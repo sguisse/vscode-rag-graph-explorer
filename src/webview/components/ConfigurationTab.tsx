@@ -19,28 +19,37 @@ export const ConfigurationTab: React.FC<ConfigProps> = ({ config }) => {
     };
 
     return (
-        <div className="w-full h-full p-4 flex flex-col gap-3 overflow-hidden bg-[var(--vscode-editor-background)]">
-            <div className="flex items-center justify-between flex-shrink-0">
-                <h2 className="text-sm font-bold tracking-wide">Node Types Configuration</h2>
-                <button
-                    onClick={handleSave}
-                    className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold shadow transition-all"
-                >
-                    Save and Apply
-                </button>
-            </div>
+        <div className="w-full h-full p-6 flex flex-col overflow-hidden bg-[var(--vscode-editor-background)]">
+            <div className="w-full max-w-4xl mx-auto flex flex-col gap-4 h-full">
+                <div className="bg-[var(--vscode-editorWidget-background)] p-5 rounded-xl border border-[var(--vscode-panel-border)] shadow-md flex flex-col h-full gap-4">
 
-            <p className="text-xs text-[var(--vscode-descriptionForeground)] leading-tight flex-shrink-0">
-                Modify the structure below to configure the list of entities accepted by the RAG Graph lexical analyzer.
-            </p>
+                    <div className="flex items-center justify-between flex-shrink-0 border-b border-[var(--vscode-panel-border)] pb-4">
+                        <div className="flex items-center gap-3">
+                            <span className="codicon codicon-settings-gear text-blue-500 text-lg"></span>
+                            <h2 className="text-sm font-bold tracking-wide uppercase text-[var(--vscode-foreground)]">Node Types Configuration</h2>
+                        </div>
+                        <button
+                            onClick={handleSave}
+                            className="px-5 py-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white rounded-md text-xs font-semibold shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+                        >
+                            <span className="codicon codicon-save"></span> Save and Apply
+                        </button>
+                    </div>
 
-            <div className="flex-1 border border-[var(--vscode-panel-border)] rounded overflow-hidden flex flex-col">
-                <textarea
-                    value={jsonString}
-                    onChange={(e) => setJsonString(e.target.value)}
-                    className="w-full flex-1 p-3 bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] font-mono text-xs resize-none outline-none focus:border-[var(--vscode-focusBorder)] leading-relaxed border-none"
-                    spellCheck={false}
-                />
+                    <p className="text-xs text-[var(--vscode-descriptionForeground)] leading-relaxed flex-shrink-0 bg-[var(--vscode-input-background)]/30 p-3 rounded-lg border border-[var(--vscode-panel-border)]/50">
+                        <span className="codicon codicon-info text-blue-400 mr-2 align-middle"></span>
+                        Modify the structure below to configure the exact list of entity groups recognized by the Graph RAG lexical engine. Changes will apply immediately to the current parsing context.
+                    </p>
+
+                    <div className="flex-1 border border-[var(--vscode-input-border)] rounded-lg overflow-hidden flex flex-col shadow-inner bg-[var(--vscode-input-background)] focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500/50 transition-all">
+                        <textarea
+                            value={jsonString}
+                            onChange={(e) => setJsonString(e.target.value)}
+                            className="w-full flex-1 p-5 bg-transparent text-[var(--vscode-input-foreground)] font-mono text-[13px] resize-none outline-none leading-relaxed border-none"
+                            spellCheck={false}
+                        />
+                    </div>
+                </div>
             </div>
         </div>
     );

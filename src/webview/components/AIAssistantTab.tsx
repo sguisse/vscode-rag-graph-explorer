@@ -55,32 +55,37 @@ export const AIAssistantTab: React.FC<AIProps> = ({ nodes, edges, selectedNodeId
     };
 
     return (
-        <div className="w-full h-full p-4 flex flex-col md:flex-row gap-4 overflow-hidden bg-[var(--vscode-editor-background)]">
-            <div className="w-full md:w-[30%] min-w-[250px] flex flex-col gap-3 flex-shrink-0">
-                <div className="flex items-center gap-2 font-semibold text-sm text-purple-400">
-                    <span className="codicon codicon-sparkle"></span> Gemini Assistant
+        <div className="w-full h-full p-6 flex flex-col md:flex-row gap-6 overflow-hidden bg-[var(--vscode-editor-background)]">
+            <div className="w-full md:w-[32%] min-w-[280px] flex flex-col gap-4 flex-shrink-0">
+                <div className="bg-[var(--vscode-editorWidget-background)] p-5 rounded-xl border border-[var(--vscode-panel-border)] shadow-md flex flex-col gap-4">
+                    <div className="flex items-center gap-2 font-bold text-base text-purple-500 tracking-wide">
+                        <span className="codicon codicon-sparkle text-lg"></span> Gemini Assistant
+                    </div>
+                    <p className="text-xs text-[var(--vscode-descriptionForeground)] leading-relaxed">
+                        Submit the selected entities to artificial intelligence to generate a technical audit, identify cyclic dependencies, or suggest architectural refactoring.
+                    </p>
+                    <button
+                        onClick={triggerAnalysis}
+                        disabled={loading}
+                        className="w-full py-2.5 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 disabled:from-purple-800/40 disabled:to-purple-800/40 text-white font-semibold text-xs rounded-md transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg mt-2"
+                    >
+                        {loading ? <span className="animate-spin opacity-80 text-sm">⏳</span> : <span className="codicon codicon-play text-sm"></span>}
+                        Launch Analysis
+                    </button>
                 </div>
-                <p className="text-xs text-[var(--vscode-descriptionForeground)] leading-relaxed">
-                    Submit the selected entities to artificial intelligence to generate a technical audit, identify cyclic dependencies, or suggest architectural refactoring.
-                </p>
-                <button
-                    onClick={triggerAnalysis}
-                    disabled={loading}
-                    className="w-full py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800/40 text-white font-medium text-xs rounded transition-colors flex items-center justify-center gap-2 shadow"
-                >
-                    {loading ? <span className="animate-spin opacity-70">⏳</span> : <span className="codicon codicon-play"></span>}
-                    Launch Analysis
-                </button>
             </div>
 
-            <div className="flex-1 border border-[var(--vscode-panel-border)] bg-[var(--vscode-sideBar-background)] rounded flex flex-col overflow-hidden min-h-0 shadow-inner">
-                <div className="px-3 py-2 border-b border-[var(--vscode-panel-border)] bg-[var(--vscode-editorGroupHeader-tabsBackground)] font-bold text-xs">
+            <div className="flex-1 bg-[var(--vscode-editorWidget-background)] rounded-xl border border-[var(--vscode-panel-border)] shadow-md flex flex-col overflow-hidden min-h-0">
+                <div className="px-5 py-3 border-b border-[var(--vscode-panel-border)] bg-[var(--vscode-editorGroupHeader-tabsBackground)] font-bold text-xs shadow-sm z-10 uppercase tracking-wider text-[var(--vscode-descriptionForeground)]">
                     Analysis Report
                 </div>
-                <div className="flex-1 overflow-y-auto p-4 font-mono text-xs whitespace-pre-wrap leading-relaxed selection:bg-purple-500/30">
-                    {analysis || (
-                        <div className="text-center italic text-[var(--vscode-descriptionForeground)] py-12">
-                            Select nodes via the Explorer view and click "Launch Analysis" to generate the report.
+                <div className="flex-1 overflow-y-auto p-6 font-mono text-sm whitespace-pre-wrap leading-relaxed selection:bg-purple-500/30 inner-shadow bg-[var(--vscode-editor-background)]/50">
+                    {analysis ? (
+                        <div className="text-[var(--vscode-foreground)]">{analysis}</div>
+                    ) : (
+                        <div className="h-full flex flex-col items-center justify-center opacity-60">
+                            <span className="codicon codicon-output text-4xl mb-4 text-purple-400/50"></span>
+                            <span className="italic text-xs text-[var(--vscode-descriptionForeground)] max-w-sm text-center">Select nodes via the Explorer view and click "Launch Analysis" to generate a comprehensive structural report.</span>
                         </div>
                     )}
                 </div>
