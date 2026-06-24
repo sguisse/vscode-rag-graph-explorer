@@ -1,10 +1,3 @@
-#!/bin/bash
-
-# Ensure components directory exists
-mkdir -p src/webview/components
-
-# Overwrite ExplorerTab.tsx with stable reference-based datasets to eliminate continuous physics updates
-cat << 'EOF' > src/webview/components/ExplorerTab.tsx
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { DataSet } from 'vis-network/standalone';
 import { Network } from 'vis-network';
@@ -519,6 +512,3 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
         </div>
     );
 };
-EOF
-
-echo "✅ Graph stabilization locked and bidirectional tree-to-graph selection state synchronized successfully!"
