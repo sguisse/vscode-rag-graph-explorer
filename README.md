@@ -19,10 +19,10 @@ To achieve memory safety and avoid freezing your editor interface, Files Exporte
 3. Install **RAG Graph Explorer** from the VS Code Extensions Marketplace.
 
 ## ⚙️ Extension Settings Customization
-Open your editor settings (`settings.json`) and search for `ragGraphExplorer` to customize your experience:
-* `ragGraphExplorer.xxxx`:
-* `ragGraphExplorer.xxx`:
-* `ragGraphExplorer.xxxx`:
+Open your editor settings (`settings.json`) and search for `graphRagExplorer` to customize your experience:
+* `graphRagExplorer.xxxx`:
+* `graphRagExplorer.xxx`:
+* `graphRagExplorer.xxxx`:
 
 ## 📜 License
 This extension is distributed under the open-source MIT License.

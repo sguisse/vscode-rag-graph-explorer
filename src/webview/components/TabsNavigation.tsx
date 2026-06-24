@@ -7,13 +7,13 @@ interface TabsProps {
 
 export const TabsNavigation: React.FC<TabsProps> = ({ activeTab, setActiveTab }) => {
     const tabs = [
-        { id: 'explorer', label: '🕸️ Explorer View' },
+        { id: 'explorer', label: '🕸️ Explorer' },
         { id: 'ai', label: '✨ AI Assistant' },
         { id: 'config', label: '⚙️ Configuration' }
     ];
 
     return (
-        <div className="flex border-b border-[var(--vscode-panel-border)] bg-[var(--vscode-editorGroupHeader-tabsBackground)] overflow-x-auto flex-shrink-0">
+        <div className="flex flex-shrink-0 bg-[var(--vscode-editorGroupHeader-tabsBackground)] border-[var(--vscode-panel-border)] border-b overflow-x-auto">
             {tabs.map(tab => (
                 <button
                     key={tab.id}

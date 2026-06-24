@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { DataSet } from 'vis-network/standalone';
 import { Network } from 'vis-network';
 import { GraphNode, GraphEdge } from '../types';
-import {MaximizeIcon, MinimizeIcon, ListUnorderedIcon} from '@primer/octicons-react'
+import { MaximizeIcon, MinimizeIcon, ListUnorderedIcon } from '@primer/octicons-react';
 
 interface ExplorerTabProps {
     nodes: GraphNode[];
@@ -42,6 +42,7 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
 
     const [parentDepth, setParentDepth] = useState<number>(0);
     const [childDepth, setChildDepth] = useState<number>(0);
+    const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
 
     const { parentMap, childrenMap } = useMemo(() => {
         const pMap: { [key: string]: string } = {};
@@ -419,6 +420,26 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
         return [];
     }, [nodes, parentMap, childrenMap, hierarchicallyVisibleIds, treeGrouping, sortOrder]);
 
+    const handleExpandAll = () => {
+        setCollapsedIds(new Set());
+    };
+
+    const handleCollapseAll = () => {
+        const nextCollapsed = new Set<string>();
+        const collapseChildrenRecursive = (elements: any[]) => {
+            elements.forEach(el => {
+                if (el.isGroup) {
+                    nextCollapsed.add(el.id);
+                    if (el.children) {
+                        collapseChildrenRecursive(el.children);
+                    }
+                }
+            });
+        };
+        collapseChildrenRecursive(treeData);
+        setCollapsedIds(nextCollapsed);
+    };
+
     const toggleNodeSelection = (id: string) => {
         setSelectedNodeIds(prev => {
             const next = new Set(prev);
@@ -439,15 +460,36 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
         });
     };
 
+    const handleClearSelectionWithConfirm = () => {
+        if (selectedNodeIds.size === 0) return;
+        const confirmClear = window.confirm(`Are you sure you want to permanently clear the selection of all ${selectedNodeIds.size} node(s)?`);
+        if (confirmClear) {
+            setSelectedNodeIds(new Set());
+        }
+    };
+
     const renderTreeElements = (elements: TreeElement[]): React.ReactNode => {
         return elements.map(el => {
             if (el.isGroup) {
+                const isGroupOpen = !collapsedIds.has(el.id);
                 return (
-                    <details key={el.id} className="w-full select-none" open>
-                        <summary className="[&::-webkit-details-marker]:hidden flex items-center gap-2 px-1.5 py-1 rounded font-bold text-xs transition-colors cursor-pointer list-none hover:bg-[var(--vscode-list-hoverBackground)]">
+                    <details key={el.id} className="w-full select-none" open={isGroupOpen}>
+                        <summary
+                            className="[&::-webkit-details-marker]:hidden flex items-center gap-1.5 px-1.5 py-1 rounded font-bold text-xs transition-colors cursor-pointer list-none hover:bg-[var(--vscode-list-hoverBackground)]"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                setCollapsedIds(prev => {
+                                    const next = new Set(prev);
+                                    if (next.has(el.id)) next.delete(el.id);
+                                    else next.add(el.id);
+                                    return next;
+                                });
+                            }}
+                        >
+                            <span className={`codicon ${isGroupOpen ? 'codicon-chevron-down' : 'codicon-chevron-right'} text-[11px] flex-shrink-0 w-3 text-center`}></span>
                             <input
                                 type="checkbox"
-                                className="cursor-pointer"
+                                className="flex-shrink-0 cursor-pointer"
                                 ref={input => {
                                     if (input) {
                                         const selectedCount = el.allLeafIds.filter(id => effectiveSelectedNodeIds.has(id)).length;
@@ -466,10 +508,10 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
                                 onChange={(e) => handleGroupCheckboxChange(el, e.target.checked)}
                                 onClick={(e) => e.stopPropagation()}
                             />
-                            <span className="text-xs">{el.icon}</span>
+                            <span className="flex-shrink-0 text-xs">{el.icon}</span>
                             <span className="flex-1 text-[var(--vscode-foreground)] truncate">{el.label}</span>
                         </summary>
-                        <div className="space-y-0.5 mt-0.5 ml-3.5 pl-2 border-[var(--vscode-panel-border)] border-l">
+                        <div className="space-y-0.5 mt-0.5 ml-[22px] pl-2 border-[var(--vscode-panel-border)] border-l">
                             {renderTreeElements(el.children || [])}
                         </div>
                     </details>
@@ -477,14 +519,15 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
             } else {
                 const isChecked = effectiveSelectedNodeIds.has(el.id);
                 return (
-                    <div key={el.id} className="group flex items-center gap-2 px-1.5 py-1 rounded w-full transition-colors hover:bg-[var(--vscode-list-hoverBackground)]">
+                    <div key={el.id} className="group flex items-center gap-1.5 px-1.5 py-1 rounded w-full transition-colors hover:bg-[var(--vscode-list-hoverBackground)]">
+                        <span className="flex-shrink-0 w-3"></span>
                         <input
                             type="checkbox"
                             checked={isChecked}
                             onChange={() => toggleNodeSelection(el.id)}
-                            className="cursor-pointer"
+                            className="flex-shrink-0 cursor-pointer"
                         />
-                        <span className="text-xs">
+                        <span className="flex-shrink-0 text-xs">
                             {el.node?.group === 'file' ? '📂' : el.node?.group === 'class' ? '📦' : el.node?.group === 'method' ? '⚡' : '📄'}
                         </span>
                         <span
@@ -496,8 +539,16 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
                                         animation: { duration: 400, easingFunction: 'easeInOutQuad' }
                                     });
                                 }
+                                if ((window as any).vscodeApi && el.node?.group === 'file' && el.node.source_file) {
+                                    try {
+                                        (window as any).vscodeApi.postMessage({
+                                            command: 'revealFile',
+                                            path: el.node.source_file
+                                        });
+                                    } catch (err) {}
+                                }
                             }}
-                            title={el.label}
+                            data-tooltip={el.label}
                         >
                             {el.label}
                         </span>
@@ -508,34 +559,71 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
     };
 
     return (
-        <div className="relative flex w-full h-full min-h-0">
+        <div className="relative flex items-stretch w-full h-full min-h-0">
+            {/* Added custom CSS block to scale the native scrollbar sliders and numeric spinner controls perfectly */}
+            <style dangerouslySetInnerHTML={{__html: `
+                input[type="number"]::-webkit-inner-spin-button,
+                input[type="number"]::-webkit-outer-spin-button {
+                    height: 24px !important;
+                    width: 14px !important;
+                    opacity: 1 !important;
+                    cursor: pointer;
+                }
+            `}} />
+
             <div className={`min-w-[250px] max-w-[70%] border-r border-[var(--vscode-panel-border)] bg-[var(--vscode-sideBar-background)] flex flex-col h-full overflow-hidden resize-x ${isTreeCollapsed || isMaximized ? 'hidden' : 'w-[35%]'}`}>
-                <div className="flex flex-col flex-shrink-0 gap-2 bg-[var(--vscode-editorGroupHeader-tabsBackground)] p-2 border-[var(--vscode-panel-border)] border-b">
-                    <div className="flex justify-between items-center">
-                        <span className="font-bold text-[11px] uppercase tracking-wider">Hierarchical Tree</span>
+                <div className="flex flex-col flex-shrink-0 justify-center bg-[var(--vscode-editorGroupHeader-tabsBackground)] px-2 border-[var(--vscode-panel-border)] border-b h-9">
+                    <div className="flex justify-between items-center w-full">
+                        <span className="font-bold text-[11px] uppercase tracking-wider">Tree&nbsp;View</span>
                         <div className="flex items-center gap-1">
-                            <button onClick={() => setSortOrder('asc')} className={`p-1 rounded text-xs ${sortOrder === 'asc' ? 'text-blue-500 bg-gray-700/40' : ''}`} title="Sort ASC">▲</button>
-                            <button onClick={() => setSortOrder('desc')} className={`p-1 rounded text-xs ${sortOrder === 'desc' ? 'text-blue-500 bg-gray-700/40' : ''}`} title="Sort DESC">▼</button>
-                            <button onClick={() => setIgnoreCase(!ignoreCase)} className={`p-1 text-xs font-mono rounded ${ignoreCase ? 'text-blue-500 bg-gray-700/40' : ''}`} title="Ignore case">Aa</button>
-                            <button onClick={() => setShowOnlySelected(!showOnlySelected)} className={`codicon codicon-eye p-1 rounded ${showOnlySelected ? 'text-blue-500 bg-gray-700/40' : ''}`} title="Show selected only"></button>
-                            <button onClick={() => setSelectedNodeIds(new Set())} className="p-1 rounded hover:text-red-500 codicon codicon-trash" title="Clear selection"></button>
+                            <button onClick={() => setSortOrder('asc')} className={`p-1 rounded text-xs ${sortOrder === 'asc' ? 'text-blue-500 bg-gray-700/40' : ''}`} data-tooltip="Sort ASC">▲</button>
+                            <button onClick={() => setSortOrder('desc')} className={`p-1 rounded text-xs ${sortOrder === 'desc' ? 'text-blue-500 bg-gray-700/40' : ''}`} data-tooltip="Sort DESC">▼</button>
+                            <button onClick={() => setIgnoreCase(!ignoreCase)} className={`p-1 text-xs font-mono rounded ${ignoreCase ? 'text-blue-500 bg-gray-700/40' : ''}`} data-tooltip="Ignore case">Aa</button>
+
+                            <div className="flex-shrink-0 bg-[var(--vscode-panel-border)] mx-1 w-[1px] h-4" />
+
+                            <button onClick={handleExpandAll} className="hover:bg-gray-700/40 p-1 rounded codicon codicon-expand-all" data-tooltip="Expand All"></button>
+                            <button onClick={handleCollapseAll} className="codicon-collapse-all hover:bg-gray-700/40 p-1 rounded codicon" data-tooltip="Collapse All"></button>
+
+                            <div className="flex-shrink-0 bg-[var(--vscode-panel-border)] mx-1 w-[1px] h-4" />
+
+                            <select
+                                value={treeGrouping}
+                                onChange={(e: any) => setTreeGrouping(e.target.value)}
+                                className="bg-[var(--vscode-input-background)] px-2 py-1 border border-[var(--vscode-input-border)] rounded outline-none max-w-[95px] h-7 font-medium text-[var(--vscode-input-foreground)] text-xs"
+                                data-tooltip="Tree grouping mode"
+                            >
+                                <option value="folder">📂 Folder</option>
+                                <option value="extension">⚙️ Extension</option>
+                                <option value="root">📄 Flat</option>
+                            </select>
+
+                            <button onClick={() => setShowOnlySelected(!showOnlySelected)} className={`codicon codicon-eye p-1 rounded ${showOnlySelected ? 'text-blue-500 bg-gray-700/40' : ''}`} data-tooltip="Show selected only"></button>
+                            <button
+                                onClick={() => {
+                                    const paths = Array.from(new Set(nodes.filter(n => selectedNodeIds.has(n.id) && n.source_file).map(n => n.source_file as string)));
+                                    if (paths.length > 0) {
+                                        if ((window as any).vscodeApi) {
+                                            (window as any).vscodeApi.postMessage({ command: 'publishToSharedList', paths });
+                                        }
+                                    } else {
+                                        if ((window as any).vscodeApi) {
+                                            (window as any).vscodeApi.postMessage({ command: 'showNotification', type: 'warn', text: 'No files selected to publish.' });
+                                        }
+                                    }
+                                }}
+                                className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] p-1 rounded text-[var(--vscode-foreground)] text-sm codicon codicon-cloud-upload"
+                                data-tooltip="Publish selected files to Files Exporter shared list"
+                            ></button>
+
+                            <div className="flex-shrink-0 bg-[var(--vscode-panel-border)] mx-1 w-[1px] h-4" />
+
+                            <button onClick={handleClearSelectionWithConfirm} className="p-1 rounded hover:text-red-500 codicon codicon-trash" data-tooltip="Clear selection"></button>
                         </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-[var(--vscode-descriptionForeground)]">Group by:</span>
-                        <select
-                            value={treeGrouping}
-                            onChange={(e: any) => setTreeGrouping(e.target.value)}
-                            className="flex-1 bg-[var(--vscode-input-background)] px-1 border border-[var(--vscode-input-border)] rounded outline-none font-medium text-[var(--vscode-input-foreground)] text-xs"
-                        >
-                            <option value="folder">📂 Folder</option>
-                            <option value="extension">⚙️ Extension</option>
-                            <option value="root">📄 Root (Flat)</option>
-                        </select>
                     </div>
                 </div>
 
-                <div className="flex-1 space-y-0.5 p-2 overflow-y-auto">
+                <div className="flex-1 space-y-0.5 bg-[var(--vscode-sideBar-background)] p-2 overflow-y-auto">
                     {treeData.length > 0 ? renderTreeElements(treeData) : (
                         <div className="py-8 text-[var(--vscode-descriptionForeground)] text-xs text-center italic">No visible elements.</div>
                     )}
@@ -544,38 +632,54 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
 
             <div className={`flex flex-col overflow-hidden bg-[var(--vscode-editor-background)] ${isMaximized ? 'fixed inset-0 z-40 w-screen h-screen' : 'flex-1 h-full'}`}>
                 <div className="flex flex-shrink-0 justify-between items-center bg-[var(--vscode-editorGroupHeader-tabsBackground)] px-3 border-[var(--vscode-panel-border)] border-b h-9">
-                    <div className="flex items-center gap-4 text-xs">
+                    <div className="flex items-center gap-4 h-full text-xs">
                         <div className="flex items-center gap-2">
                             {!isMaximized && (
                                 <button
                                     onClick={() => setIsTreeCollapsed(!isTreeCollapsed)}
                                     className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] p-1 rounded text-[var(--vscode-foreground)] text-sm codicon codicon-menu"
-                                    title={isTreeCollapsed ? "Show tree" : "Hide tree"}
+                                    data-tooltip={isTreeCollapsed ? "Show tree" : "Hide tree"}
                                 />
                             )}
-                            <span className="font-semibold text-[11px] text-[var(--vscode-descriptionForeground)] uppercase tracking-wider">Topological View</span>
+                            <span className="font-bold text-[11px] uppercase tracking-wider">Graph&nbsp;View</span>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                            <label className="text-[10px]">Callers (Parents):</label>
-                            <input type="number" min="0" max="5" value={parentDepth} onChange={(e) => setParentDepth(parseInt(e.target.value) || 0)} className="bg-[var(--vscode-input-background)] px-1 border border-[var(--vscode-input-border)] rounded w-10 text-[11px] text-center" />
+
+                        <div className="flex items-center gap-1.5 h-7">
+                            <label className="font-medium text-[var(--vscode-descriptionForeground)] text-xs" data-tooltip="Number of parent files levels to select">Callers :</label>
+                            <input
+                                type="number"
+                                min="0"
+                                max="5"
+                                value={parentDepth}
+                                onChange={(e) => setParentDepth(parseInt(e.target.value) || 0)}
+                                className="bg-[var(--vscode-input-background)] border border-[var(--vscode-input-border)] focus:border-[var(--vscode-focusBorder)] rounded outline-none w-12 h-7 font-semibold text-[var(--vscode-input-foreground)] text-xs text-center"
+                            />
                         </div>
-                        <div className="flex items-center gap-1.5">
-                            <label className="text-[10px]">Callees (Children):</label>
-                            <input type="number" min="0" max="5" value={childDepth} onChange={(e) => setChildDepth(parseInt(e.target.value) || 0)} className="bg-[var(--vscode-input-background)] px-1 border border-[var(--vscode-input-border)] rounded w-10 text-[11px] text-center" />
+
+                        <div className="flex items-center gap-1.5 h-7">
+                            <label className="font-medium text-[var(--vscode-descriptionForeground)] text-xs" data-tooltip="Number of child files levels to select">Callees :</label>
+                            <input
+                                type="number"
+                                min="0"
+                                max="5"
+                                value={childDepth}
+                                onChange={(e) => setChildDepth(parseInt(e.target.value) || 0)}
+                                className="bg-[var(--vscode-input-background)] border border-[var(--vscode-input-border)] focus:border-[var(--vscode-focusBorder)] rounded outline-none w-12 h-7 font-semibold text-[var(--vscode-input-foreground)] text-xs text-center"
+                            />
                         </div>
                     </div>
                     <div className="flex items-center gap-1">
                         <button
                             onClick={() => networkRef.current?.fit({ animation: true })}
                             className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] p-1 rounded text-[var(--vscode-foreground)]"
-                            title="Recenter"
+                            data-tooltip="Recenter"
                         >
                             <span className="text-[14px] codicon codicon-screen-full"></span>
                         </button>
                         <button
                             onClick={() => setIsMaximized(!isMaximized)}
                             className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] p-1 rounded text-[var(--vscode-foreground)]"
-                            title={isMaximized ? "Minimize" : "Maximize"}
+                            data-tooltip={isMaximized ? "Minimize" : "Maximize"}
                         >
                             {isMaximized ? (
                                 <MinimizeIcon />
@@ -584,12 +688,12 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
                             )}
                         </button>
                         <button
-        onClick={() => setShowLegend(!showLegend)}
-        className={`flex justify-center items-center p-1 rounded ${showLegend ? 'text-blue-500 bg-gray-700/40' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)] text-[var(--vscode-foreground)]'}`}
-        title="Legend"
-    >
-        <ListUnorderedIcon />
-    </button>
+                            onClick={() => setShowLegend(!showLegend)}
+                            className={`flex justify-center items-center p-1 rounded ${showLegend ? 'text-blue-500 bg-gray-700/40' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)] text-[var(--vscode-foreground)]'}`}
+                            data-tooltip="Show/Hide legend on bottom Graph"
+                        >
+                            <ListUnorderedIcon />
+                        </button>
                     </div>
                 </div>
 
@@ -603,7 +707,7 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
                                 <button
                                     onClick={() => setShowLegend(false)}
                                     className="hover:bg-[var(--vscode-toolbar-hoverBackground)] p-0.5 rounded text-[10px] cursor-pointer codicon codicon-close"
-                                    title="Close legend"
+                                    data-tooltip="Close legend"
                                 />
                             </div>
                             <div className="flex items-center gap-2">📂 <span className="bg-[#3b82f6] rounded-sm w-3 h-3"></span> File</div>

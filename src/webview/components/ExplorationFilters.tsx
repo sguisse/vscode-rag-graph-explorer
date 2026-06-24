@@ -23,7 +23,6 @@ export const ExplorationFilters: React.FC<FiltersProps> = ({
 }) => {
     const [isOpen, setIsOpen] = useState(true);
 
-    // Compute a clean, scannable configuration runtime snapshot string
     const filterSummary = useMemo(() => {
         const typesStr = selectedTypes.length === 0 || selectedTypes.length === typesList.length ? 'All' : selectedTypes.join(',');
         const queryStr = searchText ? `"${searchText}" (${searchMode}${isRegexEnabled ? '+Rx' : ''})` : 'None';
@@ -37,7 +36,7 @@ export const ExplorationFilters: React.FC<FiltersProps> = ({
             <div
                 className="flex items-center justify-between px-4 py-2 cursor-pointer select-none font-semibold text-xs bg-[var(--vscode-editorGroupHeader-tabsBackground)]"
                 onClick={() => setIsOpen(!isOpen)}
-                title="Regular Expression masks defining targeted directories and source formatting inclusions or exclusions lists."
+                data-tooltip="Regular Expression masks defining targeted directories and source formatting inclusions or exclusions lists."
             >
                 <div className="flex items-center gap-2 flex-shrink-0">
                     <span className={`codicon ${isOpen ? 'codicon-chevron-down' : 'codicon-chevron-right'}`}></span>
@@ -75,25 +74,33 @@ export const ExplorationFilters: React.FC<FiltersProps> = ({
                         <select
                             value={searchMode}
                             onChange={(e) => setSearchMode(e.target.value)}
-                            className="bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] border border-[var(--vscode-input-border)] rounded p-1 text-xs outline-none"
+                            className="bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] border border-[var(--vscode-input-border)] rounded p-1 text-xs outline-none h-7"
                         >
                             <option value="contains">Contains</option>
                             <option value="starts">Starts with</option>
                             <option value="exact">Exactly</option>
                         </select>
-                        <div className="flex gap-1">
+
+                        {/* Unified Text input relative wrapper block containing an absolute inner overlay clear capsule */}
+                        <div className="relative flex items-center w-full">
                             <input
                                 type="text"
                                 value={searchText}
                                 onChange={(e) => setSearchText(e.target.value)}
                                 placeholder="Filter..."
-                                className="flex-1 bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] border border-[var(--vscode-input-border)] rounded px-2 py-0.5 text-xs outline-none focus:border-[var(--vscode-focusBorder)]"
+                                className="w-full bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] border border-[var(--vscode-input-border)] rounded pl-2 pr-7 h-7 text-xs outline-none focus:border-[var(--vscode-focusBorder)]"
                             />
                             {searchText && (
-                                <button onClick={() => setSearchText('')} className="px-2 bg-[var(--vscode-button-secondaryBackground)] hover:bg-[var(--vscode-button-secondaryHoverBackground)] rounded text-xs">✕</button>
+                                <button
+                                    onClick={() => setSearchText('')}
+                                    className="absolute right-1.5 flex items-center justify-center p-0.5 rounded text-[var(--vscode-foreground)] opacity-70 hover:opacity-100 hover:bg-[var(--vscode-toolbar-hoverBackground)] transition-all cursor-pointer text-[10px] codicon codicon-close"
+                                    data-tooltip="Reset filter query"
+                                    aria-label="Clear filter text"
+                                />
                             )}
                         </div>
-                        <label className="flex items-center gap-1.5 text-xs mt-1 cursor-pointer">
+
+                        <label className="flex items-center gap-1.5 text-xs mt-1 cursor-pointer select-none">
                             <input type="checkbox" checked={isRegexEnabled} onChange={(e) => setIsRegexEnabled(e.target.checked)} />
                             <span>Enable Regex</span>
                         </label>
@@ -102,11 +109,11 @@ export const ExplorationFilters: React.FC<FiltersProps> = ({
                     <div className="flex flex-col gap-1.5">
                         <label className="text-[10px] uppercase font-bold tracking-wider text-[var(--vscode-descriptionForeground)]">Application Targets</label>
                         <div className="flex flex-col gap-2 mt-1">
-                            <label className="flex items-center gap-2 text-xs cursor-pointer">
+                            <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
                                 <input type="checkbox" checked={applyOnTree} onChange={(e) => setApplyOnTree(e.target.checked)} />
                                 <span>Apply on Tree</span>
                             </label>
-                            <label className="flex items-center gap-2 text-xs cursor-pointer">
+                            <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
                                 <input type="checkbox" checked={applyOnGraph} onChange={(e) => setApplyOnGraph(e.target.checked)} />
                                 <span>Apply on Graph</span>
                             </label>

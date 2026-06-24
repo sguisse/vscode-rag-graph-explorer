@@ -5,19 +5,21 @@ import { TabsNavigation } from './components/TabsNavigation';
 import { ExplorerTab } from './components/ExplorerTab';
 import { AIAssistantTab } from './components/AIAssistantTab';
 import { ConfigurationTab } from './components/ConfigurationTab';
-import { GraphNode, GraphEdge, ExtensionConfig } from './types';
+import { GraphNode, GraphEdge } from './types';
 
 declare const acquireVsCodeApi: () => any;
 const vscode = acquireVsCodeApi();
+(window as any).vscodeApi = vscode;
 
 export const App: React.FC = () => {
     const [theme, setTheme] = useState<'light' | 'dark'>('dark');
     const [activeTab, setActiveTab] = useState<string>('explorer');
-    const [config, setConfig] = useState<ExtensionConfig>({
+    const [config, setConfig] = useState<any>({
         EntitiesTypesList: ['file', 'class', 'method', 'document'],
         regexFilterEnabled: false,
         TreeFilterEnabled: true,
-        geminiApiKey: ''
+        geminiApiKey: '',
+        tooltipDelay: 2000
     });
 
     const [nodes, setNodes] = useState<GraphNode[]>([]);
@@ -38,7 +40,6 @@ export const App: React.FC = () => {
                 setConfig(message.config);
                 setIsRegexEnabled(message.config.regexFilterEnabled);
                 setApplyOnTree(message.config.TreeFilterEnabled);
-                // Intentionally keeping selectedTypes array empty by default so no items are selected on start
             }
         });
         vscode.postMessage({ command: 'ready' });
@@ -49,6 +50,56 @@ export const App: React.FC = () => {
         if (theme === 'dark') root.classList.add('dark');
         else root.classList.remove('dark');
     }, [theme]);
+
+    // Custom Tooltip Tracker Hook synchronized with workspace tooltipDelay configurations
+    useEffect(() => {
+        const tooltipEl = document.getElementById('global-cursor-tooltip');
+        let tooltipTimeout: NodeJS.Timeout | null = null;
+        let activeTarget: Element | null = null;
+
+        const positionTooltipAtCursor = (e: MouseEvent, el: HTMLElement) => {
+            const mouseX = e.clientX, mouseY = e.clientY, offset = 15;
+            const rect = el.getBoundingClientRect();
+            let targetTop = mouseY - (rect.height / 2);
+            if (targetTop < 5) targetTop = 5;
+            if (targetTop + rect.height > window.innerHeight - 5) targetTop = window.innerHeight - rect.height - 5;
+            el.style.top = `${targetTop}px`;
+            if (mouseX + offset + rect.width > window.innerWidth) el.style.left = `${mouseX - rect.width - offset}px`;
+            else el.style.left = `${mouseX + offset}px`;
+        };
+
+        const handleMouseMove = (e: MouseEvent) => {
+            const target = (e.target as Element).closest('[data-tooltip]');
+            if (target) {
+                if (activeTarget !== target) {
+                    activeTarget = target;
+                    if (tooltipTimeout) clearTimeout(tooltipTimeout);
+                    if (tooltipEl) tooltipEl.style.display = 'none';
+                    tooltipTimeout = setTimeout(() => {
+                        if (tooltipEl && activeTarget) {
+                            tooltipEl.innerHTML = activeTarget.getAttribute('data-tooltip') || '';
+                            tooltipEl.style.display = 'block';
+                            positionTooltipAtCursor(e, tooltipEl);
+                        }
+                    }, config.tooltipDelay ?? 2000);
+                } else {
+                    if (tooltipEl && tooltipEl.style.display === 'block') positionTooltipAtCursor(e, tooltipEl);
+                }
+            } else {
+                if (activeTarget) {
+                    activeTarget = null;
+                    if (tooltipTimeout) clearTimeout(tooltipTimeout);
+                    if (tooltipEl) tooltipEl.style.display = 'none';
+                }
+            }
+        };
+
+        document.body.addEventListener('mousemove', handleMouseMove);
+        return () => {
+            document.body.removeEventListener('mousemove', handleMouseMove);
+            if (tooltipTimeout) clearTimeout(tooltipTimeout);
+        };
+    }, [config.tooltipDelay]);
 
     const handleGraphLoad = (data: { nodes: any[]; links: any[] }) => {
         const parsedNodes: GraphNode[] = (data.nodes || []).map(n => {
@@ -83,7 +134,7 @@ export const App: React.FC = () => {
 
             <main className="flex-1 flex flex-col min-h-0">
                 <ExplorationFilters
-                    typesList={config.EntitiesTypesList}
+                    typesList={config.EntitiesTypesList || ['file', 'class', 'method', 'document']}
                     selectedTypes={selectedTypes}
                     setSelectedTypes={setSelectedTypes}
                     searchMode={searchMode}

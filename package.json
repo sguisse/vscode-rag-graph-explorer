@@ -1,7 +1,7 @@
 {
-  "name": "rag-graph-explorer",
+  "name": "graph-rag-explorer",
   "license": "MIT",
-  "displayName": "Graphify Explorer",
+  "displayName": "Graph RAG Explorer",
   "description": "Expert Node Navigator and Architecture Explorer via RAG and Gemini",
   "version": "1.0.0",
   "publisher": "sguisse",
@@ -16,29 +16,28 @@
   "contributes": {
     "commands": [
       {
-        "command": "ragGraphExplorer.openTool",
-        "title": "RAG Graph Explorer: Open UI",
-        "icon": "$(export)"
+        "command": "graphRagExplorer.openTool",
+        "title": "Graph RAG Explorer --> 🕸️ Open UI"
       }
     ],
     "menus": {
       "editor/title": [
         {
-          "command": "ragGraphExplorer.openTool",
+          "command": "graphRagExplorer.openTool",
           "group": "navigation"
         }
       ],
       "explorer/context": [
         {
-          "command": "ragGraphExplorer.openTool",
+          "command": "graphRagExplorer.openTool",
           "group": "navigation@0"
         }
       ]
     },
     "configuration": {
-      "title": "RAG Graph Explorer",
+      "title": "🕸️Graph RAG Explorer",
       "properties": {
-        "ragGraphExplorer.EntitiesTypesList": {
+        "graphRagExplorer.EntitiesTypesList": {
           "type": "array",
           "description": "List of predefined entity types for the graph exploration.",
           "items": {
@@ -51,20 +50,30 @@
             "document"
           ]
         },
-        "ragGraphExplorer.regexFilterEnabled": {
+        "graphRagExplorer.regexFilterEnabled": {
           "type": "boolean",
           "default": false,
           "description": "Enable Regex matching in the filter bar by default."
         },
-        "ragGraphExplorer.TreeFilterEnabled": {
+        "graphRagExplorer.TreeFilterEnabled": {
           "type": "boolean",
           "default": true,
           "description": "Apply search filters on the Tree View by default."
         },
-        "ragGraphExplorer.geminiApiKey": {
+        "graphRagExplorer.geminiApiKey": {
           "type": "string",
           "default": "",
           "description": "API Key for Gemini Assistant analysis."
+        },
+        "graphRagExplorer.tooltipDelay": {
+          "type": "number",
+          "default": 2000,
+          "description": "Delay in milliseconds before showing the custom tooltips on hover."
+        },
+        "graphRagExplorer.pinFilesExporter": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically pin the Graph RAG Explorer UI tab when opened to prevent it from being overwritten or closed as a preview tab."
         }
       }
     }
