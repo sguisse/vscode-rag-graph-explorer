@@ -22,7 +22,7 @@ export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, onGraphLoade
                 const json = JSON.parse(event.target?.result as string);
                 onGraphLoaded(json);
             } catch (err) {
-                alert('Fichier graph.json invalide.');
+                alert('Invalid graph.json file.');
             }
         };
         reader.readAsText(file);
@@ -41,18 +41,18 @@ export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, onGraphLoade
             </div>
 
             <div className="flex items-center gap-2">
-                <span className="text-xs text-[var(--vscode-descriptionForeground)] hidden md:inline">Outil d'analyse structurelle</span>
+                <span className="text-xs text-[var(--vscode-descriptionForeground)] hidden md:inline">Structural analysis tool</span>
 
                 <button onClick={toggleTheme} className="p-1.5 hover:bg-[var(--vscode-toolbar-hoverBackground)] rounded text-[var(--vscode-foreground)]">
                     <span className={`codicon ${theme === 'dark' ? 'codicon-sun' : 'codicon-moon'}`}></span>
                 </button>
 
                 <button onClick={() => setIsModalOpen(true)} className="px-3 py-1 bg-[var(--vscode-button-secondaryBackground)] hover:bg-[var(--vscode-button-secondaryHoverBackground)] text-[var(--vscode-button-secondaryForeground)] rounded text-xs flex items-center gap-1">
-                    <span className="codicon codicon-list-selection"></span> Voir Sélection
+                    <span className="codicon codicon-list-selection"></span> View Selection
                 </button>
 
                 <label className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs flex items-center gap-1 cursor-pointer">
-                    <span className="codicon codicon-file-symlink-file"></span> Charger graph.json
+                    <span className="codicon codicon-file-symlink-file"></span> Load graph.json
                     <input type="file" accept=".json" onChange={handleFileChange} className="hidden" />
                 </label>
             </div>
@@ -62,13 +62,13 @@ export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, onGraphLoade
                     <div className="bg-[var(--vscode-editor-background)] border border-[var(--vscode-panel-border)] rounded shadow-2xl w-full max-w-3xl h-[80vh] flex flex-col overflow-hidden">
                         <div className="p-3 border-b border-[var(--vscode-panel-border)] flex justify-between items-center bg-[var(--vscode-sideBar-background)]">
                             <h3 className="font-semibold text-sm flex items-center gap-2">
-                                <span className="codicon codicon-list-selection text-blue-500"></span> Entités Sélectionnées
+                                <span className="codicon codicon-list-selection text-blue-500"></span> Selected Entities
                             </h3>
                             <button onClick={() => setIsModalOpen(false)} className="codicon codicon-close hover:bg-[var(--vscode-toolbar-hoverBackground)] p-1 rounded"></button>
                         </div>
 
                         <div className="p-3 border-b border-[var(--vscode-panel-border)] bg-[var(--vscode-editor-background)] flex gap-4 text-xs">
-                            <span className="font-medium">Filtrer par type :</span>
+                            <span className="font-medium">Filter by type:</span>
                             {['file', 'class', 'method', 'document'].map(type => (
                                 <label key={type} className="flex items-center gap-1.5 capitalize cursor-pointer">
                                     <input
@@ -83,7 +83,7 @@ export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, onGraphLoade
 
                         <div className="flex-1 overflow-y-auto p-4 bg-[var(--vscode-input-background)]">
                             <p className="text-xs text-[var(--vscode-descriptionForeground)] mb-3">
-                                {selectedEntities.length} élément(s) affiché(s) sur {selectedNodeIds.size}
+                                {selectedEntities.length} element(s) displayed out of {selectedNodeIds.size}
                             </p>
                             <ul className="space-y-2">
                                 {selectedEntities.map(entity => (
@@ -95,19 +95,19 @@ export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, onGraphLoade
                                             <span className="font-medium text-xs truncate">{entity.label}</span>
                                         </div>
                                         <span className="text-[10px] bg-[var(--vscode-badge-background)] text-[var(--vscode-badge-foreground)] px-2 py-0.5 rounded truncate max-w-[250px]">
-                                            {entity.source_file || 'Non défini'}
+                                            {entity.source_file || 'Undefined'}
                                         </span>
                                     </li>
                                 ))}
                                 {selectedEntities.length === 0 && (
-                                    <div className="text-center italic text-xs py-8 text-[var(--vscode-descriptionForeground)]">Aucun élément à afficher.</div>
+                                    <div className="text-center italic text-xs py-8 text-[var(--vscode-descriptionForeground)]">No elements to display.</div>
                                 )}
                             </ul>
                         </div>
 
                         <div className="p-3 border-t border-[var(--vscode-panel-border)] bg-[var(--vscode-sideBar-background)] text-right">
                             <button onClick={() => setIsModalOpen(false)} className="px-4 py-1.5 bg-[var(--vscode-button-secondaryBackground)] hover:bg-[var(--vscode-button-secondaryHoverBackground)] text-[var(--vscode-button-secondaryForeground)] text-xs rounded">
-                                Fermer
+                                Close
                             </button>
                         </div>
                     </div>

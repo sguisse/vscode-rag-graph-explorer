@@ -38,7 +38,7 @@ export const App: React.FC = () => {
                 setConfig(message.config);
                 setIsRegexEnabled(message.config.regexFilterEnabled);
                 setApplyOnTree(message.config.TreeFilterEnabled);
-                setSelectedTypes(message.config.EntitiesTypesList);
+                // Intentionally keeping selectedTypes array empty by default so no items are selected on start
             }
         });
         vscode.postMessage({ command: 'ready' });

@@ -11,27 +11,27 @@ export const ConfigurationTab: React.FC<ConfigProps> = ({ config }) => {
     const handleSave = () => {
         try {
             const parsed = JSON.parse(jsonString);
-            if (!Array.isArray(parsed)) throw new Error("Le format doit être un tableau JSON string[].");
-            alert('Configuration sauvegardée localement avec succès ! (Modifications appliquées sur le runtime courant)');
+            if (!Array.isArray(parsed)) throw new Error("Format must be a JSON array of strings[].");
+            alert('Configuration successfully saved locally! (Changes applied to current runtime)');
         } catch (err: any) {
-            alert(`Erreur de syntaxe JSON : ${err.message}`);
+            alert(`JSON syntax error: ${err.message}`);
         }
     };
 
     return (
         <div className="w-full h-full p-4 flex flex-col gap-3 overflow-hidden bg-[var(--vscode-editor-background)]">
             <div className="flex items-center justify-between flex-shrink-0">
-                <h2 className="text-sm font-bold tracking-wide">Configuration des Types de Nœuds</h2>
+                <h2 className="text-sm font-bold tracking-wide">Node Types Configuration</h2>
                 <button
                     onClick={handleSave}
                     className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold shadow transition-all"
                 >
-                    Sauvegarder et Appliquer
+                    Save and Apply
                 </button>
             </div>
 
             <p className="text-xs text-[var(--vscode-descriptionForeground)] leading-tight flex-shrink-0">
-                Modifiez la structure ci-dessous pour configurer la liste des entités acceptées par l'analyseur lexical RAG Graph.
+                Modify the structure below to configure the list of entities accepted by the RAG Graph lexical analyzer.
             </p>
 
             <div className="flex-1 border border-[var(--vscode-panel-border)] rounded overflow-hidden flex flex-col">

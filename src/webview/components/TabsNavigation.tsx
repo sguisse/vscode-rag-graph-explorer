@@ -7,8 +7,8 @@ interface TabsProps {
 
 export const TabsNavigation: React.FC<TabsProps> = ({ activeTab, setActiveTab }) => {
     const tabs = [
-        { id: 'explorer', label: '🕸️ Vue Explorateur' },
-        { id: 'ai', label: '✨ Assistant IA' },
+        { id: 'explorer', label: '🕸️ Explorer View' },
+        { id: 'ai', label: '✨ AI Assistant' },
         { id: 'config', label: '⚙️ Configuration' }
     ];
 

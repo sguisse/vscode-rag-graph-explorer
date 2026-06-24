@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { DataSet } from 'vis-network/standalone';
 import { Network } from 'vis-network';
 import { GraphNode, GraphEdge } from '../types';
+import {MaximizeIcon, MinimizeIcon, ListUnorderedIcon} from '@primer/octicons-react'
 
 interface ExplorerTabProps {
     nodes: GraphNode[];
@@ -27,9 +28,12 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
     const containerRef = useRef<HTMLDivElement>(null);
     const networkRef = useRef<Network | null>(null);
 
-    // Persistent datasets protect node layout metrics from being reset on selection changes
     const visNodesRef = useRef<DataSet<any>>(new DataSet([]));
     const visEdgesRef = useRef<DataSet<any>>(new DataSet([]));
+
+    const [isTreeCollapsed, setIsTreeCollapsed] = useState<boolean>(false);
+    const [isMaximized, setIsMaximized] = useState<boolean>(false);
+    const [showLegend, setShowLegend] = useState<boolean>(true);
 
     const [treeGrouping, setTreeGrouping] = useState<'folder' | 'extension' | 'root'>('folder');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -52,7 +56,51 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
         return { parentMap: pMap, childrenMap: cMap };
     }, [edges]);
 
-    // Graph engine initialization
+    const effectiveSelectedNodeIds = useMemo(() => {
+        const effective = new Set<string>(selectedNodeIds);
+
+        selectedNodeIds.forEach(startId => {
+            const startNode = nodes.find(n => n.id === startId);
+            if (!startNode || startNode.group !== 'file') return;
+
+            let currentChildLayer = [startId];
+            for (let d = 0; d < childDepth; d++) {
+                const nextLayer: string[] = [];
+                currentChildLayer.forEach(id => {
+                    edges.forEach(e => {
+                        if (e.from === id) {
+                            const cNode = nodes.find(n => n.id === e.to);
+                            if (cNode && cNode.group === 'file' && !effective.has(e.to)) {
+                                effective.add(e.to);
+                                nextLayer.push(e.to);
+                            }
+                        }
+                    });
+                });
+                currentChildLayer = nextLayer;
+            }
+
+            let currentParentLayer = [startId];
+            for (let d = 0; d < parentDepth; d++) {
+                const nextLayer: string[] = [];
+                currentParentLayer.forEach(id => {
+                    edges.forEach(e => {
+                        if (e.to === id) {
+                            const pNode = nodes.find(n => n.id === e.from);
+                            if (pNode && pNode.group === 'file' && !effective.has(e.from)) {
+                                effective.add(e.from);
+                                nextLayer.push(e.from);
+                            }
+                        }
+                    });
+                });
+                currentParentLayer = nextLayer;
+            }
+        });
+
+        return effective;
+    }, [selectedNodeIds, nodes, edges, parentDepth, childDepth]);
+
     useEffect(() => {
         if (!containerRef.current) return;
 
@@ -68,10 +116,24 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
                 smooth: { enabled: true, type: 'continuous', roundness: 0.5 }
             },
             groups: {
-                file: { color: { background: '#3b82f6', border: '#2563eb' }, shape: 'hexagon', size: 20 },
-                class: { color: { background: '#22c55e', border: '#16a34a' }, shape: 'box' },
-                method: { color: { background: '#a855f7', border: '#9333ea' } },
-                document: { color: { background: '#eab308', border: '#ca8a04' }, shape: 'note' }
+                file: {
+                    color: { background: '#3b82f6', border: '#2563eb' },
+                    shape: 'hexagon',
+                    size: 20,
+                    font: { color: 'rgba(59, 130, 246, 0.85)' }
+                },
+                class: {
+                    color: { background: '#22c55e', border: '#16a34a' },
+                    shape: 'box'
+                },
+                method: {
+                    color: { background: '#a855f7', border: '#9333ea' },
+                    font: { color: 'rgba(168, 85, 247, 0.85)' }
+                },
+                document: {
+                    color: { background: '#eab308', border: '#ca8a04' },
+                    shape: 'note'
+                }
             },
             physics: {
                 forceAtlas2Based: { gravitationalConstant: -50, centralGravity: 0.01, springLength: 100 },
@@ -83,7 +145,6 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
         const network = new Network(containerRef.current, { nodes: visNodesRef.current, edges: visEdgesRef.current }, options as any);
         networkRef.current = network;
 
-        // Permanently freeze simulation after early stabilization to allow free user positioning
         network.on("stabilizationIterationsDone", () => {
             network.setOptions({ physics: false } as any);
         });
@@ -111,7 +172,6 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
         return () => { network.destroy(); };
     }, []);
 
-    // Load initial topology payload only when raw structures alter
     useEffect(() => {
         visNodesRef.current.clear();
         visEdgesRef.current.clear();
@@ -136,7 +196,6 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
         }
     }, [nodes, edges]);
 
-    // Handle high-performance properties adjustment inline without resetting positions
     useEffect(() => {
         const nodeUpdates = nodes.map(n => {
             let isVisible = true;
@@ -153,22 +212,20 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
                 }
             }
 
-            const isSelected = selectedNodeIds.has(n.id);
+            const isSelected = effectiveSelectedNodeIds.has(n.id);
             return {
                 id: n.id,
                 hidden: !isVisible,
-                opacity: selectedNodeIds.size === 0 || isSelected ? 1 : 0.18,
+                opacity: effectiveSelectedNodeIds.size === 0 || isSelected ? 1 : 0.18,
                 shadow: isSelected,
                 borderWidth: isSelected ? 4 : 2
             };
         });
 
-        if (nodeUpdates.length > 0) {
-            visNodesRef.current.update(nodeUpdates);
-        }
+        if (nodeUpdates.length > 0) visNodesRef.current.update(nodeUpdates);
 
         const edgeUpdates = edges.map((e, index) => {
-            const isHighlighted = selectedNodeIds.has(e.from) && selectedNodeIds.has(e.to);
+            const isHighlighted = effectiveSelectedNodeIds.has(e.from) && effectiveSelectedNodeIds.has(e.to);
             return {
                 id: index,
                 color: isHighlighted ? '#3b82f6' : '#4b5563',
@@ -176,15 +233,21 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
             };
         });
 
-        if (edgeUpdates.length > 0) {
-            visEdgesRef.current.update(edgeUpdates);
-        }
+        if (edgeUpdates.length > 0) visEdgesRef.current.update(edgeUpdates);
 
-        // Synchronize active selection markers on the canvas layout
         if (networkRef.current) {
-            networkRef.current.selectNodes(Array.from(selectedNodeIds), false);
+            networkRef.current.selectNodes(Array.from(effectiveSelectedNodeIds), false);
         }
-    }, [selectedNodeIds, filters, ignoreCase, nodes, edges]);
+    }, [effectiveSelectedNodeIds, filters, ignoreCase, nodes, edges]);
+
+    useEffect(() => {
+        if (networkRef.current) {
+            setTimeout(() => {
+                networkRef.current?.setSize('100%', '100%');
+                networkRef.current?.redraw();
+            }, 100);
+        }
+    }, [isTreeCollapsed, isMaximized]);
 
     const strictlyVisibleIds = useMemo(() => {
         const visible = new Set<string>();
@@ -193,7 +256,7 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
                 visible.add(n.id);
                 return;
             }
-            if (showOnlySelected && !selectedNodeIds.has(n.id)) return;
+            if (showOnlySelected && !effectiveSelectedNodeIds.has(n.id)) return;
             if (filters.selectedTypes.length > 0 && !filters.selectedTypes.includes(n.group)) return;
             if (!filters.searchText) {
                 visible.add(n.id);
@@ -213,7 +276,7 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
             if (matches) visible.add(n.id);
         });
         return visible;
-    }, [nodes, filters, showOnlySelected, selectedNodeIds, ignoreCase]);
+    }, [nodes, filters, showOnlySelected, effectiveSelectedNodeIds, ignoreCase]);
 
     const hierarchicallyVisibleIds = useMemo(() => {
         const visible = new Set<string>(strictlyVisibleIds);
@@ -274,7 +337,7 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
 
             sortedRoots.forEach(rn => {
                 if (rn.group === 'file' || rn.group === 'document') {
-                    const ext = rn.label.includes('.') ? '.' + rn.label.split('.').pop() : 'Sans extension';
+                    const ext = rn.label.includes('.') ? '.' + rn.label.split('.').pop() : 'No extension';
                     if (!extGroups[ext]) extGroups[ext] = [];
                     extGroups[ext].push(rn);
                 } else {
@@ -381,13 +444,13 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
             if (el.isGroup) {
                 return (
                     <details key={el.id} className="w-full select-none" open>
-                        <summary className="flex items-center gap-2 py-1 px-1.5 rounded font-bold hover:bg-[var(--vscode-list-hoverBackground)] cursor-pointer text-xs transition-colors list-none [&::-webkit-details-marker]:hidden">
+                        <summary className="[&::-webkit-details-marker]:hidden flex items-center gap-2 px-1.5 py-1 rounded font-bold text-xs transition-colors cursor-pointer list-none hover:bg-[var(--vscode-list-hoverBackground)]">
                             <input
                                 type="checkbox"
                                 className="cursor-pointer"
                                 ref={input => {
                                     if (input) {
-                                        const selectedCount = el.allLeafIds.filter(id => selectedNodeIds.has(id)).length;
+                                        const selectedCount = el.allLeafIds.filter(id => effectiveSelectedNodeIds.has(id)).length;
                                         if (selectedCount === 0) {
                                             input.checked = false;
                                             input.indeterminate = false;
@@ -404,17 +467,17 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
                                 onClick={(e) => e.stopPropagation()}
                             />
                             <span className="text-xs">{el.icon}</span>
-                            <span className="truncate flex-1 text-[var(--vscode-foreground)]">{el.label}</span>
+                            <span className="flex-1 text-[var(--vscode-foreground)] truncate">{el.label}</span>
                         </summary>
-                        <div className="border-l border-[var(--vscode-panel-border)] ml-3.5 pl-2 mt-0.5 space-y-0.5">
+                        <div className="space-y-0.5 mt-0.5 ml-3.5 pl-2 border-[var(--vscode-panel-border)] border-l">
                             {renderTreeElements(el.children || [])}
                         </div>
                     </details>
                 );
             } else {
-                const isChecked = selectedNodeIds.has(el.id);
+                const isChecked = effectiveSelectedNodeIds.has(el.id);
                 return (
-                    <div key={el.id} className="flex items-center gap-2 px-1.5 py-1 rounded hover:bg-[var(--vscode-list-hoverBackground)] transition-colors group w-full">
+                    <div key={el.id} className="group flex items-center gap-2 px-1.5 py-1 rounded w-full transition-colors hover:bg-[var(--vscode-list-hoverBackground)]">
                         <input
                             type="checkbox"
                             checked={isChecked}
@@ -425,7 +488,7 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
                             {el.node?.group === 'file' ? '📂' : el.node?.group === 'class' ? '📦' : el.node?.group === 'method' ? '⚡' : '📄'}
                         </span>
                         <span
-                            className="text-xs truncate cursor-pointer flex-1 text-[var(--vscode-foreground)]"
+                            className="flex-1 text-[var(--vscode-foreground)] text-xs truncate cursor-pointer"
                             onClick={() => {
                                 if (networkRef.current) {
                                     (networkRef.current as any).focus(el.id, {
@@ -445,68 +508,110 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
     };
 
     return (
-        <div className="w-full h-full flex min-h-0 relative">
-            <div className="w-[35%] min-w-[250px] max-w-[70%] border-r border-[var(--vscode-panel-border)] bg-[var(--vscode-sideBar-background)] flex flex-col h-full overflow-hidden resize-x">
-                <div className="p-2 border-b border-[var(--vscode-panel-border)] bg-[var(--vscode-editorGroupHeader-tabsBackground)] flex flex-col gap-2 flex-shrink-0">
-                    <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold uppercase tracking-wider">Arbre Hiérarchique</span>
+        <div className="relative flex w-full h-full min-h-0">
+            <div className={`min-w-[250px] max-w-[70%] border-r border-[var(--vscode-panel-border)] bg-[var(--vscode-sideBar-background)] flex flex-col h-full overflow-hidden resize-x ${isTreeCollapsed || isMaximized ? 'hidden' : 'w-[35%]'}`}>
+                <div className="flex flex-col flex-shrink-0 gap-2 bg-[var(--vscode-editorGroupHeader-tabsBackground)] p-2 border-[var(--vscode-panel-border)] border-b">
+                    <div className="flex justify-between items-center">
+                        <span className="font-bold text-[11px] uppercase tracking-wider">Hierarchical Tree</span>
                         <div className="flex items-center gap-1">
-                            <button onClick={() => setSortOrder('asc')} className={`p-1 rounded text-xs ${sortOrder === 'asc' ? 'text-blue-500 bg-gray-700/40' : ''}`} title="Tri ASC">▲</button>
-                            <button onClick={() => setSortOrder('desc')} className={`p-1 rounded text-xs ${sortOrder === 'desc' ? 'text-blue-500 bg-gray-700/40' : ''}`} title="Tri DESC">▼</button>
-                            <button onClick={() => setIgnoreCase(!ignoreCase)} className={`p-1 text-xs font-mono rounded ${ignoreCase ? 'text-blue-500 bg-gray-700/40' : ''}`} title="Ignorer la casse">Aa</button>
-                            <button onClick={() => setShowOnlySelected(!showOnlySelected)} className={`codicon codicon-eye p-1 rounded ${showOnlySelected ? 'text-blue-500' : ''}`} title="Afficher uniquement les sélectionnés"></button>
-                            <button onClick={() => setSelectedNodeIds(new Set())} className="codicon codicon-trash p-1 rounded hover:text-red-500" title="Vider la sélection"></button>
+                            <button onClick={() => setSortOrder('asc')} className={`p-1 rounded text-xs ${sortOrder === 'asc' ? 'text-blue-500 bg-gray-700/40' : ''}`} title="Sort ASC">▲</button>
+                            <button onClick={() => setSortOrder('desc')} className={`p-1 rounded text-xs ${sortOrder === 'desc' ? 'text-blue-500 bg-gray-700/40' : ''}`} title="Sort DESC">▼</button>
+                            <button onClick={() => setIgnoreCase(!ignoreCase)} className={`p-1 text-xs font-mono rounded ${ignoreCase ? 'text-blue-500 bg-gray-700/40' : ''}`} title="Ignore case">Aa</button>
+                            <button onClick={() => setShowOnlySelected(!showOnlySelected)} className={`codicon codicon-eye p-1 rounded ${showOnlySelected ? 'text-blue-500 bg-gray-700/40' : ''}`} title="Show selected only"></button>
+                            <button onClick={() => setSelectedNodeIds(new Set())} className="p-1 rounded hover:text-red-500 codicon codicon-trash" title="Clear selection"></button>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-[var(--vscode-descriptionForeground)]">Regrouper par :</span>
+                        <span className="text-[10px] text-[var(--vscode-descriptionForeground)]">Group by:</span>
                         <select
                             value={treeGrouping}
                             onChange={(e: any) => setTreeGrouping(e.target.value)}
-                            className="bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] text-xs border border-[var(--vscode-input-border)] rounded px-1 outline-none flex-1 font-medium"
+                            className="flex-1 bg-[var(--vscode-input-background)] px-1 border border-[var(--vscode-input-border)] rounded outline-none font-medium text-[var(--vscode-input-foreground)] text-xs"
                         >
-                            <option value="folder">📂 Dossier</option>
+                            <option value="folder">📂 Folder</option>
                             <option value="extension">⚙️ Extension</option>
-                            <option value="root">📄 Racine (Flat)</option>
+                            <option value="root">📄 Root (Flat)</option>
                         </select>
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+                <div className="flex-1 space-y-0.5 p-2 overflow-y-auto">
                     {treeData.length > 0 ? renderTreeElements(treeData) : (
-                        <div className="text-center italic text-xs py-8 text-[var(--vscode-descriptionForeground)]">Aucun élément visible.</div>
+                        <div className="py-8 text-[var(--vscode-descriptionForeground)] text-xs text-center italic">No visible elements.</div>
                     )}
                 </div>
             </div>
 
-            <div className="flex-1 flex flex-col h-full overflow-hidden bg-[var(--vscode-editor-background)]">
-                <div className="h-9 px-3 bg-[var(--vscode-editorGroupHeader-tabsBackground)] border-b border-[var(--vscode-panel-border)] flex items-center justify-between flex-shrink-0">
+            <div className={`flex flex-col overflow-hidden bg-[var(--vscode-editor-background)] ${isMaximized ? 'fixed inset-0 z-40 w-screen h-screen' : 'flex-1 h-full'}`}>
+                <div className="flex flex-shrink-0 justify-between items-center bg-[var(--vscode-editorGroupHeader-tabsBackground)] px-3 border-[var(--vscode-panel-border)] border-b h-9">
                     <div className="flex items-center gap-4 text-xs">
-                        <span className="font-semibold text-[11px] uppercase tracking-wider text-[var(--vscode-descriptionForeground)]">Vue Topologique</span>
-                        <div className="flex items-center gap-1.5">
-                            <label className="text-[10px]">Appelants (Parents) :</label>
-                            <input type="number" min="0" max="5" value={parentDepth} onChange={(e) => setParentDepth(parseInt(e.target.value) || 0)} className="w-10 bg-[var(--vscode-input-background)] border border-[var(--vscode-input-border)] rounded text-center px-1 text-[11px]" />
+                        <div className="flex items-center gap-2">
+                            {!isMaximized && (
+                                <button
+                                    onClick={() => setIsTreeCollapsed(!isTreeCollapsed)}
+                                    className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] p-1 rounded text-[var(--vscode-foreground)] text-sm codicon codicon-menu"
+                                    title={isTreeCollapsed ? "Show tree" : "Hide tree"}
+                                />
+                            )}
+                            <span className="font-semibold text-[11px] text-[var(--vscode-descriptionForeground)] uppercase tracking-wider">Topological View</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                            <label className="text-[10px]">Appelés (Enfants) :</label>
-                            <input type="number" min="0" max="5" value={childDepth} onChange={(e) => setChildDepth(parseInt(e.target.value) || 0)} className="w-10 bg-[var(--vscode-input-background)] border border-[var(--vscode-input-border)] rounded text-center px-1 text-[11px]" />
+                            <label className="text-[10px]">Callers (Parents):</label>
+                            <input type="number" min="0" max="5" value={parentDepth} onChange={(e) => setParentDepth(parseInt(e.target.value) || 0)} className="bg-[var(--vscode-input-background)] px-1 border border-[var(--vscode-input-border)] rounded w-10 text-[11px] text-center" />
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <label className="text-[10px]">Callees (Children):</label>
+                            <input type="number" min="0" max="5" value={childDepth} onChange={(e) => setChildDepth(parseInt(e.target.value) || 0)} className="bg-[var(--vscode-input-background)] px-1 border border-[var(--vscode-input-border)] rounded w-10 text-[11px] text-center" />
                         </div>
                     </div>
-                    <button onClick={() => networkRef.current?.fit({ animation: true })} className="px-2 py-0.5 bg-[var(--vscode-button-secondaryBackground)] hover:bg-[var(--vscode-button-secondaryHoverBackground)] text-[var(--vscode-button-secondaryForeground)] text-[11px] rounded flex items-center gap-1">
-                        <span className="codicon codicon-screen-full text-[11px]"></span> Recadrer
-                    </button>
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={() => networkRef.current?.fit({ animation: true })}
+                            className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] p-1 rounded text-[var(--vscode-foreground)]"
+                            title="Recenter"
+                        >
+                            <span className="text-[14px] codicon codicon-screen-full"></span>
+                        </button>
+                        <button
+                            onClick={() => setIsMaximized(!isMaximized)}
+                            className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] p-1 rounded text-[var(--vscode-foreground)]"
+                            title={isMaximized ? "Minimize" : "Maximize"}
+                        >
+                            {isMaximized ? (
+                                <MinimizeIcon />
+                            ) : (
+                                <MaximizeIcon />
+                            )}
+                        </button>
+                        <button
+        onClick={() => setShowLegend(!showLegend)}
+        className={`flex justify-center items-center p-1 rounded ${showLegend ? 'text-blue-500 bg-gray-700/40' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)] text-[var(--vscode-foreground)]'}`}
+        title="Legend"
+    >
+        <ListUnorderedIcon />
+    </button>
+                    </div>
                 </div>
 
-                <div className="flex-1 relative bg-[var(--vscode-editor-background)]">
+                <div className="relative flex-1 bg-[var(--vscode-editor-background)]">
                     <div ref={containerRef} className="absolute inset-0 outline-none" />
 
-                    <div className="absolute bottom-4 left-4 p-3 bg-[var(--vscode-editorWidget-background)]/80 backdrop-blur-md border border-[var(--vscode-panel-border)] rounded shadow-xl text-[11px] pointer-events-none space-y-1.5 z-10">
-                        <span className="font-bold block border-b border-gray-600/30 pb-1 mb-1">Légende Topologique</span>
-                        <div className="flex items-center gap-2">📂 <span className="w-3 h-3 bg-[#3b82f6] rounded-sm"></span> Fichier</div>
-                        <div className="flex items-center gap-2">📦 <span className="w-3 h-3 bg-[#22c55e] rounded-sm"></span> Classe</div>
-                        <div className="flex items-center gap-2">⚡ <span className="w-3 h-3 bg-[#a855f7] rounded-sm"></span> Méthode</div>
-                        <div className="flex items-center gap-2">📄 <span className="w-3 h-3 bg-[#eab308] rounded-sm"></span> Rationale / Doc</div>
-                    </div>
+                    {showLegend && (
+                        <div className="bottom-4 left-4 z-10 absolute space-y-1.5 bg-[var(--vscode-editorWidget-background)]/90 shadow-xl backdrop-blur-md p-3 border border-[var(--vscode-panel-border)] rounded w-44 text-[11px]">
+                            <div className="flex justify-between items-center mb-1 pb-1 border-gray-600/30 border-b">
+                                <span className="block font-bold">Topological Legend</span>
+                                <button
+                                    onClick={() => setShowLegend(false)}
+                                    className="hover:bg-[var(--vscode-toolbar-hoverBackground)] p-0.5 rounded text-[10px] cursor-pointer codicon codicon-close"
+                                    title="Close legend"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2">📂 <span className="bg-[#3b82f6] rounded-sm w-3 h-3"></span> File</div>
+                            <div className="flex items-center gap-2">📦 <span className="bg-[#22c55e] rounded-sm w-3 h-3"></span> Class</div>
+                            <div className="flex items-center gap-2">⚡ <span className="bg-[#a855f7] rounded-sm w-3 h-3"></span> Method</div>
+                            <div className="flex items-center gap-2">📄 <span className="bg-[#eab308] rounded-sm w-3 h-3"></span> Rationale / Doc</div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

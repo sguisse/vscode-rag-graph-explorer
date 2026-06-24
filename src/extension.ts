@@ -15,6 +15,9 @@ export function activate(context: vscode.ExtensionContext) {
             }
         );
 
+        // Force VS Code to lock and pin the active webview panel tab inside the current group
+        vscode.commands.executeCommand('workbench.action.pinEditor');
+
         panel.webview.html = getWebviewContent(panel.webview, context.extensionPath);
 
         panel.webview.onDidReceiveMessage(message => {
@@ -44,7 +47,7 @@ function getWebviewContent(webview: vscode.Webview, extensionPath: string): stri
     const scriptUri = webview.asWebviewUri(vscode.Uri.file(path.join(extensionPath, 'dist', 'webview.js')));
 
     return `<!DOCTYPE html>
-    <html lang="fr" class="h-full">
+    <html lang="en" class="h-full">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
