@@ -1,0 +1,90 @@
+{
+    "name": "rag-graph-explorer",
+    "license": "MIT",
+    "displayName": "Graphify Explorer",
+    "description": "Expert Node Navigator and Architecture Explorer via RAG and Gemini",
+    "version": "1.0.0",
+    "publisher": "sguisse",
+    "engines": {
+        "vscode": "^1.80.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [],
+    "main": "./dist/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "ragGraphExplorer.openTool",
+                "title": "RAG Graph Explorer: Open UI",
+                "icon": "$(export)"
+            }
+        ],
+        "menus": {
+            "editor/title": [
+                {
+                    "command": "ragGraphExplorer.openTool",
+                    "group": "navigation"
+                }
+            ],
+            "explorer/context": [
+                {
+                    "command": "ragGraphExplorer.openTool",
+                    "group": "navigation@0"
+                }
+            ]
+        },
+        "configuration": {
+            "title": "RAG Graph Explorer",
+            "properties": {
+                "ragGraphExplorer.EntitiesTypesList": {
+                    "type": "array",
+                    "description": "List of predefined entity types for the graph exploration.",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": [
+                        "file",
+                        "class",
+                        "method",
+                        "document"
+                    ]
+                },
+                "ragGraphExplorer.regexFilterEnabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Enable Regex matching in the filter bar by default."
+                },
+                "ragGraphExplorer.TreeFilterEnabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Apply search filters on the Tree View by default."
+                },
+                "ragGraphExplorer.geminiApiKey": {
+                    "type": "string",
+                    "default": "",
+                    "description": "API Key for Gemini Assistant analysis."
+                }
+            }
+        }
+    },
+    "scripts": {
+        "compile": "webpack",
+        "watch": "webpack --watch",
+        "package": "webpack --mode production",
+        "vscode:prepublish": "npm run package"
+    },
+    "devDependencies": {
+        "@types/mocha": "^10.0.10",
+        "@types/node": "^18.19.0",
+        "@types/vscode": "^1.80.0",
+        "ts-loader": "^9.4.3",
+        "typescript": "^5.1.3",
+        "webpack": "^5.88.0",
+        "webpack-cli": "^5.1.4"
+    },
+    "dependencies": {
+        "@vscode/vsce": "^3.9.2"
+    }
+}

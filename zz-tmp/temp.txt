@@ -1,0 +1,114 @@
+Tu es un architecte expert en development REACT et en dev d'Extention VS Code Native
+ je voudrais qu tu revois le plugin ci joint from scratch pour qu'il respecte ces guidelines :
+
+# 📊 Description de l'Architecture UI : Graph RAG Explorer
+
+Ce document décrit la structure visuelle, l'agencement (layout) et les comportements adaptatifs de l'application Web *Graph RAG Explorer*. L'interface est conçue pour occuper 100% de la hauteur de l'écran sans défilement global (le défilement est géré localement dans les panneaux). Elle gère nativement un mode Clair/Sombre.
+
+## 🏗️ Structure Globale (Layout Principal)
+Le conteneur racine (`<body>`) est une colonne flexible (`flex-col`) de la hauteur de l'écran (`100vh`), avec un débordement masqué (`overflow-hidden`).
+
+Il est divisé en deux parties principales :
+1. **Header (En-tête)** : Fixe en haut.
+2. **Main Content (Contenu Principal)** : Occupe tout l'espace restant (`flex-grow`, `flex-1`), contenant les filtres, le système d'onglets et les panneaux de contenu.
+
+---
+
+## 🔝 En-tête (Header)
+Barre horizontale fixée en haut (`flex`, `justify-between`, `items-center`, `border-b`).
+* **Zone Gauche** :
+    * Logo : Carré aux coins arrondis contenant la lettre "G".
+    * Titre principal : "Graph RAG" en gras, suivi du sous-titre "Expert Node Navigator".
+* **Zone Droite (Actions Globales)** :
+    * Texte informatif : "Outil d'analyse structurelle" (masqué sur petits écrans).
+    * Bouton "Toggle Thème" : Bouton icône (Soleil/Lune) pour basculer entre mode clair et sombre.
+    * Bouton "Voir Sélection" : Bouton d'action ouvrant une fenêtre modale.
+    * Bouton "Charger graph.json" : Bouton encapsulant un champ de type `input[type="file"]`.
+
+---
+
+## 🎛️ Contenu Principal (Main Workspace)
+Conteneur en colonne (`flex-col`) occupant le reste de l'écran. Il est divisé en trois strates verticales :
+
+### 1. Bloc "Filtres d'Exploration" (Collapsible)
+Panneau rétractable (comportement type `<details>`/`<summary>`) fixe en haut de la zone de travail.
+* **En-tête du bloc** : Titre "🔍 Filtres d'Exploration" cliquable pour replier/déplier.
+* **Contenu du bloc** : Grille responsive (1 colonne sur mobile, 3 colonnes sur desktop).
+    * *Colonne 1 (Types)* : Liste à sélection multiple (Fichier, Classe, Méthode, etc.) + texte d'aide.
+    * *Colonne 2 (Recherche)* :
+        * Menu déroulant (Mode : Contient, Commence par, etc.).
+        * Champ de texte `input` couplé avec un bouton "Effacer (✕)" accolé.
+        * Case à cocher (Toggle) "Activer Regex".
+    * *Colonne 3 (Cibles)* : Deux cases à cocher ("Appliquer sur l'Arbre", "Appliquer sur le Graphe").
+
+### 2. Navigation par Onglets (Tabs Header)
+Barre d'onglets horizontale au-dessus du panneau de contenu principal (`flex`, `border-b`, `overflow-x-auto` pour le scroll horizontal si l'écran est petit).
+* **Onglet 1** : "🕸️ Vue Explorateur" (Actif par défaut).
+* **Onglet 2** : "✨ Assistant IA".
+* **Onglet 3** : "⚙️ Configuration".
+* *Styling d'état* : L'onglet actif possède une bordure inférieure colorée, les onglets inactifs ont une bordure transparente.
+
+### 3. Conteneur des Onglets (Tab Content Area)
+Zone relative (`position: relative`, `flex-1`) qui remplit l'espace restant sous les onglets. Seul le contenu de l'onglet actif est affiché (via ajout/retrait des classes CSS `flex` ou `hidden`).
+
+---
+
+## 🗂️ Détail de l'Onglet 1 : "Vue Explorateur" (Split Pane)
+Ce panneau occupe 100% de l'espace disponible (`absolute inset-0`, `flex`). Il est divisé en deux panneaux côte à côte via un système de "Split Pane" redimensionnable.
+
+### Panneau Gauche : Arbre Hiérarchique (Tree View)
+Panneau redimensionnable horizontalement (via `resize-x` en CSS natif). Largeur par défaut : 35% (min: 250px, max: 70%).
+* **Barre d'outils de l'arbre** (fixe en haut du panneau) :
+    * Menu déroulant "Regrouper par" (Dossier, Extension, Racine).
+    * Groupe de boutons de Tri : "ASC ▲" et "DESC ▼".
+    * Bouton icône "Aa" (Toggle pour "Ignorer la casse").
+    * Bouton icône "Œil/Check" (Toggle pour "Afficher uniquement sélectionnés").
+    * Bouton icône "Corbeille/Refresh" (Effacer les sélections).
+* **Zone de contenu de l'arbre** (`overflow-y-auto`) :
+    * Contient une liste hiérarchique imbriquée.
+    * Chaque ligne possède une case à cocher (gérant 3 états : coché, décoché, indéterminé), une icône d'entité, et un libellé cliquable.
+
+### Panneau Droit : Le Graphe (Network Canvas)
+Occupe l'espace restant (`flex-1`).
+* **Barre d'outils du graphe** (fixe en haut du panneau) :
+    * Champ numérique : "Appelants (Parents)".
+    * Champ numérique : "Appelés (Enfants)".
+    * Bouton d'action : "Recadrer".
+* **Zone Canvas** :
+    * Contient le graphe de nœuds et de liens (géré par une librairie type Vis.js).
+    * **Légende flottante** : Boîte semi-transparente positionnée en bas à gauche de la zone du canvas (`absolute bottom-4 left-4`), listant les types de nœuds et leurs couleurs.
+
+---
+
+## 🤖 Détail de l'Onglet 2 : "Assistant IA"
+Layout divisé en deux colonnes sur Desktop (`md:flex-row`), une colonne sur mobile (`flex-col`).
+* **Panneau Gauche (Actions)** :
+    * Titre "✨ Assistant Gemini" et description.
+    * Gros bouton d'appel à l'action "Lancer l'analyse".
+* **Panneau Droit (Résultats)** :
+    * Conteneur avec un fond contrasté et des bordures.
+    * En-tête "Rapport d'analyse".
+    * Zone de contenu scrollable verticalement affichant du texte (Markdown formaté) ou un état de chargement.
+
+---
+
+## ⚙️ Détail de l'Onglet 3 : "Configuration"
+Layout en colonne simple (`flex-col`, scrollable).
+* **En-tête** :
+    * Titre : "Configuration des Types de Nœuds".
+    * Bouton : "Sauvegarder et Appliquer" aligné à droite.
+* **Instructions** : Paragraphe de texte explicatif.
+* **Éditeur** : Large zone de texte (`<textarea>`) occupant l'espace restant (`flex-1`), utilisant une police à chasse fixe (monospace) pour éditer du JSON.
+
+---
+
+## 🪟 Modale : "Entités Sélectionnées" (Popup)
+Superposition plein écran bloquante (`fixed inset-0`, fond semi-transparent noir).
+* **Boîte de dialogue (Modal Card)** :
+    * Centrée à l'écran, largeur maximale contrainte (`max-w-3xl`), hauteur maximale contrainte à l'écran (`max-h-full`). Agencement en colonne (`flex-col`).
+    * **En-tête** : Titre et icône, bouton "Fermer (X)" à droite.
+    * **Barre de Filtres (Fixe sous l'en-tête)** : Ligne contenant le texte "Filtrer par type :" suivi d'une série de cases à cocher générées dynamiquement (une pour chaque type d'entité).
+    * **Contenu de la liste** (`overflow-y-auto`) :
+        * Texte informatif : Compteur du type "X élément(s) affiché(s) sur Y".
+        * Liste verticale (UI type `<ul>/<li>`). Chaque élément est une "carte" horizontale contenant une icône, le nom de l'entité, et un badge aligné à droite indiquant son chemin de fichier.
+    * **Pied de page (Footer)** : Fond distinct, contient un bouton "Fermer" aligné à droite.
