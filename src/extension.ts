@@ -6,7 +6,7 @@ export function activate(context: vscode.ExtensionContext) {
     let disposable = vscode.commands.registerCommand('graphRagExplorer.openTool', () => {
         const panel = vscode.window.createWebviewPanel(
             'graphRagExplorer',
-            'RAG Graph Explorer',
+            'Graph RAG Explorer',
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
@@ -15,7 +15,7 @@ export function activate(context: vscode.ExtensionContext) {
             }
         );
 
-        // Dynamically evaluate pinning rule based on user unified configuration settings
+        // Dynamically evaluate pinning rule based on user configuration settings
         const graphConfig = vscode.workspace.getConfiguration('graphRagExplorer');
         if (graphConfig.get('pinFilesExporter') !== false) {
             vscode.commands.executeCommand('workbench.action.pinEditor');
@@ -89,7 +89,10 @@ function sendConfig(panel: vscode.WebviewPanel) {
             TreeFilterEnabled: config.get('TreeFilterEnabled'),
             geminiApiKey: config.get('geminiApiKey'),
             tooltipDelay: config.get('tooltipDelay') ?? 2000,
-            pinFilesExporter: config.get('pinFilesExporter') ?? true
+            pinFilesExporter: config.get('pinFilesExporter') ?? true,
+            graphLegendEnabled: config.get('graphLegendEnabled') ?? true,
+            callersDepth: config.get('callersDepth') ?? 1,
+            calleesDepth: config.get('calleesDepth') ?? 1
         }
     });
 }
@@ -102,7 +105,7 @@ function getWebviewContent(webview: vscode.Webview, extensionPath: string): stri
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>RAG Graph Explorer</title>
+        <title>Graph RAG Explorer</title>
         <link href="https://cdn.jsdelivr.net/npm/@vscode/codicons/dist/codicon.css" rel="stylesheet">
         <script src="https://cdn.tailwindcss.com"></script>
         <script>tailwind.config = { darkMode: 'class' }</script>

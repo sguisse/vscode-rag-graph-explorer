@@ -74,6 +74,21 @@
           "type": "boolean",
           "default": true,
           "description": "Automatically pin the Graph RAG Explorer UI tab when opened to prevent it from being overwritten or closed as a preview tab."
+        },
+        "graphRagExplorer.graphLegendEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Display the visual topological legend by default upon launch."
+        },
+        "graphRagExplorer.callersDepth": {
+          "type": "number",
+          "default": 1,
+          "description": "Default callers upstream lookup relationship parsing depth."
+        },
+        "graphRagExplorer.calleesDepth": {
+          "type": "number",
+          "default": 1,
+          "description": "Default callees downstream lookup relationship parsing depth."
         }
       }
     }

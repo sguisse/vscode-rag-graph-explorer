@@ -10,6 +10,7 @@ interface ExplorerTabProps {
     selectedNodeIds: Set<string>;
     setSelectedNodeIds: React.Dispatch<React.SetStateAction<Set<string>>>;
     filters: any;
+    config?: any;
 }
 
 interface TreeElement {
@@ -23,7 +24,7 @@ interface TreeElement {
 }
 
 export const ExplorerTab: React.FC<ExplorerTabProps> = ({
-    nodes, edges, selectedNodeIds, setSelectedNodeIds, filters
+    nodes, edges, selectedNodeIds, setSelectedNodeIds, filters, config
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const networkRef = useRef<Network | null>(null);
@@ -33,16 +34,23 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
 
     const [isTreeCollapsed, setIsTreeCollapsed] = useState<boolean>(false);
     const [isMaximized, setIsMaximized] = useState<boolean>(false);
-    const [showLegend, setShowLegend] = useState<boolean>(true);
+    const [showLegend, setShowLegend] = useState<boolean>(config?.graphLegendEnabled ?? true);
 
     const [treeGrouping, setTreeGrouping] = useState<'folder' | 'extension' | 'root'>('folder');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
     const [ignoreCase, setIgnoreCase] = useState(true);
     const [showOnlySelected, setShowOnlySelected] = useState(false);
 
-    const [parentDepth, setParentDepth] = useState<number>(0);
-    const [childDepth, setChildDepth] = useState<number>(0);
+    const [parentDepth, setParentDepth] = useState<number>(config?.callersDepth ?? 1);
+    const [childDepth, setChildDepth] = useState<number>(config?.calleesDepth ?? 1);
     const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+    useEffect(() => {
+        if (config) {
+            setShowLegend(config.graphLegendEnabled ?? true);
+            setParentDepth(config.callersDepth ?? 1);
+            setChildDepth(config.calleesDepth ?? 1);
+        }
+    }, [config]);
 
     const { parentMap, childrenMap } = useMemo(() => {
         const pMap: { [key: string]: string } = {};
@@ -571,7 +579,7 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
                 }
             `}} />
 
-            <div className={`min-w-[250px] max-w-[70%] border-r border-[var(--vscode-panel-border)] bg-[var(--vscode-sideBar-background)] flex flex-col h-full overflow-hidden resize-x ${isTreeCollapsed || isMaximized ? 'hidden' : 'w-[35%]'}`}>
+            <div className={`min-w-[250px] max-w-[70%] border-r border-[var(--vscode-panel-border)] bg-[var(--vscode-sideBar-background)] flex flex-col h-full overflow-hidden resize-x ${isTreeCollapsed || isMaximized ? 'hidden' : 'w-[460px]'}`}>
                 <div className="flex flex-col flex-shrink-0 justify-center bg-[var(--vscode-editorGroupHeader-tabsBackground)] px-2 border-[var(--vscode-panel-border)] border-b h-9">
                     <div className="flex justify-between items-center w-full">
                         <span className="font-bold text-[11px] uppercase tracking-wider">Tree&nbsp;View</span>
@@ -590,7 +598,7 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
                             <select
                                 value={treeGrouping}
                                 onChange={(e: any) => setTreeGrouping(e.target.value)}
-                                className="bg-[var(--vscode-input-background)] px-2 py-1 border border-[var(--vscode-input-border)] rounded outline-none max-w-[95px] h-7 font-medium text-[var(--vscode-input-foreground)] text-xs"
+                                className="bg-[var(--vscode-input-background)] px-2 py-1 border border-[var(--vscode-input-border)] rounded outline-none max-w-[95px] h-6 font-medium text-[var(--vscode-input-foreground)] text-xs"
                                 data-tooltip="Tree grouping mode"
                             >
                                 <option value="folder">📂 Folder</option>
@@ -649,10 +657,10 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
                             <input
                                 type="number"
                                 min="0"
-                                max="5"
+                                max="20"
                                 value={parentDepth}
                                 onChange={(e) => setParentDepth(parseInt(e.target.value) || 0)}
-                                className="bg-[var(--vscode-input-background)] border border-[var(--vscode-input-border)] focus:border-[var(--vscode-focusBorder)] rounded outline-none w-12 h-7 font-semibold text-[var(--vscode-input-foreground)] text-xs text-center"
+                                className="bg-[var(--vscode-input-background)] border border-[var(--vscode-input-border)] focus:border-[var(--vscode-focusBorder)] rounded outline-none w-12 h-6 font-semibold text-[var(--vscode-input-foreground)] text-xs text-center"
                             />
                         </div>
 
@@ -661,10 +669,10 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
                             <input
                                 type="number"
                                 min="0"
-                                max="5"
+                                max="20"
                                 value={childDepth}
                                 onChange={(e) => setChildDepth(parseInt(e.target.value) || 0)}
-                                className="bg-[var(--vscode-input-background)] border border-[var(--vscode-input-border)] focus:border-[var(--vscode-focusBorder)] rounded outline-none w-12 h-7 font-semibold text-[var(--vscode-input-foreground)] text-xs text-center"
+                                className="bg-[var(--vscode-input-background)] border border-[var(--vscode-input-border)] focus:border-[var(--vscode-focusBorder)] rounded outline-none w-12 h-6 font-semibold text-[var(--vscode-input-foreground)] text-xs text-center"
                             />
                         </div>
                     </div>

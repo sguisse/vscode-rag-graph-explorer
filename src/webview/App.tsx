@@ -19,7 +19,10 @@ export const App: React.FC = () => {
         regexFilterEnabled: false,
         TreeFilterEnabled: true,
         geminiApiKey: '',
-        tooltipDelay: 2000
+        tooltipDelay: 2000,
+        graphLegendEnabled: true,
+        callersDepth: 1,
+        calleesDepth: 1
     });
 
     const [nodes, setNodes] = useState<GraphNode[]>([]);
@@ -37,7 +40,7 @@ export const App: React.FC = () => {
         window.addEventListener('message', (event) => {
             const message = event.data;
             if (message.command === 'setConfig') {
-                setConfig(message.config);
+                setConfig(message.command === 'setConfig' ? message.config : message.config);
                 setIsRegexEnabled(message.config.regexFilterEnabled);
                 setApplyOnTree(message.config.TreeFilterEnabled);
             }
@@ -123,7 +126,7 @@ export const App: React.FC = () => {
     };
 
     return (
-        <div className="h-screen w-screen flex flex-col overflow-hidden text-[var(--vscode-foreground)] bg-[var(--vscode-editor-background)]">
+        <div className="flex flex-col bg-[var(--vscode-editor-background)] w-screen h-screen overflow-hidden text-[var(--vscode-foreground)]">
             <Header
                 theme={theme}
                 toggleTheme={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
@@ -132,7 +135,7 @@ export const App: React.FC = () => {
                 selectedNodeIds={selectedNodeIds}
             />
 
-            <main className="flex-1 flex flex-col min-h-0">
+            <main className="flex flex-col flex-1 min-h-0">
                 <ExplorationFilters
                     typesList={config.EntitiesTypesList || ['file', 'class', 'method', 'document']}
                     selectedTypes={selectedTypes}
@@ -151,7 +154,7 @@ export const App: React.FC = () => {
 
                 <TabsNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
 
-                <div className="flex-1 relative min-h-0">
+                <div className="relative flex-1 min-h-0">
                     <div className={activeTab === 'explorer' ? 'absolute inset-0 flex' : 'hidden'}>
                         <ExplorerTab
                             nodes={nodes}
@@ -159,6 +162,7 @@ export const App: React.FC = () => {
                             selectedNodeIds={selectedNodeIds}
                             setSelectedNodeIds={setSelectedNodeIds}
                             filters={{ selectedTypes, searchMode, searchText, isRegexEnabled, applyOnTree, applyOnGraph }}
+                            config={config}
                         />
                     </div>
                     <div className={activeTab === 'ai' ? 'absolute inset-0 flex' : 'hidden'}>
