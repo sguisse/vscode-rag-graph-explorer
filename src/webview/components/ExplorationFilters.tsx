@@ -32,95 +32,140 @@ export const ExplorationFilters: React.FC<FiltersProps> = ({
     }, [selectedTypes, typesList, searchText, searchMode, isRegexEnabled, applyOnTree, applyOnGraph]);
 
     return (
-        /* Le panel prend désormais toute la largeur disponible mais applique un padding précis en x de 10px (px-[10px]) */
-        <div className="w-full bg-[var(--vscode-editor-background)] px-[10px] pt-2 flex-shrink-0 z-30 relative">
-            <div className={`w-full border border-[var(--vscode-panel-border)] rounded-md bg-[var(--vscode-editorWidget-background)] overflow-hidden transition-shadow duration-300 ${isOpen ? 'shadow-[0_4px_10px_var(--vscode-widget-shadow)]' : ''}`}>
+        <div className="z-30 relative flex-shrink-0 bg-[var(--vscode-editor-background)] px-[10px] pt-2 w-full">
+
+            {/* Injection des styles CSS partagés de l'extension Files Exporter pour garantir une uniformité parfaite */}
+            <style dangerouslySetInnerHTML={{__html: `
+                .collapsible-block-header {
+                    font-size: 14px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    border-bottom: 1px solid var(--vscode-panel-border);
+                    padding-bottom: 5px;
+                    margin-bottom: 10px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    user-select: none;
+                    box-shadow: 0px 4px 5px -3px rgba(0, 0, 0, 0.25);
+                }
+                .collapsible-title-group {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                }
+                .collapsible-summary-text {
+                    font-size: 11px;
+                    font-weight: normal;
+                    color: var(--vscode-descriptionForeground, #858585);
+                    font-style: italic;
+                    padding-left: 10px;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    max-width: 65%;
+                    text-align: right;
+                }
+                .collapsible-block-content {
+                    margin-bottom: 15px;
+                }
+            `}} />
+
+            <div className="collapsible-block" id="block-filters">
+
+                {/* Header structurel strict aligné sur l'écosystème Files Exporter */}
                 <div
-                    className="flex items-center justify-between px-3 py-2 cursor-pointer select-none font-semibold text-xs bg-[var(--vscode-editorGroupHeader-tabsBackground)] hover:bg-[var(--vscode-list-hoverBackground)] transition-colors"
+                    className="collapsible-block-header"
                     onClick={() => setIsOpen(!isOpen)}
-                    data-tooltip="Regular Expression masks defining targeted directories and source formatting inclusions or exclusions lists."
                 >
-                    <div className="flex items-center gap-2 flex-shrink-0 text-[var(--vscode-foreground)]">
-                        <span className={`codicon transition-transform duration-200 ${isOpen ? 'codicon-chevron-down' : 'codicon-chevron-right'}`}></span>
-                        <span className="tracking-wide">🔍 Filters &amp; Scope Constraints</span>
+                    <div className="collapsible-title-group">
+                        <span className={`codicon ${isOpen ? 'codicon-chevron-down' : 'codicon-chevron-right'}`}></span>
+                        <span>🔍 Filters &amp; Scope Constraints</span>
                     </div>
 
+                    {/* Restauration du résumé à droite en mode replié */}
                     {!isOpen && (
-                        <span className="text-[10px] font-normal text-[var(--vscode-descriptionForeground)] truncate pl-4 text-right max-w-[70%] bg-[var(--vscode-badge-background)]/10 px-2 py-0.5 rounded-full">
-                            <strong className="text-[var(--vscode-foreground)]">Types:</strong> {filterSummary.typesStr} <span className="text-[var(--vscode-panel-border)] mx-1">|</span>
-                            <strong className="text-[var(--vscode-foreground)]">Search:</strong> {filterSummary.queryStr} <span className="text-[var(--vscode-panel-border)] mx-1">|</span>
-                            <strong className="text-[var(--vscode-foreground)]">Targets:</strong> {filterSummary.targetsStr}
+                        <span className="collapsible-summary-text">
+                            Types: {filterSummary.typesStr} | Search: {filterSummary.queryStr} | Targets: {filterSummary.targetsStr}
                         </span>
                     )}
                 </div>
 
                 {isOpen && (
-                    <div className="p-3 grid grid-cols-1 md:grid-cols-3 gap-4 bg-[var(--vscode-editor-background)]/30">
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] uppercase font-bold tracking-wider text-[var(--vscode-descriptionForeground)]">Entity Types</label>
-                            <select
-                                multiple
-                                value={selectedTypes}
-                                onChange={(e) => setSelectedTypes(Array.from(e.target.selectedOptions, option => option.value))}
-                                className="bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] border border-[var(--vscode-input-border)] rounded-md p-1 text-xs min-h-[65px] h-[80px] resize-y outline-none focus:border-blue-500 transition-all shadow-inner"
-                            >
-                                {typesList.map(type => (
-                                    <option key={type} value={type} className="px-1.5 py-0.5 rounded-sm hover:bg-[var(--vscode-list-hoverBackground)] capitalize cursor-pointer">{type}</option>
-                                ))}
-                            </select>
-                        </div>
+                    <div className="collapsible-block-content">
+                        <div className="gap-4 grid grid-cols-1 md:grid-cols-3 bg-[var(--vscode-editor-background)]/30 p-1 rounded-md">
 
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] uppercase font-bold tracking-wider text-[var(--vscode-descriptionForeground)]">Text Search</label>
+                            {/* Colonne 1 : Types de nœuds */}
+                            <div className="flex flex-col gap-1.5">
+                                <label className="font-bold text-[10px] text-[var(--vscode-descriptionForeground)] uppercase tracking-wider">Entity Types</label>
+                                <select
+                                    multiple
+                                    value={selectedTypes}
+                                    onChange={(e) => setSelectedTypes(Array.from(e.target.selectedOptions, option => option.value))}
+                                    className="bg-[var(--vscode-input-background)] shadow-inner p-1 border border-[var(--vscode-input-border)] focus:border-blue-500 rounded-md outline-none h-[90px] min-h-[70px] text-[var(--vscode-input-foreground)] text-xs transition-all resize-y"
+                                >
+                                    {typesList.map(type => (
+                                        <option key={type} value={type} className="px-1.5 py-0.5 rounded-sm capitalize cursor-pointer hover:bg-[var(--vscode-list-hoverBackground)]">{type}</option>
+                                    ))}
+                                </select>
+                            </div>
 
-                            <select
-                                value={searchMode}
-                                onChange={(e) => setSearchMode(e.target.value)}
-                                className="w-full bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] border border-[var(--vscode-input-border)] rounded-md px-2 text-xs outline-none h-7 focus:border-blue-500 transition-all shadow-sm"
-                            >
-                                <option value="contains">Contains</option>
-                                <option value="starts">Starts with</option>
-                                <option value="exact">Exactly</option>
-                            </select>
+                            {/* Colonne 2 : Moteur de recherche textuel (Combo en haut, Filter en dessous) */}
+                            <div className="flex flex-col gap-1.5">
+                                <label className="font-bold text-[10px] text-[var(--vscode-descriptionForeground)] uppercase tracking-wider">Text Search</label>
 
-                            <div className="relative flex items-center w-full shadow-sm">
-                                <input
-                                    type="text"
-                                    value={searchText}
-                                    onChange={(e) => setSearchText(e.target.value)}
-                                    placeholder="Filter..."
-                                    className="w-full bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] border border-[var(--vscode-input-border)] rounded-md pl-2 pr-7 h-7 text-xs outline-none focus:border-blue-500 transition-all"
-                                />
-                                {searchText && (
-                                    <button
-                                        onClick={() => setSearchText('')}
-                                        className="absolute right-1 flex items-center justify-center p-1 rounded-sm text-[var(--vscode-foreground)] opacity-50 hover:opacity-100 hover:bg-[var(--vscode-toolbar-hoverBackground)] transition-all cursor-pointer text-[10px] codicon codicon-close"
-                                        data-tooltip="Reset filter query"
+                                <select
+                                    value={searchMode}
+                                    onChange={(e) => setSearchMode(e.target.value)}
+                                    className="bg-[var(--vscode-input-background)] shadow-sm px-2 border border-[var(--vscode-input-border)] focus:border-blue-500 rounded-md outline-none w-full h-7 text-[var(--vscode-input-foreground)] text-xs transition-all"
+                                >
+                                    <option value="contains">Contains</option>
+                                    <option value="starts">Starts with</option>
+                                    <option value="exact">Exactly</option>
+                                </select>
+
+                                <div className="relative flex items-center shadow-sm w-full">
+                                    <input
+                                        type="text"
+                                        value={searchText}
+                                        onChange={(e) => setSearchText(e.target.value)}
+                                        placeholder="Filter..."
+                                        className="bg-[var(--vscode-input-background)] pr-7 pl-2 border border-[var(--vscode-input-border)] focus:border-blue-500 rounded-md outline-none w-full h-7 text-[var(--vscode-input-foreground)] text-xs transition-all"
                                     />
-                                )}
-                            </div>
+                                    {searchText && (
+                                        <button
+                                            onClick={() => setSearchText('')}
+                                            className="right-1.5 absolute flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] opacity-50 hover:opacity-100 p-1 rounded-sm text-[10px] text-[var(--vscode-foreground)] transition-all cursor-pointer codicon codicon-close"
+                                            data-tooltip="Reset filter query"
+                                        />
+                                    )}
+                                </div>
 
-                            <label className="flex items-center gap-1.5 text-xs mt-0.5 cursor-pointer select-none hover:text-blue-400 w-max transition-colors">
-                                <input type="checkbox" checked={isRegexEnabled} onChange={(e) => setIsRegexEnabled(e.target.checked)} className="accent-blue-500 cursor-pointer w-3.5 h-3.5" />
-                                <span className="font-medium">Enable Regex</span>
-                            </label>
-                        </div>
-
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] uppercase font-bold tracking-wider text-[var(--vscode-descriptionForeground)]">Application Targets</label>
-                            <div className="flex flex-col gap-2 mt-0.5 bg-[var(--vscode-input-background)]/20 p-2 rounded-md border border-[var(--vscode-panel-border)]/50">
-                                <label className="flex items-center gap-2 text-xs cursor-pointer select-none hover:text-blue-400 transition-colors">
-                                    <input type="checkbox" checked={applyOnTree} onChange={(e) => setApplyOnTree(e.target.checked)} className="accent-blue-500 cursor-pointer w-3.5 h-3.5" />
-                                    <span className="font-medium">Apply on Tree</span>
-                                </label>
-                                <label className="flex items-center gap-2 text-xs cursor-pointer select-none hover:text-blue-400 transition-colors">
-                                    <input type="checkbox" checked={applyOnGraph} onChange={(e) => setApplyOnGraph(e.target.checked)} className="accent-blue-500 cursor-pointer w-3.5 h-3.5" />
-                                    <span className="font-medium">Apply on Graph</span>
+                                <label className="flex items-center gap-1.5 mt-0.5 w-max hover:text-blue-400 text-xs transition-colors cursor-pointer select-none">
+                                    <input type="checkbox" checked={isRegexEnabled} onChange={(e) => setIsRegexEnabled(e.target.checked)} className="w-3.5 h-3.5 accent-blue-500 cursor-pointer" />
+                                    <span className="font-medium">Enable Regex</span>
                                 </label>
                             </div>
+
+                            {/* Colonne 3 : Cibles d'application */}
+                            <div className="flex flex-col gap-1.5">
+                                <label className="font-bold text-[10px] text-[var(--vscode-descriptionForeground)] uppercase tracking-wider">Application Targets</label>
+                                <div className="flex flex-col gap-2 bg-[var(--vscode-input-background)]/20 mt-0.5 p-2 border border-[var(--vscode-panel-border)]/50 rounded-md">
+                                    <label className="flex items-center gap-2 hover:text-blue-400 text-xs transition-colors cursor-pointer select-none">
+                                        <input type="checkbox" checked={applyOnTree} onChange={(e) => setApplyOnTree(e.target.checked)} className="w-3.5 h-3.5 accent-blue-500 cursor-pointer" />
+                                        <span className="font-medium">Apply on Tree</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 hover:text-blue-400 text-xs transition-colors cursor-pointer select-none">
+                                        <input type="checkbox" checked={applyOnGraph} onChange={(e) => setApplyOnGraph(e.target.checked)} className="w-3.5 h-3.5 accent-blue-500 cursor-pointer" />
+                                        <span className="font-medium">Apply on Graph</span>
+                                    </label>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
                 )}
+
             </div>
         </div>
     );

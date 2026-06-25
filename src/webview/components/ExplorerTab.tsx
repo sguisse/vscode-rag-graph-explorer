@@ -586,7 +586,7 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
             <div className={`min-w-[250px] max-w-[70%] border-r border-[var(--vscode-panel-border)] shadow-[2px_0_8px_var(--vscode-widget-shadow)] z-0 bg-[var(--vscode-sideBar-background)] flex flex-col h-full overflow-hidden resize-x ${isTreeCollapsed || isMaximized ? 'hidden' : 'w-[465px]'}`}>
                 <div className="z-10 relative flex flex-col flex-shrink-0 justify-center bg-[var(--vscode-editorGroupHeader-tabsBackground)] shadow-[0_2px_4px_var(--vscode-widget-shadow)] px-3 border-[var(--vscode-panel-border)] border-b h-10">
                     <div className="flex justify-between items-center w-full">
-                        <span className="font-bold text-[11px] text-[var(--vscode-descriptionForeground)] uppercase tracking-wider">Tree&nbsp;View</span>
+                        <span className="font-bold text-[11px] uppercase tracking-wider">Tree&nbsp;View</span>
                         <div className="flex items-center">
                             <button onClick={() => setSortOrder('asc')} className={`w-7 h-7 flex items-center justify-center transition-colors duration-200 rounded-md text-xs ${sortOrder === 'asc' ? 'text-blue-500 bg-blue-500/10 shadow-sm' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)]'}`} data-tooltip="Sort ASC">▲</button>
                             <button onClick={() => setSortOrder('desc')} className={`w-7 h-7 flex items-center justify-center transition-colors duration-200 rounded-md text-xs ${sortOrder === 'desc' ? 'text-blue-500 bg-blue-500/10 shadow-sm' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)]'}`} data-tooltip="Sort DESC">▼</button>
@@ -659,7 +659,7 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
                                     data-tooltip={isTreeCollapsed ? "Show Tree View" : "Hide Tree View"}
                                 />
                             )}
-                            <span className="font-bold text-[11px] text-[var(--vscode-descriptionForeground)] uppercase tracking-wider">Graph&nbsp;View</span>
+                            <span className="font-bold text-[11px] uppercase tracking-wider">Graph&nbsp;View</span>
                         </div>
 
                         <div className="flex items-center gap-2 bg-[var(--vscode-input-background)]/50 shadow-inner px-2 py-1 border border-[var(--vscode-panel-border)]/50 rounded-md h-7">
