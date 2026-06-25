@@ -9,6 +9,9 @@ export const TabsNavigation: React.FC<TabsProps> = ({ activeTab, setActiveTab })
     const tabs = [
         { id: 'explorer', label: 'Explorer View', icon: 'codicon-type-hierarchy-sub' },
         { id: 'ai', label: 'AI Assistant', icon: 'codicon-sparkle' },
+        {
+            id: 'terminal', label: 'Terminal', icon: 'codicon-terminal'
+        },
         { id: 'config', label: 'Configuration', icon: 'codicon-settings-gear' }
     ];
 

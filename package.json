@@ -40,15 +40,8 @@
         "graphRagExplorer.EntitiesTypesList": {
           "type": "array",
           "description": "List of predefined entity types for the graph exploration.",
-          "items": {
-            "type": "string"
-          },
-          "default": [
-            "file",
-            "class",
-            "method",
-            "document"
-          ]
+          "items": { "type": "string" },
+          "default": ["file", "class", "method", "document"]
         },
         "graphRagExplorer.regexFilterEnabled": {
           "type": "boolean",
@@ -73,7 +66,7 @@
         "graphRagExplorer.pinFilesExporter": {
           "type": "boolean",
           "default": true,
-          "description": "Automatically pin the Graph RAG Explorer UI tab when opened to prevent it from being overwritten or closed as a preview tab."
+          "description": "Automatically pin the Graph RAG Explorer UI tab when opened."
         },
         "graphRagExplorer.graphLegendEnabled": {
           "type": "boolean",
@@ -89,6 +82,38 @@
           "type": "number",
           "default": 1,
           "description": "Default callees downstream lookup relationship parsing depth."
+        },
+        "graphRagExplorer.includePatterns": {
+          "type": "array",
+          "description": "List of regex patterns to explicitly restrict the scope of graph analysis.",
+          "items": { "type": "string" },
+          "default": []
+        },
+        "graphRagExplorer.excludePatterns": {
+          "type": "array",
+          "description": "List of regex patterns to explicitly exclude from code analysis.",
+          "items": { "type": "string" },
+          "default": ["**/node_modules/**", "**/target/**", "**/dist/**", "**/.git/**"]
+        },
+        "graphRagExplorer.forceScriptSync": {
+          "type": "boolean",
+          "default": false,
+          "description": "Force synchronized recreation of local project core scripts."
+        },
+        "graphRagExplorer.logFileEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable background file logging redirection (.graph-rag-explorer/logs/)"
+        },
+        "graphRagExplorer.logFileMaxSize": {
+          "type": "number",
+          "default": 5,
+          "description": "Maximum size per log file before rotation triggers (in Megabytes)."
+        },
+        "graphRagExplorer.logFileMaxCountRetension": {
+          "type": "number",
+          "default": 5,
+          "description": "Maximum number of historical log file nodes to keep before cycling."
         }
       }
     }

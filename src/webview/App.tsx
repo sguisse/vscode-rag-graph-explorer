@@ -5,6 +5,7 @@ import { TabsNavigation } from './components/TabsNavigation';
 import { ExplorerTab } from './components/ExplorerTab';
 import { AIAssistantTab } from './components/AIAssistantTab';
 import { ConfigurationTab } from './components/ConfigurationTab';
+import { TerminalTab } from './components/TerminalTab';
 import { GraphNode, GraphEdge } from './types';
 import { GraphService } from './services/GraphService';
 
@@ -14,6 +15,7 @@ const vscode = acquireVsCodeApi();
 
 export const App: React.FC = () => {
     const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+    const [status, setStatus] = React.useState<'ready' | 'building' | 'error'>('ready');
     const [activeTab, setActiveTab] = useState<string>('explorer');
     const [config, setConfig] = useState<any>({
         EntitiesTypesList: ['file', 'class', 'method', 'document'],
@@ -29,6 +31,7 @@ export const App: React.FC = () => {
     const [nodes, setNodes] = useState<GraphNode[]>([]);
     const [edges, setEdges] = useState<GraphEdge[]>([]);
     const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(new Set());
+    const [logs, setLogs] = useState<Array<{ level: 'debug' | 'info' | 'warn' | 'error'; message: string; timestamp: string }>>([]);
 
     const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
     const [searchMode, setSearchMode] = useState<string>('contains');
@@ -38,15 +41,33 @@ export const App: React.FC = () => {
     const [applyOnGraph, setApplyOnGraph] = useState<boolean>(false);
 
     useEffect(() => {
-        window.addEventListener('message', (event) => {
+        const handleMessage = (event: MessageEvent) => {
             const message = event.data;
             if (message.command === 'setConfig') {
                 setConfig(message.config);
                 setIsRegexEnabled(message.config.regexFilterEnabled);
                 setApplyOnTree(message.config.TreeFilterEnabled);
+            } else if (message.command === 'updateGraphData') {
+                handleGraphLoad(message.payload);
+            } else if (message.command === 'blastRadiusReport') {
+                window.dispatchEvent(new CustomEvent('blastRadiusReport', { detail: message.payload }));
+            } else if (message.command === 'logTrace') {
+                setLogs(prev => [...prev, message.payload]);
+            } else if (message.command === 'updateStatus') {
+                setStatus(message.payload);
             }
-        });
+        };
+
+        // 1. On attache l'écouteur unique
+        window.addEventListener('message', handleMessage);
+
+        // 2. On signale qu'on est prêt
         vscode.postMessage({ command: 'ready' });
+
+        // 3. FIX CRITIQUE : Nettoyage automatique au démontage (anti-Strict Mode & anti-doublons)
+        return () => {
+            window.removeEventListener('message', handleMessage);
+        };
     }, []);
 
     useEffect(() => {
@@ -119,6 +140,7 @@ export const App: React.FC = () => {
                 onGraphLoaded={handleGraphLoad}
                 nodes={nodes}
                 selectedNodeIds={selectedNodeIds}
+                status={status}
             />
 
             <main className="flex flex-col flex-1 min-h-0">
@@ -158,6 +180,9 @@ export const App: React.FC = () => {
                             selectedNodeIds={selectedNodeIds}
                             apiKey={config.geminiApiKey}
                         />
+                    </div>
+                    <div className={activeTab === 'terminal' ? 'absolute inset-0 flex' : 'hidden'}>
+                        <TerminalTab logs={logs} clearLogs={() => setLogs([])} />
                     </div>
                     <div className={activeTab === 'config' ? 'absolute inset-0 flex' : 'hidden'}>
                         <ConfigurationTab config={config} />

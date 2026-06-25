@@ -8,9 +8,10 @@ interface HeaderProps {
     onGraphLoaded: (data: any) => void;
     nodes: GraphNode[];
     selectedNodeIds: Set<string>;
+    status: 'ready' | 'building' | 'error';
 }
 
-export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, onGraphLoaded, nodes, selectedNodeIds }) => {
+export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, onGraphLoaded, nodes, selectedNodeIds, status }) => {
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -41,7 +42,14 @@ export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, onGraphLoade
 
                 <div className="w-[1px] h-5 bg-[var(--vscode-panel-border)] mx-1" />
 
-                <label className="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white transition-all duration-200 rounded-md text-xs flex items-center gap-1.5 cursor-pointer shadow-md hover:shadow-lg">
+                <span
+                    className="text-lg flex items-center justify-center w-6 select-none"
+                    title={status === 'building' ? 'Building graph via Python Backend...' : status === 'error' ? 'Python Engine Error' : 'Engine Ready'}
+                >
+                    {status === 'building' ? '🟠' : status === 'error' ? '🔴' : '🟢'}
+                </span>
+
+                <label className="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white transition-all duration-200 rounded-md text-xs flex items-center gap-1.5 cursor-pointer shadow-md hover:shadow-lg ml-1">
                     <span className="codicon codicon-file-symlink-file"></span> Load graph.json
                     <input type="file" accept=".json" onChange={handleFileChange} className="hidden" />
                 </label>
