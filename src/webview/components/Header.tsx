@@ -1,5 +1,6 @@
 import React from 'react';
 import { GraphNode } from '../types';
+import { GraphService } from '../services/GraphService';
 
 interface HeaderProps {
     theme: 'light' | 'dark';
@@ -10,19 +11,15 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, onGraphLoaded, nodes, selectedNodeIds }) => {
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            try {
-                const json = JSON.parse(event.target?.result as string);
-                onGraphLoaded(json);
-            } catch (err) {
-                alert('Invalid graph.json file.');
-            }
-        };
-        reader.readAsText(file);
+        try {
+            const data = await GraphService.loadGraphDataFromFile(file);
+            onGraphLoaded(data);
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Invalid graph.json file.');
+        }
     };
 
     return (
@@ -49,7 +46,6 @@ export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, onGraphLoade
                     <input type="file" accept=".json" onChange={handleFileChange} className="hidden" />
                 </label>
             </div>
-
-            </header>
+        </header>
     );
 };

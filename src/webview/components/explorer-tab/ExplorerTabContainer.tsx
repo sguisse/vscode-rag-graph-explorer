@@ -1,9 +1,3 @@
-#!/bin/bash
-# Ensure workspace target directories are fully prepared
-mkdir -p src/webview/components/explorer-tab
-
-# Overwrite ExplorerTabContainer.tsx to implement file-to-file graph rollups while keeping sub-entity details for global searches
-cat << 'EOF' > src/webview/components/explorer-tab/ExplorerTabContainer.tsx
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { DataSet } from 'vis-network/standalone';
 import { Network } from 'vis-network';
@@ -553,6 +547,3 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
         </div>
     );
 };
-EOF
-
-echo "✅ Graph rolled up to isolate file-level relations exclusively while safely retaining methods and document attributes for searches!"

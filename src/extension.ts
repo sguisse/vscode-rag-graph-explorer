@@ -15,7 +15,6 @@ export function activate(context: vscode.ExtensionContext) {
             }
         );
 
-        // Dynamically evaluate pinning rule based on user configuration settings
         const graphConfig = vscode.workspace.getConfiguration('graphRagExplorer');
         if (graphConfig.get('pinFilesExporter') !== false) {
             vscode.commands.executeCommand('workbench.action.pinEditor');
@@ -63,14 +62,21 @@ export function activate(context: vscode.ExtensionContext) {
                         ? message.path
                         : path.join(workspaceFolders[0].uri.fsPath, message.path);
                     const fileUri = vscode.Uri.file(fullPath);
-                    vscode.workspace.openTextDocument(fileUri).then(doc => {
-                        vscode.window.showTextDocument(doc, {
-                            viewColumn: vscode.ViewColumn.One,
-                            preserveFocus: true,
-                            preview: true
+
+                    if (message.openEditor !== false) {
+                        vscode.workspace.openTextDocument(fileUri).then(doc => {
+                            vscode.window.showTextDocument(doc, {
+                                viewColumn: vscode.ViewColumn.One,
+                                preserveFocus: true,
+                                preview: true
+                            });
+                            vscode.commands.executeCommand('revealInExplorer', fileUri);
+                        }, () => {
+                            vscode.commands.executeCommand('revealInExplorer', fileUri);
                         });
+                    } else {
                         vscode.commands.executeCommand('revealInExplorer', fileUri);
-                    }, () => {});
+                    }
                 }
             }
         });

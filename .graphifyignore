@@ -5,8 +5,9 @@ node_modules
 .idea/
 .vscode-test/
 *.vsix
-.history
-exported-files
+.history/
+exported-files/
 *.bak*
 *.lock
 graphify-out/
+.claude/

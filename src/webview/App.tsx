@@ -6,6 +6,7 @@ import { ExplorerTab } from './components/ExplorerTab';
 import { AIAssistantTab } from './components/AIAssistantTab';
 import { ConfigurationTab } from './components/ConfigurationTab';
 import { GraphNode, GraphEdge } from './types';
+import { GraphService } from './services/GraphService';
 
 declare const acquireVsCodeApi: () => any;
 const vscode = acquireVsCodeApi();
@@ -40,7 +41,7 @@ export const App: React.FC = () => {
         window.addEventListener('message', (event) => {
             const message = event.data;
             if (message.command === 'setConfig') {
-                setConfig(message.command === 'setConfig' ? message.config : message.config);
+                setConfig(message.config);
                 setIsRegexEnabled(message.config.regexFilterEnabled);
                 setApplyOnTree(message.config.TreeFilterEnabled);
             }
@@ -54,7 +55,6 @@ export const App: React.FC = () => {
         else root.classList.remove('dark');
     }, [theme]);
 
-    // Custom Tooltip Tracker Hook synchronized with workspace tooltipDelay configurations
     useEffect(() => {
         const tooltipEl = document.getElementById('global-cursor-tooltip');
         let tooltipTimeout: NodeJS.Timeout | null = null;
@@ -105,21 +105,7 @@ export const App: React.FC = () => {
     }, [config.tooltipDelay]);
 
     const handleGraphLoad = (data: { nodes: any[]; links: any[] }) => {
-        const parsedNodes: GraphNode[] = (data.nodes || []).map(n => {
-            let group = 'class';
-            const label = n.label || n.id || '';
-            if (label.includes('()')) group = 'method';
-            else if (label.match(/\.(ts|js|py|json|md|sh|mjs|html|css)$/i)) group = 'file';
-            if (n.file_type === 'document' || n.file_type === 'rationale') group = 'document';
-            return { id: String(n.id), label, group, source_file: n.source_file, source_location: n.source_location };
-        });
-
-        const parsedEdges: GraphEdge[] = (data.links || []).map(l => ({
-            from: String(l.source),
-            to: String(l.target),
-            type: l.relation || 'relation'
-        }));
-
+        const { nodes: parsedNodes, edges: parsedEdges } = GraphService.buildGraph(data);
         setNodes(parsedNodes);
         setEdges(parsedEdges);
         setSelectedNodeIds(new Set());
