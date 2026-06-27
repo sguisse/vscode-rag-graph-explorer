@@ -1,6 +1,6 @@
 import React from 'react';
 import { MaximizeIcon, MinimizeIcon, ListUnorderedIcon } from '@primer/octicons-react';
-import { Legend } from './Legend';
+import { Legend } from '../Legend';
 
 interface GraphViewProps {
     containerRef: React.RefObject<HTMLDivElement>;
@@ -43,7 +43,7 @@ export const GraphView: React.FC<GraphViewProps> = ({
                                 data-tooltip={isTreeCollapsed ? "Show Tree View" : "Hide Tree View"}
                             />
                         )}
-                        <span className="font-bold text-[11px] uppercase tracking-wider">Graph&nbsp;View</span>
+                        <span className="block font-bold text-[11px] uppercase tracking-wider">Graph&nbsp;View</span>
                     </div>
 
                     <div className="flex items-center gap-2 bg-[var(--vscode-input-background)]/50 shadow-inner px-2 py-1 border border-[var(--vscode-panel-border)]/50 rounded-md h-7">

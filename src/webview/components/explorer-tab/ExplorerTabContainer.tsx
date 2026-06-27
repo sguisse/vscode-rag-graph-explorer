@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { DataSet } from 'vis-network/standalone';
-import { Network } from 'vis-network';
+import cytoscape from 'cytoscape';
 import { GraphNode, GraphEdge } from '../../types';
 import { TreeView } from './TreeView';
-import { GraphView } from './GraphView';
+import { GraphView } from './graph/GraphView';
+import { getGraphStyle, layoutOptions } from './graph/GraphConfig';
 import { useGraphSelection } from '../../hooks/useGraphSelection';
 
 interface ExplorerTabContainerProps {
@@ -32,10 +32,8 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
     const { applyOnGraph, applyOnTree, selectedTypes, searchText, searchMode, isRegexEnabled } = filters;
 
     const containerRef = useRef<HTMLDivElement>(null);
-    const networkRef = useRef<Network | null>(null);
-
-    const visNodesRef = useRef<DataSet<any>>(new DataSet([]));
-    const visEdgesRef = useRef<DataSet<any>>(new DataSet([]));
+    const cyRef = useRef<cytoscape.Core | null>(null);
+    const networkRef = useRef<any>(null);
 
     const [isTreeCollapsed, setIsTreeCollapsed] = useState<boolean>(false);
     const [isMaximized, setIsMaximized] = useState<boolean>(false);
@@ -62,10 +60,10 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
 
     const nodeToFileIdMap = useMemo(() => {
         const map = new Map<string, string>();
-        const fileNodes = nodes.filter(n => n.group === 'file');
+        const fileNodes = nodes.filter(n => n.group === 'file' || n.group === 'file_unreferenced');
         fileNodes.forEach(f => map.set(f.id, f.id));
         nodes.forEach(n => {
-            if (n.group !== 'file' && n.source_file) {
+            if (n.group !== 'file' && n.group !== 'file_unreferenced' && n.source_file) {
                 const matchingFile = fileNodes.find(f => f.source_file === n.source_file || f.label === n.source_file || f.id === n.source_file);
                 if (matchingFile) map.set(n.id, matchingFile.id);
             }
@@ -87,7 +85,7 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
     }, [edges]);
 
     const fileLevelEdges = useMemo(() => {
-        const fileEdgesMap = new Map<string, { from: string, to: string, types: Set<string> }>();
+        const fileEdgesMap = new Map<string, { from: string; to: string; types: Set<string> }>();
         edges.forEach(e => {
             const fromFileId = nodeToFileIdMap.get(e.from);
             const toFileId = nodeToFileIdMap.get(e.to);
@@ -110,18 +108,13 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
         clearSelection
     } = useGraphSelection(fileLevelEdges, nodeToFileIdMap, parentDepth, childDepth, isHierarchyEnabled);
 
-    // 1. Sync upwards to App.tsx
     useEffect(() => {
         setSelectedNodeIds(exactSelectedIds);
     }, [exactSelectedIds, setSelectedNodeIds]);
 
-    // 2. FIXED UPWARD SYNC CATCHER: Tracks explicit external wipes without intercepting local clicks
     const prevSelectedSizeRef = useRef<number>(selectedNodeIds.size);
     useEffect(() => {
         if (selectedNodeIds.size === 0 && prevSelectedSizeRef.current > 0 && exactSelectedIds.size > 0) {
-            if (typeof (window as any).logToTerminal === 'function') {
-                (window as any).logToTerminal('warn', `🔄 External Selection Clear Detected (Parent state went 1➔0). Syncing local layout.`);
-            }
             clearSelection();
         }
         prevSelectedSizeRef.current = selectedNodeIds.size;
@@ -130,131 +123,150 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
     useEffect(() => {
         if (!containerRef.current) return;
 
-        const options = {
-            interaction: {
-                multiselect: true,
-                selectConnectedEdges: false
+        const fileNodes = nodes.filter(n => n.group === 'file' || n.group === 'file_unreferenced');
+        const cyElements: any[] = [];
+
+        fileNodes.forEach(f => {
+            cyElements.push({
+                data: { id: f.id, label: f.label, group: f.group }
+            });
+        });
+
+        fileLevelEdges.forEach((fe, index) => {
+            cyElements.push({
+                data: { id: `edge-${index}`, source: fe.from, target: fe.to, type: Array.from(fe.types).join(', ') }
+            });
+        });
+
+        const cy = cytoscape({
+            container: containerRef.current,
+            elements: cyElements,
+            boxSelectionEnabled: false,
+            style: getGraphStyle(),
+            layout: layoutOptions as any
+        });
+
+        cyRef.current = cy;
+
+        networkRef.current = {
+            fit: () => {
+                if (cyRef.current) {
+                    cyRef.current.animate({
+                        fit: { eles: cyRef.current.elements(), padding: 40 },
+                        duration: 350
+                    });
+                }
             },
-            nodes: {
-                shape: 'dot', size: 16,
-                font: { color: '#e5e7eb', face: 'var(--vscode-font-family)', size: 12 },
-                borderWidth: 2, shadow: true
+            focus: (nodeId: string, options?: any) => {
+                if (cyRef.current) {
+                    const targetNode = cyRef.current.$(`[id = "${nodeId}"]`);
+                    if (targetNode.length) {
+                        cyRef.current.animate({
+                            center: { eles: targetNode },
+                            zoom: options?.scale || 1.1,
+                            duration: options?.animation?.duration || 450
+                        });
+                    }
+                }
             },
-            edges: {
-                width: 1.5, color: { color: '#9ca3af', highlight: '#3b82f6' },
-                arrows: { to: { enabled: true, scaleFactor: 0.5 } },
-                smooth: { enabled: true, type: 'continuous', roundness: 0.5 }
-            },
-            groups: {
-                file: { color: { background: '#3b82f6', border: '#2563eb' }, shape: 'hexagon', size: 20, font: { color: 'rgba(59, 130, 246, 0.85)' } }
-            },
-            physics: {
-                solver: 'forceAtlas2Based',
-                forceAtlas2Based: { gravitationalConstant: -50, centralGravity: 0.01, springLength: 100 },
-                stabilization: { iterations: 150 }
-            }
+            setOptions: () => {},
+            stabilize: () => {}
         };
 
-        const network = new Network(containerRef.current, { nodes: visNodesRef.current, edges: visEdgesRef.current }, options as any);
-        networkRef.current = network;
-
-        network.on("stabilizationIterationsDone", () => { network.setOptions({ physics: false } as any); });
-
-        network.on("click", (params) => {
-            const srcEvent = params.event?.srcEvent;
+        cy.on('tap', 'node', (evt) => {
+            const node = evt.target;
+            const nodeId = node.id();
+            const srcEvent = evt.originalEvent;
             const isMultiSelect = srcEvent ? (srcEvent.ctrlKey || srcEvent.metaKey) : false;
 
-            if (params.nodes.length > 0) {
-                const nodeId = String(params.nodes[0]);
-                if (typeof (window as any).logToTerminal === 'function') {
-                    (window as any).logToTerminal('debug', `🕸️ Graph Node Click: ID=[${nodeId}] | MultiSelect (Ctrl/Cmd) = [${isMultiSelect}]`);
-                }
+            if (!isMultiSelect) {
+                clearSelection();
+            }
+            toggleNodeSelection(nodeId);
+        });
 
-                if (!isMultiSelect) {
-                    clearSelection();
-                }
-                toggleNodeSelection(nodeId);
-            } else {
-                if (typeof (window as any).logToTerminal === 'function') {
-                    (window as any).logToTerminal('debug', `🕸️ Graph Background Click | MultiSelect (Ctrl/Cmd) = [${isMultiSelect}]`);
-                }
+        cy.on('tap', (evt) => {
+            if (evt.target === cy) {
+                const srcEvent = evt.originalEvent;
+                const isMultiSelect = srcEvent ? (srcEvent.ctrlKey || srcEvent.metaKey) : false;
                 if (!isMultiSelect) {
                     clearSelection();
                 }
             }
-            network.unselectAll();
         });
 
-        return () => { network.destroy(); };
-    }, [toggleNodeSelection, clearSelection]);
+        return () => {
+            cy.destroy();
+        };
+    }, [nodes, fileLevelEdges, toggleNodeSelection, clearSelection]);
 
     useEffect(() => {
-        visNodesRef.current.clear();
-        visEdgesRef.current.clear();
+        if (!cyRef.current) return;
+        cyRef.current.batch(() => {
+            cyRef.current!.nodes().forEach(node => {
+                const id = node.id();
+                let isVisible = true;
 
-        const fileNodes = nodes.filter(n => n.group === 'file');
-        visNodesRef.current.add(fileNodes.map(n => ({ id: n.id, label: n.label, group: n.group, title: n.label })));
-
-        const synthesizedEdges = fileLevelEdges.map((fe, index) => ({ id: index, from: fe.from, to: fe.to, type: Array.from(fe.types).join(', ') }));
-        visEdgesRef.current.add(synthesizedEdges);
-
-        if (networkRef.current) {
-            networkRef.current.setOptions({ physics: true } as any);
-            networkRef.current.stabilize();
-        }
-    }, [nodes, fileLevelEdges]);
-
-    useEffect(() => {
-        const fileNodes = nodes.filter(n => n.group === 'file');
-        const nodeUpdates = fileNodes.map(f => {
-            let isVisible = true;
-            if (applyOnGraph) {
-                const relatedNodes = nodes.filter(n => nodeToFileIdMap.get(n.id) === f.id);
-                const filteredRelated = selectedTypes.length > 0 ? relatedNodes.filter(rn => selectedTypes.includes(rn.group)) : relatedNodes;
-                if (filteredRelated.length === 0) isVisible = false;
-                else if (searchText) {
-                    const queryStr = ignoreCase ? searchText.toLowerCase() : searchText;
-                    const matchesSearch = filteredRelated.some(rn => {
-                        const labelStr = ignoreCase ? rn.label.toLowerCase() : rn.label;
-                        if (isRegexEnabled) {
-                            try { return new RegExp(queryStr).test(labelStr); } catch { return true; }
-                        } else {
-                            return searchMode === 'exact' ? labelStr === queryStr : labelStr.includes(queryStr);
-                        }
-                    });
-                    if (!matchesSearch) isVisible = false;
+                if (applyOnGraph) {
+                    const relatedNodes = nodes.filter(n => nodeToFileIdMap.get(n.id) === id);
+                    const filteredRelated = selectedTypes.length > 0 ? relatedNodes.filter(rn => selectedTypes.includes(rn.group)) : relatedNodes;
+                    if (filteredRelated.length === 0) isVisible = false;
+                    else if (searchText) {
+                        const queryStr = ignoreCase ? searchText.toLowerCase() : searchText;
+                        const matchesSearch = filteredRelated.some(rn => {
+                            const labelStr = ignoreCase ? rn.label.toLowerCase() : rn.label;
+                            if (isRegexEnabled) {
+                                try { return new RegExp(queryStr).test(labelStr); } catch { return true; }
+                            } else {
+                                return searchMode === 'exact' ? labelStr === queryStr : labelStr.includes(queryStr);
+                            }
+                        });
+                        if (!matchesSearch) isVisible = false;
+                    }
                 }
-            }
 
-            const isContextuallySelected = effectiveFileIds.has(f.id);
-            const isExactlySelected = exactSelectedIds.has(f.id);
+                const isContextuallySelected = effectiveFileIds.has(id);
+                const isExactlySelected = exactSelectedIds.has(id);
 
-            return {
-                id: f.id,
-                hidden: !isVisible,
-                opacity: effectiveFileIds.size === 0 ? 1 : (isContextuallySelected ? 1 : 0.18),
-                shadow: isContextuallySelected,
-                borderWidth: isExactlySelected ? 5 : (isContextuallySelected ? 2 : 1)
-            };
+                let opacity = 1;
+                if (effectiveFileIds.size > 0) {
+                    opacity = isContextuallySelected ? 1 : 0.15;
+                }
+
+                node.style({
+                    'display': isVisible ? 'element' : 'none',
+                    'opacity': opacity,
+                    'border-width': isExactlySelected ? 4 : (isContextuallySelected ? 2.5 : (node.data('group') === 'file_unreferenced' ? 2.5 : 2)),
+                    'border-color': isExactlySelected ? '#007acc' : (isContextuallySelected ? '#3b82f6' : (node.data('group') === 'file_unreferenced' ? '#000000' : '#1177bb')),
+                    'background-color': isExactlySelected ? '#1f8ad2' : (node.data('group') === 'file_unreferenced' ? '#3a1e22' : '#0e639c')
+                });
+            });
+
+            cyRef.current!.edges().forEach(edge => {
+                const sourceId = edge.source().id();
+                const targetId = edge.target().id();
+                const isHighlighted = effectiveFileIds.has(sourceId) && effectiveFileIds.has(targetId);
+
+                let opacity = 0.65;
+                if (effectiveFileIds.size > 0) {
+                    opacity = isHighlighted ? 1 : 0.05;
+                }
+
+                edge.style({
+                    'line-color': isHighlighted ? '#3b82f6' : '#444444',
+                    'target-arrow-color': isHighlighted ? '#3b82f6' : '#444444',
+                    'width': isHighlighted ? 2.5 : 1.5,
+                    'opacity': opacity
+                });
+            });
         });
-
-        if (nodeUpdates.length > 0) visNodesRef.current.update(nodeUpdates);
-
-        const edgeUpdates = fileLevelEdges.map((fe, index) => {
-            const isHighlighted = effectiveFileIds.has(fe.from) && effectiveFileIds.has(fe.to);
-            return { id: index, color: isHighlighted ? '#3b82f6' : '#4b5563', width: isHighlighted ? 2.5 : 1 };
-        });
-
-        if (edgeUpdates.length > 0) visEdgesRef.current.update(edgeUpdates);
-
     }, [effectiveFileIds, exactSelectedIds, applyOnGraph, selectedTypes, searchText, searchMode, isRegexEnabled, ignoreCase, nodes, fileLevelEdges, nodeToFileIdMap]);
 
     useEffect(() => {
-        if (networkRef.current) {
+        if (cyRef.current) {
             setTimeout(() => {
-                networkRef.current?.setSize('100%', '100%');
-                networkRef.current?.redraw();
-            }, 100);
+                cyRef.current?.resize();
+            }, 150);
         }
     }, [isTreeCollapsed, isMaximized]);
 
@@ -315,7 +327,7 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
         let workspaceName = 'Workspace';
         let commonPrefixPath = '';
 
-        const fileNodes = nodes.filter(n => n.group === 'file' && n.source_file);
+        const fileNodes = nodes.filter(n => (n.group === 'file' || n.group === 'file_unreferenced') && n.source_file);
         if (fileNodes.length > 0) {
             const splitPaths = fileNodes.map(n => n.source_file!.split('/').filter(Boolean));
             for (let i = 0; i < splitPaths[0].length; i++) {
@@ -357,7 +369,7 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
             const extGroups: { [key: string]: GraphNode[] } = {};
             const nonExtRoots: GraphNode[] = [];
             sortedRoots.forEach(rn => {
-                if (rn.group === 'file' || rn.group === 'document') {
+                if (rn.group === 'file' || rn.group === 'file_unreferenced' || rn.group === 'document') {
                     const ext = rn.label.includes('.') ? '.' + rn.label.split('.').pop() : 'No extension';
                     if (!extGroups[ext]) extGroups[ext] = [];
                     extGroups[ext].push(rn);
@@ -376,7 +388,7 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
             const nonFolderRoots: GraphNode[] = [];
 
             sortedRoots.forEach(rn => {
-                if ((rn.group === 'file' || rn.group === 'document') && rn.source_file) {
+                if ((rn.group === 'file' || rn.group === 'file_unreferenced' || rn.group === 'document') && rn.source_file) {
                     const parts = rn.source_file.split('/').filter(Boolean);
                     const relParts = parts.slice(commonPrefix.length);
 

@@ -3,7 +3,7 @@
   "license": "MIT",
   "displayName": "Graph RAG Explorer",
   "description": "Expert Node Navigator and Architecture Explorer via RAG and Gemini",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "publisher": "sguisse",
   "engines": {
     "vscode": "^1.80.0"
@@ -145,6 +145,7 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@types/vscode": "^1.80.0",
+    "@types/cytoscape": "^3.25.7",
     "css-loader": "^6.8.1",
     "style-loader": "^3.3.3",
     "ts-loader": "^9.4.3",
@@ -157,6 +158,6 @@
     "@vscode/vsce": "^3.9.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "vis-network": "^9.1.6"
+    "cytoscape": "^3.30.0"
   }
 }

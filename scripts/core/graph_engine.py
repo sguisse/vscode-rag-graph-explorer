@@ -2,15 +2,15 @@ import os
 import json
 import networkx as nx
 from typing import Dict, Any
-from utils import info, success
 
 class GraphEngine:
     def __init__(self):
         self.graph = nx.DiGraph()
 
     def load_raw_outputs(self, raw_outputs_dir: str):
-        """ Parcourt tous les dossiers d'analyseurs et fusionne les données """
-        info(f"Consolidation des données depuis {raw_outputs_dir}...", component="GraphEngine")
+        """ Scans and merges isolated parser outputs into the topological network """
+        if not os.path.exists(raw_outputs_dir):
+            return
 
         for root, _, files in os.walk(raw_outputs_dir):
             for file in files:
@@ -31,28 +31,22 @@ class GraphEngine:
 
                     except Exception:
                         pass
-        info(f"Graphe consolidé : {self.graph.number_of_nodes()} nœuds, {self.graph.number_of_edges()} liaisons.", component="GraphEngine")
 
     def export_pure_visjs_format(self) -> Dict[str, Any]:
         nodes_payload = []
         for node_id, data in self.graph.nodes(data=True):
-            node_properties = {
+            current_group = data.get("group", "file")
+
+            # Map unreferenced files to isolated semantic group for cytoscape stylesheets lookups
+            if self.graph.in_degree(node_id) == 0 and current_group == "file":
+                current_group = "file_unreferenced"
+
+            nodes_payload.append({
                 "id": node_id,
                 "label": data.get("label", node_id),
-                "file_type": data.get("group", "file"),
+                "file_type": current_group,
                 "source_file": data.get("source_file", "")
-            }
-
-            # Détection des points d'entrée morts (Nœuds sans référence entrante)
-            if self.graph.in_degree(node_id) == 0:
-                node_properties["borderWidth"] = 2
-                node_properties["color"] = {
-                    "border": "#000000"
-                }
-                # Double sécurité : indicateur textuel si l'IHM n'utilise pas le style d'objet
-                node_properties["label"] = f"🎯 {data.get('label', node_id)}"
-
-            nodes_payload.append(node_properties)
+            })
 
         edges_payload = []
         for source, target, data in self.graph.edges(data=True):
@@ -69,5 +63,3 @@ class GraphEngine:
         graphify_path = os.path.join(consolidated_dir, "graphify-data.json")
         with open(graphify_path, "w", encoding="utf-8") as f:
             json.dump(nx.node_link_data(self.graph), f, indent=2, ensure_ascii=False)
-
-        success(f"Artefacts consolidés générés dans {consolidated_dir}", component="GraphEngine")

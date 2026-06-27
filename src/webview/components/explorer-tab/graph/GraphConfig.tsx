@@ -1,13 +1,3 @@
-#!/bin/bash
-
-# Ensure dedicated graph directory architecture is fully ready
-mkdir -p src/webview/components/explorer-tab/graph
-
-# ==============================================================================
-# REWRITE GRAPH CONFIGURATION MODULE WITH LOOSE TYPE BYPASS (GraphConfig.tsx)
-# Fixes TS2353 by using any[] typing to bypass rigid internal version differences in @types/cytoscape
-# ==============================================================================
-cat << 'EOF' > src/webview/components/explorer-tab/graph/GraphConfig.tsx
 import cytoscape from 'cytoscape';
 
 export const getGraphStyle = (): any[] => [
@@ -20,16 +10,16 @@ export const getGraphStyle = (): any[] => [
             'background-color': '#0e639c',
             'border-color': '#1177bb',
             'border-width': 2,
-            'color': '#cccccc',
-            'font-family': 'var(--vscode-font-family, -apple-system, BlinkMacSystemFont, sans-serif)',
+            'color': '#0e639c',
+            'font-family': 'var(--vscode-font-family, sans-serif)',
             'font-size': 10,
-            'font-weight': '600',
+            'font-weight': '400',
             'text-valign': 'bottom',
             'text-margin-y': 7,
             'shape': 'diamond',
-            'text-outline-color': 'var(--vscode-editor-background, #1e1e1e)',
-            'text-outline-width': 2,
-            'text-max-width': '120px',
+            'text-outline-color': 'var(--vscode-editor-background, #1177bb)',
+            'text-outline-width': 0,
+            'text-max-width': '200px',
             'text-wrap': 'ellipsis',
             'transition-property': 'opacity, border-width, border-color, background-color, transform',
             'transition-duration': 0.25
@@ -88,11 +78,3 @@ export const layoutOptions = {
     coolingFactor: 0.95,
     minTemp: 1.0
 };
-EOF
-
-# ==============================================================================
-# TRIGGER REBUILD ASSEMBLY STREAMS
-# ==============================================================================
-npm run package
-
-echo "✅ fix/compile: Resolved TS2353 stylesheet configuration error inside GraphConfig.tsx by utilizing adaptive any[] mapping arrays definitions!"
