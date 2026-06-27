@@ -14,8 +14,9 @@ interface TreeElement {
 
 interface TreeViewProps {
     nodes: GraphNode[];
-    effectiveSelectedNodeIds: Set<string>;
-    toggleNodeSelection: (id: string, multi?: boolean) => void;
+    exactSelectedIds: Set<string>;
+    effectiveFileIds: Set<string>;
+    toggleNodeSelection: (id: string) => void;
     setNodesSelectionState: (ids: string[], checked: boolean) => void;
     clearSelection: () => void;
     treeData: TreeElement[];
@@ -37,15 +38,15 @@ interface TreeViewProps {
 }
 
 export const TreeView: React.FC<TreeViewProps> = ({
-    nodes, effectiveSelectedNodeIds, toggleNodeSelection, setNodesSelectionState, clearSelection,
+    nodes, exactSelectedIds, effectiveFileIds, toggleNodeSelection, setNodesSelectionState, clearSelection,
     treeData, sortOrder, setSortOrder, ignoreCase, setIgnoreCase, treeGrouping, setTreeGrouping,
     showOnlySelected, setShowOnlySelected, collapsedIds, setCollapsedIds,
     handleExpandAll, handleCollapseAll, networkRef, isHierarchyEnabled, setIsHierarchyEnabled
 }) => {
 
     const handleClearSelectionWithConfirm = () => {
-        if (effectiveSelectedNodeIds.size === 0) return;
-        if (window.confirm(`Clear selection of all ${effectiveSelectedNodeIds.size} node(s)?`)) {
+        if (exactSelectedIds.size === 0) return;
+        if (window.confirm(`Clear selection of all ${exactSelectedIds.size} node(s)?`)) {
             clearSelection();
         }
     };
@@ -54,13 +55,18 @@ export const TreeView: React.FC<TreeViewProps> = ({
         return elements.map(el => {
             if (el.isGroup) {
                 const isGroupOpen = !collapsedIds.has(el.id);
-                const isChecked = el.allLeafIds.every(id => effectiveSelectedNodeIds.has(id));
-                const isIndeterminate = !isChecked && el.allLeafIds.some(id => effectiveSelectedNodeIds.has(id));
+                const isChecked = el.allLeafIds.length > 0 && el.allLeafIds.every(id => exactSelectedIds.has(id));
+                const isIndeterminate = !isChecked && el.allLeafIds.some(id => exactSelectedIds.has(id));
+
+                const tooltipMessage = el.id === 'workspace-root'
+                    ? (el.folderPath ? `Workspace Absolute Context: ${el.folderPath}` : 'Workspace')
+                    : (el.folderPath ? `Path: ${el.folderPath}` : undefined);
 
                 return (
                     <details key={el.id} className="w-full select-none" open={isGroupOpen}>
                         <summary
                             className="[&::-webkit-details-marker]:hidden flex items-center gap-1.5 px-1.5 py-0.5 rounded-md font-bold text-xs transition-colors cursor-pointer list-none hover:bg-[var(--vscode-list-hoverBackground)]"
+                            data-tooltip={tooltipMessage}
                             onClick={(e) => {
                                 e.preventDefault();
                                 if ((window as any).vscodeApi && el.folderPath) {
@@ -94,7 +100,8 @@ export const TreeView: React.FC<TreeViewProps> = ({
                     </details>
                 );
             } else {
-                const isChecked = effectiveSelectedNodeIds.has(el.id);
+                const isChecked = exactSelectedIds.has(el.id);
+
                 return (
                     <div key={el.id} className="group flex items-center gap-1.5 px-1.5 py-0.5 rounded-md w-full transition-colors hover:bg-[var(--vscode-list-hoverBackground)]">
                         <span className="w-3 flex-shrink-0" />
@@ -102,7 +109,7 @@ export const TreeView: React.FC<TreeViewProps> = ({
                             type="checkbox"
                             className="flex-shrink-0 w-3.5 h-3.5 accent-blue-500 cursor-pointer"
                             checked={isChecked}
-                            onChange={() => toggleNodeSelection(el.id, true)}
+                            onChange={() => toggleNodeSelection(el.id)}
                         />
                         <span className="flex-shrink-0 opacity-80 text-xs">
                             {el.node?.group === 'file' ? '📂' : el.node?.group === 'class' ? '📦' : el.node?.group === 'method' ? '⚡' : '📄'}
@@ -116,7 +123,7 @@ export const TreeView: React.FC<TreeViewProps> = ({
                             }}
                             onDoubleClick={() => {
                                 clearSelection();
-                                toggleNodeSelection(el.id, false);
+                                toggleNodeSelection(el.id);
                                 if ((window as any).vscodeApi && el.node?.group === 'file' && el.node.source_file) {
                                     try {
                                         (window as any).vscodeApi.postMessage({ command: 'revealFile', path: el.node.source_file, openEditor: true });
@@ -169,7 +176,7 @@ export const TreeView: React.FC<TreeViewProps> = ({
 
                         <button
                             onClick={() => {
-                                const paths = Array.from(new Set(nodes.filter(n => effectiveSelectedNodeIds.has(n.id) && n.source_file).map(n => n.source_file as string)));
+                                const paths = Array.from(new Set(nodes.filter(n => effectiveFileIds.has(n.id) && n.source_file).map(n => n.source_file as string)));
                                 if (paths.length > 0) {
                                     if ((window as any).vscodeApi) {
                                         (window as any).vscodeApi.postMessage({ command: 'publishToSharedList', paths });

@@ -29,7 +29,6 @@ interface TreeElement {
 export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
     nodes, edges, selectedNodeIds, setSelectedNodeIds, filters, config
 }) => {
-    // FIX: Destructure primitive values to ensure React hooks check exact values, not unstable object references
     const { applyOnGraph, applyOnTree, selectedTypes, searchText, searchMode, isRegexEnabled } = filters;
 
     const containerRef = useRef<HTMLDivElement>(null);
@@ -104,27 +103,31 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
     }, [edges, nodeToFileIdMap]);
 
     const {
-        manualSelectedIds,
-        effectiveSelectedNodeIds,
+        exactSelectedIds,
+        effectiveFileIds,
         toggleNodeSelection,
         setNodesSelectionState,
         clearSelection
     } = useGraphSelection(fileLevelEdges, nodeToFileIdMap, parentDepth, childDepth, isHierarchyEnabled);
 
     useEffect(() => {
-        setSelectedNodeIds(effectiveSelectedNodeIds);
-    }, [effectiveSelectedNodeIds, setSelectedNodeIds]);
+        setSelectedNodeIds(exactSelectedIds);
+    }, [exactSelectedIds, setSelectedNodeIds]);
 
     useEffect(() => {
-        if (selectedNodeIds.size === 0 && manualSelectedIds.size > 0) {
+        if (selectedNodeIds.size === 0 && exactSelectedIds.size > 0) {
             clearSelection();
         }
-    }, [selectedNodeIds, manualSelectedIds, clearSelection]);
+    }, [selectedNodeIds, exactSelectedIds, clearSelection]);
 
     useEffect(() => {
         if (!containerRef.current) return;
 
         const options = {
+            interaction: {
+                multiselect: true,
+                selectConnectedEdges: false
+            },
             nodes: {
                 shape: 'dot', size: 16,
                 font: { color: '#e5e7eb', face: 'var(--vscode-font-family)', size: 12 },
@@ -151,16 +154,14 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
         network.on("stabilizationIterationsDone", () => { network.setOptions({ physics: false } as any); });
 
         network.on("click", (params) => {
-            const isMultiSelect = params.event.srcEvent.ctrlKey || params.event.srcEvent.metaKey;
             if (params.nodes.length > 0) {
-                toggleNodeSelection(String(params.nodes[0]), isMultiSelect);
-            } else if (!isMultiSelect) {
-                clearSelection();
+                toggleNodeSelection(String(params.nodes[0]));
             }
+            network.unselectAll();
         });
 
         return () => { network.destroy(); };
-    }, [toggleNodeSelection, clearSelection]);
+    }, [toggleNodeSelection]);
 
     useEffect(() => {
         visNodesRef.current.clear();
@@ -178,7 +179,6 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
         }
     }, [nodes, fileLevelEdges]);
 
-    // Graph DataView rendering logic using scalar dependencies
     useEffect(() => {
         const fileNodes = nodes.filter(n => n.group === 'file');
         const nodeUpdates = fileNodes.map(f => {
@@ -201,27 +201,28 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
                 }
             }
 
-            const isSelected = effectiveSelectedNodeIds.has(f.id);
+            const isContextuallySelected = effectiveFileIds.has(f.id);
+            const isExactlySelected = exactSelectedIds.has(f.id);
+
             return {
                 id: f.id,
                 hidden: !isVisible,
-                opacity: effectiveSelectedNodeIds.size === 0 || isSelected ? 1 : 0.18,
-                shadow: isSelected,
-                borderWidth: isSelected ? 4 : 2
+                opacity: effectiveFileIds.size === 0 ? 1 : (isContextuallySelected ? 1 : 0.18),
+                shadow: isContextuallySelected,
+                borderWidth: isExactlySelected ? 5 : (isContextuallySelected ? 2 : 1)
             };
         });
 
         if (nodeUpdates.length > 0) visNodesRef.current.update(nodeUpdates);
 
         const edgeUpdates = fileLevelEdges.map((fe, index) => {
-            const isHighlighted = effectiveSelectedNodeIds.has(fe.from) && effectiveSelectedNodeIds.has(fe.to);
+            const isHighlighted = effectiveFileIds.has(fe.from) && effectiveFileIds.has(fe.to);
             return { id: index, color: isHighlighted ? '#3b82f6' : '#4b5563', width: isHighlighted ? 2.5 : 1 };
         });
 
         if (edgeUpdates.length > 0) visEdgesRef.current.update(edgeUpdates);
 
-        if (networkRef.current) networkRef.current.selectNodes(Array.from(effectiveSelectedNodeIds), false);
-    }, [effectiveSelectedNodeIds, applyOnGraph, selectedTypes, searchText, searchMode, isRegexEnabled, ignoreCase, nodes, fileLevelEdges, nodeToFileIdMap]);
+    }, [effectiveFileIds, exactSelectedIds, applyOnGraph, selectedTypes, searchText, searchMode, isRegexEnabled, ignoreCase, nodes, fileLevelEdges, nodeToFileIdMap]);
 
     useEffect(() => {
         if (networkRef.current) {
@@ -232,9 +233,7 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
         }
     }, [isTreeCollapsed, isMaximized]);
 
-    // FIX: Decouple 'effectiveSelectedNodeIds' from the Tree dependency array unless 'showOnlySelected' is actively true.
-    // If showOnlySelected is false, 'selectionDep' evaluates to null, breaking the render cascade on user clicks!
-    const selectionDep = showOnlySelected ? effectiveSelectedNodeIds : null;
+    const treeSelectionDep = showOnlySelected ? exactSelectedIds : null;
 
     const strictlyVisibleIds = useMemo(() => {
         const visible = new Set<string>();
@@ -244,11 +243,8 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
                 return;
             }
 
-            // Only apply selection-based filtering if 'selectionDep' is not null (meaning showOnlySelected is active)
-            if (selectionDep) {
-                const fileId = nodeToFileIdMap.get(n.id);
-                const isNodeSelected = selectionDep.has(n.id) || (fileId && selectionDep.has(fileId));
-                if (!isNodeSelected) return;
+            if (treeSelectionDep) {
+                if (!treeSelectionDep.has(n.id)) return;
             }
 
             if (selectedTypes.length > 0 && !selectedTypes.includes(n.group)) return;
@@ -268,7 +264,7 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
             if (matches) visible.add(n.id);
         });
         return visible;
-    }, [nodes, applyOnTree, showOnlySelected, selectionDep, selectedTypes, searchText, searchMode, isRegexEnabled, ignoreCase, nodeToFileIdMap]);
+    }, [nodes, applyOnTree, showOnlySelected, treeSelectionDep, selectedTypes, searchText, searchMode, isRegexEnabled, ignoreCase]);
 
     const hierarchicallyVisibleIds = useMemo(() => {
         const visible = new Set<string>(strictlyVisibleIds);
@@ -290,6 +286,30 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
         const visibleNodes = nodes.filter(n => hierarchicallyVisibleIds.has(n.id));
         const sortNodes = (arr: GraphNode[]) => arr.sort((a, b) => a.label.localeCompare(b.label));
 
+        let commonPrefix: string[] = [];
+        let workspaceName = 'Workspace';
+        let commonPrefixPath = '';
+
+        const fileNodes = nodes.filter(n => n.group === 'file' && n.source_file);
+        if (fileNodes.length > 0) {
+            const splitPaths = fileNodes.map(n => n.source_file!.split('/').filter(Boolean));
+            for (let i = 0; i < splitPaths[0].length; i++) {
+                const part = splitPaths[0][i];
+                if (splitPaths.every(p => p[i] === part)) {
+                    commonPrefix.push(part);
+                } else {
+                    break;
+                }
+            }
+            workspaceName = commonPrefix.length > 0 ? commonPrefix[commonPrefix.length - 1] : 'Workspace';
+
+            const firstPath = fileNodes[0].source_file as string;
+            commonPrefixPath = commonPrefix.join('/');
+            if (firstPath.startsWith('/')) {
+                commonPrefixPath = '/' + commonPrefixPath;
+            }
+        }
+
         const buildNodeSubtree = (node: GraphNode): TreeElement => {
             const childIds = childrenMap[node.id] || [];
             const visibleChildrenIds = childIds.filter(cid => hierarchicallyVisibleIds.has(cid));
@@ -304,9 +324,11 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
         const rootNodes = visibleNodes.filter(n => !parentMap[n.id] || !hierarchicallyVisibleIds.has(parentMap[n.id]));
         const sortedRoots = sortNodes(rootNodes);
 
-        if (treeGrouping === 'root') return sortedRoots.map(rn => buildNodeSubtree(rn));
+        let result: TreeElement[] = [];
 
-        if (treeGrouping === 'extension') {
+        if (treeGrouping === 'root') {
+            result = sortedRoots.map(rn => buildNodeSubtree(rn));
+        } else if (treeGrouping === 'extension') {
             const extGroups: { [key: string]: GraphNode[] } = {};
             const nonExtRoots: GraphNode[] = [];
             sortedRoots.forEach(rn => {
@@ -322,21 +344,21 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
                 children.forEach(c => allLeafIds.push(...c.allLeafIds));
                 return { id: `ext-${ext}`, label: ext, isGroup: true, icon: '🗂️', children, allLeafIds };
             });
-            return [...groupElements, ...nonExtRoots.map(rn => buildNodeSubtree(rn))];
-        }
-
-        if (treeGrouping === 'folder') {
+            result = [...groupElements, ...nonExtRoots.map(rn => buildNodeSubtree(rn))];
+        } else if (treeGrouping === 'folder') {
             interface FolderNode { name: string; path: string; nodes: GraphNode[]; subfolders: { [key: string]: FolderNode }; }
-            const rootFolder: FolderNode = { name: '', path: '', nodes: [], subfolders: {} };
+            const rootFolder: FolderNode = { name: '', path: commonPrefixPath, nodes: [], subfolders: {} };
             const nonFolderRoots: GraphNode[] = [];
 
             sortedRoots.forEach(rn => {
                 if ((rn.group === 'file' || rn.group === 'document') && rn.source_file) {
-                    const parts = rn.source_file.split('/').filter(p => p);
+                    const parts = rn.source_file.split('/').filter(Boolean);
+                    const relParts = parts.slice(commonPrefix.length);
+
                     let current = rootFolder;
-                    let accumulatedPath = '';
-                    for (let i = 0; i < parts.length - 1; i++) {
-                        const part = parts[i];
+                    let accumulatedPath = commonPrefixPath;
+                    for (let i = 0; i < relParts.length - 1; i++) {
+                        const part = relParts[i];
                         accumulatedPath = accumulatedPath ? `${accumulatedPath}/${part}` : part;
                         if (!current.subfolders[part]) current.subfolders[part] = { name: part, path: accumulatedPath, nodes: [], subfolders: {} };
                         current = current.subfolders[part];
@@ -351,12 +373,27 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
                 const combinedChildren = [...subfolderElements, ...nodeElements];
                 const allLeafIds: string[] = [];
                 combinedChildren.forEach(c => allLeafIds.push(...c.allLeafIds));
+
                 return { id: `folder-${folder.path || 'root'}`, label: pathName || 'Workspace', isGroup: true, icon: '🗂️', children: combinedChildren, allLeafIds, folderPath: folder.path || undefined };
             };
-            const builtRoot = convertFolderToTreeElement(rootFolder, '');
-            return [...(builtRoot.children || []), ...nonFolderRoots.map(rn => buildNodeSubtree(rn))];
+            const builtRoot = convertFolderToTreeElement(rootFolder, workspaceName);
+            result = [...(builtRoot.children || []), ...nonFolderRoots.map(rn => buildNodeSubtree(rn))];
         }
-        return [];
+
+        const allLeafIds: string[] = [];
+        result.forEach(child => allLeafIds.push(...child.allLeafIds));
+
+        const workspaceRoot: TreeElement = {
+            id: 'workspace-root',
+            label: workspaceName,
+            isGroup: true,
+            icon: '💻',
+            children: result,
+            allLeafIds: allLeafIds,
+            folderPath: commonPrefixPath || undefined
+        };
+
+        return [workspaceRoot];
     }, [nodes, parentMap, childrenMap, hierarchicallyVisibleIds, treeGrouping, sortOrder]);
 
     const handleExpandAll = () => setCollapsedIds(new Set());
@@ -379,7 +416,8 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
             <div className={`min-w-[250px] max-w-[70%] border-r border-[var(--vscode-panel-border)] shadow-[2px_0_8px_var(--vscode-widget-shadow)] z-0 bg-[var(--vscode-sideBar-background)] flex flex-col h-full overflow-hidden resize-x ${isTreeCollapsed || isMaximized ? 'hidden' : 'w-[465px]'}`}>
                 <TreeView
                     nodes={nodes}
-                    effectiveSelectedNodeIds={effectiveSelectedNodeIds}
+                    exactSelectedIds={exactSelectedIds}
+                    effectiveFileIds={effectiveFileIds}
                     toggleNodeSelection={toggleNodeSelection}
                     setNodesSelectionState={setNodesSelectionState}
                     clearSelection={clearSelection}

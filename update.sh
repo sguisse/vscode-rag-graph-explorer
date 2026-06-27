@@ -1,524 +1,669 @@
 #!/bin/bash
 
-# 1. Overwrite src/webview/components/Header.tsx to add the extension version tooltip and the requested ID
-cat << 'EOF' > src/webview/components/Header.tsx
-import React from 'react';
-import { GraphNode } from '../types';
-import { GraphService } from '../services/GraphService';
+# Ensure target directory structure exists
+mkdir -p src/webview/components/explorer-tab
 
-interface HeaderProps {
-    theme: 'light' | 'dark';
-    toggleTheme: () => void;
-    onGraphLoaded: (data: any) => void;
+# 1. Provide the complete /full content of ExplorerTabContainer.tsx with fixed common prefix calculation and single root layout
+cat << 'EOF' > src/webview/components/explorer-tab/ExplorerTabContainer.tsx
+import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { DataSet } from 'vis-network/standalone';
+import { Network } from 'vis-network';
+import { GraphNode, GraphEdge } from '../../types';
+import { TreeView } from './TreeView';
+import { GraphView } from './GraphView';
+import { useGraphSelection } from '../../hooks/useGraphSelection';
+
+interface ExplorerTabContainerProps {
     nodes: GraphNode[];
+    edges: GraphEdge[];
     selectedNodeIds: Set<string>;
-    version?: string;
+    setSelectedNodeIds: React.Dispatch<React.SetStateAction<Set<string>>>;
+    filters: any;
+    config?: any;
 }
 
-export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, onGraphLoaded, nodes, selectedNodeIds, version }) => {
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        try {
-            const data = await GraphService.loadGraphDataFromFile(file);
-            onGraphLoaded(data);
-        } catch (err) {
-            alert(err instanceof Error ? err.message : 'Invalid graph.json file.');
+interface TreeElement {
+    id: string;
+    label: string;
+    isGroup: boolean;
+    icon?: string;
+    node?: GraphNode;
+    children?: TreeElement[];
+    allLeafIds: string[];
+    folderPath?: string;
+}
+
+export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
+    nodes, edges, selectedNodeIds, setSelectedNodeIds, filters, config
+}) => {
+    const { applyOnGraph, applyOnTree, selectedTypes, searchText, searchMode, isRegexEnabled } = filters;
+
+    const containerRef = useRef<HTMLDivElement>(null);
+    const networkRef = useRef<Network | null>(null);
+
+    const visNodesRef = useRef<DataSet<any>>(new DataSet([]));
+    const visEdgesRef = useRef<DataSet<any>>(new DataSet([]));
+
+    const [isTreeCollapsed, setIsTreeCollapsed] = useState<boolean>(false);
+    const [isMaximized, setIsMaximized] = useState<boolean>(false);
+    const [showLegend, setShowLegend] = useState<boolean>(config?.graphLegendEnabled ?? true);
+
+    const [treeGrouping, setTreeGrouping] = useState<'folder' | 'extension' | 'root'>('folder');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+    const [ignoreCase, setIgnoreCase] = useState(true);
+    const [showOnlySelected, setShowOnlySelected] = useState(false);
+
+    const [parentDepth, setParentDepth] = useState<number>(config?.callersDepth ?? 1);
+    const [childDepth, setChildDepth] = useState<number>(config?.calleesDepth ?? 1);
+    const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+
+    const [isHierarchyEnabled, setIsHierarchyEnabled] = useState<boolean>(true);
+
+    useEffect(() => {
+        if (config) {
+            setShowLegend(config.graphLegendEnabled ?? true);
+            setParentDepth(config.callersDepth ?? 1);
+            setChildDepth(config.calleesDepth ?? 1);
         }
-    };
+    }, [config]);
 
-    return (
-        <header className="z-40 relative flex flex-shrink-0 justify-between items-center bg-[var(--vscode-editor-background)] shadow-[0_2px_8px_var(--vscode-widget-shadow)] px-4 border-[var(--vscode-panel-border)] border-b h-12">
+    const nodeToFileIdMap = useMemo(() => {
+        const map = new Map<string, string>();
+        const fileNodes = nodes.filter(n => n.group === 'file');
+        fileNodes.forEach(f => map.set(f.id, f.id));
+        nodes.forEach(n => {
+            if (n.group !== 'file' && n.source_file) {
+                const matchingFile = fileNodes.find(f => f.source_file === n.source_file || f.label === n.source_file || f.id === n.source_file);
+                if (matchingFile) map.set(n.id, matchingFile.id);
+            }
+        });
+        return map;
+    }, [nodes]);
 
-            {/* INJECTED ID AND TOOLTIP HERE */}
-            <div id="extension-identity" className="flex items-center gap-3 cursor-default" data-tooltip={`Version ${version || '1.0.0'}`}>
-                <div className="flex justify-center items-center bg-gradient-to-br from-blue-500 to-blue-700 shadow-inner rounded-md w-7 h-7 font-bold text-white text-sm">G</div>
-                <div>
-                    <span className="block font-bold text-sm leading-tight tracking-wide">Graph RAG</span>
-                    <span className="font-semibold text-[10px] text-[var(--vscode-descriptionForeground)] uppercase tracking-widest">Expert Node Navigator</span>
-                </div>
-            </div>
+    const { parentMap, childrenMap } = useMemo(() => {
+        const pMap: { [key: string]: string } = {};
+        const cMap: { [key: string]: string[] } = {};
+        edges.forEach(e => {
+            if (e.type === 'contains' || e.type === 'relation') {
+                pMap[e.to] = e.from;
+                if (!cMap[e.from]) cMap[e.from] = [];
+                cMap[e.from].push(e.to);
+            }
+        });
+        return { parentMap: pMap, childrenMap: cMap };
+    }, [edges]);
 
-            <div className="flex items-center gap-2">
-                <button onClick={toggleTheme} className="hover:bg-[var(--vscode-toolbar-hoverBackground)] p-1.5 rounded-md text-[var(--vscode-foreground)] transition-colors duration-200">
-                    <span className={`codicon ${theme === 'dark' ? 'codicon-sun' : 'codicon-moon'}`}></span>
-                </button>
+    const fileLevelEdges = useMemo(() => {
+        const fileEdgesMap = new Map<string, { from: string, to: string, types: Set<string> }>();
+        edges.forEach(e => {
+            const fromFileId = nodeToFileIdMap.get(e.from);
+            const toFileId = nodeToFileIdMap.get(e.to);
+            if (fromFileId && toFileId && fromFileId !== toFileId) {
+                const key = `${fromFileId}->${toFileId}`;
+                if (!fileEdgesMap.has(key)) {
+                    fileEdgesMap.set(key, { from: fromFileId, to: toFileId, types: new Set() });
+                }
+                fileEdgesMap.get(key)!.types.add(e.type);
+            }
+        });
+        return Array.from(fileEdgesMap.values());
+    }, [edges, nodeToFileIdMap]);
 
-                <div className="bg-[var(--vscode-panel-border)] mx-1 w-[1px] h-5" />
-
-                <label className="flex items-center gap-1.5 bg-gradient-to-r from-blue-600 hover:from-blue-500 to-blue-500 hover:to-blue-400 shadow-md hover:shadow-lg px-3 py-1.5 rounded-md text-white text-xs transition-all duration-200 cursor-pointer">
-                    <span className="codicon codicon-file-symlink-file"></span> Load graph.json
-                    <input type="file" accept=".json" onChange={handleFileChange} className="hidden" />
-                </label>
-            </div>
-        </header>
-    );
-};
-EOF
-
-# 2. Overwrite src/webview/App.tsx to pass down the dynamic extensionVersion
-cat << 'EOF' > src/webview/App.tsx
-import React, { useState, useEffect, useMemo } from 'react';
-import { Header } from './components/Header';
-import { Footer } from './components/Footer';
-import { ExplorationFilters } from './components/ExplorationFilters';
-import { TabsNavigation } from './components/TabsNavigation';
-import { ExplorerTab } from './components/ExplorerTab';
-import { AIAssistantTab } from './components/AIAssistantTab';
-import { ConfigurationTab } from './components/ConfigurationTab';
-import { TerminalTab } from './components/TerminalTab';
-import { GraphNode, GraphEdge } from './types';
-import { GraphService } from './services/GraphService';
-
-declare const acquireVsCodeApi: () => any;
-const vscode = acquireVsCodeApi();
-(window as any).vscodeApi = vscode;
-
-export const App: React.FC = () => {
-    const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-    const [status, setStatus] = React.useState<'ready' | 'building' | 'error'>('ready');
-    const [progress, setProgress] = React.useState<{ current: number; total: number }>({ current: 0, total: 0 });
-    const [activeTab, setActiveTab] = useState<string>('explorer');
-
-    const [config, setConfig] = useState<any>({
-        EntitiesTypesList: ['file', 'class', 'method', 'document'],
-        regexFilterEnabled: false,
-        TreeFilterEnabled: true,
-        geminiApiKey: '',
-        tooltipDelay: 2000,
-        graphLegendEnabled: true,
-        callersDepth: 1,
-        calleesDepth: 1,
-        extensionVersion: '1.0.0'
-    });
-
-    const [nodes, setNodes] = useState<GraphNode[]>([]);
-    const [edges, setEdges] = useState<GraphEdge[]>([]);
-    const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(new Set());
-    const [logs, setLogs] = useState<Array<{ level: 'debug' | 'info' | 'warn' | 'error'; message: string; timestamp: string }>>([]);
-
-    const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-    const [searchMode, setSearchMode] = useState<string>('contains');
-    const [searchText, setSearchText] = useState<string>('');
-    const [isRegexEnabled, setIsRegexEnabled] = useState<boolean>(false);
-    const [applyOnTree, setApplyOnTree] = useState<boolean>(true);
-    const [applyOnGraph, setApplyOnGraph] = useState<boolean>(false);
-
-    const activeFilters = useMemo(() => ({
-        selectedTypes, searchMode, searchText, isRegexEnabled, applyOnTree, applyOnGraph
-    }), [selectedTypes, searchMode, searchText, isRegexEnabled, applyOnTree, applyOnGraph]);
+    const {
+        exactSelectedIds,
+        effectiveFileIds,
+        toggleNodeSelection,
+        setNodesSelectionState,
+        clearSelection
+    } = useGraphSelection(fileLevelEdges, nodeToFileIdMap, parentDepth, childDepth, isHierarchyEnabled);
 
     useEffect(() => {
-        const handleMessage = (event: MessageEvent) => {
-            const message = event.data;
-            if (message.command === 'setConfig') {
-                setConfig(message.config);
-                setIsRegexEnabled(message.config.regexFilterEnabled);
-                setApplyOnTree(message.config.TreeFilterEnabled);
-            } else if (message.command === 'updateGraphData') {
-                handleGraphLoad(message.payload);
-            } else if (message.command === 'blastRadiusReport') {
-                window.dispatchEvent(new CustomEvent('blastRadiusReport', { detail: message.payload }));
-            } else if (message.command === 'logTrace') {
-                setLogs(prev => [...prev, message.payload]);
+        setSelectedNodeIds(exactSelectedIds);
+    }, [exactSelectedIds, setSelectedNodeIds]);
 
-                const logMessage = message.payload.message || '';
-                const progressMatch = logMessage.match(/Progression de l'analyse parallèle\s*:\s*(\d+)\/(\d+)/);
-                if (progressMatch) {
-                    setProgress({
-                        current: parseInt(progressMatch[1], 10),
-                        total: parseInt(progressMatch[2], 10)
-                    });
-                }
-            } else if (message.command === 'updateStatus') {
-                setStatus(message.payload);
-                if (message.payload === 'building') {
-                    setProgress({ current: 0, total: 0 });
-                }
+    useEffect(() => {
+        if (selectedNodeIds.size === 0 && exactSelectedIds.size > 0) {
+            clearSelection();
+        }
+    }, [selectedNodeIds, exactSelectedIds, clearSelection]);
+
+    useEffect(() => {
+        if (!containerRef.current) return;
+
+        const options = {
+            interaction: {
+                multiselect: true,
+                selectConnectedEdges: false
+            },
+            nodes: {
+                shape: 'dot', size: 16,
+                font: { color: '#e5e7eb', face: 'var(--vscode-font-family)', size: 12 },
+                borderWidth: 2, shadow: true
+            },
+            edges: {
+                width: 1.5, color: { color: '#9ca3af', highlight: '#3b82f6' },
+                arrows: { to: { enabled: true, scaleFactor: 0.5 } },
+                smooth: { enabled: true, type: 'continuous', roundness: 0.5 }
+            },
+            groups: {
+                file: { color: { background: '#3b82f6', border: '#2563eb' }, shape: 'hexagon', size: 20, font: { color: 'rgba(59, 130, 246, 0.85)' } }
+            },
+            physics: {
+                solver: 'forceAtlas2Based',
+                forceAtlas2Based: { gravitationalConstant: -50, centralGravity: 0.01, springLength: 100 },
+                stabilization: { iterations: 150 }
             }
         };
 
-        window.addEventListener('message', handleMessage);
-        vscode.postMessage({ command: 'ready' });
+        const network = new Network(containerRef.current, { nodes: visNodesRef.current, edges: visEdgesRef.current }, options as any);
+        networkRef.current = network;
 
-        return () => {
-            window.removeEventListener('message', handleMessage);
-        };
-    }, []);
+        network.on("stabilizationIterationsDone", () => { network.setOptions({ physics: false } as any); });
+
+        network.on("click", (params) => {
+            if (params.nodes.length > 0) {
+                toggleNodeSelection(String(params.nodes[0]));
+            }
+            network.unselectAll();
+        });
+
+        return () => { network.destroy(); };
+    }, [toggleNodeSelection]);
 
     useEffect(() => {
-        const root = window.document.documentElement;
-        if (theme === 'dark') root.classList.add('dark');
-        else root.classList.remove('dark');
-    }, [theme]);
+        visNodesRef.current.clear();
+        visEdgesRef.current.clear();
+
+        const fileNodes = nodes.filter(n => n.group === 'file');
+        visNodesRef.current.add(fileNodes.map(n => ({ id: n.id, label: n.label, group: n.group, title: n.label })));
+
+        const synthesizedEdges = fileLevelEdges.map((fe, index) => ({ id: index, from: fe.from, to: fe.to, type: Array.from(fe.types).join(', ') }));
+        visEdgesRef.current.add(synthesizedEdges);
+
+        if (networkRef.current) {
+            networkRef.current.setOptions({ physics: true } as any);
+            networkRef.current.stabilize();
+        }
+    }, [nodes, fileLevelEdges]);
 
     useEffect(() => {
-        const tooltipEl = document.getElementById('global-cursor-tooltip');
-        let tooltipTimeout: NodeJS.Timeout | null = null;
-        let activeTarget: Element | null = null;
-
-        const handleMouseMove = (e: MouseEvent) => {
-            const target = (e.target as Element).closest('[data-tooltip]');
-            if (target) {
-                if (activeTarget !== target) {
-                    activeTarget = target;
-                    if (tooltipTimeout) clearTimeout(tooltipTimeout);
-                    if (tooltipEl) tooltipEl.style.display = 'none';
-                    tooltipTimeout = setTimeout(() => {
-                        if (tooltipEl && activeTarget) {
-                            tooltipEl.innerHTML = activeTarget.getAttribute('data-tooltip') || '';
-                            tooltipEl.style.display = 'block';
-                            let targetTop = e.clientY - 20;
-                            tooltipEl.style.top = `${targetTop}px`;
-                            tooltipEl.style.left = `${e.clientX + 15}px`;
+        const fileNodes = nodes.filter(n => n.group === 'file');
+        const nodeUpdates = fileNodes.map(f => {
+            let isVisible = true;
+            if (applyOnGraph) {
+                const relatedNodes = nodes.filter(n => nodeToFileIdMap.get(n.id) === f.id);
+                const filteredRelated = selectedTypes.length > 0 ? relatedNodes.filter(rn => selectedTypes.includes(rn.group)) : relatedNodes;
+                if (filteredRelated.length === 0) isVisible = false;
+                else if (searchText) {
+                    const queryStr = ignoreCase ? searchText.toLowerCase() : searchText;
+                    const matchesSearch = filteredRelated.some(rn => {
+                        const labelStr = ignoreCase ? rn.label.toLowerCase() : rn.label;
+                        if (isRegexEnabled) {
+                            try { return new RegExp(queryStr).test(labelStr); } catch { return true; }
+                        } else {
+                            return searchMode === 'exact' ? labelStr === queryStr : labelStr.includes(queryStr);
                         }
-                    }, config.tooltipDelay ?? 2000);
-                } else if (tooltipEl && tooltipEl.style.display === 'block') {
-                    tooltipEl.style.top = `${e.clientY - 20}px`;
-                    tooltipEl.style.left = `${e.clientX + 15}px`;
-                }
-            } else {
-                if (activeTarget) {
-                    activeTarget = null;
-                    if (tooltipTimeout) clearTimeout(tooltipTimeout);
-                    if (tooltipEl) tooltipEl.style.display = 'none';
+                    });
+                    if (!matchesSearch) isVisible = false;
                 }
             }
+
+            const isContextuallySelected = effectiveFileIds.has(f.id);
+            const isExactlySelected = exactSelectedIds.has(f.id);
+
+            return {
+                id: f.id,
+                hidden: !isVisible,
+                opacity: effectiveFileIds.size === 0 ? 1 : (isContextuallySelected ? 1 : 0.18),
+                shadow: isContextuallySelected,
+                borderWidth: isExactlySelected ? 5 : (isContextuallySelected ? 2 : 1)
+            };
+        });
+
+        if (nodeUpdates.length > 0) visNodesRef.current.update(nodeUpdates);
+
+        const edgeUpdates = fileLevelEdges.map((fe, index) => {
+            const isHighlighted = effectiveFileIds.has(fe.from) && effectiveFileIds.has(fe.to);
+            return { id: index, color: isHighlighted ? '#3b82f6' : '#4b5563', width: isHighlighted ? 2.5 : 1 };
+        });
+
+        if (edgeUpdates.length > 0) visEdgesRef.current.update(edgeUpdates);
+
+    }, [effectiveFileIds, exactSelectedIds, applyOnGraph, selectedTypes, searchText, searchMode, isRegexEnabled, ignoreCase, nodes, fileLevelEdges, nodeToFileIdMap]);
+
+    useEffect(() => {
+        if (networkRef.current) {
+            setTimeout(() => {
+                networkRef.current?.setSize('100%', '100%');
+                networkRef.current?.redraw();
+            }, 100);
+        }
+    }, [isTreeCollapsed, isMaximized]);
+
+    const treeSelectionDep = showOnlySelected ? exactSelectedIds : null;
+
+    const strictlyVisibleIds = useMemo(() => {
+        const visible = new Set<string>();
+        nodes.forEach(n => {
+            if (!applyOnTree) {
+                visible.add(n.id);
+                return;
+            }
+
+            if (treeSelectionDep) {
+                if (!treeSelectionDep.has(n.id)) return;
+            }
+
+            if (selectedTypes.length > 0 && !selectedTypes.includes(n.group)) return;
+            if (!searchText) {
+                visible.add(n.id);
+                return;
+            }
+
+            const labelStr = ignoreCase ? n.label.toLowerCase() : n.label;
+            const queryStr = ignoreCase ? searchText.toLowerCase() : searchText;
+            let matches = false;
+            if (isRegexEnabled) {
+                try { matches = new RegExp(queryStr).test(labelStr); } catch { matches = true; }
+            } else {
+                matches = searchMode === 'exact' ? labelStr === queryStr : labelStr.includes(queryStr);
+            }
+            if (matches) visible.add(n.id);
+        });
+        return visible;
+    }, [nodes, applyOnTree, showOnlySelected, treeSelectionDep, selectedTypes, searchText, searchMode, isRegexEnabled, ignoreCase]);
+
+    const hierarchicallyVisibleIds = useMemo(() => {
+        const visible = new Set<string>(strictlyVisibleIds);
+        let added = true;
+        while (added) {
+            added = false;
+            for (const id of Array.from(visible)) {
+                const pid = parentMap[id];
+                if (pid && !visible.has(pid)) {
+                    visible.add(pid);
+                    added = true;
+                }
+            }
+        }
+        return visible;
+    }, [strictlyVisibleIds, parentMap]);
+
+    const treeData = useMemo((): TreeElement[] => {
+        const visibleNodes = nodes.filter(n => hierarchicallyVisibleIds.has(n.id));
+        const sortNodes = (arr: GraphNode[]) => arr.sort((a, b) => a.label.localeCompare(b.label));
+
+        let commonPrefix: string[] = [];
+        let workspaceName = 'Workspace';
+        let commonPrefixPath = '';
+
+        const fileNodes = nodes.filter(n => n.group === 'file' && n.source_file);
+        if (fileNodes.length > 0) {
+            const splitPaths = fileNodes.map(n => n.source_file!.split('/').filter(Boolean));
+            for (let i = 0; i < splitPaths[0].length; i++) {
+                const part = splitPaths[0][i];
+                if (splitPaths.every(p => p[i] === part)) {
+                    commonPrefix.push(part);
+                } else {
+                    break;
+                }
+            }
+            workspaceName = commonPrefix.length > 0 ? commonPrefix[commonPrefix.length - 1] : 'Workspace';
+
+            const firstPath = fileNodes[0].source_file as string;
+            commonPrefixPath = commonPrefix.join('/');
+            if (firstPath.startsWith('/')) {
+                commonPrefixPath = '/' + commonPrefixPath;
+            }
+        }
+
+        const buildNodeSubtree = (node: GraphNode): TreeElement => {
+            const childIds = childrenMap[node.id] || [];
+            const visibleChildrenIds = childIds.filter(cid => hierarchicallyVisibleIds.has(cid));
+            const sortedChildren = sortNodes(nodes.filter(n => visibleChildrenIds.includes(n.id)));
+            const childrenElements = sortedChildren.map(cn => buildNodeSubtree(cn));
+            const allLeafIds = [node.id];
+            childrenElements.forEach(c => allLeafIds.push(...c.allLeafIds));
+
+            return { id: node.id, label: node.label, isGroup: false, node, children: childrenElements.length > 0 ? childrenElements : undefined, allLeafIds };
         };
 
-        document.body.addEventListener('mousemove', handleMouseMove);
-        return () => {
-            document.body.removeEventListener('mousemove', handleMouseMove);
-            if (tooltipTimeout) clearTimeout(tooltipTimeout);
-        };
-    }, [config.tooltipDelay]);
+        const rootNodes = visibleNodes.filter(n => !parentMap[n.id] || !hierarchicallyVisibleIds.has(parentMap[n.id]));
+        const sortedRoots = sortNodes(rootNodes);
 
-    const handleGraphLoad = (data: { nodes: any[]; links: any[] }) => {
-        const { nodes: parsedNodes, edges: parsedEdges } = GraphService.buildGraph(data);
-        setNodes(parsedNodes);
-        setEdges(parsedEdges);
-        setSelectedNodeIds(new Set());
+        let result: TreeElement[] = [];
+
+        if (treeGrouping === 'root') {
+            result = sortedRoots.map(rn => buildNodeSubtree(rn));
+        } else if (treeGrouping === 'extension') {
+            const extGroups: { [key: string]: GraphNode[] } = {};
+            const nonExtRoots: GraphNode[] = [];
+            sortedRoots.forEach(rn => {
+                if (rn.group === 'file' || rn.group === 'document') {
+                    const ext = rn.label.includes('.') ? '.' + rn.label.split('.').pop() : 'No extension';
+                    if (!extGroups[ext]) extGroups[ext] = [];
+                    extGroups[ext].push(rn);
+                } else nonExtRoots.push(rn);
+            });
+            const groupElements: TreeElement[] = Object.keys(extGroups).sort((a, b) => sortOrder === 'asc' ? a.localeCompare(b) : b.localeCompare(a)).map(ext => {
+                const children = extGroups[ext].map(rn => buildNodeSubtree(rn));
+                const allLeafIds: string[] = [];
+                children.forEach(c => allLeafIds.push(...c.allLeafIds));
+                return { id: `ext-${ext}`, label: ext, isGroup: true, icon: '🗂️', children, allLeafIds };
+            });
+            result = [...groupElements, ...nonExtRoots.map(rn => buildNodeSubtree(rn))];
+        } else if (treeGrouping === 'folder') {
+            interface FolderNode { name: string; path: string; nodes: GraphNode[]; subfolders: { [key: string]: FolderNode }; }
+            const rootFolder: FolderNode = { name: '', path: commonPrefixPath, nodes: [], subfolders: {} };
+            const nonFolderRoots: GraphNode[] = [];
+
+            sortedRoots.forEach(rn => {
+                if ((rn.group === 'file' || rn.group === 'document') && rn.source_file) {
+                    const parts = rn.source_file.split('/').filter(Boolean);
+                    const relParts = parts.slice(commonPrefix.length);
+
+                    let current = rootFolder;
+                    let accumulatedPath = commonPrefixPath;
+                    for (let i = 0; i < relParts.length - 1; i++) {
+                        const part = relParts[i];
+                        accumulatedPath = accumulatedPath ? `${accumulatedPath}/${part}` : part;
+                        if (!current.subfolders[part]) current.subfolders[part] = { name: part, path: accumulatedPath, nodes: [], subfolders: {} };
+                        current = current.subfolders[part];
+                    }
+                    current.nodes.push(rn);
+                } else nonFolderRoots.push(rn);
+            });
+
+            const convertFolderToTreeElement = (folder: FolderNode, pathName: string): TreeElement => {
+                const subfolderElements = Object.keys(folder.subfolders).sort((a, b) => sortOrder === 'asc' ? a.localeCompare(b) : b.localeCompare(a)).map(k => convertFolderToTreeElement(folder.subfolders[k], k));
+                const nodeElements = sortNodes(folder.nodes).map(n => buildNodeSubtree(n));
+                const combinedChildren = [...subfolderElements, ...nodeElements];
+                const allLeafIds: string[] = [];
+                combinedChildren.forEach(c => allLeafIds.push(...c.allLeafIds));
+
+                return { id: `folder-${folder.path || 'root'}`, label: pathName || 'Workspace', isGroup: true, icon: '🗂️', children: combinedChildren, allLeafIds, folderPath: folder.path || undefined };
+            };
+            const builtRoot = convertFolderToTreeElement(rootFolder, workspaceName);
+            result = [...(builtRoot.children || []), ...nonFolderRoots.map(rn => buildNodeSubtree(rn))];
+        }
+
+        const allLeafIds: string[] = [];
+        result.forEach(child => allLeafIds.push(...child.allLeafIds));
+
+        const workspaceRoot: TreeElement = {
+            id: 'workspace-root',
+            label: workspaceName,
+            isGroup: true,
+            icon: '💻',
+            children: result,
+            allLeafIds: allLeafIds,
+            folderPath: commonPrefixPath || undefined
+        };
+
+        return [workspaceRoot];
+    }, [nodes, parentMap, childrenMap, hierarchicallyVisibleIds, treeGrouping, sortOrder]);
+
+    const handleExpandAll = () => setCollapsedIds(new Set());
+    const handleCollapseAll = () => {
+        const nextCollapsed = new Set<string>();
+        const collapseChildrenRecursive = (elements: any[]) => {
+            elements.forEach(el => {
+                if (el.isGroup) {
+                    nextCollapsed.add(el.id);
+                    if (el.children) collapseChildrenRecursive(el.children);
+                }
+            });
+        };
+        collapseChildrenRecursive(treeData);
+        setCollapsedIds(nextCollapsed);
     };
 
     return (
-        <div className="flex flex-col bg-[var(--vscode-editor-background)] w-screen h-screen overflow-hidden text-[var(--vscode-foreground)]">
-            <Header
-                theme={theme}
-                toggleTheme={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
-                onGraphLoaded={handleGraphLoad}
-                nodes={nodes}
-                selectedNodeIds={selectedNodeIds}
-                version={config.extensionVersion}
-            />
-
-            <main className="flex flex-col flex-1 min-h-0">
-                <ExplorationFilters
-                    typesList={config.EntitiesTypesList || ['file', 'class', 'method', 'document']}
-                    selectedTypes={selectedTypes}
-                    setSelectedTypes={setSelectedTypes}
-                    searchMode={searchMode}
-                    setSearchMode={setSearchMode}
-                    searchText={searchText}
-                    setSearchText={setSearchText}
-                    isRegexEnabled={isRegexEnabled}
-                    setIsRegexEnabled={setIsRegexEnabled}
-                    applyOnTree={applyOnTree}
-                    setApplyOnTree={setApplyOnTree}
-                    applyOnGraph={applyOnGraph}
-                    setApplyOnGraph={setApplyOnGraph}
+        <div className="relative flex items-stretch w-full h-full min-h-0">
+            <div className={`min-w-[250px] max-w-[70%] border-r border-[var(--vscode-panel-border)] shadow-[2px_0_8px_var(--vscode-widget-shadow)] z-0 bg-[var(--vscode-sideBar-background)] flex flex-col h-full overflow-hidden resize-x ${isTreeCollapsed || isMaximized ? 'hidden' : 'w-[465px]'}`}>
+                <TreeView
+                    nodes={nodes}
+                    exactSelectedIds={exactSelectedIds}
+                    effectiveFileIds={effectiveFileIds}
+                    toggleNodeSelection={toggleNodeSelection}
+                    setNodesSelectionState={setNodesSelectionState}
+                    clearSelection={clearSelection}
+                    treeData={treeData}
+                    sortOrder={sortOrder} setSortOrder={setSortOrder} ignoreCase={ignoreCase} setIgnoreCase={setIgnoreCase}
+                    treeGrouping={treeGrouping} setTreeGrouping={setTreeGrouping} showOnlySelected={showOnlySelected}
+                    setShowOnlySelected={setShowOnlySelected} collapsedIds={collapsedIds} setCollapsedIds={setCollapsedIds}
+                    handleExpandAll={handleExpandAll} handleCollapseAll={handleCollapseAll} networkRef={networkRef}
+                    isHierarchyEnabled={isHierarchyEnabled} setIsHierarchyEnabled={setIsHierarchyEnabled}
                 />
-
-                <TabsNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
-
-                <div className="relative flex-1 min-h-0">
-                    <div className={activeTab === 'explorer' ? 'absolute inset-0 flex' : 'hidden'}>
-                        <ExplorerTab
-                            nodes={nodes}
-                            edges={edges}
-                            selectedNodeIds={selectedNodeIds}
-                            setSelectedNodeIds={setSelectedNodeIds}
-                            filters={activeFilters}
-                            config={config}
-                        />
-                    </div>
-                    <div className={activeTab === 'ai' ? 'absolute inset-0 flex' : 'hidden'}>
-                        <AIAssistantTab
-                            nodes={nodes}
-                            edges={edges}
-                            selectedNodeIds={selectedNodeIds}
-                            apiKey={config.geminiApiKey}
-                        />
-                    </div>
-                    <div className={activeTab === 'terminal' ? 'absolute inset-0 flex' : 'hidden'}>
-                        <TerminalTab logs={logs} clearLogs={() => setLogs([])} />
-                    </div>
-                    <div className={activeTab === 'config' ? 'absolute inset-0 flex' : 'hidden'}>
-                        <ConfigurationTab config={config} />
-                    </div>
-                </div>
-            </main>
-
-            <Footer
-                status={status}
-                progress={progress}
-                onKill={() => vscode.postMessage({ command: 'killAnalysis' })}
+            </div>
+            <GraphView
+                containerRef={containerRef} isMaximized={isMaximized} setIsMaximized={setIsMaximized}
+                isTreeCollapsed={isTreeCollapsed} setIsTreeCollapsed={setIsTreeCollapsed}
+                parentDepth={parentDepth} setParentDepth={setParentDepth} childDepth={childDepth} setChildDepth={setChildDepth}
+                networkRef={networkRef} showLegend={showLegend} setShowLegend={setShowLegend}
             />
         </div>
     );
 };
 EOF
 
-# 3. Overwrite src/extension.ts to push the package.json version via the configuration payload
-cat << 'EOF' > src/extension.ts
-import * as vscode from 'vscode';
-import * as path from 'path';
-import * as fs from 'fs';
+# 2. Provide the complete /full content of TreeView.tsx with precise tooltips and stable checking logic
+cat << 'EOF' > src/webview/components/explorer-tab/TreeView.tsx
+import React from 'react';
+import { GraphNode } from '../../types';
 
-let activeChildProcess: any = null;
+interface TreeElement {
+    id: string;
+    label: string;
+    isGroup: boolean;
+    icon?: string;
+    node?: GraphNode;
+    children?: TreeElement[];
+    allLeafIds: string[];
+    folderPath?: string;
+}
 
-export function activate(context: vscode.ExtensionContext) {
-    let disposable = vscode.commands.registerCommand('graphRagExplorer.openTool', () => {
-        const panel = vscode.window.createWebviewPanel(
-            'graphRagExplorer', 'Graph RAG Explorer', vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true,
-                localResourceRoots: [vscode.Uri.file(path.join(context.extensionPath, 'dist'))]
-            }
-        );
+interface TreeViewProps {
+    nodes: GraphNode[];
+    exactSelectedIds: Set<string>;
+    effectiveFileIds: Set<string>;
+    toggleNodeSelection: (id: string) => void;
+    setNodesSelectionState: (ids: string[], checked: boolean) => void;
+    clearSelection: () => void;
+    treeData: TreeElement[];
+    sortOrder: 'asc' | 'desc';
+    setSortOrder: (val: 'asc' | 'desc') => void;
+    ignoreCase: boolean;
+    setIgnoreCase: (val: boolean) => void;
+    treeGrouping: 'folder' | 'extension' | 'root';
+    setTreeGrouping: (val: 'folder' | 'extension' | 'root') => void;
+    showOnlySelected: boolean;
+    setShowOnlySelected: (val: boolean) => void;
+    collapsedIds: Set<string>;
+    setCollapsedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
+    handleExpandAll: () => void;
+    handleCollapseAll: () => void;
+    networkRef: React.RefObject<any>;
+    isHierarchyEnabled: boolean;
+    setIsHierarchyEnabled: (val: boolean) => void;
+}
 
-        const graphConfig = vscode.workspace.getConfiguration('graphRagExplorer');
-        if (graphConfig.get('pinFilesExporter') !== false) {
-            vscode.commands.executeCommand('workbench.action.pinEditor');
+export const TreeView: React.FC<TreeViewProps> = ({
+    nodes, exactSelectedIds, effectiveFileIds, toggleNodeSelection, setNodesSelectionState, clearSelection,
+    treeData, sortOrder, setSortOrder, ignoreCase, setIgnoreCase, treeGrouping, setTreeGrouping,
+    showOnlySelected, setShowOnlySelected, collapsedIds, setCollapsedIds,
+    handleExpandAll, handleCollapseAll, networkRef, isHierarchyEnabled, setIsHierarchyEnabled
+}) => {
+
+    const handleClearSelectionWithConfirm = () => {
+        if (exactSelectedIds.size === 0) return;
+        if (window.confirm(`Clear selection of all ${exactSelectedIds.size} node(s)?`)) {
+            clearSelection();
         }
+    };
 
-        panel.webview.html = getWebviewContent(panel.webview, context.extensionPath);
+    const renderTreeElements = (elements: TreeElement[]): React.ReactNode => {
+        return elements.map(el => {
+            if (el.isGroup) {
+                const isGroupOpen = !collapsedIds.has(el.id);
+                const isChecked = el.allLeafIds.length > 0 && el.allLeafIds.every(id => exactSelectedIds.has(id));
+                const isIndeterminate = !isChecked && el.allLeafIds.some(id => exactSelectedIds.has(id));
 
-        const saveListener = vscode.workspace.onDidSaveTextDocument((document) => {
-            if (document.uri.scheme !== 'file') return;
-            const relativePath = vscode.workspace.asRelativePath(document.uri);
-            runPythonScan(context, panel, "delta", relativePath);
-        });
-        context.subscriptions.push(saveListener);
+                const tooltipMessage = el.id === 'workspace-root'
+                    ? (el.folderPath ? `Workspace Absolute Context: ${el.folderPath}` : 'Workspace')
+                    : (el.folderPath ? `Path: ${el.folderPath}` : undefined);
 
-        panel.onDidDispose(() => {
-            saveListener.dispose();
-            if (activeChildProcess) {
-                try { activeChildProcess.kill('SIGKILL'); } catch(e){}
-                activeChildProcess = null;
+                return (
+                    <details key={el.id} className="w-full select-none" open={isGroupOpen}>
+                        <summary
+                            className="[&::-webkit-details-marker]:hidden flex items-center gap-1.5 px-1.5 py-0.5 rounded-md font-bold text-xs transition-colors cursor-pointer list-none hover:bg-[var(--vscode-list-hoverBackground)]"
+                            data-tooltip={tooltipMessage}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                if ((window as any).vscodeApi && el.folderPath) {
+                                    try {
+                                        (window as any).vscodeApi.postMessage({ command: 'revealFile', path: el.folderPath, openEditor: false });
+                                    } catch (err) {}
+                                }
+                                setCollapsedIds(prev => {
+                                    const next = new Set(prev);
+                                    if (next.has(el.id)) next.delete(el.id);
+                                    else next.add(el.id);
+                                    return next;
+                                });
+                            }}
+                        >
+                            <span className={`codicon transition-transform duration-200 ${isGroupOpen ? 'codicon-chevron-down' : 'codicon-chevron-right'} text-[12px] flex-shrink-0 w-3 text-center`}></span>
+                            <input
+                                type="checkbox"
+                                className="flex-shrink-0 w-3.5 h-3.5 accent-blue-500 cursor-pointer"
+                                checked={isChecked}
+                                ref={el => { if (el) el.indeterminate = isIndeterminate; }}
+                                onChange={(e) => setNodesSelectionState(el.allLeafIds, e.target.checked)}
+                                onClick={(e) => e.stopPropagation()}
+                            />
+                            <span className="flex-shrink-0 opacity-90 text-xs">{el.icon}</span>
+                            <span className="flex-1 text-[var(--vscode-foreground)] truncate tracking-wide">{el.label}</span>
+                        </summary>
+                        <div className="space-y-0 mt-0 ml-[24px] pl-2 border-[var(--vscode-panel-border)] border-l">
+                            {renderTreeElements(el.children || [])}
+                        </div>
+                    </details>
+                );
+            } else {
+                const isChecked = exactSelectedIds.has(el.id);
+
+                return (
+                    <div key={el.id} className="group flex items-center gap-1.5 px-1.5 py-0.5 rounded-md w-full transition-colors hover:bg-[var(--vscode-list-hoverBackground)]">
+                        <span className="w-3 flex-shrink-0" />
+                        <input
+                            type="checkbox"
+                            className="flex-shrink-0 w-3.5 h-3.5 accent-blue-500 cursor-pointer"
+                            checked={isChecked}
+                            onChange={() => toggleNodeSelection(el.id)}
+                        />
+                        <span className="flex-shrink-0 opacity-80 text-xs">
+                            {el.node?.group === 'file' ? '📂' : el.node?.group === 'class' ? '📦' : el.node?.group === 'method' ? '⚡' : '📄'}
+                        </span>
+                        <span
+                            className="flex-1 text-[var(--vscode-foreground)] hover:text-blue-400 text-xs truncate transition-colors cursor-pointer select-none"
+                            onClick={() => {
+                                if (networkRef.current) {
+                                    networkRef.current.focus(el.id, { scale: 1.2, animation: { duration: 400, easingFunction: 'easeInOutQuad' } });
+                                }
+                            }}
+                            onDoubleClick={() => {
+                                clearSelection();
+                                toggleNodeSelection(el.id);
+                                if ((window as any).vscodeApi && el.node?.group === 'file' && el.node.source_file) {
+                                    try {
+                                        (window as any).vscodeApi.postMessage({ command: 'revealFile', path: el.node.source_file, openEditor: true });
+                                    } catch (err) {}
+                                }
+                            }}
+                        >
+                            {el.label}
+                        </span>
+                    </div>
+                );
             }
-        });
-
-        panel.webview.onDidReceiveMessage(async message => {
-            if (message.command === 'ready') {
-                sendConfig(panel, context);
-                runPythonScan(context, panel, "deep");
-            } else if (message.command === 'forceRefreshScan') {
-                runPythonScan(context, panel, "deep");
-            } else if (message.command === 'killAnalysis') {
-                if (activeChildProcess) {
-                    try { activeChildProcess.kill('SIGKILL'); } catch (err) {}
-                    activeChildProcess = null;
-                }
-                panel.webview.postMessage({ command: "updateStatus", payload: "ready" });
-                panel.webview.postMessage({
-                    command: "logTrace",
-                    payload: { level: "warn", message: "❌ Active background analysis runtime process terminated immediately via user interface override request capsule.", timestamp: new Date().toLocaleTimeString() }
-                });
-            } else if (message.command === 'nodeSelected' && message.id) {
-                const workspaceFolders = vscode.workspace.workspaceFolders;
-                if (workspaceFolders && workspaceFolders.length > 0) {
-                    const radiusPath = path.join(workspaceFolders[0].uri.fsPath, ".graph-rag-explorer", "code-graph", "blast_radius.json");
-                    if (fs.existsSync(radiusPath)) {
-                        try {
-                            const report = JSON.parse(fs.readFileSync(radiusPath, "utf-8"));
-                            panel.webview.postMessage({ command: 'blastRadiusReport', payload: report });
-                        } catch(e){}
-                    }
-                }
-                sendConfig(panel, context);
-            } else if (message.command === 'publishToSharedList' && message.paths) {
-                const filesExporterExt = vscode.extensions.getExtension('sguisse.files-exporter');
-                if (filesExporterExt) {
-                    if (!filesExporterExt.isActive) await filesExporterExt.activate();
-                    const workspaceFolders = vscode.workspace.workspaceFolders;
-                    const absolutePaths = message.paths.map((p: string) => {
-                        if (path.isAbsolute(p)) return p;
-                        return workspaceFolders && workspaceFolders.length > 0 ? path.join(workspaceFolders[0].uri.fsPath, p) : p;
-                    });
-                    if (filesExporterExt.exports && filesExporterExt.exports.appendExternalPaths) {
-                        filesExporterExt.exports.appendExternalPaths(absolutePaths);
-                        vscode.window.showInformationMessage(`${absolutePaths.length} absolute file(s) published successfully.`);
-                    }
-                }
-            } else if (message.command === 'showNotification') {
-                if (message.type === 'warn') vscode.window.showWarningMessage(message.text);
-                else vscode.window.showInformationMessage(message.text);
-            } else if (message.command === 'revealFile' && message.path) {
-                const workspaceFolders = vscode.workspace.workspaceFolders;
-                if (workspaceFolders && workspaceFolders.length > 0) {
-                    const fullPath = path.isAbsolute(message.path) ? message.path : path.join(workspaceFolders[0].uri.fsPath, message.path);
-                    if (!fs.existsSync(fullPath)) return;
-                    const fileUri = vscode.Uri.file(fullPath);
-                    if (message.openEditor !== false) {
-                        vscode.workspace.openTextDocument(fileUri).then(doc => {
-                            vscode.window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.One, preserveFocus: true, preview: true });
-                            vscode.commands.executeCommand('revealInExplorer', fileUri);
-                        }, () => vscode.commands.executeCommand('revealInExplorer', fileUri));
-                    } else {
-                        vscode.commands.executeCommand('revealInExplorer', fileUri);
-                    }
-                }
-            }
-        });
-    });
-    context.subscriptions.push(disposable);
-}
-
-function syncCoreScripts(context: vscode.ExtensionContext, workspaceRoot: string): boolean {
-    const targetDir = path.join(workspaceRoot, ".graph-rag-explorer", "scripts");
-    const versionFilePath = path.join(targetDir, "version.json");
-    const currentVersion = context.extension.packageJSON.version;
-    const graphConfig = vscode.workspace.getConfiguration("graphRagExplorer");
-    let needsSync = graphConfig.get("forceScriptSync") === true || !fs.existsSync(targetDir) || !fs.existsSync(versionFilePath);
-
-    if (!needsSync && fs.existsSync(versionFilePath)) {
-        try {
-            if (JSON.parse(fs.readFileSync(versionFilePath, "utf-8")).version !== currentVersion) needsSync = true;
-        } catch (e) { needsSync = true; }
-    }
-    if (needsSync) {
-        try {
-            if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
-            const sourceDir = path.join(context.extensionPath, "scripts", "core");
-            if (fs.existsSync(sourceDir)) {
-                fs.readdirSync(sourceDir).forEach(file => {
-                    const srcFile = path.join(sourceDir, file);
-                    if (fs.statSync(srcFile).isFile()) fs.copyFileSync(srcFile, path.join(targetDir, file));
-                });
-            }
-            fs.writeFileSync(versionFilePath, JSON.stringify({ version: currentVersion }), "utf-8");
-        } catch (err) { return false; }
-    }
-    return true;
-}
-
-function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPanel, mode: string, targetFile: string = "") {
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders || workspaceFolders.length === 0) return;
-
-    const workspaceRoot = workspaceFolders[0].uri.fsPath;
-    const graphConfig = vscode.workspace.getConfiguration("graphRagExplorer");
-    const outputDir = path.join(workspaceRoot, ".graph-rag-explorer", "code-graph");
-    const targetDir = path.join(workspaceRoot, ".graph-rag-explorer", "scripts");
-
-    syncCoreScripts(context, workspaceRoot);
-    panel.webview.postMessage({ command: "updateStatus", payload: "building" });
-
-    const parseLogLine = (line: string, fallbackLevel: 'debug' | 'info' | 'warn' | 'error') => {
-        let level: 'debug' | 'info' | 'warn' | 'error' = fallbackLevel;
-        const cleanLine = line.trim();
-        if (!cleanLine) return;
-
-        if (cleanLine.includes("🪲") || cleanLine.includes("[DEBUG]")) level = "debug";
-        else if (cleanLine.includes("⚠️") || cleanLine.includes("[WARN]")) level = "warn";
-        else if (cleanLine.includes("❌") || cleanLine.includes("[ERROR]") || cleanLine.includes("CRITICAL")) level = "error";
-        else if (cleanLine.includes("ℹ️") || cleanLine.includes("[INFO]") || cleanLine.includes("✅") || cleanLine.includes("[SUCCESS]")) level = "info";
-
-        panel.webview.postMessage({
-            command: "logTrace",
-            payload: { level: level, message: cleanLine, timestamp: new Date().toLocaleTimeString() }
         });
     };
 
-    const cp = require("child_process");
-    const runnerScript = path.join(targetDir, "runner.py");
-    let args = [runnerScript];
-    if (mode === "deep") args.push("--workspace", workspaceRoot, "--output", outputDir);
-    else args.push("--workspace", workspaceRoot, "--file", targetFile, "--output", outputDir);
+    return (
+        <>
+            <div className="z-10 relative flex flex-col flex-shrink-0 justify-center bg-[var(--vscode-editorGroupHeader-tabsBackground)] shadow-[0_2px_4px_var(--vscode-widget-shadow)] px-3 border-[var(--vscode-panel-border)] border-b h-10">
+                <div className="flex justify-between items-center w-full">
+                    <span className="font-bold text-[11px] uppercase tracking-wider">Tree&nbsp;View</span>
+                    <div className="flex items-center">
+                        <button onClick={() => setSortOrder('asc')} className={`w-7 h-7 flex items-center justify-center rounded-md text-xs ${sortOrder === 'asc' ? 'text-blue-500 bg-blue-500/10 shadow-sm' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)]'}`}>▲</button>
+                        <button onClick={() => setSortOrder('desc')} className={`w-7 h-7 flex items-center justify-center rounded-md text-xs ${sortOrder === 'desc' ? 'text-blue-500 bg-blue-500/10 shadow-sm' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)]'}`}>▼</button>
+                        <button onClick={() => setIgnoreCase(!ignoreCase)} className={`w-7 h-7 flex items-center justify-center text-xs font-mono rounded-md ${ignoreCase ? 'text-blue-500 bg-blue-500/10 shadow-sm' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)]'}`}>Aa</button>
 
-    const payloadConfig = {
-        includePathsRegex: graphConfig.get("includePathsRegex") ?? ".*",
-        includeExtensionsRegex: graphConfig.get("includeExtensionsRegex") ?? "",
-        excludePathsRegex: graphConfig.get("excludePathsRegex") ?? "",
-        excludeExtensionsRegex: graphConfig.get("excludeExtensionsRegex") ?? "",
-        logFileEnabled: graphConfig.get("logFileEnabled") ?? true,
-        logFileMaxSize: graphConfig.get("logFileMaxSize") ?? 5,
-        logFileMaxCountRetension: graphConfig.get("logFileMaxCountRetension") ?? 5
-    };
+                        <div className="block flex-shrink-0 bg-[var(--vscode-panel-border)] mx-1.5 w-[1px] h-5" />
 
-    if (activeChildProcess) {
-        try { activeChildProcess.kill('SIGKILL'); } catch(e){}
-    }
+                        <button onClick={handleExpandAll} className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] rounded-md w-7 h-7 codicon codicon-expand-all"></button>
+                        <button onClick={handleCollapseAll} className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] rounded-md w-7 h-7 codicon codicon-collapse-all"></button>
 
-    const child = cp.spawn("python3", args, { cwd: workspaceRoot, env: { ...process.env, PYTHONPATH: targetDir } });
-    activeChildProcess = child;
+                        <div className="block flex-shrink-0 bg-[var(--vscode-panel-border)] mx-1.5 w-[1px] h-5" />
 
-    child.stdin.write(JSON.stringify(payloadConfig));
-    child.stdin.end();
+                        <button
+                            onClick={() => setIsHierarchyEnabled(!isHierarchyEnabled)}
+                            className={`w-7 h-7 mr-1 flex items-center justify-center codicon codicon-references rounded-md transition-all duration-200 ${isHierarchyEnabled ? 'text-blue-500 bg-blue-500/10 border border-blue-500/20 shadow-sm' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)] opacity-60'}`}
+                            data-tooltip={isHierarchyEnabled ? "Hierarchy Link Sync active (Forcing Callers/Callees)" : "Hierarchy Link Sync inactive (Manual Tuning enabled)"}
+                        />
 
-    child.stdout.on("data", (data: any) => data.toString().split("\n").forEach((l: string) => parseLogLine(l, "info")));
-    child.stderr.on("data", (data: any) => data.toString().split("\n").forEach((l: string) => parseLogLine(l, "error")));
+                        <select
+                            value={treeGrouping}
+                            onChange={(e: any) => setTreeGrouping(e.target.value)}
+                            className="bg-[var(--vscode-input-background)] shadow-sm py-1 pr-2 border border-[var(--vscode-input-border)] focus:border-blue-500 rounded-md outline-none max-w-[95px] h-7 font-semibold text-[var(--vscode-input-foreground)] text-xs cursor-pointer"
+                        >
+                            <option value="folder">📂 Folder</option>
+                            <option value="extension">⚙️ Extension</option>
+                            <option value="root">📄 Flat</option>
+                        </select>
 
-    child.on("close", (code: number) => {
-        if (activeChildProcess === child) {
-            activeChildProcess = null;
-        }
-        if (code === 0) {
-            panel.webview.postMessage({ command: "updateStatus", payload: "ready" });
-            const graphJsonPath = path.join(outputDir, "graph.json");
-            if (fs.existsSync(graphJsonPath)) {
-                try {
-                    panel.webview.postMessage({ command: "updateGraphData", payload: JSON.parse(fs.readFileSync(graphJsonPath, "utf-8")) });
-                } catch (err) {}
-            }
-        } else {
-            panel.webview.postMessage({ command: "updateStatus", payload: "error" });
-        }
-    });
-}
+                        <button onClick={() => setShowOnlySelected(!showOnlySelected)} className={`w-7 h-7 flex items-center justify-center codicon codicon-eye rounded-md ${showOnlySelected ? 'text-blue-500 bg-blue-500/10 shadow-sm' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)]'}`}></button>
 
-function sendConfig(panel: vscode.WebviewPanel, context: vscode.ExtensionContext) {
-    const config = vscode.workspace.getConfiguration('graphRagExplorer');
-    panel.webview.postMessage({
-        command: 'setConfig',
-        config: {
-            EntitiesTypesList: config.get('EntitiesTypesList'),
-            regexFilterEnabled: config.get('regexFilterEnabled'),
-            TreeFilterEnabled: config.get('TreeFilterEnabled'),
-            geminiApiKey: config.get('geminiApiKey'),
-            tooltipDelay: config.get('tooltipDelay') ?? 2000,
-            pinFilesExporter: config.get('pinFilesExporter') ?? true,
-            graphLegendEnabled: config.get('graphLegendEnabled') ?? true,
-            callersDepth: config.get('callersDepth') ?? 1,
-            calleesDepth: config.get('calleesDepth') ?? 1,
-            extensionVersion: context.extension.packageJSON.version
-        }
-    });
-}
+                        <button
+                            onClick={() => {
+                                const paths = Array.from(new Set(nodes.filter(n => effectiveFileIds.has(n.id) && n.source_file).map(n => n.source_file as string)));
+                                if (paths.length > 0) {
+                                    if ((window as any).vscodeApi) {
+                                        (window as any).vscodeApi.postMessage({ command: 'publishToSharedList', paths });
+                                    }
+                                } else {
+                                    if ((window as any).vscodeApi) {
+                                        (window as any).vscodeApi.postMessage({ command: 'showNotification', type: 'warn', text: 'No files selected to publish.' });
+                                    }
+                                }
+                            }}
+                            className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] rounded-md w-7 h-7 text-[var(--vscode-foreground)] hover:text-blue-400 text-sm codicon codicon-cloud-upload"
+                            data-tooltip="Publish selected files to Files Exporter shared list"
+                        ></button>
 
-function getWebviewContent(webview: vscode.Webview, extensionPath: string): string {
-    const scriptUri = webview.asWebviewUri(vscode.Uri.file(path.join(extensionPath, 'dist', 'webview.js')));
-    return `<!DOCTYPE html>
-    <html lang="en" class="h-full">
-    <head>
-        <meta charset="UTF-8"><title>Graph RAG Explorer</title>
-        <link href="https://cdn.jsdelivr.net/npm/@vscode/codicons/dist/codicon.css" rel="stylesheet">
-        <script src="https://cdn.tailwindcss.com"></script>
-        <style>
-            body { padding: 0; margin: 0; background-color: var(--vscode-editor-background); color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
-            #global-cursor-tooltip { position: fixed; background-color: #000000; color: #ffffff; border: 1px solid #454545; padding: 6px 10px; border-radius: 4px; font-size: 11px; z-index: 999999; pointer-events: none; display: none; }
-        </style>
-    </head>
-    <body class="h-full overflow-hidden select-none">
-        <div id="root" class="h-full flex flex-col"></div><div id="global-cursor-tooltip"></div>
-        <script src="${scriptUri}"></script>
-    </body></html>`;
-}
-export function deactivate() {}
+                        <div className="block flex-shrink-0 bg-[var(--vscode-panel-border)] mx-1.5 w-[1px] h-5" />
+
+                        <button onClick={handleClearSelectionWithConfirm} className="flex justify-center items-center hover:bg-red-500/10 rounded-md w-7 h-7 hover:text-red-500 codicon codicon-trash"></button>
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex-1 space-y-0 bg-[var(--vscode-sideBar-background)] inner-shadow p-3 overflow-y-auto">
+                {treeData.length > 0 ? renderTreeElements(treeData) : (
+                    <div className="flex flex-col justify-center items-center opacity-60 py-12">
+                        <span className="mb-2 text-3xl codicon-list-tree codicon"></span>
+                        <span className="text-[var(--vscode-descriptionForeground)] text-xs italic">No visible elements.</span>
+                    </div>
+                )}
+            </div>
+        </>
+    );
+};
 EOF
 
-# Build code bundle
+# Compile files back to application webview bundles
 npm run compile
 
-echo "✅ feat: Injected 'extension-identity' ID and dynamically populated Version tooltip on the UI header utilizing package.json properties!"
+echo "✅ fix: Resolved selection regressions by preserving absolute leaf node path identifiers inside the optimized, limited single root workspace tree container!"
+EOF

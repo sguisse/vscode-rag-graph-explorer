@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 
 export function useGraphSelection(
     fileLevelEdges: { from: string; to: string; types: Set<string> }[],
@@ -7,27 +7,36 @@ export function useGraphSelection(
     childDepth: number,
     isHierarchyEnabled: boolean
 ) {
-    const [manualSelectedIds, setManualSelectedIds] = useState<Set<string>>(new Set());
-    const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set());
+    // REGISTRY A: Exact Entities manually clicked/checked by the user
+    const [exactSelectedIds, setExactSelectedIds] = useState<Set<string>>(new Set());
 
-    // 1. Calculate the impact radius (Callers / Callees)
-    const derivedSelectedIds = useMemo(() => {
-        const derived = new Set<string>();
-        if (!isHierarchyEnabled || manualSelectedIds.size === 0) return derived;
+    // Map exact entities to their parent File IDs for the graph context
+    const manualFileIds = useMemo(() => {
+        const fileIds = new Set<string>();
+        exactSelectedIds.forEach(id => {
+            const fileId = nodeToFileIdMap.get(id) || id;
+            fileIds.add(fileId);
+        });
+        return fileIds;
+    }, [exactSelectedIds, nodeToFileIdMap]);
 
-        const startFileIds = Array.from(manualSelectedIds)
-            .map(id => nodeToFileIdMap.get(id))
-            .filter(Boolean) as string[];
+    // REGISTRY B: Effective File Context (Manual + Derived Callers/Callees)
+    const effectiveFileIds = useMemo(() => {
+        const effective = new Set<string>(manualFileIds);
 
-        startFileIds.forEach(startId => {
-            // Propagate to Callees
+        // If hierarchy sync is disabled, we only highlight the exact files selected
+        if (!isHierarchyEnabled || manualFileIds.size === 0) return effective;
+
+        // BFS Traversal for callers and callees
+        Array.from(manualFileIds).forEach(startId => {
+            // Propagate downstream (Callees)
             let currentChildLayer = [startId];
             for (let d = 0; d < childDepth; d++) {
                 const nextLayer: string[] = [];
                 currentChildLayer.forEach(id => {
                     for (const e of fileLevelEdges) {
-                        if (e.from === id && !derived.has(e.to) && !manualSelectedIds.has(e.to)) {
-                            derived.add(e.to);
+                        if (e.from === id && !effective.has(e.to)) {
+                            effective.add(e.to);
                             nextLayer.push(e.to);
                         }
                     }
@@ -35,14 +44,14 @@ export function useGraphSelection(
                 currentChildLayer = nextLayer;
             }
 
-            // Propagate to Callers
+            // Propagate upstream (Callers)
             let currentParentLayer = [startId];
             for (let d = 0; d < parentDepth; d++) {
                 const nextLayer: string[] = [];
                 currentParentLayer.forEach(id => {
                     for (const e of fileLevelEdges) {
-                        if (e.to === id && !derived.has(e.from) && !manualSelectedIds.has(e.from)) {
-                            derived.add(e.from);
+                        if (e.to === id && !effective.has(e.from)) {
+                            effective.add(e.from);
                             nextLayer.push(e.from);
                         }
                     }
@@ -51,102 +60,42 @@ export function useGraphSelection(
             }
         });
 
-        return derived;
-    }, [manualSelectedIds, nodeToFileIdMap, fileLevelEdges, parentDepth, childDepth, isHierarchyEnabled]);
-
-    // --- ANTI-FLICKER STABILIZATION TRICK ---
-    // Keep track of the latest computed state using refs to avoid injecting them into callbacks dependencies.
-    // This totally prevents React from recreating the click functions, saving Vis.js from being destroyed!
-    const derivedRef = useRef<Set<string>>(derivedSelectedIds);
-    useEffect(() => {
-        derivedRef.current = derivedSelectedIds;
-    }, [derivedSelectedIds]);
-
-    const nodeToFileMapRef = useRef(nodeToFileIdMap);
-    useEffect(() => {
-        nodeToFileMapRef.current = nodeToFileIdMap;
-    }, [nodeToFileIdMap]);
-
-    // 2. Calculate final effective selection
-    const effectiveSelectedNodeIds = useMemo(() => {
-        const effective = new Set<string>();
-
-        manualSelectedIds.forEach(id => {
-            const fileId = nodeToFileIdMap.get(id) || id;
-            effective.add(fileId);
-        });
-
-        if (isHierarchyEnabled) {
-            derivedSelectedIds.forEach(id => {
-                if (!excludedIds.has(id)) effective.add(id);
-            });
-        }
-
         return effective;
-    }, [manualSelectedIds, derivedSelectedIds, excludedIds, nodeToFileIdMap, isHierarchyEnabled]);
+    }, [manualFileIds, fileLevelEdges, parentDepth, childDepth, isHierarchyEnabled]);
 
-    // 3. Individual toggle controller (100% Stable Reference)
-    const toggleNodeSelection = useCallback((targetId: string, isMultiSelect: boolean = true) => {
-        const fileMap = nodeToFileMapRef.current;
-        const fileId = fileMap.get(targetId) || targetId;
-
-        setManualSelectedIds(prevManual => {
-            const nextManual = new Set(isMultiSelect ? prevManual : []);
-            setExcludedIds(prevExcluded => {
-                const nextExcluded = new Set(isMultiSelect ? prevExcluded : []);
-
-                const isManual = nextManual.has(targetId);
-                const isDerived = derivedRef.current.has(fileId);
-                const isExcluded = nextExcluded.has(fileId);
-
-                if (isManual) {
-                    nextManual.delete(targetId);
-                } else if (isDerived && !isExcluded) {
-                    nextExcluded.add(fileId);
-                } else {
-                    nextManual.add(targetId);
-                    if (isExcluded) nextExcluded.delete(fileId);
-                }
-
-                return nextExcluded;
-            });
-            return nextManual;
+    // Interaction Parity: 100% stable reference via functional state updates.
+    // A single click ALWAYS toggles the specific ID without destroying the rest of the selection.
+    const toggleNodeSelection = useCallback((targetId: string) => {
+        setExactSelectedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(targetId)) {
+                next.delete(targetId);
+            } else {
+                next.add(targetId);
+            }
+            return next;
         });
-    }, []); // Empty dependency array -> Never changes!
+    }, []);
 
-    // 4. Mass selection controller (100% Stable Reference)
+    // Mass selection from TreeView group checkboxes
     const setNodesSelectionState = useCallback((ids: string[], checked: boolean) => {
-        const fileMap = nodeToFileMapRef.current;
-
-        setManualSelectedIds(prevManual => {
-            const nextManual = new Set(prevManual);
-            setExcludedIds(prevExcluded => {
-                const nextExcluded = new Set(prevExcluded);
-
-                ids.forEach(id => {
-                    const fileId = fileMap.get(id) || id;
-                    if (checked) {
-                        nextManual.add(id);
-                        nextExcluded.delete(fileId);
-                    } else {
-                        nextManual.delete(id);
-                        if (derivedRef.current.has(fileId)) nextExcluded.add(fileId);
-                    }
-                });
-                return nextExcluded;
+        setExactSelectedIds(prev => {
+            const next = new Set(prev);
+            ids.forEach(id => {
+                if (checked) next.add(id);
+                else next.delete(id);
             });
-            return nextManual;
+            return next;
         });
-    }, []); // Empty dependency array -> Never changes!
+    }, []);
 
     const clearSelection = useCallback(() => {
-        setManualSelectedIds(new Set());
-        setExcludedIds(new Set());
+        setExactSelectedIds(new Set());
     }, []);
 
     return {
-        manualSelectedIds,
-        effectiveSelectedNodeIds,
+        exactSelectedIds,
+        effectiveFileIds,
         toggleNodeSelection,
         setNodesSelectionState,
         clearSelection
