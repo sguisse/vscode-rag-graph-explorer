@@ -12,13 +12,12 @@ interface TerminalTabProps {
 }
 
 export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => {
-    // FIX : La combo de l'écran terminal est désormais positionnée sur Info ('info') par défaut
     const [selectedLevel, setSelectedLevel] = useState<string>('info');
     const terminalEndRef = useRef<HTMLDivElement>(null);
     const [copied, setCopied] = useState<boolean>(false);
 
     const handleCopy = () => {
-        const textToCopy = filteredLogs.map(log => `[${log.timestamp}] ${log.message}`).join('\n');
+        const textToCopy = filteredLogs.map(log => log.message).join('\n');
         navigator.clipboard.writeText(textToCopy).then(() => {
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
@@ -87,7 +86,7 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => 
                     {filteredLogs.length > 0 ? (
                         filteredLogs.map((log, idx) => (
                           <div key={idx} className="flex items-start gap-2 leading-relaxed whitespace-pre-wrap break-all">
-                              <span className="text-gray-500 select-none flex-shrink-0">[{log.timestamp}]</span>
+                              {/* FIX EFFECTUÉ : Retrait complet de la balise de duplication de l'horodatage UI */}
                               <span className={getLogColor(log.level)}>{log.message}</span>
                           </div>
                         ))

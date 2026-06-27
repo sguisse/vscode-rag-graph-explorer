@@ -3,7 +3,7 @@
   "license": "MIT",
   "displayName": "Graph RAG Explorer",
   "description": "Expert Node Navigator and Architecture Explorer via RAG and Gemini",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "sguisse",
   "engines": {
     "vscode": "^1.80.0"
@@ -83,17 +83,25 @@
           "default": 1,
           "description": "Default callees downstream lookup relationship parsing depth."
         },
-        "graphRagExplorer.includePatterns": {
-          "type": "array",
-          "description": "List of regex patterns to explicitly restrict the scope of graph analysis.",
-          "items": { "type": "string" },
-          "default": []
+        "graphRagExplorer.includePathsRegex": {
+          "type": "string",
+          "default": ".*",
+          "description": "Regex to include paths (default is all paths '.*')."
         },
-        "graphRagExplorer.excludePatterns": {
-          "type": "array",
-          "description": "List of regex patterns to explicitly exclude from code analysis.",
-          "items": { "type": "string" },
-          "default": ["**/node_modules/**", "**/target/**", "**/dist/**", "**/.git/**"]
+        "graphRagExplorer.includeExtensionsRegex": {
+          "type": "string",
+          "default": "",
+          "description": "Regex to include files with specific extensions (like '.*\\.(java|ts|tsx|js|html|css|json|xml|yaml|yml|py|md|properties)$'). By default include all"
+        },
+        "graphRagExplorer.excludePathsRegex": {
+          "type": "string",
+          "default": ".*/node_modules/.*|.*/target/.*|.*/\\.git/.*|.*/dist/.*|.*/.idea/.*|.*/.vscode/.*|.*/.history/.*|.*/exported-files/.*,/\\.[^/]+",
+          "description": "Regex to exclude paths containing specific directories (e.g., node_modules, target, .git, dist, /\\.[^/]+)."
+        },
+        "graphRagExplorer.excludeExtensionsRegex": {
+          "type": "string",
+          "default": "^[^.]+$|.*\\.(?:log|tmp|lock|zip|tar|png|jpg|gif|pyc|vsix)$",
+          "description": "Regex to exclude files without extensions or with specific extensions (e.g., log, tmp, lock, zip, tar, png, jpg, gif, pyc, vsix)."
         },
         "graphRagExplorer.forceScriptSync": {
           "type": "boolean",

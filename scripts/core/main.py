@@ -11,16 +11,14 @@ from utils import debug, info, warn, error, success, configure_logger
 def main():
     parser = argparse.ArgumentParser(description="Graph RAG Explorer - Core Engine Entrypoint")
     parser.add_argument("--workspace", required=True)
-    parser.add_argument("--output", default=".codegraph")
+    parser.add_argument("--output", default=".graph-rag-explorer/code-graph")
     args = parser.parse_args()
 
-    # Ingestion hâtive du flux de configuration pour initialiser le logger de fichiers
     try:
         config = json.loads(sys.stdin.read())
     except Exception:
         config = {}
 
-    # Bootstrap du logger avec les paramètres de configuration utilisateurs
     configure_logger(
         workspace_root=args.workspace,
         enabled=config.get("logFileEnabled", True),
@@ -30,8 +28,16 @@ def main():
 
     info("Point d'entrée exécutable du moteur Graph RAG activé.", component="Main")
     debug(f"Arguments reçus -> Workspace: {args.workspace} | Target: {args.output}", component="Main")
+    debug(f"Configuration injectée par VS Code : {json.dumps(config)}", component="Main")
 
-    path_filter = PathFilter(config.get("includePatterns", []), config.get("excludePatterns", []))
+    # Mappage strict des nouvelles clés de configuration en expressions régulières (Regex)
+    path_filter = PathFilter(
+        include_paths=config.get("includePathsRegex", ".*"),
+        exclude_paths=config.get("excludePathsRegex", ""),
+        include_exts=config.get("includeExtensionsRegex", ""),
+        exclude_exts=config.get("excludeExtensionsRegex", "")
+    )
+
     scanner = WorkspaceScanner(args.workspace, path_filter)
     graph_engine = GraphEngine()
     orchestrator = ParallelOrchestrator(graph_engine)

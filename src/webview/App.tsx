@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
+import { Footer } from './components/Footer';
 import { ExplorationFilters } from './components/ExplorationFilters';
 import { TabsNavigation } from './components/TabsNavigation';
 import { ExplorerTab } from './components/ExplorerTab';
@@ -16,6 +17,7 @@ const vscode = acquireVsCodeApi();
 export const App: React.FC = () => {
     const [theme, setTheme] = useState<'light' | 'dark'>('dark');
     const [status, setStatus] = React.useState<'ready' | 'building' | 'error'>('ready');
+    const [progress, setProgress] = React.useState<{ current: number; total: number }>({ current: 0, total: 0 });
     const [activeTab, setActiveTab] = useState<string>('explorer');
     const [config, setConfig] = useState<any>({
         EntitiesTypesList: ['file', 'class', 'method', 'document'],
@@ -53,18 +55,26 @@ export const App: React.FC = () => {
                 window.dispatchEvent(new CustomEvent('blastRadiusReport', { detail: message.payload }));
             } else if (message.command === 'logTrace') {
                 setLogs(prev => [...prev, message.payload]);
+
+                const logMessage = message.payload.message || '';
+                const progressMatch = logMessage.match(/Progression de l'analyse parallèle\s*:\s*(\d+)\/(\d+)/);
+                if (progressMatch) {
+                    setProgress({
+                        current: parseInt(progressMatch[1], 10),
+                        total: parseInt(progressMatch[2], 10)
+                    });
+                }
             } else if (message.command === 'updateStatus') {
                 setStatus(message.payload);
+                if (message.payload === 'building') {
+                    setProgress({ current: 0, total: 0 });
+                }
             }
         };
 
-        // 1. On attache l'écouteur unique
         window.addEventListener('message', handleMessage);
-
-        // 2. On signale qu'on est prêt
         vscode.postMessage({ command: 'ready' });
 
-        // 3. FIX CRITIQUE : Nettoyage automatique au démontage (anti-Strict Mode & anti-doublons)
         return () => {
             window.removeEventListener('message', handleMessage);
         };
@@ -81,17 +91,6 @@ export const App: React.FC = () => {
         let tooltipTimeout: NodeJS.Timeout | null = null;
         let activeTarget: Element | null = null;
 
-        const positionTooltipAtCursor = (e: MouseEvent, el: HTMLElement) => {
-            const mouseX = e.clientX, mouseY = e.clientY, offset = 15;
-            const rect = el.getBoundingClientRect();
-            let targetTop = mouseY - (rect.height / 2);
-            if (targetTop < 5) targetTop = 5;
-            if (targetTop + rect.height > window.innerHeight - 5) targetTop = window.innerHeight - rect.height - 5;
-            el.style.top = `${targetTop}px`;
-            if (mouseX + offset + rect.width > window.innerWidth) el.style.left = `${mouseX - rect.width - offset}px`;
-            else el.style.left = `${mouseX + offset}px`;
-        };
-
         const handleMouseMove = (e: MouseEvent) => {
             const target = (e.target as Element).closest('[data-tooltip]');
             if (target) {
@@ -103,11 +102,14 @@ export const App: React.FC = () => {
                         if (tooltipEl && activeTarget) {
                             tooltipEl.innerHTML = activeTarget.getAttribute('data-tooltip') || '';
                             tooltipEl.style.display = 'block';
-                            positionTooltipAtCursor(e, tooltipEl);
+                            let targetTop = e.clientY - 20;
+                            tooltipEl.style.top = `${targetTop}px`;
+                            tooltipEl.style.left = `${e.clientX + 15}px`;
                         }
                     }, config.tooltipDelay ?? 2000);
-                } else {
-                    if (tooltipEl && tooltipEl.style.display === 'block') positionTooltipAtCursor(e, tooltipEl);
+                } else if (tooltipEl && tooltipEl.style.display === 'block') {
+                    tooltipEl.style.top = `${e.clientY - 20}px`;
+                    tooltipEl.style.left = `${e.clientX + 15}px`;
                 }
             } else {
                 if (activeTarget) {
@@ -140,7 +142,6 @@ export const App: React.FC = () => {
                 onGraphLoaded={handleGraphLoad}
                 nodes={nodes}
                 selectedNodeIds={selectedNodeIds}
-                status={status}
             />
 
             <main className="flex flex-col flex-1 min-h-0">
@@ -189,6 +190,12 @@ export const App: React.FC = () => {
                     </div>
                 </div>
             </main>
+
+            <Footer
+                status={status}
+                progress={progress}
+                onKill={() => vscode.postMessage({ command: 'killAnalysis' })}
+            />
         </div>
     );
 };

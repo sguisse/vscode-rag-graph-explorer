@@ -40,7 +40,7 @@ def _log(level: str, component: str, message: str, flush: bool = True):
 
     # Génération du format strict demandé : YYYY/MM/DD-HH-mm-ss-sss
     now = datetime.now()
-    timestamp = now.strftime("%Y/%m/%d-%H-%M-%S-%f")[:-3]
+    timestamp = now.strftime("%Y/%m/%d-%H:%M:%S.%f")[:-3]
     full_message = f"[{timestamp}] {level} [{component}] {message}"
 
     # Émission immédiate sur la sortie standard de contrôle (interceptée par VS Code)

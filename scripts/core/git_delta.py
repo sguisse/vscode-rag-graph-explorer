@@ -77,15 +77,15 @@ def main():
     parser = argparse.ArgumentParser(description="Deterministic Blast Radius Evaluation")
     parser.add_argument("--workspace", required=True)
     parser.add_argument("--file", required=True)
-    parser.add_argument("--output", default=".codegraph")
+    # FIX : Aligner la valeur de secours du dossier d'output pour l'analyse delta
+    parser.add_argument("--output", default=".graph-rag-explorer/code-graph")
     args = parser.parse_args()
 
     try:
-        config = json.loads(sys.stdin.read())
+        config = json.loads(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].startswith('{') else json.loads(sys.stdin.read())
     except Exception:
         config = {}
 
-    # Alignement du logger sur l'exécution chirurgicale delta
     configure_logger(
         workspace_root=args.workspace,
         enabled=config.get("logFileEnabled", True),

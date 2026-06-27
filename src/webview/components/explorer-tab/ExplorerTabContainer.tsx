@@ -4,6 +4,7 @@ import { Network } from 'vis-network';
 import { GraphNode, GraphEdge } from '../../types';
 import { TreeView } from './TreeView';
 import { GraphView } from './GraphView';
+import { useGraphSelection } from '../../hooks/useGraphSelection';
 
 interface ExplorerTabContainerProps {
     nodes: GraphNode[];
@@ -47,6 +48,8 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
     const [childDepth, setChildDepth] = useState<number>(config?.calleesDepth ?? 1);
     const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
 
+    const [isHierarchyEnabled, setIsHierarchyEnabled] = useState<boolean>(true);
+
     useEffect(() => {
         if (config) {
             setShowLegend(config.graphLegendEnabled ?? true);
@@ -55,7 +58,6 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
         }
     }, [config]);
 
-    // Unified helper map to resolve any node ID to its parent file node ID
     const nodeToFileIdMap = useMemo(() => {
         const map = new Map<string, string>();
         const fileNodes = nodes.filter(n => n.group === 'file');
@@ -63,9 +65,7 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
         nodes.forEach(n => {
             if (n.group !== 'file' && n.source_file) {
                 const matchingFile = fileNodes.find(f => f.source_file === n.source_file || f.label === n.source_file || f.id === n.source_file);
-                if (matchingFile) {
-                    map.set(n.id, matchingFile.id);
-                }
+                if (matchingFile) map.set(n.id, matchingFile.id);
             }
         });
         return map;
@@ -84,7 +84,6 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
         return { parentMap: pMap, childrenMap: cMap };
     }, [edges]);
 
-    // Construct a rolled-up unique file-to-file connection map
     const fileLevelEdges = useMemo(() => {
         const fileEdgesMap = new Map<string, { from: string, to: string, types: Set<string> }>();
         edges.forEach(e => {
@@ -101,49 +100,28 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
         return Array.from(fileEdgesMap.values());
     }, [edges, nodeToFileIdMap]);
 
-    // Map upstream/downstream connection selections using file-level topology links
-    const effectiveSelectedNodeIds = useMemo(() => {
-        const effective = new Set<string>();
+    // --- NEW STATE MANAGEMENT ENGINE ---
+    const {
+        manualSelectedIds,
+        effectiveSelectedNodeIds,
+        toggleNodeSelection,
+        setNodesSelectionState,
+        clearSelection
+    } = useGraphSelection(fileLevelEdges, nodeToFileIdMap, parentDepth, childDepth, isHierarchyEnabled);
 
-        selectedNodeIds.forEach(id => {
-            const fileId = nodeToFileIdMap.get(id);
-            if (fileId) effective.add(fileId);
-        });
+    // Sync upwards to App.tsx (For AI Assistant)
+    useEffect(() => {
+        setSelectedNodeIds(effectiveSelectedNodeIds);
+    }, [effectiveSelectedNodeIds, setSelectedNodeIds]);
 
-        const startFileIds = Array.from(effective);
-        startFileIds.forEach(startId => {
-            let currentChildLayer = [startId];
-            for (let d = 0; d < childDepth; d++) {
-                const nextLayer: string[] = [];
-                currentChildLayer.forEach(id => {
-                    levelEdgesLoop: for (const e of fileLevelEdges) {
-                        if (e.from === id && !effective.has(e.to)) {
-                            effective.add(e.to);
-                            nextLayer.push(e.to);
-                        }
-                    }
-                });
-                currentChildLayer = nextLayer;
-            }
+    // Sync downwards: if Header forces a reset via App.tsx
+    useEffect(() => {
+        if (selectedNodeIds.size === 0 && manualSelectedIds.size > 0) {
+            clearSelection();
+        }
+    }, [selectedNodeIds, manualSelectedIds, clearSelection]);
 
-            let currentParentLayer = [startId];
-            for (let d = 0; d < parentDepth; d++) {
-                const nextLayer: string[] = [];
-                currentParentLayer.forEach(id => {
-                    levelEdgesLoop2: for (const e of fileLevelEdges) {
-                        if (e.to === id && !effective.has(e.from)) {
-                            effective.add(e.from);
-                            nextLayer.push(e.from);
-                        }
-                    }
-                });
-                currentParentLayer = nextLayer;
-            }
-        });
-
-        return effective;
-    }, [selectedNodeIds, nodeToFileIdMap, fileLevelEdges, parentDepth, childDepth]);
-
+    // Vis.js Initial Configuration
     useEffect(() => {
         if (!containerRef.current) return;
 
@@ -159,16 +137,11 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
                 smooth: { enabled: true, type: 'continuous', roundness: 0.5 }
             },
             groups: {
-                file: {
-                    color: { background: '#3b82f6', border: '#2563eb' },
-                    shape: 'hexagon',
-                    size: 20,
-                    font: { color: 'rgba(59, 130, 246, 0.85)' }
-                }
+                file: { color: { background: '#3b82f6', border: '#2563eb' }, shape: 'hexagon', size: 20, font: { color: 'rgba(59, 130, 246, 0.85)' } }
             },
             physics: {
-                forceAtlas2Based: { gravitationalConstant: -50, centralGravity: 0.01, springLength: 100 },
                 solver: 'forceAtlas2Based',
+                forceAtlas2Based: { gravitationalConstant: -50, centralGravity: 0.01, springLength: 100 },
                 stabilization: { iterations: 150 }
             }
         };
@@ -176,53 +149,29 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
         const network = new Network(containerRef.current, { nodes: visNodesRef.current, edges: visEdgesRef.current }, options as any);
         networkRef.current = network;
 
-        network.on("stabilizationIterationsDone", () => {
-            network.setOptions({ physics: false } as any);
-        });
+        network.on("stabilizationIterationsDone", () => { network.setOptions({ physics: false } as any); });
 
         network.on("click", (params) => {
             const isMultiSelect = params.event.srcEvent.ctrlKey || params.event.srcEvent.metaKey;
             if (params.nodes.length > 0) {
-                const targetId = String(params.nodes[0]);
-                setSelectedNodeIds(prev => {
-                    const next = new Set(prev);
-                    if (isMultiSelect) {
-                        if (next.has(targetId)) next.delete(targetId);
-                        else next.add(targetId);
-                    } else {
-                        next.clear();
-                        next.add(targetId);
-                    }
-                    return next;
-                });
+                toggleNodeSelection(String(params.nodes[0]), isMultiSelect);
             } else if (!isMultiSelect) {
-                setSelectedNodeIds(new Set());
+                clearSelection();
             }
         });
 
         return () => { network.destroy(); };
-    }, []);
+    }, [toggleNodeSelection, clearSelection]);
 
-    // Feed exclusively file-level topological structure elements into vis network display data sets
+    // Structural Reconstruction (Only on source file changes)
     useEffect(() => {
         visNodesRef.current.clear();
         visEdgesRef.current.clear();
 
         const fileNodes = nodes.filter(n => n.group === 'file');
-        visNodesRef.current.add(fileNodes.map(n => ({
-            id: n.id,
-            label: n.label,
-            group: n.group,
-            title: n.label
-        })));
+        visNodesRef.current.add(fileNodes.map(n => ({ id: n.id, label: n.label, group: n.group, title: n.label })));
 
-        const synthesizedEdges = fileLevelEdges.map((fe, index) => ({
-            id: index,
-            from: fe.from,
-            to: fe.to,
-            type: Array.from(fe.types).join(', ')
-        }));
-
+        const synthesizedEdges = fileLevelEdges.map((fe, index) => ({ id: index, from: fe.from, to: fe.to, type: Array.from(fe.types).join(', ') }));
         visEdgesRef.current.add(synthesizedEdges);
 
         if (networkRef.current) {
@@ -231,20 +180,16 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
         }
     }, [nodes, fileLevelEdges]);
 
-    // Apply global text searching rules on the visible graph files using full historical child sub-entities matches
+    // Purely Cosmetic / View updates (DataView style update)
     useEffect(() => {
         const fileNodes = nodes.filter(n => n.group === 'file');
         const nodeUpdates = fileNodes.map(f => {
             let isVisible = true;
             if (filters.applyOnGraph) {
                 const relatedNodes = nodes.filter(n => nodeToFileIdMap.get(n.id) === f.id);
-                const filteredRelated = filters.selectedTypes.length > 0
-                    ? relatedNodes.filter(rn => filters.selectedTypes.includes(rn.group))
-                    : relatedNodes;
-
-                if (filteredRelated.length === 0) {
-                    isVisible = false;
-                } else if (filters.searchText) {
+                const filteredRelated = filters.selectedTypes.length > 0 ? relatedNodes.filter(rn => filters.selectedTypes.includes(rn.group)) : relatedNodes;
+                if (filteredRelated.length === 0) isVisible = false;
+                else if (filters.searchText) {
                     const queryStr = ignoreCase ? filters.searchText.toLowerCase() : filters.searchText;
                     const matchesSearch = filteredRelated.some(rn => {
                         const labelStr = ignoreCase ? rn.label.toLowerCase() : rn.label;
@@ -272,18 +217,12 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
 
         const edgeUpdates = fileLevelEdges.map((fe, index) => {
             const isHighlighted = effectiveSelectedNodeIds.has(fe.from) && effectiveSelectedNodeIds.has(fe.to);
-            return {
-                id: index,
-                color: isHighlighted ? '#3b82f6' : '#4b5563',
-                width: isHighlighted ? 2.5 : 1
-            };
+            return { id: index, color: isHighlighted ? '#3b82f6' : '#4b5563', width: isHighlighted ? 2.5 : 1 };
         });
 
         if (edgeUpdates.length > 0) visEdgesRef.current.update(edgeUpdates);
 
-        if (networkRef.current) {
-            networkRef.current.selectNodes(Array.from(effectiveSelectedNodeIds), false);
-        }
+        if (networkRef.current) networkRef.current.selectNodes(Array.from(effectiveSelectedNodeIds), false);
     }, [effectiveSelectedNodeIds, filters, ignoreCase, nodes, fileLevelEdges, nodeToFileIdMap]);
 
     useEffect(() => {
@@ -295,7 +234,6 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
         }
     }, [isTreeCollapsed, isMaximized]);
 
-    // Retain all deep granular attributes, methods, and documents details for tree navigation lookups
     const strictlyVisibleIds = useMemo(() => {
         const visible = new Set<string>();
         nodes.forEach(n => {
@@ -305,9 +243,8 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
             }
             const fileId = nodeToFileIdMap.get(n.id);
             if (showOnlySelected) {
-                const isNodeSelectedDirectly = selectedNodeIds.has(n.id);
-                const isParentFileSelected = fileId && effectiveSelectedNodeIds.has(fileId);
-                if (!isNodeSelectedDirectly && !isParentFileSelected) return;
+                const isNodeSelected = effectiveSelectedNodeIds.has(n.id) || (fileId && effectiveSelectedNodeIds.has(fileId));
+                if (!isNodeSelected) return;
             }
             if (filters.selectedTypes.length > 0 && !filters.selectedTypes.includes(n.group)) return;
             if (!filters.searchText) {
@@ -317,18 +254,16 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
 
             const labelStr = ignoreCase ? n.label.toLowerCase() : n.label;
             const queryStr = ignoreCase ? filters.searchText.toLowerCase() : filters.searchText;
-
             let matches = false;
             if (filters.isRegexEnabled) {
                 try { matches = new RegExp(queryStr).test(labelStr); } catch { matches = true; }
             } else {
                 matches = filters.searchMode === 'exact' ? labelStr === queryStr : labelStr.includes(queryStr);
             }
-
             if (matches) visible.add(n.id);
         });
         return visible;
-    }, [nodes, filters, showOnlySelected, effectiveSelectedNodeIds, selectedNodeIds, ignoreCase, nodeToFileIdMap]);
+    }, [nodes, filters, showOnlySelected, effectiveSelectedNodeIds, ignoreCase, nodeToFileIdMap]);
 
     const hierarchicallyVisibleIds = useMemo(() => {
         const visible = new Set<string>(strictlyVisibleIds);
@@ -348,82 +283,45 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
 
     const treeData = useMemo((): TreeElement[] => {
         const visibleNodes = nodes.filter(n => hierarchicallyVisibleIds.has(n.id));
-
-        const sortNodes = (arr: GraphNode[]) => {
-            return [...arr].sort((a, b) => {
-                const cmp = a.label.localeCompare(b.label);
-                return sortOrder === 'asc' ? cmp : -cmp;
-            });
-        };
+        const sortNodes = (arr: GraphNode[]) => arr.sort((a, b) => a.label.localeCompare(b.label));
 
         const buildNodeSubtree = (node: GraphNode): TreeElement => {
             const childIds = childrenMap[node.id] || [];
             const visibleChildrenIds = childIds.filter(cid => hierarchicallyVisibleIds.has(cid));
-            const visibleChildrenNodes = nodes.filter(n => visibleChildrenIds.includes(n.id));
-            const sortedChildren = sortNodes(visibleChildrenNodes);
-
+            const sortedChildren = sortNodes(nodes.filter(n => visibleChildrenIds.includes(n.id)));
             const childrenElements = sortedChildren.map(cn => buildNodeSubtree(cn));
             const allLeafIds = [node.id];
             childrenElements.forEach(c => allLeafIds.push(...c.allLeafIds));
 
-            return {
-                id: node.id,
-                label: node.label,
-                isGroup: false,
-                node,
-                children: childrenElements.length > 0 ? childrenElements : undefined,
-                allLeafIds
-            };
+            return { id: node.id, label: node.label, isGroup: false, node, children: childrenElements.length > 0 ? childrenElements : undefined, allLeafIds };
         };
 
         const rootNodes = visibleNodes.filter(n => !parentMap[n.id] || !hierarchicallyVisibleIds.has(parentMap[n.id]));
         const sortedRoots = sortNodes(rootNodes);
 
-        if (treeGrouping === 'root') {
-            return sortedRoots.map(rn => buildNodeSubtree(rn));
-        }
+        if (treeGrouping === 'root') return sortedRoots.map(rn => buildNodeSubtree(rn));
 
         if (treeGrouping === 'extension') {
             const extGroups: { [key: string]: GraphNode[] } = {};
             const nonExtRoots: GraphNode[] = [];
-
             sortedRoots.forEach(rn => {
                 if (rn.group === 'file' || rn.group === 'document') {
                     const ext = rn.label.includes('.') ? '.' + rn.label.split('.').pop() : 'No extension';
                     if (!extGroups[ext]) extGroups[ext] = [];
                     extGroups[ext].push(rn);
-                } else {
-                    nonExtRoots.push(rn);
-                }
+                } else nonExtRoots.push(rn);
             });
-
-            const groupElements: TreeElement[] = Object.keys(extGroups)
-                .sort((a, b) => sortOrder === 'asc' ? a.localeCompare(b) : b.localeCompare(a))
-                .map(ext => {
-                    const children = extGroups[ext].map(rn => buildNodeSubtree(rn));
-                    const allLeafIds: string[] = [];
-                    children.forEach(c => allLeafIds.push(...c.allLeafIds));
-                    return {
-                        id: `ext-${ext}`,
-                        label: ext,
-                        isGroup: true,
-                        icon: '🗂️',
-                        children,
-                        allLeafIds
-                    };
-                });
-
+            const groupElements: TreeElement[] = Object.keys(extGroups).sort((a, b) => sortOrder === 'asc' ? a.localeCompare(b) : b.localeCompare(a)).map(ext => {
+                const children = extGroups[ext].map(rn => buildNodeSubtree(rn));
+                const allLeafIds: string[] = [];
+                children.forEach(c => allLeafIds.push(...c.allLeafIds));
+                return { id: `ext-${ext}`, label: ext, isGroup: true, icon: '🗂️', children, allLeafIds };
+            });
             return [...groupElements, ...nonExtRoots.map(rn => buildNodeSubtree(rn))];
         }
 
         if (treeGrouping === 'folder') {
-            interface FolderNode {
-                name: string;
-                path: string;
-                nodes: GraphNode[];
-                subfolders: { [key: string]: FolderNode };
-            }
-
+            interface FolderNode { name: string; path: string; nodes: GraphNode[]; subfolders: { [key: string]: FolderNode }; }
             const rootFolder: FolderNode = { name: '', path: '', nodes: [], subfolders: {} };
             const nonFolderRoots: GraphNode[] = [];
 
@@ -435,59 +333,35 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
                     for (let i = 0; i < parts.length - 1; i++) {
                         const part = parts[i];
                         accumulatedPath = accumulatedPath ? `${accumulatedPath}/${part}` : part;
-                        if (!current.subfolders[part]) {
-                            current.subfolders[part] = { name: part, path: accumulatedPath, nodes: [], subfolders: {} };
-                        }
+                        if (!current.subfolders[part]) current.subfolders[part] = { name: part, path: accumulatedPath, nodes: [], subfolders: {} };
                         current = current.subfolders[part];
                     }
                     current.nodes.push(rn);
-                } else {
-                    nonFolderRoots.push(rn);
-                }
+                } else nonFolderRoots.push(rn);
             });
 
             const convertFolderToTreeElement = (folder: FolderNode, pathName: string): TreeElement => {
-                const subfolderElements = Object.keys(folder.subfolders)
-                    .sort((a, b) => sortOrder === 'asc' ? a.localeCompare(b) : b.localeCompare(a))
-                    .map(k => convertFolderToTreeElement(folder.subfolders[k], k));
-
+                const subfolderElements = Object.keys(folder.subfolders).sort((a, b) => sortOrder === 'asc' ? a.localeCompare(b) : b.localeCompare(a)).map(k => convertFolderToTreeElement(folder.subfolders[k], k));
                 const nodeElements = sortNodes(folder.nodes).map(n => buildNodeSubtree(n));
                 const combinedChildren = [...subfolderElements, ...nodeElements];
-
                 const allLeafIds: string[] = [];
                 combinedChildren.forEach(c => allLeafIds.push(...c.allLeafIds));
-
-                return {
-                    id: `folder-${folder.path || 'root'}`,
-                    label: pathName || 'Workspace',
-                    isGroup: true,
-                    icon: '🗂️',
-                    children: combinedChildren,
-                    allLeafIds,
-                    folderPath: folder.path || undefined
-                };
+                return { id: `folder-${folder.path || 'root'}`, label: pathName || 'Workspace', isGroup: true, icon: '🗂️', children: combinedChildren, allLeafIds, folderPath: folder.path || undefined };
             };
-
             const builtRoot = convertFolderToTreeElement(rootFolder, '');
             return [...(builtRoot.children || []), ...nonFolderRoots.map(rn => buildNodeSubtree(rn))];
         }
-
         return [];
     }, [nodes, parentMap, childrenMap, hierarchicallyVisibleIds, treeGrouping, sortOrder]);
 
-    const handleExpandAll = () => {
-        setCollapsedIds(new Set());
-    };
-
+    const handleExpandAll = () => setCollapsedIds(new Set());
     const handleCollapseAll = () => {
         const nextCollapsed = new Set<string>();
         const collapseChildrenRecursive = (elements: any[]) => {
             elements.forEach(el => {
                 if (el.isGroup) {
                     nextCollapsed.add(el.id);
-                    if (el.children) {
-                        collapseChildrenRecursive(el.children);
-                    }
+                    if (el.children) collapseChildrenRecursive(el.children);
                 }
             });
         };
@@ -497,52 +371,26 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
 
     return (
         <div className="relative flex items-stretch w-full h-full min-h-0">
-            <style dangerouslySetInnerHTML={{__html: `
-                input[type="number"]::-webkit-inner-spin-button,
-                input[type="number"]::-webkit-outer-spin-button {
-                    height: 24px !important;
-                    width: 14px !important;
-                    opacity: 1 !important;
-                    cursor: pointer;
-                }
-            `}} />
-
             <div className={`min-w-[250px] max-w-[70%] border-r border-[var(--vscode-panel-border)] shadow-[2px_0_8px_var(--vscode-widget-shadow)] z-0 bg-[var(--vscode-sideBar-background)] flex flex-col h-full overflow-hidden resize-x ${isTreeCollapsed || isMaximized ? 'hidden' : 'w-[465px]'}`}>
                 <TreeView
                     nodes={nodes}
-                    selectedNodeIds={selectedNodeIds}
-                    setSelectedNodeIds={setSelectedNodeIds}
                     effectiveSelectedNodeIds={effectiveSelectedNodeIds}
+                    toggleNodeSelection={toggleNodeSelection}
+                    setNodesSelectionState={setNodesSelectionState}
+                    clearSelection={clearSelection}
                     treeData={treeData}
-                    sortOrder={sortOrder}
-                    setSortOrder={setSortOrder}
-                    ignoreCase={ignoreCase}
-                    setIgnoreCase={setIgnoreCase}
-                    treeGrouping={treeGrouping}
-                    setTreeGrouping={setTreeGrouping}
-                    showOnlySelected={showOnlySelected}
-                    setShowOnlySelected={setShowOnlySelected}
-                    collapsedIds={collapsedIds}
-                    setCollapsedIds={setCollapsedIds}
-                    handleExpandAll={handleExpandAll}
-                    handleCollapseAll={handleCollapseAll}
-                    networkRef={networkRef}
+                    sortOrder={sortOrder} setSortOrder={setSortOrder} ignoreCase={ignoreCase} setIgnoreCase={setIgnoreCase}
+                    treeGrouping={treeGrouping} setTreeGrouping={setTreeGrouping} showOnlySelected={showOnlySelected}
+                    setShowOnlySelected={setShowOnlySelected} collapsedIds={collapsedIds} setCollapsedIds={setCollapsedIds}
+                    handleExpandAll={handleExpandAll} handleCollapseAll={handleCollapseAll} networkRef={networkRef}
+                    isHierarchyEnabled={isHierarchyEnabled} setIsHierarchyEnabled={setIsHierarchyEnabled}
                 />
             </div>
-
             <GraphView
-                containerRef={containerRef}
-                isMaximized={isMaximized}
-                setIsMaximized={setIsMaximized}
-                isTreeCollapsed={isTreeCollapsed}
-                setIsTreeCollapsed={setIsTreeCollapsed}
-                parentDepth={parentDepth}
-                setParentDepth={setParentDepth}
-                childDepth={childDepth}
-                setChildDepth={setChildDepth}
-                networkRef={networkRef}
-                showLegend={showLegend}
-                setShowLegend={setShowLegend}
+                containerRef={containerRef} isMaximized={isMaximized} setIsMaximized={setIsMaximized}
+                isTreeCollapsed={isTreeCollapsed} setIsTreeCollapsed={setIsTreeCollapsed}
+                parentDepth={parentDepth} setParentDepth={setParentDepth} childDepth={childDepth} setChildDepth={setChildDepth}
+                networkRef={networkRef} showLegend={showLegend} setShowLegend={setShowLegend}
             />
         </div>
     );

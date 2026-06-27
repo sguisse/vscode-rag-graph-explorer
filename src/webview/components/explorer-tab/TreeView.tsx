@@ -14,9 +14,10 @@ interface TreeElement {
 
 interface TreeViewProps {
     nodes: GraphNode[];
-    selectedNodeIds: Set<string>;
-    setSelectedNodeIds: React.Dispatch<React.SetStateAction<Set<string>>>;
     effectiveSelectedNodeIds: Set<string>;
+    toggleNodeSelection: (id: string, multi?: boolean) => void;
+    setNodesSelectionState: (ids: string[], checked: boolean) => void;
+    clearSelection: () => void;
     treeData: TreeElement[];
     sortOrder: 'asc' | 'desc';
     setSortOrder: (val: 'asc' | 'desc') => void;
@@ -31,53 +32,21 @@ interface TreeViewProps {
     handleExpandAll: () => void;
     handleCollapseAll: () => void;
     networkRef: React.RefObject<any>;
+    isHierarchyEnabled: boolean;
+    setIsHierarchyEnabled: (val: boolean) => void;
 }
 
 export const TreeView: React.FC<TreeViewProps> = ({
-    nodes,
-    selectedNodeIds,
-    setSelectedNodeIds,
-    effectiveSelectedNodeIds,
-    treeData,
-    sortOrder,
-    setSortOrder,
-    ignoreCase,
-    setIgnoreCase,
-    treeGrouping,
-    setTreeGrouping,
-    showOnlySelected,
-    setShowOnlySelected,
-    collapsedIds,
-    setCollapsedIds,
-    handleExpandAll,
-    handleCollapseAll,
-    networkRef
+    nodes, effectiveSelectedNodeIds, toggleNodeSelection, setNodesSelectionState, clearSelection,
+    treeData, sortOrder, setSortOrder, ignoreCase, setIgnoreCase, treeGrouping, setTreeGrouping,
+    showOnlySelected, setShowOnlySelected, collapsedIds, setCollapsedIds,
+    handleExpandAll, handleCollapseAll, networkRef, isHierarchyEnabled, setIsHierarchyEnabled
 }) => {
-    const toggleNodeSelection = (id: string) => {
-        setSelectedNodeIds(prev => {
-            const next = new Set(prev);
-            if (next.has(id)) next.delete(id);
-            else next.add(id);
-            return next;
-        });
-    };
-
-    const handleGroupCheckboxChange = (element: TreeElement, checked: boolean) => {
-        setSelectedNodeIds(prev => {
-            const next = new Set(prev);
-            element.allLeafIds.forEach(id => {
-                if (checked) next.add(id);
-                else next.delete(id);
-            });
-            return next;
-        });
-    };
 
     const handleClearSelectionWithConfirm = () => {
-        if (selectedNodeIds.size === 0) return;
-        const confirmClear = window.confirm(`Are you sure you want to permanently clear the selection of all ${selectedNodeIds.size} node(s)?`);
-        if (confirmClear) {
-            setSelectedNodeIds(new Set());
+        if (effectiveSelectedNodeIds.size === 0) return;
+        if (window.confirm(`Clear selection of all ${effectiveSelectedNodeIds.size} node(s)?`)) {
+            clearSelection();
         }
     };
 
@@ -85,6 +54,9 @@ export const TreeView: React.FC<TreeViewProps> = ({
         return elements.map(el => {
             if (el.isGroup) {
                 const isGroupOpen = !collapsedIds.has(el.id);
+                const isChecked = el.allLeafIds.every(id => effectiveSelectedNodeIds.has(id));
+                const isIndeterminate = !isChecked && el.allLeafIds.some(id => effectiveSelectedNodeIds.has(id));
+
                 return (
                     <details key={el.id} className="w-full select-none" open={isGroupOpen}>
                         <summary
@@ -93,11 +65,7 @@ export const TreeView: React.FC<TreeViewProps> = ({
                                 e.preventDefault();
                                 if ((window as any).vscodeApi && el.folderPath) {
                                     try {
-                                        (window as any).vscodeApi.postMessage({
-                                            command: 'revealFile',
-                                            path: el.folderPath,
-                                            openEditor: false
-                                        });
+                                        (window as any).vscodeApi.postMessage({ command: 'revealFile', path: el.folderPath, openEditor: false });
                                     } catch (err) {}
                                 }
                                 setCollapsedIds(prev => {
@@ -112,22 +80,9 @@ export const TreeView: React.FC<TreeViewProps> = ({
                             <input
                                 type="checkbox"
                                 className="flex-shrink-0 w-3.5 h-3.5 accent-blue-500 cursor-pointer"
-                                ref={input => {
-                                    if (input) {
-                                        const selectedCount = el.allLeafIds.filter(id => effectiveSelectedNodeIds.has(id)).length;
-                                        if (selectedCount === 0) {
-                                            input.checked = false;
-                                            input.indeterminate = false;
-                                        } else if (selectedCount === el.allLeafIds.length) {
-                                            input.checked = true;
-                                            input.indeterminate = false;
-                                        } else {
-                                            input.checked = false;
-                                            input.indeterminate = true;
-                                        }
-                                    }
-                                }}
-                                onChange={(e) => handleGroupCheckboxChange(el, e.target.checked)}
+                                checked={isChecked}
+                                ref={el => { if (el) el.indeterminate = isIndeterminate; }}
+                                onChange={(e) => setNodesSelectionState(el.allLeafIds, e.target.checked)}
                                 onClick={(e) => e.stopPropagation()}
                             />
                             <span className="flex-shrink-0 opacity-90 text-xs">{el.icon}</span>
@@ -142,12 +97,12 @@ export const TreeView: React.FC<TreeViewProps> = ({
                 const isChecked = effectiveSelectedNodeIds.has(el.id);
                 return (
                     <div key={el.id} className="group flex items-center gap-1.5 px-1.5 py-0.5 rounded-md w-full transition-colors hover:bg-[var(--vscode-list-hoverBackground)]">
-                        <span className="flex-shrink-0 w-3"></span>
+                        <span className="w-3 flex-shrink-0" />
                         <input
                             type="checkbox"
-                            checked={isChecked}
-                            onChange={() => toggleNodeSelection(el.id)}
                             className="flex-shrink-0 w-3.5 h-3.5 accent-blue-500 cursor-pointer"
+                            checked={isChecked}
+                            onChange={() => toggleNodeSelection(el.id, true)}
                         />
                         <span className="flex-shrink-0 opacity-80 text-xs">
                             {el.node?.group === 'file' ? '📂' : el.node?.group === 'class' ? '📦' : el.node?.group === 'method' ? '⚡' : '📄'}
@@ -156,40 +111,18 @@ export const TreeView: React.FC<TreeViewProps> = ({
                             className="flex-1 text-[var(--vscode-foreground)] hover:text-blue-400 text-xs truncate transition-colors cursor-pointer select-none"
                             onClick={() => {
                                 if (networkRef.current) {
-                                    networkRef.current.focus(el.id, {
-                                        scale: 1.2,
-                                        animation: { duration: 400, easingFunction: 'easeInOutQuad' }
-                                    });
-                                }
-                                if ((window as any).vscodeApi && el.node?.group === 'file' && el.node.source_file) {
-                                    try {
-                                        (window as any).vscodeApi.postMessage({
-                                            command: 'revealFile',
-                                            path: el.node.source_file,
-                                            openEditor: false
-                                        });
-                                    } catch (err) {}
+                                    networkRef.current.focus(el.id, { scale: 1.2, animation: { duration: 400, easingFunction: 'easeInOutQuad' } });
                                 }
                             }}
                             onDoubleClick={() => {
-                                setSelectedNodeIds(new Set([el.id]));
-                                if (networkRef.current) {
-                                    networkRef.current.focus(el.id, {
-                                        scale: 1.2,
-                                        animation: { duration: 400, easingFunction: 'easeInOutQuad' }
-                                    });
-                                }
+                                clearSelection();
+                                toggleNodeSelection(el.id, false);
                                 if ((window as any).vscodeApi && el.node?.group === 'file' && el.node.source_file) {
                                     try {
-                                        (window as any).vscodeApi.postMessage({
-                                            command: 'revealFile',
-                                            path: el.node.source_file,
-                                            openEditor: true
-                                        });
+                                        (window as any).vscodeApi.postMessage({ command: 'revealFile', path: el.node.source_file, openEditor: true });
                                     } catch (err) {}
                                 }
                             }}
-                            data-tooltip={el.label}
                         >
                             {el.label}
                         </span>
@@ -205,33 +138,38 @@ export const TreeView: React.FC<TreeViewProps> = ({
                 <div className="flex justify-between items-center w-full">
                     <span className="font-bold text-[11px] uppercase tracking-wider">Tree&nbsp;View</span>
                     <div className="flex items-center">
-                        <button onClick={() => setSortOrder('asc')} className={`w-7 h-7 flex items-center justify-center transition-colors duration-200 rounded-md text-xs ${sortOrder === 'asc' ? 'text-blue-500 bg-blue-500/10 shadow-sm' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)]'}`} data-tooltip="Sort ASC">▲</button>
-                        <button onClick={() => setSortOrder('desc')} className={`w-7 h-7 flex items-center justify-center transition-colors duration-200 rounded-md text-xs ${sortOrder === 'desc' ? 'text-blue-500 bg-blue-500/10 shadow-sm' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)]'}`} data-tooltip="Sort DESC">▼</button>
-                        <button onClick={() => setIgnoreCase(!ignoreCase)} className={`w-7 h-7 flex items-center justify-center transition-colors duration-200 text-xs font-mono rounded-md ${ignoreCase ? 'text-blue-500 bg-blue-500/10 shadow-sm' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)]'}`} data-tooltip="Ignore case">Aa</button>
+                        <button onClick={() => setSortOrder('asc')} className={`w-7 h-7 flex items-center justify-center rounded-md text-xs ${sortOrder === 'asc' ? 'text-blue-500 bg-blue-500/10 shadow-sm' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)]'}`}>▲</button>
+                        <button onClick={() => setSortOrder('desc')} className={`w-7 h-7 flex items-center justify-center rounded-md text-xs ${sortOrder === 'desc' ? 'text-blue-500 bg-blue-500/10 shadow-sm' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)]'}`}>▼</button>
+                        <button onClick={() => setIgnoreCase(!ignoreCase)} className={`w-7 h-7 flex items-center justify-center text-xs font-mono rounded-md ${ignoreCase ? 'text-blue-500 bg-blue-500/10 shadow-sm' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)]'}`}>Aa</button>
 
                         <div className="block flex-shrink-0 bg-[var(--vscode-panel-border)] mx-1.5 w-[1px] h-5" />
 
-                        <button onClick={handleExpandAll} className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] rounded-md w-7 h-7 transition-colors duration-200 codicon codicon-expand-all" data-tooltip="Expand All"></button>
-                        <button onClick={handleCollapseAll} className="codicon-collapse-all flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] p-1.5 rounded-md w-7 h-7 transition-colors duration-200 codicon" data-tooltip="Collapse All"></button>
+                        <button onClick={handleExpandAll} className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] rounded-md w-7 h-7 codicon codicon-expand-all"></button>
+                        <button onClick={handleCollapseAll} className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] rounded-md w-7 h-7 codicon codicon-collapse-all"></button>
 
                         <div className="block flex-shrink-0 bg-[var(--vscode-panel-border)] mx-1.5 w-[1px] h-5" />
+
+                        <button
+                            onClick={() => setIsHierarchyEnabled(!isHierarchyEnabled)}
+                            className={`w-7 h-7 mr-1 flex items-center justify-center codicon codicon-references rounded-md transition-all duration-200 ${isHierarchyEnabled ? 'text-blue-500 bg-blue-500/10 border border-blue-500/20 shadow-sm' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)] opacity-60'}`}
+                            data-tooltip={isHierarchyEnabled ? "Hierarchy Link Sync active (Forcing Callers/Callees)" : "Hierarchy Link Sync inactive (Manual Tuning enabled)"}
+                        />
 
                         <select
                             value={treeGrouping}
                             onChange={(e: any) => setTreeGrouping(e.target.value)}
-                            className="bg-[var(--vscode-input-background)] shadow-sm py-1 pr-2 border border-[var(--vscode-input-border)] focus:border-blue-500 rounded-md outline-none max-w-[95px] h-7 font-semibold text-[var(--vscode-input-foreground)] text-xs transition-all cursor-pointer"
-                            data-tooltip="Tree grouping mode"
+                            className="bg-[var(--vscode-input-background)] shadow-sm py-1 pr-2 border border-[var(--vscode-input-border)] focus:border-blue-500 rounded-md outline-none max-w-[95px] h-7 font-semibold text-[var(--vscode-input-foreground)] text-xs cursor-pointer"
                         >
                             <option value="folder">📂 Folder</option>
                             <option value="extension">⚙️ Extension</option>
                             <option value="root">📄 Flat</option>
                         </select>
 
-                        <button onClick={() => setShowOnlySelected(!showOnlySelected)} className={`w-7 h-7 flex items-center justify-center codicon codicon-eye rounded-md transition-colors duration-200 ${showOnlySelected ? 'text-blue-500 bg-blue-500/10 shadow-sm' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)]'}`} data-tooltip="Show selected only"></button>
+                        <button onClick={() => setShowOnlySelected(!showOnlySelected)} className={`w-7 h-7 flex items-center justify-center codicon codicon-eye rounded-md ${showOnlySelected ? 'text-blue-500 bg-blue-500/10 shadow-sm' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)]'}`}></button>
 
                         <button
                             onClick={() => {
-                                const paths = Array.from(new Set(nodes.filter(n => selectedNodeIds.has(n.id) && n.source_file).map(n => n.source_file as string)));
+                                const paths = Array.from(new Set(nodes.filter(n => effectiveSelectedNodeIds.has(n.id) && n.source_file).map(n => n.source_file as string)));
                                 if (paths.length > 0) {
                                     if ((window as any).vscodeApi) {
                                         (window as any).vscodeApi.postMessage({ command: 'publishToSharedList', paths });
@@ -242,13 +180,13 @@ export const TreeView: React.FC<TreeViewProps> = ({
                                     }
                                 }
                             }}
-                            className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] rounded-md w-7 h-7 text-[var(--vscode-foreground)] hover:text-blue-400 text-sm transition-colors duration-200 codicon codicon-cloud-upload"
+                            className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] rounded-md w-7 h-7 text-[var(--vscode-foreground)] hover:text-blue-400 text-sm codicon codicon-cloud-upload"
                             data-tooltip="Publish selected files to Files Exporter shared list"
                         ></button>
 
                         <div className="block flex-shrink-0 bg-[var(--vscode-panel-border)] mx-1.5 w-[1px] h-5" />
 
-                        <button onClick={handleClearSelectionWithConfirm} className="flex justify-center items-center hover:bg-red-500/10 rounded-md w-7 h-7 hover:text-red-500 transition-colors duration-200 codicon codicon-trash" data-tooltip="Clear selection"></button>
+                        <button onClick={handleClearSelectionWithConfirm} className="flex justify-center items-center hover:bg-red-500/10 rounded-md w-7 h-7 hover:text-red-500 codicon codicon-trash"></button>
                     </div>
                 </div>
             </div>

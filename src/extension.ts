@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 
+let activeChildProcess: any = null;
+
 export function activate(context: vscode.ExtensionContext) {
     let disposable = vscode.commands.registerCommand('graphRagExplorer.openTool', () => {
         const panel = vscode.window.createWebviewPanel(
@@ -21,12 +23,19 @@ export function activate(context: vscode.ExtensionContext) {
         panel.webview.html = getWebviewContent(panel.webview, context.extensionPath);
 
         const saveListener = vscode.workspace.onDidSaveTextDocument((document) => {
+            if (document.uri.scheme !== 'file') return;
             const relativePath = vscode.workspace.asRelativePath(document.uri);
             runPythonScan(context, panel, "delta", relativePath);
         });
         context.subscriptions.push(saveListener);
 
-        panel.onDidDispose(() => { saveListener.dispose(); });
+        panel.onDidDispose(() => {
+            saveListener.dispose();
+            if (activeChildProcess) {
+                try { activeChildProcess.kill('SIGKILL'); } catch(e){}
+                activeChildProcess = null;
+            }
+        });
 
         panel.webview.onDidReceiveMessage(async message => {
             if (message.command === 'ready') {
@@ -34,10 +43,20 @@ export function activate(context: vscode.ExtensionContext) {
                 runPythonScan(context, panel, "deep");
             } else if (message.command === 'forceRefreshScan') {
                 runPythonScan(context, panel, "deep");
+            } else if (message.command === 'killAnalysis') {
+                if (activeChildProcess) {
+                    try { activeChildProcess.kill('SIGKILL'); } catch (err) {}
+                    activeChildProcess = null;
+                }
+                panel.webview.postMessage({ command: "updateStatus", payload: "ready" });
+                panel.webview.postMessage({
+                    command: "logTrace",
+                    payload: { level: "warn", message: "❌ Active background analysis runtime process terminated immediately via user interface override request capsule.", timestamp: new Date().toLocaleTimeString() }
+                });
             } else if (message.command === 'nodeSelected' && message.id) {
                 const workspaceFolders = vscode.workspace.workspaceFolders;
                 if (workspaceFolders && workspaceFolders.length > 0) {
-                    const radiusPath = path.join(workspaceFolders[0].uri.fsPath, ".codegraph", "blast_radius.json");
+                    const radiusPath = path.join(workspaceFolders[0].uri.fsPath, ".graph-rag-explorer", "code-graph", "blast_radius.json");
                     if (fs.existsSync(radiusPath)) {
                         try {
                             const report = JSON.parse(fs.readFileSync(radiusPath, "utf-8"));
@@ -67,6 +86,7 @@ export function activate(context: vscode.ExtensionContext) {
                 const workspaceFolders = vscode.workspace.workspaceFolders;
                 if (workspaceFolders && workspaceFolders.length > 0) {
                     const fullPath = path.isAbsolute(message.path) ? message.path : path.join(workspaceFolders[0].uri.fsPath, message.path);
+                    if (!fs.existsSync(fullPath)) return;
                     const fileUri = vscode.Uri.file(fullPath);
                     if (message.openEditor !== false) {
                         vscode.workspace.openTextDocument(fileUri).then(doc => {
@@ -84,7 +104,7 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 function syncCoreScripts(context: vscode.ExtensionContext, workspaceRoot: string): boolean {
-    const targetDir = path.join(workspaceRoot, ".graph-rag-explorer");
+    const targetDir = path.join(workspaceRoot, ".graph-rag-explorer", "scripts");
     const versionFilePath = path.join(targetDir, "version.json");
     const currentVersion = context.extension.packageJSON.version;
     const graphConfig = vscode.workspace.getConfiguration("graphRagExplorer");
@@ -116,9 +136,12 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
     if (!workspaceFolders || workspaceFolders.length === 0) return;
 
     const workspaceRoot = workspaceFolders[0].uri.fsPath;
+
+    // Always fetch fresh config directly from VS Code workspace at scan time
     const graphConfig = vscode.workspace.getConfiguration("graphRagExplorer");
-    const outputDir = path.join(workspaceRoot, ".codegraph");
-    const targetDir = path.join(workspaceRoot, ".graph-rag-explorer");
+
+    const outputDir = path.join(workspaceRoot, ".graph-rag-explorer", "code-graph");
+    const targetDir = path.join(workspaceRoot, ".graph-rag-explorer", "scripts");
 
     syncCoreScripts(context, workspaceRoot);
     panel.webview.postMessage({ command: "updateStatus", payload: "building" });
@@ -145,15 +168,24 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
     if (mode === "deep") args.push("--workspace", workspaceRoot, "--output", outputDir);
     else args.push("--workspace", workspaceRoot, "--file", targetFile, "--output", outputDir);
 
+    // Payload object mapped perfectly to the new package.json Regex settings
     const payloadConfig = {
-        includePatterns: graphConfig.get("includePatterns") || [],
-        excludePatterns: graphConfig.get("excludePatterns") || [],
+        includePathsRegex: graphConfig.get("includePathsRegex") ?? ".*",
+        includeExtensionsRegex: graphConfig.get("includeExtensionsRegex") ?? "",
+        excludePathsRegex: graphConfig.get("excludePathsRegex") ?? "",
+        excludeExtensionsRegex: graphConfig.get("excludeExtensionsRegex") ?? "",
         logFileEnabled: graphConfig.get("logFileEnabled") ?? true,
         logFileMaxSize: graphConfig.get("logFileMaxSize") ?? 5,
         logFileMaxCountRetension: graphConfig.get("logFileMaxCountRetension") ?? 5
     };
 
+    if (activeChildProcess) {
+        try { activeChildProcess.kill('SIGKILL'); } catch(e){}
+    }
+
     const child = cp.spawn("python3", args, { cwd: workspaceRoot, env: { ...process.env, PYTHONPATH: targetDir } });
+    activeChildProcess = child;
+
     child.stdin.write(JSON.stringify(payloadConfig));
     child.stdin.end();
 
@@ -161,6 +193,9 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
     child.stderr.on("data", (data: any) => data.toString().split("\n").forEach((l: string) => parseLogLine(l, "error")));
 
     child.on("close", (code: number) => {
+        if (activeChildProcess === child) {
+            activeChildProcess = null;
+        }
         if (code === 0) {
             panel.webview.postMessage({ command: "updateStatus", payload: "ready" });
             const graphJsonPath = path.join(outputDir, "graph.json");
