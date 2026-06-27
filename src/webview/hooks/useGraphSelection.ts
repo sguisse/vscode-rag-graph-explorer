@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 
 export function useGraphSelection(
     fileLevelEdges: { from: string; to: string; types: Set<string> }[],
@@ -22,9 +22,6 @@ export function useGraphSelection(
         const effective = new Set<string>(manualFileIds);
 
         if (!isHierarchyEnabled || manualFileIds.size === 0) {
-            if (typeof (window as any).logToTerminal === 'function') {
-                (window as any).logToTerminal('debug', `Registry B recalculated (Flat Mode). Effective Files: ${effective.size}`);
-            }
             return effective;
         }
 
@@ -58,11 +55,19 @@ export function useGraphSelection(
             }
         });
 
-        if (typeof (window as any).logToTerminal === 'function') {
-            (window as any).logToTerminal('debug', `Registry B recalculated (Hierarchy Sync Link). Manual Base: ${manualFileIds.size} ➔ Total Effective Files Context: ${effective.size}`);
-        }
         return effective;
     }, [manualFileIds, fileLevelEdges, parentDepth, childDepth, isHierarchyEnabled]);
+
+    // Relocate side-effect logging to a safe useEffect lifecycle phase to eliminate App component render-phase updates
+    useEffect(() => {
+        if (typeof (window as any).logToTerminal === 'function') {
+            if (!isHierarchyEnabled || manualFileIds.size === 0) {
+                (window as any).logToTerminal('debug', `Registry B recalculated (Flat Mode). Effective Files: ${effectiveFileIds.size}`);
+            } else {
+                (window as any).logToTerminal('debug', `Registry B recalculated (Hierarchy Sync Link). Manual Base: ${manualFileIds.size} ➔ Total Effective Files Context: ${effectiveFileIds.size}`);
+            }
+        }
+    }, [effectiveFileIds, manualFileIds, isHierarchyEnabled]);
 
     const toggleNodeSelection = useCallback((targetId: string) => {
         setExactSelectedIds(prev => {

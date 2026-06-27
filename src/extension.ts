@@ -103,9 +103,6 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(disposable);
 }
 
-/**
- * SOLID / KISS: Robust recursive synchronous directory cloner utility
- */
 function copyFolderRecursiveSync(source: string, target: string) {
     if (!fs.existsSync(target)) {
         fs.mkdirSync(target, { recursive: true });
@@ -139,7 +136,6 @@ function syncCoreScripts(context: vscode.ExtensionContext, workspaceRoot: string
     if (needsSync) {
         try {
             const sourceDir = path.join(context.extensionPath, "scripts");
-            // FIXED: Replaced flat file array loop with a deep recursive synchronizer block
             copyFolderRecursiveSync(sourceDir, targetDir);
             fs.writeFileSync(versionFilePath, JSON.stringify({ version: currentVersion }), "utf-8");
         } catch (err) { return false; }
@@ -250,7 +246,7 @@ function getWebviewContent(webview: vscode.Webview, extensionPath: string): stri
         <link href="https://cdn.jsdelivr.net/npm/@vscode/codicons/dist/codicon.css" rel="stylesheet">
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
-            body { padding: 0; margin: 0; background-color: var(--vscode-editor-background); color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
+            body { padding: 0; margin: 0; background-color: var(--vscode-editor-background); color: var(--vscode-foreground); font-family: var(--vscode-font-family, sans-serif); }
             #global-cursor-tooltip { position: fixed; background-color: #000000; color: #ffffff; border: 1px solid #454545; padding: 6px 10px; border-radius: 4px; font-size: 11px; z-index: 999999; pointer-events: none; display: none; }
         </style>
     </head>
@@ -259,4 +255,5 @@ function getWebviewContent(webview: vscode.Webview, extensionPath: string): stri
         <script src="${scriptUri}"></script>
     </body></html>`;
 }
+
 export function deactivate() {}

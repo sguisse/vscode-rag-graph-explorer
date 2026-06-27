@@ -99,9 +99,9 @@ export const App: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        const root = window.document.documentElement;
+        const root = window.document.documentElement; if (root) {
         if (theme === 'dark') root.classList.add('dark');
-        else root.classList.remove('dark');
+        else root.classList.remove('dark'); }
     }, [theme]);
 
     useEffect(() => {
