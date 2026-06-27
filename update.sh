@@ -1,101 +1,112 @@
 #!/bin/bash
 
 # ==============================================================================
-# FIX DE L'ANALYSEUR NODE.JS (scripts/analyzers/node/analyzer.js)
-# Restauration du type "json" et utilisation de JSON.parse()
+# 1. MISE À JOUR DE LA CONSOLIDATION BACKEND (scripts/core/graph_engine.py)
+# Garantit l'envoi des métadonnées de style Vis.js conformes
 # ==============================================================================
-cat << 'EOF' > scripts/analyzers/node/analyzer.js
-import { cruise } from "dependency-cruiser";
-import fs from "node:fs";
-import path from "node:path";
-import crypto from "node:crypto";
+cat << 'EOF' > scripts/core/graph_engine.py
+import os
+import json
+import networkx as nx
+from typing import Dict, Any
+from utils import info, success
 
-const manifestPath = process.argv[2];
-const outputDir = process.argv[3];
+class GraphEngine:
+    def __init__(self):
+        self.graph = nx.DiGraph()
 
-if (!manifestPath || !outputDir) {
-    console.error("Usage: node analyzer.js <manifest_path> <output_dir>");
-    process.exit(1);
-}
+    def load_raw_outputs(self, raw_outputs_dir: str):
+        """ Parcourt tous les dossiers d'analyseurs et fusionne les données """
+        info(f"Consolidation des données depuis {raw_outputs_dir}...", component="GraphEngine")
 
-try {
-    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+        for root, _, files in os.walk(raw_outputs_dir):
+            for file in files:
+                if file.endswith(".json"):
+                    file_path = os.path.join(root, file)
+                    try:
+                        with open(file_path, "r", encoding="utf-8") as f:
+                            data = json.load(f)
 
-    process.chdir(manifest.workspace_root);
+                        for ent in data.get("entities", []):
+                            norm_id = ent["id"].replace("\\", "/").lower()
+                            self.graph.add_node(norm_id, label=ent["label"], group=ent.get("group", "file"), source_file=norm_id)
 
-    const allowedFilesSet = new Set(manifest.files.map(f => f.replace(/\\/g, '/')));
-    const webRegex = /\.(js|jsx|ts|tsx|vue|svelte|html|htm|css|scss|less)$/i;
+                        for rel in data.get("relations", []):
+                            src = rel["source"].replace("\\", "/").lower()
+                            tgt = rel["target"].replace("\\", "/").lower()
+                            self.graph.add_edge(src, tgt, relation=rel.get("type", "relation"))
 
-    const relativeFilesToParse = manifest.files
-        .filter(f => webRegex.test(f))
-        .map(f => path.relative(manifest.workspace_root, f).replace(/\\/g, '/'))
-        .filter(f => f !== '');
+                    except Exception:
+                        pass
+        info(f"Graphe consolidé : {self.graph.number_of_nodes()} nœuds, {self.graph.number_of_edges()} liaisons.", component="GraphEngine")
 
-    if (relativeFilesToParse.length === 0) {
-        process.exit(0);
-    }
-
-    console.log(`[Node AST] Démarrage de l'analyse de ${relativeFilesToParse.length} fichiers Web...`);
-    const startTime = Date.now();
-
-    // On utilise le type de sortie officiel "json"
-    const cruiseResult = await cruise(
-        relativeFilesToParse,
-        {
-            tsPreCompilationDeps: true,
-            outputType: "json"
-        }
-    );
-
-    const result = { entities: [], relations: [] };
-
-    // FIX : On parse la String JSON renvoyée par dependency-cruiser
-    let output;
-    try {
-        output = typeof cruiseResult.output === 'string' ? JSON.parse(cruiseResult.output) : cruiseResult.output;
-    } catch(e) {
-        console.error("Impossible de parser le résultat JSON de dependency-cruiser", e);
-        process.exit(1);
-    }
-
-    if (output && output.modules) {
-        output.modules.forEach(mod => {
-            const sourceAbs = path.resolve(manifest.workspace_root, mod.source).replace(/\\/g, '/');
-            if (!allowedFilesSet.has(sourceAbs)) return;
-
-            result.entities.push({ id: sourceAbs, label: path.basename(sourceAbs), group: "file" });
-
-            if (mod.dependencies) {
-                mod.dependencies.forEach(dep => {
-                    const targetAbs = path.resolve(manifest.workspace_root, dep.resolved).replace(/\\/g, '/');
-                    if (allowedFilesSet.has(targetAbs)) {
-                        result.relations.push({ source: sourceAbs, target: targetAbs, type: "imports" });
-                    }
-                });
+    def export_pure_visjs_format(self) -> Dict[str, Any]:
+        nodes_payload = []
+        for node_id, data in self.graph.nodes(data=True):
+            node_properties = {
+                "id": node_id,
+                "label": data.get("label", node_id),
+                "file_type": data.get("group", "file"),
+                "source_file": data.get("source_file", "")
             }
-        });
-    }
 
-    fs.mkdirSync(outputDir, { recursive: true });
-    const hash = crypto.createHash('md5').update("web_analysis").digest('hex');
-    fs.writeFileSync(path.join(outputDir, `${hash}.json`), JSON.stringify(result, null, 2));
+            # Détection des points d'entrée morts (Nœuds sans référence entrante)
+            if self.graph.in_degree(node_id) == 0:
+                node_properties["borderWidth"] = 2
+                node_properties["color"] = {
+                    "border": "#000000"
+                }
+                # Double sécurité : indicateur textuel si l'IHM n'utilise pas le style d'objet
+                node_properties["label"] = f"🎯 {data.get('label', node_id)}"
 
-    const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-    console.log(`[Node AST] ✅ Parsing Web terminé en ${duration}s. (${result.entities.length} entités validées)`);
+            nodes_payload.append(node_properties)
 
-} catch (error) {
-    console.error("Erreur critique dans l'analyseur Node:", error);
-    process.exit(1);
-}
-process.exit(0);
+        edges_payload = []
+        for source, target, data in self.graph.edges(data=True):
+            edges_payload.append({"from": source, "to": target, "relation": data.get("relation", "relation")})
+
+        return {"nodes": nodes_payload, "edges": edges_payload}
+
+    def save_to_workspace(self, consolidated_dir: str):
+        os.makedirs(consolidated_dir, exist_ok=True)
+        vis_path = os.path.join(consolidated_dir, "graph-view.json")
+        with open(vis_path, "w", encoding="utf-8") as f:
+            json.dump(self.export_pure_visjs_format(), f, indent=2, ensure_ascii=False)
+
+        graphify_path = os.path.join(consolidated_dir, "graphify-data.json")
+        with open(graphify_path, "w", encoding="utf-8") as f:
+            json.dump(nx.node_link_data(self.graph), f, indent=2, ensure_ascii=False)
+
+        success(f"Artefacts consolidés générés dans {consolidated_dir}", component="GraphEngine")
 EOF
 
 # ==============================================================================
-# FORCER LA SYNC DE L'EXTENSION
+# 2. RAPPEL D'ALIGNEMENT JAVASCRIPT POUR TON IHM (A METTRE DANS TA WEBVIEW)
 # ==============================================================================
-sed -i.bak 's/"version": "[0-9]*\.[0-9]*\.[0-9]*"/"version": "1.3.9"/' package.json
+# Pour que ton IHM accepte les propriétés, assure-bas que le récepteur ressemble à ça :
+#
+# window.addEventListener('message', event => {
+#     const message = event.data;
+#     if (message.command === 'updateGraphData') {
+#         const rawNodes = message.payload.nodes;
+#
+#         // Utiliser le rest/spread operator pour ne perdre aucune propriété de style du backend !
+#         const visNodes = rawNodes.map(node => ({
+#             ...node,               // Spreads id, label, borderWidth, color, etc.
+#             group: node.file_type  // Maintient la compatibilité avec ton système de groupe actuel
+#         }));
+#
+#         const data = { nodes: new vis.DataSet(vis_points), edges: ... };
+#         network.setData(data);
+#     }
+# });
+
+# ==============================================================================
+# 3. MISE À JOUR DU BUILD ET RE-PACKAGING
+# ==============================================================================
+sed -i.bak 's/"version": "[0-9]*\.[0-9]*\.[0-9]*"/"version": "1.4.1"/' package.json
 rm -f package.json.bak
 
 npm run package
 
-echo "✅ Correctif appliqué ! Le format JSON est maintenant correctement parsé."
+echo "🚀 Clé de style consolidée et script mis à jour avec succès !"

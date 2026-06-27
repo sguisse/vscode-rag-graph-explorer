@@ -20,7 +20,6 @@ class GraphEngine:
                         with open(file_path, "r", encoding="utf-8") as f:
                             data = json.load(f)
 
-                        # Injection dans NetworkX
                         for ent in data.get("entities", []):
                             norm_id = ent["id"].replace("\\", "/").lower()
                             self.graph.add_node(norm_id, label=ent["label"], group=ent.get("group", "file"), source_file=norm_id)
@@ -30,17 +29,30 @@ class GraphEngine:
                             tgt = rel["target"].replace("\\", "/").lower()
                             self.graph.add_edge(src, tgt, relation=rel.get("type", "relation"))
 
-                    except Exception as e:
+                    except Exception:
                         pass
         info(f"Graphe consolidé : {self.graph.number_of_nodes()} nœuds, {self.graph.number_of_edges()} liaisons.", component="GraphEngine")
 
     def export_pure_visjs_format(self) -> Dict[str, Any]:
         nodes_payload = []
         for node_id, data in self.graph.nodes(data=True):
-            nodes_payload.append({
-                "id": node_id, "label": data.get("label", node_id),
-                "file_type": data.get("group", "file"), "source_file": data.get("source_file", "")
-            })
+            node_properties = {
+                "id": node_id,
+                "label": data.get("label", node_id),
+                "file_type": data.get("group", "file"),
+                "source_file": data.get("source_file", "")
+            }
+
+            # Détection des points d'entrée morts (Nœuds sans référence entrante)
+            if self.graph.in_degree(node_id) == 0:
+                node_properties["borderWidth"] = 2
+                node_properties["color"] = {
+                    "border": "#000000"
+                }
+                # Double sécurité : indicateur textuel si l'IHM n'utilise pas le style d'objet
+                node_properties["label"] = f"🎯 {data.get('label', node_id)}"
+
+            nodes_payload.append(node_properties)
 
         edges_payload = []
         for source, target, data in self.graph.edges(data=True):
@@ -50,7 +62,6 @@ class GraphEngine:
 
     def save_to_workspace(self, consolidated_dir: str):
         os.makedirs(consolidated_dir, exist_ok=True)
-
         vis_path = os.path.join(consolidated_dir, "graph-view.json")
         with open(vis_path, "w", encoding="utf-8") as f:
             json.dump(self.export_pure_visjs_format(), f, indent=2, ensure_ascii=False)
