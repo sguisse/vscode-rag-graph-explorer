@@ -7,10 +7,8 @@ export function useGraphSelection(
     childDepth: number,
     isHierarchyEnabled: boolean
 ) {
-    // REGISTRY A: Exact Entities manually clicked/checked by the user
     const [exactSelectedIds, setExactSelectedIds] = useState<Set<string>>(new Set());
 
-    // Map exact entities to their parent File IDs for the graph context
     const manualFileIds = useMemo(() => {
         const fileIds = new Set<string>();
         exactSelectedIds.forEach(id => {
@@ -20,16 +18,17 @@ export function useGraphSelection(
         return fileIds;
     }, [exactSelectedIds, nodeToFileIdMap]);
 
-    // REGISTRY B: Effective File Context (Manual + Derived Callers/Callees)
     const effectiveFileIds = useMemo(() => {
         const effective = new Set<string>(manualFileIds);
 
-        // If hierarchy sync is disabled, we only highlight the exact files selected
-        if (!isHierarchyEnabled || manualFileIds.size === 0) return effective;
+        if (!isHierarchyEnabled || manualFileIds.size === 0) {
+            if (typeof (window as any).logToTerminal === 'function') {
+                (window as any).logToTerminal('debug', `Registry B recalculated (Flat Mode). Effective Files: ${effective.size}`);
+            }
+            return effective;
+        }
 
-        // BFS Traversal for callers and callees
         Array.from(manualFileIds).forEach(startId => {
-            // Propagate downstream (Callees)
             let currentChildLayer = [startId];
             for (let d = 0; d < childDepth; d++) {
                 const nextLayer: string[] = [];
@@ -44,7 +43,6 @@ export function useGraphSelection(
                 currentChildLayer = nextLayer;
             }
 
-            // Propagate upstream (Callers)
             let currentParentLayer = [startId];
             for (let d = 0; d < parentDepth; d++) {
                 const nextLayer: string[] = [];
@@ -60,24 +58,28 @@ export function useGraphSelection(
             }
         });
 
+        if (typeof (window as any).logToTerminal === 'function') {
+            (window as any).logToTerminal('debug', `Registry B recalculated (Hierarchy Sync Link). Manual Base: ${manualFileIds.size} ➔ Total Effective Files Context: ${effective.size}`);
+        }
         return effective;
     }, [manualFileIds, fileLevelEdges, parentDepth, childDepth, isHierarchyEnabled]);
 
-    // Interaction Parity: 100% stable reference via functional state updates.
-    // A single click ALWAYS toggles the specific ID without destroying the rest of the selection.
     const toggleNodeSelection = useCallback((targetId: string) => {
         setExactSelectedIds(prev => {
             const next = new Set(prev);
-            if (next.has(targetId)) {
+            const isChecked = next.has(targetId);
+            if (isChecked) {
                 next.delete(targetId);
             } else {
                 next.add(targetId);
+            }
+            if (typeof (window as any).logToTerminal === 'function') {
+                (window as any).logToTerminal('info', `🎯 Transaction: toggleNodeSelection ID=[${targetId}] | PriorState=${isChecked ? 'Checked' : 'Unchecked'} ➔ New Registry A Size: ${next.size}`);
             }
             return next;
         });
     }, []);
 
-    // Mass selection from TreeView group checkboxes
     const setNodesSelectionState = useCallback((ids: string[], checked: boolean) => {
         setExactSelectedIds(prev => {
             const next = new Set(prev);
@@ -85,11 +87,17 @@ export function useGraphSelection(
                 if (checked) next.add(id);
                 else next.delete(id);
             });
+            if (typeof (window as any).logToTerminal === 'function') {
+                (window as any).logToTerminal('info', `📦 Mass Transaction: setNodesSelectionState -> TargetState=${checked} | Actioned IDs Count: ${ids.length} ➔ New Registry A Size: ${next.size}`);
+            }
             return next;
         });
     }, []);
 
     const clearSelection = useCallback(() => {
+        if (typeof (window as any).logToTerminal === 'function') {
+            (window as any).logToTerminal('warn', `🗑️ Transaction: clearSelection invoked. Purging total Registry A!`);
+        }
         setExactSelectedIds(new Set());
     }, []);
 

@@ -110,14 +110,21 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
         clearSelection
     } = useGraphSelection(fileLevelEdges, nodeToFileIdMap, parentDepth, childDepth, isHierarchyEnabled);
 
+    // 1. Sync upwards to App.tsx
     useEffect(() => {
         setSelectedNodeIds(exactSelectedIds);
     }, [exactSelectedIds, setSelectedNodeIds]);
 
+    // 2. FIXED UPWARD SYNC CATCHER: Tracks explicit external wipes without intercepting local clicks
+    const prevSelectedSizeRef = useRef<number>(selectedNodeIds.size);
     useEffect(() => {
-        if (selectedNodeIds.size === 0 && exactSelectedIds.size > 0) {
+        if (selectedNodeIds.size === 0 && prevSelectedSizeRef.current > 0 && exactSelectedIds.size > 0) {
+            if (typeof (window as any).logToTerminal === 'function') {
+                (window as any).logToTerminal('warn', `🔄 External Selection Clear Detected (Parent state went 1➔0). Syncing local layout.`);
+            }
             clearSelection();
         }
+        prevSelectedSizeRef.current = selectedNodeIds.size;
     }, [selectedNodeIds, exactSelectedIds, clearSelection]);
 
     useEffect(() => {
@@ -154,14 +161,32 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
         network.on("stabilizationIterationsDone", () => { network.setOptions({ physics: false } as any); });
 
         network.on("click", (params) => {
+            const srcEvent = params.event?.srcEvent;
+            const isMultiSelect = srcEvent ? (srcEvent.ctrlKey || srcEvent.metaKey) : false;
+
             if (params.nodes.length > 0) {
-                toggleNodeSelection(String(params.nodes[0]));
+                const nodeId = String(params.nodes[0]);
+                if (typeof (window as any).logToTerminal === 'function') {
+                    (window as any).logToTerminal('debug', `🕸️ Graph Node Click: ID=[${nodeId}] | MultiSelect (Ctrl/Cmd) = [${isMultiSelect}]`);
+                }
+
+                if (!isMultiSelect) {
+                    clearSelection();
+                }
+                toggleNodeSelection(nodeId);
+            } else {
+                if (typeof (window as any).logToTerminal === 'function') {
+                    (window as any).logToTerminal('debug', `🕸️ Graph Background Click | MultiSelect (Ctrl/Cmd) = [${isMultiSelect}]`);
+                }
+                if (!isMultiSelect) {
+                    clearSelection();
+                }
             }
             network.unselectAll();
         });
 
         return () => { network.destroy(); };
-    }, [toggleNodeSelection]);
+    }, [toggleNodeSelection, clearSelection]);
 
     useEffect(() => {
         visNodesRef.current.clear();

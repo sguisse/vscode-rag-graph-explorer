@@ -44,6 +44,18 @@ export const App: React.FC = () => {
     const [applyOnTree, setApplyOnTree] = useState<boolean>(true);
     const [applyOnGraph, setApplyOnGraph] = useState<boolean>(false);
 
+    // EXPOSE GLOBAL RUNTIME LOG ROUTER FOR FRONTEND INTERACTIONS
+    useEffect(() => {
+        (window as any).logToTerminal = (level: 'debug' | 'info' | 'warn' | 'error', message: string) => {
+            setLogs(prev => [...prev, {
+                level,
+                message: `🖥️ [UI Webview Context] ${message}`,
+                timestamp: new Date().toLocaleTimeString()
+            }]);
+        };
+        return () => { delete (window as any).logToTerminal; };
+    }, []);
+
     const activeFilters = useMemo(() => ({
         selectedTypes, searchMode, searchText, isRegexEnabled, applyOnTree, applyOnGraph
     }), [selectedTypes, searchMode, searchText, isRegexEnabled, applyOnTree, applyOnGraph]);
@@ -133,7 +145,6 @@ export const App: React.FC = () => {
         };
     }, [config.tooltipDelay]);
 
-    // FIXED: Signature changed from 'links' to 'edges' to pass strict TS validation against GraphService compilation contracts
     const handleGraphLoad = (data: { nodes: any[]; edges: any[] }) => {
         const { nodes: parsedNodes, edges: parsedEdges } = GraphService.buildGraph(data);
         setNodes(parsedNodes);

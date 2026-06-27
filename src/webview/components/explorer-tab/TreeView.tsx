@@ -25,6 +25,7 @@ interface TreeViewProps {
     ignoreCase: boolean;
     setIgnoreCase: (val: boolean) => void;
     treeGrouping: 'folder' | 'extension' | 'root';
+    // FIXED: Appended the correct execution return callback arrow definition signature
     setTreeGrouping: (val: 'folder' | 'extension' | 'root') => void;
     showOnlySelected: boolean;
     setShowOnlySelected: (val: boolean) => void;
@@ -88,7 +89,13 @@ export const TreeView: React.FC<TreeViewProps> = ({
                                 className="flex-shrink-0 w-3.5 h-3.5 accent-blue-500 cursor-pointer"
                                 checked={isChecked}
                                 ref={el => { if (el) el.indeterminate = isIndeterminate; }}
-                                onChange={(e) => setNodesSelectionState(el.allLeafIds, e.target.checked)}
+                                onChange={(e) => {
+                                    const checked = e.target.checked;
+                                    if (typeof (window as any).logToTerminal === 'function') {
+                                        (window as any).logToTerminal('debug', `🌳 TreeView Group Checkbox Changed: ID=[${el.id}] | TargetState=${checked} | Total Children: ${el.allLeafIds.length}`);
+                                    }
+                                    setNodesSelectionState(el.allLeafIds, checked);
+                                }}
                                 onClick={(e) => e.stopPropagation()}
                             />
                             <span className="flex-shrink-0 opacity-90 text-xs">{el.icon}</span>
@@ -109,7 +116,12 @@ export const TreeView: React.FC<TreeViewProps> = ({
                             type="checkbox"
                             className="flex-shrink-0 w-3.5 h-3.5 accent-blue-500 cursor-pointer"
                             checked={isChecked}
-                            onChange={() => toggleNodeSelection(el.id)}
+                            onChange={() => {
+                                if (typeof (window as any).logToTerminal === 'function') {
+                                    (window as any).logToTerminal('debug', `🌳 TreeView Leaf Checkbox Changed: ID=[${el.id}] | Group='${el.node?.group}' | Prior Checked State=${isChecked}`);
+                                }
+                                toggleNodeSelection(el.id);
+                            }}
                         />
                         <span className="flex-shrink-0 opacity-80 text-xs">
                             {el.node?.group === 'file' ? '📂' : el.node?.group === 'class' ? '📦' : el.node?.group === 'method' ? '⚡' : '📄'}
@@ -117,11 +129,17 @@ export const TreeView: React.FC<TreeViewProps> = ({
                         <span
                             className="flex-1 text-[var(--vscode-foreground)] hover:text-blue-400 text-xs truncate transition-colors cursor-pointer select-none"
                             onClick={() => {
+                                if (typeof (window as any).logToTerminal === 'function') {
+                                    (window as any).logToTerminal('debug', `🌳 TreeView Text Node Requested Focus: ID=[${el.id}]`);
+                                }
                                 if (networkRef.current) {
                                     networkRef.current.focus(el.id, { scale: 1.2, animation: { duration: 400, easingFunction: 'easeInOutQuad' } });
                                 }
                             }}
                             onDoubleClick={() => {
+                                if (typeof (window as any).logToTerminal === 'function') {
+                                    (window as any).logToTerminal('warn', `🌳 TreeView Text Node DoubleClick (Isolate Document Focus Request): ID=[${el.id}]`);
+                                }
                                 clearSelection();
                                 toggleNodeSelection(el.id);
                                 if ((window as any).vscodeApi && el.node?.group === 'file' && el.node.source_file) {
