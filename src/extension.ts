@@ -103,6 +103,27 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(disposable);
 }
 
+/**
+ * SOLID / KISS: Robust recursive synchronous directory cloner utility
+ */
+function copyFolderRecursiveSync(source: string, target: string) {
+    if (!fs.existsSync(target)) {
+        fs.mkdirSync(target, { recursive: true });
+    }
+    if (fs.existsSync(source)) {
+        const files = fs.readdirSync(source);
+        for (const file of files) {
+            const curSource = path.join(source, file);
+            const curTarget = path.join(target, file);
+            if (fs.statSync(curSource).isDirectory()) {
+                copyFolderRecursiveSync(curSource, curTarget);
+            } else {
+                fs.copyFileSync(curSource, curTarget);
+            }
+        }
+    }
+}
+
 function syncCoreScripts(context: vscode.ExtensionContext, workspaceRoot: string): boolean {
     const targetDir = path.join(workspaceRoot, ".graph-rag-explorer", "scripts");
     const versionFilePath = path.join(targetDir, "version.json");
@@ -117,14 +138,9 @@ function syncCoreScripts(context: vscode.ExtensionContext, workspaceRoot: string
     }
     if (needsSync) {
         try {
-            if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
-            const sourceDir = path.join(context.extensionPath, "scripts", "core");
-            if (fs.existsSync(sourceDir)) {
-                fs.readdirSync(sourceDir).forEach(file => {
-                    const srcFile = path.join(sourceDir, file);
-                    if (fs.statSync(srcFile).isFile()) fs.copyFileSync(srcFile, path.join(targetDir, file));
-                });
-            }
+            const sourceDir = path.join(context.extensionPath, "scripts");
+            // FIXED: Replaced flat file array loop with a deep recursive synchronizer block
+            copyFolderRecursiveSync(sourceDir, targetDir);
             fs.writeFileSync(versionFilePath, JSON.stringify({ version: currentVersion }), "utf-8");
         } catch (err) { return false; }
     }
@@ -160,7 +176,7 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
     };
 
     const cp = require("child_process");
-    const runnerScript = path.join(targetDir, "runner.py");
+    const runnerScript = path.join(targetDir, "core", "runner.py");
     let args = [runnerScript];
     if (mode === "deep") args.push("--workspace", workspaceRoot, "--output", outputDir);
     else args.push("--workspace", workspaceRoot, "--file", targetFile, "--output", outputDir);
@@ -179,7 +195,7 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
         try { activeChildProcess.kill('SIGKILL'); } catch(e){}
     }
 
-    const child = cp.spawn("python3", args, { cwd: workspaceRoot, env: { ...process.env, PYTHONPATH: targetDir } });
+    const child = cp.spawn("python3", args, { cwd: workspaceRoot, env: { ...process.env, PYTHONPATH: path.join(targetDir, "core") } });
     activeChildProcess = child;
 
     child.stdin.write(JSON.stringify(payloadConfig));
@@ -194,7 +210,6 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
         }
         if (code === 0) {
             panel.webview.postMessage({ command: "updateStatus", payload: "ready" });
-            // FIXED TARGET LOOKUP: Reads the clean Vis.js tailored file format directly
             const graphJsonPath = path.join(outputDir, "graph-view.json");
             if (fs.existsSync(graphJsonPath)) {
                 try {

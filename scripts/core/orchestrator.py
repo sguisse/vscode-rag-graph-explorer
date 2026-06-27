@@ -1,101 +1,78 @@
 import os
-import re
-import concurrent.futures
-from typing import List, Dict
+import signal
+import subprocess
+from discovery_engine import DiscoveryEngine
 from graph_engine import GraphEngine
-from utils import debug, info, warn, error, success
-
-def parse_java_file(file_path: str) -> Dict[str, any]:
-    entities, relations = [], []
-    base_name = os.path.basename(file_path)
-    file_id = file_path.replace("\\", "/")
-    entities.append({"id": file_id, "label": base_name, "group": "file"})
-    try:
-        with open(file_path, "r", encoding="utf-8", errors="replace") as f:
-            content = f.read()
-        class_match = re.search(r'(?:class|interface|enum)\s+([a-zA-Z0-9_]+)', content)
-        if class_match:
-            class_name = class_match.group(1)
-            class_id = f"{file_id}::{class_name}"
-            entities.append({"id": class_id, "label": class_name, "group": "class"})
-            relations.append({"source": file_id, "target": class_id, "type": "contains"})
-            if "@Autowired" in content or "@Inject" in content:
-                fields = re.findall(r'(?:private|protected)\s+([a-zA-Z0-9_]+)\s+([a-zA-Z0-9_]+);', content)
-                for field_type, field_name in fields:
-                    relations.append({"source": class_id, "target": f"virtual::{field_type}", "type": "INJECTS"})
-            methods = re.findall(r'(@[a-zA-Z]+Mapping\([^)]*\))?\s*(?:public|private|protected)?\s+[a-zA-Z0-9_<>\s]+\s+([a-zA-Z0-9_]+)\s*\([^)]*\)', content)
-            for annotation, method_name in methods:
-                if method_name and method_name not in ["if", "for", "while", "switch", "catch"]:
-                    method_id = f"{class_id}::{method_name}()"
-                    label = f"{annotation} {method_name}()" if annotation else f"{method_name}()"
-                    entities.append({"id": method_id, "label": label, "group": "method"})
-                    relations.append({"source": class_id, "target": method_id, "type": "contains"})
-    except Exception as e:
-        warn(f"Échec de l'analyse syntaxique Java sur {base_name}:", e, component="Orchestrator")
-    return {"entities": entities, "relations": relations}
-
-def parse_ts_file(file_path: str) -> Dict[str, any]:
-    entities, relations = [], []
-    base_name = os.path.basename(file_path)
-    file_id = file_path.replace("\\", "/")
-    entities.append({"id": file_id, "label": base_name, "group": "file"})
-    try:
-        with open(file_path, "r", encoding="utf-8", errors="replace") as f:
-            content = f.read()
-        imports = re.findall(r'import\s+.*\s+from\s+[\'"]([^\'\"]+)[\'"]', content)
-        for imp in imports:
-            relations.append({"source": file_id, "target": f"resolved::{imp}", "type": "imports"})
-        functions = re.findall(r'(?:export\s+)?(?:const|function)\s+([a-zA-Z0-9_]+)\s*(?:=\s*\([^)]*\)\s*=>|\([^)]*\))', content)
-        for func in functions:
-            func_id = f"{file_id}::{func}"
-            entities.append({"id": func_id, "label": func, "group": "method"})
-            relations.append({"source": file_id, "target": func_id, "type": "contains"})
-    except Exception as e:
-        warn(f"Échec de l'analyse syntaxique TS sur {base_name}:", e, component="Orchestrator")
-    return {"entities": entities, "relations": relations}
-
-def parse_py_file(file_path: str) -> Dict[str, any]:
-    entities, relations = [], []
-    base_name = os.path.basename(file_path)
-    file_id = file_path.replace("\\", "/")
-    entities.append({"id": file_id, "label": base_name, "group": "file"})
-    try:
-        with open(file_path, "r", encoding="utf-8", errors="replace") as f:
-            content = f.read()
-        classes = re.findall(r'class\s+([a-zA-Z0-9_]+)', content)
-        for cls in classes:
-            class_id = f"{file_id}::{cls}"
-            entities.append({"id": class_id, "label": cls, "group": "class"})
-            relations.append({"source": file_id, "target": class_id, "type": "contains"})
-        functions = re.findall(r'def\s+([a-zA-Z0-9_]+)\s*\([^)]*\)', content)
-        for func in functions:
-            func_id = f"{file_id}::{func}"
-            entities.append({"id": func_id, "label": f"{func}()", "group": "method"})
-            relations.append({"source": file_id, "target": func_id, "type": "contains"})
-    except Exception as e:
-        warn(f"Échec de l'analyse syntaxique Python sur {base_name}:", e, component="Orchestrator")
-    return {"entities": entities, "relations": relations}
+from utils import info, warn, success, error
 
 class ParallelOrchestrator:
-    def __init__(self, graph_engine: GraphEngine):
-        self.graph_engine = graph_engine
+    # Ajout du paramètre output_dir
+    def __init__(self, workspace_root: str, output_dir: str, config: dict):
+        self.workspace_root = os.path.abspath(workspace_root)
+        self.config = config
+        self.target_dir = os.path.join(self.workspace_root, ".graph-rag-explorer", "target")
+        self.pid_dir = os.path.join(self.target_dir, "pids")
+        self.raw_out_node = os.path.join(self.target_dir, "raw_outputs", "node")
 
-    def execute_analysis_pool(self, partitions: Dict[str, List[str]]):
-        info("Initialisation du pool d'exécution concurrent ProcessPoolExecutor.", component="Orchestrator")
-        tasks = []
-        with concurrent.futures.ProcessPoolExecutor() as executor:
-            for file_path in partitions.get("JAVA", []): tasks.append(executor.submit(parse_java_file, file_path))
-            for file_path in partitions.get("TS_JS", []): tasks.append(executor.submit(parse_ts_file, file_path))
-            for file_path in partitions.get("PYTHON", []): tasks.append(executor.submit(parse_py_file, file_path))
-            info(f"Pool démarré : {len(tasks)} fichiers soumis à l'analyse.", component="Orchestrator")
-            processed_count = 0
-            for future in concurrent.futures.as_completed(tasks):
-                res = future.result()
-                processed_count += 1
-                for ent in res["entities"]:
-                    self.graph_engine.add_entity(ent["id"], ent["label"], ent["group"], ent["id"].split("::")[0])
-                for rel in res["relations"]:
-                    self.graph_engine.add_relation(rel["source"], rel["target"], rel["type"])
-                if processed_count % 10 == 0 or processed_count == len(tasks):
-                    info(f"Progression de l'analyse parallèle : {processed_count}/{len(tasks)}", component="Orchestrator")
-        success("Extraction syntaxique multi-langages terminée.", component="Orchestrator")
+        # Le dossier de consolidation final pointe directement vers args.output (code-graph)
+        self.consolidated_dir = os.path.abspath(output_dir)
+
+        for d in [self.pid_dir, self.raw_out_node, self.consolidated_dir]:
+            os.makedirs(d, exist_ok=True)
+
+        self.cleanup_orphan_processes()
+
+    def is_process_running(self, pid: int) -> bool:
+        try: os.kill(pid, 0); return True
+        except OSError: return False
+
+    def cleanup_orphan_processes(self):
+        purged = 0
+        for f in os.listdir(self.pid_dir):
+            if f.endswith(".pid"):
+                path = os.path.join(self.pid_dir, f)
+                try:
+                    with open(path, "r") as pf: pid = int(pf.read().strip())
+                    if self.is_process_running(pid):
+                        os.kill(pid, signal.SIGKILL)
+                        purged += 1
+                except: pass
+                finally: os.remove(path)
+        if purged > 0: warn(f"{purged} processus orphelins nettoyés.", component="Orchestrator")
+
+    def _bootstrap_node_analyzer(self) -> str:
+        script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        node_project_dir = os.path.join(script_dir, "analyzers", "node")
+        node_modules_dir = os.path.join(node_project_dir, "node_modules")
+
+        if not os.path.exists(node_modules_dir):
+            info("📦 Installation JIT des dépendances Node.js (Dependency-Cruiser)...", component="Orchestrator")
+            try:
+                subprocess.run(["npm", "install"], cwd=node_project_dir, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                success("Environnement Node.js initialisé avec succès.", component="Orchestrator")
+            except subprocess.CalledProcessError as e:
+                error(f"Échec de l'installation NPM: {e.stderr.decode('utf-8', errors='replace')}", component="Orchestrator")
+                raise RuntimeError("Impossible de démarrer l'analyseur Node.")
+        return os.path.join(node_project_dir, "analyzer.js")
+
+    def run_node_analyzer(self, manifest_path: str):
+        analyzer_js = self._bootstrap_node_analyzer()
+        info("Lancement de l'analyseur Web (AST Node.js)...", component="Orchestrator")
+
+        p = subprocess.Popen(["node", analyzer_js, manifest_path, self.raw_out_node])
+
+        pid_file = os.path.join(self.pid_dir, f"{p.pid}.pid")
+        with open(pid_file, "w") as f: f.write(str(p.pid))
+
+        p.wait()
+        if os.path.exists(pid_file): os.remove(pid_file)
+
+    def execute_analysis_pool(self):
+        discovery = DiscoveryEngine(self.workspace_root, self.config)
+        manifest_path = discovery.generate_manifest()
+
+        self.run_node_analyzer(manifest_path)
+
+        engine = GraphEngine()
+        engine.load_raw_outputs(os.path.join(self.target_dir, "raw_outputs"))
+        engine.save_to_workspace(self.consolidated_dir)

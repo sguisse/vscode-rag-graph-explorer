@@ -1,0 +1,10 @@
+{
+  "name": "graph-rag-node-analyzer",
+  "version": "1.0.0",
+  "description": "Analyseur structurel AST Web autonome",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "dependency-cruiser": "^16.0.0"
+  }
+}

@@ -1,10 +1,3 @@
-#!/bin/bash
-
-# ==============================================================================
-# FIX DE L'ANALYSEUR NODE.JS (scripts/analyzers/node/analyzer.js)
-# Restauration du type "json" et utilisation de JSON.parse()
-# ==============================================================================
-cat << 'EOF' > scripts/analyzers/node/analyzer.js
 import { cruise } from "dependency-cruiser";
 import fs from "node:fs";
 import path from "node:path";
@@ -88,14 +81,3 @@ try {
     process.exit(1);
 }
 process.exit(0);
-EOF
-
-# ==============================================================================
-# FORCER LA SYNC DE L'EXTENSION
-# ==============================================================================
-sed -i.bak 's/"version": "[0-9]*\.[0-9]*\.[0-9]*"/"version": "1.3.9"/' package.json
-rm -f package.json.bak
-
-npm run package
-
-echo "✅ Correctif appliqué ! Le format JSON est maintenant correctement parsé."
