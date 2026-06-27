@@ -3,7 +3,7 @@
   "license": "MIT",
   "displayName": "Graph RAG Explorer",
   "description": "Expert Node Navigator and Architecture Explorer via RAG and Gemini",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "publisher": "sguisse",
   "engines": {
     "vscode": "^1.80.0"

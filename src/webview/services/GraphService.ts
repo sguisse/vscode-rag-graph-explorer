@@ -9,7 +9,7 @@ export class GraphService {
           const json = JSON.parse(event.target?.result as string);
           resolve(json);
         } catch (err) {
-          reject(new Error('Invalid graph.json file.'));
+          reject(new Error('Invalid graph data format file.'));
         }
       };
       reader.onerror = () => {
@@ -19,7 +19,8 @@ export class GraphService {
     });
   }
 
-  static buildGraph(data: { nodes: any[]; links: any[] }): { nodes: GraphNode[]; edges: GraphEdge[] } {
+  static buildGraph(data: { nodes: any[]; edges: any[] }): { nodes: GraphNode[]; edges: GraphEdge[] } {
+    // Zero computation mapping block! Data is already tailored perfectly by Python.
     const parsedNodes: GraphNode[] = (data.nodes || []).map(n => {
       let group = 'class';
       const label = n.label || n.id || '';
@@ -29,10 +30,10 @@ export class GraphService {
       return { id: String(n.id), label, group, source_file: n.source_file, source_location: n.source_location };
     });
 
-    const parsedEdges: GraphEdge[] = (data.links || []).map(l => ({
-      from: String(l.source),
-      to: String(l.target),
-      type: l.relation || 'relation'
+    const parsedEdges: GraphEdge[] = (data.edges || []).map(e => ({
+      from: String(e.from),
+      to: String(e.to),
+      type: e.relation || 'relation'
     }));
 
     return { nodes: parsedNodes, edges: parsedEdges };

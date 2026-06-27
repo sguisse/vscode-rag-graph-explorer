@@ -9,15 +9,15 @@ class GitDeltaAnalyzer:
     def __init__(self, workspace_root: str, graph_cache_dir: str):
         self.workspace_root = os.path.abspath(workspace_root)
         self.graph_cache_dir = os.path.abspath(graph_cache_dir)
-        self.graph_json_path = os.path.join(self.graph_cache_dir, "graph.json")
+        self.graph_json_path = os.path.join(self.graph_cache_dir, "graph-view.json")
         info(f"Initialisation de l'analyseur incrémental sur : {self.workspace_root}", component="GitDelta")
 
     def calculate_blast_radius(self, target_file: str):
-        norm_target = target_file.replace("\\", "/")
+        norm_target = target_file.replace("\\", "/").lower()
         info(f"Analyse chirurgicale de Blast Radius pour : {norm_target}", component="GitDelta")
 
         if not os.path.exists(self.graph_json_path):
-            error("Cache global graph.json introuvable. Effectuez un Deep Scan au préalable.", component="GitDelta")
+            error("Cache global graph-view.json introuvable. Effectuez un Deep Scan au préalable.", component="GitDelta")
             return
 
         with open(self.graph_json_path, "r", encoding="utf-8") as f:
@@ -28,10 +28,10 @@ class GitDeltaAnalyzer:
         for node in graph_data.get("nodes", []):
             nid = node["id"]
             G.add_node(nid, **node)
-            node_file_map[nid] = node.get("source_file", "").replace("\\", "/")
+            node_file_map[nid] = node.get("source_file", "").replace("\\", "/").lower()
 
-        for link in graph_data.get("links", []):
-            G.add_edge(link["source"], link["target"], relation=link.get("relation", "relation"))
+        for edge in graph_data.get("edges", []):
+            G.add_edge(edge["from"], edge["to"], relation=edge.get("relation", "relation"))
 
         impacted_seeds = []
         for nid, src_file in node_file_map.items():
@@ -77,12 +77,11 @@ def main():
     parser = argparse.ArgumentParser(description="Deterministic Blast Radius Evaluation")
     parser.add_argument("--workspace", required=True)
     parser.add_argument("--file", required=True)
-    # FIX : Aligner la valeur de secours du dossier d'output pour l'analyse delta
     parser.add_argument("--output", default=".graph-rag-explorer/code-graph")
     args = parser.parse_args()
 
     try:
-        config = json.loads(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].startswith('{') else json.loads(sys.stdin.read())
+        config = json.loads(sys.stdin.read())
     except Exception:
         config = {}
 

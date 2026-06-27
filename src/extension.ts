@@ -194,7 +194,8 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
         }
         if (code === 0) {
             panel.webview.postMessage({ command: "updateStatus", payload: "ready" });
-            const graphJsonPath = path.join(outputDir, "graph.json");
+            // FIXED TARGET LOOKUP: Reads the clean Vis.js tailored file format directly
+            const graphJsonPath = path.join(outputDir, "graph-view.json");
             if (fs.existsSync(graphJsonPath)) {
                 try {
                     panel.webview.postMessage({ command: "updateGraphData", payload: JSON.parse(fs.readFileSync(graphJsonPath, "utf-8")) });

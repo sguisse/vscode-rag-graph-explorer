@@ -133,7 +133,8 @@ export const App: React.FC = () => {
         };
     }, [config.tooltipDelay]);
 
-    const handleGraphLoad = (data: { nodes: any[]; links: any[] }) => {
+    // FIXED: Signature changed from 'links' to 'edges' to pass strict TS validation against GraphService compilation contracts
+    const handleGraphLoad = (data: { nodes: any[]; edges: any[] }) => {
         const { nodes: parsedNodes, edges: parsedEdges } = GraphService.buildGraph(data);
         setNodes(parsedNodes);
         setEdges(parsedEdges);
