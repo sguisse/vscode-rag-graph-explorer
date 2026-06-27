@@ -25,7 +25,6 @@ interface TreeViewProps {
     ignoreCase: boolean;
     setIgnoreCase: (val: boolean) => void;
     treeGrouping: 'folder' | 'extension' | 'root';
-    // FIXED: Appended the correct execution return callback arrow definition signature
     setTreeGrouping: (val: 'folder' | 'extension' | 'root') => void;
     showOnlySelected: boolean;
     setShowOnlySelected: (val: boolean) => void;
@@ -70,6 +69,7 @@ export const TreeView: React.FC<TreeViewProps> = ({
                             data-tooltip={tooltipMessage}
                             onClick={(e) => {
                                 e.preventDefault();
+                                // SIMPLE CLICK FOLDER: Focuses the folder node in native VS Code Sidebar
                                 if ((window as any).vscodeApi && el.folderPath) {
                                     try {
                                         (window as any).vscodeApi.postMessage({ command: 'revealFile', path: el.folderPath, openEditor: false });
@@ -132,16 +132,26 @@ export const TreeView: React.FC<TreeViewProps> = ({
                                 if (typeof (window as any).logToTerminal === 'function') {
                                     (window as any).logToTerminal('debug', `🌳 TreeView Text Node Requested Focus: ID=[${el.id}]`);
                                 }
+
+                                // SIMPLE CLICK FILE: Sync-selects ONLY the corresponding file node inside the native VS Code Explorer Sidebar
+                                if ((window as any).vscodeApi && el.node?.group === 'file' && el.node.source_file) {
+                                    try {
+                                        (window as any).vscodeApi.postMessage({ command: 'revealFile', path: el.node.source_file, openEditor: false });
+                                    } catch (err) {}
+                                }
+
                                 if (networkRef.current) {
                                     networkRef.current.focus(el.id, { scale: 1.2, animation: { duration: 400, easingFunction: 'easeInOutQuad' } });
                                 }
                             }}
                             onDoubleClick={() => {
                                 if (typeof (window as any).logToTerminal === 'function') {
-                                    (window as any).logToTerminal('warn', `🌳 TreeView Text Node DoubleClick (Isolate Document Focus Request): ID=[${el.id}]`);
+                                    (window as any).logToTerminal('warn', `🌳 TreeView Text Node DoubleClick (Open Document editor tab context): ID=[${el.id}]`);
                                 }
                                 clearSelection();
                                 toggleNodeSelection(el.id);
+
+                                // DOUBLE CLICK FILE: Keeps opening the active file node directly into the VS Code Editor layout!
                                 if ((window as any).vscodeApi && el.node?.group === 'file' && el.node.source_file) {
                                     try {
                                         (window as any).vscodeApi.postMessage({ command: 'revealFile', path: el.node.source_file, openEditor: true });
