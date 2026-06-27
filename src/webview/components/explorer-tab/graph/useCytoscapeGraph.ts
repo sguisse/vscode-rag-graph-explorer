@@ -1,14 +1,3 @@
-#!/bin/bash
-
-# Ensure dedicated graph hook directory structure layout is present
-mkdir -p src/webview/components/explorer-tab/graph
-
-# ==============================================================================
-# REWRITE CYTOSCAPE HOOK WITH DETERMINISTIC POST-PAN ANIMATED FLASH HOOK
-# Leverages the native 'complete' callback parameter of cytoscape core animations
-# to trigger the golden scale flash strictly *after* canvas centering has finished.
-# ==============================================================================
-cat << 'EOF' > src/webview/components/explorer-tab/graph/useCytoscapeGraph.ts
 import { useEffect, useRef } from 'react';
 import cytoscape from 'cytoscape';
 import { GraphNode } from '../../../types';
@@ -245,11 +234,3 @@ export function useCytoscapeGraph({
 
     return { containerRef, networkRef };
 }
-EOF
-
-# ==============================================================================
-# COMPILE EXTENSION PRODUCTION PACKS
-# ==============================================================================
-npm run package
-
-echo "✅ feat/animation: Transferred node flashing to the native animation completion callback for a precise post-centering golden pulse trigger effect!"

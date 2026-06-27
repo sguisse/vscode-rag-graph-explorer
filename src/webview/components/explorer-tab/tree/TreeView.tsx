@@ -1,48 +1,31 @@
 import React from 'react';
-import { GraphNode } from '../../types';
-
-interface TreeElement {
-    id: string;
-    label: string;
-    isGroup: boolean;
-    icon?: string;
-    node?: GraphNode;
-    children?: TreeElement[];
-    allLeafIds: string[];
-    folderPath?: string;
-}
+import { GraphNode, GraphEdge } from '../../../types';
+import { useTreeData } from './useTreeData';
+import { TreeElement } from './treeTypes';
 
 interface TreeViewProps {
     nodes: GraphNode[];
+    edges: GraphEdge[];
     exactSelectedIds: Set<string>;
     effectiveFileIds: Set<string>;
     toggleNodeSelection: (id: string) => void;
     setNodesSelectionState: (ids: string[], checked: boolean) => void;
     clearSelection: () => void;
-    treeData: TreeElement[];
-    sortOrder: 'asc' | 'desc';
-    setSortOrder: (val: 'asc' | 'desc') => void;
-    ignoreCase: boolean;
-    setIgnoreCase: (val: boolean) => void;
-    treeGrouping: 'folder' | 'extension' | 'root';
-    setTreeGrouping: (val: 'folder' | 'extension' | 'root') => void;
-    showOnlySelected: boolean;
-    setShowOnlySelected: (val: boolean) => void;
-    collapsedIds: Set<string>;
-    setCollapsedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
-    handleExpandAll: () => void;
-    handleCollapseAll: () => void;
     networkRef: React.RefObject<any>;
     isHierarchyEnabled: boolean;
     setIsHierarchyEnabled: (val: boolean) => void;
+    filters: any;
 }
 
 export const TreeView: React.FC<TreeViewProps> = ({
-    nodes, exactSelectedIds, effectiveFileIds, toggleNodeSelection, setNodesSelectionState, clearSelection,
-    treeData, sortOrder, setSortOrder, ignoreCase, setIgnoreCase, treeGrouping, setTreeGrouping,
-    showOnlySelected, setShowOnlySelected, collapsedIds, setCollapsedIds,
-    handleExpandAll, handleCollapseAll, networkRef, isHierarchyEnabled, setIsHierarchyEnabled
+    nodes, edges, exactSelectedIds, effectiveFileIds, toggleNodeSelection, setNodesSelectionState, clearSelection,
+    networkRef, isHierarchyEnabled, setIsHierarchyEnabled, filters
 }) => {
+    const {
+        treeData, sortOrder, setSortOrder, ignoreCase, setIgnoreCase,
+        treeGrouping, setTreeGrouping, showOnlySelected, setShowOnlySelected,
+        collapsedIds, setCollapsedIds, handleExpandAll, handleCollapseAll
+    } = useTreeData(nodes, edges, exactSelectedIds, filters);
 
     const handleClearSelectionWithConfirm = () => {
         if (exactSelectedIds.size === 0) return;
@@ -65,11 +48,10 @@ export const TreeView: React.FC<TreeViewProps> = ({
                 return (
                     <details key={el.id} className="w-full select-none" open={isGroupOpen}>
                         <summary
-                            className="[&::-webkit-details-marker]:hidden flex items-center gap-1.5 px-1.5 py-0.5 rounded-md font-bold text-xs transition-colors cursor-pointer list-none hover:bg-[var(--vscode-list-hoverBackground)]"
+                            className="clean-summary flex items-center gap-1.5 px-1.5 py-0.5 rounded-md font-bold text-xs transition-colors cursor-pointer list-none hover:bg-[var(--vscode-list-hoverBackground)]"
                             data-tooltip={tooltipMessage}
                             onClick={(e) => {
                                 e.preventDefault();
-                                // SIMPLE CLICK FOLDER: Focuses the folder node in native VS Code Sidebar
                                 if ((window as any).vscodeApi && el.folderPath) {
                                     try {
                                         (window as any).vscodeApi.postMessage({ command: 'revealFile', path: el.folderPath, openEditor: false });
@@ -124,7 +106,7 @@ export const TreeView: React.FC<TreeViewProps> = ({
                             }}
                         />
                         <span className="flex-shrink-0 opacity-80 text-xs">
-                            {el.node?.group === 'file' ? '📂' : el.node?.group === 'class' ? '📦' : el.node?.group === 'method' ? '⚡' : '📄'}
+                            {el.node?.group === 'file' || el.node?.group === 'file_unreferenced' ? '📂' : el.node?.group === 'class' ? '📦' : el.node?.group === 'method' ? '⚡' : '📄'}
                         </span>
                         <span
                             className="flex-1 text-[var(--vscode-foreground)] hover:text-blue-400 text-xs truncate transition-colors cursor-pointer select-none"
@@ -133,8 +115,7 @@ export const TreeView: React.FC<TreeViewProps> = ({
                                     (window as any).logToTerminal('debug', `🌳 TreeView Text Node Requested Focus: ID=[${el.id}]`);
                                 }
 
-                                // SIMPLE CLICK FILE: Sync-selects ONLY the corresponding file node inside the native VS Code Explorer Sidebar
-                                if ((window as any).vscodeApi && el.node?.group === 'file' && el.node.source_file) {
+                                if ((window as any).vscodeApi && (el.node?.group === 'file' || el.node?.group === 'file_unreferenced') && el.node.source_file) {
                                     try {
                                         (window as any).vscodeApi.postMessage({ command: 'revealFile', path: el.node.source_file, openEditor: false });
                                     } catch (err) {}
@@ -151,8 +132,7 @@ export const TreeView: React.FC<TreeViewProps> = ({
                                 clearSelection();
                                 toggleNodeSelection(el.id);
 
-                                // DOUBLE CLICK FILE: Keeps opening the active file node directly into the VS Code Editor layout!
-                                if ((window as any).vscodeApi && el.node?.group === 'file' && el.node.source_file) {
+                                if ((window as any).vscodeApi && (el.node?.group === 'file' || el.node?.group === 'file_unreferenced') && el.node.source_file) {
                                     try {
                                         (window as any).vscodeApi.postMessage({ command: 'revealFile', path: el.node.source_file, openEditor: true });
                                     } catch (err) {}
