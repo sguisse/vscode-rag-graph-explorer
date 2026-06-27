@@ -1,255 +1,313 @@
 #!/bin/bash
 
-# Ensure dedicated graph hook directory structure layout is present
-mkdir -p src/webview/components/explorer-tab/graph
+# Ensure dedicated layout subdirectory is fully ready
+mkdir -p src/webview/components/explorer-tab/tree
 
 # ==============================================================================
-# REWRITE CYTOSCAPE HOOK WITH DETERMINISTIC POST-PAN ANIMATED FLASH HOOK
-# Leverages the native 'complete' callback parameter of cytoscape core animations
-# to trigger the golden scale flash strictly *after* canvas centering has finished.
+# REWRITE TREE DATA HOOK WITH SIMPLIFIED TOPOLOGICAL TOOLTIPS (useTreeData.ts)
+# Replaces verbose descriptions with explicit, scannable relationship tags:
+# - No parent & No children
+# - No parent
+# - No children
 # ==============================================================================
-cat << 'EOF' > src/webview/components/explorer-tab/graph/useCytoscapeGraph.ts
-import { useEffect, useRef } from 'react';
-import cytoscape from 'cytoscape';
-import { GraphNode } from '../../../types';
-import { getGraphStyle, layoutOptions } from './GraphConfig';
+cat << 'EOF' > src/webview/components/explorer-tab/tree/useTreeData.ts
+import { useState, useMemo } from 'react';
+import { GraphNode, GraphEdge } from '../../../types';
+import { TreeElement } from './treeTypes';
 
-interface UseCytoscapeGraphProps {
-    nodes: GraphNode[];
-    fileLevelEdges: any[];
-    nodeToFileIdMap: Map<string, string>;
-    effectiveFileIds: Set<string>;
-    exactSelectedIds: Set<string>;
-    toggleNodeSelection: (id: string) => void;
-    clearSelection: () => void;
-    applyOnGraph: boolean;
-    selectedTypes: string[];
-    searchText: string;
-    searchMode: string;
-    isRegexEnabled: boolean;
-    ignoreCase: boolean;
-    isTreeCollapsed: boolean;
-    isMaximized: boolean;
-}
+export function useTreeData(
+    nodes: GraphNode[],
+    edges: GraphEdge[],
+    exactSelectedIds: Set<string>,
+    filters: any
+) {
+    const { applyOnTree, selectedTypes, searchText, searchMode, isRegexEnabled } = filters;
 
-export function useCytoscapeGraph({
-    nodes,
-    fileLevelEdges,
-    nodeToFileIdMap,
-    effectiveFileIds,
-    exactSelectedIds,
-    toggleNodeSelection,
-    clearSelection,
-    applyOnGraph,
-    selectedTypes,
-    searchText,
-    searchMode,
-    isRegexEnabled,
-    ignoreCase,
-    isTreeCollapsed,
-    isMaximized
-}: UseCytoscapeGraphProps) {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const cyRef = useRef<cytoscape.Core | null>(null);
-    const networkRef = useRef<any>(null);
+    const [treeGrouping, setTreeGrouping] = useState<'folder' | 'extension' | 'root'>('folder');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+    const [ignoreCase, setIgnoreCase] = useState(true);
+    const [showOnlySelected, setShowOnlySelected] = useState(false);
+    const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
 
-    useEffect(() => {
-        if (!containerRef.current) return;
-
-        const fileNodes = nodes.filter(n => n.group === 'file' || n.group === 'file_unreferenced');
-        const cyElements: any[] = [];
-
-        fileNodes.forEach(f => {
-            cyElements.push({
-                data: { id: f.id, label: f.label, group: f.group }
-            });
-        });
-
-        fileLevelEdges.forEach((fe, index) => {
-            cyElements.push({
-                data: { id: `edge-${index}`, source: fe.from, target: fe.to, type: Array.from(fe.types).join(', ') }
-            });
-        });
-
-        const cy = cytoscape({
-            container: containerRef.current,
-            elements: cyElements,
-            boxSelectionEnabled: false,
-            style: getGraphStyle(),
-            layout: layoutOptions as any
-        });
-
-        cyRef.current = cy;
-
-        networkRef.current = {
-            fit: () => {
-                if (cyRef.current) {
-                    cyRef.current.animate({
-                        fit: { eles: cyRef.current.elements(), padding: 40 },
-                        duration: 350
-                    });
-                }
-            },
-            focus: (nodeId: string, options?: any) => {
-                if (cyRef.current) {
-                    const targetNode = cyRef.current.$(`[id = "${nodeId}"]`);
-                    if (targetNode.length) {
-                        // Chained camera tracking centering animation profile
-                        cyRef.current.animate({
-                            center: { eles: targetNode },
-                            zoom: options?.scale || 1.1,
-                            duration: options?.animation?.duration || 450,
-                            complete: () => {
-                                // Captured styling variables parameters cache for precise structural restoration
-                                const targetBg = targetNode.style('background-color');
-                                const targetBorderColor = targetNode.style('border-color');
-                                const targetBorderWidth = targetNode.style('border-width');
-                                const targetWidth = targetNode.style('width');
-                                const targetHeight = targetNode.style('height');
-
-                                // Dynamic scale highlight sequence triggered ONLY when translation completes
-                                targetNode.animate({
-                                    style: {
-                                        'width': 55,
-                                        'height': 55,
-                                        'background-color': '#ffeb3b',
-                                        'border-color': '#ffffff',
-                                        'border-width': 4
-                                    },
-                                    duration: 150
-                                }).animate({
-                                    style: {
-                                        'width': targetWidth,
-                                        'height': targetHeight,
-                                        'background-color': targetBg,
-                                        'border-color': targetBorderColor,
-                                        'border-width': targetBorderWidth
-                                    },
-                                    duration: 250
-                                });
-                            }
-                        } as any);
-                    }
-                }
-            },
-            setOptions: () => {},
-            stabilize: () => {}
-        };
-
-        cy.on('tap', 'node', (evt) => {
-            const node = evt.target;
-            const nodeId = node.id();
-            const srcEvent = evt.originalEvent;
-            const isMultiSelect = srcEvent ? (srcEvent.ctrlKey || srcEvent.metaKey) : false;
-
-            if (!isMultiSelect) {
-                clearSelection();
+    const { parentMap, childrenMap } = useMemo(() => {
+        const pMap: { [key: string]: string } = {};
+        const cMap: { [key: string]: string[] } = {};
+        edges.forEach(e => {
+            if (e.type === 'contains' || e.type === 'relation') {
+                pMap[e.to] = e.from;
+                if (!cMap[e.from]) cMap[e.from] = [];
+                cMap[e.from].push(e.to);
             }
-            toggleNodeSelection(nodeId);
         });
+        return { parentMap: pMap, childrenMap: cMap };
+    }, [edges]);
 
-        cy.on('tap', (evt) => {
-            if (evt.target === cy) {
-                const srcEvent = evt.originalEvent;
-                const isMultiSelect = srcEvent ? (srcEvent.ctrlKey || srcEvent.metaKey) : false;
-                if (!isMultiSelect) {
-                    clearSelection();
-                }
+    const { incomingConnectivity, outgoingConnectivity } = useMemo(() => {
+        const incoming = new Map<string, Set<string>>();
+        const outgoing = new Map<string, Set<string>>();
+
+        nodes.forEach(n => {
+            if (n.group === 'file' || n.group === 'file_unreferenced') {
+                incoming.set(n.id, new Set());
+                outgoing.set(n.id, new Set());
             }
         });
 
-        return () => {
-            cy.destroy();
-        };
-    }, [nodes, fileLevelEdges, toggleNodeSelection, clearSelection]);
-
-    useEffect(() => {
-        if (!cyRef.current) return;
-        cyRef.current.batch(() => {
-            cyRef.current!.nodes().forEach(node => {
-                const id = node.id();
-                let isVisible = true;
-
-                if (applyOnGraph) {
-                    const relatedNodes = nodes.filter(n => nodeToFileIdMap.get(n.id) === id);
-                    const filteredRelated = selectedTypes.length > 0 ? relatedNodes.filter(rn => selectedTypes.includes(rn.group)) : relatedNodes;
-                    if (filteredRelated.length === 0) isVisible = false;
-                    else if (searchText) {
-                        const queryStr = ignoreCase ? searchText.toLowerCase() : searchText;
-                        const matchesSearch = filteredRelated.some(rn => {
-                            const labelStr = ignoreCase ? rn.label.toLowerCase() : rn.label;
-                            const pathStr = rn.source_file ? (ignoreCase ? rn.source_file.toLowerCase() : rn.source_file) : '';
-
-                            if (isRegexEnabled) {
-                                try {
-                                    return new RegExp(queryStr).test(labelStr) || new RegExp(queryStr).test(pathStr);
-                                } catch { return true; }
-                            } else {
-                                if (searchMode === 'exact') {
-                                    return labelStr === queryStr || pathStr === queryStr;
-                                } else if (searchMode === 'starts') {
-                                    return labelStr.startsWith(queryStr) || pathStr.startsWith(queryStr);
-                                } else {
-                                    return labelStr.includes(queryStr) || pathStr.includes(queryStr);
-                                }
-                            }
-                        });
-                        if (!matchesSearch) isVisible = false;
-                    }
-                }
-
-                const isContextuallySelected = effectiveFileIds.has(id);
-                const isExactlySelected = exactSelectedIds.has(id);
-
-                let opacity = 1;
-                if (effectiveFileIds.size > 0) {
-                    opacity = isContextuallySelected ? 1 : 0.15;
-                }
-
-                node.style({
-                    'display': isVisible ? 'element' : 'none',
-                    'opacity': opacity,
-                    'border-width': isExactlySelected ? 4 : (isContextuallySelected ? 2.5 : (node.data('group') === 'file_unreferenced' ? 2.5 : 2)),
-                    'border-color': isExactlySelected ? '#007acc' : (isContextuallySelected ? '#3b82f6' : (node.data('group') === 'file_unreferenced' ? '#000000' : '#1177bb')),
-                    'background-color': isExactlySelected ? '#1f8ad2' : (node.data('group') === 'file_unreferenced' ? '#3a1e22' : '#0e639c')
-                });
-            });
-
-            cyRef.current!.edges().forEach(edge => {
-                const sourceId = edge.source().id();
-                const targetId = edge.target().id();
-                const isHighlighted = effectiveFileIds.has(sourceId) && effectiveFileIds.has(targetId);
-
-                let opacity = 0.65;
-                if (effectiveFileIds.size > 0) {
-                    opacity = isHighlighted ? 1 : 0.05;
-                }
-
-                edge.style({
-                    'line-color': isHighlighted ? '#3b82f6' : '#444444',
-                    'target-arrow-color': isHighlighted ? '#3b82f6' : '#444444',
-                    'width': isHighlighted ? 2.5 : 1.5,
-                    'opacity': opacity
-                });
-            });
+        edges.forEach(e => {
+            if (incoming.has(e.to) && outgoing.has(e.from)) {
+                outgoing.get(e.from)?.add(e.to);
+                incoming.get(e.to)?.add(e.from);
+            }
         });
-    }, [effectiveFileIds, exactSelectedIds, applyOnGraph, selectedTypes, searchText, searchMode, isRegexEnabled, ignoreCase, nodes, fileLevelEdges, nodeToFileIdMap]);
 
-    useEffect(() => {
-        if (cyRef.current) {
-            setTimeout(() => {
-                cyRef.current?.resize();
-            }, 150);
+        return { incomingConnectivity: incoming, outgoingConnectivity: outgoing };
+    }, [nodes, edges]);
+
+    const treeSelectionDep = showOnlySelected ? exactSelectedIds : null;
+
+    const strictlyVisibleIds = useMemo(() => {
+        const visible = new Set<string>();
+        nodes.forEach(n => {
+            if (!applyOnTree) {
+                visible.add(n.id);
+                return;
+            }
+
+            if (treeSelectionDep && !treeSelectionDep.has(n.id)) return;
+            if (selectedTypes.length > 0 && !selectedTypes.includes(n.group)) return;
+            if (!searchText) {
+                visible.add(n.id);
+                return;
+            }
+
+            const labelStr = ignoreCase ? n.label.toLowerCase() : n.label;
+            const pathStr = n.source_file ? (ignoreCase ? n.source_file.toLowerCase() : n.source_file) : '';
+            const queryStr = ignoreCase ? searchText.toLowerCase() : searchText;
+            let matches = false;
+
+            if (isRegexEnabled) {
+                try {
+                    matches = new RegExp(queryStr).test(labelStr) || new RegExp(queryStr).test(pathStr);
+                } catch { matches = true; }
+            } else {
+                if (searchMode === 'exact') {
+                    matches = labelStr === queryStr || pathStr === queryStr;
+                } else if (searchMode === 'starts') {
+                    matches = labelStr.startsWith(queryStr) || pathStr.startsWith(queryStr);
+                } else {
+                    matches = labelStr.includes(queryStr) || pathStr.includes(queryStr);
+                }
+            }
+            if (matches) visible.add(n.id);
+        });
+        return visible;
+    }, [nodes, applyOnTree, treeSelectionDep, selectedTypes, searchText, searchMode, isRegexEnabled, ignoreCase]);
+
+    const hierarchicallyVisibleIds = useMemo(() => {
+        const visible = new Set<string>(strictlyVisibleIds);
+        let added = true;
+        while (added) {
+            added = false;
+            for (const id of Array.from(visible)) {
+                const pid = parentMap[id];
+                if (pid && !visible.has(pid)) {
+                    visible.add(pid);
+                    added = true;
+                }
+            }
         }
-    }, [isTreeCollapsed, isMaximized]);
+        return visible;
+    }, [strictlyVisibleIds, parentMap]);
 
-    return { containerRef, networkRef };
+    const treeData = useMemo((): TreeElement[] => {
+        const visibleNodes = nodes.filter(n => hierarchicallyVisibleIds.has(n.id));
+        const sortNodes = (arr: GraphNode[]) => arr.sort((a, b) => a.label.localeCompare(b.label));
+
+        let commonPrefix: string[] = [];
+        let workspaceName = 'Workspace';
+        let commonPrefixPath = '';
+
+        const fileNodes = nodes.filter(n => (n.group === 'file' || n.group === 'file_unreferenced') && n.source_file);
+        if (fileNodes.length > 0) {
+            const splitPaths = fileNodes.map(n => n.source_file!.split('/').filter(Boolean));
+            for (let i = 0; i < splitPaths[0].length; i++) {
+                const part = splitPaths[0][i];
+                if (splitPaths.every(p => p[i] === part)) {
+                    commonPrefix.push(part);
+                } else {
+                    break;
+                }
+            }
+            workspaceName = commonPrefix.length > 0 ? commonPrefix[commonPrefix.length - 1] : 'Workspace';
+
+            const firstPath = fileNodes[0].source_file as string;
+            commonPrefixPath = commonPrefix.join('/');
+            if (firstPath.startsWith('/')) {
+                commonPrefixPath = '/' + commonPrefixPath;
+            }
+        }
+
+        const buildNodeSubtree = (node: GraphNode): TreeElement => {
+            const childIds = childrenMap[node.id] || [];
+            const visibleChildrenIds = childIds.filter(cid => hierarchicallyVisibleIds.has(cid));
+            const sortedChildren = sortNodes(nodes.filter(n => visibleChildrenIds.includes(n.id)));
+            const childrenElements = sortedChildren.map(cn => buildNodeSubtree(cn));
+            const allLeafIds = [node.id];
+            childrenElements.forEach(c => allLeafIds.push(...c.allLeafIds));
+
+            let leafIcon = '📄';
+            let iconTooltip = 'Generic Resource Artifact Node';
+            const isFile = node.group === 'file' || node.group === 'file_unreferenced';
+
+            if (isFile) {
+                const incCount = incomingConnectivity.get(node.id)?.size || 0;
+                const outCount = outgoingConnectivity.get(node.id)?.size || 0;
+
+                if (incCount === 0 && outCount === 0) {
+                    leafIcon = '📭';
+                    iconTooltip = 'No parent & No children';
+                } else if (incCount === 0) {
+                    leafIcon = '📥';
+                    iconTooltip = 'No parent';
+                } else if (outCount === 0) {
+                    leafIcon = '📤';
+                    iconTooltip = 'No children';
+                } else {
+                    leafIcon = '📂';
+                    iconTooltip = 'Connected Module';
+                }
+            } else if (node.group === 'class') {
+                leafIcon = '📦';
+                iconTooltip = 'Class Definition';
+            } else if (node.group === 'method') {
+                leafIcon = '⚡';
+                iconTooltip = 'Method Subroutine';
+            }
+
+            return {
+                id: node.id,
+                label: node.label,
+                isGroup: false,
+                icon: leafIcon,
+                iconTooltip: iconTooltip,
+                node,
+                children: childrenElements.length > 0 ? childrenElements : undefined,
+                allLeafIds
+            };
+        };
+
+        const rootNodes = visibleNodes.filter(n => !parentMap[n.id] || !hierarchicallyVisibleIds.has(parentMap[n.id]));
+        const sortedRoots = sortNodes(rootNodes);
+
+        let result: TreeElement[] = [];
+
+        if (treeGrouping === 'root') {
+            result = sortedRoots.map(rn => buildNodeSubtree(rn));
+        } else if (treeGrouping === 'extension') {
+            const extGroups: { [key: string]: GraphNode[] } = {};
+            const nonExtRoots: GraphNode[] = [];
+            sortedRoots.forEach(rn => {
+                if (rn.group === 'file' || rn.group === 'file_unreferenced' || rn.group === 'document') {
+                    const ext = rn.label.includes('.') ? '.' + rn.label.split('.').pop() : 'No extension';
+                    if (!extGroups[ext]) extGroups[ext] = [];
+                    extGroups[ext].push(rn);
+                } else nonExtRoots.push(rn);
+            });
+            const groupElements: TreeElement[] = Object.keys(extGroups).sort((a, b) => sortOrder === 'asc' ? a.localeCompare(b) : b.localeCompare(a)).map(ext => {
+                const children = extGroups[ext].map(rn => buildNodeSubtree(rn));
+                const allLeafIds: string[] = [];
+                children.forEach(c => allLeafIds.push(...c.allLeafIds));
+                return { id: `ext-${ext}`, label: ext, isGroup: true, icon: '🗂️', iconTooltip: `Extension Category Group (${ext})`, children, allLeafIds };
+            });
+            result = [...groupElements, ...nonExtRoots.map(rn => buildNodeSubtree(rn))];
+        } else if (treeGrouping === 'folder') {
+            interface FolderNode { name: string; path: string; nodes: GraphNode[]; subfolders: { [key: string]: FolderNode }; }
+            const rootFolder: FolderNode = { name: '', path: commonPrefixPath, nodes: [], subfolders: {} };
+            const nonFolderRoots: GraphNode[] = [];
+
+            sortedRoots.forEach(rn => {
+                if ((rn.group === 'file' || rn.group === 'file_unreferenced' || rn.group === 'document') && rn.source_file) {
+                    const parts = rn.source_file.split('/').filter(Boolean);
+                    const relParts = parts.slice(commonPrefix.length);
+
+                    let current = rootFolder;
+                    let accumulatedPath = commonPrefixPath;
+                    for (let i = 0; i < relParts.length - 1; i++) {
+                        const part = relParts[i];
+                        accumulatedPath = accumulatedPath ? `${accumulatedPath}/${part}` : part;
+                        if (!current.subfolders[part]) current.subfolders[part] = { name: part, path: accumulatedPath, nodes: [], subfolders: {} };
+                        current = current.subfolders[part];
+                    }
+                    current.nodes.push(rn);
+                } else nonFolderRoots.push(rn);
+            });
+
+            const convertFolderToTreeElement = (folder: FolderNode, pathName: string): TreeElement => {
+                const subfolderElements = Object.keys(folder.subfolders).sort((a, b) => sortOrder === 'asc' ? a.localeCompare(b) : b.localeCompare(a)).map(k => convertFolderToTreeElement(folder.subfolders[k], k));
+                const nodeElements = sortNodes(folder.nodes).map(n => buildNodeSubtree(n));
+                const combinedChildren = [...subfolderElements, ...nodeElements];
+                const allLeafIds: string[] = [];
+                combinedChildren.forEach(c => allLeafIds.push(...c.allLeafIds));
+
+                return { id: `folder-${folder.path || 'root'}`, label: pathName || 'Workspace', isGroup: true, icon: '🗂️', iconTooltip: `Directory Scope (${folder.path || 'Root'})`, children: combinedChildren, allLeafIds, folderPath: folder.path || undefined };
+            };
+            const builtRoot = convertFolderToTreeElement(rootFolder, workspaceName);
+            result = [...(builtRoot.children || []), ...nonFolderRoots.map(rn => buildNodeSubtree(rn))];
+        }
+
+        const allLeafIds: string[] = [];
+        result.forEach(child => allLeafIds.push(...child.allLeafIds));
+
+        const workspaceRoot: TreeElement = {
+            id: 'workspace-root',
+            label: workspaceName,
+            isGroup: true,
+            icon: '💻',
+            iconTooltip: 'Unified Workspace Context Root',
+            children: result,
+            allLeafIds: allLeafIds,
+            folderPath: commonPrefixPath || undefined
+        };
+
+        return [workspaceRoot];
+    }, [nodes, parentMap, childrenMap, hierarchicallyVisibleIds, treeGrouping, sortOrder, incomingConnectivity, outgoingConnectivity]);
+
+    const handleExpandAll = () => setCollapsedIds(new Set());
+    const handleCollapseAll = () => {
+        const nextCollapsed = new Set<string>();
+        const collapseChildrenRecursive = (elements: any[]) => {
+            elements.forEach(el => {
+                if (el.isGroup) {
+                    nextCollapsed.add(el.id);
+                    if (el.children) collapseChildrenRecursive(el.children);
+                }
+            });
+        };
+        collapseChildrenRecursive(treeData);
+        setCollapsedIds(nextCollapsed);
+    };
+
+    return {
+        treeData,
+        sortOrder,
+        setSortOrder,
+        ignoreCase,
+        setIgnoreCase,
+        treeGrouping,
+        setTreeGrouping,
+        showOnlySelected,
+        setShowOnlySelected,
+        collapsedIds,
+        setCollapsedIds,
+        handleExpandAll,
+        handleCollapseAll
+    };
 }
 EOF
 
 # ==============================================================================
-# COMPILE EXTENSION PRODUCTION PACKS
+# COMPILE EXTENSION ASSEMBLY
 # ==============================================================================
 npm run package
 
-echo "✅ feat/animation: Transferred node flashing to the native animation completion callback for a precise post-centering golden pulse trigger effect!"
+echo "✅ feat/tooltips: Cleaned and updated context tooltips to simple indicators ('No children', 'No parent', 'No parent & No children')."

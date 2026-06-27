@@ -102,7 +102,7 @@
         },
         "graphRagExplorer.excludePathsRegex": {
           "type": "string",
-          "default": ".*/node_modules/.*|.*/target/.*|.*/\\.git/.*|.*/dist/.*|.*/.idea/.*|.*/.vscode/.*|.*/.history/.*|.*/exported-files/.*,/\\.[^/]+",
+          "default": ".*/node_modules/.*|.*/target/.*|.*/\\.git/.*|.*/dist/.*|.*/.*-tmp/.*|.*/.*-out/.*|.*/.idea/.*|.*/.vscode/.*|.*/.history/.*|.*/exported-files/.*,/\\.[^/]+",
           "description": "Regex to exclude paths containing specific directories (e.g., node_modules, target, .git, dist, /\\.[^/]+)."
         },
         "graphRagExplorer.excludeExtensionsRegex": {

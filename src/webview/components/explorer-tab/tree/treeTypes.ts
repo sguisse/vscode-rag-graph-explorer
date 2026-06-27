@@ -5,6 +5,7 @@ export interface TreeElement {
     label: string;
     isGroup: boolean;
     icon?: string;
+    iconTooltip?: string;
     node?: GraphNode;
     children?: TreeElement[];
     allLeafIds: string[];

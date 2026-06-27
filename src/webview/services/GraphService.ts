@@ -26,10 +26,7 @@ export class GraphService {
       if (label.includes('()')) group = 'method';
       else if (label.match(/\.(ts|js|py|json|md|sh|mjs|html|css)$/i)) group = 'file';
       if (n.file_type === 'document' || n.file_type === 'rationale') group = 'document';
-
-      // Preserve unreferenced group categorization across serialization channels
       if (n.file_type === 'file_unreferenced') group = 'file_unreferenced';
-
       return { id: String(n.id), label, group, source_file: n.source_file, source_location: n.source_location };
     });
 

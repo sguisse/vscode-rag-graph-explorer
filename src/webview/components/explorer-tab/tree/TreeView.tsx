@@ -80,7 +80,7 @@ export const TreeView: React.FC<TreeViewProps> = ({
                                 }}
                                 onClick={(e) => e.stopPropagation()}
                             />
-                            <span className="flex-shrink-0 opacity-90 text-xs">{el.icon}</span>
+                            <span className="flex-shrink-0 opacity-90 text-xs cursor-help" data-tooltip={el.iconTooltip}>{el.icon}</span>
                             <span className="flex-1 text-[var(--vscode-foreground)] truncate tracking-wide">{el.label}</span>
                         </summary>
                         <div className="space-y-0 mt-0 ml-[24px] pl-2 border-[var(--vscode-panel-border)] border-l">
@@ -90,6 +90,7 @@ export const TreeView: React.FC<TreeViewProps> = ({
                 );
             } else {
                 const isChecked = exactSelectedIds.has(el.id);
+                const isFile = el.node?.group === 'file' || el.node?.group === 'file_unreferenced';
 
                 return (
                     <div key={el.id} className="group flex items-center gap-1.5 px-1.5 py-0.5 rounded-md w-full transition-colors hover:bg-[var(--vscode-list-hoverBackground)]">
@@ -105,8 +106,8 @@ export const TreeView: React.FC<TreeViewProps> = ({
                                 toggleNodeSelection(el.id);
                             }}
                         />
-                        <span className="flex-shrink-0 opacity-80 text-xs">
-                            {el.node?.group === 'file' || el.node?.group === 'file_unreferenced' ? '📂' : el.node?.group === 'class' ? '📦' : el.node?.group === 'method' ? '⚡' : '📄'}
+                        <span className="flex-shrink-0 opacity-80 text-xs cursor-help" data-tooltip={el.iconTooltip}>
+                            {el.icon || '📄'}
                         </span>
                         <span
                             className="flex-1 text-[var(--vscode-foreground)] hover:text-blue-400 text-xs truncate transition-colors cursor-pointer select-none"
@@ -115,7 +116,7 @@ export const TreeView: React.FC<TreeViewProps> = ({
                                     (window as any).logToTerminal('debug', `🌳 TreeView Text Node Requested Focus: ID=[${el.id}]`);
                                 }
 
-                                if ((window as any).vscodeApi && (el.node?.group === 'file' || el.node?.group === 'file_unreferenced') && el.node.source_file) {
+                                if ((window as any).vscodeApi && isFile && el.node?.source_file) {
                                     try {
                                         (window as any).vscodeApi.postMessage({ command: 'revealFile', path: el.node.source_file, openEditor: false });
                                     } catch (err) {}
@@ -132,7 +133,7 @@ export const TreeView: React.FC<TreeViewProps> = ({
                                 clearSelection();
                                 toggleNodeSelection(el.id);
 
-                                if ((window as any).vscodeApi && (el.node?.group === 'file' || el.node?.group === 'file_unreferenced') && el.node.source_file) {
+                                if ((window as any).vscodeApi && isFile && el.node?.source_file) {
                                     try {
                                         (window as any).vscodeApi.postMessage({ command: 'revealFile', path: el.node.source_file, openEditor: true });
                                     } catch (err) {}

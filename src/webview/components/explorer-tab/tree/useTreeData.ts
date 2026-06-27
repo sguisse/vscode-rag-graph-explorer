@@ -29,6 +29,27 @@ export function useTreeData(
         return { parentMap: pMap, childrenMap: cMap };
     }, [edges]);
 
+    const { incomingConnectivity, outgoingConnectivity } = useMemo(() => {
+        const incoming = new Map<string, Set<string>>();
+        const outgoing = new Map<string, Set<string>>();
+
+        nodes.forEach(n => {
+            if (n.group === 'file' || n.group === 'file_unreferenced') {
+                incoming.set(n.id, new Set());
+                outgoing.set(n.id, new Set());
+            }
+        });
+
+        edges.forEach(e => {
+            if (incoming.has(e.to) && outgoing.has(e.from)) {
+                outgoing.get(e.from)?.add(e.to);
+                incoming.get(e.to)?.add(e.from);
+            }
+        });
+
+        return { incomingConnectivity: incoming, outgoingConnectivity: outgoing };
+    }, [nodes, edges]);
+
     const treeSelectionDep = showOnlySelected ? exactSelectedIds : null;
 
     const strictlyVisibleIds = useMemo(() => {
@@ -121,7 +142,45 @@ export function useTreeData(
             const allLeafIds = [node.id];
             childrenElements.forEach(c => allLeafIds.push(...c.allLeafIds));
 
-            return { id: node.id, label: node.label, isGroup: false, node, children: childrenElements.length > 0 ? childrenElements : undefined, allLeafIds };
+            let leafIcon = '📄';
+            let iconTooltip = 'Generic Resource Artifact Node';
+            const isFile = node.group === 'file' || node.group === 'file_unreferenced';
+
+            if (isFile) {
+                const incCount = incomingConnectivity.get(node.id)?.size || 0;
+                const outCount = outgoingConnectivity.get(node.id)?.size || 0;
+
+                if (incCount === 0 && outCount === 0) {
+                    leafIcon = '📭';
+                    iconTooltip = 'No parent & No children';
+                } else if (incCount === 0) {
+                    leafIcon = '📥';
+                    iconTooltip = 'No parent';
+                } else if (outCount === 0) {
+                    leafIcon = '📤';
+                    iconTooltip = 'No children';
+                } else {
+                    leafIcon = '📂';
+                    iconTooltip = 'Connected Module';
+                }
+            } else if (node.group === 'class') {
+                leafIcon = '📦';
+                iconTooltip = 'Class Definition';
+            } else if (node.group === 'method') {
+                leafIcon = '⚡';
+                iconTooltip = 'Method Subroutine';
+            }
+
+            return {
+                id: node.id,
+                label: node.label,
+                isGroup: false,
+                icon: leafIcon,
+                iconTooltip: iconTooltip,
+                node,
+                children: childrenElements.length > 0 ? childrenElements : undefined,
+                allLeafIds
+            };
         };
 
         const rootNodes = visibleNodes.filter(n => !parentMap[n.id] || !hierarchicallyVisibleIds.has(parentMap[n.id]));
@@ -145,7 +204,7 @@ export function useTreeData(
                 const children = extGroups[ext].map(rn => buildNodeSubtree(rn));
                 const allLeafIds: string[] = [];
                 children.forEach(c => allLeafIds.push(...c.allLeafIds));
-                return { id: `ext-${ext}`, label: ext, isGroup: true, icon: '🗂️', children, allLeafIds };
+                return { id: `ext-${ext}`, label: ext, isGroup: true, icon: '🗂️', iconTooltip: `Extension Category Group (${ext})`, children, allLeafIds };
             });
             result = [...groupElements, ...nonExtRoots.map(rn => buildNodeSubtree(rn))];
         } else if (treeGrouping === 'folder') {
@@ -177,7 +236,7 @@ export function useTreeData(
                 const allLeafIds: string[] = [];
                 combinedChildren.forEach(c => allLeafIds.push(...c.allLeafIds));
 
-                return { id: `folder-${folder.path || 'root'}`, label: pathName || 'Workspace', isGroup: true, icon: '🗂️', children: combinedChildren, allLeafIds, folderPath: folder.path || undefined };
+                return { id: `folder-${folder.path || 'root'}`, label: pathName || 'Workspace', isGroup: true, icon: '🗂️', iconTooltip: `Directory Scope (${folder.path || 'Root'})`, children: combinedChildren, allLeafIds, folderPath: folder.path || undefined };
             };
             const builtRoot = convertFolderToTreeElement(rootFolder, workspaceName);
             result = [...(builtRoot.children || []), ...nonFolderRoots.map(rn => buildNodeSubtree(rn))];
@@ -191,13 +250,14 @@ export function useTreeData(
             label: workspaceName,
             isGroup: true,
             icon: '💻',
+            iconTooltip: 'Unified Workspace Context Root',
             children: result,
             allLeafIds: allLeafIds,
             folderPath: commonPrefixPath || undefined
         };
 
         return [workspaceRoot];
-    }, [nodes, parentMap, childrenMap, hierarchicallyVisibleIds, treeGrouping, sortOrder]);
+    }, [nodes, parentMap, childrenMap, hierarchicallyVisibleIds, treeGrouping, sortOrder, incomingConnectivity, outgoingConnectivity]);
 
     const handleExpandAll = () => setCollapsedIds(new Set());
     const handleCollapseAll = () => {

@@ -83,20 +83,19 @@ export function useCytoscapeGraph({
                 if (cyRef.current) {
                     const targetNode = cyRef.current.$(`[id = "${nodeId}"]`);
                     if (targetNode.length) {
-                        // Chained camera tracking centering animation profile
+                        // Core camera repositioning workflow
                         cyRef.current.animate({
                             center: { eles: targetNode },
                             zoom: options?.scale || 1.1,
                             duration: options?.animation?.duration || 450,
+                            // High visibility flashing pipeline triggered only when camera translation is fully done
                             complete: () => {
-                                // Captured styling variables parameters cache for precise structural restoration
                                 const targetBg = targetNode.style('background-color');
                                 const targetBorderColor = targetNode.style('border-color');
                                 const targetBorderWidth = targetNode.style('border-width');
                                 const targetWidth = targetNode.style('width');
                                 const targetHeight = targetNode.style('height');
 
-                                // Dynamic scale highlight sequence triggered ONLY when translation completes
                                 targetNode.animate({
                                     style: {
                                         'width': 55,
