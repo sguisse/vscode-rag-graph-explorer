@@ -8,9 +8,10 @@ interface HeaderProps {
     onGraphLoaded: (data: any) => void;
     nodes: GraphNode[];
     selectedNodeIds: Set<string>;
+    version?: string;
 }
 
-export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, onGraphLoaded, nodes, selectedNodeIds }) => {
+export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, onGraphLoaded, nodes, selectedNodeIds, version }) => {
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -24,7 +25,9 @@ export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, onGraphLoade
 
     return (
         <header className="z-40 relative flex flex-shrink-0 justify-between items-center bg-[var(--vscode-editor-background)] shadow-[0_2px_8px_var(--vscode-widget-shadow)] px-4 border-[var(--vscode-panel-border)] border-b h-12">
-            <div className="flex items-center gap-3">
+
+            {/* INJECTED ID AND TOOLTIP HERE */}
+            <div id="extension-identity" className="flex items-center gap-3 cursor-default" data-tooltip={`Version ${version || '1.0.0'}`}>
                 <div className="flex justify-center items-center bg-gradient-to-br from-blue-500 to-blue-700 shadow-inner rounded-md w-7 h-7 font-bold text-white text-sm">G</div>
                 <div>
                     <span className="block font-bold text-sm leading-tight tracking-wide">Graph RAG</span>
@@ -33,7 +36,6 @@ export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, onGraphLoade
             </div>
 
             <div className="flex items-center gap-2">
-
                 <button onClick={toggleTheme} className="hover:bg-[var(--vscode-toolbar-hoverBackground)] p-1.5 rounded-md text-[var(--vscode-foreground)] transition-colors duration-200">
                     <span className={`codicon ${theme === 'dark' ? 'codicon-sun' : 'codicon-moon'}`}></span>
                 </button>

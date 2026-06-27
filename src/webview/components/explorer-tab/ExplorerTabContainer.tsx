@@ -29,6 +29,9 @@ interface TreeElement {
 export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
     nodes, edges, selectedNodeIds, setSelectedNodeIds, filters, config
 }) => {
+    // FIX: Destructure primitive values to ensure React hooks check exact values, not unstable object references
+    const { applyOnGraph, applyOnTree, selectedTypes, searchText, searchMode, isRegexEnabled } = filters;
+
     const containerRef = useRef<HTMLDivElement>(null);
     const networkRef = useRef<Network | null>(null);
 
@@ -100,7 +103,6 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
         return Array.from(fileEdgesMap.values());
     }, [edges, nodeToFileIdMap]);
 
-    // --- NEW STATE MANAGEMENT ENGINE ---
     const {
         manualSelectedIds,
         effectiveSelectedNodeIds,
@@ -109,19 +111,16 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
         clearSelection
     } = useGraphSelection(fileLevelEdges, nodeToFileIdMap, parentDepth, childDepth, isHierarchyEnabled);
 
-    // Sync upwards to App.tsx (For AI Assistant)
     useEffect(() => {
         setSelectedNodeIds(effectiveSelectedNodeIds);
     }, [effectiveSelectedNodeIds, setSelectedNodeIds]);
 
-    // Sync downwards: if Header forces a reset via App.tsx
     useEffect(() => {
         if (selectedNodeIds.size === 0 && manualSelectedIds.size > 0) {
             clearSelection();
         }
     }, [selectedNodeIds, manualSelectedIds, clearSelection]);
 
-    // Vis.js Initial Configuration
     useEffect(() => {
         if (!containerRef.current) return;
 
@@ -163,7 +162,6 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
         return () => { network.destroy(); };
     }, [toggleNodeSelection, clearSelection]);
 
-    // Structural Reconstruction (Only on source file changes)
     useEffect(() => {
         visNodesRef.current.clear();
         visEdgesRef.current.clear();
@@ -180,23 +178,23 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
         }
     }, [nodes, fileLevelEdges]);
 
-    // Purely Cosmetic / View updates (DataView style update)
+    // Graph DataView rendering logic using scalar dependencies
     useEffect(() => {
         const fileNodes = nodes.filter(n => n.group === 'file');
         const nodeUpdates = fileNodes.map(f => {
             let isVisible = true;
-            if (filters.applyOnGraph) {
+            if (applyOnGraph) {
                 const relatedNodes = nodes.filter(n => nodeToFileIdMap.get(n.id) === f.id);
-                const filteredRelated = filters.selectedTypes.length > 0 ? relatedNodes.filter(rn => filters.selectedTypes.includes(rn.group)) : relatedNodes;
+                const filteredRelated = selectedTypes.length > 0 ? relatedNodes.filter(rn => selectedTypes.includes(rn.group)) : relatedNodes;
                 if (filteredRelated.length === 0) isVisible = false;
-                else if (filters.searchText) {
-                    const queryStr = ignoreCase ? filters.searchText.toLowerCase() : filters.searchText;
+                else if (searchText) {
+                    const queryStr = ignoreCase ? searchText.toLowerCase() : searchText;
                     const matchesSearch = filteredRelated.some(rn => {
                         const labelStr = ignoreCase ? rn.label.toLowerCase() : rn.label;
-                        if (filters.isRegexEnabled) {
+                        if (isRegexEnabled) {
                             try { return new RegExp(queryStr).test(labelStr); } catch { return true; }
                         } else {
-                            return filters.searchMode === 'exact' ? labelStr === queryStr : labelStr.includes(queryStr);
+                            return searchMode === 'exact' ? labelStr === queryStr : labelStr.includes(queryStr);
                         }
                     });
                     if (!matchesSearch) isVisible = false;
@@ -223,7 +221,7 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
         if (edgeUpdates.length > 0) visEdgesRef.current.update(edgeUpdates);
 
         if (networkRef.current) networkRef.current.selectNodes(Array.from(effectiveSelectedNodeIds), false);
-    }, [effectiveSelectedNodeIds, filters, ignoreCase, nodes, fileLevelEdges, nodeToFileIdMap]);
+    }, [effectiveSelectedNodeIds, applyOnGraph, selectedTypes, searchText, searchMode, isRegexEnabled, ignoreCase, nodes, fileLevelEdges, nodeToFileIdMap]);
 
     useEffect(() => {
         if (networkRef.current) {
@@ -234,36 +232,43 @@ export const ExplorerTabContainer: React.FC<ExplorerTabContainerProps> = ({
         }
     }, [isTreeCollapsed, isMaximized]);
 
+    // FIX: Decouple 'effectiveSelectedNodeIds' from the Tree dependency array unless 'showOnlySelected' is actively true.
+    // If showOnlySelected is false, 'selectionDep' evaluates to null, breaking the render cascade on user clicks!
+    const selectionDep = showOnlySelected ? effectiveSelectedNodeIds : null;
+
     const strictlyVisibleIds = useMemo(() => {
         const visible = new Set<string>();
         nodes.forEach(n => {
-            if (!filters.applyOnTree) {
+            if (!applyOnTree) {
                 visible.add(n.id);
                 return;
             }
-            const fileId = nodeToFileIdMap.get(n.id);
-            if (showOnlySelected) {
-                const isNodeSelected = effectiveSelectedNodeIds.has(n.id) || (fileId && effectiveSelectedNodeIds.has(fileId));
+
+            // Only apply selection-based filtering if 'selectionDep' is not null (meaning showOnlySelected is active)
+            if (selectionDep) {
+                const fileId = nodeToFileIdMap.get(n.id);
+                const isNodeSelected = selectionDep.has(n.id) || (fileId && selectionDep.has(fileId));
                 if (!isNodeSelected) return;
             }
-            if (filters.selectedTypes.length > 0 && !filters.selectedTypes.includes(n.group)) return;
-            if (!filters.searchText) {
+
+            if (selectedTypes.length > 0 && !selectedTypes.includes(n.group)) return;
+            if (!searchText) {
                 visible.add(n.id);
                 return;
             }
 
             const labelStr = ignoreCase ? n.label.toLowerCase() : n.label;
-            const queryStr = ignoreCase ? filters.searchText.toLowerCase() : filters.searchText;
+            const queryStr = ignoreCase ? searchText.toLowerCase() : searchText;
             let matches = false;
-            if (filters.isRegexEnabled) {
+            if (isRegexEnabled) {
                 try { matches = new RegExp(queryStr).test(labelStr); } catch { matches = true; }
             } else {
-                matches = filters.searchMode === 'exact' ? labelStr === queryStr : labelStr.includes(queryStr);
+                matches = searchMode === 'exact' ? labelStr === queryStr : labelStr.includes(queryStr);
             }
             if (matches) visible.add(n.id);
         });
         return visible;
-    }, [nodes, filters, showOnlySelected, effectiveSelectedNodeIds, ignoreCase, nodeToFileIdMap]);
+    }, [nodes, applyOnTree, showOnlySelected, selectionDep, selectedTypes, searchText, searchMode, isRegexEnabled, ignoreCase, nodeToFileIdMap]);
 
     const hierarchicallyVisibleIds = useMemo(() => {
         const visible = new Set<string>(strictlyVisibleIds);

@@ -1,77 +1,274 @@
 #!/bin/bash
 
-# 1. Bump the extension version in package.json to invalidate the Python scripts cache
-# VS Code RAG Explorer syncs core scripts only if the version changes.
-# Because we didn't bump the version, your workspace was still running the old cached discovery.py & main.py!
-sed -i.bak 's/"version": "[0-9]*\.[0-9]*\.[0-9]*"/"version": "1.0.1"/' package.json
-rm -f package.json.bak
+# 1. Overwrite src/webview/components/Header.tsx to add the extension version tooltip and the requested ID
+cat << 'EOF' > src/webview/components/Header.tsx
+import React from 'react';
+import { GraphNode } from '../types';
+import { GraphService } from '../services/GraphService';
 
-# Ensure target directory exists
-mkdir -p scripts/core
-mkdir -p src
+interface HeaderProps {
+    theme: 'light' | 'dark';
+    toggleTheme: () => void;
+    onGraphLoaded: (data: any) => void;
+    nodes: GraphNode[];
+    selectedNodeIds: Set<string>;
+    version?: string;
+}
 
-# 2. Overwrite main.py to strictly read the new string Regex configuration keys
-cat << 'EOF' > scripts/core/main.py
-import argparse
-import json
-import sys
-import shutil
-from discovery import PathFilter, WorkspaceScanner
-from graph_engine import GraphEngine
-from orchestrator import ParallelOrchestrator
-from reconciler import PolyglotReconciler
-from utils import debug, info, warn, error, success, configure_logger
+export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, onGraphLoaded, nodes, selectedNodeIds, version }) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try {
+            const data = await GraphService.loadGraphDataFromFile(file);
+            onGraphLoaded(data);
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Invalid graph.json file.');
+        }
+    };
 
-def main():
-    parser = argparse.ArgumentParser(description="Graph RAG Explorer - Core Engine Entrypoint")
-    parser.add_argument("--workspace", required=True)
-    parser.add_argument("--output", default=".graph-rag-explorer/code-graph")
-    args = parser.parse_args()
+    return (
+        <header className="z-40 relative flex flex-shrink-0 justify-between items-center bg-[var(--vscode-editor-background)] shadow-[0_2px_8px_var(--vscode-widget-shadow)] px-4 border-[var(--vscode-panel-border)] border-b h-12">
 
-    try:
-        config = json.loads(sys.stdin.read())
-    except Exception:
-        config = {}
+            {/* INJECTED ID AND TOOLTIP HERE */}
+            <div id="extension-identity" className="flex items-center gap-3 cursor-default" data-tooltip={`Version ${version || '1.0.0'}`}>
+                <div className="flex justify-center items-center bg-gradient-to-br from-blue-500 to-blue-700 shadow-inner rounded-md w-7 h-7 font-bold text-white text-sm">G</div>
+                <div>
+                    <span className="block font-bold text-sm leading-tight tracking-wide">Graph RAG</span>
+                    <span className="font-semibold text-[10px] text-[var(--vscode-descriptionForeground)] uppercase tracking-widest">Expert Node Navigator</span>
+                </div>
+            </div>
 
-    configure_logger(
-        workspace_root=args.workspace,
-        enabled=config.get("logFileEnabled", True),
-        max_size=config.get("logFileMaxSize", 5),
-        retention=config.get("logFileMaxCountRetension", 5)
-    )
+            <div className="flex items-center gap-2">
+                <button onClick={toggleTheme} className="hover:bg-[var(--vscode-toolbar-hoverBackground)] p-1.5 rounded-md text-[var(--vscode-foreground)] transition-colors duration-200">
+                    <span className={`codicon ${theme === 'dark' ? 'codicon-sun' : 'codicon-moon'}`}></span>
+                </button>
 
-    info("Point d'entrée exécutable du moteur Graph RAG activé.", component="Main")
-    debug(f"Arguments reçus -> Workspace: {args.workspace} | Target: {args.output}", component="Main")
-    debug(f"Configuration injectée par VS Code : {json.dumps(config)}", component="Main")
+                <div className="bg-[var(--vscode-panel-border)] mx-1 w-[1px] h-5" />
 
-    # Mappage strict des nouvelles clés de configuration en expressions régulières (Regex)
-    path_filter = PathFilter(
-        include_paths=config.get("includePathsRegex", ".*"),
-        exclude_paths=config.get("excludePathsRegex", ""),
-        include_exts=config.get("includeExtensionsRegex", ""),
-        exclude_exts=config.get("excludeExtensionsRegex", "")
-    )
-
-    scanner = WorkspaceScanner(args.workspace, path_filter)
-    graph_engine = GraphEngine()
-    orchestrator = ParallelOrchestrator(graph_engine)
-
-    partitions = scanner.scan_and_partition()
-    if partitions.get("JAVA") and not shutil.which("mvn"):
-        warn("Maven (mvn) absent des variables d'environnement locales.", component="Main")
-    if partitions.get("TS_JS") and not shutil.which("npm"):
-        warn("npm/NodeJS absent des variables d'environnement locales.", component="Main")
-
-    orchestrator.execute_analysis_pool(partitions)
-    PolyglotReconciler.reconcile_api_routes(graph_engine)
-    graph_engine.save_to_workspace(args.output)
-    success("Processus d'indexation structurelle terminé.", component="Main")
-
-if __name__ == "__main__":
-    main()
+                <label className="flex items-center gap-1.5 bg-gradient-to-r from-blue-600 hover:from-blue-500 to-blue-500 hover:to-blue-400 shadow-md hover:shadow-lg px-3 py-1.5 rounded-md text-white text-xs transition-all duration-200 cursor-pointer">
+                    <span className="codicon codicon-file-symlink-file"></span> Load graph.json
+                    <input type="file" accept=".json" onChange={handleFileChange} className="hidden" />
+                </label>
+            </div>
+        </header>
+    );
+};
 EOF
 
-# 3. Patch extension.ts runPythonScan function to safely extract the config (in case it was missing)
+# 2. Overwrite src/webview/App.tsx to pass down the dynamic extensionVersion
+cat << 'EOF' > src/webview/App.tsx
+import React, { useState, useEffect, useMemo } from 'react';
+import { Header } from './components/Header';
+import { Footer } from './components/Footer';
+import { ExplorationFilters } from './components/ExplorationFilters';
+import { TabsNavigation } from './components/TabsNavigation';
+import { ExplorerTab } from './components/ExplorerTab';
+import { AIAssistantTab } from './components/AIAssistantTab';
+import { ConfigurationTab } from './components/ConfigurationTab';
+import { TerminalTab } from './components/TerminalTab';
+import { GraphNode, GraphEdge } from './types';
+import { GraphService } from './services/GraphService';
+
+declare const acquireVsCodeApi: () => any;
+const vscode = acquireVsCodeApi();
+(window as any).vscodeApi = vscode;
+
+export const App: React.FC = () => {
+    const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+    const [status, setStatus] = React.useState<'ready' | 'building' | 'error'>('ready');
+    const [progress, setProgress] = React.useState<{ current: number; total: number }>({ current: 0, total: 0 });
+    const [activeTab, setActiveTab] = useState<string>('explorer');
+
+    const [config, setConfig] = useState<any>({
+        EntitiesTypesList: ['file', 'class', 'method', 'document'],
+        regexFilterEnabled: false,
+        TreeFilterEnabled: true,
+        geminiApiKey: '',
+        tooltipDelay: 2000,
+        graphLegendEnabled: true,
+        callersDepth: 1,
+        calleesDepth: 1,
+        extensionVersion: '1.0.0'
+    });
+
+    const [nodes, setNodes] = useState<GraphNode[]>([]);
+    const [edges, setEdges] = useState<GraphEdge[]>([]);
+    const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(new Set());
+    const [logs, setLogs] = useState<Array<{ level: 'debug' | 'info' | 'warn' | 'error'; message: string; timestamp: string }>>([]);
+
+    const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+    const [searchMode, setSearchMode] = useState<string>('contains');
+    const [searchText, setSearchText] = useState<string>('');
+    const [isRegexEnabled, setIsRegexEnabled] = useState<boolean>(false);
+    const [applyOnTree, setApplyOnTree] = useState<boolean>(true);
+    const [applyOnGraph, setApplyOnGraph] = useState<boolean>(false);
+
+    const activeFilters = useMemo(() => ({
+        selectedTypes, searchMode, searchText, isRegexEnabled, applyOnTree, applyOnGraph
+    }), [selectedTypes, searchMode, searchText, isRegexEnabled, applyOnTree, applyOnGraph]);
+
+    useEffect(() => {
+        const handleMessage = (event: MessageEvent) => {
+            const message = event.data;
+            if (message.command === 'setConfig') {
+                setConfig(message.config);
+                setIsRegexEnabled(message.config.regexFilterEnabled);
+                setApplyOnTree(message.config.TreeFilterEnabled);
+            } else if (message.command === 'updateGraphData') {
+                handleGraphLoad(message.payload);
+            } else if (message.command === 'blastRadiusReport') {
+                window.dispatchEvent(new CustomEvent('blastRadiusReport', { detail: message.payload }));
+            } else if (message.command === 'logTrace') {
+                setLogs(prev => [...prev, message.payload]);
+
+                const logMessage = message.payload.message || '';
+                const progressMatch = logMessage.match(/Progression de l'analyse parallèle\s*:\s*(\d+)\/(\d+)/);
+                if (progressMatch) {
+                    setProgress({
+                        current: parseInt(progressMatch[1], 10),
+                        total: parseInt(progressMatch[2], 10)
+                    });
+                }
+            } else if (message.command === 'updateStatus') {
+                setStatus(message.payload);
+                if (message.payload === 'building') {
+                    setProgress({ current: 0, total: 0 });
+                }
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+        vscode.postMessage({ command: 'ready' });
+
+        return () => {
+            window.removeEventListener('message', handleMessage);
+        };
+    }, []);
+
+    useEffect(() => {
+        const root = window.document.documentElement;
+        if (theme === 'dark') root.classList.add('dark');
+        else root.classList.remove('dark');
+    }, [theme]);
+
+    useEffect(() => {
+        const tooltipEl = document.getElementById('global-cursor-tooltip');
+        let tooltipTimeout: NodeJS.Timeout | null = null;
+        let activeTarget: Element | null = null;
+
+        const handleMouseMove = (e: MouseEvent) => {
+            const target = (e.target as Element).closest('[data-tooltip]');
+            if (target) {
+                if (activeTarget !== target) {
+                    activeTarget = target;
+                    if (tooltipTimeout) clearTimeout(tooltipTimeout);
+                    if (tooltipEl) tooltipEl.style.display = 'none';
+                    tooltipTimeout = setTimeout(() => {
+                        if (tooltipEl && activeTarget) {
+                            tooltipEl.innerHTML = activeTarget.getAttribute('data-tooltip') || '';
+                            tooltipEl.style.display = 'block';
+                            let targetTop = e.clientY - 20;
+                            tooltipEl.style.top = `${targetTop}px`;
+                            tooltipEl.style.left = `${e.clientX + 15}px`;
+                        }
+                    }, config.tooltipDelay ?? 2000);
+                } else if (tooltipEl && tooltipEl.style.display === 'block') {
+                    tooltipEl.style.top = `${e.clientY - 20}px`;
+                    tooltipEl.style.left = `${e.clientX + 15}px`;
+                }
+            } else {
+                if (activeTarget) {
+                    activeTarget = null;
+                    if (tooltipTimeout) clearTimeout(tooltipTimeout);
+                    if (tooltipEl) tooltipEl.style.display = 'none';
+                }
+            }
+        };
+
+        document.body.addEventListener('mousemove', handleMouseMove);
+        return () => {
+            document.body.removeEventListener('mousemove', handleMouseMove);
+            if (tooltipTimeout) clearTimeout(tooltipTimeout);
+        };
+    }, [config.tooltipDelay]);
+
+    const handleGraphLoad = (data: { nodes: any[]; links: any[] }) => {
+        const { nodes: parsedNodes, edges: parsedEdges } = GraphService.buildGraph(data);
+        setNodes(parsedNodes);
+        setEdges(parsedEdges);
+        setSelectedNodeIds(new Set());
+    };
+
+    return (
+        <div className="flex flex-col bg-[var(--vscode-editor-background)] w-screen h-screen overflow-hidden text-[var(--vscode-foreground)]">
+            <Header
+                theme={theme}
+                toggleTheme={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
+                onGraphLoaded={handleGraphLoad}
+                nodes={nodes}
+                selectedNodeIds={selectedNodeIds}
+                version={config.extensionVersion}
+            />
+
+            <main className="flex flex-col flex-1 min-h-0">
+                <ExplorationFilters
+                    typesList={config.EntitiesTypesList || ['file', 'class', 'method', 'document']}
+                    selectedTypes={selectedTypes}
+                    setSelectedTypes={setSelectedTypes}
+                    searchMode={searchMode}
+                    setSearchMode={setSearchMode}
+                    searchText={searchText}
+                    setSearchText={setSearchText}
+                    isRegexEnabled={isRegexEnabled}
+                    setIsRegexEnabled={setIsRegexEnabled}
+                    applyOnTree={applyOnTree}
+                    setApplyOnTree={setApplyOnTree}
+                    applyOnGraph={applyOnGraph}
+                    setApplyOnGraph={setApplyOnGraph}
+                />
+
+                <TabsNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
+
+                <div className="relative flex-1 min-h-0">
+                    <div className={activeTab === 'explorer' ? 'absolute inset-0 flex' : 'hidden'}>
+                        <ExplorerTab
+                            nodes={nodes}
+                            edges={edges}
+                            selectedNodeIds={selectedNodeIds}
+                            setSelectedNodeIds={setSelectedNodeIds}
+                            filters={activeFilters}
+                            config={config}
+                        />
+                    </div>
+                    <div className={activeTab === 'ai' ? 'absolute inset-0 flex' : 'hidden'}>
+                        <AIAssistantTab
+                            nodes={nodes}
+                            edges={edges}
+                            selectedNodeIds={selectedNodeIds}
+                            apiKey={config.geminiApiKey}
+                        />
+                    </div>
+                    <div className={activeTab === 'terminal' ? 'absolute inset-0 flex' : 'hidden'}>
+                        <TerminalTab logs={logs} clearLogs={() => setLogs([])} />
+                    </div>
+                    <div className={activeTab === 'config' ? 'absolute inset-0 flex' : 'hidden'}>
+                        <ConfigurationTab config={config} />
+                    </div>
+                </div>
+            </main>
+
+            <Footer
+                status={status}
+                progress={progress}
+                onKill={() => vscode.postMessage({ command: 'killAnalysis' })}
+            />
+        </div>
+    );
+};
+EOF
+
+# 3. Overwrite src/extension.ts to push the package.json version via the configuration payload
 cat << 'EOF' > src/extension.ts
 import * as vscode from 'vscode';
 import * as path from 'path';
@@ -114,7 +311,7 @@ export function activate(context: vscode.ExtensionContext) {
 
         panel.webview.onDidReceiveMessage(async message => {
             if (message.command === 'ready') {
-                sendConfig(panel);
+                sendConfig(panel, context);
                 runPythonScan(context, panel, "deep");
             } else if (message.command === 'forceRefreshScan') {
                 runPythonScan(context, panel, "deep");
@@ -139,7 +336,7 @@ export function activate(context: vscode.ExtensionContext) {
                         } catch(e){}
                     }
                 }
-                sendConfig(panel);
+                sendConfig(panel, context);
             } else if (message.command === 'publishToSharedList' && message.paths) {
                 const filesExporterExt = vscode.extensions.getExtension('sguisse.files-exporter');
                 if (filesExporterExt) {
@@ -211,10 +408,7 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
     if (!workspaceFolders || workspaceFolders.length === 0) return;
 
     const workspaceRoot = workspaceFolders[0].uri.fsPath;
-
-    // Always fetch fresh config directly from VS Code workspace at scan time
     const graphConfig = vscode.workspace.getConfiguration("graphRagExplorer");
-
     const outputDir = path.join(workspaceRoot, ".graph-rag-explorer", "code-graph");
     const targetDir = path.join(workspaceRoot, ".graph-rag-explorer", "scripts");
 
@@ -243,7 +437,6 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
     if (mode === "deep") args.push("--workspace", workspaceRoot, "--output", outputDir);
     else args.push("--workspace", workspaceRoot, "--file", targetFile, "--output", outputDir);
 
-    // Payload object mapped perfectly to the new package.json Regex settings
     const payloadConfig = {
         includePathsRegex: graphConfig.get("includePathsRegex") ?? ".*",
         includeExtensionsRegex: graphConfig.get("includeExtensionsRegex") ?? "",
@@ -285,7 +478,7 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
     });
 }
 
-function sendConfig(panel: vscode.WebviewPanel) {
+function sendConfig(panel: vscode.WebviewPanel, context: vscode.ExtensionContext) {
     const config = vscode.workspace.getConfiguration('graphRagExplorer');
     panel.webview.postMessage({
         command: 'setConfig',
@@ -298,7 +491,8 @@ function sendConfig(panel: vscode.WebviewPanel) {
             pinFilesExporter: config.get('pinFilesExporter') ?? true,
             graphLegendEnabled: config.get('graphLegendEnabled') ?? true,
             callersDepth: config.get('callersDepth') ?? 1,
-            calleesDepth: config.get('calleesDepth') ?? 1
+            calleesDepth: config.get('calleesDepth') ?? 1,
+            extensionVersion: context.extension.packageJSON.version
         }
     });
 }
@@ -327,4 +521,4 @@ EOF
 # Build code bundle
 npm run compile
 
-echo "✅ fix: Bumped extension version to 1.0.1 to clear the workspace script cache! The new Regex-based engine configurations are now accurately propagating to the Python parser!"
+echo "✅ feat: Injected 'extension-identity' ID and dynamically populated Version tooltip on the UI header utilizing package.json properties!"

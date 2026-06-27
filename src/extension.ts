@@ -39,7 +39,7 @@ export function activate(context: vscode.ExtensionContext) {
 
         panel.webview.onDidReceiveMessage(async message => {
             if (message.command === 'ready') {
-                sendConfig(panel);
+                sendConfig(panel, context);
                 runPythonScan(context, panel, "deep");
             } else if (message.command === 'forceRefreshScan') {
                 runPythonScan(context, panel, "deep");
@@ -64,7 +64,7 @@ export function activate(context: vscode.ExtensionContext) {
                         } catch(e){}
                     }
                 }
-                sendConfig(panel);
+                sendConfig(panel, context);
             } else if (message.command === 'publishToSharedList' && message.paths) {
                 const filesExporterExt = vscode.extensions.getExtension('sguisse.files-exporter');
                 if (filesExporterExt) {
@@ -136,10 +136,7 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
     if (!workspaceFolders || workspaceFolders.length === 0) return;
 
     const workspaceRoot = workspaceFolders[0].uri.fsPath;
-
-    // Always fetch fresh config directly from VS Code workspace at scan time
     const graphConfig = vscode.workspace.getConfiguration("graphRagExplorer");
-
     const outputDir = path.join(workspaceRoot, ".graph-rag-explorer", "code-graph");
     const targetDir = path.join(workspaceRoot, ".graph-rag-explorer", "scripts");
 
@@ -168,7 +165,6 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
     if (mode === "deep") args.push("--workspace", workspaceRoot, "--output", outputDir);
     else args.push("--workspace", workspaceRoot, "--file", targetFile, "--output", outputDir);
 
-    // Payload object mapped perfectly to the new package.json Regex settings
     const payloadConfig = {
         includePathsRegex: graphConfig.get("includePathsRegex") ?? ".*",
         includeExtensionsRegex: graphConfig.get("includeExtensionsRegex") ?? "",
@@ -210,7 +206,7 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
     });
 }
 
-function sendConfig(panel: vscode.WebviewPanel) {
+function sendConfig(panel: vscode.WebviewPanel, context: vscode.ExtensionContext) {
     const config = vscode.workspace.getConfiguration('graphRagExplorer');
     panel.webview.postMessage({
         command: 'setConfig',
@@ -223,7 +219,8 @@ function sendConfig(panel: vscode.WebviewPanel) {
             pinFilesExporter: config.get('pinFilesExporter') ?? true,
             graphLegendEnabled: config.get('graphLegendEnabled') ?? true,
             callersDepth: config.get('callersDepth') ?? 1,
-            calleesDepth: config.get('calleesDepth') ?? 1
+            calleesDepth: config.get('calleesDepth') ?? 1,
+            extensionVersion: context.extension.packageJSON.version
         }
     });
 }

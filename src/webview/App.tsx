@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { ExplorationFilters } from './components/ExplorationFilters';
@@ -19,6 +19,7 @@ export const App: React.FC = () => {
     const [status, setStatus] = React.useState<'ready' | 'building' | 'error'>('ready');
     const [progress, setProgress] = React.useState<{ current: number; total: number }>({ current: 0, total: 0 });
     const [activeTab, setActiveTab] = useState<string>('explorer');
+
     const [config, setConfig] = useState<any>({
         EntitiesTypesList: ['file', 'class', 'method', 'document'],
         regexFilterEnabled: false,
@@ -27,7 +28,8 @@ export const App: React.FC = () => {
         tooltipDelay: 2000,
         graphLegendEnabled: true,
         callersDepth: 1,
-        calleesDepth: 1
+        calleesDepth: 1,
+        extensionVersion: '1.0.0'
     });
 
     const [nodes, setNodes] = useState<GraphNode[]>([]);
@@ -41,6 +43,10 @@ export const App: React.FC = () => {
     const [isRegexEnabled, setIsRegexEnabled] = useState<boolean>(false);
     const [applyOnTree, setApplyOnTree] = useState<boolean>(true);
     const [applyOnGraph, setApplyOnGraph] = useState<boolean>(false);
+
+    const activeFilters = useMemo(() => ({
+        selectedTypes, searchMode, searchText, isRegexEnabled, applyOnTree, applyOnGraph
+    }), [selectedTypes, searchMode, searchText, isRegexEnabled, applyOnTree, applyOnGraph]);
 
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
@@ -142,6 +148,7 @@ export const App: React.FC = () => {
                 onGraphLoaded={handleGraphLoad}
                 nodes={nodes}
                 selectedNodeIds={selectedNodeIds}
+                version={config.extensionVersion}
             />
 
             <main className="flex flex-col flex-1 min-h-0">
@@ -170,7 +177,7 @@ export const App: React.FC = () => {
                             edges={edges}
                             selectedNodeIds={selectedNodeIds}
                             setSelectedNodeIds={setSelectedNodeIds}
-                            filters={{ selectedTypes, searchMode, searchText, isRegexEnabled, applyOnTree, applyOnGraph }}
+                            filters={activeFilters}
                             config={config}
                         />
                     </div>
