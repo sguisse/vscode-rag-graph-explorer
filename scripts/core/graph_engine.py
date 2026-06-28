@@ -21,12 +21,14 @@ class GraphEngine:
                             data = json.load(f)
 
                         for ent in data.get("entities", []):
-                            norm_id = ent["id"].replace("\\", "/").lower()
+                            # CORRECTIF : On remplace les anti-slashs mais on PRÉSERVE la casse d'origine (pas de .lower())
+                            norm_id = ent["id"].replace("\\", "/")
                             self.graph.add_node(norm_id, label=ent["label"], group=ent.get("group", "file"), source_file=norm_id)
 
                         for rel in data.get("relations", []):
-                            src = rel["source"].replace("\\", "/").lower()
-                            tgt = rel["target"].replace("\\", "/").lower()
+                            # CORRECTIF : Préservation de la casse d'origine sur les liaisons également
+                            src = rel["source"].replace("\\", "/")
+                            tgt = rel["target"].replace("\\", "/")
                             self.graph.add_edge(src, tgt, relation=rel.get("type", "relation"))
 
                     except Exception:
@@ -37,20 +39,27 @@ class GraphEngine:
         for node_id, data in self.graph.nodes(data=True):
             current_group = data.get("group", "file")
 
-            # Map unreferenced files to isolated semantic group for cytoscape stylesheets lookups
+            # Détection des fichiers orphelins / non référencés
             if self.graph.in_degree(node_id) == 0 and current_group == "file":
                 current_group = "file_unreferenced"
 
             nodes_payload.append({
                 "id": node_id,
                 "label": data.get("label", node_id),
-                "file_type": current_group,
+                "group": current_group,        # Ajout par sécurité pour le TreeView/UI
+                "file_type": current_group,    # Rétrocompatibilité avec le style Cytoscape
                 "source_file": data.get("source_file", "")
             })
 
         edges_payload = []
         for source, target, data in self.graph.edges(data=True):
-            edges_payload.append({"from": source, "to": target, "relation": data.get("relation", "relation")})
+            edges_payload.append({
+                "from": source,
+                "to": target,
+                "source": source,              # Redondance sécuritaire pour les liaisons
+                "target": target,
+                "relation": data.get("relation", "relation")
+            })
 
         return {"nodes": nodes_payload, "edges": edges_payload}
 
