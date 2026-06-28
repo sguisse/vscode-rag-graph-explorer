@@ -1,13 +1,3 @@
-#!/bin/bash
-set -e
-
-echo "⏳ Génération du fichier d'audit technique (scripts-python-audit.md)..."
-
-# Astuce ultime : on génère les backticks via leur code ASCII (octal 140)
-# pour que l'interface de chat (LLM) ne coupe pas le bloc de code !
-TICK=$(printf '\140\140\140')
-
-cat << EOF > scripts-python-audit.md
 # Audit Complet et Spécifications du Pipeline Python (Graph-RAG Explorer)
 
 Ce document fournit une cartographie technique exhaustive de l'architecture, du cycle de vie et de la gestion des erreurs du pipeline d'indexation topologique du projet **Graph-RAG Explorer**.
@@ -18,7 +8,7 @@ Ce document fournit une cartographie technique exhaustive de l'architecture, du 
 
 Le pipeline s'exécute de façon strictement séquentielle au niveau de ses grandes phases (Cycle de vie -> Découverte -> Analyse -> Consolidation) afin d'éliminer toute condition de concurrence (*Race Condition*), tout en exploitant un parallélisme multi-processus lors de la phase lourde de parsing AST.
 
-${TICK}mermaid
+```mermaid
 flowchart TD
     A[VS Code Extension / CLI Entry] --> B[scripts/core/main.py]
 
@@ -62,7 +52,7 @@ flowchart TD
     end
 
     K --> L[Fin d'Indexation Réussie 🎉]
-${TICK}
+```
 
 ---
 
@@ -102,6 +92,3 @@ Parcourt dynamiquement l'arborescence ascendante (Bubble Search) pour trouver la
 | **8** | Échec lancement de l'arbre parallèle. | L'appel vers run_parallel_analysis visait une méthode inexistante. | Injection d'un radar d'introspection Python listant en temps réel les méthodes disponibles sur l'objet. |
 | **9** | Récidive 'str' object has no attribute 'get'. | L'orchestrateur attendait le JSON parsé (dictionnaire) mais recevait le chemin du fichier. | Ajout du parsing json.load() sur le manifeste avant l'injection dans le constructeur. |
 | **10** | Crash Is a directory: discovery_manifest.json | Une vieille tentative de fix système avait accidentellement créé un DOSSIER au lieu d'un fichier. | Déploiement d'une routine d'exorcisme (shutil.rmtree) supprimant les dossiers fantômes à vue. |
-EOF
-
-echo "✅ Fichier 'scripts-python-audit.md' généré proprement en pur Bash !"
