@@ -1,611 +1,403 @@
 #!/bin/bash
 set -e
 
-# Create target paths if they don't exist
-mkdir -p src/webview/components
+# S'assurer que les répertoires cibles existent
+mkdir -p scripts/analyzers/java/graphify
+mkdir -p scripts/analyzers/java/code_graph
+mkdir -p scripts/analyzers/node/dependency_cruiser
+mkdir -p scripts/analyzers/node/swc
 
-# 1. Overwrite src/webview/components/Header.tsx with the new structural features and modifier trackers
-cat << 'EOF' > src/webview/components/Header.tsx
-import React, { useState, useEffect } from 'react';
-import { GraphNode } from '../types';
-import { GraphService } from '../services/GraphService';
+# ============================================================================
+# 1. STRUCTURATION OBJETS JAVA : GRAPHIFY
+# ============================================================================
 
-interface HeaderProps {
-    theme: 'light' | 'dark';
-    toggleTheme: () => void;
-    onGraphLoaded: (data: any) => void;
-    nodes: GraphNode[];
-    selectedNodeIds: Set<string>;
-    version?: string;
-    onReload: (mode: 'deep' | 'delta') => void;
-}
+cat << 'EOF' > scripts/analyzers/java/graphify/install.py
+#!/usr/bin/env python3
+import os
+import sys
+import json
+import subprocess
 
-export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, onGraphLoaded, nodes, selectedNodeIds, version, onReload }) => {
-    const [isModifierActive, setIsModifierActive] = useState(false);
+CORE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "core"))
+if CORE_DIR not in sys.path:
+    sys.path.insert(0, CORE_DIR)
 
-    useEffect(() => {
-        const handleModifierChange = (e: KeyboardEvent) => {
-            if (e.metaKey || e.ctrlKey) {
-                setIsModifierActive(true);
-            } else {
-                setIsModifierActive(false);
-            }
-        };
+from utils import info, warn, error, success
 
-        const handleKeyUp = (e: KeyboardEvent) => {
-            if (!e.metaKey && !e.ctrlKey) {
-                setIsModifierActive(false);
-            }
-        };
+class GraphifyInstaller:
+    def __init__(self):
+        self.base_dir = os.path.dirname(os.path.abspath(__file__))
+        self.tool_subpath = "java/graphify"
+        self.status = {}
 
-        const handleBlur = () => {
-            setIsModifierActive(false);
-        };
+    def find_target_dir(self, phase: str) -> str:
+        """ Remonte l'arborescence pour localiser la racine .graph-rag-explorer """
+        current = os.path.abspath(self.base_dir)
+        while current != os.path.dirname(current):
+            if os.path.basename(current) == ".graph-rag-explorer":
+                return os.path.join(current, "target", "install_outputs", self.tool_subpath, phase)
+            current = os.path.dirname(current)
+        return os.path.abspath(os.path.join(self.base_dir, "../../../../target/install_outputs", self.tool_subpath, phase))
 
-        window.addEventListener('keydown', handleModifierChange);
-        window.addEventListener('keyup', handleKeyUp);
-        window.addEventListener('blur', handleBlur);
+    def snapshot_environment(self, phase: str):
+        """ Étape dédiée : Exécution du check et sauvegarde du rapport structurel """
+        check_script = os.path.join(self.base_dir, "install_check.py")
+        output_dir = self.find_target_dir(phase)
+        os.makedirs(output_dir, exist_ok=True)
 
-        return () => {
-            window.removeEventListener('keydown', handleModifierChange);
-            window.removeEventListener('keyup', handleKeyUp);
-            window.removeEventListener('blur', handleBlur);
-        };
-    }, []);
+        res = subprocess.run([sys.executable, check_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+        json_payload = None
+        for line in res.stdout.splitlines():
+            if "{" in line and "}" in line:
+                start = line.find("{")
+                end = line.rfind("}") + 1
+                json_payload = line[start:end]
+                break
 
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        try {
-            const data = await GraphService.loadGraphDataFromFile(file);
-            onGraphLoaded(data);
-        } catch (err) {
-            alert(err instanceof Error ? err.message : 'Invalid graph.json file.');
-        }
-    };
+        if not json_payload:
+            raise ValueError("No structural mapping payload recovered from checklist stream.")
 
-    return (
-        <header className="z-40 relative flex flex-shrink-0 justify-between items-center bg-[var(--vscode-editor-background)] shadow-[0_2px_8px_var(--vscode-widget-shadow)] px-4 border-[var(--vscode-panel-border)] border-b h-12">
+        self.status = json.loads(json_payload)
+        with open(os.path.join(output_dir, "status.json"), "w", encoding="utf-8") as f:
+            json.dump(self.status, f, indent=2, ensure_ascii=False)
 
-            <div id="extension-identity" className="flex items-center gap-3 cursor-default" data-tooltip={`Version ${version || '1.0.0'}`}>
-                <div className="flex justify-center items-center bg-gradient-to-br from-blue-500 to-blue-700 shadow-inner rounded-md w-7 h-7 font-bold text-white text-sm">G</div>
-                <div>
-                    <span className="block font-bold text-sm leading-tight tracking-wide">Graph RAG</span>
-                    <span className="font-semibold text-[10px] text-[var(--vscode-descriptionForeground)] uppercase tracking-widest">Expert Node Navigator</span>
-                </div>
-            </div>
+    def setup_graphifyignore(self):
+        """ Étape dédiée : Algorithme de fusion dédoublonnée du .graphifyignore """
+        if self.status.get("graphifyignore", {}).get("status") == "✅":
+            return
 
-            <div className="flex items-center gap-2">
-                <button onClick={toggleTheme} className="hover:bg-[var(--vscode-toolbar-hoverBackground)] p-1.5 rounded-md text-[var(--vscode-foreground)] transition-colors duration-200">
-                    <span className={`codicon ${theme === 'dark' ? 'codicon-sun' : 'codicon-moon'}`}></span>
-                </button>
+        info("Configuring missing .graphifyignore by merging workspace .gitignore and tool template...", component="GraphifyInstall")
+        ignore_lines = []
 
-                <div className="bg-[var(--vscode-panel-border)] mx-1 w-[1px] h-5" />
+        default_template = ["out", "dist", "node_modules", ".vscode/", ".idea/", ".vscode-test/", "*.vsix", ".history/", "exported-files/", "*.bak*", "*.lock", "graphify-out/", ".claude/"]
+        template_path = os.path.join(self.base_dir, ".graphifyignore")
+        if os.path.exists(template_path):
+            try:
+                with open(template_path, "r", encoding="utf-8") as tf:
+                    default_template = [line.strip() for line in tf if line.strip()]
+            except Exception:
+                pass
 
-                <label className="flex items-center gap-1.5 bg-gradient-to-r from-blue-600 hover:from-blue-500 to-blue-500 hover:to-blue-400 shadow-md hover:shadow-lg px-3 py-1.5 rounded-md text-white text-xs transition-all duration-200 cursor-pointer">
-                    <span className="codicon codicon-file-symlink-file"></span> Load graph.json
-                    <input type="file" accept=".json" onChange={handleFileChange} className="hidden" />
-                </label>
+        for line in default_template:
+            if line not in ignore_lines:
+                ignore_lines.append(line)
 
-                <button
-                    onClick={() => onReload(isModifierActive ? 'delta' : 'deep')}
-                    className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white shadow-md px-3 py-1.5 rounded-md text-xs transition-all duration-200 font-semibold cursor-pointer select-none"
-                    data-tooltip={isModifierActive ? "Force the delta parsing of the active file" : "Force the parsing of the codebase"}
-                >
-                    <span className={`codicon ${isModifierActive ? 'codicon-git-compare' : 'codicon-refresh'}`}></span>
-                    {isModifierActive ? 'Delta Reload' : 'Reload'}
-                </button>
-            </div>
-        </header>
-    );
-};
+        workspace_gitignore = os.path.join(os.getcwd(), ".gitignore")
+        if os.path.exists(workspace_gitignore):
+            try:
+                with open(workspace_gitignore, "r", encoding="utf-8") as gf:
+                    for line in gf:
+                        cleaned = line.strip()
+                        if cleaned and not cleaned.startswith("#") and cleaned not in ignore_lines:
+                            ignore_lines.append(cleaned)
+            except Exception as e:
+                warn(f"Failed to read workspace .gitignore: {e}", component="GraphifyInstall")
+
+        try:
+            target_ignore = os.path.join(os.getcwd(), ".graphifyignore")
+            with open(target_ignore, "w", encoding="utf-8") as out_f:
+                out_f.write("\n".join(ignore_lines) + "\n")
+            success("Successfully generated merged .graphifyignore file at workspace root.", component="GraphifyInstall")
+        except Exception as e:
+            error(f"Failed to write merged .graphifyignore at workspace root: {e}", component="GraphifyInstall")
+
+    def install_packages(self):
+        """ Étape dédiée : Provisionnement du binaire via uvx """
+        if self.status.get("graphify", {}).get("status") == "✅":
+            return
+
+        info("Invoking uvx package sync installation layer for graphifyy...", component="GraphifyInstall")
+        try:
+            subprocess.run(["uvx", "--refresh", "graphifyy[all]"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except Exception as e:
+            warn(f"Non-blocking installation layout alert: {e}")
+
+    def run(self):
+        """ Orchestration globale séquentielle des étapes isolées """
+        self.snapshot_environment("before")
+        summary = self.status.get("summary", {})
+
+        if summary.get("globalStatus") == "✅":
+            success("Optimization Triggered: All checks passed. Skipping installation workflow.", component="GraphifyInstall")
+            self.snapshot_environment("after")
+            return
+
+        info(f"Analyzing environmental status matrix (KO: {summary.get('koCount')}). Syncing runtime layers...", component="GraphifyInstall")
+
+        self.setup_graphifyignore()
+        self.install_packages()
+
+        self.snapshot_environment("after")
+
+if __name__ == "__main__":
+    installer = GraphifyInstaller()
+    installer.run()
 EOF
 
-# 2. Overwrite src/webview/App.tsx to wire up the callback propagation pipeline
-cat << 'EOF' > src/webview/App.tsx
-import React, { useState, useEffect, useMemo } from 'react';
-import { Header } from './components/Header';
-import { Footer } from './components/Footer';
-import { ExplorationFilters } from './components/ExplorationFilters';
-import { TabsNavigation } from './components/TabsNavigation';
-import { ExplorerTab } from './components/ExplorerTab';
-import { AIAssistantTab } from './components/AIAssistantTab';
-import { ConfigurationTab } from './components/ConfigurationTab';
-import { TerminalTab } from './components/TerminalTab';
-import { GraphNode, GraphEdge } from './types';
-import { GraphService } from './services/GraphService';
+# ============================================================================
+# 2. STRUCTURATION OBJETS JAVA : CODE_GRAPH
+# ============================================================================
 
-declare const acquireVsCodeApi: () => any;
-const vscode = acquireVsCodeApi();
-(window as any).vscodeApi = vscode;
+cat << 'EOF' > scripts/analyzers/java/code_graph/install.py
+#!/usr/bin/env python3
+import os
+import sys
+import json
+import subprocess
 
-export const App: React.FC = () => {
-    const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-    const [status, setStatus] = React.useState<'ready' | 'building' | 'error'>('ready');
-    const [progress, setProgress] = React.useState<{ current: number; total: number }>({ current: 0, total: 0 });
-    const [activeTab, setActiveTab] = useState<string>('explorer');
+CORE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "core"))
+if CORE_DIR not in sys.path:
+    sys.path.insert(0, CORE_DIR)
 
-    const [config, setConfig] = useState<any>({
-        EntitiesTypesList: ['file', 'class', 'method', 'document'],
-        regexFilterEnabled: false,
-        TreeFilterEnabled: true,
-        geminiApiKey: '',
-        tooltipDelay: 2000,
-        graphLegendEnabled: true,
-        callersDepth: 1,
-        calleesDepth: 1,
-        extensionVersion: '1.0.0'
-    });
+from utils import info, warn, error, success
 
-    const [nodes, setNodes] = useState<GraphNode[]>([]);
-    const [edges, setEdges] = useState<GraphEdge[]>([]);
-    const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(new Set());
-    const [logs, setLogs] = useState<Array<{ level: 'debug' | 'info' | 'warn' | 'error'; message: string; timestamp: string }>>([]);
+class CodeGraphInstaller:
+    def __init__(self):
+        self.base_dir = os.path.dirname(os.path.abspath(__file__))
+        self.tool_subpath = "java/code_graph"
+        self.status = {}
 
-    const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-    const [searchMode, setSearchMode] = useState<string>('contains');
-    const [searchText, setSearchText] = useState<string>('');
-    const [isRegexEnabled, setIsRegexEnabled] = useState<boolean>(false);
-    const [applyOnTree, setApplyOnTree] = useState<boolean>(true);
-    const [applyOnGraph, setApplyOnGraph] = useState<boolean>(false);
+    def find_target_dir(self, phase: str) -> str:
+        current = os.path.abspath(self.base_dir)
+        while current != os.path.dirname(current):
+            if os.path.basename(current) == ".graph-rag-explorer":
+                return os.path.join(current, "target", "install_outputs", self.tool_subpath, phase)
+            current = os.path.dirname(current)
+        return os.path.abspath(os.path.join(self.base_dir, "../../../../target/install_outputs", self.tool_subpath, phase))
 
-    useEffect(() => {
-        (window as any).logToTerminal = (level: 'debug' | 'info' | 'warn' | 'error', message: string) => {
-            setLogs(prev => [...prev, {
-                level,
-                message: `🖥️ [UI Webview Context] ${message}`,
-                timestamp: new Date().toLocaleTimeString()
-            }]);
-        };
-        return () => { delete (window as any).logToTerminal; };
-    }, []);
+    def snapshot_environment(self, phase: str):
+        """ Étape dédiée : Exécution du check et sauvegarde du rapport structurel """
+        check_script = os.path.join(self.base_dir, "install_check.py")
+        output_dir = self.find_target_dir(phase)
+        os.makedirs(output_dir, exist_ok=True)
 
-    const activeFilters = useMemo(() => ({
-        selectedTypes, searchMode, searchText, isRegexEnabled, applyOnTree, applyOnGraph
-    }), [selectedTypes, searchMode, searchText, isRegexEnabled, applyOnTree, applyOnGraph]);
+        res = subprocess.run([sys.executable, check_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+        json_payload = None
+        for line in res.stdout.splitlines():
+            if "{" in line and "}" in line:
+                start = line.find("{")
+                end = line.rfind("}") + 1
+                json_payload = line[start:end]
+                break
 
-    useEffect(() => {
-        const handleMessage = (event: MessageEvent) => {
-            const message = event.data;
-            if (message.command === 'setConfig') {
-                setConfig(message.config);
-                setIsRegexEnabled(message.config.regexFilterEnabled);
-                setApplyOnTree(message.config.TreeFilterEnabled);
-            } else if (message.command === 'updateGraphData') {
-                handleGraphLoad(message.payload);
-            } else if (message.command === 'blastRadiusReport') {
-                window.dispatchEvent(new CustomEvent('blastRadiusReport', { detail: message.payload }));
-            } else if (message.command === 'logTrace') {
-                setLogs(prev => [...prev, message.payload]);
+        if not json_payload:
+            raise ValueError("No structural mapping payload recovered from checklist stream.")
 
-                const logMessage = message.payload.message || '';
-                const progressMatch = logMessage.match(/Progression de l'analyse parallèle\s*:\s*(\d+)\/(\d+)/);
-                if (progressMatch) {
-                    setProgress({
-                        current: parseInt(progressMatch[1], 10),
-                        total: parseInt(progressMatch[2], 10)
-                    });
-                }
-            } else if (message.command === 'updateStatus') {
-                setStatus(message.payload);
-                if (message.payload === 'building') {
-                    setProgress({ current: 0, total: 0 });
-                }
-            }
-        };
+        self.status = json.loads(json_payload)
+        with open(os.path.join(output_dir, "status.json"), "w", encoding="utf-8") as f:
+            json.dump(self.status, f, indent=2, ensure_ascii=False)
 
-        window.addEventListener('message', handleMessage);
-        vscode.postMessage({ command: 'ready' });
+    def install_packages(self):
+        """ Étape dédiée : Enregistrement global du framework CLI CLI """
+        if self.status.get("codegraph", {}).get("status") == "✅":
+            return
 
-        return () => {
-            window.removeEventListener('message', handleMessage);
-        };
-    }, []);
+        info("Registering global context packages for @codegraph/cli...", component="CodeGraphInstall")
+        try:
+            subprocess.run(["npm", "install", "-g", "@codegraph/cli"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except Exception:
+            pass
 
-    useEffect(() => {
-        const root = window.document.documentElement;
-        if (root) {
-            if (theme === 'dark') root.classList.add('dark');
-            else root.classList.remove('dark');
-        }
-    }, [theme]);
+    def run(self):
+        """ Orchestration globale séquentielle des étapes isolées """
+        self.snapshot_environment("before")
+        summary = self.status.get("summary", {})
 
-    useEffect(() => {
-        const tooltipEl = document.getElementById('global-cursor-tooltip');
-        let tooltipTimeout: NodeJS.Timeout | null = null;
-        let activeTarget: Element | null = null;
+        if summary.get("globalStatus") == "✅":
+            success("Optimization Triggered: All checks passed. Skipping installation workflow.", component="CodeGraphInstall")
+            self.snapshot_environment("after")
+            return
 
-        const handleMouseMove = (e: MouseEvent) => {
-            const target = (e.target as Element).closest('[data-tooltip]');
-            if (target) {
-                if (activeTarget !== target) {
-                    activeTarget = target;
-                    if (tooltipTimeout) clearTimeout(tooltipTimeout);
-                    if (tooltipEl) tooltipEl.style.display = 'none';
-                    tooltipTimeout = setTimeout(() => {
-                        if (tooltipEl && activeTarget) {
-                            tooltipEl.innerHTML = activeTarget.getAttribute('data-tooltip') || '';
-                            tooltipEl.style.display = 'block';
-                            let targetTop = e.clientY - 20;
-                            tooltipEl.style.top = `${targetTop}px`;
-                            tooltipEl.style.left = `${e.clientX + 15}px`;
-                        }
-                    }, config.tooltipDelay ?? 2000);
-                } else if (tooltipEl && tooltipEl.style.display === 'block') {
-                    tooltipEl.style.top = `${e.clientY - 20}px`;
-                    tooltipEl.style.left = `${e.clientX + 15}px`;
-                }
-            } else {
-                if (activeTarget) {
-                    activeTarget = null;
-                    if (tooltipTimeout) clearTimeout(tooltipTimeout);
-                    if (tooltipEl) tooltipEl.style.display = 'none';
-                }
-            }
-        };
+        info(f"Analyzing environmental status matrix (KO: {summary.get('koCount')}). Syncing runtime layers...", component="CodeGraphInstall")
 
-        document.body.addEventListener('mousemove', handleMouseMove);
-        return () => {
-            document.body.removeEventListener('mousemove', handleMouseMove);
-            if (tooltipTimeout) clearTimeout(tooltipTimeout);
-        };
-    }, [config.tooltipDelay]);
+        self.install_packages()
 
-    const handleGraphLoad = (data: { nodes: any[]; edges: any[] }) => {
-        const { nodes: parsedNodes, edges: parsedEdges } = GraphService.buildGraph(data);
-        setNodes(parsedNodes);
-        setEdges(parsedEdges);
-        setSelectedNodeIds(new Set());
-    };
+        self.snapshot_environment("after")
 
-    const handleReload = (mode: 'deep' | 'delta') => {
-        vscode.postMessage({ command: 'forceRefreshScan', mode });
-    };
-
-    return (
-        <div className="flex flex-col bg-[var(--vscode-editor-background)] w-screen h-screen overflow-hidden text-[var(--vscode-foreground)]">
-            <Header
-                theme={theme}
-                toggleTheme={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
-                onGraphLoaded={handleGraphLoad}
-                nodes={nodes}
-                selectedNodeIds={selectedNodeIds}
-                version={config.extensionVersion}
-                onReload={handleReload}
-            />
-
-            <main className="flex flex-col flex-1 min-h-0">
-                <ExplorationFilters
-                    typesList={config.EntitiesTypesList || ['file', 'class', 'method', 'document']}
-                    selectedTypes={selectedTypes}
-                    setSelectedTypes={setSelectedTypes}
-                    searchMode={searchMode}
-                    setSearchMode={setSearchMode}
-                    searchText={searchText}
-                    setSearchText={setSearchText}
-                    isRegexEnabled={isRegexEnabled}
-                    setIsRegexEnabled={setIsRegexEnabled}
-                    applyOnTree={applyOnTree}
-                    setApplyOnTree={setApplyOnTree}
-                    applyOnGraph={applyOnGraph}
-                    setApplyOnGraph={setApplyOnGraph}
-                />
-
-                <TabsNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
-
-                <div className="relative flex-1 min-h-0">
-                    <div className={activeTab === 'explorer' ? 'absolute inset-0 flex' : 'hidden'}>
-                        <ExplorerTab
-                            nodes={nodes}
-                            edges={edges}
-                            selectedNodeIds={selectedNodeIds}
-                            setSelectedNodeIds={setSelectedNodeIds}
-                            filters={activeFilters}
-                            config={config}
-                        />
-                    </div>
-                    <div className={activeTab === 'ai' ? 'absolute inset-0 flex' : 'hidden'}>
-                        <AIAssistantTab
-                            nodes={nodes}
-                            edges={edges}
-                            selectedNodeIds={selectedNodeIds}
-                            apiKey={config.geminiApiKey}
-                        />
-                    </div>
-                    <div className={activeTab === 'terminal' ? 'absolute inset-0 flex' : 'hidden'}>
-                        <TerminalTab logs={logs} clearLogs={() => setLogs([])} />
-                    </div>
-                    <div className={activeTab === 'config' ? 'absolute inset-0 flex' : 'hidden'}>
-                        <ConfigurationTab config={config} />
-                    </div>
-                </div>
-            </main>
-
-            <Footer
-                status={status}
-                progress={progress}
-                onKill={() => vscode.postMessage({ command: 'killAnalysis' })}
-            />
-        </div>
-    );
-};
+if __name__ == "__main__":
+    installer = CodeGraphInstaller()
+    installer.run()
 EOF
 
-# 3. Overwrite src/extension.ts to accept and parse reload sub-modes cleanly
-cat << 'EOF' > src/extension.ts
-import * as vscode from 'vscode';
-import * as path from 'path';
-import * as fs from 'fs';
+# ============================================================================
+# 3. STRUCTURATION OBJETS NODE : DEPENDENCY_CRUISER
+# ============================================================================
 
-let activeChildProcess: any = null;
+cat << 'EOF' > scripts/analyzers/node/dependency_cruiser/install.py
+#!/usr/bin/env python3
+import os
+import sys
+import json
+import subprocess
 
-export function activate(context: vscode.ExtensionContext) {
-    let disposable = vscode.commands.registerCommand('graphRagExplorer.openTool', () => {
-        const panel = vscode.window.createWebviewPanel(
-            'graphRagExplorer', 'Graph RAG Explorer', vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true,
-                localResourceRoots: [vscode.Uri.file(path.join(context.extensionPath, 'dist'))]
-            }
-        );
+CORE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "core"))
+if CORE_DIR not in sys.path:
+    sys.path.insert(0, CORE_DIR)
 
-        const graphConfig = vscode.workspace.getConfiguration('graphRagExplorer');
-        if (graphConfig.get('pinFilesExporter') !== false) {
-            vscode.commands.executeCommand('workbench.action.pinEditor');
-        }
+from utils import info, warn, error, success
 
-        panel.webview.html = getWebviewContent(panel.webview, context.extensionPath);
+class DependencyCruiserInstaller:
+    def __init__(self):
+        self.base_dir = os.path.dirname(os.path.abspath(__file__))
+        self.tool_subpath = "node/dependency_cruiser"
+        self.status = {}
 
-        const saveListener = vscode.workspace.onDidSaveTextDocument((document) => {
-            if (document.uri.scheme !== 'file') return;
-            const relativePath = vscode.workspace.asRelativePath(document.uri);
-            runPythonScan(context, panel, "delta", relativePath);
-        });
-        context.subscriptions.push(saveListener);
+    def find_target_dir(self, phase: str) -> str:
+        current = os.path.abspath(self.base_dir)
+        while current != os.path.dirname(current):
+            if os.path.basename(current) == ".graph-rag-explorer":
+                return os.path.join(current, "target", "install_outputs", self.tool_subpath, phase)
+            current = os.path.dirname(current)
+        return os.path.abspath(os.path.join(self.base_dir, "../../../../target/install_outputs", self.tool_subpath, phase))
 
-        panel.onDidDispose(() => {
-            saveListener.dispose();
-            if (activeChildProcess) {
-                try { activeChildProcess.kill('SIGKILL'); } catch(e){}
-                activeChildProcess = null;
-            }
-        });
+    def snapshot_environment(self, phase: str):
+        """ Étape dédiée : Exécution du check et sauvegarde du rapport structurel """
+        check_script = os.path.join(self.base_dir, "install_check.py")
+        output_dir = self.find_target_dir(phase)
+        os.makedirs(output_dir, exist_ok=True)
 
-        panel.webview.onDidReceiveMessage(async message => {
-            if (message.command === 'ready') {
-                sendConfig(panel, context);
-                runPythonScan(context, panel, "deep");
-            } else if (message.command === 'forceRefreshScan') {
-                const mode = message.mode || "deep";
-                let targetFile = "";
-                if (mode === "delta") {
-                    const activeEditor = vscode.window.activeTextEditor;
-                    if (activeEditor && activeEditor.document.uri.scheme === 'file') {
-                        targetFile = vscode.workspace.asRelativePath(activeEditor.document.uri);
-                    } else {
-                        vscode.window.showWarningMessage("Delta Reload parsing rules require an active text file layout window to be focused.");
-                        panel.webview.postMessage({ command: "updateStatus", payload: "ready" });
-                        return;
-                    }
-                }
-                runPythonScan(context, panel, mode, targetFile);
-            } else if (message.command === 'killAnalysis') {
-                if (activeChildProcess) {
-                    try { activeChildProcess.kill('SIGKILL'); } catch (err) {}
-                    activeChildProcess = null;
-                }
-                panel.webview.postMessage({ command: "updateStatus", payload: "ready" });
-                panel.webview.postMessage({
-                    command: "logTrace",
-                    payload: { level: "warn", message: "❌ Active background analysis runtime process terminated immediately via user interface override request capsule.", timestamp: new Date().toLocaleTimeString() }
-                });
-            } else if (message.command === 'nodeSelected' && message.id) {
-                const workspaceFolders = vscode.workspace.workspaceFolders;
-                if (workspaceFolders && workspaceFolders.length > 0) {
-                    const radiusPath = path.join(workspaceFolders[0].uri.fsPath, ".graph-rag-explorer", "code-graph", "blast_radius.json");
-                    if (fs.existsSync(radiusPath)) {
-                        try {
-                            const report = JSON.parse(fs.readFileSync(radiusPath, "utf-8"));
-                            panel.webview.postMessage({ command: 'blastRadiusReport', payload: report });
-                        } catch(e){}
-                    }
-                }
-                sendConfig(panel, context);
-            } else if (message.command === 'publishToSharedList' && message.paths) {
-                const filesExporterExt = vscode.extensions.getExtension('sguisse.files-exporter');
-                if (filesExporterExt) {
-                    if (!filesExporterExt.isActive) await filesExporterExt.activate();
-                    const workspaceFolders = vscode.workspace.workspaceFolders;
-                    const absolutePaths = message.paths.map((p: string) => {
-                        if (path.isAbsolute(p)) return p;
-                        return workspaceFolders && workspaceFolders.length > 0 ? path.join(workspaceFolders[0].uri.fsPath, p) : p;
-                    });
-                    if (filesExporterExt.exports && filesExporterExt.exports.appendExternalPaths) {
-                        filesExporterExt.exports.appendExternalPaths(absolutePaths);
-                        vscode.window.showInformationMessage(`${absolutePaths.length} absolute file(s) published successfully.`);
-                    }
-                }
-            } else if (message.command === 'showNotification') {
-                if (message.type === 'warn') vscode.window.showWarningMessage(message.text);
-                else vscode.window.showInformationMessage(message.text);
-            } else if (message.command === 'revealFile' && message.path) {
-                const workspaceFolders = vscode.workspace.workspaceFolders;
-                if (workspaceFolders && workspaceFolders.length > 0) {
-                    const fullPath = path.isAbsolute(message.path) ? message.path : path.join(workspaceFolders[0].uri.fsPath, message.path);
-                    if (!fs.existsSync(fullPath)) return;
-                    const fileUri = vscode.Uri.file(fullPath);
-                    if (message.openEditor !== false) {
-                        vscode.workspace.openTextDocument(fileUri).then(doc => {
-                            vscode.window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.One, preserveFocus: true, preview: true });
-                            vscode.commands.executeCommand('revealInExplorer', fileUri);
-                        }, () => vscode.commands.executeCommand('revealInExplorer', fileUri));
-                    } else {
-                        vscode.commands.executeCommand('revealInExplorer', fileUri);
-                    }
-                }
-            }
-        });
-    });
-    context.subscriptions.push(disposable);
-}
+        res = subprocess.run([sys.executable, check_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+        json_payload = None
+        for line in res.stdout.splitlines():
+            if "{" in line and "}" in line:
+                start = line.find("{")
+                end = line.rfind("}") + 1
+                json_payload = line[start:end]
+                break
 
-function copyFolderRecursiveSync(source: string, target: string) {
-    if (!fs.existsSync(target)) {
-        fs.mkdirSync(target, { recursive: true });
-    }
-    if (fs.existsSync(source)) {
-        const files = fs.readdirSync(source);
-        for (const file of files) {
-            const curSource = path.join(source, file);
-            const curTarget = path.join(target, file);
-            if (fs.statSync(curSource).isDirectory()) {
-                copyFolderRecursiveSync(curSource, curTarget);
-            } else {
-                fs.copyFileSync(curSource, curTarget);
-            }
-        }
-    }
-}
+        if not json_payload:
+            raise ValueError("No structural mapping payload recovered from checklist stream.")
 
-function syncCoreScripts(context: vscode.ExtensionContext, workspaceRoot: string): boolean {
-    const targetDir = path.join(workspaceRoot, ".graph-rag-explorer", "scripts");
-    const versionFilePath = path.join(targetDir, "version.json");
-    const currentVersion = context.extension.packageJSON.version;
-    const graphConfig = vscode.workspace.getConfiguration("graphRagExplorer");
-    let needsSync = graphConfig.get("forceScriptSync") === true || !fs.existsSync(targetDir) || !fs.existsSync(versionFilePath);
+        self.status = json.loads(json_payload)
+        with open(os.path.join(output_dir, "status.json"), "w", encoding="utf-8") as f:
+            json.dump(self.status, f, indent=2, ensure_ascii=False)
 
-    if (!needsSync && fs.existsSync(versionFilePath)) {
-        try {
-            if (JSON.parse(fs.readFileSync(versionFilePath, "utf-8")).version !== currentVersion) needsSync = true;
-        } catch (e) { needsSync = true; }
-    }
-    if (needsSync) {
-        try {
-            const sourceDir = path.join(context.extensionPath, "scripts");
-            copyFolderRecursiveSync(sourceDir, targetDir);
-            fs.writeFileSync(versionFilePath, JSON.stringify({ version: currentVersion }), "utf-8");
-        } catch (err) { return false; }
-    }
-    return true;
-}
+    def install_packages(self):
+        """ Étape dédiée : Résolution locale JIT des modules node_modules """
+        if self.status.get("dependency_cruiser", {}).get("status") == "✅":
+            return
 
-function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPanel, mode: string, targetFile: string = "") {
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders || workspaceFolders.length === 0) return;
+        node_dir = os.path.abspath(os.path.join(self.base_dir, ".."))
+        info("Running localized node dependency provisioning loop via npm install...", component="DependencyCruiserInstall")
+        try:
+            subprocess.run(["npm", "install"], cwd=node_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except Exception:
+            pass
 
-    const workspaceRoot = workspaceFolders[0].uri.fsPath;
-    const graphConfig = vscode.workspace.getConfiguration("graphRagExplorer");
-    const outputDir = path.join(workspaceRoot, ".graph-rag-explorer", "code-graph");
-    const targetDir = path.join(workspaceRoot, ".graph-rag-explorer", "scripts");
+    def run(self):
+        """ Orchestration globale séquentielle des étapes isolées """
+        self.snapshot_environment("before")
+        summary = self.status.get("summary", {})
 
-    syncCoreScripts(context, workspaceRoot);
-    panel.webview.postMessage({ command: "updateStatus", payload: "building" });
+        if summary.get("globalStatus") == "✅":
+            success("Optimization Triggered: All checks passed. Skipping installation.", component="DependencyCruiserInstall")
+            self.snapshot_environment("after")
+            return
 
-    const parseLogLine = (line: string, fallbackLevel: 'debug' | 'info' | 'warn' | 'error') => {
-        let level: 'debug' | 'info' | 'warn' | 'error' = fallbackLevel;
-        const cleanLine = line.trim();
-        if (!cleanLine) return;
+        info(f"Analyzing environmental status matrix (KO: {summary.get('koCount')}). Syncing runtime layers...", component="DependencyCruiserInstall")
 
-        if (cleanLine.includes("🪲") || cleanLine.includes("[DEBUG]")) level = "debug";
-        else if (cleanLine.includes("⚠️") || cleanLine.includes("[WARN]")) level = "warn";
-        else if (cleanLine.includes("❌") || cleanLine.includes("[ERROR]") || cleanLine.includes("CRITICAL")) level = "error";
-        else if (cleanLine.includes("ℹ️") || cleanLine.includes("[INFO]") || cleanLine.includes("✅") || cleanLine.includes("[SUCCESS]")) level = "info";
+        self.install_packages()
 
-        panel.webview.postMessage({
-            command: "logTrace",
-            payload: { level: level, message: cleanLine, timestamp: new Date().toLocaleTimeString() }
-        });
-    };
+        self.snapshot_environment("after")
 
-    const cp = require("child_process");
-    const runnerScript = path.join(targetDir, "core", "runner.py");
-    let args = [runnerScript];
-    if (mode === "deep") args.push("--workspace", workspaceRoot, "--output", outputDir);
-    else args.push("--workspace", workspaceRoot, "--file", targetFile, "--output", outputDir);
-
-    const payloadConfig = {
-        includePathsRegex: graphConfig.get("includePathsRegex") ?? ".*",
-        includeExtensionsRegex: graphConfig.get("includeExtensionsRegex") ?? "",
-        excludePathsRegex: graphConfig.get("excludePathsRegex") ?? "",
-        excludeExtensionsRegex: graphConfig.get("excludeExtensionsRegex") ?? "",
-        logFileEnabled: graphConfig.get("logFileEnabled") ?? true,
-        logFileMaxSize: graphConfig.get("logFileMaxSize") ?? 5,
-        logFileMaxCountRetension: graphConfig.get("logFileMaxCountRetension") ?? 5
-    };
-
-    if (activeChildProcess) {
-        try { activeChildProcess.kill('SIGKILL'); } catch(e){}
-    }
-
-    const child = cp.spawn("python3", args, { cwd: workspaceRoot, env: { ...process.env, PYTHONPATH: path.join(targetDir, "core") } });
-    activeChildProcess = child;
-
-    child.stdin.write(JSON.stringify(payloadConfig));
-    child.stdin.end();
-
-    child.stdout.on("data", (data: any) => data.toString().split("\n").forEach((l: string) => parseLogLine(l, "info")));
-    child.stderr.on("data", (data: any) => data.toString().split("\n").forEach((l: string) => parseLogLine(l, "error")));
-
-    child.on("close", (code: number) => {
-        if (activeChildProcess === child) {
-            activeChildProcess = null;
-        }
-        if (code === 0) {
-            panel.webview.postMessage({ command: "updateStatus", payload: "ready" });
-            const graphJsonPath = path.join(outputDir, "graph-view.json");
-            if (fs.existsSync(graphJsonPath)) {
-                try {
-                    panel.webview.postMessage({ command: "updateGraphData", payload: JSON.parse(fs.readFileSync(graphJsonPath, "utf-8")) });
-                } catch (err) {}
-            }
-        } else {
-            panel.webview.postMessage({ command: "updateStatus", payload: "error" });
-        }
-    });
-}
-
-function sendConfig(panel: vscode.WebviewPanel, context: vscode.ExtensionContext) {
-    const config = vscode.workspace.getConfiguration('graphRagExplorer');
-    panel.webview.postMessage({
-        command: 'setConfig',
-        config: {
-            EntitiesTypesList: config.get('EntitiesTypesList'),
-            regexFilterEnabled: config.get('regexFilterEnabled'),
-            TreeFilterEnabled: config.get('TreeFilterEnabled'),
-            geminiApiKey: config.get('geminiApiKey'),
-            tooltipDelay: config.get('tooltipDelay') ?? 2000,
-            pinFilesExporter: config.get('pinFilesExporter') ?? true,
-            graphLegendEnabled: config.get('graphLegendEnabled') ?? true,
-            callersDepth: config.get('callersDepth') ?? 1,
-            calleesDepth: config.get('calleesDepth') ?? 1,
-            extensionVersion: context.extension.packageJSON.version
-        }
-    });
-}
-
-function getWebviewContent(webview: vscode.Webview, extensionPath: string): string {
-    const scriptUri = webview.asWebviewUri(vscode.Uri.file(path.join(extensionPath, 'dist', 'webview.js')));
-    return `<!DOCTYPE html>
-    <html lang="en" class="h-full">
-    <head>
-        <meta charset="UTF-8"><title>Graph RAG Explorer</title>
-        <link href="https://cdn.jsdelivr.net/npm/@vscode/codicons/dist/codicon.css" rel="stylesheet">
-        <style>
-            body { padding: 0; margin: 0; background-color: var(--vscode-editor-background); color: var(--vscode-foreground); font-family: var(--vscode-font-family, sans-serif); }
-            #global-cursor-tooltip { position: fixed; background-color: #000000; color: #ffffff; border: 1px solid #454545; padding: 6px 10px; border-radius: 4px; font-size: 11px; z-index: 999999; pointer-events: none; display: none; }
-        </style>
-    </head>
-    <body class="h-full overflow-hidden select-none">
-        <div id="root" class="h-full flex flex-col"></div><div id="global-cursor-tooltip"></div>
-        <script src="${scriptUri}"></script>
-    </body></html>`;
-}
-
-export function deactivate() {}
+if __name__ == "__main__":
+    installer = DependencyCruiserInstaller()
+    installer.run()
 EOF
 
-# Compile and package extension artifacts
-npm run package
+# ============================================================================
+# 4. STRUCTURATION OBJETS NODE : SWC
+# ============================================================================
 
-echo "✅ feat: Added a dynamic 'Reload' button to the header supporting conditional state toggle logic for 'Delta Reload' on cmd/ctrl key sequences."
+cat << 'EOF' > scripts/analyzers/node/swc/install.py
+#!/usr/bin/env python3
+import os
+import sys
+import json
+import subprocess
+
+CORE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "core"))
+if CORE_DIR not in sys.path:
+    sys.path.insert(0, CORE_DIR)
+
+from utils import info, warn, error, success
+
+class SWCInstaller:
+    def __init__(self):
+        self.base_dir = os.path.dirname(os.path.abspath(__file__))
+        self.tool_subpath = "node/swc"
+        self.status = {}
+
+    def find_target_dir(self, phase: str) -> str:
+        current = os.path.abspath(self.base_dir)
+        while current != os.path.dirname(current):
+            if os.path.basename(current) == ".graph-rag-explorer":
+                return os.path.join(current, "target", "install_outputs", self.tool_subpath, phase)
+            current = os.path.dirname(current)
+        return os.path.abspath(os.path.join(self.base_dir, "../../../../target/install_outputs", self.tool_subpath, phase))
+
+    def snapshot_environment(self, phase: str):
+        """ Étape dédiée : Exécution du check et sauvegarde du rapport structurel """
+        check_script = os.path.join(self.base_dir, "install_check.py")
+        output_dir = self.find_target_dir(phase)
+        os.makedirs(output_dir, exist_ok=True)
+
+        res = subprocess.run([sys.executable, check_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+        json_payload = None
+        for line in res.stdout.splitlines():
+            if "{" in line and "}" in line:
+                start = line.find("{")
+                end = line.rfind("}") + 1
+                json_payload = line[start:end]
+                break
+
+        if not json_payload:
+            raise ValueError("No structural mapping payload recovered from checklist stream.")
+
+        self.status = json.loads(json_payload)
+        with open(os.path.join(output_dir, "status.json"), "w", encoding="utf-8") as f:
+            json.dump(self.status, f, indent=2, ensure_ascii=False)
+
+    def install_packages(self):
+        """ Étape dédiée : Injection ciblée de la dépendance @swc/core """
+        if self.status.get("swc", {}).get("status") == "✅":
+            return
+
+        node_dir = os.path.abspath(os.path.join(self.base_dir, ".."))
+        info("Injecting native token compilation layers via npm install @swc/core...", component="SWCInstall")
+        try:
+            subprocess.run(["npm", "install", "@swc/core"], cwd=node_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except Exception:
+            pass
+
+    def run(self):
+        """ Orchestration globale séquentielle des étapes isolées """
+        self.snapshot_environment("before")
+        summary = self.status.get("summary", {})
+
+        if summary.get("globalStatus") == "✅":
+            success("Optimization Triggered: All checks passed. Skipping installation.", component="SWCInstall")
+            self.snapshot_environment("after")
+            return
+
+        info(f"Analyzing environmental status matrix (KO: {summary.get('koCount')}). Syncing runtime layers...", component="SWCInstall")
+
+        self.install_packages()
+
+        self.snapshot_environment("after")
+
+if __name__ == "__main__":
+    installer = SWCInstaller()
+    installer.run()
+EOF
+
+# S'assurer de conserver la configuration de permissions adéquate
+chmod +x scripts/analyzers/java/graphify/install.py
+chmod +x scripts/analyzers/java/code_graph/install.py
+chmod +x scripts/analyzers/node/dependency_cruiser/install.py
+chmod +x scripts/analyzers/node/swc/install.py
+
+# Recompilation finale du projet
+npm run compile
+
+echo "✅ refactor: Tous les scripts `install.py` ont été restructurés de manière modulaire sous forme de classes, isolant proprement chaque tâche d'installation."

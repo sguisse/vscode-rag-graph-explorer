@@ -60,6 +60,6 @@ class GraphEngine:
         with open(vis_path, "w", encoding="utf-8") as f:
             json.dump(self.export_pure_visjs_format(), f, indent=2, ensure_ascii=False)
 
-        graphify_path = os.path.join(consolidated_dir, "graphify-data.json")
-        with open(graphify_path, "w", encoding="utf-8") as f:
+        graph_data_path = os.path.join(consolidated_dir, "graph-data.json")
+        with open(graph_data_path, "w", encoding="utf-8") as f:
             json.dump(nx.node_link_data(self.graph), f, indent=2, ensure_ascii=False)

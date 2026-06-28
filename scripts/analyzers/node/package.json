@@ -5,6 +5,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "dependency-cruiser": "^16.0.0"
+    "dependency-cruiser": "18.0.0",
+    "@swc/core": "1.15.43"
   }
 }
