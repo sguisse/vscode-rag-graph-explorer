@@ -42,7 +42,19 @@ export function activate(context: vscode.ExtensionContext) {
                 sendConfig(panel, context);
                 runPythonScan(context, panel, "deep");
             } else if (message.command === 'forceRefreshScan') {
-                runPythonScan(context, panel, "deep");
+                const mode = message.mode || "deep";
+                let targetFile = "";
+                if (mode === "delta") {
+                    const activeEditor = vscode.window.activeTextEditor;
+                    if (activeEditor && activeEditor.document.uri.scheme === 'file') {
+                        targetFile = vscode.workspace.asRelativePath(activeEditor.document.uri);
+                    } else {
+                        vscode.window.showWarningMessage("Delta Reload parsing rules require an active text file layout window to be focused.");
+                        panel.webview.postMessage({ command: "updateStatus", payload: "ready" });
+                        return;
+                    }
+                }
+                runPythonScan(context, panel, mode, targetFile);
             } else if (message.command === 'killAnalysis') {
                 if (activeChildProcess) {
                     try { activeChildProcess.kill('SIGKILL'); } catch (err) {}

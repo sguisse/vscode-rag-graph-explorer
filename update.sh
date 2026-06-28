@@ -1,216 +1,337 @@
 #!/bin/bash
 set -e
 
-# Create workspace folders if they don't exist
-mkdir -p src
-mkdir -p src/webview/hooks
-mkdir -p src/webview/components/explorer-tab/graph
+# Create target paths if they don't exist
+mkdir -p src/webview/components
 
-# 1. Update useGraphSelection.ts to fix the React render-phase state update warning
-cat << 'EOF' > src/webview/hooks/useGraphSelection.ts
-import { useState, useMemo, useCallback, useEffect } from 'react';
+# 1. Overwrite src/webview/components/Header.tsx with the new structural features and modifier trackers
+cat << 'EOF' > src/webview/components/Header.tsx
+import React, { useState, useEffect } from 'react';
+import { GraphNode } from '../types';
+import { GraphService } from '../services/GraphService';
 
-export function useGraphSelection(
-    fileLevelEdges: { from: string; to: string; types: Set<string> }[],
-    nodeToFileIdMap: Map<string, string>,
-    parentDepth: number,
-    childDepth: number,
-    isHierarchyEnabled: boolean
-) {
-    const [exactSelectedIds, setExactSelectedIds] = useState<Set<string>>(new Set());
-
-    const manualFileIds = useMemo(() => {
-        const fileIds = new Set<string>();
-        exactSelectedIds.forEach(id => {
-            const fileId = nodeToFileIdMap.get(id) || id;
-            fileIds.add(fileId);
-        });
-        return fileIds;
-    }, [exactSelectedIds, nodeToFileIdMap]);
-
-    const effectiveFileIds = useMemo(() => {
-        const effective = new Set<string>(manualFileIds);
-
-        if (!isHierarchyEnabled || manualFileIds.size === 0) {
-            return effective;
-        }
-
-        Array.from(manualFileIds).forEach(startId => {
-            let currentChildLayer = [startId];
-            for (let d = 0; d < childDepth; d++) {
-                const nextLayer: string[] = [];
-                currentChildLayer.forEach(id => {
-                    for (const e of fileLevelEdges) {
-                        if (e.from === id && !effective.has(e.to)) {
-                            effective.add(e.to);
-                            nextLayer.push(e.to);
-                        }
-                    }
-                });
-                currentChildLayer = nextLayer;
-            }
-
-            let currentParentLayer = [startId];
-            for (let d = 0; d < parentDepth; d++) {
-                const nextLayer: string[] = [];
-                currentParentLayer.forEach(id => {
-                    for (const e of fileLevelEdges) {
-                        if (e.to === id && !effective.has(e.from)) {
-                            effective.add(e.from);
-                            nextLayer.push(e.from);
-                        }
-                    }
-                });
-                currentParentLayer = nextLayer;
-            }
-        });
-
-        return effective;
-    }, [manualFileIds, fileLevelEdges, parentDepth, childDepth, isHierarchyEnabled]);
-
-    // Relocate side-effect logging to a safe useEffect lifecycle phase to eliminate App component render-phase updates
-    useEffect(() => {
-        if (typeof (window as any).logToTerminal === 'function') {
-            if (!isHierarchyEnabled || manualFileIds.size === 0) {
-                (window as any).logToTerminal('debug', `Registry B recalculated (Flat Mode). Effective Files: ${effectiveFileIds.size}`);
-            } else {
-                (window as any).logToTerminal('debug', `Registry B recalculated (Hierarchy Sync Link). Manual Base: ${manualFileIds.size} ➔ Total Effective Files Context: ${effectiveFileIds.size}`);
-            }
-        }
-    }, [effectiveFileIds, manualFileIds, isHierarchyEnabled]);
-
-    const toggleNodeSelection = useCallback((targetId: string) => {
-        setExactSelectedIds(prev => {
-            const next = new Set(prev);
-            const isChecked = next.has(targetId);
-            if (isChecked) {
-                next.delete(targetId);
-            } else {
-                next.add(targetId);
-            }
-            if (typeof (window as any).logToTerminal === 'function') {
-                (window as any).logToTerminal('info', `🎯 Transaction: toggleNodeSelection ID=[${targetId}] | PriorState=${isChecked ? 'Checked' : 'Unchecked'} ➔ New Registry A Size: ${next.size}`);
-            }
-            return next;
-        });
-    }, []);
-
-    const setNodesSelectionState = useCallback((ids: string[], checked: boolean) => {
-        setExactSelectedIds(prev => {
-            const next = new Set(prev);
-            ids.forEach(id => {
-                if (checked) next.add(id);
-                else next.delete(id);
-            });
-            if (typeof (window as any).logToTerminal === 'function') {
-                (window as any).logToTerminal('info', `📦 Mass Transaction: setNodesSelectionState -> TargetState=${checked} | Actioned IDs Count: ${ids.length} ➔ New Registry A Size: ${next.size}`);
-            }
-            return next;
-        });
-    }, []);
-
-    const clearSelection = useCallback(() => {
-        if (typeof (window as any).logToTerminal === 'function') {
-            (window as any).logToTerminal('warn', `🗑️ Transaction: clearSelection invoked. Purging total Registry A!`);
-        }
-        setExactSelectedIds(new Set());
-    }, []);
-
-    return {
-        exactSelectedIds,
-        effectiveFileIds,
-        toggleNodeSelection,
-        setNodesSelectionState,
-        clearSelection
-    };
+interface HeaderProps {
+    theme: 'light' | 'dark';
+    toggleTheme: () => void;
+    onGraphLoaded: (data: any) => void;
+    nodes: GraphNode[];
+    selectedNodeIds: Set<string>;
+    version?: string;
+    onReload: (mode: 'deep' | 'delta') => void;
 }
-EOF
 
-# 2. Update GraphConfig.ts to replace invalid dynamic CSS syntax and drop unrecognized property tracking values
-cat << 'EOF' > src/webview/components/explorer-tab/graph/GraphConfig.ts
-import cytoscape from 'cytoscape';
+export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, onGraphLoaded, nodes, selectedNodeIds, version, onReload }) => {
+    const [isModifierActive, setIsModifierActive] = useState(false);
 
-export const getGraphStyle = (): any[] => [
-    {
-        selector: 'node',
-        style: {
-            'label': 'data(label)',
-            'width': 26,
-            'height': 26,
-            'background-color': '#0e639c',
-            'border-color': '#1177bb',
-            'border-width': 2,
-            'color': '#0e639c',
-            'font-family': 'sans-serif',
-            'font-size': 10,
-            'font-weight': '400',
-            'text-valign': 'bottom',
-            'text-margin-y': 7,
-            'shape': 'diamond',
-            'text-outline-color': '#1177bb',
-            'text-outline-width': 0,
-            'text-max-width': '200px',
-            'text-wrap': 'ellipsis',
-            'transition-property': 'opacity, border-width, border-color, background-color',
-            'transition-duration': 0.25
-        }
-    },
-    {
-        selector: 'node[group = "file_unreferenced"]',
-        style: {
-            'background-color': '#3a1e22',
-            'border-color': '#000000',
-            'border-width': 2.5,
-            'color': '#e0a0a0',
-            'shape': 'diamond'
-        }
-    },
-    {
-        selector: 'edge',
-        style: {
-            'width': 1.5,
-            'line-color': '#444444',
-            'target-arrow-shape': 'triangle',
-            'target-arrow-color': '#444444',
-            'curve-style': 'bezier',
-            'control-point-step-size': 40,
-            'arrow-scale': 0.9,
-            'opacity': 0.65,
-            'transition-property': 'line-color, target-arrow-color, width, opacity',
-            'transition-duration': 0.25
-        }
-    },
-    {
-        selector: 'node:selected',
-        style: {
-            'border-color': '#007acc',
-            'border-width': 4,
-            'background-color': '#1f8ad2'
-        }
-    }
-];
+    useEffect(() => {
+        const handleModifierChange = (e: KeyboardEvent) => {
+            if (e.metaKey || e.ctrlKey) {
+                setIsModifierActive(true);
+            } else {
+                setIsModifierActive(false);
+            }
+        };
 
-export const layoutOptions = {
-    name: 'cose',
-    animate: true,
-    refresh: 20,
-    fit: true,
-    padding: 40,
-    nodeOverlap: 40,
-    idealEdgeLength: () => 90,
-    componentSpacing: 120,
-    nodeRepulsion: () => 900000,
-    edgeElasticity: () => 100,
-    nestingFactor: 5,
-    gravity: 25,
-    numIter: 1200,
-    initialTemp: 300,
-    coolingFactor: 0.95,
-    minTemp: 1.0
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (!e.metaKey && !e.ctrlKey) {
+                setIsModifierActive(false);
+            }
+        };
+
+        const handleBlur = () => {
+            setIsModifierActive(false);
+        };
+
+        window.addEventListener('keydown', handleModifierChange);
+        window.addEventListener('keyup', handleKeyUp);
+        window.addEventListener('blur', handleBlur);
+
+        return () => {
+            window.removeEventListener('keydown', handleModifierChange);
+            window.removeEventListener('keyup', handleKeyUp);
+            window.removeEventListener('blur', handleBlur);
+        };
+    }, []);
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try {
+            const data = await GraphService.loadGraphDataFromFile(file);
+            onGraphLoaded(data);
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Invalid graph.json file.');
+        }
+    };
+
+    return (
+        <header className="z-40 relative flex flex-shrink-0 justify-between items-center bg-[var(--vscode-editor-background)] shadow-[0_2px_8px_var(--vscode-widget-shadow)] px-4 border-[var(--vscode-panel-border)] border-b h-12">
+
+            <div id="extension-identity" className="flex items-center gap-3 cursor-default" data-tooltip={`Version ${version || '1.0.0'}`}>
+                <div className="flex justify-center items-center bg-gradient-to-br from-blue-500 to-blue-700 shadow-inner rounded-md w-7 h-7 font-bold text-white text-sm">G</div>
+                <div>
+                    <span className="block font-bold text-sm leading-tight tracking-wide">Graph RAG</span>
+                    <span className="font-semibold text-[10px] text-[var(--vscode-descriptionForeground)] uppercase tracking-widest">Expert Node Navigator</span>
+                </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+                <button onClick={toggleTheme} className="hover:bg-[var(--vscode-toolbar-hoverBackground)] p-1.5 rounded-md text-[var(--vscode-foreground)] transition-colors duration-200">
+                    <span className={`codicon ${theme === 'dark' ? 'codicon-sun' : 'codicon-moon'}`}></span>
+                </button>
+
+                <div className="bg-[var(--vscode-panel-border)] mx-1 w-[1px] h-5" />
+
+                <label className="flex items-center gap-1.5 bg-gradient-to-r from-blue-600 hover:from-blue-500 to-blue-500 hover:to-blue-400 shadow-md hover:shadow-lg px-3 py-1.5 rounded-md text-white text-xs transition-all duration-200 cursor-pointer">
+                    <span className="codicon codicon-file-symlink-file"></span> Load graph.json
+                    <input type="file" accept=".json" onChange={handleFileChange} className="hidden" />
+                </label>
+
+                <button
+                    onClick={() => onReload(isModifierActive ? 'delta' : 'deep')}
+                    className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white shadow-md px-3 py-1.5 rounded-md text-xs transition-all duration-200 font-semibold cursor-pointer select-none"
+                    data-tooltip={isModifierActive ? "Force the delta parsing of the active file" : "Force the parsing of the codebase"}
+                >
+                    <span className={`codicon ${isModifierActive ? 'codicon-git-compare' : 'codicon-refresh'}`}></span>
+                    {isModifierActive ? 'Delta Reload' : 'Reload'}
+                </button>
+            </div>
+        </header>
+    );
 };
 EOF
 
-# 3. Update extension.ts to eliminate production CDN script tags, document.write hazards, and secure DOM bindings
+# 2. Overwrite src/webview/App.tsx to wire up the callback propagation pipeline
+cat << 'EOF' > src/webview/App.tsx
+import React, { useState, useEffect, useMemo } from 'react';
+import { Header } from './components/Header';
+import { Footer } from './components/Footer';
+import { ExplorationFilters } from './components/ExplorationFilters';
+import { TabsNavigation } from './components/TabsNavigation';
+import { ExplorerTab } from './components/ExplorerTab';
+import { AIAssistantTab } from './components/AIAssistantTab';
+import { ConfigurationTab } from './components/ConfigurationTab';
+import { TerminalTab } from './components/TerminalTab';
+import { GraphNode, GraphEdge } from './types';
+import { GraphService } from './services/GraphService';
+
+declare const acquireVsCodeApi: () => any;
+const vscode = acquireVsCodeApi();
+(window as any).vscodeApi = vscode;
+
+export const App: React.FC = () => {
+    const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+    const [status, setStatus] = React.useState<'ready' | 'building' | 'error'>('ready');
+    const [progress, setProgress] = React.useState<{ current: number; total: number }>({ current: 0, total: 0 });
+    const [activeTab, setActiveTab] = useState<string>('explorer');
+
+    const [config, setConfig] = useState<any>({
+        EntitiesTypesList: ['file', 'class', 'method', 'document'],
+        regexFilterEnabled: false,
+        TreeFilterEnabled: true,
+        geminiApiKey: '',
+        tooltipDelay: 2000,
+        graphLegendEnabled: true,
+        callersDepth: 1,
+        calleesDepth: 1,
+        extensionVersion: '1.0.0'
+    });
+
+    const [nodes, setNodes] = useState<GraphNode[]>([]);
+    const [edges, setEdges] = useState<GraphEdge[]>([]);
+    const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(new Set());
+    const [logs, setLogs] = useState<Array<{ level: 'debug' | 'info' | 'warn' | 'error'; message: string; timestamp: string }>>([]);
+
+    const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+    const [searchMode, setSearchMode] = useState<string>('contains');
+    const [searchText, setSearchText] = useState<string>('');
+    const [isRegexEnabled, setIsRegexEnabled] = useState<boolean>(false);
+    const [applyOnTree, setApplyOnTree] = useState<boolean>(true);
+    const [applyOnGraph, setApplyOnGraph] = useState<boolean>(false);
+
+    useEffect(() => {
+        (window as any).logToTerminal = (level: 'debug' | 'info' | 'warn' | 'error', message: string) => {
+            setLogs(prev => [...prev, {
+                level,
+                message: `🖥️ [UI Webview Context] ${message}`,
+                timestamp: new Date().toLocaleTimeString()
+            }]);
+        };
+        return () => { delete (window as any).logToTerminal; };
+    }, []);
+
+    const activeFilters = useMemo(() => ({
+        selectedTypes, searchMode, searchText, isRegexEnabled, applyOnTree, applyOnGraph
+    }), [selectedTypes, searchMode, searchText, isRegexEnabled, applyOnTree, applyOnGraph]);
+
+    useEffect(() => {
+        const handleMessage = (event: MessageEvent) => {
+            const message = event.data;
+            if (message.command === 'setConfig') {
+                setConfig(message.config);
+                setIsRegexEnabled(message.config.regexFilterEnabled);
+                setApplyOnTree(message.config.TreeFilterEnabled);
+            } else if (message.command === 'updateGraphData') {
+                handleGraphLoad(message.payload);
+            } else if (message.command === 'blastRadiusReport') {
+                window.dispatchEvent(new CustomEvent('blastRadiusReport', { detail: message.payload }));
+            } else if (message.command === 'logTrace') {
+                setLogs(prev => [...prev, message.payload]);
+
+                const logMessage = message.payload.message || '';
+                const progressMatch = logMessage.match(/Progression de l'analyse parallèle\s*:\s*(\d+)\/(\d+)/);
+                if (progressMatch) {
+                    setProgress({
+                        current: parseInt(progressMatch[1], 10),
+                        total: parseInt(progressMatch[2], 10)
+                    });
+                }
+            } else if (message.command === 'updateStatus') {
+                setStatus(message.payload);
+                if (message.payload === 'building') {
+                    setProgress({ current: 0, total: 0 });
+                }
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+        vscode.postMessage({ command: 'ready' });
+
+        return () => {
+            window.removeEventListener('message', handleMessage);
+        };
+    }, []);
+
+    useEffect(() => {
+        const root = window.document.documentElement;
+        if (root) {
+            if (theme === 'dark') root.classList.add('dark');
+            else root.classList.remove('dark');
+        }
+    }, [theme]);
+
+    useEffect(() => {
+        const tooltipEl = document.getElementById('global-cursor-tooltip');
+        let tooltipTimeout: NodeJS.Timeout | null = null;
+        let activeTarget: Element | null = null;
+
+        const handleMouseMove = (e: MouseEvent) => {
+            const target = (e.target as Element).closest('[data-tooltip]');
+            if (target) {
+                if (activeTarget !== target) {
+                    activeTarget = target;
+                    if (tooltipTimeout) clearTimeout(tooltipTimeout);
+                    if (tooltipEl) tooltipEl.style.display = 'none';
+                    tooltipTimeout = setTimeout(() => {
+                        if (tooltipEl && activeTarget) {
+                            tooltipEl.innerHTML = activeTarget.getAttribute('data-tooltip') || '';
+                            tooltipEl.style.display = 'block';
+                            let targetTop = e.clientY - 20;
+                            tooltipEl.style.top = `${targetTop}px`;
+                            tooltipEl.style.left = `${e.clientX + 15}px`;
+                        }
+                    }, config.tooltipDelay ?? 2000);
+                } else if (tooltipEl && tooltipEl.style.display === 'block') {
+                    tooltipEl.style.top = `${e.clientY - 20}px`;
+                    tooltipEl.style.left = `${e.clientX + 15}px`;
+                }
+            } else {
+                if (activeTarget) {
+                    activeTarget = null;
+                    if (tooltipTimeout) clearTimeout(tooltipTimeout);
+                    if (tooltipEl) tooltipEl.style.display = 'none';
+                }
+            }
+        };
+
+        document.body.addEventListener('mousemove', handleMouseMove);
+        return () => {
+            document.body.removeEventListener('mousemove', handleMouseMove);
+            if (tooltipTimeout) clearTimeout(tooltipTimeout);
+        };
+    }, [config.tooltipDelay]);
+
+    const handleGraphLoad = (data: { nodes: any[]; edges: any[] }) => {
+        const { nodes: parsedNodes, edges: parsedEdges } = GraphService.buildGraph(data);
+        setNodes(parsedNodes);
+        setEdges(parsedEdges);
+        setSelectedNodeIds(new Set());
+    };
+
+    const handleReload = (mode: 'deep' | 'delta') => {
+        vscode.postMessage({ command: 'forceRefreshScan', mode });
+    };
+
+    return (
+        <div className="flex flex-col bg-[var(--vscode-editor-background)] w-screen h-screen overflow-hidden text-[var(--vscode-foreground)]">
+            <Header
+                theme={theme}
+                toggleTheme={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
+                onGraphLoaded={handleGraphLoad}
+                nodes={nodes}
+                selectedNodeIds={selectedNodeIds}
+                version={config.extensionVersion}
+                onReload={handleReload}
+            />
+
+            <main className="flex flex-col flex-1 min-h-0">
+                <ExplorationFilters
+                    typesList={config.EntitiesTypesList || ['file', 'class', 'method', 'document']}
+                    selectedTypes={selectedTypes}
+                    setSelectedTypes={setSelectedTypes}
+                    searchMode={searchMode}
+                    setSearchMode={setSearchMode}
+                    searchText={searchText}
+                    setSearchText={setSearchText}
+                    isRegexEnabled={isRegexEnabled}
+                    setIsRegexEnabled={setIsRegexEnabled}
+                    applyOnTree={applyOnTree}
+                    setApplyOnTree={setApplyOnTree}
+                    applyOnGraph={applyOnGraph}
+                    setApplyOnGraph={setApplyOnGraph}
+                />
+
+                <TabsNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
+
+                <div className="relative flex-1 min-h-0">
+                    <div className={activeTab === 'explorer' ? 'absolute inset-0 flex' : 'hidden'}>
+                        <ExplorerTab
+                            nodes={nodes}
+                            edges={edges}
+                            selectedNodeIds={selectedNodeIds}
+                            setSelectedNodeIds={setSelectedNodeIds}
+                            filters={activeFilters}
+                            config={config}
+                        />
+                    </div>
+                    <div className={activeTab === 'ai' ? 'absolute inset-0 flex' : 'hidden'}>
+                        <AIAssistantTab
+                            nodes={nodes}
+                            edges={edges}
+                            selectedNodeIds={selectedNodeIds}
+                            apiKey={config.geminiApiKey}
+                        />
+                    </div>
+                    <div className={activeTab === 'terminal' ? 'absolute inset-0 flex' : 'hidden'}>
+                        <TerminalTab logs={logs} clearLogs={() => setLogs([])} />
+                    </div>
+                    <div className={activeTab === 'config' ? 'absolute inset-0 flex' : 'hidden'}>
+                        <ConfigurationTab config={config} />
+                    </div>
+                </div>
+            </main>
+
+            <Footer
+                status={status}
+                progress={progress}
+                onKill={() => vscode.postMessage({ command: 'killAnalysis' })}
+            />
+        </div>
+    );
+};
+EOF
+
+# 3. Overwrite src/extension.ts to accept and parse reload sub-modes cleanly
 cat << 'EOF' > src/extension.ts
 import * as vscode from 'vscode';
 import * as path from 'path';
@@ -256,7 +377,19 @@ export function activate(context: vscode.ExtensionContext) {
                 sendConfig(panel, context);
                 runPythonScan(context, panel, "deep");
             } else if (message.command === 'forceRefreshScan') {
-                runPythonScan(context, panel, "deep");
+                const mode = message.mode || "deep";
+                let targetFile = "";
+                if (mode === "delta") {
+                    const activeEditor = vscode.window.activeTextEditor;
+                    if (activeEditor && activeEditor.document.uri.scheme === 'file') {
+                        targetFile = vscode.workspace.asRelativePath(activeEditor.document.uri);
+                    } else {
+                        vscode.window.showWarningMessage("Delta Reload parsing rules require an active text file layout window to be focused.");
+                        panel.webview.postMessage({ command: "updateStatus", payload: "ready" });
+                        return;
+                    }
+                }
+                runPythonScan(context, panel, mode, targetFile);
             } else if (message.command === 'killAnalysis') {
                 if (activeChildProcess) {
                     try { activeChildProcess.kill('SIGKILL'); } catch (err) {}
@@ -472,12 +605,7 @@ function getWebviewContent(webview: vscode.Webview, extensionPath: string): stri
 export function deactivate() {}
 EOF
 
-# 4. Add safety checks to App.tsx when reading classList to resolve transient theme changes
-sed -i.bak 's/const root = window.document.documentElement;/const root = window.document.documentElement; if (root) {/g' src/webview/App.tsx
-sed -i.bak 's/else root.classList.remove(\x27dark\x27);/else root.classList.remove(\x27dark\x27); }/g' src/webview/App.tsx
-rm -f src/webview/App.tsx.bak
-
-# Compile project using extension configuration scripts
+# Compile and package extension artifacts
 npm run package
 
-echo "✅ fix: Resolved render-phase state update crashes, corrected invalid Cytoscape engine variables, and safely removed dynamic runtime CDN stylesheet warnings."
+echo "✅ feat: Added a dynamic 'Reload' button to the header supporting conditional state toggle logic for 'Delta Reload' on cmd/ctrl key sequences."

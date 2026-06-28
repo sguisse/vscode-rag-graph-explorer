@@ -44,7 +44,6 @@ export const App: React.FC = () => {
     const [applyOnTree, setApplyOnTree] = useState<boolean>(true);
     const [applyOnGraph, setApplyOnGraph] = useState<boolean>(false);
 
-    // EXPOSE GLOBAL RUNTIME LOG ROUTER FOR FRONTEND INTERACTIONS
     useEffect(() => {
         (window as any).logToTerminal = (level: 'debug' | 'info' | 'warn' | 'error', message: string) => {
             setLogs(prev => [...prev, {
@@ -99,9 +98,11 @@ export const App: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        const root = window.document.documentElement; if (root) {
-        if (theme === 'dark') root.classList.add('dark');
-        else root.classList.remove('dark'); }
+        const root = window.document.documentElement;
+        if (root) {
+            if (theme === 'dark') root.classList.add('dark');
+            else root.classList.remove('dark');
+        }
     }, [theme]);
 
     useEffect(() => {
@@ -152,6 +153,10 @@ export const App: React.FC = () => {
         setSelectedNodeIds(new Set());
     };
 
+    const handleReload = (mode: 'deep' | 'delta') => {
+        vscode.postMessage({ command: 'forceRefreshScan', mode });
+    };
+
     return (
         <div className="flex flex-col bg-[var(--vscode-editor-background)] w-screen h-screen overflow-hidden text-[var(--vscode-foreground)]">
             <Header
@@ -161,6 +166,7 @@ export const App: React.FC = () => {
                 nodes={nodes}
                 selectedNodeIds={selectedNodeIds}
                 version={config.extensionVersion}
+                onReload={handleReload}
             />
 
             <main className="flex flex-col flex-1 min-h-0">

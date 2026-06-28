@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { GraphNode } from '../types';
 import { GraphService } from '../services/GraphService';
 
@@ -9,9 +9,42 @@ interface HeaderProps {
     nodes: GraphNode[];
     selectedNodeIds: Set<string>;
     version?: string;
+    onReload: (mode: 'deep' | 'delta') => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, onGraphLoaded, nodes, selectedNodeIds, version }) => {
+export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, onGraphLoaded, nodes, selectedNodeIds, version, onReload }) => {
+    const [isModifierActive, setIsModifierActive] = useState(false);
+
+    useEffect(() => {
+        const handleModifierChange = (e: KeyboardEvent) => {
+            if (e.metaKey || e.ctrlKey) {
+                setIsModifierActive(true);
+            } else {
+                setIsModifierActive(false);
+            }
+        };
+
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (!e.metaKey && !e.ctrlKey) {
+                setIsModifierActive(false);
+            }
+        };
+
+        const handleBlur = () => {
+            setIsModifierActive(false);
+        };
+
+        window.addEventListener('keydown', handleModifierChange);
+        window.addEventListener('keyup', handleKeyUp);
+        window.addEventListener('blur', handleBlur);
+
+        return () => {
+            window.removeEventListener('keydown', handleModifierChange);
+            window.removeEventListener('keyup', handleKeyUp);
+            window.removeEventListener('blur', handleBlur);
+        };
+    }, []);
+
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -26,7 +59,6 @@ export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, onGraphLoade
     return (
         <header className="z-40 relative flex flex-shrink-0 justify-between items-center bg-[var(--vscode-editor-background)] shadow-[0_2px_8px_var(--vscode-widget-shadow)] px-4 border-[var(--vscode-panel-border)] border-b h-12">
 
-            {/* INJECTED ID AND TOOLTIP HERE */}
             <div id="extension-identity" className="flex items-center gap-3 cursor-default" data-tooltip={`Version ${version || '1.0.0'}`}>
                 <div className="flex justify-center items-center bg-gradient-to-br from-blue-500 to-blue-700 shadow-inner rounded-md w-7 h-7 font-bold text-white text-sm">G</div>
                 <div>
@@ -46,6 +78,15 @@ export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, onGraphLoade
                     <span className="codicon codicon-file-symlink-file"></span> Load graph.json
                     <input type="file" accept=".json" onChange={handleFileChange} className="hidden" />
                 </label>
+
+                <button
+                    onClick={() => onReload(isModifierActive ? 'delta' : 'deep')}
+                    className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 shadow-md px-3 py-1.5 rounded-md font-semibold text-white text-xs transition-all duration-200 cursor-pointer select-none"
+                    data-tooltip={isModifierActive ? "Force the delta parsing of the updated files" : "Force the parsing of the codebase"}
+                >
+                    <span className={`codicon ${isModifierActive ? 'codicon-git-compare' : 'codicon-refresh'}`}></span>
+                    {isModifierActive ? 'Delta Reload' : 'Reload'}
+                </button>
             </div>
         </header>
     );
