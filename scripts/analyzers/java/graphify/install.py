@@ -31,7 +31,7 @@ class GraphifyInstaller:
         output_dir = self.find_target_dir(phase)
         os.makedirs(output_dir, exist_ok=True)
 
-        res = subprocess.run([sys.executable, check_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+        res = subprocess.run([sys.executable, check_script], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace", check=True)
         json_payload = None
         for line in res.stdout.splitlines():
             if "{" in line and "}" in line:

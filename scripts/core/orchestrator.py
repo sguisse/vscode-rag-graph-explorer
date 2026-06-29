@@ -1,4 +1,5 @@
 import os
+import sys
 import signal
 import subprocess
 from discovery_engine import DiscoveryEngine
@@ -71,7 +72,7 @@ class ParallelOrchestrator:
             return
 
         info("Lancement de l'analyseur Java (Multi-Engine AST Pipeline)...", component="Orchestrator")
-        p = subprocess.Popen(["python3", java_analyzer_py, manifest_path, self.raw_out_java])
+        p = subprocess.Popen([sys.executable, java_analyzer_py, manifest_path, self.raw_out_java])
 
         pid_file = os.path.join(self.pid_dir, f"java_orchestrator_{p.pid}.pid")
         with open(pid_file, "w") as f:

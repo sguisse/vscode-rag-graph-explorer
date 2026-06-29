@@ -1,4 +1,5 @@
 import os
+import sys
 import subprocess
 import signal
 import json
@@ -13,7 +14,7 @@ class CodeGraphNodeWrapper:
 
     def execute(self, manifest_path: str, output_json_path: str, pids_dir: str):
         install_script = os.path.join(self.directory, "install.py")
-        subprocess.run(["python3", install_script], check=True)
+        subprocess.run([sys.executable, install_script], check=True)
 
         os.makedirs(os.path.dirname(output_json_path), exist_ok=True)
 
