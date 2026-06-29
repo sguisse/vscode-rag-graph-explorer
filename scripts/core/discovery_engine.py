@@ -11,18 +11,26 @@ class DiscoveryEngine:
         self.manifest_path = os.path.join(self.target_dir, "discovery_manifest.json")
         os.makedirs(self.target_dir, exist_ok=True)
 
-        self.inc_paths = self._compile_regex(config.get("includePathsRegex", ".*"))
-        self.exc_paths = self._compile_regex(config.get("excludePathsRegex", ""))
-        self.inc_exts = self._compile_regex(config.get("includeExtensionsRegex", ""))
-        self.exc_exts = self._compile_regex(config.get("excludeExtensionsRegex", ""))
+        self.inc_paths = self._compile_regex("includePathsRegex", config.get("includePathsRegex", ".*"))
+        self.exc_paths = self._compile_regex("excludePathsRegex", config.get("excludePathsRegex", ""))
+        self.inc_exts = self._compile_regex("includeExtensionsRegex", config.get("includeExtensionsRegex", ""))
+        self.exc_exts = self._compile_regex("excludeExtensionsRegex", config.get("excludeExtensionsRegex", ""))
 
-    def _compile_regex(self, pattern_str: str) -> List[re.Pattern]:
+        # Strategic diagnostic logs utilizing the info logging interface from utils.py
+        info(f"Loaded includePathsRegex patterns: {[p.pattern for p in self.inc_paths]}", component="Discovery")
+        info(f"Loaded excludePathsRegex patterns: {[p.pattern for p in self.exc_paths]}", component="Discovery")
+        info(f"Loaded includeExtensionsRegex patterns: {[p.pattern for p in self.inc_exts]}", component="Discovery")
+        info(f"Loaded excludeExtensionsRegex patterns: {[p.pattern for p in self.exc_exts]}", component="Discovery")
+
+    def _compile_regex(self, name: str, pattern_str: str) -> List[re.Pattern]:
         if not pattern_str: return []
         patterns = [p.strip() for p in re.split(r'[\n,;]', pattern_str) if p.strip()]
         compiled = []
         for p in patterns:
-            try: compiled.append(re.compile(p))
-            except Exception: pass
+            try:
+                compiled.append(re.compile(p))
+            except Exception as e:
+                warn(f"Failed to compile regex pattern '{p}' for config element '{name}': {e}", component="Discovery")
         return compiled
 
     def _matches_any(self, text: str, regex_list: List[re.Pattern]) -> bool:
@@ -41,12 +49,10 @@ class DiscoveryEngine:
         valid_files = []
 
         for root, dirs, files in os.walk(self.workspace_root):
-            # FIX: Restauration du formatage originel ("./" ou ".") attendu par les Regex
             rel_root = "./" + os.path.relpath(root, self.workspace_root).replace("\\", "/")
             if rel_root == "./.":
                 rel_root = "."
 
-            # Exclusions des dossiers pour stopper le crawl (Performance)
             if self.exc_paths:
                 dirs[:] = [d for d in dirs if not self._matches_any(f"{rel_root}/{d}", self.exc_paths)]
 
@@ -73,10 +79,15 @@ if __name__ == "__main__":
     if len(_sys.argv) < 3:
         print("Usage: discovery_engine.py <workspace_root> <manifest_path>", file=_sys.stderr)
         _sys.exit(1)
-    # Create engine with empty config (include-all default behaviour)
-    _engine = DiscoveryEngine(_sys.argv[1], {})
-    # Override the hardcoded .graph-rag-explorer/target/ manifest path with the
-    # caller-supplied path so the file is written to exactly where main.py expects it
+
+    _config = {}
+    if "ENGINE_CONFIG" in os.environ:
+        try:
+            _config = json.loads(os.environ["ENGINE_CONFIG"])
+        except Exception:
+            pass
+
+    _engine = DiscoveryEngine(_sys.argv[1], _config)
     _engine.manifest_path = os.path.abspath(_sys.argv[2])
     os.makedirs(os.path.dirname(_engine.manifest_path), exist_ok=True)
     _engine.generate_manifest()

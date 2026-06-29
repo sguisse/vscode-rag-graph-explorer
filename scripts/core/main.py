@@ -26,6 +26,14 @@ except ImportError:
     DiscoveryEngine = None
 
 def main():
+    # Ingest runtime configuration matrix from layout context standard input stream
+    config = {}
+    if not sys.stdin.isatty():
+        try:
+            config = json.loads(sys.stdin.read())
+        except Exception:
+            config = {}
+
     clean_args = [arg for arg in sys.argv[1:] if not arg.startswith('-')]
     provided_paths = [os.path.abspath(p) for p in clean_args if p.strip()]
 
@@ -46,8 +54,8 @@ def main():
         else:
             workspace_root = p
 
-    if not workspace_root and dir_paths:
-        workspace_root = dir_paths[0]
+        if not workspace_root and dir_paths:
+            workspace_root = dir_paths[0]
 
     if workspace_root:
         if not output_dir:
@@ -64,24 +72,26 @@ def main():
     info(f"Manifeste cible : {manifest_path}", component="Main")
     info(f"Dossier de sortie : {output_dir}", component="Main")
 
-    # === CORRECTIF ANTI-DOSSIER FANTÔME ===
     if os.path.exists(manifest_path) and os.path.isdir(manifest_path):
         warn(f"Anomalie détectée: '{manifest_path}' est un répertoire ! Nettoyage en cours...", component="Main")
         shutil.rmtree(manifest_path)
-    # ======================================
 
     info("Initialisation du scan de cartographie via DiscoveryEngine...", component="Main")
     try:
         discovery_script = os.path.join(BASE_DIR, "discovery_engine.py")
         if os.path.exists(discovery_script):
-            subprocess.run([sys.executable, discovery_script, workspace_root, manifest_path], check=True)
+            subprocess.run(
+                [sys.executable, discovery_script, workspace_root, manifest_path],
+                env={**os.environ, "ENGINE_CONFIG": json.dumps(config)},
+                check=True
+            )
         elif DiscoveryEngine is not None:
             try:
-                engine = DiscoveryEngine({"workspace_root": workspace_root, "manifest_path": manifest_path})
+                engine = DiscoveryEngine(workspace_root, config)
                 engine.generate_manifest()
             except Exception:
                 try:
-                    engine = DiscoveryEngine(workspace_root, manifest_path)
+                    engine = DiscoveryEngine({"workspace_root": workspace_root, "manifest_path": manifest_path})
                     engine.generate_manifest()
                 except Exception:
                     DiscoveryEngine.generate_manifest(workspace_root, manifest_path)
@@ -98,11 +108,10 @@ def main():
     try:
         info("Manifeste sécurisé. Lecture des données d'indexation...", component="Main")
 
-        # Le fichier est garanti d'être un vrai fichier JSON à ce stade
         with open(manifest_path, 'r', encoding='utf-8') as f:
             manifest_data = json.load(f)
 
-        orchestrator = ParallelOrchestrator(workspace_root, output_dir, {})
+        orchestrator = ParallelOrchestrator(workspace_root, output_dir, config)
 
         execution_triggered = False
         target_methods = [
