@@ -42,37 +42,24 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
         fileNodes.forEach(f => map.set(f.id, f.id));
         nodes.forEach(n => {
             if (n.group !== 'file' && n.group !== 'file_unreferenced' && n.source_file) {
-                const matchingFile = fileNodes.find(f => f.source_file === n.source_file || f.label === n.source_file || f.id === n.source_file);
+                const matchingFile = fileNodes.find(f => f.source_file === n.source_file || f.id === n.source_file);
                 if (matchingFile) map.set(n.id, matchingFile.id);
             }
         });
         return map;
     }, [nodes]);
 
-    // ARCHITECTURAL CORRECTION: Include intra-file structural relations if no cross-file coupling is found
     const fileLevelEdges = useMemo(() => {
         const fileEdgesMap = new Map<string, { from: string; to: string; types: Set<string> }>();
-
-        // Detect if any true cross-file references exist across the global structure payload
-        const hasCrossFileEdges = edges.some(e => {
-            const fromFileId = nodeToFileIdMap.get(e.from);
-            const toFileId = nodeToFileIdMap.get(e.to);
-            return fromFileId && toFileId && fromFileId !== toFileId;
-        });
-
         edges.forEach(e => {
             const fromFileId = nodeToFileIdMap.get(e.from);
             const toFileId = nodeToFileIdMap.get(e.to);
-
-            if (fromFileId && toFileId) {
-                // If cross-file coupling exists, skip internal file blocks. Otherwise, map them safely.
-                if (fromFileId !== toFileId || !hasCrossFileEdges) {
-                    const key = `${fromFileId}->${toFileId}`;
-                    if (!fileEdgesMap.has(key)) {
-                        fileEdgesMap.set(key, { from: fromFileId, to: toFileId, types: new Set() });
-                    }
-                    fileEdgesMap.get(key)!.types.add(e.type);
+            if (fromFileId && toFileId && fromFileId !== toFileId) {
+                const key = `${fromFileId}->${toFileId}`;
+                if (!fileEdgesMap.has(key)) {
+                    fileEdgesMap.set(key, { from: fromFileId, to: toFileId, types: new Set() });
                 }
+                fileEdgesMap.get(key)!.types.add(e.type);
             }
         });
         return Array.from(fileEdgesMap.values());

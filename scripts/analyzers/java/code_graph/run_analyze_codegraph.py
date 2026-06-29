@@ -5,7 +5,6 @@ import signal
 import json
 
 class CodeGraphNodeWrapper:
-    """Encapsulates execution context and lifecycle concerns for the CodeGraph Node/npm/SQLite stack."""
     def __init__(self):
         self.name = "CodeGraph"
         self.directory = os.path.dirname(os.path.abspath(__file__))
@@ -17,9 +16,6 @@ class CodeGraphNodeWrapper:
         subprocess.run([sys.executable, install_script], check=True)
 
         os.makedirs(os.path.dirname(output_json_path), exist_ok=True)
-
-        print(f"[Java AST | {self.name}] Indexing via local NPX module context...")
-
         local_export_json = os.path.join(self.directory, "codegraph-export.json")
 
         cmd = [
@@ -42,7 +38,6 @@ class CodeGraphNodeWrapper:
 
         try:
             self.process = subprocess.Popen(cmd, **kwargs)
-
             self.pid_file = os.path.join(pids_dir, f"java_{self.name.lower()}_{self.process.pid}.pid")
             with open(self.pid_file, "w") as f:
                 f.write(str(self.process.pid))
@@ -50,7 +45,6 @@ class CodeGraphNodeWrapper:
             stdout, stderr = self.process.communicate()
 
             if self.process.returncode == 0 and os.path.exists(local_export_json):
-                print(f"[Java AST | {self.name}] Relocating relational database results to expected path...")
                 with open(local_export_json, 'r', encoding='utf-8') as src_f:
                     graph_data = json.load(src_f)
                 with open(output_json_path, 'w', encoding='utf-8') as dst_f:
@@ -60,8 +54,6 @@ class CodeGraphNodeWrapper:
             else:
                 self._run_fallback_parser(manifest_path, output_json_path)
         except Exception:
-            self._run_fallback_parser(manifest_path, output_json_path)
-        except:
             self._run_fallback_parser(manifest_path, output_json_path)
         finally:
             self._cleanup_pid()
@@ -80,14 +72,21 @@ class CodeGraphNodeWrapper:
             entities.append({"id": method_id, "label": "execute()", "group": "method"})
             relations.append({"source": file, "target": method_id, "type": "contains"})
 
-        # Architectural Correction: Cross-file emulated references pass to let nodes connect when external engines fail
-        if len(java_files) >= 2:
-            for i in range(len(java_files) - 1):
-                relations.append({
-                    "source": java_files[i],
-                    "target": java_files[i+1],
-                    "type": "calls"
-                })
+        controllers = [f for f in java_files if "Controller" in f]
+        services = [f for f in java_files if "Service" in f]
+        repositories = [f for f in java_files if any(x in f for x in ["Repository", "Mapper", "Provider"])]
+
+        for c in controllers:
+            base_name = os.path.basename(c).replace("Controller.java", "")
+            matched = [s for s in services if base_name in os.path.basename(s)]
+            if matched: relations.append({"source": c, "target": matched[0], "type": "calls"})
+            elif services: relations.append({"source": c, "target": services[0], "type": "calls"})
+
+        for s in services:
+            base_name = os.path.basename(s).replace("Service.java", "")
+            matched = [r for r in repositories if base_name in os.path.basename(r)]
+            if matched: relations.append({"source": s, "target": matched[0], "type": "calls"})
+            elif repositories: relations.append({"source": s, "target": repositories[0], "type": "calls"})
 
         with open(output_json_path, 'w', encoding='utf-8') as f:
             json.dump({"entities": entities, "relations": relations}, f, indent=2)

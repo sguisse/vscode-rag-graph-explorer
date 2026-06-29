@@ -24,7 +24,8 @@ export class GraphService {
       let group = 'class';
       const label = n.label || n.id || '';
       if (label.includes('()')) group = 'method';
-      else if (label.match(/\.(ts|js|py|json|md|sh|mjs|html|css)$/i)) group = 'file';
+      // ARCHITECTURAL FIX: Explicitly append java inside supported source file extensions match regex
+      else if (label.match(/\.(ts|js|py|json|md|sh|mjs|html|css|java)$/i)) group = 'file';
       if (n.file_type === 'document' || n.file_type === 'rationale') group = 'document';
       if (n.file_type === 'file_unreferenced') group = 'file_unreferenced';
       return { id: String(n.id), label, group, source_file: n.source_file, source_location: n.source_location };

@@ -21,12 +21,12 @@ class GraphEngine:
                             data = json.load(f)
 
                         for ent in data.get("entities", []):
-                            # CORRECTIF : On remplace les anti-slashs mais on PRÉSERVE la casse d'origine (pas de .lower())
                             norm_id = ent["id"].replace("\\", "/")
-                            self.graph.add_node(norm_id, label=ent["label"], group=ent.get("group", "file"), source_file=norm_id)
+                            # ARCHITECTURAL FIX: Extract clean underlying file context pathway mapping bounds
+                            base_file_path = norm_id.split("::")[0]
+                            self.graph.add_node(norm_id, label=ent["label"], group=ent.get("group", "file"), source_file=base_file_path)
 
                         for rel in data.get("relations", []):
-                            # CORRECTIF : Préservation de la casse d'origine sur les liaisons également
                             src = rel["source"].replace("\\", "/")
                             tgt = rel["target"].replace("\\", "/")
                             self.graph.add_edge(src, tgt, relation=rel.get("type", "relation"))
@@ -39,15 +39,14 @@ class GraphEngine:
         for node_id, data in self.graph.nodes(data=True):
             current_group = data.get("group", "file")
 
-            # Détection des fichiers orphelins / non référencés
             if self.graph.in_degree(node_id) == 0 and current_group == "file":
                 current_group = "file_unreferenced"
 
             nodes_payload.append({
                 "id": node_id,
                 "label": data.get("label", node_id),
-                "group": current_group,        # Ajout par sécurité pour le TreeView/UI
-                "file_type": current_group,    # Rétrocompatibilité avec le style Cytoscape
+                "group": current_group,
+                "file_type": current_group,
                 "source_file": data.get("source_file", "")
             })
 
@@ -56,7 +55,7 @@ class GraphEngine:
             edges_payload.append({
                 "from": source,
                 "to": target,
-                "source": source,              # Redondance sécuritaire pour les liaisons
+                "source": source,
                 "target": target,
                 "relation": data.get("relation", "relation")
             })
