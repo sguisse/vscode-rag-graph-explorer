@@ -1,20 +1,3 @@
-#!/usr/bin/env bash
-# ==============================================================================
-# 🕸️ GRAPH RAG EXPLORER - MULTI-PROTOCOL LINK ROUTER ENHANCEMENT
-# ==============================================================================
-# This script updates FinderHtml.tsx to intercept all resource anchor clicks.
-# It halts native webview sandbox execution and dispatches an event command up
-# to the VS Code Extension Host to force opening in a new default browser tab.
-# ==============================================================================
-
-set -e
-
-mkdir -p src/webview/components/core/finder
-
-# ==============================================================================
-# ⚡ REWRITE FILE: CLICK DELEGATION LINK ROUTER (FINDERHTML.TSX)
-# ==============================================================================
-cat << 'EOF' > src/webview/components/core/finder/FinderHtml.tsx
 import React, { useMemo } from 'react';
 
 export interface TextChunk {
@@ -135,28 +118,3 @@ export const FinderHtml: React.FC<FinderHtmlProps> = ({
         />
     );
 };
-EOF
-
-# ==============================================================================
-# 🔏 PHASE 2: RE-HYDRATION OF BACKTICKS (POST-PROCESSOR)
-# ==============================================================================
-python3 -c "
-import os
-for root, _, files in os.walk('.'):
-    for file in files:
-        if file.endswith(('.tsx', '.ts')):
-            path = os.path.join(root, file)
-            try:
-                with open(path, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                if '___TRIPLE_TICK___' in content or '___BTICK___' in content:
-                    content = content.replace('___TRIPLE_TICK___', chr(96)*3).replace('___BTICK___', chr(96))
-                    with open(path, 'w', encoding='utf-8') as f:
-                        f.write(content)
-            except Exception:
-                pass
-"
-
-echo "=============================================================================="
-echo "✅ feat/external-browser-tabs: Linked click delegation routing fully secured inside FinderHtml!"
-echo "=============================================================================="

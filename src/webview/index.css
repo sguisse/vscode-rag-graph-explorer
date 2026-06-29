@@ -1,0 +1,7 @@
+
+/* Force total padding reset on the native HTML body container element */
+body {
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden;
+}
