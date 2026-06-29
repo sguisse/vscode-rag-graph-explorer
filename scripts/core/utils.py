@@ -2,6 +2,16 @@ import os
 import sys
 from datetime import datetime
 
+def _configure_console_stream(stream):
+    if hasattr(stream, "reconfigure"):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
+for _stream in (sys.stdout, sys.stderr):
+    _configure_console_stream(_stream)
+
 # Variables d'état globales pour la redirection et la rotation
 LOG_ENABLED = True
 MAX_SIZE_MB = 5
@@ -44,10 +54,13 @@ def _log(level: str, component: str, message: str, flush: bool = True):
     full_message = f"[{timestamp}] {level} [{component}] {message}"
 
     # Émission immédiate sur la sortie standard de contrôle (interceptée par VS Code)
-    if "ERROR" in level or "WARN" in level:
-        print(full_message, file=sys.stderr, flush=flush)
-    else:
-        print(full_message, file=sys.stdout, flush=flush)
+    target_stream = sys.stderr if "ERROR" in level or "WARN" in level else sys.stdout
+    try:
+        print(full_message, file=target_stream, flush=flush)
+    except UnicodeEncodeError:
+        encoding = getattr(target_stream, "encoding", None) or "utf-8"
+        safe_message = full_message.encode(encoding, errors="replace").decode(encoding, errors="replace")
+        print(safe_message, file=target_stream, flush=flush)
 
     # Redirection vers fichier rotatif local si activé
     if LOG_ENABLED and WORKSPACE_ROOT:

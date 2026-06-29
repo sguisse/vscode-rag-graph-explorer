@@ -1,8 +1,14 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as childProcess from 'child_process';
 
 let activeChildProcess: any = null;
+const SCRIPT_SYNC_IGNORED_NAMES = new Set(["__pycache__", ".python_packages", ".bootstrap.lock"]);
+
+function shouldSkipScriptSyncEntry(fileName: string): boolean {
+    return SCRIPT_SYNC_IGNORED_NAMES.has(fileName) || fileName.endsWith(".pyc") || fileName.endsWith(".pyo");
+}
 
 export function activate(context: vscode.ExtensionContext) {
     let disposable = vscode.commands.registerCommand('graphRagExplorer.openTool', () => {
@@ -122,6 +128,7 @@ function copyFolderRecursiveSync(source: string, target: string) {
     if (fs.existsSync(source)) {
         const files = fs.readdirSync(source);
         for (const file of files) {
+            if (shouldSkipScriptSyncEntry(file)) continue;
             const curSource = path.join(source, file);
             const curTarget = path.join(target, file);
             if (fs.statSync(curSource).isDirectory()) {
@@ -133,10 +140,36 @@ function copyFolderRecursiveSync(source: string, target: string) {
     }
 }
 
+function hasOutdatedFiles(source: string, target: string): boolean {
+    if (!fs.existsSync(source)) return false;
+    if (!fs.existsSync(target)) return true;
+
+    const files = fs.readdirSync(source);
+    for (const file of files) {
+        if (shouldSkipScriptSyncEntry(file)) continue;
+        const curSource = path.join(source, file);
+        const curTarget = path.join(target, file);
+        const sourceStat = fs.statSync(curSource);
+
+        if (sourceStat.isDirectory()) {
+            if (hasOutdatedFiles(curSource, curTarget)) return true;
+            continue;
+        }
+
+        if (!fs.existsSync(curTarget)) return true;
+        const targetStat = fs.statSync(curTarget);
+        if (!targetStat.isFile() || targetStat.size !== sourceStat.size) return true;
+        if (!fs.readFileSync(curSource).equals(fs.readFileSync(curTarget))) return true;
+    }
+
+    return false;
+}
+
 function syncCoreScripts(context: vscode.ExtensionContext, workspaceRoot: string): boolean {
     const targetDir = path.join(workspaceRoot, ".graph-rag-explorer", "scripts");
     const versionFilePath = path.join(targetDir, "version.json");
     const currentVersion = context.extension.packageJSON.version;
+    const sourceDir = path.join(context.extensionPath, "scripts");
     const graphConfig = vscode.workspace.getConfiguration("graphRagExplorer");
     let needsSync = graphConfig.get("forceScriptSync") === true || !fs.existsSync(targetDir) || !fs.existsSync(versionFilePath);
 
@@ -145,9 +178,11 @@ function syncCoreScripts(context: vscode.ExtensionContext, workspaceRoot: string
             if (JSON.parse(fs.readFileSync(versionFilePath, "utf-8")).version !== currentVersion) needsSync = true;
         } catch (e) { needsSync = true; }
     }
+    if (!needsSync) {
+        needsSync = hasOutdatedFiles(sourceDir, targetDir);
+    }
     if (needsSync) {
         try {
-            const sourceDir = path.join(context.extensionPath, "scripts");
             copyFolderRecursiveSync(sourceDir, targetDir);
             fs.writeFileSync(versionFilePath, JSON.stringify({ version: currentVersion }), "utf-8");
         } catch (err) { return false; }
@@ -183,7 +218,6 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
         });
     };
 
-    const cp = require("child_process");
     const runnerScript = path.join(targetDir, "core", "runner.py");
     let args = [runnerScript];
     if (mode === "deep") args.push("--workspace", workspaceRoot, "--output", outputDir);
@@ -203,7 +237,7 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
         try { activeChildProcess.kill('SIGKILL'); } catch(e){}
     }
 
-    const child = cp.spawn("python3", args, { cwd: workspaceRoot, env: { ...process.env, PYTHONPATH: path.join(targetDir, "core") } });
+    const child = childProcess.spawn("python3", args, { cwd: workspaceRoot, env: { ...process.env, PYTHONPATH: path.join(targetDir, "core") } });
     activeChildProcess = child;
 
     child.stdin.write(JSON.stringify(payloadConfig));
