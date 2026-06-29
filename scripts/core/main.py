@@ -93,7 +93,7 @@ def main():
         error(f"Échec critique de la phase de découverte synchrone : {e}", component="Main")
         sys.exit(1)
 
-    raw_outputs_dir = os.path.join(output_dir, "raw_outputs")
+    raw_outputs_dir = os.path.join(workspace_root, ".graph-rag-explorer", "target", "raw_outputs")
 
     try:
         info("Manifeste sécurisé. Lecture des données d'indexation...", component="Main")
@@ -102,7 +102,7 @@ def main():
         with open(manifest_path, 'r', encoding='utf-8') as f:
             manifest_data = json.load(f)
 
-        orchestrator = ParallelOrchestrator(workspace_root, manifest_data, raw_outputs_dir)
+        orchestrator = ParallelOrchestrator(workspace_root, output_dir, {})
 
         execution_triggered = False
         target_methods = [

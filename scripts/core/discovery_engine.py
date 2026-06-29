@@ -67,3 +67,16 @@ class DiscoveryEngine:
 
         success(f"Manifeste généré : {len(valid_files)} fichiers validés pour l'analyse.", component="Discovery")
         return self.manifest_path
+
+if __name__ == "__main__":
+    import sys as _sys
+    if len(_sys.argv) < 3:
+        print("Usage: discovery_engine.py <workspace_root> <manifest_path>", file=_sys.stderr)
+        _sys.exit(1)
+    # Create engine with empty config (include-all default behaviour)
+    _engine = DiscoveryEngine(_sys.argv[1], {})
+    # Override the hardcoded .graph-rag-explorer/target/ manifest path with the
+    # caller-supplied path so the file is written to exactly where main.py expects it
+    _engine.manifest_path = os.path.abspath(_sys.argv[2])
+    os.makedirs(os.path.dirname(_engine.manifest_path), exist_ok=True)
+    _engine.generate_manifest()
