@@ -1,102 +1,81 @@
 #!/usr/bin/env bash
-# Production-ready patch to sort the extension metrics descending and add multi-line newline separation layouts.
+# Production-ready patch to fix Exit Code 126 (Permission Denied) by ensuring execution permissions are recursively granted across all sandboxed jQAssistant binaries and internal wrapper sub-scripts.
 
-mkdir -p scripts/initialization
+mkdir -p scripts/analyser/tools/java/jqassistant
 
-cat << 'EOF' > scripts/initialization/discovery_engine.py
+cat << 'EOF' > scripts/analyser/tools/java/jqassistant/worker.py
 import os
-import re
-import json
-from typing import List, Dict, Any
-from core.utils import info, warn, success, normalize_path
+import shutil
+from analyser.base import BaseAnalyser
+from analyser.registry import AnalyserRegistry
+from analyser.neo4j_client import Neo4jClient
+from core.utils import info, error, execute_tracked_command
 
-class DiscoveryEngine:
-    """Evaluates workspace file structures using multi-layered regex settings patterns."""
-    def __init__(self, workspace_root: str, config: Dict[str, Any]):
-        self.workspace_root = normalize_path(workspace_root)
-        self.output_path = f"{self.workspace_root}/.graph-rag-explorer/target/discovery_manifest.json"
-        os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
+@AnalyserRegistry.register
+class JQAssistantWorker(BaseAnalyser):
+    @property
+    def name(self) -> str: return "java_jqassistant_worker"
 
-        # Read keys directly matching variables mapped out under package.json configuration nodes
-        self.inc_paths = self._compile_regex("includePathsRegex", config.get("includePathsRegex", ".*"))
-        self.exc_paths = self._compile_regex("excludePathsRegex", config.get("excludePathsRegex", ""))
-        self.inc_exts = self._compile_regex("includeExtensionsRegex", config.get("includeExtensionsRegex", ""))
-        self.exc_exts = self._compile_regex("excludeExtensionsRegex", config.get("excludeExtensionsRegex", ""))
+    def _find_sandboxed_binary(self, base_dir: str, target_name: str) -> str:
+        if not os.path.exists(base_dir): return None
+        for root, _, files in os.walk(base_dir):
+            if target_name in files:
+                return os.path.join(root, target_name).replace("\\", "/")
+        return None
 
-        info(f"Loaded includePathsRegex criteria size: {len(self.inc_paths)}", component="DiscoveryEngine")
-        info(f"Loaded excludePathsRegex criteria size: {len(self.exc_paths)}", component="DiscoveryEngine")
-        info(f"Loaded includeExtensionsRegex criteria size: {len(self.inc_exts)}", component="DiscoveryEngine")
-        info(f"Loaded excludeExtensionsRegex criteria size: {len(self.exc_exts)}", component="DiscoveryEngine")
+    def run_analysis(self, manifest_data: dict, neo4j_client: Neo4jClient, config_matrix: dict) -> None:
+        java_files = [f for f in manifest_data.get("files", []) if f.endswith(".java")]
+        if not java_files:
+            info("No Java target files detected in manifest paths. Bypassing jQAssistant pipeline loops.", component=self.name)
+            return
 
-    def _compile_regex(self, name: str, pattern_str: str) -> List[re.Pattern]:
-        if not pattern_str:
-            return []
-        patterns = [p.strip() for p in re.split(r'[\n,;]', pattern_str) if p.strip()]
-        compiled = []
-        for p in patterns:
-            try:
-                compiled.append(re.compile(p))
-            except Exception as e:
-                warn(f"Failed compiling regex token '{p}' under setting key '{name}': {e}", component="DiscoveryEngine")
-        return compiled
+        workspace_root = manifest_data.get("workspace_root", os.getcwd())
 
-    def _matches_any(self, text: str, regex_list: List[re.Pattern]) -> bool:
-        if not regex_list:
-            return False
-        return any(r.search(text) for r in regex_list)
+        version = config_matrix.get("jqassistant", {}).get("version", "2.9.1")
+        report_sub_setup = config_matrix.get("jqassistant", {}).get("xmlReportPath", "./target/site/jacoco/jacoco.xml")
+        java_raw_output_dir = f"{workspace_root}/.graph-rag-explorer/target/raw_outputs/java"
 
-    def _is_allowed(self, rel_path: str, filename: str) -> bool:
-        if self.inc_paths and not self._matches_any(rel_path, self.inc_paths): return False
-        if self.exc_paths and self._matches_any(rel_path, self.exc_paths): return False
-        if self.inc_exts and not self._matches_any(filename, self.inc_exts): return False
-        if self.exc_exts and self._matches_any(filename, self.exc_exts): return False
-        return True
+        base_cmd = "jqassistant.cmd" if os.name == 'nt' else "jqassistant.sh"
+        executable_target = base_cmd if shutil.which(base_cmd) else ("jqassistant" if shutil.which("jqassistant") else None)
 
-    def generate_manifest(self) -> str:
-        info("Génération du Manifeste d'Indexation (Discovery)...", component="DiscoveryEngine")
-        valid_files = []
+        if not executable_target:
+            sandbox_root = f"{workspace_root}/.graph-rag-explorer/target/tools/java/jqassistant/jqassistant-{version}"
+            local_bin_path = self._find_sandboxed_binary(sandbox_root, base_cmd)
+            if local_bin_path and os.path.exists(local_bin_path):
+                executable_target = local_bin_path
+                if os.name != 'nt':
+                    # Fix Exit Code 126 by recursively ensuring executable permissions on all sub-shells, internal scripts, and binaries inside the sandbox layout
+                    for walk_root, _, walk_files in os.walk(sandbox_root):
+                        for file in walk_files:
+                            if file.endswith(".sh") or "bin" in walk_root.replace("\\", "/").split("/"):
+                                try:
+                                    os.chmod(os.path.join(walk_root, file), 0o755)
+                                except Exception:
+                                    pass
 
-        for root, dirs, files in os.walk(self.workspace_root):
-            rel_root = "./" + os.path.relpath(root, self.workspace_root).replace("\\", "/")
-            if rel_root == "./.":
-                rel_root = "."
+        if not executable_target:
+            error("Aborting analysis sequence loop: jQAssistant executable command string could not be resolved from tools path repositories.", component=self.name)
+            return
 
-            # Prune directories mutable slices in-place for optimized platform tree navigation operations
-            if self.exc_paths:
-                dirs[:] = [d for d in dirs if not self._matches_any(f"{rel_root}/{d}", self.exc_paths)]
+        # 1. Bytecode Scan Phase
+        info(f"[jQAssistant Engine] Initializing bytecode scanning cycle via '{executable_target}' on path: {java_raw_output_dir}", component=self.name)
+        scan_return_code = execute_tracked_command([executable_target, "scan", "-f", java_raw_output_dir], "jqa_scan", cwd=workspace_root)
 
-            for file in files:
-                rel_path = f"{rel_root}/{file}"
-                if self._is_allowed(rel_path, file):
-                    abs_path = normalize_path(os.path.join(root, file))
-                    valid_files.append(abs_path)
+        # 2. Structural Analysis Phase
+        if scan_return_code == 0:
+            info(f"[jQAssistant Engine] Scan operation completed successfully. Triggering rule enrichment analysis pass...", component=self.name)
+            execute_tracked_command([executable_target, "analyze"], "jqa_analyze", cwd=workspace_root)
+        else:
+            error(f"[jQAssistant Engine] Ingestion scanning failed with exit status code {scan_return_code}. Bypassing subsequent analysis workflows.", component=self.name)
 
-        # Compute and format metrics breakdown per extension
-        extension_counts = {}
-        for file_path in valid_files:
-            _, ext = os.path.splitext(file_path)
-            ext_key = ext.lower() if ext else "no_extension"
-            extension_counts[ext_key] = extension_counts.get(ext_key, 0) + 1
-
-        # Sort extensions by volume from largest to smallest (descending order)
-        sorted_extensions = sorted(extension_counts.items(), key=lambda x: x[1], reverse=True)
-        breakdown_string = "".join([f"\n  - {ext}: {count}" for ext, count in sorted_extensions])
-        info(f"Fichiers trouvés par extension :{breakdown_string}", component="DiscoveryEngine")
-
-        manifest_data = {
-            "workspace_root": self.workspace_root,
-            "total_files": len(valid_files),
-            "files": valid_files
-        }
-
-        with open(self.output_path, "w", encoding="utf-8") as f:
-            json.dump(manifest_data, f, indent=2, ensure_ascii=False)
-
-        success(f"Manifeste généré : {len(valid_files)} fichiers validés pour l'analyse.", component="DiscoveryEngine")
-        return self.output_path
+        for file in java_files:
+            neo4j_client.execute_write(
+                "MERGE (f:File:Java {path: $path}) SET f.name = $name",
+                {"path": file, "name": file.split("/")[-1]}
+            )
 EOF
 
-# Compile the presentation package layer
+# Package the extension bundle configuration changes
 npm run package
 
-echo "✅ feat/logging: Transformed the metrics overview log stream into a multi-line format sorted in descending order from largest to smallest!"
+echo "✅ fix/permissions: Added recursive chmod mapping hooks over the entire sandboxed directory tree to eliminate nested runtime permission faults (Exit Code 126)!"
