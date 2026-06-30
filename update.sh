@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Production-ready patch to append file extension breakdown metrics to the DiscoveryEngine logs.
+# Production-ready patch to sort the extension metrics descending and add multi-line newline separation layouts.
 
 mkdir -p scripts/initialization
 
@@ -78,8 +78,10 @@ class DiscoveryEngine:
             ext_key = ext.lower() if ext else "no_extension"
             extension_counts[ext_key] = extension_counts.get(ext_key, 0) + 1
 
-        breakdown_string = ", ".join([f"{ext}: {count}" for ext, count in sorted(extension_counts.items())])
-        info(f"Fichiers trouvés par extension : {breakdown_string}", component="DiscoveryEngine")
+        # Sort extensions by volume from largest to smallest (descending order)
+        sorted_extensions = sorted(extension_counts.items(), key=lambda x: x[1], reverse=True)
+        breakdown_string = "".join([f"\n  - {ext}: {count}" for ext, count in sorted_extensions])
+        info(f"Fichiers trouvés par extension :{breakdown_string}", component="DiscoveryEngine")
 
         manifest_data = {
             "workspace_root": self.workspace_root,
@@ -94,7 +96,7 @@ class DiscoveryEngine:
         return self.output_path
 EOF
 
-# Rebuild extension visual asset bundles
+# Compile the presentation package layer
 npm run package
 
-echo "✅ feat/logging: Added file metrics breakdown by extension inside the DiscoveryEngine info logging process pipeline!"
+echo "✅ feat/logging: Transformed the metrics overview log stream into a multi-line format sorted in descending order from largest to smallest!"

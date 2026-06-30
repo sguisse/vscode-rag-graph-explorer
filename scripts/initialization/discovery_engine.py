@@ -72,8 +72,10 @@ class DiscoveryEngine:
             ext_key = ext.lower() if ext else "no_extension"
             extension_counts[ext_key] = extension_counts.get(ext_key, 0) + 1
 
-        breakdown_string = ", ".join([f"{ext}: {count}" for ext, count in sorted(extension_counts.items())])
-        info(f"Fichiers trouvés par extension : {breakdown_string}", component="DiscoveryEngine")
+        # Sort extensions by volume from largest to smallest (descending order)
+        sorted_extensions = sorted(extension_counts.items(), key=lambda x: x[1], reverse=True)
+        breakdown_string = "".join([f"\n  - {ext}: {count}" for ext, count in sorted_extensions])
+        info(f"Fichiers trouvés par extension :{breakdown_string}", component="DiscoveryEngine")
 
         manifest_data = {
             "workspace_root": self.workspace_root,
