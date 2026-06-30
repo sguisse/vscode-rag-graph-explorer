@@ -1,68 +1,155 @@
 #!/usr/bin/env bash
-# Production-ready patch to run a Cypher query at the end of the analysis pipeline to count and log Java files.
+# Production-ready patch to eliminate unindexed property warnings from the Neo4j query compiler by using dynamic property lookup.
 
-mkdir -p scripts/analyser
+mkdir -p scripts/core
 
-cat << 'EOF' > scripts/analyser/runner.py
-import json
+cat << 'EOF' > scripts/core/ui_extractor.py
 import os
-import sys
-from concurrent.futures import ThreadPoolExecutor
+import json
 from analyser.neo4j_client import Neo4jClient
-from analyser.registry import AnalyserRegistry
+from core.utils import info, success, error, normalize_path
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from core.utils import info, success, error
+class UIExtractor:
+    def __init__(self, workspace_root: str, db_client: Neo4jClient):
+        self.workspace_root = normalize_path(workspace_root)
+        self.db_client = db_client
+        self.output_file = f"{self.workspace_root}/.graph-rag-explorer/target/ui_outputs/graph-ui-payload.json"
 
-def run_analysis_pipeline(manifest_path: str, neo4j_config: dict, global_config_matrix: dict):
-    info("Launching background data parsing threads targeting embedded storage context...", component="AnalyserRunner")
+    def build_tree_view(self, files: list) -> dict:
+        tree = {"name": "root", "type": "directory", "children": []}
+        for path in files:
+            rel_path = os.path.relpath(path, self.workspace_root)
+            parts = rel_path.split(os.sep)
+            current = tree
+            for i, part in enumerate(parts):
+                is_file = (i == len(parts) - 1)
+                existing = next((child for child in current["children"] if child["name"] == part), None)
+                if not existing:
+                    new_node = {
+                        "name": part,
+                        "type": "file" if is_file else "directory",
+                        "path": path if is_file else None
+                    }
+                    if not is_file:
+                        new_node["children"] = []
+                    current["children"].append(new_node)
+                    current = new_node
+                else:
+                    current = existing
+        return tree
 
-    if not os.path.exists(manifest_path):
-        error(f"Execution terminated: Manifest file target unmapped at {manifest_path}", component="AnalyserRunner")
-        return
+    def extract_and_save(self, manifest_files: list):
+        info("Extracting live graph topology and relationships from active Neo4j instance...", component="UIExtractor")
 
-    with open(manifest_path, "r", encoding="utf-8") as f:
-        manifest_data = json.load(f)
+        nodes_payload = []
+        edges_payload = []
+        resolved_nodes = {}
 
-    db_client = Neo4jClient(
-        uri=neo4j_config.get("uri", "bolt://localhost:7687"),
-        auth=(neo4j_config.get("username", "neo4j"), neo4j_config.get("password", "password"))
-    )
-
-    analyser_root = os.path.dirname(os.path.abspath(__file__))
-    AnalyserRegistry.discover_and_load_workers(analyser_root)
-    worker_classes = AnalyserRegistry.get_all_analysers()
-
-    info(f"Spawning {len(worker_classes)} background workers to feed the knowledge graph container context.", component="AnalyserRunner")
-
-    with ThreadPoolExecutor(max_workers=len(worker_classes)) as executor:
-        futures = []
-        for cls in worker_classes:
-            worker = cls()
-            info(f"Allocating execution thread targeting analytics worker node: [{worker.name}]", component="AnalyserRunner")
-            futures.append(executor.submit(worker.run_analysis, manifest_data, db_client, global_config_matrix))
-
-        for future in futures:
+        if hasattr(self.db_client, 'driver') and self.db_client._connected:
             try:
-                future.result()
-            except Exception as e:
-                error(f"Background thread ingestion crash details: {e}", component="AnalyserRunner")
+                with self.db_client.driver.session() as session:
+                    # Access unindexed keys using dynamic map brackets properties(n)['key'] to bypass database static schema warnings completely
+                    nodes_query = """
+                    MATCH (n)
+                    RETURN elementId(n) as el_id, labels(n) as labels, n.name as name,
+                           properties(n)['path'] as path, properties(n)['source_file'] as source_file
+                    """
+                    nodes_results = session.run(nodes_query)
+                    for record in nodes_results:
+                        el_id = record["el_id"]
+                        labels = record["labels"] or []
+                        path_val = record["path"]
+                        name_val = record["name"]
+                        src_file = record["source_file"]
 
-    # Execute fallback query session verification to report Java entities metrics before disconnect
-    try:
-        if hasattr(db_client, 'driver') and db_client._connected:
-            with db_client.driver.session() as session:
-                result = session.run("MATCH (f:File:Java) RETURN count(f) AS javaFilesCount")
-                record = result.single()
-                java_count = record["javaFilesCount"] if record else 0
-                info(f"Number of Java files found in Neo4j database: {java_count}", component="AnalyserRunner")
-    except Exception as err:
-        error(f"Failed executing database node summary verification query: {err}", component="AnalyserRunner")
+                        if "Document" in labels:
+                            group_type = "document"
+                            label_name = name_val or (path_val.split("/")[-1] if path_val else "Document")
+                        elif "Class" in labels or "Type" in labels:
+                            group_type = "class"
+                            label_name = name_val or "Class"
+                        elif "Method" in labels:
+                            group_type = "method"
+                            label_name = name_val or "Method"
+                            if not label_name.endswith("()"):
+                                label_name += "()"
+                        else:
+                            group_type = "file"
+                            label_name = name_val or (path_val.split("/")[-1] if path_val else f"Node_{el_id}")
 
-    db_client.close()
+                        node_id = path_val if (path_val and group_type in ["file", "document"]) else el_id
+
+                        resolved_nodes[el_id] = {
+                            "id": node_id,
+                            "label": label_name,
+                            "file_type": group_type,
+                            "source_file": src_file or path_val or ""
+                        }
+
+                    for n_entry in resolved_nodes.values():
+                        nodes_payload.append({
+                            "data": {
+                                "id": n_entry["id"],
+                                "label": n_entry["label"],
+                                "type": n_entry["file_type"].capitalize(),
+                                "source_file": n_entry["source_file"]
+                            }
+                        })
+
+                    relationships_query = """
+                    MATCH (s)-[r]->(t)
+                    RETURN elementId(s) as source_el_id, type(r) as relation_type, elementId(t) as target_el_id
+                    """
+                    rel_results = session.run(relationships_query)
+                    for record in rel_results:
+                        s_el = record["source_el_id"]
+                        t_el = record["target_el_id"]
+
+                        if s_el in resolved_nodes and t_el in resolved_nodes:
+                            s_node = resolved_nodes[s_el]
+                            t_node = resolved_nodes[t_el]
+
+                            edges_payload.append({
+                                "data": {
+                                    "id": f"edge_{s_el}_{t_el}",
+                                    "source": s_node["id"],
+                                    "target": t_node["id"],
+                                    "relation": record["relation_type"]
+                                }
+                            })
+            except Exception as ex:
+                error(f"Failed extracting live payload elements from Neo4j: {ex}", component="UIExtractor")
+
+        if not nodes_payload:
+            for file in manifest_files:
+                nodes_payload.append({
+                    "data": {
+                        "id": file,
+                        "label": os.path.basename(file),
+                        "type": "File",
+                        "source_file": file
+                    }
+                })
+
+        cytoscape_elements = {
+            "nodes": nodes_payload,
+            "edges": edges_payload
+        }
+
+        tree_data = self.build_tree_view(manifest_files)
+        final_payload = {
+            "treeView": tree_data,
+            "graph": cytoscape_elements
+        }
+
+        os.makedirs(os.path.dirname(self.output_file), exist_ok=True)
+        with open(self.output_file, "w", encoding="utf-8") as f:
+            json.dump(final_payload, f, indent=2, ensure_ascii=False)
+
+        success(f"UI presentation payload generated with {len(nodes_payload)} nodes and {len(edges_payload)} edges, stored under: {self.output_file}", component="UIExtractor")
 EOF
 
-# Compile the presentation asset bundle layout profiles
+# Rebuild extension distribution assets
 npm run package
 
-echo "✅ feat/analysis: Added post-analysis Cypher query step to count and log total Java files present in the Neo4j database instance!"
+echo "✅ fix/query: Replaced static schema properties matching rules with dynamic map lookups to eliminate unrecognized column warnings!"
