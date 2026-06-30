@@ -20,9 +20,9 @@ class CodeGraphInstaller:
         current = os.path.abspath(self.base_dir)
         while current != os.path.dirname(current):
             if os.path.basename(current) == ".graph-rag-explorer":
-                return os.path.join(current, "target", "install_outputs", self.tool_subpath, phase)
+                return os.path.join(current, "target", "install_reports", self.tool_subpath, phase)
             current = os.path.dirname(current)
-        return os.path.abspath(os.path.join(self.base_dir, "../../../../target/install_outputs", self.tool_subpath, phase))
+        return os.path.abspath(os.path.join(self.base_dir, "../../../../target/install_reports", self.tool_subpath, phase))
 
     def snapshot_environment(self, phase: str):
         """ Étape dédiée : Exécution du check et sauvegarde du rapport structurel """

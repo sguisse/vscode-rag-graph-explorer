@@ -14,13 +14,13 @@ class CoreInstaller:
         self.status = {}
 
     def find_target_dir(self, phase: str) -> str:
-        """ Détermine l'emplacement exact d'exportation au sein de l'architecture install_outputs """
+        """ Détermine l'emplacement exact d'exportation au sein de l'architecture install_reports """
         current = os.path.abspath(self.base_dir)
         while current != os.path.dirname(current):
             if os.path.basename(current) == ".graph-rag-explorer":
-                return os.path.join(current, "target", "install_outputs", self.tool_subpath, phase)
+                return os.path.join(current, "target", "install_reports", self.tool_subpath, phase)
             current = os.path.dirname(current)
-        return os.path.abspath(os.path.join(self.base_dir, "../../target/install_outputs", self.tool_subpath, phase))
+        return os.path.abspath(os.path.join(self.base_dir, "../../target/install_reports", self.tool_subpath, phase))
 
     def snapshot_environment(self, phase: str):
         """ Exécute l'analyse de statut et écrit les résultats sous forme d'instantané structurel JSON """

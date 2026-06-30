@@ -7,29 +7,29 @@ def generate_final_install_status():
     """ Localise la racine .graph-rag-explorer et fusionne fidèlement tous les statuts d'installation """
     info("Génération du rapport récapitulatif final de l'infrastructure de déploiement...", component="InstallSummary")
 
-    # Résolution dynamique du dossier racine réel .graph-rag-explorer/target/install_outputs
+    # Résolution dynamique du dossier racine réel .graph-rag-explorer/target/install_reports
     base_dir = os.path.dirname(os.path.abspath(__file__))
     current = os.path.abspath(base_dir)
-    install_outputs_base = None
+    install_reports_base = None
 
     while current != os.path.dirname(current):
         if os.path.basename(current) == ".graph-rag-explorer":
-            install_outputs_base = os.path.join(current, "target", "install_outputs")
+            install_reports_base = os.path.join(current, "target", "install_reports")
             break
         current = os.path.dirname(current)
 
-    if not install_outputs_base:
-        install_outputs_base = os.path.abspath(os.path.join(base_dir, "../../target/install_outputs"))
+    if not install_reports_base:
+        install_reports_base = os.path.abspath(os.path.join(base_dir, "../../target/install_reports"))
 
-    final_status_path = os.path.join(install_outputs_base, "final-status.json")
+    final_status_path = os.path.join(install_reports_base, "final-status.json")
 
-    # Alignement sur la hiérarchie de stockage réelle de target/install_outputs/
+    # Alignement sur la hiérarchie de stockage réelle de target/install_reports/
     mappings = {
-        "core": os.path.join(install_outputs_base, "core", "after", "status.json"),
-        "java_code_graph": os.path.join(install_outputs_base, "java", "code_graph", "after", "status.json"),
-        "java_graphify": os.path.join(install_outputs_base, "java", "graphify", "after", "status.json"),
-        "node_dependency_cruiser": os.path.join(install_outputs_base, "node", "dependency_cruiser", "after", "status.json"),
-        "node_swc": os.path.join(install_outputs_base, "node", "swc", "after", "status.json"),
+        "core": os.path.join(install_reports_base, "core", "after", "status.json"),
+        "java_code_graph": os.path.join(install_reports_base, "java", "code_graph", "after", "status.json"),
+        "java_graphify": os.path.join(install_reports_base, "java", "graphify", "after", "status.json"),
+        "node_dependency_cruiser": os.path.join(install_reports_base, "node", "dependency_cruiser", "after", "status.json"),
+        "node_swc": os.path.join(install_reports_base, "node", "swc", "after", "status.json"),
     }
 
     final_report = {}

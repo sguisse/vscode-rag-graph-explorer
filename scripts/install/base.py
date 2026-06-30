@@ -6,7 +6,7 @@ class EnvironmentContext:
     def __init__(self, workspace_root: str, configuration_matrix: Dict[str, Any]):
         self.workspace_root = os.path.abspath(workspace_root).replace("\\", "/")
         self.target_dir = f"{self.workspace_root}/.graph-rag-explorer/target"
-        self.install_outputs_dir = f"{self.target_dir}/install_outputs"
+        self.install_reports_dir = f"{self.target_dir}/install_reports"
         self.raw_outputs_dir = f"{self.target_dir}/raw_outputs"
         self.tools_dir = f"{self.target_dir}/tools"
         self.settings = configuration_matrix

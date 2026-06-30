@@ -7,7 +7,7 @@ class ReportHandler:
         self.context = context
 
     def save_snapshot(self, module_name: str, phase: str, data: dict):
-        target_path = f"{self.context.install_outputs_dir}/{module_name}/{phase}"
+        target_path = f"{self.context.install_reports_dir}/{module_name}/{phase}"
         os.makedirs(target_path, exist_ok=True)
         with open(f"{target_path}/status.json", "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
@@ -17,9 +17,9 @@ class ReportHandler:
         global_steps, global_ko, global_ok = 0, 0, 0
         has_warnings = False
 
-        if os.path.exists(self.context.install_outputs_dir):
-            for module_name in os.listdir(self.context.install_outputs_dir):
-                after_file = f"{self.context.install_outputs_dir}/{module_name}/after/status.json"
+        if os.path.exists(self.context.install_reports_dir):
+            for module_name in os.listdir(self.context.install_reports_dir):
+                after_file = f"{self.context.install_reports_dir}/{module_name}/after/status.json"
                 if os.path.exists(after_file):
                     try:
                         with open(after_file, "r", encoding="utf-8") as f:
@@ -41,5 +41,5 @@ class ReportHandler:
             "okCount": global_ok
         }
 
-        with open(f"{self.context.install_outputs_dir}/final-status.json", "w", encoding="utf-8") as out_f:
+        with open(f"{self.context.install_reports_dir}/final-status.json", "w", encoding="utf-8") as out_f:
             json.dump(final_report, out_f, indent=2, ensure_ascii=False)
