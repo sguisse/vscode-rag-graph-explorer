@@ -1,3 +1,6 @@
+//@ts-check
+'use strict';
+
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -67,6 +70,29 @@ export function activate(context: vscode.ExtensionContext) {
                     activeChildProcess = null;
                 }
                 panel.webview.postMessage({ command: "updateStatus", payload: "ready" });
+            } else if (message.command === 'openExternal') {
+                if (message.url) {
+                    try {
+                        vscode.env.openExternal(vscode.Uri.parse(message.url));
+                    } catch (err) {
+                        vscode.window.showErrorMessage(`Failed to open external link: ${message.url}`);
+                    }
+                }
+            } else if (message.command === 'revealFile') {
+                if (message.path) {
+                    const workspaceFolders = vscode.workspace.workspaceFolders;
+                    const workspaceRoot = workspaceFolders && workspaceFolders.length > 0 ? workspaceFolders[0].uri.fsPath : '';
+                    const fullPath = path.isAbsolute(message.path) ? message.path : path.join(workspaceRoot, message.path);
+                    if (fs.existsSync(fullPath)) {
+                        try {
+                            const doc = await vscode.workspace.openTextDocument(fullPath);
+                            await vscode.window.showTextDocument(doc, {
+                                viewColumn: message.openEditor ? vscode.ViewColumn.One : undefined,
+                                preserveFocus: !message.openEditor
+                            });
+                        } catch (err) {}
+                    }
+                }
             }
         });
     });

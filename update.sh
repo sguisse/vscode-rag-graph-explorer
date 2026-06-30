@@ -1,162 +1,31 @@
 #!/usr/bin/env bash
-# ==============================================================================
-# 🕸️ GRAPH RAG EXPLORER - MULTI-PROTOCOL LINK ROUTER ENHANCEMENT
-# ==============================================================================
-# This script updates FinderHtml.tsx to intercept all resource anchor clicks.
-# It halts native webview sandbox execution and dispatches an event command up
-# to the VS Code Extension Host to force opening in a new default browser tab.
-# ==============================================================================
+# Production-ready patch to enable text selection in the Terminal log monitor while preventing edits.
 
-set -e
+TARGET_FILE="src/webview/components/TerminalTab.tsx"
 
-mkdir -p src/webview/components/core/finder
+if [ -f "$TARGET_FILE" ]; then
+    python3 -c "
+with open('$TARGET_FILE', 'r', encoding='utf-8') as f:
+    content = f.read()
 
-# ==============================================================================
-# ⚡ REWRITE FILE: CLICK DELEGATION LINK ROUTER (FINDERHTML.TSX)
-# ==============================================================================
-cat << 'EOF' > src/webview/components/core/finder/FinderHtml.tsx
-import React, { useMemo } from 'react';
+# Enable user text selection on the log container viewport
+content = content.replace(
+    'className=\"flex-1 bg-black rounded-lg border border-[var(--vscode-panel-border)] p-4 font-mono text-xs overflow-y-auto flex flex-col gap-1 relative\"',
+    'className=\"flex-1 bg-black rounded-lg border border-[var(--vscode-panel-border)] p-4 font-mono text-xs overflow-y-auto flex flex-col gap-1 relative select-text\"'
+)
 
-export interface TextChunk {
-    text: string;
-    isMatch: boolean;
-    globalIndex?: number;
-}
+# Enable user text selection on individual line layout streams
+content = content.replace(
+    'className=\"flex items-start gap-2 leading-relaxed whitespace-pre-wrap break-all\"',
+    'className=\"flex items-start gap-2 leading-relaxed whitespace-pre-wrap break-all select-text\"'
+)
 
-interface FinderHtmlProps {
-    text: string;
-    searchQuery: string;
-    caseSensitive: boolean;
-    wholeWord: boolean;
-    useRegex: boolean;
-    currentMatchIndex: number;
-    globalMatchCounterRef?: React.MutableRefObject<number>;
-}
-
-export const FinderHtml: React.FC<FinderHtmlProps> = ({
-    text,
-    searchQuery,
-    caseSensitive,
-    wholeWord,
-    useRegex,
-    currentMatchIndex,
-    globalMatchCounterRef
-}) => {
-    const chunks = useMemo(() => {
-        const rawText = text || '';
-        if (!searchQuery) {
-            return [{ text: rawText, isMatch: false }];
-        }
-
-        let pattern = useRegex ? searchQuery : searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        if (wholeWord) {
-            pattern = `\\b${pattern}\\b`;
-        }
-
-        try {
-            const regex = new RegExp(pattern, caseSensitive ? 'g' : 'gi');
-            const result: TextChunk[] = [];
-            let lastIndex = 0;
-            let match;
-
-            while ((match = regex.exec(rawText)) !== null) {
-                if (match.index > lastIndex) {
-                    result.push({ text: rawText.substring(lastIndex, match.index), isMatch: false });
-                }
-
-                const currentIdx = globalMatchCounterRef ? globalMatchCounterRef.current++ : 0;
-
-                result.push({
-                    text: match[0],
-                    isMatch: true,
-                    globalIndex: currentIdx
-                });
-
-                lastIndex = regex.lastIndex;
-                if (match[0].length === 0) {
-                    regex.lastIndex++;
-                }
-            }
-
-            if (lastIndex < rawText.length) {
-                result.push({ text: rawText.substring(lastIndex), isMatch: false });
-            }
-
-            return result;
-        } catch (e) {
-            return [{ text: rawText, isMatch: false }];
-        }
-    }, [text, searchQuery, caseSensitive, wholeWord, useRegex, globalMatchCounterRef]);
-
-    // SOLID CLICK ROUTER: Safely delegates link routing out of the webview sandbox sandbox environment
-    const handleLinkClickIntercept = (e: React.MouseEvent<HTMLSpanElement>) => {
-        const targetElement = e.target as HTMLElement;
-        const closestAnchor = targetElement.closest('a');
-
-        if (closestAnchor) {
-            // Prevent the internal sandbox from trying to process file:// or bolt:// routes
-            e.preventDefault();
-            e.stopPropagation();
-
-            const targetUrl = closestAnchor.getAttribute('href');
-            if (!targetUrl) return;
-
-            // Resolve access to the global VS Code API instance acquired in your extension page boilerplate
-            const vscode = (window as any).vscodeApi || (typeof (window as any).acquireVsCodeApi === 'function' ? (window as any).acquireVsCodeApi() : null);
-
-            if (vscode) {
-                // Post command up to your Extension Host message router listener
-                vscode.postMessage({
-                    command: 'openExternal',
-                    url: targetUrl
-                });
-            } else {
-                // Standalone web browser testing fallback mode profiles
-                window.open(targetUrl, '_blank', 'noopener,noreferrer');
-            }
-        }
-    };
-
-    return (
-        <span
-            onClick={handleLinkClickIntercept}
-            dangerouslySetInnerHTML={{
-                __html: chunks.map(chunk => {
-                    if (chunk.isMatch) {
-                        const isActive = chunk.globalIndex === currentMatchIndex;
-                        const markClass = isActive
-                            ? 'bg-orange-500 text-black font-extrabold shadow-sm outline outline-1 outline-white z-10 px-0.5 rounded-sm'
-                            : 'bg-yellow-400 text-black px-0.5 rounded-sm';
-                        return `<mark data-match-index="${chunk.globalIndex}" class="${markClass}">${chunk.text}</mark>`;
-                    }
-                    return chunk.text;
-                }).join('')
-            }}
-        />
-    );
-};
-EOF
-
-# ==============================================================================
-# 🔏 PHASE 2: RE-HYDRATION OF BACKTICKS (POST-PROCESSOR)
-# ==============================================================================
-python3 -c "
-import os
-for root, _, files in os.walk('.'):
-    for file in files:
-        if file.endswith(('.tsx', '.ts')):
-            path = os.path.join(root, file)
-            try:
-                with open(path, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                if '___TRIPLE_TICK___' in content or '___BTICK___' in content:
-                    content = content.replace('___TRIPLE_TICK___', chr(96)*3).replace('___BTICK___', chr(96))
-                    with open(path, 'w', encoding='utf-8') as f:
-                        f.write(content)
-            except Exception:
-                pass
+with open('$TARGET_FILE', 'w', encoding='utf-8') as f:
+    f.write(content)
 "
+fi
 
-echo "=============================================================================="
-echo "✅ feat/external-browser-tabs: Linked click delegation routing fully secured inside FinderHtml!"
-echo "=============================================================================="
+# Rebuild extension visual asset bundles
+npm run package
+
+echo "✅ fix/terminal: Logs display area and inner row tokens have been updated with selection tracking mechanics to enable keyboard/mouse text selection!"

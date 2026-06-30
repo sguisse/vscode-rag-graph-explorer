@@ -18,7 +18,7 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => 
     const [copied, setCopied] = useState<boolean>(false);
 
     // --- États de contrôle de la recherche ---
-    const [showFind, setShowFind] = useState<boolean>(true);
+    const [showFind, setShowFind] = useState<boolean>(false);
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [caseSensitive, setCaseSensitive] = useState<boolean>(false);
     const [wholeWord, setWholeWord] = useState<boolean>(false);
@@ -100,21 +100,21 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => 
     globalMatchCounterRef.current = 0;
 
     return (
-        <div className="w-full h-full p-0 flex flex-col overflow-hidden bg-[var(--vscode-editor-background)]">
-            <div className="w-full max-w-6xl mx-auto flex flex-col h-full gap-4 relative">
+        <div className="flex flex-col bg-[var(--vscode-editor-background)] p-0 w-full h-full overflow-hidden">
+            <div className="relative flex flex-col gap-4 mx-auto w-full max-w-6xl h-full">
 
                 {/* Tableau de bord de contrôle supérieur */}
-                <div className="bg-[var(--vscode-editorWidget-background)] p-4 rounded-xl border border-[var(--vscode-panel-border)] shadow-md flex items-center justify-between flex-shrink-0 gap-4">
+                <div className="flex flex-shrink-0 justify-between items-center gap-4 bg-[var(--vscode-editorWidget-background)] shadow-md p-4 border border-[var(--vscode-panel-border)] rounded-xl">
                     <div className="flex items-center gap-3">
-                        <span className="codicon codicon-terminal text-blue-500 text-lg"></span>
-                        <h2 className="text-xs font-bold tracking-wide uppercase text-[var(--vscode-foreground)]">Backend Script Runtime Monitor</h2>
+                        <span className="text-blue-500 text-lg codicon codicon-terminal"></span>
+                        <h2 className="font-bold text-[var(--vscode-foreground)] text-xs uppercase tracking-wide">Backend Script Runtime Monitor</h2>
                     </div>
                     <div className="flex items-center gap-3">
-                        <label className="text-xs font-medium text-[var(--vscode-descriptionForeground)]">Filter Level:</label>
+                        <label className="font-medium text-[var(--vscode-descriptionForeground)] text-xs">Filter Level:</label>
                         <select
                             value={selectedLevel}
                             onChange={(e) => setSelectedLevel(e.target.value)}
-                            className="bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] shadow-sm px-2 py-1 border border-[var(--vscode-input-border)] rounded-md outline-none text-xs font-semibold"
+                            className="bg-[var(--vscode-input-background)] shadow-sm px-2 py-1 border border-[var(--vscode-input-border)] rounded-md outline-none font-semibold text-[var(--vscode-input-foreground)] text-xs"
                         >
                             <option value="debug">🪲 Debug</option>
                             <option value="info">ℹ️ Info</option>
@@ -127,10 +127,10 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => 
                         >
                             <span className="codicon codicon-search"></span> Find
                         </button>
-                        <button onClick={handleCopy} className="px-3 py-1 bg-blue-600/10 text-blue-500 rounded-md text-xs font-semibold flex items-center gap-1.5">
+                        <button onClick={handleCopy} className="flex items-center gap-1.5 bg-blue-600/10 px-3 py-1 rounded-md font-semibold text-blue-500 text-xs">
                             <span className={"codicon " + (copied ? "codicon-check" : "codicon-copy")}></span> {copied ? "Copied!" : "Copy Logs"}
                         </button>
-                        <button onClick={clearLogs} className="px-3 py-1 bg-red-600/10 text-red-500 rounded-md text-xs font-semibold flex items-center gap-1.5">
+                        <button onClick={clearLogs} className="flex items-center gap-1.5 bg-red-600/10 px-3 py-1 rounded-md font-semibold text-red-500 text-xs">
                             <span className="codicon codicon-trash"></span> Clear Output
                         </button>
                     </div>
@@ -138,7 +138,7 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => 
 
                 {/* Injection du Toolbar de recherche abstrait */}
                 {showFind && (
-                    <div className="absolute top-16 right-4 z-50">
+                    <div className="top-16 right-4 z-50 absolute">
                         <FinderBase
                             searchQuery={searchQuery} setSearchQuery={setSearchQuery}
                             caseSensitive={caseSensitive} setCaseSensitive={setCaseSensitive}
@@ -155,11 +155,11 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => 
                 {/* Zone d'affichage des lignes de log */}
                 <div
                     ref={logsContainerRef}
-                    className="flex-1 bg-black rounded-lg border border-[var(--vscode-panel-border)] p-4 font-mono text-xs overflow-y-auto flex flex-col gap-1 relative"
+                    className="relative flex flex-col flex-1 gap-1 bg-black p-4 border border-[var(--vscode-panel-border)] rounded-lg overflow-y-auto font-mono text-xs select-text"
                 >
                     {filteredLogs.length > 0 ? (
                         filteredLogs.map((log, idx) => (
-                            <div key={idx} className="flex items-start gap-2 leading-relaxed whitespace-pre-wrap break-all">
+                            <div key={idx} className="flex items-start gap-2 break-all leading-relaxed whitespace-pre-wrap select-text">
                                 <span className={getLogColor(log.level)}>
                                     {/* Délégation complète de la surveillance lexicale à FinderHtml */}
                                     <FinderHtml
@@ -175,7 +175,7 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => 
                             </div>
                         ))
                     ) : (
-                        <div className="h-full flex flex-col items-center justify-center text-gray-500 italic">
+                        <div className="flex flex-col justify-center items-center h-full text-gray-500 italic">
                             No log traces captured matching current severity filter level constraint.
                         </div>
                     )}
