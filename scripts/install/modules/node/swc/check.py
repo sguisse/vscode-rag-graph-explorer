@@ -28,7 +28,7 @@ class NodeSwcChecker(BaseCheckModule):
 
     def check_swc_core_package(self):
         self.steps_count += 1
-        swc_path = f"{self.context.workspace_root}/scripts/analyser/node_modules/@swc/core"
+        swc_path = f"{self.context.tools_dir}/node/node_modules/@swc/core"
         if os.path.exists(swc_path):
             self.status["swc"] = {"status": "✅"}
         else:

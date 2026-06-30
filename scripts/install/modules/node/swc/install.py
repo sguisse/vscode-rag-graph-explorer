@@ -13,10 +13,10 @@ class NodeSwcInstaller(BaseInstallModule):
             execute_tracked_command(["npm", "init", "-y"], "swc_init", cwd=target_env)
 
     def install_swc_core(self, target_env: str):
-        execute_tracked_command(["npm", "install", "@swc/core"], "swc_install", cwd=target_env)
+        execute_tracked_command(["npm", "install", "@swc/core@1.15.43"], "swc_install", cwd=target_env)
 
     def execute_all_installations(self) -> None:
-        target_env = f"{self.context.workspace_root}/scripts/analyser"
+        target_env = f"{self.context.tools_dir}/node"
         os.makedirs(target_env, exist_ok=True)
         self.init_package_json(target_env)
         self.install_swc_core(target_env)

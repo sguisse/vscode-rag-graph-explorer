@@ -17,7 +17,7 @@ class NodeDependencyCruiserChecker(BaseCheckModule):
 
     def check_dependency_cruiser_modules(self):
         self.steps_count += 1
-        dc_path = f"{self.context.workspace_root}/scripts/analyser/node_modules/dependency-cruiser"
+        dc_path = f"{self.context.tools_dir}/node/node_modules/dependency-cruiser"
         if os.path.exists(dc_path): self.status["dependency_cruiser"] = {"status": "✅"}
         else:
             self.status["dependency_cruiser"] = {"status": "❌"}
