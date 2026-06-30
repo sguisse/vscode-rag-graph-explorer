@@ -120,10 +120,30 @@
           "default": "5.26.0",
           "description": "The specific community release version of the local sandboxed database engine server."
         },
+        "graphRagExplorer.neo4j.host": {
+          "type": "string",
+          "default": "localhost",
+          "description": "Neo4j host."
+        },
+        "graphRagExplorer.neo4j.port.bolt": {
+          "type": "number",
+          "default": 7687,
+          "description": "Neo4j connection endpoint port used to access db API."
+        },
+        "graphRagExplorer.neo4j.port.http": {
+          "type": "number",
+          "default": 7474,
+          "description": "Neo4j website client http port"
+        },
         "graphRagExplorer.neo4j.uri": {
           "type": "string",
-          "default": "bolt://localhost:7687",
+          "default": "bolt://${graphRagExplorer.neo4j.host}:${graphRagExplorer.neo4j.port.bolt}",
           "description": "Neo4j connection endpoint mapping into the embedded jQAssistant server database."
+        },
+        "graphRagExplorer.neo4j.url": {
+          "type": "string",
+          "default": "http://${graphRagExplorer.neo4j.host}:${graphRagExplorer.neo4j.port.http}/browser/preview/",
+          "description": "Neo4j website client URL."
         },
         "graphRagExplorer.neo4j.username": {
           "type": "string",

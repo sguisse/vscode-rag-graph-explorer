@@ -1,355 +1,524 @@
 #!/usr/bin/env bash
-# Production-ready script to inject semantic ID markers to the root layout container of each webview tab component.
+# Production-ready patch to update Neo4j setup configuration schema parameters and introduce an interactive console web launcher action button.
 
-mkdir -p src/webview/components
+mkdir -p src/webview/components/explorer-tab/graph
 
-# 1. Update Terminal Tab Component
-cat << 'EOF' > src/webview/components/TerminalTab.tsx
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { FinderBase } from './core/finder/FinderBase';
-import { FinderHtml } from './core/finder/FinderHtml';
-
-interface LogEntry {
-    level: 'debug' | 'info' | 'warn' | 'error';
-    message: string;
-    timestamp: string;
-}
-
-interface TerminalTabProps {
-    logs: LogEntry[];
-    clearLogs: () => void;
-}
-
-export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => {
-    const [selectedLevel, setSelectedLevel] = useState<string>('info');
-    const [copied, setCopied] = useState<boolean>(false);
-
-    // --- Searching Controls ---
-    const [showFind, setShowFind] = useState<boolean>(false);
-    const [searchQuery, setSearchQuery] = useState<string>('');
-    const [caseSensitive, setCaseSensitive] = useState<boolean>(false);
-    const [wholeWord, setWholeWord] = useState<boolean>(false);
-    const [useRegex, setUseRegex] = useState<boolean>(false);
-    const [currentMatchIndex, setCurrentMatchIndex] = useState<number>(0);
-    const [totalMatches, setTotalMatches] = useState<number>(0);
-
-    const terminalEndRef = useRef<HTMLDivElement>(null);
-    const logsContainerRef = useRef<HTMLDivElement>(null);
-    const globalMatchCounterRef = useRef<number>(0);
-
-    const severityMap: Record<string, number> = { debug: 0, info: 1, warn: 2, error: 3 };
-
-    const filteredLogs = useMemo(() => {
-        const targetSeverity = severityMap[selectedLevel] ?? 1;
-        return logs.filter(log => (severityMap[log.level] ?? 1) >= targetSeverity);
-    }, [logs, selectedLevel]);
-
-    useEffect(() => {
-        if (!searchQuery) {
-            setTotalMatches(0);
-            return;
+# 1. Fully rebuild package.json with updated property schemas
+cat << 'EOF' > package.json
+{
+  "name": "graph-rag-explorer",
+  "license": "MIT",
+  "displayName": "Graph RAG Explorer",
+  "description": "Expert Node Navigator and Architecture Explorer via RAG and Gemini",
+  "version": "1.5.0",
+  "publisher": "sguisse",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "graphRagExplorer.openTool",
+        "title": "Graph RAG Explorer --> 🕸️ Open UI"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "graphRagExplorer.openTool",
+          "group": "navigation"
         }
-        let pattern = useRegex ? searchQuery : searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        if (wholeWord) pattern = `\\b${pattern}\\b`;
+      ],
+      "explorer/context": [
+        {
+          "command": "graphRagExplorer.openTool",
+          "group": "navigation@0"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "🕸️Graph RAG Explorer",
+      "properties": {
+        "graphRagExplorer.EntitiesTypesList": {
+          "type": "array",
+          "description": "List of predefined entity types for the graph exploration.",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "file",
+            "class",
+            "method",
+            "document"
+          ]
+        },
+        "graphRagExplorer.regexFilterEnabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable Regex matching in the filter bar by default."
+        },
+        "graphRagExplorer.TreeFilterEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Apply search filters on the Tree View by default."
+        },
+        "graphRagExplorer.geminiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API Key for Gemini Assistant analysis."
+        },
+        "graphRagExplorer.tooltipDelay": {
+          "type": "number",
+          "default": 2000,
+          "description": "Delay in milliseconds before showing the custom tooltips on hover."
+        },
+        "graphRagExplorer.pinFilesExporter": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically pin the Graph RAG Explorer UI tab when opened."
+        },
+        "graphRagExplorer.graphLegendEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Display the visual topological legend by default upon launch."
+        },
+        "graphRagExplorer.callersDepth": {
+          "type": "number",
+          "default": 1,
+          "description": "Default callers upstream lookup relationship parsing depth."
+        },
+        "graphRagExplorer.calleesDepth": {
+          "type": "number",
+          "default": 1,
+          "description": "Default callees downstream lookup relationship parsing depth."
+        },
+        "graphRagExplorer.excludePathsRegex": {
+          "type": "string",
+          "default": ".*/node_modules/.*|.*/target/.*|.*/\\.git/.*|.*/dist/.*|.*/.*-tmp/.*|.*/.*-out/.*|.*/.idea/.*|.*/.vscode/.*|.*/.history/.*|.*/exported-files/.*,/\\.[^/]+",
+          "description": "Regex to exclude paths containing specific directories (e.g., node_modules, target, .git, dist, /\\.[^/]+)."
+        },
+        "graphRagExplorer.forceScriptSync": {
+          "type": "boolean",
+          "default": false,
+          "description": "Force synchronized recreation of local project core scripts."
+        },
+        "graphRagExplorer.logFileEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable background file logging redirection (.graph-rag-explorer/logs/)"
+        },
+        "graphRagExplorer.logFileMaxSize": {
+          "type": "number",
+          "default": 5,
+          "description": "Maximum size per log file before rotation triggers (in Megabytes)."
+        },
+        "graphRagExplorer.logFileMaxCountRetension": {
+          "type": "number",
+          "default": 5,
+          "description": "Maximum number of historical log file nodes to keep before cycling."
+        },
+        "graphRagExplorer.neo4j.version": {
+          "type": "string",
+          "default": "5.26.0",
+          "description": "The specific community release version of the local sandboxed database engine server."
+        },
+        "graphRagExplorer.neo4j.host": {
+          "type": "string",
+          "default": "localhost",
+          "description": "Neo4j host."
+        },
+        "graphRagExplorer.neo4j.port.bolt": {
+          "type": "number",
+          "default": 7687,
+          "description": "Neo4j connection endpoint port used to access db API."
+        },
+        "graphRagExplorer.neo4j.port.http": {
+          "type": "number",
+          "default": 7474,
+          "description": "Neo4j website client http port"
+        },
+        "graphRagExplorer.neo4j.uri": {
+          "type": "string",
+          "default": "bolt://${graphRagExplorer.neo4j.host}:${graphRagExplorer.neo4j.port.bolt}",
+          "description": "Neo4j connection endpoint mapping into the embedded jQAssistant server database."
+        },
+        "graphRagExplorer.neo4j.url": {
+          "type": "string",
+          "default": "http://${graphRagExplorer.neo4j.host}:${graphRagExplorer.neo4j.port.http}/browser/preview/",
+          "description": "Neo4j website client URL."
+        },
+        "graphRagExplorer.neo4j.username": {
+          "type": "string",
+          "default": "neo4j",
+          "description": "Database account access identifier username."
+        },
+        "graphRagExplorer.neo4j.password": {
+          "type": "string",
+          "default": "password",
+          "description": "Database secure transaction authorization secret credentials."
+        },
+        "graphRagExplorer.jqassistant.version": {
+          "type": "string",
+          "default": "2.9.1",
+          "description": "The target production-ready release version of the portable jQAssistant CLI tool."
+        },
+        "graphRagExplorer.jqassistant.downloadUrl": {
+          "type": "string",
+          "default": "https://github.com/jQAssistant/jqassistant/releases/download/${version}/jqassistant-commandline-neo4jv5-${version}-distribution.zip",
+          "description": "The absolute parameterized GitHub Releases download link for fetching portable jQAssistant distribution packages."
+        },
+        "graphRagExplorer.jqassistant.xmlReportPath": {
+          "type": "string",
+          "default": "./target/site/jacoco/jacoco.xml",
+          "description": "Workspace matching path targeting local JaCoCo XML metric reports."
+        },
+        "graphRagExplorer.dependencyCruiser.configFile": {
+          "type": "string",
+          "default": ".dependency-cruiser.json",
+          "description": "Configuration rules path definition for Dependency Cruiser checks."
+        },
+        "graphRagExplorer.graphify.arguments": {
+          "type": "string",
+          "default": "--deep-scan",
+          "description": "Optional runtime execution flags passed onto the background python graphify engine."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "webpack",
+    "watch": "webpack --watch",
+    "package": "webpack --mode production",
+    "vscode:prepublish": "npm run package"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^18.19.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@types/vscode": "^1.80.0",
+    "@types/cytoscape": "^3.25.7",
+    "css-loader": "^6.8.1",
+    "style-loader": "^3.3.3",
+    "ts-loader": "^9.4.3",
+    "typescript": "^5.1.3",
+    "webpack": "^5.88.0",
+    "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {
+    "@primer/octicons-react": "^19.28.1",
+    "@vscode/vsce": "^3.9.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "cytoscape": "^3.30.0"
+  }
+}
+EOF
 
+# 2. Update extension orchestrator host logic to correctly compute template URL options
+cat << 'EOF' > src/extension.ts
+//@ts-check
+'use strict';
+
+import * as vscode from 'vscode';
+import * as path from 'path';
+import * as fs from 'fs';
+import * as childProcess from 'child_process';
+
+let activeChildProcess: any = null;
+const SCRIPT_SYNC_IGNORED_NAMES = new Set(["__pycache__", ".python_packages", ".bootstrap.lock"]);
+
+function shouldSkipScriptSyncEntry(fileName: string): boolean {
+    return SCRIPT_SYNC_IGNORED_NAMES.has(fileName) || fileName.endsWith(".pyc") || fileName.endsWith(".pyo");
+}
+
+export function activate(context: vscode.ExtensionContext) {
+    let disposable = vscode.commands.registerCommand('graphRagExplorer.openTool', () => {
+        const panel = vscode.window.createWebviewPanel(
+            'graphRagExplorer', 'Graph RAG Explorer', vscode.ViewColumn.One,
+            {
+                enableScripts: true,
+                retainContextWhenHidden: true,
+                localResourceRoots: [vscode.Uri.file(path.join(context.extensionPath, 'dist'))]
+            }
+        );
+
+        const graphConfig = vscode.workspace.getConfiguration('graphRagExplorer');
+        if (graphConfig.get('pinFilesExporter') !== false) {
+            vscode.commands.executeCommand('workbench.action.pinEditor');
+        }
+
+        panel.webview.html = getWebviewContent(panel.webview, context.extensionPath);
+
+        const saveListener = vscode.workspace.onDidSaveTextDocument((document) => {
+            if (document.uri.scheme !== 'file') return;
+            const relativePath = vscode.workspace.asRelativePath(document.uri);
+            runPythonScan(context, panel, "delta", relativePath);
+        });
+        context.subscriptions.push(saveListener);
+
+        panel.onDidDispose(() => {
+            saveListener.dispose();
+            if (activeChildProcess) {
+                try { activeChildProcess.kill('SIGKILL'); } catch(e){}
+                activeChildProcess = null;
+            }
+        });
+
+        panel.webview.onDidReceiveMessage(async message => {
+            if (message.command === 'ready') {
+                sendConfig(panel, context);
+                runPythonScan(context, panel, "deep");
+            } else if (message.command === 'forceRefreshScan') {
+                const mode = message.mode || "deep";
+                let targetFile = "";
+                if (mode === "delta") {
+                    const activeEditor = vscode.window.activeTextEditor;
+                    if (activeEditor && activeEditor.document.uri.scheme === 'file') {
+                        targetFile = vscode.workspace.asRelativePath(activeEditor.document.uri);
+                    } else {
+                        vscode.window.showWarningMessage("Delta Reload parsing rules require an active text file window context.");
+                        panel.webview.postMessage({ command: "updateStatus", payload: "ready" });
+                        return;
+                    }
+                }
+                runPythonScan(context, panel, mode, targetFile);
+            } else if (message.command === 'killAnalysis') {
+                if (activeChildProcess) {
+                    try { activeChildProcess.kill('SIGKILL'); } catch (err) {}
+                    activeChildProcess = null;
+                }
+                panel.webview.postMessage({ command: "updateStatus", payload: "ready" });
+            } else if (message.command === 'openExternal') {
+                if (message.url) {
+                    try {
+                        vscode.env.openExternal(vscode.Uri.parse(message.url));
+                    } catch (err) {
+                        vscode.window.showErrorMessage(`Failed to open external link: ${message.url}`);
+                    }
+                }
+            } else if (message.command === 'revealFile') {
+                if (message.path) {
+                    const workspaceFolders = vscode.workspace.workspaceFolders;
+                    const workspaceRoot = workspaceFolders && workspaceFolders.length > 0 ? workspaceFolders[0].uri.fsPath : '';
+                    const fullPath = path.isAbsolute(message.path) ? message.path : path.join(workspaceRoot, message.path);
+                    if (fs.existsSync(fullPath)) {
+                        try {
+                            const doc = await vscode.workspace.openTextDocument(fullPath);
+                            await vscode.window.showTextDocument(doc, {
+                                viewColumn: message.openEditor ? vscode.ViewColumn.One : undefined,
+                                preserveFocus: !message.openEditor
+                            });
+                        } catch (err) {}
+                    }
+                }
+            }
+        });
+    });
+    context.subscriptions.push(disposable);
+}
+
+function copyFolderRecursiveSync(source: string, target: string) {
+    if (!fs.existsSync(target)) {
+        fs.mkdirSync(target, { recursive: true });
+    }
+    if (fs.existsSync(source)) {
+        const files = fs.readdirSync(source);
+        for (const file of files) {
+            if (shouldSkipScriptSyncEntry(file)) continue;
+            const curSource = path.join(source, file);
+            const curTarget = path.join(target, file);
+            if (fs.statSync(curSource).isDirectory()) {
+                copyFolderRecursiveSync(curSource, curTarget);
+            } else {
+                fs.copyFileSync(curSource, curTarget);
+            }
+        }
+    }
+}
+
+function hasOutdatedFiles(source: string, target: string): boolean {
+    if (!fs.existsSync(source)) return false;
+    if (!fs.existsSync(target)) return true;
+
+    const files = fs.readdirSync(source);
+    for (const file of files) {
+        if (shouldSkipScriptSyncEntry(file)) continue;
+        const curSource = path.join(source, file);
+        const curTarget = path.join(target, file);
+        const sourceStat = fs.statSync(curSource);
+
+        if (sourceStat.isDirectory()) {
+            if (hasOutdatedFiles(curSource, curTarget)) return true;
+            continue;
+        }
+
+        if (!fs.existsSync(curTarget)) return true;
+        const targetStat = fs.statSync(curTarget);
+        if (!targetStat.isFile() || targetStat.size !== sourceStat.size) return true;
+        if (!fs.readFileSync(curSource).equals(fs.readFileSync(curTarget))) return true;
+    }
+    return false;
+}
+
+function syncCoreScripts(context: vscode.ExtensionContext, workspaceRoot: string): boolean {
+    const targetDir = path.join(workspaceRoot, ".graph-rag-explorer", "scripts");
+    const versionFilePath = path.join(targetDir, "version.json");
+    const currentVersion = context.extension.packageJSON.version;
+    const sourceDir = path.join(context.extensionPath, "scripts");
+    const graphConfig = vscode.workspace.getConfiguration("graphRagExplorer");
+    let needsSync = graphConfig.get("forceScriptSync") === true || !fs.existsSync(targetDir) || !fs.existsSync(versionFilePath);
+
+    if (!needsSync && fs.existsSync(versionFilePath)) {
         try {
-            const regex = new RegExp(pattern, caseSensitive ? 'g' : 'gi');
-            let count = 0;
-            filteredLogs.forEach(log => {
-                const matches = log.message.match(regex);
-                if (matches) count += matches.length;
-            });
-            setTotalMatches(count);
-        } catch (e) {
-            setTotalMatches(0);
-        }
-    }, [filteredLogs, searchQuery, caseSensitive, wholeWord, useRegex]);
+            if (JSON.parse(fs.readFileSync(versionFilePath, "utf-8")).version !== currentVersion) needsSync = true;
+        } catch (e) { needsSync = true; }
+    }
+    if (!needsSync) {
+        needsSync = hasOutdatedFiles(sourceDir, targetDir);
+    }
+    if (needsSync) {
+        try {
+            copyFolderRecursiveSync(sourceDir, targetDir);
+            fs.writeFileSync(versionFilePath, JSON.stringify({ version: currentVersion }), "utf-8");
+        } catch (err) { return false; }
+    }
+    return true;
+}
 
-    useEffect(() => {
-        setCurrentMatchIndex(0);
-    }, [searchQuery, caseSensitive, wholeWord, useRegex, selectedLevel]);
+function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPanel, mode: string, targetFile: string = "") {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders || workspaceFolders.length === 0) return;
 
-    useEffect(() => {
-        if (totalMatches === 0 || !showFind) return;
-        const targetActiveElement = logsContainerRef.current?.querySelector(`[data-match-index="${currentMatchIndex}"]`);
-        if (targetActiveElement) {
-            targetActiveElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-    }, [currentMatchIndex, totalMatches, showFind]);
+    const workspaceRoot = workspaceFolders[0].uri.fsPath;
+    const graphConfig = vscode.workspace.getConfiguration("graphRagExplorer");
+    const targetDir = path.join(workspaceRoot, ".graph-rag-explorer", "scripts");
 
-    useEffect(() => {
-        if (!searchQuery) {
-            terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-        }
-    }, [filteredLogs, searchQuery]);
+    syncCoreScripts(context, workspaceRoot);
+    panel.webview.postMessage({ command: "updateStatus", payload: "building" });
 
-    const handleCopy = () => {
-        const textToCopy = filteredLogs.map(log => log.message).join('\n');
-        navigator.clipboard.writeText(textToCopy).then(() => {
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
+    const parseLogLine = (line: string, fallbackLevel: 'debug' | 'info' | 'warn' | 'error') => {
+        const cleanLine = line.trim();
+        if (!cleanLine) return;
+        let level = fallbackLevel;
+        if (cleanLine.includes("🪲") || cleanLine.includes("[DEBUG]")) level = "debug";
+        else if (cleanLine.includes("⚠️") || cleanLine.includes("[WARN]")) level = "warn";
+        else if (cleanLine.includes("❌") || cleanLine.includes("[ERROR]")) level = "error";
+        else if (cleanLine.includes("ℹ️") || cleanLine.includes("[INFO]") || cleanLine.includes("✅")) level = "info";
+
+        panel.webview.postMessage({
+            command: "logTrace",
+            payload: { level: level, message: cleanLine, timestamp: new Date().toLocaleTimeString() }
         });
     };
 
-    const getLogColor = (level: string) => {
-        switch (level) {
-            case 'debug': return 'text-gray-400';
-            case 'info': return 'text-blue-400';
-            case 'warn': return 'text-yellow-500 font-semibold';
-            case 'error': return 'text-red-500 font-bold';
-            default: return 'text-white';
+    const runnerScript = path.join(targetDir, "main.py");
+    let args = [runnerScript];
+
+    const isWindows = process.platform === 'win32';
+    const pythonBinary = isWindows ? 'python' : 'python3';
+
+    const payloadConfig = {
+        workspaceRoot: workspaceRoot,
+        excludePathsRegex: graphConfig.get("excludePathsRegex") ?? "",
+        includeExtensions: [".java", ".ts", ".js", ".py", ".md"],
+        logFileEnabled: graphConfig.get("logFileEnabled") ?? true,
+        logFileMaxSize: graphConfig.get("logFileMaxSize") ?? 5,
+        logFileMaxCountRetension: graphConfig.get("logFileMaxCountRetension") ?? 5,
+        neo4j: {
+            version: graphConfig.get("neo4j.version") ?? "5.26.0",
+            host: graphConfig.get("neo4j.host") ?? "localhost",
+            portBolt: graphConfig.get("neo4j.port.bolt") ?? 7687,
+            portHttp: graphConfig.get("neo4j.port.http") ?? 7474,
+            uri: `bolt://${graphConfig.get("neo4j.host") ?? "localhost"}:${graphConfig.get("neo4j.port.bolt") ?? 7687}`,
+            username: graphConfig.get("neo4j.username") ?? "neo4j",
+            password: graphConfig.get("neo4j.password") ?? "password"
+        },
+        jqassistant: {
+            xmlReportPath: graphConfig.get("jqassistant.xmlReportPath") ?? "./target/jqassistant/report/jacoco/jacoco.xml"
+        },
+        dependencyCruiser: {
+            configFile: graphConfig.get("dependencyCruiser.configFile") ?? ".dependency-cruiser.json"
+        },
+        graphify: {
+            arguments: graphConfig.get("graphify.arguments") ?? "--deep-scan"
         }
     };
 
-    globalMatchCounterRef.current = 0;
+    if (activeChildProcess) {
+        try { activeChildProcess.kill('SIGKILL'); } catch(e){}
+    }
 
-    return (
-        <div id="tab-terminal-content" className="flex flex-col bg-[var(--vscode-editor-background)] p-0 w-full h-full overflow-hidden">
-            <div className="relative flex flex-col gap-4 mx-auto w-full max-w-6xl h-full">
+    const child = childProcess.spawn(pythonBinary, args, { cwd: workspaceRoot });
+    activeChildProcess = child;
 
-                {/* Top Control Panel */}
-                <div className="flex flex-shrink-0 justify-between items-center gap-4 bg-[var(--vscode-editorWidget-background)] shadow-md p-4 border border-[var(--vscode-panel-border)] rounded-xl">
-                    <div className="flex items-center gap-3">
-                        <span className="text-blue-500 text-lg codicon codicon-terminal"></span>
-                        <h2 className="font-bold text-[var(--vscode-foreground)] text-xs uppercase tracking-wide">Backend Script Runtime Monitor</h2>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <label className="font-medium text-[var(--vscode-descriptionForeground)] text-xs">Filter Level:</label>
-                        <select
-                            value={selectedLevel}
-                            onChange={(e) => setSelectedLevel(e.target.value)}
-                            className="bg-[var(--vscode-input-background)] shadow-sm px-2 py-1 border border-[var(--vscode-input-border)] rounded-md outline-none font-semibold text-[var(--vscode-input-foreground)] text-xs"
-                        >
-                            <option value="debug">🪲 Debug</option>
-                            <option value="info">ℹ️ Info</option>
-                            <option value="warn">⚠️ Warn</option>
-                            <option value="error">❌ Error</option>
-                        </select>
-                        <button
-                            onClick={() => setShowFind(!showFind)}
-                            className={`px-3 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5 ${showFind ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-blue-600/10 text-blue-500'}`}
-                        >
-                            <span className="codicon codicon-search"></span> Find
-                        </button>
-                        <button onClick={handleCopy} className="flex items-center gap-1.5 bg-blue-600/10 px-3 py-1 rounded-md font-semibold text-blue-500 text-xs">
-                            <span className={"codicon " + (copied ? "codicon-check" : "codicon-copy")}></span> {copied ? "Copied!" : "Copy Logs"}
-                        </button>
-                        <button onClick={clearLogs} className="flex items-center gap-1.5 bg-red-600/10 px-3 py-1 rounded-md font-semibold text-red-500 text-xs">
-                            <span className="codicon codicon-trash"></span> Clear Output
-                        </button>
-                    </div>
-                </div>
+    child.stdin.write(JSON.stringify(payloadConfig));
+    child.stdin.end();
 
-                {/* Find Search Widget Injection */}
-                {showFind && (
-                    <div className="top-16 right-4 z-50 absolute">
-                        <FinderBase
-                            searchQuery={searchQuery} setSearchQuery={setSearchQuery}
-                            caseSensitive={caseSensitive} setCaseSensitive={setCaseSensitive}
-                            wholeWord={wholeWord} setWholeWord={setWholeWord}
-                            useRegex={useRegex} setUseRegex={setUseRegex}
-                            currentMatchIndex={currentMatchIndex} totalMatches={totalMatches}
-                            onNext={() => setCurrentMatchIndex((p) => (p + 1 >= totalMatches ? 0 : p + 1))}
-                            onPrev={() => setCurrentMatchIndex((p) => (p - 1 < 0 ? totalMatches - 1 : p - 1))}
-                            onClose={() => { setSearchQuery(''); setShowFind(false); }}
-                        />
-                    </div>
-                )}
+    child.stdout.on("data", (data: any) => data.toString().split("\n").forEach((l: string) => parseLogLine(l, "info")));
+    child.stderr.on("data", (data: any) => data.toString().split("\n").forEach((l: string) => parseLogLine(l, "error")));
 
-                {/* Logs Text Area Stream Viewport */}
-                <div
-                    ref={logsContainerRef}
-                    className="relative flex flex-col flex-1 gap-1 bg-black p-4 border border-[var(--vscode-panel-border)] rounded-lg overflow-y-auto font-mono text-xs select-text"
-                >
-                    {filteredLogs.length > 0 ? (
-                        filteredLogs.map((log, idx) => (
-                            <div key={idx} className="flex items-start gap-2 break-all leading-relaxed whitespace-pre-wrap select-text">
-                                <span className={getLogColor(log.level)}>
-                                    <FinderHtml
-                                        text={log.message}
-                                        searchQuery={searchQuery}
-                                        caseSensitive={caseSensitive}
-                                        wholeWord={wholeWord}
-                                        useRegex={useRegex}
-                                        currentMatchIndex={currentMatchIndex}
-                                        globalMatchCounterRef={globalMatchCounterRef}
-                                    />
-                                </span>
-                            </div>
-                        ))
-                    ) : (
-                        <div className="flex flex-col justify-center items-center h-full text-gray-500 italic">
-                            No log traces captured matching current severity filter level constraint.
-                        </div>
-                    )}
-                    <div ref={terminalEndRef} />
-                </div>
-            </div>
-        </div>
-    );
-};
-EOF
-
-# 2. Update AI Assistant Tab Component
-cat << 'EOF' > src/webview/components/AIAssistantTab.tsx
-import React, { useState } from 'react';
-import { GraphNode, GraphEdge } from '../types';
-
-interface AIProps {
-    nodes: GraphNode[];
-    edges: GraphEdge[];
-    selectedNodeIds: Set<string>;
-    apiKey: string;
+    child.on("close", (code: number) => {
+        if (activeChildProcess === child) activeChildProcess = null;
+        if (code === 0) {
+            panel.webview.postMessage({ command: "updateStatus", payload: "ready" });
+            const finalUiPayloadPath = path.join(workspaceRoot, ".graph-rag-explorer", "target", "ui_outputs", "graph-ui-payload.json");
+            if (fs.existsSync(finalUiPayloadPath)) {
+                try {
+                    const rawPayload = JSON.parse(fs.readFileSync(finalUiPayloadPath, "utf-8"));
+                    panel.webview.postMessage({ command: "updateGraphData", payload: rawPayload.graph });
+                } catch (err) {}
+            }
+        } else {
+            panel.webview.postMessage({ command: "updateStatus", payload: "error" });
+        }
+    });
 }
 
-export const AIAssistantTab: React.FC<AIProps> = ({ nodes, edges, selectedNodeIds, apiKey }) => {
-    const [analysis, setAnalysis] = useState<string>('');
-    const [loading, setLoading] = useState<boolean>(false);
+function sendConfig(panel: vscode.WebviewPanel, context: vscode.ExtensionContext) {
+    const config = vscode.workspace.getConfiguration('graphRagExplorer');
+    const host = config.get('neo4j.host') || 'localhost';
+    const portHttp = config.get('neo4j.port.http') || 7474;
+    const neo4jUrl = `http://${host}:${portHttp}/browser/preview/`;
 
-    const triggerAnalysis = async () => {
-        if (selectedNodeIds.size === 0) {
-            setAnalysis('Please select at least one entity in the Explorer first.');
-            return;
+    panel.webview.postMessage({
+        command: 'setConfig',
+        config: {
+            EntitiesTypesList: config.get('EntitiesTypesList'),
+            regexFilterEnabled: config.get('regexFilterEnabled'),
+            TreeFilterEnabled: config.get('TreeFilterEnabled'),
+            geminiApiKey: config.get('geminiApiKey'),
+            tooltipDelay: config.get('tooltipDelay') ?? 2000,
+            extensionVersion: context.extension.packageJSON.version,
+            neo4jUrl: neo4jUrl
         }
-        if (!apiKey) {
-            setAnalysis('Gemini API key missing. Please provide it in your VS Code extension configuration.');
-            return;
-        }
-
-        setLoading(true);
-        setAnalysis('Structural and architectural analysis in progress...');
-
-        const activeNodes = nodes.filter(n => selectedNodeIds.has(n.id));
-        const activeEdges = edges.filter(e => selectedNodeIds.has(e.from) && selectedNodeIds.has(e.to));
-
-        let contextPrompt = `Analyze the architecture of the following subsystem:\n\nEntities:\n`;
-        activeNodes.forEach(n => contextPrompt += `- ${n.label} [Type: ${n.group}]\n`);
-        contextPrompt += `\nRelations:\n`;
-        activeEdges.forEach(e => contextPrompt += `- ${e.from} --(${e.type})--> ${e.to}\n`);
-
-        try {
-            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: contextPrompt }] }],
-                    systemInstruction: { parts: [{ text: "You are a principal software engineer expert in architecture. Provide a concise report structured as bullet points. Respond strictly in English." }] }
-                })
-            });
-
-            const payload = await response.json();
-            const textResult = payload.candidates?.[0]?.content?.parts?.[0]?.text;
-            setAnalysis(textResult || 'Error processing the analysis report.');
-        } catch (err: any) {
-            setAnalysis(`A critical error occurred: ${err?.message || err}`);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div id="tab-ai-content" className="w-full h-full p-6 flex flex-col md:flex-row gap-6 overflow-hidden bg-[var(--vscode-editor-background)]">
-            <div className="w-full md:w-[32%] min-w-[280px] flex flex-col gap-4 flex-shrink-0">
-                <div className="bg-[var(--vscode-editorWidget-background)] p-5 rounded-xl border border-[var(--vscode-panel-border)] shadow-md flex flex-col gap-4">
-                    <div className="flex items-center gap-2 font-bold text-base text-purple-500 tracking-wide">
-                        <span className="codicon codicon-sparkle text-lg"></span> Gemini Assistant
-                    </div>
-                    <p className="text-xs text-[var(--vscode-descriptionForeground)] leading-relaxed">
-                        Submit the selected entities to artificial intelligence to generate a technical audit, identify cyclic dependencies, or suggest architectural refactoring.
-                    </p>
-                    <button
-                        onClick={triggerAnalysis}
-                        disabled={loading}
-                        className="w-full py-2.5 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 disabled:from-purple-800/40 disabled:to-purple-800/40 text-white font-semibold text-xs rounded-md transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg mt-2"
-                    >
-                        {loading ? <span className="animate-spin opacity-80 text-sm">⏳</span> : <span className="codicon codicon-play text-sm"></span>}
-                        Launch Analysis
-                    </button>
-                </div>
-            </div>
-
-            <div className="flex-1 bg-[var(--vscode-editorWidget-background)] rounded-xl border border-[var(--vscode-panel-border)] shadow-md flex flex-col overflow-hidden min-h-0">
-                <div className="px-5 py-3 border-b border-[var(--vscode-panel-border)] bg-[var(--vscode-editorGroupHeader-tabsBackground)] font-bold text-xs shadow-sm z-10 uppercase tracking-wider text-[var(--vscode-descriptionForeground)]">
-                    Analysis Report
-                </div>
-                <div className="flex-1 overflow-y-auto p-6 font-mono text-sm whitespace-pre-wrap leading-relaxed selection:bg-purple-500/30 inner-shadow bg-[var(--vscode-editor-background)]/50">
-                    {analysis ? (
-                        <div className="text-[var(--vscode-foreground)]">{analysis}</div>
-                    ) : (
-                        <div className="h-full flex flex-col items-center justify-center opacity-60">
-                            <span className="codicon codicon-output text-4xl mb-4 text-purple-400/50"></span>
-                            <span className="italic text-xs text-[var(--vscode-descriptionForeground)] max-w-sm text-center">Select nodes via the Explorer view and click "Launch Analysis" to generate a comprehensive structural report.</span>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-};
-EOF
-
-# 3. Update Configuration Tab Component
-cat << 'EOF' > src/webview/components/ConfigurationTab.tsx
-import React, { useState } from 'react';
-import { ExtensionConfig } from '../types';
-
-interface ConfigProps {
-    config: ExtensionConfig;
+    });
 }
 
-export const ConfigurationTab: React.FC<ConfigProps> = ({ config }) => {
-    const [jsonString, setJsonString] = useState<string>(JSON.stringify(config.EntitiesTypesList, null, 4));
+function getWebviewContent(webview: vscode.Webview, extensionPath: string): string {
+    const scriptUri = webview.asWebviewUri(vscode.Uri.file(path.join(extensionPath, 'dist', 'webview.js')));
+    return `<!DOCTYPE html>
+    <html lang="en" class="h-full">
+    <head>
+        <meta charset="UTF-8"><title>Graph RAG Explorer</title>
+        <link href="https://cdn.jsdelivr.net/npm/@vscode/codicons/dist/codicon.css" rel="stylesheet">
+        <script src="https://cdn.tailwindcss.com"></script>
+    </head>
+    <body class="h-full overflow-hidden select-none" style="padding: 0px !important;">
+        <div id="root" class="h-full flex flex-col"></div>
+        <script src="${scriptUri}"></script>
+    </body></html>`;
+}
 
-    const handleSave = () => {
-        try {
-            const parsed = JSON.parse(jsonString);
-            if (!Array.isArray(parsed)) throw new Error("Format must be a JSON array of strings[].");
-            alert('Configuration successfully saved locally! (Changes applied to current runtime)');
-        } catch (err: any) {
-            alert(`JSON syntax error: ${err.message}`);
-        }
-    };
-
-    return (
-        <div id="tab-config-content" className="w-full h-full p-6 flex flex-col overflow-hidden bg-[var(--vscode-editor-background)]">
-            <div className="w-full max-w-4xl mx-auto flex flex-col gap-4 h-full">
-                <div className="bg-[var(--vscode-editorWidget-background)] p-5 rounded-xl border border-[var(--vscode-panel-border)] shadow-md flex flex-col h-full gap-4">
-
-                    <div className="flex items-center justify-between flex-shrink-0 border-b border-[var(--vscode-panel-border)] pb-4">
-                        <div className="flex items-center gap-3">
-                            <span className="codicon codicon-settings-gear text-blue-500 text-lg"></span>
-                            <h2 className="text-sm font-bold tracking-wide uppercase text-[var(--vscode-foreground)]">Node Types Configuration</h2>
-                        </div>
-                        <button
-                            onClick={handleSave}
-                            className="px-5 py-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white rounded-md text-xs font-semibold shadow-md hover:shadow-lg transition-all flex items-center gap-2"
-                        >
-                            <span className="codicon codicon-save"></span> Save and Apply
-                        </button>
-                    </div>
-
-                    <p className="text-xs text-[var(--vscode-descriptionForeground)] leading-relaxed flex-shrink-0 bg-[var(--vscode-input-background)]/30 p-3 rounded-lg border border-[var(--vscode-panel-border)]/50">
-                        <span className="codicon codicon-info text-blue-400 mr-2 align-middle"></span>
-                        Modify the structure below to configure the exact list of entity groups recognized by the Graph RAG lexical engine. Changes will apply immediately to the current parsing context.
-                    </p>
-
-                    <div className="flex-1 border border-[var(--vscode-input-border)] rounded-lg overflow-hidden flex flex-col shadow-inner bg-[var(--vscode-input-background)] focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500/50 transition-all">
-                        <textarea
-                            value={jsonString}
-                            onChange={(e) => setJsonString(e.target.value)}
-                            className="w-full flex-1 p-5 bg-transparent text-[var(--vscode-input-foreground)] font-mono text-[13px] resize-none outline-none leading-relaxed border-none"
-                            spellCheck={false}
-                        />
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
+export function deactivate() {}
 EOF
 
-# 4. Update Explorer Tab Component
+# 3. Propagate neo4jUrl parameters seamlessly into ExplorerTab props tracking mapping bounds
 cat << 'EOF' > src/webview/components/ExplorerTab.tsx
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { GraphNode, GraphEdge } from '../types';
@@ -478,13 +647,143 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
                 isTreeCollapsed={isTreeCollapsed} setIsTreeCollapsed={setIsTreeCollapsed}
                 parentDepth={parentDepth} setParentDepth={setParentDepth} childDepth={childDepth} setChildDepth={setChildDepth}
                 networkRef={networkRef} showLegend={showLegend} setShowLegend={setShowLegend}
+                neo4jUrl={config?.neo4jUrl}
             />
         </div>
     );
 };
 EOF
 
-# Compile the package modification bundles securely
+# 4. Append custom interactive Neo4j Web Browser Console launcher button to GraphView
+cat << 'EOF' > src/webview/components/explorer-tab/graph/GraphView.tsx
+import React from 'react';
+import { MaximizeIcon, MinimizeIcon, ListUnorderedIcon } from '@primer/octicons-react';
+import { Legend } from '../Legend';
+
+interface GraphViewProps {
+    containerRef: React.RefObject<HTMLDivElement>;
+    isMaximized: boolean;
+    setIsMaximized: (val: boolean) => void;
+    isTreeCollapsed: boolean;
+    setIsTreeCollapsed: (val: boolean) => void;
+    parentDepth: number;
+    setParentDepth: (val: number) => void;
+    childDepth: number;
+    setChildDepth: (val: number) => void;
+    networkRef: React.RefObject<any>;
+    showLegend: boolean;
+    setShowLegend: (val: boolean) => void;
+    neo4jUrl?: string;
+}
+
+export const GraphView: React.FC<GraphViewProps> = ({
+    containerRef,
+    isMaximized,
+    setIsMaximized,
+    isTreeCollapsed,
+    setIsTreeCollapsed,
+    parentDepth,
+    setParentDepth,
+    childDepth,
+    setChildDepth,
+    networkRef,
+    showLegend,
+    setShowLegend,
+    neo4jUrl
+}) => {
+    return (
+        <div className={`flex flex-col overflow-hidden bg-[var(--vscode-editor-background)] ${isMaximized ? 'fixed inset-0 z-50 w-screen h-screen' : 'flex-1 h-full'}`}>
+            <div className="z-10 relative flex flex-shrink-0 justify-between items-center bg-[var(--vscode-editorGroupHeader-tabsBackground)] shadow-[0_2px_4px_var(--vscode-widget-shadow)] px-3 border-[var(--vscode-panel-border)] border-b h-10">
+                <div className="flex items-center gap-4 h-full text-xs">
+                    <div className="flex items-center gap-2">
+                        {!isMaximized && (
+                            <button
+                                onClick={() => setIsTreeCollapsed(!isTreeCollapsed)}
+                                className="codicon-layout-sidebar-left flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] rounded-md w-7 h-7 text-[var(--vscode-foreground)] text-sm transition-colors duration-200 codicon"
+                                data-tooltip={isTreeCollapsed ? "Show Tree View" : "Hide Tree View"}
+                            />
+                        )}
+                        <span className="block font-bold text-[11px] uppercase tracking-wider">Graph&nbsp;View</span>
+                    </div>
+
+                    <div className="flex items-center gap-2 bg-[var(--vscode-input-background)]/50 shadow-inner px-2 py-1 border border-[var(--vscode-panel-border)]/50 rounded-md h-7">
+                        <label className="font-semibold text-[10px] text-[var(--vscode-descriptionForeground)] uppercase tracking-wide" data-tooltip="Number of parent files levels to select">Callers</label>
+                        <input
+                            type="number"
+                            min="0"
+                            max="20"
+                            value={parentDepth}
+                            onChange={(e) => setParentDepth(parseInt(e.target.value) || 0)}
+                            className="bg-[var(--vscode-input-background)] shadow-sm border border-[var(--vscode-input-border)] focus:border-blue-500 rounded-sm outline-none focus:ring-1 focus:ring-blue-500/50 w-12 h-6 font-bold text-[var(--vscode-input-foreground)] text-xs text-center transition-all"
+                        />
+                    </div>
+
+                    <div className="flex items-center gap-2 bg-[var(--vscode-input-background)]/50 shadow-inner px-2 py-1 border border-[var(--vscode-panel-border)]/50 rounded-md h-7">
+                        <label className="font-semibold text-[10px] text-[var(--vscode-descriptionForeground)] uppercase tracking-wide" data-tooltip="Number of child files levels to select">Callees</label>
+                        <input
+                            type="number"
+                            min="0"
+                            max="20"
+                            value={childDepth}
+                            onChange={(e) => setChildDepth(parseInt(e.target.value) || 0)}
+                            className="bg-[var(--vscode-input-background)] shadow-sm border border-[var(--vscode-input-border)] focus:border-blue-500 rounded-sm outline-none focus:ring-1 focus:ring-blue-500/50 w-12 h-6 font-bold text-[var(--vscode-input-foreground)] text-xs text-center transition-all"
+                        />
+                    </div>
+
+                    {/* Standalone Neo4j Browser Client console utility navigation launch module */}
+                    <button
+                        onClick={() => {
+                            const vscode = (window as any).vscodeApi;
+                            if (vscode && neo4jUrl) {
+                                vscode.postMessage({ command: 'openExternal', url: neo4jUrl });
+                            } else if (neo4jUrl) {
+                                window.open(neo4jUrl, '_blank', 'noopener,noreferrer');
+                            }
+                        }}
+                        className="flex items-center gap-1.5 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 shadow-sm px-2.5 rounded-md font-bold text-white text-[10px] uppercase tracking-wider h-7 transition-all cursor-pointer select-none"
+                        data-tooltip="Open embedded Neo4j Web Console Client Browser"
+                    >
+                        <span className="codicon codicon-database"></span> Neo4j
+                    </button>
+                </div>
+                <div className="flex items-center">
+                    <button
+                        onClick={() => networkRef.current?.fit({ animation: true })}
+                        className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] shadow-sm rounded-md w-7 h-7 text-[var(--vscode-foreground)] transition-colors duration-200"
+                        data-tooltip="Recenter Graph"
+                    >
+                        <span className="text-[14px] codicon codicon-screen-full"></span>
+                    </button>
+                    <button
+                        onClick={() => setIsMaximized(!isMaximized)}
+                        className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] shadow-sm rounded-md w-7 h-7 text-[var(--vscode-foreground)] transition-colors duration-200"
+                        data-tooltip={isMaximized ? "Minimize Graph View" : "Maximize Graph View"}
+                    >
+                        {isMaximized ? <MinimizeIcon /> : <MaximizeIcon />}
+                    </button>
+
+                    <div className="block flex-shrink-0 bg-[var(--vscode-panel-border)] mx-1 w-[1px] h-5" />
+
+                    <button
+                        onClick={() => setShowLegend(!showLegend)}
+                        className={`w-7 h-7 flex items-center justify-center transition-colors duration-200 rounded-md shadow-sm ${showLegend ? 'text-blue-500 bg-blue-500/10' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)] text-[var(--vscode-foreground)]'}`}
+                        data-tooltip="Toggle Legend"
+                    >
+                        <ListUnorderedIcon />
+                    </button>
+                </div>
+            </div>
+
+            <div className="relative flex-1 bg-[var(--vscode-editor-background)]">
+                <div ref={containerRef} className="absolute inset-0 outline-none" />
+                <Legend showLegend={showLegend} onClose={() => setShowLegend(false)} />
+            </div>
+        </div>
+    );
+};
+EOF
+
+# Compile structural configuration bundle layout profiles
 npm run package
 
-echo "✅ feat/layout: All tab view components updated to incorporate explicit semantic DOM ID identifiers matching 'tab-*-content' patterns!"
+echo "✅ feat/neo4j: Extended application schemas with port parameters and injected a dedicated console toolbar navigation link to launch the Neo4j client!"

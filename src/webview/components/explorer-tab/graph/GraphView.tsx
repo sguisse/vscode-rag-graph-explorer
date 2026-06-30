@@ -15,6 +15,7 @@ interface GraphViewProps {
     networkRef: React.RefObject<any>;
     showLegend: boolean;
     setShowLegend: (val: boolean) => void;
+    neo4jUrl?: string;
 }
 
 export const GraphView: React.FC<GraphViewProps> = ({
@@ -29,7 +30,8 @@ export const GraphView: React.FC<GraphViewProps> = ({
     setChildDepth,
     networkRef,
     showLegend,
-    setShowLegend
+    setShowLegend,
+    neo4jUrl
 }) => {
     return (
         <div className={`flex flex-col overflow-hidden bg-[var(--vscode-editor-background)] ${isMaximized ? 'fixed inset-0 z-50 w-screen h-screen' : 'flex-1 h-full'}`}>
@@ -69,6 +71,22 @@ export const GraphView: React.FC<GraphViewProps> = ({
                             className="bg-[var(--vscode-input-background)] shadow-sm border border-[var(--vscode-input-border)] focus:border-blue-500 rounded-sm outline-none focus:ring-1 focus:ring-blue-500/50 w-12 h-6 font-bold text-[var(--vscode-input-foreground)] text-xs text-center transition-all"
                         />
                     </div>
+
+                    {/* Standalone Neo4j Browser Client console utility navigation launch module */}
+                    <button
+                        onClick={() => {
+                            const vscode = (window as any).vscodeApi;
+                            if (vscode && neo4jUrl) {
+                                vscode.postMessage({ command: 'openExternal', url: neo4jUrl });
+                            } else if (neo4jUrl) {
+                                window.open(neo4jUrl, '_blank', 'noopener,noreferrer');
+                            }
+                        }}
+                        className="flex items-center gap-1.5 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 shadow-sm px-2.5 rounded-md font-bold text-white text-[10px] uppercase tracking-wider h-7 transition-all cursor-pointer select-none"
+                        data-tooltip="Open embedded Neo4j Web Console Client Browser"
+                    >
+                        <span className="codicon codicon-database"></span> Neo4j
+                    </button>
                 </div>
                 <div className="flex items-center">
                     <button

@@ -208,7 +208,10 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
         logFileMaxCountRetension: graphConfig.get("logFileMaxCountRetension") ?? 5,
         neo4j: {
             version: graphConfig.get("neo4j.version") ?? "5.26.0",
-            uri: graphConfig.get("neo4j.uri") ?? "bolt://localhost:7687",
+            host: graphConfig.get("neo4j.host") ?? "localhost",
+            portBolt: graphConfig.get("neo4j.port.bolt") ?? 7687,
+            portHttp: graphConfig.get("neo4j.port.http") ?? 7474,
+            uri: `bolt://${graphConfig.get("neo4j.host") ?? "localhost"}:${graphConfig.get("neo4j.port.bolt") ?? 7687}`,
             username: graphConfig.get("neo4j.username") ?? "neo4j",
             password: graphConfig.get("neo4j.password") ?? "password"
         },
@@ -255,6 +258,10 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
 
 function sendConfig(panel: vscode.WebviewPanel, context: vscode.ExtensionContext) {
     const config = vscode.workspace.getConfiguration('graphRagExplorer');
+    const host = config.get('neo4j.host') || 'localhost';
+    const portHttp = config.get('neo4j.port.http') || 7474;
+    const neo4jUrl = `http://${host}:${portHttp}/browser/preview/`;
+
     panel.webview.postMessage({
         command: 'setConfig',
         config: {
@@ -263,7 +270,8 @@ function sendConfig(panel: vscode.WebviewPanel, context: vscode.ExtensionContext
             TreeFilterEnabled: config.get('TreeFilterEnabled'),
             geminiApiKey: config.get('geminiApiKey'),
             tooltipDelay: config.get('tooltipDelay') ?? 2000,
-            extensionVersion: context.extension.packageJSON.version
+            extensionVersion: context.extension.packageJSON.version,
+            neo4jUrl: neo4jUrl
         }
     });
 }

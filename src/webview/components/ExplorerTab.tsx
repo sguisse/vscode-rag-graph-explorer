@@ -125,6 +125,7 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
                 isTreeCollapsed={isTreeCollapsed} setIsTreeCollapsed={setIsTreeCollapsed}
                 parentDepth={parentDepth} setParentDepth={setParentDepth} childDepth={childDepth} setChildDepth={setChildDepth}
                 networkRef={networkRef} showLegend={showLegend} setShowLegend={setShowLegend}
+                neo4jUrl={config?.neo4jUrl}
             />
         </div>
     );
