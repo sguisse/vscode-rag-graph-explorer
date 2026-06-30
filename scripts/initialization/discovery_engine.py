@@ -65,6 +65,16 @@ class DiscoveryEngine:
                     abs_path = normalize_path(os.path.join(root, file))
                     valid_files.append(abs_path)
 
+        # Compute and format metrics breakdown per extension
+        extension_counts = {}
+        for file_path in valid_files:
+            _, ext = os.path.splitext(file_path)
+            ext_key = ext.lower() if ext else "no_extension"
+            extension_counts[ext_key] = extension_counts.get(ext_key, 0) + 1
+
+        breakdown_string = ", ".join([f"{ext}: {count}" for ext, count in sorted(extension_counts.items())])
+        info(f"Fichiers trouvés par extension : {breakdown_string}", component="DiscoveryEngine")
+
         manifest_data = {
             "workspace_root": self.workspace_root,
             "total_files": len(valid_files),

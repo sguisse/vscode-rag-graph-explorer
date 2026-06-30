@@ -1,150 +1,100 @@
 #!/usr/bin/env bash
-# Production-ready patch to relocate the sandboxed Node analyzer environment to target/tools/node.
+# Production-ready patch to append file extension breakdown metrics to the DiscoveryEngine logs.
 
-# 1. Purge the old workspace-root level node sandbox paths if they exist to avoid confusion
-if [ -d "scripts/analyser/node_modules" ]; then
-    rm -rf "scripts/analyser/node_modules"
-fi
-if [ -f "scripts/analyser/package.json" ]; then
-    rm -f "scripts/analyser/package.json"
-fi
-if [ -f "scripts/analyser/package-lock.json" ]; then
-    rm -f "scripts/analyser/package-lock.json"
-fi
+mkdir -p scripts/initialization
 
-# 2. Create the new sandboxed tools location
-mkdir -p scripts/install/modules/node/dependency_cruiser
-mkdir -p scripts/install/modules/node/swc
-
-# 3. Rewrite Dependency Cruiser Checker with new sandboxed paths
-cat << 'EOF' > scripts/install/modules/node/dependency_cruiser/check.py
-import shutil
+cat << 'EOF' > scripts/initialization/discovery_engine.py
 import os
-from install.base import BaseCheckModule
-from install.registry import ModuleRegistry
+import re
+import json
+from typing import List, Dict, Any
+from core.utils import info, warn, success, normalize_path
 
-@ModuleRegistry.register_checker
-class NodeDependencyCruiserChecker(BaseCheckModule):
-    @property
-    def name(self) -> str: return "node_dependency_cruiser"
+class DiscoveryEngine:
+    """Evaluates workspace file structures using multi-layered regex settings patterns."""
+    def __init__(self, workspace_root: str, config: Dict[str, Any]):
+        self.workspace_root = normalize_path(workspace_root)
+        self.output_path = f"{self.workspace_root}/.graph-rag-explorer/target/discovery_manifest.json"
+        os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
 
-    def check_node_executable(self):
-        self.steps_count += 1
-        if shutil.which("node"): self.status["node"] = {"status": "✅"}
-        else:
-            self.status["node"] = {"status": "❌"}
-            self.ko_count += 1
+        # Read keys directly matching variables mapped out under package.json configuration nodes
+        self.inc_paths = self._compile_regex("includePathsRegex", config.get("includePathsRegex", ".*"))
+        self.exc_paths = self._compile_regex("excludePathsRegex", config.get("excludePathsRegex", ""))
+        self.inc_exts = self._compile_regex("includeExtensionsRegex", config.get("includeExtensionsRegex", ""))
+        self.exc_exts = self._compile_regex("excludeExtensionsRegex", config.get("excludeExtensionsRegex", ""))
 
-    def check_dependency_cruiser_modules(self):
-        self.steps_count += 1
-        dc_path = f"{self.context.tools_dir}/node/node_modules/dependency-cruiser"
-        if os.path.exists(dc_path): self.status["dependency_cruiser"] = {"status": "✅"}
-        else:
-            self.status["dependency_cruiser"] = {"status": "❌"}
-            self.ko_count += 1
+        info(f"Loaded includePathsRegex criteria size: {len(self.inc_paths)}", component="DiscoveryEngine")
+        info(f"Loaded excludePathsRegex criteria size: {len(self.exc_paths)}", component="DiscoveryEngine")
+        info(f"Loaded includeExtensionsRegex criteria size: {len(self.inc_exts)}", component="DiscoveryEngine")
+        info(f"Loaded excludeExtensionsRegex criteria size: {len(self.exc_exts)}", component="DiscoveryEngine")
 
-    def execute_all_checks(self) -> dict:
-        self.check_node_executable()
-        self.check_dependency_cruiser_modules()
-        return self.generate_summary()
+    def _compile_regex(self, name: str, pattern_str: str) -> List[re.Pattern]:
+        if not pattern_str:
+            return []
+        patterns = [p.strip() for p in re.split(r'[\n,;]', pattern_str) if p.strip()]
+        compiled = []
+        for p in patterns:
+            try:
+                compiled.append(re.compile(p))
+            except Exception as e:
+                warn(f"Failed compiling regex token '{p}' under setting key '{name}': {e}", component="DiscoveryEngine")
+        return compiled
+
+    def _matches_any(self, text: str, regex_list: List[re.Pattern]) -> bool:
+        if not regex_list:
+            return False
+        return any(r.search(text) for r in regex_list)
+
+    def _is_allowed(self, rel_path: str, filename: str) -> bool:
+        if self.inc_paths and not self._matches_any(rel_path, self.inc_paths): return False
+        if self.exc_paths and self._matches_any(rel_path, self.exc_paths): return False
+        if self.inc_exts and not self._matches_any(filename, self.inc_exts): return False
+        if self.exc_exts and self._matches_any(filename, self.exc_exts): return False
+        return True
+
+    def generate_manifest(self) -> str:
+        info("Génération du Manifeste d'Indexation (Discovery)...", component="DiscoveryEngine")
+        valid_files = []
+
+        for root, dirs, files in os.walk(self.workspace_root):
+            rel_root = "./" + os.path.relpath(root, self.workspace_root).replace("\\", "/")
+            if rel_root == "./.":
+                rel_root = "."
+
+            # Prune directories mutable slices in-place for optimized platform tree navigation operations
+            if self.exc_paths:
+                dirs[:] = [d for d in dirs if not self._matches_any(f"{rel_root}/{d}", self.exc_paths)]
+
+            for file in files:
+                rel_path = f"{rel_root}/{file}"
+                if self._is_allowed(rel_path, file):
+                    abs_path = normalize_path(os.path.join(root, file))
+                    valid_files.append(abs_path)
+
+        # Compute and format metrics breakdown per extension
+        extension_counts = {}
+        for file_path in valid_files:
+            _, ext = os.path.splitext(file_path)
+            ext_key = ext.lower() if ext else "no_extension"
+            extension_counts[ext_key] = extension_counts.get(ext_key, 0) + 1
+
+        breakdown_string = ", ".join([f"{ext}: {count}" for ext, count in sorted(extension_counts.items())])
+        info(f"Fichiers trouvés par extension : {breakdown_string}", component="DiscoveryEngine")
+
+        manifest_data = {
+            "workspace_root": self.workspace_root,
+            "total_files": len(valid_files),
+            "files": valid_files
+        }
+
+        with open(self.output_path, "w", encoding="utf-8") as f:
+            json.dump(manifest_data, f, indent=2, ensure_ascii=False)
+
+        success(f"Manifeste généré : {len(valid_files)} fichiers validés pour l'analyse.", component="DiscoveryEngine")
+        return self.output_path
 EOF
 
-# 4. Rewrite Dependency Cruiser Installer with new sandboxed paths
-cat << 'EOF' > scripts/install/modules/node/dependency_cruiser/install.py
-import os
-from install.base import BaseInstallModule
-from install.registry import ModuleRegistry
-from core.utils import execute_tracked_command
-
-@ModuleRegistry.register_installer
-class NodeDependencyCruiserInstaller(BaseInstallModule):
-    @property
-    def name(self) -> str: return "node_dependency_cruiser"
-
-    def provisioning_dependency_cruiser(self, target_env: str):
-        execute_tracked_command(["npm", "install", "dependency-cruiser@18.0.0"], "dc_install", cwd=target_env)
-
-    def execute_all_installations(self) -> None:
-        target_env = f"{self.context.tools_dir}/node"
-        os.makedirs(target_env, exist_ok=True)
-        if not os.path.exists(f"{target_env}/package.json"):
-            execute_tracked_command(["npm", "init", "-y"], "dc_init", cwd=target_env)
-        self.provisioning_dependency_cruiser(target_env)
-EOF
-
-# 5. Rewrite SWC Checker with new sandboxed paths
-cat << 'EOF' > scripts/install/modules/node/swc/check.py
-import shutil
-import os
-from install.base import BaseCheckModule
-from install.registry import ModuleRegistry
-
-@ModuleRegistry.register_checker
-class NodeSwcChecker(BaseCheckModule):
-    @property
-    def name(self) -> str: return "node_swc"
-
-    def check_node_binary(self):
-        self.steps_count += 1
-        node_bin = shutil.which("node")
-        if node_bin:
-            self.status["node"] = {"status": "✅"}
-        else:
-            self.status["node"] = {"status": "❌", "message": "Node environment runtime omitted."}
-            self.ko_count += 1
-
-    def check_npm_binary(self):
-        self.steps_count += 1
-        npm_bin = shutil.which("npm")
-        if npm_bin:
-            self.status["npm"] = {"status": "✅"}
-        else:
-            self.status["npm"] = {"status": "❌", "message": "Npm utility wrapper unmapped."}
-            self.ko_count += 1
-
-    def check_swc_core_package(self):
-        self.steps_count += 1
-        swc_path = f"{self.context.tools_dir}/node/node_modules/@swc/core"
-        if os.path.exists(swc_path):
-            self.status["swc"] = {"status": "✅"}
-        else:
-            self.status["swc"] = {"status": "❌", "message": "@swc/core modules unallocated."}
-            self.ko_count += 1
-
-    def execute_all_checks(self) -> dict:
-        self.check_node_binary()
-        self.check_npm_binary()
-        self.check_swc_core_package()
-        return self.generate_summary()
-EOF
-
-# 6. Rewrite SWC Installer with new sandboxed paths
-cat << 'EOF' > scripts/install/modules/node/swc/install.py
-import os
-from install.base import BaseInstallModule
-from install.registry import ModuleRegistry
-from core.utils import execute_tracked_command
-
-@ModuleRegistry.register_installer
-class NodeSwcInstaller(BaseInstallModule):
-    @property
-    def name(self) -> str: return "node_swc"
-
-    def init_package_json(self, target_env: str):
-        if not os.path.exists(f"{target_env}/package.json"):
-            execute_tracked_command(["npm", "init", "-y"], "swc_init", cwd=target_env)
-
-    def install_swc_core(self, target_env: str):
-        execute_tracked_command(["npm", "install", "@swc/core@1.15.43"], "swc_install", cwd=target_env)
-
-    def execute_all_installations(self) -> None:
-        target_env = f"{self.context.tools_dir}/node"
-        os.makedirs(target_env, exist_ok=True)
-        self.init_package_json(target_env)
-        self.install_swc_core(target_env)
-EOF
-
-# Rebuild the production asset packages
+# Rebuild extension visual asset bundles
 npm run package
 
-echo "✅ refactor/node: Relocated localized package.json configurations and node modules installation directories safely into .graph-rag-explorer/target/tools/node!"
+echo "✅ feat/logging: Added file metrics breakdown by extension inside the DiscoveryEngine info logging process pipeline!"
