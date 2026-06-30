@@ -42,4 +42,15 @@ def run_analysis_pipeline(manifest_path: str, neo4j_config: dict, global_config_
             except Exception as e:
                 error(f"Background thread ingestion crash details: {e}", component="AnalyserRunner")
 
+    # Execute fallback query session verification to report Java entities metrics before disconnect
+    try:
+        if hasattr(db_client, 'driver') and db_client._connected:
+            with db_client.driver.session() as session:
+                result = session.run("MATCH (f:File:Java) RETURN count(f) AS javaFilesCount")
+                record = result.single()
+                java_count = record["javaFilesCount"] if record else 0
+                info(f"Number of Java files found in Neo4j database: {java_count}", component="AnalyserRunner")
+    except Exception as err:
+        error(f"Failed executing database node summary verification query: {err}", component="AnalyserRunner")
+
     db_client.close()

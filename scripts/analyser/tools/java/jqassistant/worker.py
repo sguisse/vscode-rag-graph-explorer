@@ -38,7 +38,6 @@ class JQAssistantWorker(BaseAnalyser):
             if local_bin_path and os.path.exists(local_bin_path):
                 executable_target = local_bin_path
                 if os.name != 'nt':
-                    # Fix Exit Code 126 by recursively ensuring executable permissions on all sub-shells, internal scripts, and binaries inside the sandbox layout
                     for walk_root, _, walk_files in os.walk(sandbox_root):
                         for file in walk_files:
                             if file.endswith(".sh") or "bin" in walk_root.replace("\\", "/").split("/"):
@@ -51,14 +50,37 @@ class JQAssistantWorker(BaseAnalyser):
             error("Aborting analysis sequence loop: jQAssistant executable command string could not be resolved from tools path repositories.", component=self.name)
             return
 
+        # Explicit target locations realigned to the isolated subfolder layers
+        store_dir = f"{workspace_root}/.graph-rag-explorer/target/raw_outputs/java/jqassistant"
+        config_dir = f"{workspace_root}/scripts/analyser/tools/java/jqassistant/config"
+        os.makedirs(store_dir, exist_ok=True)
+        os.makedirs(config_dir, exist_ok=True)
+
+        # Inject environment variable parameters to cleanly re-route storage directories and rules lookup configurations safely across all host operating platforms
+        custom_env = os.environ.copy()
+        custom_env["JQASSISTANT_STORE_DIRECTORY"] = store_dir
+        custom_env["JQASSISTANT_RULES_DIRECTORY"] = config_dir
+
         # 1. Bytecode Scan Phase
         info(f"[jQAssistant Engine] Initializing bytecode scanning cycle via '{executable_target}' on path: {java_raw_output_dir}", component=self.name)
-        scan_return_code = execute_tracked_command([executable_target, "scan", "-f", java_raw_output_dir], "jqa_scan", cwd=workspace_root)
+        scan_return_code = execute_tracked_command([
+            executable_target,
+            f"-Djqassistant.store.directory={store_dir}",
+            f"-Djqassistant.rules.directory={config_dir}",
+            "scan",
+            "-f",
+            java_raw_output_dir
+        ], "jqa_scan", cwd=workspace_root, env=custom_env)
 
         # 2. Structural Analysis Phase
         if scan_return_code == 0:
             info(f"[jQAssistant Engine] Scan operation completed successfully. Triggering rule enrichment analysis pass...", component=self.name)
-            execute_tracked_command([executable_target, "analyze"], "jqa_analyze", cwd=workspace_root)
+            execute_tracked_command([
+                executable_target,
+                f"-Djqassistant.store.directory={store_dir}",
+                f"-Djqassistant.rules.directory={config_dir}",
+                "analyze"
+            ], "jqa_analyze", cwd=workspace_root, env=custom_env)
         else:
             error(f"[jQAssistant Engine] Ingestion scanning failed with exit status code {scan_return_code}. Bypassing subsequent analysis workflows.", component=self.name)
 

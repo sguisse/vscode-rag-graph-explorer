@@ -1,0 +1,33 @@
+<jqassistant-rules xmlns="http://schema.jqassistant.org/rule/v2.9"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://schema.jqassistant.org/rule/v2.9 https://jqassistant.github.io/jqassistant/current/schema/jqassistant-rule-v2.9.xsd">
+
+    <concept id="custom-java:MapGlobalCodeArchitecture">
+        <description>Labels all scanned Java packages, classes, methods, and files for global dependency tracking mapping boundaries.</description>
+        <cypher><![CDATA[
+            MATCH (t:Type)
+            SET t:Class:Java
+            WITH t
+            MATCH (t)-[:DECLARES]->(m:Method)
+            SET m:Method:Java
+            RETURN count(t) AS EnrichedNodesCount
+        ]]></cypher>
+    </concept>
+
+    <concept id="custom-java:LinkTypesToSourceFiles">
+        <description>Binds structural Type definitions directly to their corresponding File path nodes in the database network topology.</description>
+        <cypher><![CDATA[
+            MATCH (f:File) WHERE f.name ENDS WITH '.java'
+            WITH f
+            MATCH (t:Type) WHERE t.fqn CONTAINS f.name
+            MERGE (f)-[:CONTAINS]->(t)
+            RETURN count(t) AS LinkedSourceFilesCount
+        ]]></cypher>
+    </concept>
+
+    <group id="default">
+        <includeConcept ref="custom-java:MapGlobalCodeArchitecture"/>
+        <includeConcept ref="custom-java:LinkTypesToSourceFiles"/>
+    </group>
+
+</jqassistant-rules>
