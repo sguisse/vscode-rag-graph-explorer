@@ -55,7 +55,7 @@ export const AIAssistantTab: React.FC<AIProps> = ({ nodes, edges, selectedNodeId
     };
 
     return (
-        <div className="w-full h-full p-6 flex flex-col md:flex-row gap-6 overflow-hidden bg-[var(--vscode-editor-background)]">
+        <div id="tab-ai-content" className="w-full h-full p-6 flex flex-col md:flex-row gap-6 overflow-hidden bg-[var(--vscode-editor-background)]">
             <div className="w-full md:w-[32%] min-w-[280px] flex flex-col gap-4 flex-shrink-0">
                 <div className="bg-[var(--vscode-editorWidget-background)] p-5 rounded-xl border border-[var(--vscode-panel-border)] shadow-md flex flex-col gap-4">
                     <div className="flex items-center gap-2 font-bold text-base text-purple-500 tracking-wide">

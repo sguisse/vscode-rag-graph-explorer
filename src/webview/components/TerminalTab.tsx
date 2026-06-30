@@ -17,7 +17,7 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => 
     const [selectedLevel, setSelectedLevel] = useState<string>('info');
     const [copied, setCopied] = useState<boolean>(false);
 
-    // --- États de contrôle de la recherche ---
+    // --- Searching Controls ---
     const [showFind, setShowFind] = useState<boolean>(false);
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [caseSensitive, setCaseSensitive] = useState<boolean>(false);
@@ -37,7 +37,6 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => 
         return logs.filter(log => (severityMap[log.level] ?? 1) >= targetSeverity);
     }, [logs, selectedLevel]);
 
-    // SOLID Calculation: Calcul isolé et rapide de la quantité totale d'occurrences
     useEffect(() => {
         if (!searchQuery) {
             setTotalMatches(0);
@@ -63,7 +62,6 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => 
         setCurrentMatchIndex(0);
     }, [searchQuery, caseSensitive, wholeWord, useRegex, selectedLevel]);
 
-    // Gestion du défilement automatique vers l'élément sélectionné
     useEffect(() => {
         if (totalMatches === 0 || !showFind) return;
         const targetActiveElement = logsContainerRef.current?.querySelector(`[data-match-index="${currentMatchIndex}"]`);
@@ -96,14 +94,13 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => 
         }
     };
 
-    // Réinitialisation de la référence de comptage avant le rendu de la boucle
     globalMatchCounterRef.current = 0;
 
     return (
-        <div className="flex flex-col bg-[var(--vscode-editor-background)] p-0 w-full h-full overflow-hidden">
+        <div id="tab-terminal-content" className="flex flex-col bg-[var(--vscode-editor-background)] pt-[5px] pr-0 pb-0 pl-0 w-full h-full overflow-hidden">
             <div className="relative flex flex-col gap-4 mx-auto w-full max-w-6xl h-full">
 
-                {/* Tableau de bord de contrôle supérieur */}
+                {/* Top Control Panel */}
                 <div className="flex flex-shrink-0 justify-between items-center gap-4 bg-[var(--vscode-editorWidget-background)] shadow-md p-4 border border-[var(--vscode-panel-border)] rounded-xl">
                     <div className="flex items-center gap-3">
                         <span className="text-blue-500 text-lg codicon codicon-terminal"></span>
@@ -136,7 +133,7 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => 
                     </div>
                 </div>
 
-                {/* Injection du Toolbar de recherche abstrait */}
+                {/* Find Search Widget Injection */}
                 {showFind && (
                     <div className="top-16 right-4 z-50 absolute">
                         <FinderBase
@@ -152,7 +149,7 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => 
                     </div>
                 )}
 
-                {/* Zone d'affichage des lignes de log */}
+                {/* Logs Text Area Stream Viewport */}
                 <div
                     ref={logsContainerRef}
                     className="relative flex flex-col flex-1 gap-1 bg-black p-4 border border-[var(--vscode-panel-border)] rounded-lg overflow-y-auto font-mono text-xs select-text"
@@ -161,7 +158,6 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => 
                         filteredLogs.map((log, idx) => (
                             <div key={idx} className="flex items-start gap-2 break-all leading-relaxed whitespace-pre-wrap select-text">
                                 <span className={getLogColor(log.level)}>
-                                    {/* Délégation complète de la surveillance lexicale à FinderHtml */}
                                     <FinderHtml
                                         text={log.message}
                                         searchQuery={searchQuery}

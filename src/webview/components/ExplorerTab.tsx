@@ -104,7 +104,7 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
     });
 
     return (
-        <div className="relative flex items-stretch w-full h-full min-h-0">
+        <div id="tab-explorer-content" className="relative flex items-stretch w-full h-full min-h-0">
             <div className={`min-w-[250px] max-w-[70%] border-r border-[var(--vscode-panel-border)] shadow-[2px_0_8px_var(--vscode-widget-shadow)] z-0 bg-[var(--vscode-sideBar-background)] flex flex-col h-full overflow-hidden resize-x ${isTreeCollapsed || isMaximized ? 'hidden' : 'w-[465px]'}`}>
                 <TreeView
                     nodes={nodes}

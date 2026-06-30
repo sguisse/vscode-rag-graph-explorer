@@ -277,7 +277,7 @@ function getWebviewContent(webview: vscode.Webview, extensionPath: string): stri
         <link href="https://cdn.jsdelivr.net/npm/@vscode/codicons/dist/codicon.css" rel="stylesheet">
         <script src="https://cdn.tailwindcss.com"></script>
     </head>
-    <body class="h-full overflow-hidden select-none">
+    <body class="h-full overflow-hidden select-none" style="padding: 0px !important;">
         <div id="root" class="h-full flex flex-col"></div>
         <script src="${scriptUri}"></script>
     </body></html>`;

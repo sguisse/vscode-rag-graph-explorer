@@ -19,7 +19,7 @@ export const ConfigurationTab: React.FC<ConfigProps> = ({ config }) => {
     };
 
     return (
-        <div className="w-full h-full p-6 flex flex-col overflow-hidden bg-[var(--vscode-editor-background)]">
+        <div id="tab-config-content" className="w-full h-full p-6 flex flex-col overflow-hidden bg-[var(--vscode-editor-background)]">
             <div className="w-full max-w-4xl mx-auto flex flex-col gap-4 h-full">
                 <div className="bg-[var(--vscode-editorWidget-background)] p-5 rounded-xl border border-[var(--vscode-panel-border)] shadow-md flex flex-col h-full gap-4">
 
