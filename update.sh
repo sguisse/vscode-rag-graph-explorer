@@ -1,260 +1,384 @@
 #!/usr/bin/env bash
+set -e
 
-# Safely manage backticks for Markdown/code generation
-BTICK=$(printf '\x60')
-TRIPLE_TICK=$(printf '\x60\x60\x60')
+# Create standard workbench module routing directories
+mkdir -p scripts/analyser/tools/java/jqassistant
+mkdir -p scripts/install/modules/java/jqassistant
 
-echo "🚀 Standardizing state resetting across all remaining module checkers to eliminate cumulative summary duplication..."
-
-mkdir -p scripts/install/modules/python/graphify
-mkdir -p scripts/install/modules/java/jacoco
-mkdir -p scripts/install/modules/system/neo4j
-mkdir -p scripts/install/modules/system/core
-mkdir -p scripts/install/modules/node/dependency_cruiser
-mkdir -p scripts/install/modules/node/swc
-
-# ------------------------------------------------------------------------------
-# FILE: scripts/install/modules/python/graphify/check.py
-# ------------------------------------------------------------------------------
-cat << 'EOF' > scripts/install/modules/python/graphify/check.py
-import shutil
-from install.base import BaseCheckModule
-from install.registry import ModuleRegistry
-
-@ModuleRegistry.register_checker
-class PythonGraphifyChecker(BaseCheckModule):
-    @property
-    def name(self) -> str: return "python_graphify"
-
-    def check_uvx_runtime_utility(self):
-        self.steps_count += 1
-        if shutil.which("uvx"): self.status["uvx"] = {"status": "✅"}
-        else: self.status["uvx"] = {"status": "⚠️", "message": "Optimized compilation layer binaries absent."}
-
-    def execute_all_checks(self) -> dict:
-        self.steps_count = 0
-        self.ko_count = 0
-        self.status = {}
-        self.check_uvx_runtime_utility()
-        return self.generate_summary()
-EOF
-
-# ------------------------------------------------------------------------------
-# FILE: scripts/install/modules/java/jacoco/check.py
-# ------------------------------------------------------------------------------
-cat << 'EOF' > scripts/install/modules/java/jacoco/check.py
-from install.base import BaseCheckModule
-from install.registry import ModuleRegistry
-
-@ModuleRegistry.register_checker
-class JavaJacocoChecker(BaseCheckModule):
-    @property
-    def name(self) -> str: return "java_jacoco"
-
-    def check_xml_report_path_wiring(self):
-        self.steps_count += 1
-        target_report = self.context.get_tool_setting("jqassistant", "xmlReportPath", "./target/site/jacoco/jacoco.xml")
-        self.status["jacoco_wired"] = {"status": "✅", "path": target_report}
-
-    def execute_all_checks(self) -> dict:
-        self.steps_count = 0
-        self.ko_count = 0
-        self.status = {}
-        self.check_xml_report_path_wiring()
-        return self.generate_summary()
-EOF
-
-# ------------------------------------------------------------------------------
-# FILE: scripts/install/modules/system/neo4j/check.py
-# ------------------------------------------------------------------------------
-cat << 'EOF' > scripts/install/modules/system/neo4j/check.py
-import shutil
+# Write the production-ready synchronized analytics runner engine code
+cat << 'EOF' > scripts/analyser/tools/java/jqassistant/worker.py
 import os
-from install.base import BaseCheckModule
-from install.registry import ModuleRegistry
-
-@ModuleRegistry.register_checker
-class SystemNeo4jChecker(BaseCheckModule):
-    @property
-    def name(self) -> str: return "system_neo4j"
-
-    def check_java_version_compliance(self):
-        self.steps_count += 1
-        java_executable = shutil.which("java")
-        if java_executable:
-            self.status["java_runtime_executable"] = {"status": "✅", "path": java_executable}
-        else:
-            self.status["java_runtime_executable"] = {
-                "status": "❌",
-                "message": "Neo4j operations constraint requires an active local installation of Java 17 or Java 21."
-            }
-            self.ko_count += 1
-
-    def check_local_sandboxed_binaries(self):
-        self.steps_count += 1
-        version = self.context.get_tool_setting("neo4j", "version", "5.26.0")
-
-        target_folder = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/system/neo4j/neo4j-community-{version}"
-        bin_dir = os.path.join(target_folder, "bin")
-        admin_executable = os.path.join(bin_dir, "neo4j-admin.bat" if os.name == 'nt' else "neo4j-admin")
-
-        if os.path.exists(admin_executable):
-            self.status["neo4j_local_installation"] = {"status": "✅", "location": target_folder}
-
-            self.steps_count += 1
-            plugins_dir = os.path.join(target_folder, "plugins")
-            has_apoc = any("apoc" in file and file.endswith(".jar") for file in os.listdir(plugins_dir)) if os.path.exists(plugins_dir) else False
-            has_gds = any("graph-data-science" in file and file.endswith(".jar") for file in os.listdir(plugins_dir)) if os.path.exists(plugins_dir) else False
-
-            if has_apoc and has_gds:
-                self.status["neo4j_plugins_compliance"] = {"status": "✅", "message": "APOC Core and GDS extensions detected inside sandbox context."}
-            else:
-                self.status["neo4j_plugins_compliance"] = {
-                    "status": "❌",
-                    "message": "Missing necessary procedure plugins jars (apoc or graph-data-science) inside runtime subfolder."
-                }
-                self.ko_count += 1
-        else:
-            self.status["neo4j_local_installation"] = {
-                "status": "❌",
-                "message": f"Local database engine binary package missing inside dedicated tools route: target/tools/system/neo4j/"
-            }
-            self.ko_count += 1
-
-    def execute_all_checks(self) -> dict:
-        self.steps_count = 0
-        self.ko_count = 0
-        self.status = {}
-        self.check_java_version_compliance()
-        self.check_local_sandboxed_binaries()
-        return self.generate_summary()
-EOF
-
-# ------------------------------------------------------------------------------
-# FILE: scripts/install/modules/system/core/check.py
-# ------------------------------------------------------------------------------
-cat << 'EOF' > scripts/install/modules/system/core/check.py
-import os
-from install.base import BaseCheckModule
-from install.registry import ModuleRegistry
-
-@ModuleRegistry.register_checker
-class SystemCoreChecker(BaseCheckModule):
-    @property
-    def name(self) -> str: return "system_core"
-
-    def check_gitignore_rule(self):
-        self.steps_count += 1
-        gi_path = f"{self.context.workspace_root}/.gitignore"
-        has_rule = False
-        if os.path.exists(gi_path):
-            with open(gi_path, "r", encoding="utf-8") as f:
-                if ".graph-rag-explorer" in f.read():
-                    has_rule = True
-
-        if has_rule:
-            self.status["gitignore_rule_mapped"] = {"status": "✅"}
-        else:
-            self.status["gitignore_rule_mapped"] = {"status": "❌", "message": ".graph-rag-explorer exclusion pattern unlisted."}
-            self.ko_count += 1
-
-    def execute_all_checks(self) -> dict:
-        self.steps_count = 0
-        self.ko_count = 0
-        self.status = {}
-        self.check_gitignore_rule()
-        return self.generate_summary()
-EOF
-
-# ------------------------------------------------------------------------------
-# FILE: scripts/install/modules/node/dependency_cruiser/check.py
-# ------------------------------------------------------------------------------
-cat << 'EOF' > scripts/install/modules/node/dependency_cruiser/check.py
+import json
 import shutil
-import os
-from install.base import BaseCheckModule
-from install.registry import ModuleRegistry
+import subprocess
+import sys
+from analyser.base import BaseAnalyser
+from analyser.registry import AnalyserRegistry
+from analyser.neo4j_client import Neo4jClient
+from core.utils import info, error, debug, execute_tracked_command
+from core.sources_discovery import discover_workspace_sources
 
-@ModuleRegistry.register_checker
-class NodeDependencyCruiserChecker(BaseCheckModule):
+@AnalyserRegistry.register
+class JQAssistantWorker(BaseAnalyser):
     @property
-    def name(self) -> str: return "node_dependency_cruiser"
+    def name(self) -> str: return "java_jqassistant_worker"
 
-    def check_node_executable(self):
-        self.steps_count += 1
-        if shutil.which("node"): self.status["node"] = {"status": "✅"}
-        else:
-            self.status["node"] = {"status": "❌"}
-            self.ko_count += 1
+    def _find_sandboxed_binary(self, base_dir: str, target_name: str) -> str:
+        if not os.path.exists(base_dir): return None
+        for root, _, files in os.walk(base_dir):
+            if target_name in files:
+                return os.path.join(root, target_name).replace("\\", "/")
+        return None
 
-    def check_dependency_cruiser_modules(self):
-        self.steps_count += 1
-        dc_path = f"{self.context.tools_dir}/node/node_modules/dependency-cruiser"
-        if os.path.exists(dc_path): self.status["dependency_cruiser"] = {"status": "✅"}
-        else:
-            self.status["dependency_cruiser"] = {"status": "❌"}
-            self.ko_count += 1
+    def run_analysis(self, manifest_data: dict, neo4j_client: Neo4jClient, config_matrix: dict) -> None:
+        """Main orchestrator for the jQAssistant analysis pipeline."""
+        workspace_root = manifest_data.get("workspace_root", os.getcwd())
+        version = config_matrix.get("jqassistant", {}).get("version", "2.9.1")
+        exclude_regex = config_matrix.get("excludePathsRegex", "")
 
-    def execute_all_checks(self) -> dict:
-        self.steps_count = 0
-        self.ko_count = 0
-        self.status = {}
-        self.check_node_executable()
-        self.check_dependency_cruiser_modules()
-        return self.generate_summary()
+        sandbox_root = f"{workspace_root}/.graph-rag-explorer/target/tools/java/jqassistant"
+        config_dir = f"{sandbox_root}/config"
+        custom_config_path = f"{config_dir}/.jqassistant.yml"
+
+        # Define isolated execution CWD
+        jqa_run_dir = f"{workspace_root}/.graph-rag-explorer/target/raw_outputs/java"
+        discovery_output = f"{jqa_run_dir}/jqassistant/sources_discovered.json"
+
+        os.makedirs(jqa_run_dir, exist_ok=True)
+
+        # 1. Discovery Phase
+        discovered_sources = self._run_discovery(workspace_root, exclude_regex, discovery_output)
+        if not discovered_sources["java_src"] and not discovered_sources["java_classes"]:
+            info("No Java source or class directories detected. Bypassing jQAssistant pipeline.", component=self.name)
+            return
+
+        # 2. Binary Resolution Phase
+        executable_target = self._resolve_binary(sandbox_root, version)
+        if not executable_target:
+            error("Aborting analysis: jQAssistant executable command string could not be resolved.", component=self.name)
+            return
+
+        custom_env = os.environ.copy()
+
+        # 3. Diagnostics Phase
+        self._dump_diagnostics(executable_target, jqa_run_dir, custom_config_path, workspace_root, custom_env)
+
+        # 4. Execution Phase
+        scan_return_code = self._execute_scan_and_analyze(
+            executable_target, jqa_run_dir, discovered_sources, custom_config_path, custom_env
+        )
+
+        # 5. Fallback Linking Phase
+        if scan_return_code != 0:
+            info(f"Scan code {scan_return_code}. Activating semantic code relationship fallback parser layers...", component=self.name)
+        self._run_fallback_linking(discovered_sources, neo4j_client)
+
+    def _run_discovery(self, workspace_root: str, exclude_regex: str, discovery_output: str) -> dict:
+        info("Running dynamic workspace path discovery for jQAssistant...", component=self.name)
+        return discover_workspace_sources(workspace_root, exclude_regex, discovery_output)
+
+    def _resolve_binary(self, sandbox_root: str, version: str) -> str:
+        base_cmd = "jqassistant.cmd" if os.name == 'nt' else "jqassistant.sh"
+        executable_target = shutil.which(base_cmd) or shutil.which("jqassistant")
+
+        if not executable_target:
+            sandbox_bin_root = f"{sandbox_root}/jqassistant-{version}"
+            local_bin_path = self._find_sandboxed_binary(sandbox_bin_root, base_cmd)
+            if local_bin_path and os.path.exists(local_bin_path):
+                executable_target = local_bin_path
+                if os.name != 'nt':
+                    for walk_root, _, walk_files in os.walk(sandbox_bin_root):
+                        for file in walk_files:
+                            if file.endswith(".sh") or "bin" in walk_root.replace("\\", "/").split("/"):
+                                try: os.chmod(os.path.join(walk_root, file), 0o755)
+                                except Exception: pass
+        return executable_target
+
+    def _dump_diagnostics(self, executable_target: str, jqa_run_dir: str, custom_config_path: str, workspace_root: str, custom_env: dict) -> None:
+        reports_dir = os.path.join(workspace_root, ".graph-rag-explorer", "target", "install_reports", "java_jqassistant")
+        os.makedirs(reports_dir, exist_ok=True)
+
+        info(f"Dumping effective jQAssistant configuration and available rules to {reports_dir}...", component=self.name)
+        try:
+            self._dump_effective_configuration(executable_target, jqa_run_dir, custom_config_path, reports_dir, custom_env)
+            self._dump_available_rules(executable_target, jqa_run_dir, custom_config_path, reports_dir, custom_env)
+        except Exception as e:
+            error(f"Failed to execute effective diagnostic commands: {e}", component=self.name)
+
+    def _dump_effective_configuration(self, executable_target: str, jqa_run_dir: str, custom_config_path: str, reports_dir: str, custom_env: dict) -> None:
+        eff_config_cmd = [executable_target, "effective-configuration", "-configurationLocations", custom_config_path]
+        info(f"Executing subprocess command: {' '.join(eff_config_cmd)} (cwd={jqa_run_dir})", component=self.name)
+
+        res_config = subprocess.run(eff_config_cmd, cwd=jqa_run_dir, env=custom_env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
+        config_file_path = os.path.join(reports_dir, "effective-configuration.txt")
+        with open(config_file_path, "w", encoding="utf-8") as f:
+            f.write(res_config.stdout)
+        debug(f"Saved effective configuration to {config_file_path}", component=self.name)
+
+    def _dump_available_rules(self, executable_target: str, jqa_run_dir: str, custom_config_path: str, reports_dir: str, custom_env: dict) -> None:
+        avail_rules_cmd = [executable_target, "available-rules", "-configurationLocations", custom_config_path]
+        info(f"Executing subprocess command: {' '.join(avail_rules_cmd)} (cwd={jqa_run_dir})", component=self.name)
+
+        res_rules = subprocess.run(avail_rules_cmd, cwd=jqa_run_dir, env=custom_env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace", check=False)
+        rules_file_path = os.path.join(reports_dir, "available-rules.txt")
+        with open(rules_file_path, "w", encoding="utf-8") as f:
+            f.write(res_rules.stdout)
+
+        if res_rules.stdout:
+            sys.stdout.write(res_rules.stdout)
+            sys.stdout.flush()
+
+    def _execute_scan_and_analyze(self, executable_target: str, jqa_run_dir: str, discovered_sources: dict, custom_config_path: str, custom_env: dict) -> int:
+        scan_return_code = self._execute_scan(executable_target, jqa_run_dir, discovered_sources, custom_config_path, custom_env)
+
+        if scan_return_code == 0:
+            self._execute_analyze(executable_target, jqa_run_dir, custom_config_path, custom_env)
+
+        return scan_return_code
+
+    def _execute_scan(self, executable_target: str, jqa_run_dir: str, discovered_sources: dict, custom_config_path: str, custom_env: dict) -> int:
+        scan_cmd = [
+            executable_target,
+            "scan",
+            "-configurationLocations", custom_config_path
+        ]
+
+        for class_dir in discovered_sources["java_classes"]:
+            scan_cmd.extend(["-f", f"java:classpath::{class_dir}"])
+
+        info(f"Executing tracking runner: {' '.join(scan_cmd)} (cwd={jqa_run_dir})", component=self.name)
+        return execute_tracked_command(scan_cmd, "jqa_scan", cwd=jqa_run_dir, env=custom_env)
+
+    def _execute_analyze(self, executable_target: str, jqa_run_dir: str, custom_config_path: str, custom_env: dict) -> int:
+        analyze_cmd = [
+            executable_target,
+            "analyze",
+            "-configurationLocations", custom_config_path
+        ]
+        info(f"Executing tracking runner: {' '.join(analyze_cmd)} (cwd={jqa_run_dir})", component=self.name)
+        return execute_tracked_command(analyze_cmd, "jqa_analyze", cwd=jqa_run_dir, env=custom_env)
+
+    def _run_fallback_linking(self, discovered_sources: dict, neo4j_client: Neo4jClient) -> None:
+        java_files = discovered_sources["java_src"]
+        for file in java_files:
+            neo4j_client.execute_write(
+                "MERGE (f:File:Java {path: $path}) SET f.name = $name",
+                {"path": file, "name": file.split("/")[-1]}
+            )
+
+        controllers = [f for f in java_files if "Controller" in f]
+        services = [f for f in java_files if "Service" in f]
+        repositories = [f for f in java_files if any(x in f for x in ["Repository", "Mapper", "Provider"])]
+
+        for c in controllers:
+            base_name = c.split("/")[-1].replace("Controller.java", "")
+            matched = [s for s in services if base_name in s.split("/")[-1]]
+            if matched:
+                neo4j_client.execute_write("MATCH (src:File {path: $src}), (dst:File {path: $dst}) MERGE (src)-[:CALLS]->(dst)", {"src": c, "dst": matched[0]})
+
+        for s in services:
+            base_name = s.split("/")[-1].replace("Service.java", "")
+            matched = [r for r in repositories if base_name in r.split("/")[-1]]
+            if matched:
+                neo4j_client.execute_write("MATCH (src:File {path: $src}), (dst:File {path: $dst}) MERGE (src)-[:CALLS]->(dst)", {"src": s, "dst": matched[0]})
 EOF
 
-# ------------------------------------------------------------------------------
-# FILE: scripts/install/modules/node/swc/check.py
-# ------------------------------------------------------------------------------
-cat << 'EOF' > scripts/install/modules/node/swc/check.py
-import shutil
+# Write the production-ready infrastructure installer engine code
+cat << 'EOF' > scripts/install/modules/java/jqassistant/install.py
 import os
-from install.base import BaseCheckModule
+import sys
+import ssl
+import json
+import re
+import urllib.request
+import urllib.error
+import zipfile
+from install.base import BaseInstallModule
 from install.registry import ModuleRegistry
+from core.utils import info, success, error, warn
+from core.sources_discovery import discover_workspace_sources
+from install.modules.java.jqassistant.check import JavaJQAssistantChecker
 
-@ModuleRegistry.register_checker
-class NodeSwcChecker(BaseCheckModule):
+@ModuleRegistry.register_installer
+class JavaJQAssistantInstaller(BaseInstallModule):
+    def __init__(self, context):
+        super().__init__(context)
+        self._last_reported_percent = -5
+
     @property
-    def name(self) -> str: return "node_swc"
+    def name(self) -> str: return "java_jqassistant"
 
-    def check_node_binary(self):
-        self.steps_count += 1
-        node_bin = shutil.which("node")
-        if node_bin:
-            self.status["node"] = {"status": "✅"}
-        else:
-            self.status["node"] = {"status": "❌", "message": "Node environment runtime omitted."}
-            self.ko_count += 1
+    def _download_progress_bar(self, block_num, block_size, total_size):
+        if total_size <= 0: return
+        read_so_far = block_num * block_size
+        percent = min(100, int(read_so_far * 100 / total_size))
+        if percent - self._last_reported_percent >= 5 or percent == 100:
+            info(f"Downloading portable jQAssistant CLI distribution package: {percent}%", component=self.name)
+            self._last_reported_percent = percent
 
-    def check_npm_binary(self):
-        self.steps_count += 1
-        npm_bin = shutil.which("npm")
-        if npm_bin:
-            self.status["npm"] = {"status": "✅"}
-        else:
-            self.status["npm"] = {"status": "❌", "message": "Npm utility wrapper unmapped."}
-            self.ko_count += 1
+    def fetch_and_extract_jqassistant(self):
+        version = self.context.get_tool_setting("jqassistant", "version", "2.9.1")
+        jqa_tool_root = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/java/jqassistant"
+        target_folder = os.path.join(jqa_tool_root, f"jqassistant-{version}")
 
-    def check_swc_core_package(self):
-        self.steps_count += 1
-        swc_path = f"{self.context.tools_dir}/node/node_modules/@swc/core"
-        if os.path.exists(swc_path):
-            self.status["swc"] = {"status": "✅"}
-        else:
-            self.status["swc"] = {"status": "❌", "message": "@swc/core modules unallocated."}
-            self.ko_count += 1
+        if os.path.exists(target_folder): return
 
-    def execute_all_checks(self) -> dict:
-        self.steps_count = 0
-        self.ko_count = 0
-        self.status = {}
-        self.check_node_binary()
-        self.check_npm_binary()
-        self.check_swc_core_package()
-        return self.generate_summary()
+        os.makedirs(jqa_tool_root, exist_ok=True)
+        local_zip_path = os.path.join(jqa_tool_root, "jqassistant.zip")
+        default_url = f"https://github.com/jQAssistant/jqassistant/releases/download/{version}/jqassistant-commandline-neo4jv5-{version}-distribution.zip"
+        url = self.context.get_tool_setting("jqassistant", "downloadUrl", default_url).replace("${version}", version)
+
+        download_success = False
+        original_context = ssl._create_default_https_context
+        ssl._create_default_https_context = ssl._create_unverified_context
+
+        try:
+            info(f"Downloading jQAssistant portable binaries bundle: {url}", component=self.name)
+            try:
+                self._last_reported_percent = -5
+                urllib.request.urlretrieve(url, local_zip_path, self._download_progress_bar)
+                sys.stdout.write("\n")
+                download_success = True
+            except urllib.error.URLError as url_err:
+                error(f"Target address responded with network fault: {url_err}", component=self.name)
+        finally:
+            ssl._create_default_https_context = original_context
+
+        if not download_success:
+            raise FileNotFoundError("Network asset download failure. Verification loops terminated.")
+
+        info("Extracting sandboxed jQAssistant binaries...", component=self.name)
+        try:
+            with zipfile.ZipFile(local_zip_path, 'r') as zip_ref:
+                zip_ref.extractall(target_folder)
+            os.remove(local_zip_path)
+            success(f"jQAssistant workspace package successfully provisioned: {target_folder}", component=self.name)
+        except Exception as e:
+            error(f"Decompression extraction failed: {e}", component=self.name)
+            if os.path.exists(local_zip_path):
+                try: os.remove(local_zip_path)
+                except OSError: pass
+            raise e
+
+    def inject_mcp_server_config(self):
+        mcp_dir = os.path.join(self.context.workspace_root, ".vscode")
+        os.makedirs(mcp_dir, exist_ok=True)
+        mcp_path = os.path.join(mcp_dir, "mcp.json")
+
+        template_path = os.path.join(os.path.dirname(__file__), "config", "templates", "mcp-server-template.json")
+        if not os.path.exists(template_path):
+            error("MCP Server template missing from installer resources.", component=self.name)
+            return
+
+        with open(template_path, "r", encoding="utf-8") as f:
+            template_content = f.read()
+
+        mcp_host = self.context.get_tool_setting("jqassistant", "mcp.host", "127.0.0.1")
+        mcp_port = self.context.get_tool_setting("jqassistant", "mcp.port", 8800)
+        template_content = template_content.replace("{{JQA_MCP_HOST}}", str(mcp_host)).replace("{{JQA_MCP_PORT}}", str(mcp_port))
+
+        try:
+            template_data = json.loads(template_content)
+        except json.JSONDecodeError as e:
+            error(f"Malformed MCP template JSON: {e}", component=self.name)
+            return
+
+        mcp_data = {}
+        if os.path.exists(mcp_path):
+            try:
+                with open(mcp_path, "r", encoding="utf-8") as f:
+                    mcp_data = json.load(f)
+            except json.JSONDecodeError:
+                warn("Existing .vscode/mcp.json is malformed. Overwriting.", component=self.name)
+
+        if "servers" not in mcp_data:
+            mcp_data["servers"] = {}
+
+        server_key = "jqassistant-graph-rag"
+        if server_key in template_data:
+            mcp_data["servers"][server_key] = template_data[server_key]
+        elif "servers" in template_data and server_key in template_data["servers"]:
+            mcp_data["servers"][server_key] = template_data["servers"][server_key]
+
+        with open(mcp_path, "w", encoding="utf-8") as f:
+            json.dump(mcp_data, f, indent=4)
+        success(f"MCP server config injected successfully into {mcp_path}", component=self.name)
+
+    def install_config_and_rules(self):
+        workspace_root = self.context.workspace_root
+        exclude_regex = self.context.get_tool_setting("excludePathsRegex", "")
+
+        jqa_tool_root = f"{workspace_root}/.graph-rag-explorer/target/tools/java/jqassistant"
+        config_dir = f"{jqa_tool_root}/config"
+        rules_dir = f"{config_dir}/rules"
+        jqa_results_dir = f"{workspace_root}/.graph-rag-explorer/target/raw_outputs/java"
+
+        os.makedirs(config_dir, exist_ok=True)
+        os.makedirs(rules_dir, exist_ok=True)
+        os.makedirs(jqa_results_dir, exist_ok=True)
+
+        discovery_output = f"{jqa_results_dir}/jqassistant/sources_discovered.json"
+        discovered = discover_workspace_sources(workspace_root, exclude_regex, discovery_output)
+
+        template_config = os.path.join(os.path.dirname(__file__), "config", "templates", ".jqassistant-template.yml")
+        custom_config_path = f"{config_dir}/.jqassistant.yml"
+
+        with open(template_config, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        # Build clean multiline list data parameters
+        java_src_yaml = "\n".join([f"        - '{path}'" for path in discovered["java_src"]])
+        neo4j_uri = self.context.get_tool_setting("neo4j", "uri", "bolt://localhost:7687")
+        neo4j_user = self.context.get_tool_setting("neo4j", "username", "neo4j")
+        neo4j_pass = self.context.get_tool_setting("neo4j", "password", "password")
+        project_name = os.path.basename(workspace_root)
+
+        # Pre-clean the template injection target lines to prevent template indent trailing offset anomalies
+        content = re.sub(r'[ \t]*\{\{JAVA_SRC_DIRS_YAML_LIST\}\}', '{{JAVA_SRC_DIRS_YAML_LIST}}', content)
+
+        content = content.replace("{{JQA_BOLT_URL}}", neo4j_uri)\
+                         .replace("{{JQA_BOLT_USERNAME}}", neo4j_user)\
+                         .replace("{{JQA_BOLT_PASSWORD}}", neo4j_pass)\
+                         .replace("{{JAVA_SRC_DIRS_YAML_LIST}}", java_src_yaml)\
+                         .replace("{{PROJECT_NAME}}", project_name)\
+                         .replace("{{JQA_RULES_DIRECTORY}}", rules_dir.replace("\\", "/"))
+
+        with open(custom_config_path, "w", encoding="utf-8") as f:
+            f.write(content)
+
+        success(f"JQAssistant configuration dropped into {custom_config_path}", component=self.name)
+
+        template_rules = os.path.join(os.path.dirname(__file__), "config", "templates", "analysis-rules-template.xml")
+        target_rules = f"{rules_dir}/{project_name}-rules.xml"
+
+        with open(template_rules, "r", encoding="utf-8") as f:
+            rules_content = f.read().replace("{{PROJECT_NAME}}", project_name)
+
+        with open(target_rules, "w", encoding="utf-8") as f:
+            f.write(rules_content)
+
+        success(f"JQAssistant rules dropped into {target_rules}", component=self.name)
+
+    def execute_all_installations(self) -> None:
+        """Runs installation workflows based on validation checks without creating runtime output folders."""
+        checker = JavaJQAssistantChecker(self.context)
+        status = checker.execute_all_checks()
+
+        if status.get("jqassistant_binary", {}).get("status") != "✅":
+            self.fetch_and_extract_jqassistant()
+
+        if status.get("mcp_server_config", {}).get("status") != "✅":
+            self.inject_mcp_server_config()
+
+        if (status.get("jqassistant_custom_config", {}).get("status") != "✅" or
+            status.get("jqassistant_custom_rules", {}).get("status") != "✅"):
+            self.install_config_and_rules()
 EOF
 
-npm run package
+# Purge any legacy distorted target configurations to force immediate correction layout regeneration triggers
+rm -f .graph-rag-explorer/target/tools/java/jqassistant/config/.jqassistant.yml
 
-echo "✅ fix/metrics-idempotency: Extended the pre-check cleanup logic across all system, node, and python checkers to systematically stabilize telemetry step-counts."
+# Recompile the VS Code Extension package bundle
+npm run compile
+
+echo "✅ fix: Resolved first element indentation layout offset error by stripping trailing text padding metrics from the injection template context."

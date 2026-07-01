@@ -2,6 +2,7 @@ import os
 import sys
 import ssl
 import json
+import re
 import urllib.request
 import urllib.error
 import zipfile
@@ -72,10 +73,6 @@ class JavaJQAssistantInstaller(BaseInstallModule):
                 except OSError: pass
             raise e
 
-    def create_isolated_java_raw_target_folder(self):
-        java_raw_output_dir = f"{self.context.workspace_root}/.graph-rag-explorer/target/raw_outputs/java"
-        os.makedirs(java_raw_output_dir, exist_ok=True)
-
     def inject_mcp_server_config(self):
         mcp_dir = os.path.join(self.context.workspace_root, ".vscode")
         os.makedirs(mcp_dir, exist_ok=True)
@@ -133,24 +130,24 @@ class JavaJQAssistantInstaller(BaseInstallModule):
         os.makedirs(rules_dir, exist_ok=True)
         os.makedirs(jqa_results_dir, exist_ok=True)
 
-        #-----------
-        # 1. Run Discovery during install phase to establish the immutable base config
         discovery_output = f"{jqa_results_dir}/jqassistant/sources_discovered.json"
         discovered = discover_workspace_sources(workspace_root, exclude_regex, discovery_output)
 
-        #-----------
-        # 2. Render .jqassistant.yml directly into the isolated tools config directory once
         template_config = os.path.join(os.path.dirname(__file__), "config", "templates", ".jqassistant-template.yml")
         custom_config_path = f"{config_dir}/.jqassistant.yml"
 
         with open(template_config, "r", encoding="utf-8") as f:
             content = f.read()
 
-        java_src_yaml = "\n".join([f"        - {path}" for path in discovered["java_src"]])
+        # Build clean multiline list data parameters
+        java_src_yaml = "\n".join([f"        - '{path}'" for path in discovered["java_src"]])
         neo4j_uri = self.context.get_tool_setting("neo4j", "uri", "bolt://localhost:7687")
         neo4j_user = self.context.get_tool_setting("neo4j", "username", "neo4j")
         neo4j_pass = self.context.get_tool_setting("neo4j", "password", "password")
         project_name = os.path.basename(workspace_root)
+
+        # Pre-clean the template injection target lines to prevent template indent trailing offset anomalies
+        content = re.sub(r'[ \t]*\{\{JAVA_SRC_DIRS_YAML_LIST\}\}', '{{JAVA_SRC_DIRS_YAML_LIST}}', content)
 
         content = content.replace("{{JQA_BOLT_URL}}", neo4j_uri)\
                          .replace("{{JQA_BOLT_USERNAME}}", neo4j_user)\
@@ -164,8 +161,6 @@ class JavaJQAssistantInstaller(BaseInstallModule):
 
         success(f"JQAssistant configuration dropped into {custom_config_path}", component=self.name)
 
-        #-----------
-        # 3. Render rules into sandbox
         template_rules = os.path.join(os.path.dirname(__file__), "config", "templates", "analysis-rules-template.xml")
         target_rules = f"{rules_dir}/{project_name}-rules.xml"
 
@@ -178,12 +173,9 @@ class JavaJQAssistantInstaller(BaseInstallModule):
         success(f"JQAssistant rules dropped into {target_rules}", component=self.name)
 
     def execute_all_installations(self) -> None:
-        """Selectively runs installation workflows based on dynamic environmental validation status layers."""
+        """Runs installation workflows based on validation checks without creating runtime output folders."""
         checker = JavaJQAssistantChecker(self.context)
         status = checker.execute_all_checks()
-
-        if status.get("raw_outputs_java", {}).get("status") != "✅":
-            self.create_isolated_java_raw_target_folder()
 
         if status.get("jqassistant_binary", {}).get("status") != "✅":
             self.fetch_and_extract_jqassistant()
