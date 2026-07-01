@@ -2,10 +2,12 @@ import os
 import sys
 import ssl
 import time
+import shutil
 import urllib.request
 import tarfile
 import zipfile
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 from install.base import BaseInstallModule
 from install.registry import ModuleRegistry
 from core.utils import info, success, error
@@ -14,78 +16,60 @@ from core.utils import info, success, error
 class SystemNeo4jInstaller(BaseInstallModule):
     def __init__(self, context):
         super().__init__(context)
-        self._last_reported_percent = -5
 
     @property
     def name(self) -> str: return "system_neo4j"
 
-    def _download_progress_bar(self, archive_name, block_num, block_size, total_size):
-        if total_size <= 0: return
-        read_so_far = block_num * block_size
-        percent = min(100, int(read_so_far * 100 / total_size))
-        if percent - self._last_reported_percent >= 5 or percent == 100:
-            info(f"Downloading Neo4j Graph Platform Archive ({archive_name}) : {percent}%", component=self.name)
-            self._last_reported_percent = percent
+    def _download_file(self, url, local_path, asset_name, headers, ctx):
+        if os.path.exists(local_path):
+            return
+        info(f"Starting parallel download for asset: {asset_name}", component=self.name)
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, context=ctx) as response:
+                total_size = int(response.info().get('Content-Length', -1))
+                block_size = 16384
+                read_so_far = 0
+                last_reported_percent = -10
+                with open(local_path, 'wb') as out_file:
+                    while True:
+                        block = response.read(block_size)
+                        if not block: break
+                        out_file.write(block)
+                        read_so_far += len(block)
+                        if total_size > 0:
+                            percent = min(100, int(read_so_far * 100 / total_size))
+                            if percent - last_reported_percent >= 10 or percent == 100:
+                                info(f"Downloading {asset_name} progress: {percent}%", component=self.name)
+                                last_reported_percent = percent
+            success(f"Successfully completed download for: {asset_name}", component=self.name)
+        except Exception as e:
+            error(f"Parallel download context failure for {asset_name}: {e}", component=self.name)
+            if os.path.exists(local_path):
+                try: os.remove(local_path)
+                except OSError: pass
+            raise e
 
-    def fetch_and_extract_distribution(self):
+    def execute_all_installations(self) -> None:
         version = self.context.get_tool_setting("neo4j", "version", "5.26.0")
+        gds_version = self.context.get_tool_setting("neo4j", "gds_version", "2026.05.0")
         is_windows = (os.name == 'nt')
-        archive_name = f"neo4j-community-{version}-windows.zip" if is_windows else f"neo4j-community-{version}-unix.tar.gz"
 
         sandbox_root = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/system/neo4j"
         target_folder = os.path.join(sandbox_root, f"neo4j-community-{version}")
+        plugins_dir = os.path.join(target_folder, "plugins")
 
-        if os.path.exists(target_folder):
-            return
+        admin_cmd = os.path.join(target_folder, "bin", "neo4j-admin.bat" if is_windows else "neo4j-admin")
+        apoc_jar_path = os.path.join(plugins_dir, f"apoc-{version}-core.jar")
+        gds_jar_path = os.path.join(plugins_dir, f"neo4j-graph-data-science-{gds_version}.jar")
+
+        archive_name = f"neo4j-community-{version}-windows.zip" if is_windows else f"neo4j-community-{version}-unix.tar.gz"
+        local_archive_path = os.path.join(sandbox_root, archive_name)
+        apoc_tmp_path = os.path.join(sandbox_root, f"apoc-{version}-core.jar")
+        gds_zip_name = f"neo4j-graph-data-science-{gds_version}.jar.zip"
+        gds_tmp_path = os.path.join(sandbox_root, gds_zip_name)
 
         os.makedirs(sandbox_root, exist_ok=True)
-        url = f"https://dist.neo4j.org/{archive_name}"
-        local_archive_path = os.path.join(sandbox_root, archive_name)
-
-        if not os.path.exists(local_archive_path):
-            info(f"Starting download from destination URL: {url}", component=self.name)
-            try:
-                original_https_context = ssl._create_default_https_context
-                ssl._create_default_https_context = ssl._create_unverified_context
-
-                req = urllib.request.Request(
-                    url,
-                    headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
-                )
-                with urllib.request.urlopen(req) as response:
-                    total_size = int(response.info().get('Content-Length', -1))
-                    block_size = 16384
-                    block_num = 0
-                    with open(local_archive_path, 'wb') as out_file:
-                        while True:
-                            block = response.read(block_size)
-                            if not block: break
-                            out_file.write(block)
-                            block_num += 1
-                            self._download_progress_bar(archive_name,block_num, block_size, total_size)
-            except Exception as e:
-                error(f"Network request timeout or download pipeline block exception context: {e}", component=self.name)
-                raise e
-            finally:
-                ssl._create_default_https_context = original_https_context
-
-        info(f"Decompressing structural layout archives onto tools target context...", component=self.name)
-        if is_windows:
-            with zipfile.ZipFile(local_archive_path, 'r') as zip_ref:
-                zip_ref.extractall(sandbox_root)
-        else:
-            with tarfile.open(local_archive_path, "r:gz") as tar_ref:
-                tar_ref.extractall(sandbox_root)
-
-        try: os.remove(local_archive_path)
-        except OSError: pass
-
-    def _fetch_plugins(self, target_folder):
-        version = self.context.get_tool_setting("neo4j", "version", "5.26.0")
-        plugins_dir = os.path.join(target_folder, "plugins")
-        os.makedirs(plugins_dir, exist_ok=True)
-
-        gds_version = self.context.get_tool_setting("neo4j", "gds_version", "2026.05.0")
 
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -93,83 +77,59 @@ class SystemNeo4jInstaller(BaseInstallModule):
         }
         ctx = ssl._create_unverified_context()
 
-        # 1. Télécharger APOC (Distribué directement en tant que JAR sur GitHub)
-        apoc_jar_name = f"apoc-{version}-core.jar"
-        apoc_jar_path = os.path.join(plugins_dir, apoc_jar_name)
-        apoc_url = f"https://github.com/neo4j/apoc/releases/download/{version}/{apoc_jar_name}"
+        download_tasks = []
+
+        if not os.path.exists(admin_cmd):
+            dist_url = f"https://dist.neo4j.org/{archive_name}"
+            download_tasks.append((dist_url, local_archive_path, archive_name))
 
         if not os.path.exists(apoc_jar_path):
-            info(f"Procuring essential system plugin asset: {apoc_jar_name}", component=self.name)
-            info(f"Source URL: {apoc_url}", component=self.name)
-            self._last_reported_percent = -5
-            try:
-                req = urllib.request.Request(apoc_url, headers=headers)
-                with urllib.request.urlopen(req, context=ctx) as response:
-                    total_size = int(response.info().get('Content-Length', -1))
-                    block_size = 16384
-                    block_num = 0
-                    with open(apoc_jar_path, 'wb') as out_file:
-                        while True:
-                            block = response.read(block_size)
-                            if not block: break
-                            out_file.write(block)
-                            block_num += 1
-                            self._download_progress_bar(f"{apoc_jar_name}", block_num, block_size, total_size)
-            except Exception as e:
-                error(f"Plugin download pipeline critical failure for APOC: {e}", component=self.name)
-                if os.path.exists(apoc_jar_path):
-                    try: os.remove(apoc_jar_path)
-                    except OSError: pass
-                raise e
-
-        # 2. Télécharger GDS (Via les releases officielles GitHub au format .jar.zip)
-        gds_zip_name = f"neo4j-graph-data-science-{gds_version}.jar.zip"
-        gds_zip_path = os.path.join(plugins_dir, gds_zip_name)
-        gds_jar_name = f"neo4j-graph-data-science-{gds_version}.jar"
-        gds_jar_path = os.path.join(plugins_dir, gds_jar_name)
-        gds_zip_url = f"https://github.com/neo4j/graph-data-science/releases/download/{gds_version}/{gds_zip_name}"
+            apoc_url = f"https://github.com/neo4j/apoc/releases/download/{version}/apoc-{version}-core.jar"
+            download_tasks.append((apoc_url, apoc_tmp_path, f"apoc-{version}-core.jar"))
 
         if not os.path.exists(gds_jar_path):
-            info(f"Procuring essential system plugin asset: {gds_jar_name} (via ZIP Archive)", component=self.name)
-            info(f"Source URL: {gds_zip_url}", component=self.name)
-            self._last_reported_percent = -5
-            try:
-                # Etape A : Téléchargement du ZIP
-                req = urllib.request.Request(gds_zip_url, headers=headers)
-                with urllib.request.urlopen(req, context=ctx) as response:
-                    total_size = int(response.info().get('Content-Length', -1))
-                    block_size = 16384
-                    block_num = 0
-                    with open(gds_zip_path, 'wb') as out_file:
-                        while True:
-                            block = response.read(block_size)
-                            if not block: break
-                            out_file.write(block)
-                            block_num += 1
-                            self._download_progress_bar(f"{gds_jar_name}", block_num, block_size, total_size)
+            gds_zip_url = f"https://github.com/neo4j/graph-data-science/releases/download/{gds_version}/{gds_zip_name}"
+            download_tasks.append((gds_zip_url, gds_tmp_path, gds_zip_name))
 
-                # Etape B : Extraction du JAR depuis le ZIP
-                info(f"Extracting GDS JAR from downloaded archive...", component=self.name)
-                with zipfile.ZipFile(gds_zip_path, 'r') as zip_ref:
-                    jar_filename = next((f.filename for f in zip_ref.infolist() if f.filename.endswith(".jar")), None)
-                    if jar_filename:
-                        with zip_ref.open(jar_filename) as zf, open(gds_jar_path, 'wb') as f:
-                            f.write(zf.read())
-                    else:
-                        raise Exception("No .jar file found inside the GDS zip archive.")
+        if download_tasks:
+            info(f"Launching {len(download_tasks)} download threads concurrently...", component=self.name)
+            with ThreadPoolExecutor(max_workers=len(download_tasks)) as executor:
+                futures = [
+                    executor.submit(self._download_file, url, path, name, headers, ctx)
+                    for url, path, name in download_tasks
+                ]
+                for future in futures:
+                    future.result()
 
-                # Etape C : Nettoyage du ZIP temporaire
-                os.remove(gds_zip_path)
+        if os.path.exists(local_archive_path):
+            info("Decompressing structural layout archives onto tools target context...", component=self.name)
+            if is_windows:
+                with zipfile.ZipFile(local_archive_path, 'r') as zip_ref:
+                    zip_ref.extractall(sandbox_root)
+            else:
+                with tarfile.open(local_archive_path, "r:gz") as tar_ref:
+                    tar_ref.extractall(sandbox_root)
+            try: os.remove(local_archive_path)
+            except OSError: pass
 
-            except Exception as e:
-                error(f"Plugin download pipeline critical failure for GDS: {e}", component=self.name)
-                if os.path.exists(gds_zip_path):
-                    try: os.remove(gds_zip_path)
-                    except OSError: pass
-                if os.path.exists(gds_jar_path):
-                    try: os.remove(gds_jar_path)
-                    except OSError: pass
-                raise e
+        os.makedirs(plugins_dir, exist_ok=True)
+
+        if os.path.exists(apoc_tmp_path):
+            shutil.move(apoc_tmp_path, apoc_jar_path)
+
+        if os.path.exists(gds_tmp_path):
+            info("Extracting GDS JAR from downloaded archive...", component=self.name)
+            with zipfile.ZipFile(gds_tmp_path, 'r') as zip_ref:
+                jar_filename = next((f.filename for f in zip_ref.infolist() if f.filename.endswith(".jar")), None)
+                if jar_filename:
+                    with zip_ref.open(jar_filename) as zf, open(gds_jar_path, 'wb') as f:
+                        f.write(zf.read())
+                else:
+                    raise Exception("No .jar file found inside the GDS zip archive.")
+            try: os.remove(gds_tmp_path)
+            except OSError: pass
+
+        self.configure_credentials_and_boot(target_folder)
 
     def _configure_neo4j_settings(self, target_folder):
         conf_path = os.path.join(target_folder, "conf", "neo4j.conf")
@@ -201,8 +161,7 @@ class SystemNeo4jInstaller(BaseInstallModule):
         except Exception as e:
             error(f"Failed to patch config parameters: {e}", component=self.name)
 
-    def configure_credentials_and_boot(self):
-        version = self.context.get_tool_setting("neo4j", "version", "5.26.0")
+    def configure_credentials_and_boot(self, target_folder):
         password = self.context.get_tool_setting("neo4j", "password", "password")
         user = self.context.get_tool_setting("neo4j", "user", "neo4j")
         host = self.context.get_tool_setting("neo4j", "host", "localhost")
@@ -210,9 +169,6 @@ class SystemNeo4jInstaller(BaseInstallModule):
         http_port = self.context.get_tool_setting("neo4j", "port.http", "7474")
         is_windows = (os.name == 'nt')
 
-        target_folder = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/system/neo4j/neo4j-community-{version}"
-
-        self._fetch_plugins(target_folder)
         self._configure_neo4j_settings(target_folder)
 
         bin_dir = os.path.join(target_folder, "bin")
@@ -222,7 +178,8 @@ class SystemNeo4jInstaller(BaseInstallModule):
 
         if not is_windows:
             for cmd in [admin_cmd, neo4j_cmd, shell_cmd]:
-                os.chmod(cmd, 0o755)
+                if os.path.exists(cmd):
+                    os.chmod(cmd, 0o755)
 
         info("Initializing system administrator authorization credentials token inside Neo4j engine...", component=self.name)
         try:
@@ -254,7 +211,3 @@ class SystemNeo4jInstaller(BaseInstallModule):
                 error(f"Failed to inject custom user via Cypher-Shell blueprint: {e.stderr.decode()}", component=self.name)
 
         success(f"Neo4j instance initialized smoothly. Browser UI: http://{host}:{http_port} | Bolt profile: bolt://{host}:{bolt_port} [User: {user} | Pass: {password}]", component=self.name)
-
-    def execute_all_installations(self) -> None:
-        self.fetch_and_extract_distribution()
-        self.configure_credentials_and_boot()
