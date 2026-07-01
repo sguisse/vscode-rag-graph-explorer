@@ -189,10 +189,10 @@ class SystemNeo4jInstaller(BaseInstallModule):
         try:
             check_query = "MATCH (m:SystemMetadata {id: 'global_config'}) RETURN m.`Remote-Database` AS status;"
             res = subprocess.run([shell_cmd, "-a", f"bolt://localhost:{bolt_port}", "-u", user, "-p", password, check_query], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
-            if "true" in res.stdout:
+            if "TRUE" in res.stdout:
                 success("Database integrity verification satisfied: 'Remote-Database = true' confirmed online.", component=self.name)
             else:
-                warn("Post-installation verification warning: 'Remote-Database = true' token could not be immediately parsed via cypher-shell.", component=self.name)
+                warn(f"Post-installation verification warning: 'Remote-Database = true' token could not be immediately parsed via cypher-shell : res = {res.stdout}", component=self.name)
         except Exception as ex:
             warn(f"Post-installation verification warning: Encountered a connection/query anomaly while validating metadata token status: {ex}", component=self.name)
 

@@ -5,7 +5,7 @@ import subprocess
 import sys
 from analyser.base import BaseAnalyser
 from analyser.registry import AnalyserRegistry
-from analyser.neo4j_client import Neo4jClient
+from analyser.tools.neo4j.neo4j_client import Neo4jClient
 from core.utils import info, error, debug, execute_tracked_command
 from core.sources_discovery import discover_workspace_sources
 

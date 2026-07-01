@@ -120,12 +120,14 @@ class JavaJQAssistantChecker(BaseCheckModule):
         try:
             check_query = "MATCH (m:SystemMetadata {id: 'global_config'}) RETURN m.`Remote-Database` AS status;"
             res = subprocess.run([shell_cmd, "-a", f"bolt://localhost:{bolt_port}", "-u", user, "-p", password, check_query], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
-            if res.returncode == 0 and "true" in res.stdout:
+            if "TRUE" in res.stdout:
                 self.status["remote_database_token"] = {"status": "✅"}
             else:
                 self.status["remote_database_token"] = {"status": "❌", "message": "'Remote-Database = true' token missing or invalid on targeted instance profile."}
+                self.ko_count += 1
         except Exception as e:
             self.status["remote_database_token"] = {"status": "❌", "message": f"Targeted database instance currently unreachable. Context: {e}"}
+            self.ko_count += 1
 
     def execute_all_checks(self) -> dict:
         self.steps_count = 0

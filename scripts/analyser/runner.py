@@ -2,11 +2,12 @@ import json
 import os
 import sys
 from concurrent.futures import ThreadPoolExecutor
-from analyser.neo4j_client import Neo4jClient
+from analyser.tools.neo4j.neo4j_client import Neo4jClient
 from analyser.registry import AnalyserRegistry
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from core.utils import info, success, error
+from analyser.tools.neo4j.neo4j_statistics_extractor import build_statistics
 
 def run_analysis_pipeline(manifest_path: str, neo4j_config: dict, global_config_matrix: dict):
     info("Launching background data parsing threads targeting embedded storage context...", component="AnalyserRunner")
@@ -50,6 +51,10 @@ def run_analysis_pipeline(manifest_path: str, neo4j_config: dict, global_config_
                 record = result.single()
                 java_count = record["javaFilesCount"] if record else 0
                 info(f"Number of Java files found in Neo4j database: {java_count}", component="AnalyserRunner")
+
+            # Call the newly integrated Neo4j global statistics extractor
+            build_statistics(db_client, manifest_data.get("workspace_root", os.getcwd()))
+
     except Exception as err:
         error(f"Failed executing database node summary verification query: {err}", component="AnalyserRunner")
 

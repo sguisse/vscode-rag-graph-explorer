@@ -1,4 +1,4 @@
-from analyser.neo4j_client import Neo4jClient
+from analyser.tools.neo4j.neo4j_client import Neo4jClient
 
 class BaseAnalyser:
     @property

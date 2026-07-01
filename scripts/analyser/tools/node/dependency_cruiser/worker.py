@@ -1,7 +1,7 @@
 import os
 from analyser.base import BaseAnalyser
 from analyser.registry import AnalyserRegistry
-from analyser.neo4j_client import Neo4jClient
+from analyser.tools.neo4j.neo4j_client import Neo4jClient
 from core.utils import info
 
 @AnalyserRegistry.register

@@ -1,6 +1,14 @@
 import sys
 import subprocess
+import logging
+import warnings
 from core.utils import info, error
+
+# Force total muting of the internal neo4j driver log streams and notification handlers
+logging.getLogger("neo4j").setLevel(logging.ERROR)
+logging.getLogger("neo4j.notifications").setLevel(logging.ERROR)
+warnings.filterwarnings("ignore", message=".*notification.*")
+warnings.filterwarnings("ignore", message=".*DBMS.*")
 
 # Secure dynamic runtime provisioning of the official python driver dependency
 try:
@@ -19,7 +27,12 @@ class Neo4jClient:
         self.uri = uri
         self.auth = auth
         try:
-            self.driver = GraphDatabase.driver(uri, auth=auth)
+            # Pass configurations to deactivate notification callbacks inside the driver context session
+            self.driver = GraphDatabase.driver(
+                uri,
+                auth=auth,
+                notifications_min_severity="OFF"
+            )
             # Verify connectivity state immediately upon initiation
             self.driver.verify_connectivity()
             self._connected = True

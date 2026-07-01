@@ -198,4 +198,4 @@ class JavaJQAssistantInstaller(BaseInstallModule):
         if os.path.exists(neo4j_folder):
             post_check_status = checker.execute_all_checks()
             if post_check_status.get("remote_database_token", {}).get("status") != "✅":
-                raise RuntimeError("Blocking Error: 'Remote-Database = true' metadata initialization token validation failed on target sandbox layer profile container context.")
+                raise RuntimeError("Blocking Error: 'Remote-Database = true' metadata initialization token validation failed. jqassistant cannot proceed with ingestion lifecycle without this critical database configuration property being set.")

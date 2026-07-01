@@ -10,7 +10,7 @@ from core.ui_extractor import UIExtractor
 from install.runner import run_installation_pipeline
 from initialization.runner import run_initialization_pipeline
 from analyser.runner import run_analysis_pipeline
-from analyser.neo4j_client import Neo4jClient
+from analyser.tools.neo4j.neo4j_client import Neo4jClient
 
 def main():
     config = {}

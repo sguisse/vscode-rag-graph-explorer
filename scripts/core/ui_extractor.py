@@ -1,6 +1,6 @@
 import os
 import json
-from analyser.neo4j_client import Neo4jClient
+from analyser.tools.neo4j.neo4j_client import Neo4jClient
 from core.utils import info, success, error, normalize_path
 
 class UIExtractor:
