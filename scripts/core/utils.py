@@ -103,7 +103,7 @@ def execute_tracked_command(cmd_args: List[str], tool_name: str, cwd: str = None
         "text": True,
         "errors": "replace"
     }
-    if os.name == 'nt': kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+    if os.name == 'nt': kwargs["creationflags"] = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 512)
     else: kwargs["preexec_fn"] = os.setsid
     try:
         proc = subprocess.Popen(cmd_args, **kwargs)
