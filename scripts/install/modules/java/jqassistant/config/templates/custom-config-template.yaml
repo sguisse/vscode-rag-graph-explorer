@@ -1,6 +1,5 @@
 jqassistant:
   store:
-    directory: '{{JQA_STORE_DIRECTORY}}'
     remote:
       url: '{{JQA_BOLT_URL}}'
       username: '{{JQA_BOLT_USERNAME}}'
@@ -20,7 +19,6 @@ jqassistant:
       directory: '{{JQA_RULES_DIRECTORY}}'
 
   report:
-    directory: '{{JQA_REPORT_DIRECTORY}}'
     continue-on-failure: true
 
   plugins:

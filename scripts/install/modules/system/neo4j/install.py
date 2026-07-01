@@ -19,12 +19,12 @@ class SystemNeo4jInstaller(BaseInstallModule):
     @property
     def name(self) -> str: return "system_neo4j"
 
-    def _download_progress_bar(self, block_num, block_size, total_size):
+    def _download_progress_bar(self, archive_name, block_num, block_size, total_size):
         if total_size <= 0: return
         read_so_far = block_num * block_size
         percent = min(100, int(read_so_far * 100 / total_size))
         if percent - self._last_reported_percent >= 5 or percent == 100:
-            info(f"Downloading Neo4j Graph Platform Archive: {percent}%", component=self.name)
+            info(f"Downloading Neo4j Graph Platform Archive ({archive_name}) : {percent}%", component=self.name)
             self._last_reported_percent = percent
 
     def fetch_and_extract_distribution(self):
@@ -62,7 +62,7 @@ class SystemNeo4jInstaller(BaseInstallModule):
                             if not block: break
                             out_file.write(block)
                             block_num += 1
-                            self._download_progress_bar(block_num, block_size, total_size)
+                            self._download_progress_bar(archive_name,block_num, block_size, total_size)
             except Exception as e:
                 error(f"Network request timeout or download pipeline block exception context: {e}", component=self.name)
                 raise e
@@ -114,7 +114,7 @@ class SystemNeo4jInstaller(BaseInstallModule):
                             if not block: break
                             out_file.write(block)
                             block_num += 1
-                            self._download_progress_bar(block_num, block_size, total_size)
+                            self._download_progress_bar(f"{apoc_jar_name}", block_num, block_size, total_size)
             except Exception as e:
                 error(f"Plugin download pipeline critical failure for APOC: {e}", component=self.name)
                 if os.path.exists(apoc_jar_path):
@@ -146,7 +146,7 @@ class SystemNeo4jInstaller(BaseInstallModule):
                             if not block: break
                             out_file.write(block)
                             block_num += 1
-                            self._download_progress_bar(block_num, block_size, total_size)
+                            self._download_progress_bar(f"{gds_jar_name}", block_num, block_size, total_size)
 
                 # Etape B : Extraction du JAR depuis le ZIP
                 info(f"Extracting GDS JAR from downloaded archive...", component=self.name)

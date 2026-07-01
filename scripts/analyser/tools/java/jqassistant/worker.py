@@ -27,51 +27,38 @@ class JQAssistantWorker(BaseAnalyser):
         exclude_regex = config_matrix.get("excludePathsRegex", "")
 
         sandbox_root = f"{workspace_root}/.graph-rag-explorer/target/tools/java/jqassistant"
-        config_dir = f"{sandbox_root}/config"
-        rules_dir = f"{config_dir}/rules"
-        custom_config_path = f"{config_dir}/custom-config.yaml"
+        custom_config_path = f"{sandbox_root}/config/.jqassistant.yml"
 
-        jqa_output_dir = f"{workspace_root}/.graph-rag-explorer/target/raw_outputs/java/jqassistant"
-        jqa_store_dir = f"{jqa_output_dir}/store"
-        jqa_report_dir = f"{jqa_output_dir}/report"
-        discovery_output = f"{jqa_output_dir}/sources_discovered.json"
+        # Define isolated execution CWD
+        jqa_run_dir = f"{workspace_root}/.graph-rag-explorer/target/raw_outputs/java"
+        discovery_output = f"{jqa_run_dir}/jqassistant/sources_discovered.json"
 
-        os.makedirs(jqa_store_dir, exist_ok=True)
-        os.makedirs(jqa_report_dir, exist_ok=True)
+        os.makedirs(jqa_run_dir, exist_ok=True)
 
-        # 1. Discovery Phase
+        # 1. Discovery Phase (Still needed for dynamic classpath extraction)
         discovered_sources = self._run_discovery(workspace_root, exclude_regex, discovery_output)
         if not discovered_sources["java_src"] and not discovered_sources["java_classes"]:
             info("No Java source or class directories detected. Bypassing jQAssistant pipeline.", component=self.name)
             return
 
-        # 2. Configuration Rendering Phase
-        template_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../../install/modules/java/jqassistant/config/templates/custom-config-template.yaml")
-        self._render_custom_config(
-            template_path, custom_config_path, config_dir,
-            discovered_sources, config_matrix, workspace_root,
-            rules_dir, jqa_store_dir, jqa_report_dir
-        )
-
-        # 3. Binary Resolution Phase
+        # 2. Binary Resolution Phase
         executable_target = self._resolve_binary(sandbox_root, version)
         if not executable_target:
             error("Aborting analysis: jQAssistant executable command string could not be resolved.", component=self.name)
             return
 
-        # 4. Environment Preparation Phase
-        custom_env = self._prepare_environment(custom_config_path, jqa_store_dir, jqa_report_dir)
+        # 3. Environment Preparation Phase
+        custom_env = self._prepare_environment(custom_config_path)
 
-        # 5. Diagnostics Phase (Dumping to dedicated files)
-        self._dump_diagnostics(executable_target, jqa_store_dir, jqa_report_dir, workspace_root, custom_env)
+        # 4. Diagnostics Phase (Using jqa_run_dir as CWD)
+        self._dump_diagnostics(executable_target, jqa_run_dir, workspace_root, custom_env)
 
-        # 6. Execution Phase (Scan & Analyze)
+        # 5. Execution Phase (Scan & Analyze in isolated CWD)
         scan_return_code = self._execute_scan_and_analyze(
-            executable_target, jqa_store_dir, jqa_report_dir,
-            discovered_sources, workspace_root, custom_env
+            executable_target, jqa_run_dir, discovered_sources, custom_env
         )
 
-        # 7. Fallback Linking Phase
+        # 6. Fallback Linking Phase
         if scan_return_code != 0:
             info(f"Scan code {scan_return_code}. Activating semantic code relationship fallback parser layers...", component=self.name)
         self._run_fallback_linking(discovered_sources, neo4j_client)
@@ -80,33 +67,6 @@ class JQAssistantWorker(BaseAnalyser):
         """Discovers java source and class paths within the workspace."""
         info("Running dynamic workspace path discovery for jQAssistant...", component=self.name)
         return discover_workspace_sources(workspace_root, exclude_regex, discovery_output)
-
-    def _render_custom_config(self, template_path: str, custom_config_path: str, config_dir: str, discovered_sources: dict, config_matrix: dict, workspace_root: str, rules_dir: str, jqa_store_dir: str, jqa_report_dir: str) -> None:
-        """Generates the custom configuration file from template."""
-        if not os.path.exists(template_path):
-            return
-
-        java_src_yaml_list = "\n".join([f"        - {path}" for path in discovered_sources["java_src"]])
-        neo4j_uri = config_matrix.get("neo4j", {}).get("uri", "bolt://localhost:7687")
-        neo4j_user = config_matrix.get("neo4j", {}).get("username", "neo4j")
-        neo4j_pass = config_matrix.get("neo4j", {}).get("password", "password")
-        project_name = os.path.basename(workspace_root)
-
-        with open(template_path, "r", encoding="utf-8") as f:
-            content = f.read()
-
-        content = content.replace("{{JQA_BOLT_URL}}", neo4j_uri)\
-                         .replace("{{JQA_BOLT_USERNAME}}", neo4j_user)\
-                         .replace("{{JQA_BOLT_PASSWORD}}", neo4j_pass)\
-                         .replace("{{JAVA_SRC_DIRS_YAML_LIST}}", java_src_yaml_list)\
-                         .replace("{{PROJECT_NAME}}", project_name)\
-                         .replace("{{JQA_RULES_DIRECTORY}}", rules_dir.replace("\\", "/"))\
-                         .replace("{{JQA_STORE_DIRECTORY}}", jqa_store_dir.replace("\\", "/"))\
-                         .replace("{{JQA_REPORT_DIRECTORY}}", jqa_report_dir.replace("\\", "/"))
-
-        os.makedirs(config_dir, exist_ok=True)
-        with open(custom_config_path, "w", encoding="utf-8") as f:
-            f.write(content)
 
     def _resolve_binary(self, sandbox_root: str, version: str) -> str:
         """Resolves the correct jqassistant executable binary."""
@@ -126,76 +86,73 @@ class JQAssistantWorker(BaseAnalyser):
                                 except Exception: pass
         return executable_target
 
-    def _prepare_environment(self, custom_config_path: str, jqa_store_dir: str, jqa_report_dir: str) -> dict:
-        """Prepares environment variables for the jQAssistant execution."""
+    def _prepare_environment(self, custom_config_path: str) -> dict:
+        """Prepares environment variables by binding SmallRye config location."""
         custom_env = os.environ.copy()
-        custom_env["JQASSISTANT_OPTS"] = (
-            f"-Dsmallrye.config.locations=file:{custom_config_path} "
-            f"-Djqassistant.store.directory={jqa_store_dir} "
-            f"-Djqassistant.report.directory={jqa_report_dir}"
-        )
+        custom_env["JQASSISTANT_OPTS"] = f"-Dsmallrye.config.locations=file:{custom_config_path}"
         return custom_env
 
-    def _dump_diagnostics(self, executable_target: str, jqa_store_dir: str, jqa_report_dir: str, workspace_root: str, custom_env: dict) -> None:
-        """Dumps effective configuration and available rules to dedicated log files."""
+    def _dump_diagnostics(self, executable_target: str, jqa_run_dir: str, workspace_root: str, custom_env: dict) -> None:
+        """Dumps effective configuration and available rules to dedicated log files using isolated CWD."""
         reports_dir = os.path.join(workspace_root, ".graph-rag-explorer", "target", "install_reports", "java_jqassistant")
         os.makedirs(reports_dir, exist_ok=True)
 
         info(f"Dumping effective jQAssistant configuration and available rules to {reports_dir}...", component=self.name)
         try:
-            # 1. Effective Configuration
-            eff_config_cmd = [
-                executable_target,
-                f"-Djqassistant.store.directory={jqa_store_dir}",
-                f"-Djqassistant.report.directory={jqa_report_dir}",
-                "effective-configuration"
-            ]
-            res_config = subprocess.run(eff_config_cmd, cwd=workspace_root, env=custom_env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
-            config_file_path = os.path.join(reports_dir, "effective-configuration.txt")
-            with open(config_file_path, "w", encoding="utf-8") as f:
-                f.write(res_config.stdout)
-            debug(f"Saved effective configuration to {config_file_path}", component=self.name)
-
-            # 2. Available Rules
-            avail_rules_cmd = [
-                executable_target,
-                f"-Djqassistant.store.directory={jqa_store_dir}",
-                f"-Djqassistant.report.directory={jqa_report_dir}",
-                "available-rules"
-            ]
-            res_rules = subprocess.run(avail_rules_cmd, cwd=workspace_root, env=custom_env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
-            rules_file_path = os.path.join(reports_dir, "available-rules.txt")
-            with open(rules_file_path, "w", encoding="utf-8") as f:
-                f.write(res_rules.stdout)
-            debug(f"Saved available rules to {rules_file_path}", component=self.name)
+            self._dump_effective_configuration(executable_target, jqa_run_dir, reports_dir, custom_env)
+            self._dump_available_rules(executable_target, jqa_run_dir, reports_dir, custom_env)
         except Exception as e:
             error(f"Failed to execute effective diagnostic commands: {e}", component=self.name)
 
-    def _execute_scan_and_analyze(self, executable_target: str, jqa_store_dir: str, jqa_report_dir: str, discovered_sources: dict, workspace_root: str, custom_env: dict) -> int:
-        """Executes the jQAssistant scan and analyze phases."""
-        scan_cmd = [
-            executable_target,
-            f"-Djqassistant.store.directory={jqa_store_dir}",
-            f"-Djqassistant.report.directory={jqa_report_dir}",
-            "scan"
-        ]
+    def _dump_effective_configuration(self, executable_target: str, jqa_run_dir: str, reports_dir: str, custom_env: dict) -> None:
+        """Executes 'effective-configuration' and saves the output, logging the target environment parameters."""
+        eff_config_cmd = [executable_target, "effective-configuration"]
+        info(f"Executing subprocess command: {' '.join(eff_config_cmd)} (cwd={jqa_run_dir})", component=self.name)
+        info(f"Injected JQASSISTANT_OPTS environment configuration matrix: {custom_env.get('JQASSISTANT_OPTS')}", component=self.name)
+
+        res_config = subprocess.run(eff_config_cmd, cwd=jqa_run_dir, env=custom_env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
+        config_file_path = os.path.join(reports_dir, "effective-configuration.txt")
+        with open(config_file_path, "w", encoding="utf-8") as f:
+            f.write(res_config.stdout)
+        debug(f"Saved effective configuration to {config_file_path}", component=self.name)
+
+    def _dump_available_rules(self, executable_target: str, jqa_run_dir: str, reports_dir: str, custom_env: dict) -> None:
+        """Executes 'available-rules' and saves the output, logging the target environment parameters."""
+        avail_rules_cmd = [executable_target, "available-rules"]
+        info(f"Executing subprocess command: {' '.join(avail_rules_cmd)} (cwd={jqa_run_dir})", component=self.name)
+        info(f"Injected JQASSISTANT_OPTS environment configuration matrix: {custom_env.get('JQASSISTANT_OPTS')}", component=self.name)
+
+        res_rules = subprocess.run(avail_rules_cmd, cwd=jqa_run_dir, env=custom_env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
+        rules_file_path = os.path.join(reports_dir, "available-rules.txt")
+        with open(rules_file_path, "w", encoding="utf-8") as f:
+            f.write(res_rules.stdout)
+        debug(f"Saved available rules to {rules_file_path}", component=self.name)
+
+    def _execute_scan_and_analyze(self, executable_target: str, jqa_run_dir: str, discovered_sources: dict, custom_env: dict) -> int:
+        """Orchestrates the jQAssistant scan and analyze phases within the isolated CWD."""
+        scan_return_code = self._execute_scan(executable_target, jqa_run_dir, discovered_sources, custom_env)
+
+        if scan_return_code == 0:
+            self._execute_analyze(executable_target, jqa_run_dir, custom_env)
+
+        return scan_return_code
+
+    def _execute_scan(self, executable_target: str, jqa_run_dir: str, discovered_sources: dict, custom_env: dict) -> int:
+        """Executes the jQAssistant scan phase, logging the command string and custom environment options via info."""
+        scan_cmd = [executable_target, "scan"]
         for class_dir in discovered_sources["java_classes"]:
             scan_cmd.extend(["-f", f"java:classpath::{class_dir}"])
 
-        info(f"Triggering CLI jQAssistant Scan Phase...", component=self.name)
-        scan_return_code = execute_tracked_command(scan_cmd, "jqa_scan", cwd=workspace_root, env=custom_env)
+        info(f"Executing tracking runner: {' '.join(scan_cmd)} (cwd={jqa_run_dir})", component=self.name)
+        info(f"Injected JQASSISTANT_OPTS environment configuration matrix: {custom_env.get('JQASSISTANT_OPTS')}", component=self.name)
+        return execute_tracked_command(scan_cmd, "jqa_scan", cwd=jqa_run_dir, env=custom_env)
 
-        if scan_return_code == 0:
-            info(f"Scan operation completed. Triggering rule enrichment analysis pass...", component=self.name)
-            analyze_cmd = [
-                executable_target,
-                f"-Djqassistant.store.directory={jqa_store_dir}",
-                f"-Djqassistant.report.directory={jqa_report_dir}",
-                "analyze"
-            ]
-            execute_tracked_command(analyze_cmd, "jqa_analyze", cwd=workspace_root, env=custom_env)
-
-        return scan_return_code
+    def _execute_analyze(self, executable_target: str, jqa_run_dir: str, custom_env: dict) -> int:
+        """Executes the jQAssistant analyze phase, logging the command string and custom environment options via info."""
+        analyze_cmd = [executable_target, "analyze"]
+        info(f"Executing tracking runner: {' '.join(analyze_cmd)} (cwd={jqa_run_dir})", component=self.name)
+        info(f"Injected JQASSISTANT_OPTS environment configuration matrix: {custom_env.get('JQASSISTANT_OPTS')}", component=self.name)
+        return execute_tracked_command(analyze_cmd, "jqa_analyze", cwd=jqa_run_dir, env=custom_env)
 
     def _run_fallback_linking(self, discovered_sources: dict, neo4j_client: Neo4jClient) -> None:
         """Applies fallback graph mutations if the scan was incomplete or failed."""

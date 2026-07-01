@@ -98,7 +98,7 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => 
 
     return (
         <div id="tab-terminal-content" className="flex flex-col bg-[var(--vscode-editor-background)] pt-[5px] pr-0 pb-0 pl-0 w-full h-full overflow-hidden">
-            <div className="relative flex flex-col gap-4 mx-auto w-full max-w-6xl h-full">
+            <div className="relative flex flex-col gap-4 mx-auto p-2 w-full h-full">
 
                 {/* Top Control Panel */}
                 <div className="flex flex-shrink-0 justify-between items-center gap-4 bg-[var(--vscode-editorWidget-background)] shadow-md p-4 border border-[var(--vscode-panel-border)] rounded-xl">

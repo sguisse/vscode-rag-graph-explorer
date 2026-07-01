@@ -29,16 +29,13 @@ class JavaJQAssistantInstaller(BaseInstallModule):
 
     def fetch_and_extract_jqassistant(self):
         version = self.context.get_tool_setting("jqassistant", "version", "2.9.1")
-
         sandbox_root = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/java/jqassistant"
         target_folder = os.path.join(sandbox_root, f"jqassistant-{version}")
 
-        if os.path.exists(target_folder):
-            return
+        if os.path.exists(target_folder): return
 
         os.makedirs(sandbox_root, exist_ok=True)
         local_zip_path = os.path.join(sandbox_root, "jqassistant.zip")
-
         default_url = f"https://github.com/jQAssistant/jqassistant/releases/download/{version}/jqassistant-commandline-neo4jv5-{version}-distribution.zip"
         url = self.context.get_tool_setting("jqassistant", "downloadUrl", default_url).replace("${version}", version)
 
@@ -129,23 +126,19 @@ class JavaJQAssistantInstaller(BaseInstallModule):
         sandbox_root = f"{workspace_root}/.graph-rag-explorer/target/tools/java/jqassistant"
         config_dir = f"{sandbox_root}/config"
         rules_dir = f"{config_dir}/rules"
+        jqa_run_dir = f"{workspace_root}/.graph-rag-explorer/target/raw_outputs/java"
 
-        # Define isolated output directories for store and report
-        jqa_output_dir = f"{workspace_root}/.graph-rag-explorer/target/raw_outputs/java/jqassistant"
-        jqa_store_dir = f"{jqa_output_dir}/store"
-        jqa_report_dir = f"{jqa_output_dir}/report"
-
+        os.makedirs(config_dir, exist_ok=True)
         os.makedirs(rules_dir, exist_ok=True)
-        os.makedirs(jqa_store_dir, exist_ok=True)
-        os.makedirs(jqa_report_dir, exist_ok=True)
+        os.makedirs(jqa_run_dir, exist_ok=True)
 
-        # 1. Run Discovery to generate base config
-        discovery_output = f"{jqa_output_dir}/sources_discovered.json"
+        # 1. Run Discovery during install phase to establish the immutable base config
+        discovery_output = f"{jqa_run_dir}/jqassistant/sources_discovered.json"
         discovered = discover_workspace_sources(workspace_root, exclude_regex, discovery_output)
 
-        # 2. Render custom-config.yaml
+        # 2. Render .jqassistant.yml directly into the isolated tools config directory once
         template_config = f"{os.path.dirname(__file__)}/config/templates/custom-config-template.yaml"
-        custom_config_path = f"{config_dir}/custom-config.yaml"
+        custom_config_path = f"{config_dir}/.jqassistant.yml"
 
         with open(template_config, "r", encoding="utf-8") as f:
             content = f.read()
@@ -161,14 +154,12 @@ class JavaJQAssistantInstaller(BaseInstallModule):
                          .replace("{{JQA_BOLT_PASSWORD}}", neo4j_pass)\
                          .replace("{{JAVA_SRC_DIRS_YAML_LIST}}", java_src_yaml)\
                          .replace("{{PROJECT_NAME}}", project_name)\
-                         .replace("{{JQA_RULES_DIRECTORY}}", rules_dir.replace("\\", "/"))\
-                         .replace("{{JQA_STORE_DIRECTORY}}", jqa_store_dir.replace("\\", "/"))\
-                         .replace("{{JQA_REPORT_DIRECTORY}}", jqa_report_dir.replace("\\", "/"))
+                         .replace("{{JQA_RULES_DIRECTORY}}", rules_dir.replace("\\", "/"))
 
         with open(custom_config_path, "w", encoding="utf-8") as f:
             f.write(content)
 
-        # 3. Render rules
+        # 3. Render rules into sandbox
         template_rules = f"{os.path.dirname(__file__)}/config/templates/analysis-rules-template.xml"
         target_rules = f"{rules_dir}/{project_name}-rules.xml"
 
@@ -178,7 +169,7 @@ class JavaJQAssistantInstaller(BaseInstallModule):
         with open(target_rules, "w", encoding="utf-8") as f:
             f.write(rules_content)
 
-        success("Sandboxed configuration and rules successfully provisioned.", component=self.name)
+        success(f"Sandboxed configuration dropped into {custom_config_path}", component=self.name)
 
     def execute_all_installations(self) -> None:
         self.create_isolated_java_raw_target_folder()

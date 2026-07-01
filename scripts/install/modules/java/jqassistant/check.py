@@ -56,13 +56,14 @@ class JavaJQAssistantChecker(BaseCheckModule):
 
     def check_sandboxed_config(self):
         self.steps_count += 1
-        config_path = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/java/jqassistant/config/custom-config.yaml"
+        # Realigned path to tools/java/jqassistant/config
+        config_path = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/java/jqassistant/config/.jqassistant.yml"
         if os.path.exists(config_path):
             self.status["jqassistant_custom_config"] = {"status": "✅", "path": config_path}
         else:
             self.status["jqassistant_custom_config"] = {
                 "status": "❌",
-                "message": "Isolated jQAssistant configuration (custom-config.yaml) is missing."
+                "message": "Isolated jQAssistant configuration (.jqassistant.yml) is missing in config directory."
             }
             self.ko_count += 1
 
