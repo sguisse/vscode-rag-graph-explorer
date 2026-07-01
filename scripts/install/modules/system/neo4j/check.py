@@ -24,13 +24,27 @@ class SystemNeo4jChecker(BaseCheckModule):
         self.steps_count += 1
         version = self.context.get_tool_setting("neo4j", "version", "5.26.0")
 
-        # REALIGNED PATH: Pointing precisely inside target/tools/system/neo4j
         target_folder = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/system/neo4j/neo4j-community-{version}"
         bin_dir = os.path.join(target_folder, "bin")
         admin_executable = os.path.join(bin_dir, "neo4j-admin.bat" if os.name == 'nt' else "neo4j-admin")
 
         if os.path.exists(admin_executable):
             self.status["neo4j_local_installation"] = {"status": "✅", "location": target_folder}
+
+            # Secondary internal step: verify plugin containment status
+            self.steps_count += 1
+            plugins_dir = os.path.join(target_folder, "plugins")
+            has_apoc = any("apoc" in file and file.endswith(".jar") for file in os.listdir(plugins_dir)) if os.path.exists(plugins_dir) else False
+            has_gds = any("graph-data-science" in file and file.endswith(".jar") for file in os.listdir(plugins_dir)) if os.path.exists(plugins_dir) else False
+
+            if has_apoc and has_gds:
+                self.status["neo4j_plugins_compliance"] = {"status": "✅", "message": "APOC Core and GDS extensions detected inside sandbox context."}
+            else:
+                self.status["neo4j_plugins_compliance"] = {
+                    "status": "❌",
+                    "message": "Missing necessary procedure plugins jars (apoc or graph-data-science) inside runtime subfolder."
+                }
+                self.ko_count += 1
         else:
             self.status["neo4j_local_installation"] = {
                 "status": "❌",

@@ -6,9 +6,9 @@ from analyser.neo4j_client import Neo4jClient
 from core.utils import info, normalize_path
 
 @AnalyserRegistry.register
-class DocumentationLinkerWorker(BaseAnalyser):
+class MarkdownLinkerWorker(BaseAnalyser):
     @property
-    def name(self) -> str: return "documentation_cross_linker"
+    def name(self) -> str: return "markdown_cross_link_worker"
 
     def run_analysis(self, manifest_data: dict, neo4j_client: Neo4jClient, config_matrix: dict) -> None:
         md_files = [f for f in manifest_data.get("files", []) if f.endswith(".md")]

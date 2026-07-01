@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jqa:jqassistant-rules xmlns:jqa="http://www.buschmais.com/jqassistant/core/analysis/rules/schema/v1.0">
+
+    <!-- lightweight copy of module-analysis-rules.xml for conventional filename support -->
+
+    <concept id="{{PROJECT_NAME}}:MarkSpringController">
+        <description>Labels every class annotated with @RestController or @Controller with :Controller</description>
+        <cypher><![CDATA[
+            MATCH (c:Class)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(t:Type)
+            WHERE t.fqn IN [
+                'org.springframework.web.bind.annotation.RestController',
+                'org.springframework.stereotype.Controller'
+            ]
+            SET c:Controller
+            RETURN count(c) AS MarkedControllers
+        ]]>        </cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkSpringService">
+        <description>Labels every class annotated with @Service with :Service</description>
+        <cypher><![CDATA[
+            MATCH (c:Class)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(t:Type)
+            WHERE t.fqn = 'org.springframework.stereotype.Service'
+            SET c:Service
+            RETURN count(c) AS MarkedServices
+        ]]>        </cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkSpringRepository">
+        <description>Labels every class annotated with @Repository with :Repository</description>
+        <cypher><![CDATA[
+            MATCH (c:Class)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(t:Type)
+            WHERE t.fqn = 'org.springframework.stereotype.Repository'
+            SET c:Repository
+            RETURN count(c) AS MarkedRepositories
+        ]]>        </cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkApiLayer">
+        <description>Labels classes in packages ending in .api as :ApiLayer</description>
+        <cypher><![CDATA[
+            MATCH (p:Package)-[:CONTAINS]->(c:Class)
+            WHERE p.fqn ENDS WITH '.api'
+            SET c:ApiLayer
+            RETURN count(c) AS MarkedApiClasses
+        ]]>        </cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkDomainLayer">
+        <description>Labels classes in packages ending in .domain as :DomainLayer</description>
+        <cypher><![CDATA[
+            MATCH (p:Package)-[:CONTAINS]->(c:Class)
+            WHERE p.fqn ENDS WITH '.domain'
+            SET c:DomainLayer
+            RETURN count(c) AS MarkedDomainClasses
+        ]]>        </cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkInfrastructureLayer">
+        <description>Labels classes in packages ending in .infrastructure as :InfrastructureLayer</description>
+        <cypher><![CDATA[
+            MATCH (p:Package)-[:CONTAINS]->(c:Class)
+            WHERE p.fqn ENDS WITH '.infrastructure'
+            SET c:InfrastructureLayer
+            RETURN count(c) AS MarkedInfraClasses
+        ]]>        </cypher>
+    </concept>
+
+    <constraint id="{{PROJECT_NAME}}:ControllerMustNotDependOnRepository" severity="major">
+        <requiresConcept refId="{{PROJECT_NAME}}:MarkSpringController"/>
+        <requiresConcept refId="{{PROJECT_NAME}}:MarkSpringRepository"/>
+        <description>Controllers must not directly depend on Repositories.</description>
+        <cypher><![CDATA[
+            MATCH (ctrl:Controller)-[:DEPENDS_ON]->(repo:Repository)
+            RETURN ctrl.fqn AS Controller, repo.fqn AS Repository
+        ]]>        </cypher>
+    </constraint>
+
+    <constraint id="{{PROJECT_NAME}}:DomainMustNotDependOnInfrastructure" severity="major">
+        <requiresConcept refId="{{PROJECT_NAME}}:MarkDomainLayer"/>
+        <requiresConcept refId="{{PROJECT_NAME}}:MarkInfrastructureLayer"/>
+        <description>Domain classes must not depend on Infrastructure classes.</description>
+        <cypher><![CDATA[
+            MATCH (d:DomainLayer)-[:DEPENDS_ON]->(i:InfrastructureLayer)
+            RETURN d.fqn AS DomainClass, i.fqn AS InfrastructureClass
+        ]]>        </cypher>
+    </constraint>
+
+    <constraint id="{{PROJECT_NAME}}:ApiLayerMustNotDependOnInfrastructure" severity="major">
+        <requiresConcept refId="{{PROJECT_NAME}}:MarkApiLayer"/>
+        <requiresConcept refId="{{PROJECT_NAME}}:MarkInfrastructureLayer"/>
+        <description>API layer classes must not directly depend on Infrastructure classes.</description>
+        <cypher><![CDATA[
+            MATCH (a:ApiLayer)-[:DEPENDS_ON]->(i:InfrastructureLayer)
+            RETURN a.fqn AS ApiClass, i.fqn AS InfrastructureClass
+        ]]>        </cypher>
+    </constraint>
+
+    <constraint id="{{PROJECT_NAME}}:NoCyclicPackageDependencies" severity="blocker">
+        <description>No cyclic package dependencies between top-level application packages.</description>
+        <cypher><![CDATA[
+            MATCH (p1:Package)-[:DEPENDS_ON]->(p2:Package)-[:DEPENDS_ON]->(p1)
+            WHERE p1.fqn STARTS WITH 'com.dkt.smartassessment'
+              AND p2.fqn STARTS WITH 'com.dkt.smartassessment'
+              AND p1 <> p2
+            RETURN p1.fqn AS Package1, p2.fqn AS Package2
+        ]]>        </cypher>
+    </constraint>
+
+    <group id="{{PROJECT_NAME}}:Default">
+        <includeConcept refId="{{PROJECT_NAME}}:MarkSpringController"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkSpringService"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkSpringRepository"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkApiLayer"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkDomainLayer"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkInfrastructureLayer"/>
+        <includeConstraint refId="{{PROJECT_NAME}}:ControllerMustNotDependOnRepository"/>
+        <includeConstraint refId="{{PROJECT_NAME}}:DomainMustNotDependOnInfrastructure"/>
+        <includeConstraint refId="{{PROJECT_NAME}}:ApiLayerMustNotDependOnInfrastructure"/>
+        <includeConstraint refId="{{PROJECT_NAME}}:NoCyclicPackageDependencies"/>
+    </group>
+
+</jqa:jqassistant-rules>

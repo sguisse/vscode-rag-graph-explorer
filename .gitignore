@@ -8,3 +8,4 @@ exported-files
 *.bak*
 graphify-out
 __pycache__
+zz-tmp/rvng-jqassistant-analysis

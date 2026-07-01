@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.my.group</groupId>
+    <artifactId>my-service</artifactId>
+    <version>1.0.0</version>
+    <name>my-service</name>
+    <description>my-service</description>
+    <properties>
+        <java.version>22</java.version>
+        <lombok.version>1.18.32</lombok.version>
+    </properties>
+
+    <dependencies>
+    </dependencies>
+
+    <dependencyManagement>
+        <dependencies>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                    <compilerArgs>
+                        <arg>-parameters</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+
+            <!-- jQAssistant plugin is provided via the 'jqassistant' profile (see below) -->
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>jqassistant</id>
+
+            <properties>
+                <!-- jQAssistant plugin version used by the project; adjust if you pin a different release -->
+                <jqassistant.version>2.9.1</jqassistant.version>
+
+                <!-- NOTE: do NOT set jqassistant.configuration.locations here — it overrides default .jqassistant.yml discovery
+                     All scan/analyze/store configuration lives in .jqassistant.yml at the project root. -->
+            </properties>
+
+            <build>
+
+                <plugins>
+
+                    <!-- jQAssistant Maven plugin: provides scan / analyze / server goals for repository analysis -->
+                    <plugin>
+                        <groupId>com.buschmais.jqassistant</groupId>
+                        <artifactId>jqassistant-maven-plugin</artifactId>
+                        <version>${jqassistant.version}</version>
+                        <!-- No default phase binding so plugin runs only when explicitly invoked.
+                             Example: mvn -Pjqassistant jqassistant:scan jqassistant:analyze
+                        -->
+                        <executions>
+                            <execution>
+                                <id>jqassistant-scan-and-analyze-then-deploy-server</id>
+                                <phase>install</phase>
+                                <goals>
+                                    <goal>scan</goal>
+                                    <goal>analyze</goal>
+                                    <!--
+                                    <goal>server</goal>
+                                    -->
+                                </goals>
+                            </execution>
+                        </executions>
+
+                        <configuration>
+                            <configurationLocations>
+                                <configurationLocation>.github/skills/rvng-jqassistant-analysis/scripts/config/.jqassistant.yml</configurationLocation>
+                            </configurationLocations>
+                        </configuration>
+
+
+                        <!-- All configuration (scan directories, analyze groups, store, report) is
+                             managed centrally in .jqassistant.yml at the project root.
+                             Do NOT add <scan> or <report> blocks here — they are unknown parameters
+                             in jqassistant-maven-plugin 2.x and will be silently ignored. -->
+
+                        <!--
+                        <configuration>
+                            <!- Keep scan defaults in sync with .jqassistant.yml / templates/jqassistant-template.yml ->
+                        <scan>
+                            <directories>
+                                <directory>${project.build.outputDirectory}</directory>
+                                <directory>${project.build.testOutputDirectory}</directory>
+                                <directory>${project.basedir}/src/main/java</directory>
+                            </directories>
+                        </scan>
+                        <report>
+                            <html>true</html>
+                        </report>
+                    </configuration>
+                    -->
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+</project>
