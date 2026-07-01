@@ -54,7 +54,8 @@ class JQAssistantWorker(BaseAnalyser):
         # 3. Diagnostics Phase
         self._dump_diagnostics(executable_target, jqa_run_dir, custom_config_path, workspace_root, custom_env)
 
-        # 4. Execution Phase
+
+        # 4. Execution Phase (Scan & Analyze via custom configurations)
         scan_return_code = self._execute_scan_and_analyze(
             executable_target, jqa_run_dir, discovered_sources, custom_config_path, custom_env
         )

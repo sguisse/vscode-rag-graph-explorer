@@ -1,5 +1,6 @@
 import shutil
 import os
+import subprocess
 from install.base import BaseCheckModule
 from install.registry import ModuleRegistry
 
@@ -17,11 +18,13 @@ class JavaJQAssistantChecker(BaseCheckModule):
 
     def check_java_runtime(self):
         self.steps_count += 1
-        java_executable = shutil.which("java")
-        if java_executable:
+        if shutil.which("java"):
             self.status["java"] = {"status": "✅"}
         else:
-            self.status["java"] = {"status": "❌", "message": "Java JRE/JDK runtime environment is missing."}
+            self.status["java"] = {
+                "status": "❌",
+                "message": "Java JRE/JDK runtime environment is missing."
+            }
             self.ko_count += 1
 
     def check_jqassistant_executable_availability(self):
@@ -30,14 +33,11 @@ class JavaJQAssistantChecker(BaseCheckModule):
         base_cmd = "jqassistant.cmd" if os.name == 'nt' else "jqassistant.sh"
 
         global_bin = shutil.which(base_cmd) or shutil.which("jqassistant")
-
         sandbox_root = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/java/jqassistant/jqassistant-{version}"
         local_bin = self._find_sandboxed_binary(sandbox_root, base_cmd)
 
-        if global_bin:
-            self.status["jqassistant_binary"] = {"status": "✅", "type": "global", "path": global_bin}
-        elif local_bin:
-            self.status["jqassistant_binary"] = {"status": "✅", "type": "sandbox", "path": local_bin}
+        if global_bin or local_bin:
+            self.status["jqassistant_binary"] = {"status": "✅"}
         else:
             self.status["jqassistant_binary"] = {
                 "status": "❌",
@@ -47,19 +47,19 @@ class JavaJQAssistantChecker(BaseCheckModule):
 
     def check_workspace_raw_outputs_dir(self):
         self.steps_count += 1
-        java_raw_output_dir = f"{self.context.workspace_root}/.graph-rag-explorer/target/raw_outputs/java"
-        if os.path.exists(java_raw_output_dir):
+        if os.path.exists(f"{self.context.workspace_root}/.graph-rag-explorer/target/raw_outputs/java"):
             self.status["raw_outputs_java"] = {"status": "✅"}
         else:
-            self.status["raw_outputs_java"] = {"status": "❌"}
+            self.status["raw_outputs_java"] = {
+                "status": "❌",
+                "message": "Java analysis target subdirectory raw outputs path layout is missing."
+            }
             self.ko_count += 1
 
     def check_sandboxed_config(self):
         self.steps_count += 1
-        # Realigned path to tools/java/jqassistant/config
-        config_path = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/java/jqassistant/config/.jqassistant.yml"
-        if os.path.exists(config_path):
-            self.status["jqassistant_custom_config"] = {"status": "✅", "path": config_path}
+        if os.path.exists(f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/java/jqassistant/config/.jqassistant.yml"):
+            self.status["jqassistant_custom_config"] = {"status": "✅"}
         else:
             self.status["jqassistant_custom_config"] = {
                 "status": "❌",
@@ -71,7 +71,7 @@ class JavaJQAssistantChecker(BaseCheckModule):
         self.steps_count += 1
         rules_dir = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/java/jqassistant/config/rules"
         if os.path.exists(rules_dir) and any(f.endswith(".xml") for f in os.listdir(rules_dir)):
-            self.status["jqassistant_custom_rules"] = {"status": "✅", "path": rules_dir}
+            self.status["jqassistant_custom_rules"] = {"status": "✅"}
         else:
             self.status["jqassistant_custom_rules"] = {
                 "status": "❌",
@@ -91,11 +91,10 @@ class JavaJQAssistantChecker(BaseCheckModule):
                     data = json.load(f)
                     if "servers" in data and "jqassistant-graph-rag" in data["servers"]:
                         has_server = True
-            except Exception:
-                pass
+            except Exception: pass
 
         if has_server:
-            self.status["mcp_server_config"] = {"status": "✅", "path": mcp_path}
+            self.status["mcp_server_config"] = {"status": "✅"}
         else:
             self.status["mcp_server_config"] = {
                 "status": "❌",
@@ -103,17 +102,40 @@ class JavaJQAssistantChecker(BaseCheckModule):
             }
             self.ko_count += 1
 
+    def check_remote_database_token_compliance(self):
+        """Queries the active Neo4j container database safely without throwing unhandled lifecycle registration breaks."""
+        self.steps_count += 1
+        neo4j_version = self.context.get_tool_setting("neo4j", "version", "5.26.0")
+        user = self.context.get_tool_setting("neo4j", "user", "neo4j")
+        password = self.context.get_tool_setting("neo4j", "password", "password")
+        bolt_port = self.context.get_tool_setting("neo4j", "port.bolt", "7687")
+
+        target_folder = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/system/neo4j/neo4j-community-{neo4j_version}"
+        shell_cmd = os.path.join(target_folder, "bin", "cypher-shell.bat" if os.name == 'nt' else "cypher-shell")
+
+        if not os.path.exists(shell_cmd):
+            self.status["remote_database_token"] = {"status": "❌", "message": "cypher-shell missing from system infrastructure layout routes."}
+            return
+
+        try:
+            check_query = "MATCH (m:SystemMetadata {id: 'global_config'}) RETURN m.`Remote-Database` AS status;"
+            res = subprocess.run([shell_cmd, "-a", f"bolt://localhost:{bolt_port}", "-u", user, "-p", password, check_query], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
+            if res.returncode == 0 and "true" in res.stdout:
+                self.status["remote_database_token"] = {"status": "✅"}
+            else:
+                self.status["remote_database_token"] = {"status": "❌", "message": "'Remote-Database = true' token missing or invalid on targeted instance profile."}
+        except Exception as e:
+            self.status["remote_database_token"] = {"status": "❌", "message": f"Targeted database instance currently unreachable. Context: {e}"}
+
     def execute_all_checks(self) -> dict:
-        # CRITICAL FIX: Reset step counters and clean state before running diagnostics
-        # This completely stops metrics accumulation when called sequentially across before/after phases
         self.steps_count = 0
         self.ko_count = 0
         self.status = {}
-
         self.check_java_runtime()
         self.check_jqassistant_executable_availability()
         self.check_workspace_raw_outputs_dir()
         self.check_sandboxed_config()
         self.check_sandboxed_rules()
         self.check_workspace_mcp_config()
+        self.check_remote_database_token_compliance()
         return self.generate_summary()

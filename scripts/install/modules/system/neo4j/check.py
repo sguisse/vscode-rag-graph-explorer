@@ -1,5 +1,6 @@
 import shutil
 import os
+import subprocess
 from install.base import BaseCheckModule
 from install.registry import ModuleRegistry
 
@@ -47,8 +48,36 @@ class SystemNeo4jChecker(BaseCheckModule):
         else:
             self.status["neo4j_local_installation"] = {
                 "status": "❌",
-                "message": f"Local database engine binary package missing inside dedicated tools route: target/tools/system/neo4j/"
+                "message": "Local database engine binary package missing inside dedicated tools route: target/tools/system/neo4j/"
             }
+            self.ko_count += 1
+
+    def check_remote_database_token_compliance(self):
+        """Queries the database to assert the validation token. Does NOT raise an error if missing."""
+        self.steps_count += 1
+        version = self.context.get_tool_setting("neo4j", "version", "5.26.0")
+        user = self.context.get_tool_setting("neo4j", "user", "neo4j")
+        password = self.context.get_tool_setting("neo4j", "password", "password")
+        bolt_port = self.context.get_tool_setting("neo4j", "port.bolt", "7687")
+
+        target_folder = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/system/neo4j/neo4j-community-{version}"
+        shell_cmd = os.path.join(target_folder, "bin", "cypher-shell.bat" if os.name == 'nt' else "cypher-shell")
+
+        if not os.path.exists(shell_cmd):
+            self.status["remote_database_token"] = {"status": "❌", "message": "cypher-shell script missing from server bin structures."}
+            self.ko_count += 1
+            return
+
+        try:
+            check_query = "MATCH (m:SystemMetadata {id: 'global_config'}) RETURN m.`Remote-Database` AS status;"
+            res = subprocess.run([shell_cmd, "-a", f"bolt://localhost:{bolt_port}", "-u", user, "-p", password, check_query], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
+            if res.returncode == 0 and "true" in res.stdout:
+                self.status["remote_database_token"] = {"status": "✅", "message": "Remote-Database identifier token confirmed active."}
+            else:
+                self.status["remote_database_token"] = {"status": "❌", "message": "Remote-Database configuration property field unallocated or false."}
+                self.ko_count += 1
+        except Exception:
+            self.status["remote_database_token"] = {"status": "❌", "message": "Database sandbox container cluster currently unreachable or uninitialized."}
             self.ko_count += 1
 
     def execute_all_checks(self) -> dict:
@@ -57,4 +86,5 @@ class SystemNeo4jChecker(BaseCheckModule):
         self.status = {}
         self.check_java_version_compliance()
         self.check_local_sandboxed_binaries()
+        self.check_remote_database_token_compliance()
         return self.generate_summary()

@@ -3,9 +3,9 @@ import sys
 import ssl
 import json
 import re
+import zipfile
 import urllib.request
 import urllib.error
-import zipfile
 from install.base import BaseInstallModule
 from install.registry import ModuleRegistry
 from core.utils import info, success, error, warn
@@ -54,6 +54,8 @@ class JavaJQAssistantInstaller(BaseInstallModule):
                 download_success = True
             except urllib.error.URLError as url_err:
                 error(f"Target address responded with network fault: {url_err}", component=self.name)
+        except Exception as e:
+            error(f"Parallel download context failure: {e}", component=self.name)
         finally:
             ssl._create_default_https_context = original_context
 
@@ -139,14 +141,12 @@ class JavaJQAssistantInstaller(BaseInstallModule):
         with open(template_config, "r", encoding="utf-8") as f:
             content = f.read()
 
-        # Build clean multiline list data parameters
         java_src_yaml = "\n".join([f"        - '{path}'" for path in discovered["java_src"]])
         neo4j_uri = self.context.get_tool_setting("neo4j", "uri", "bolt://localhost:7687")
         neo4j_user = self.context.get_tool_setting("neo4j", "username", "neo4j")
         neo4j_pass = self.context.get_tool_setting("neo4j", "password", "password")
         project_name = os.path.basename(workspace_root)
 
-        # Pre-clean the template injection target lines to prevent template indent trailing offset anomalies
         content = re.sub(r'[ \t]*\{\{JAVA_SRC_DIRS_YAML_LIST\}\}', '{{JAVA_SRC_DIRS_YAML_LIST}}', content)
 
         content = content.replace("{{JQA_BOLT_URL}}", neo4j_uri)\
@@ -173,9 +173,12 @@ class JavaJQAssistantInstaller(BaseInstallModule):
         success(f"JQAssistant rules dropped into {target_rules}", component=self.name)
 
     def execute_all_installations(self) -> None:
-        """Runs installation workflows based on validation checks without creating runtime output folders."""
+        """Selectively runs configurations. Critical: Raises a hard blocking exception if the remote token is invalid."""
         checker = JavaJQAssistantChecker(self.context)
         status = checker.execute_all_checks()
+
+        if status.get("java", {}).get("status") != "✅":
+            raise RuntimeError("Blocking Error: Missing mandatory system-wide Java compilation JRE environment dependency framework layout.")
 
         if status.get("jqassistant_binary", {}).get("status") != "✅":
             self.fetch_and_extract_jqassistant()
@@ -186,3 +189,13 @@ class JavaJQAssistantInstaller(BaseInstallModule):
         if (status.get("jqassistant_custom_config", {}).get("status") != "✅" or
             status.get("jqassistant_custom_rules", {}).get("status") != "✅"):
             self.install_config_and_rules()
+
+        # Final active state verification block assertion parameter validation check
+        neo4j_version = self.context.get_tool_setting("neo4j", "version", "5.26.0")
+        neo4j_folder = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/system/neo4j/neo4j-community-{neo4j_version}"
+
+        # Enforce strict token validation checkpoints only if database infrastructure layer stands loaded
+        if os.path.exists(neo4j_folder):
+            post_check_status = checker.execute_all_checks()
+            if post_check_status.get("remote_database_token", {}).get("status") != "✅":
+                raise RuntimeError("Blocking Error: 'Remote-Database = true' metadata initialization token validation failed on target sandbox layer profile container context.")
