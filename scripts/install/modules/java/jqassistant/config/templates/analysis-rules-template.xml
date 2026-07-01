@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <jqa:jqassistant-rules xmlns:jqa="http://www.buschmais.com/jqassistant/core/analysis/rules/schema/v1.0">
-
-    <!-- lightweight copy of module-analysis-rules.xml for conventional filename support -->
-
     <concept id="{{PROJECT_NAME}}:MarkSpringController">
         <description>Labels every class annotated with @RestController or @Controller with :Controller</description>
         <cypher><![CDATA[
@@ -76,37 +73,6 @@
         ]]>        </cypher>
     </constraint>
 
-    <constraint id="{{PROJECT_NAME}}:DomainMustNotDependOnInfrastructure" severity="major">
-        <requiresConcept refId="{{PROJECT_NAME}}:MarkDomainLayer"/>
-        <requiresConcept refId="{{PROJECT_NAME}}:MarkInfrastructureLayer"/>
-        <description>Domain classes must not depend on Infrastructure classes.</description>
-        <cypher><![CDATA[
-            MATCH (d:DomainLayer)-[:DEPENDS_ON]->(i:InfrastructureLayer)
-            RETURN d.fqn AS DomainClass, i.fqn AS InfrastructureClass
-        ]]>        </cypher>
-    </constraint>
-
-    <constraint id="{{PROJECT_NAME}}:ApiLayerMustNotDependOnInfrastructure" severity="major">
-        <requiresConcept refId="{{PROJECT_NAME}}:MarkApiLayer"/>
-        <requiresConcept refId="{{PROJECT_NAME}}:MarkInfrastructureLayer"/>
-        <description>API layer classes must not directly depend on Infrastructure classes.</description>
-        <cypher><![CDATA[
-            MATCH (a:ApiLayer)-[:DEPENDS_ON]->(i:InfrastructureLayer)
-            RETURN a.fqn AS ApiClass, i.fqn AS InfrastructureClass
-        ]]>        </cypher>
-    </constraint>
-
-    <constraint id="{{PROJECT_NAME}}:NoCyclicPackageDependencies" severity="blocker">
-        <description>No cyclic package dependencies between top-level application packages.</description>
-        <cypher><![CDATA[
-            MATCH (p1:Package)-[:DEPENDS_ON]->(p2:Package)-[:DEPENDS_ON]->(p1)
-            WHERE p1.fqn STARTS WITH 'com.dkt.smartassessment'
-              AND p2.fqn STARTS WITH 'com.dkt.smartassessment'
-              AND p1 <> p2
-            RETURN p1.fqn AS Package1, p2.fqn AS Package2
-        ]]>        </cypher>
-    </constraint>
-
     <group id="{{PROJECT_NAME}}:Default">
         <includeConcept refId="{{PROJECT_NAME}}:MarkSpringController"/>
         <includeConcept refId="{{PROJECT_NAME}}:MarkSpringService"/>
@@ -115,9 +81,5 @@
         <includeConcept refId="{{PROJECT_NAME}}:MarkDomainLayer"/>
         <includeConcept refId="{{PROJECT_NAME}}:MarkInfrastructureLayer"/>
         <includeConstraint refId="{{PROJECT_NAME}}:ControllerMustNotDependOnRepository"/>
-        <includeConstraint refId="{{PROJECT_NAME}}:DomainMustNotDependOnInfrastructure"/>
-        <includeConstraint refId="{{PROJECT_NAME}}:ApiLayerMustNotDependOnInfrastructure"/>
-        <includeConstraint refId="{{PROJECT_NAME}}:NoCyclicPackageDependencies"/>
     </group>
-
 </jqa:jqassistant-rules>

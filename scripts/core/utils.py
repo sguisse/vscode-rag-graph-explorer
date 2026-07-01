@@ -62,6 +62,7 @@ def info(msg: str, component: str = "System"): _log("ℹ️ [INFO]", component, 
 def success(msg: str, component: str = "System"): _log("✅ [SUCCESS]", component, msg)
 def warn(msg: str, component: str = "System"): _log("⚠️ [WARN]", component, msg)
 def error(msg: str, component: str = "System"): _log("❌ [ERROR]", component, msg)
+def debug(msg: str, component: str = "System"): _log("🐛 [DEBUG]", component, msg)
 
 def normalize_path(raw_path: str) -> str: return os.path.abspath(raw_path).replace("\\", "/")
 def get_platform_shell_requirement() -> bool: return os.name == 'nt'

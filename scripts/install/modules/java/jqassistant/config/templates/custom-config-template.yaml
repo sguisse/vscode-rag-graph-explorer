@@ -1,0 +1,32 @@
+jqassistant:
+  store:
+    directory: '{{JQA_STORE_DIRECTORY}}'
+    remote:
+      url: '{{JQA_BOLT_URL}}'
+      username: '{{JQA_BOLT_USERNAME}}'
+      password: '{{JQA_BOLT_PASSWORD}}'
+      encryption: false
+      trust-strategy: trustAllCertificates
+
+  scan:
+    include:
+      files:
+{{JAVA_SRC_DIRS_YAML_LIST}}
+
+  analyze:
+    groups:
+      - '{{PROJECT_NAME}}:Default'
+    rule:
+      directory: '{{JQA_RULES_DIRECTORY}}'
+
+  report:
+    directory: '{{JQA_REPORT_DIRECTORY}}'
+    continue-on-failure: true
+
+  plugins:
+    - group-id: org.jqassistant.plugin
+      artifact-id: jqassistant-openapi-plugin
+      version: 1.0.0-M2
+    - group-id: org.jqassistant.plugin.typescript
+      artifact-id: jqassistant-typescript-plugin
+      version: 1.4.0

@@ -31,7 +31,6 @@ class JavaJQAssistantChecker(BaseCheckModule):
 
         global_bin = shutil.which(base_cmd) or shutil.which("jqassistant")
 
-        # REALIGNED PATH: Scans targeted mirror structure inside tools repository tree
         sandbox_root = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/java/jqassistant/jqassistant-{version}"
         local_bin = self._find_sandboxed_binary(sandbox_root, base_cmd)
 
@@ -55,8 +54,59 @@ class JavaJQAssistantChecker(BaseCheckModule):
             self.status["raw_outputs_java"] = {"status": "❌"}
             self.ko_count += 1
 
+    def check_sandboxed_config(self):
+        self.steps_count += 1
+        config_path = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/java/jqassistant/config/custom-config.yaml"
+        if os.path.exists(config_path):
+            self.status["jqassistant_custom_config"] = {"status": "✅", "path": config_path}
+        else:
+            self.status["jqassistant_custom_config"] = {
+                "status": "❌",
+                "message": "Isolated jQAssistant configuration (custom-config.yaml) is missing."
+            }
+            self.ko_count += 1
+
+    def check_sandboxed_rules(self):
+        self.steps_count += 1
+        rules_dir = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/java/jqassistant/config/rules"
+        if os.path.exists(rules_dir) and any(f.endswith(".xml") for f in os.listdir(rules_dir)):
+            self.status["jqassistant_custom_rules"] = {"status": "✅", "path": rules_dir}
+        else:
+            self.status["jqassistant_custom_rules"] = {
+                "status": "❌",
+                "message": f"No custom XML rules found in sandboxed directory: {rules_dir}"
+            }
+            self.ko_count += 1
+
+    def check_workspace_mcp_config(self):
+        self.steps_count += 1
+        mcp_path = os.path.join(self.context.workspace_root, ".vscode", "mcp.json")
+        has_server = False
+
+        if os.path.exists(mcp_path):
+            try:
+                import json
+                with open(mcp_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if "servers" in data and "jqassistant-graph-rag" in data["servers"]:
+                        has_server = True
+            except Exception:
+                pass
+
+        if has_server:
+            self.status["mcp_server_config"] = {"status": "✅", "path": mcp_path}
+        else:
+            self.status["mcp_server_config"] = {
+                "status": "❌",
+                "message": "MCP server 'jqassistant-graph-rag' is missing from .vscode/mcp.json."
+            }
+            self.ko_count += 1
+
     def execute_all_checks(self) -> dict:
         self.check_java_runtime()
         self.check_jqassistant_executable_availability()
         self.check_workspace_raw_outputs_dir()
+        self.check_sandboxed_config()
+        self.check_sandboxed_rules()
+        self.check_workspace_mcp_config()
         return self.generate_summary()
