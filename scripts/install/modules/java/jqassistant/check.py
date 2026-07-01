@@ -104,6 +104,12 @@ class JavaJQAssistantChecker(BaseCheckModule):
             self.ko_count += 1
 
     def execute_all_checks(self) -> dict:
+        # CRITICAL FIX: Reset step counters and clean state before running diagnostics
+        # This completely stops metrics accumulation when called sequentially across before/after phases
+        self.steps_count = 0
+        self.ko_count = 0
+        self.status = {}
+
         self.check_java_runtime()
         self.check_jqassistant_executable_availability()
         self.check_workspace_raw_outputs_dir()

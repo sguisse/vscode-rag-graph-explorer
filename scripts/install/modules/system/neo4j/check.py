@@ -31,7 +31,6 @@ class SystemNeo4jChecker(BaseCheckModule):
         if os.path.exists(admin_executable):
             self.status["neo4j_local_installation"] = {"status": "✅", "location": target_folder}
 
-            # Secondary internal step: verify plugin containment status
             self.steps_count += 1
             plugins_dir = os.path.join(target_folder, "plugins")
             has_apoc = any("apoc" in file and file.endswith(".jar") for file in os.listdir(plugins_dir)) if os.path.exists(plugins_dir) else False
@@ -53,6 +52,9 @@ class SystemNeo4jChecker(BaseCheckModule):
             self.ko_count += 1
 
     def execute_all_checks(self) -> dict:
+        self.steps_count = 0
+        self.ko_count = 0
+        self.status = {}
         self.check_java_version_compliance()
         self.check_local_sandboxed_binaries()
         return self.generate_summary()

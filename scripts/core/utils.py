@@ -92,14 +92,31 @@ def execute_tracked_command(cmd_args: List[str], tool_name: str, cwd: str = None
     cmd_args[0] = resolve_executable_name(cmd_args[0])
     pids_dir = get_pids_dir()
     os.makedirs(pids_dir, exist_ok=True)
-    kwargs = {"cwd": cwd, "env": env or os.environ.copy(), "stdout": subprocess.PIPE, "stderr": subprocess.PIPE, "shell": get_platform_shell_requirement()}
+
+    # Merge stderr into stdout and open text streaming pipe to capture CLI output logs in real-time
+    kwargs = {
+        "cwd": cwd,
+        "env": env or os.environ.copy(),
+        "stdout": subprocess.PIPE,
+        "stderr": subprocess.STDOUT,
+        "shell": get_platform_shell_requirement(),
+        "text": True,
+        "errors": "replace"
+    }
     if os.name == 'nt': kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
     else: kwargs["preexec_fn"] = os.setsid
     try:
         proc = subprocess.Popen(cmd_args, **kwargs)
         pid_file = os.path.join(pids_dir, f"{tool_name}_{proc.pid}.pid")
         with open(pid_file, "w", encoding="utf-8") as f: f.write(str(proc.pid))
-        proc.communicate()
+
+        # Stream the continuous CLI line output directly to the extension host stdout stream
+        if proc.stdout:
+            for line in proc.stdout:
+                sys.stdout.write(line)
+                sys.stdout.flush()
+
+        proc.wait()
         if os.path.exists(pid_file): os.remove(pid_file)
         return proc.returncode
     except Exception as e:

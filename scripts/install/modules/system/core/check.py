@@ -23,5 +23,8 @@ class SystemCoreChecker(BaseCheckModule):
             self.ko_count += 1
 
     def execute_all_checks(self) -> dict:
+        self.steps_count = 0
+        self.ko_count = 0
+        self.status = {}
         self.check_gitignore_rule()
         return self.generate_summary()

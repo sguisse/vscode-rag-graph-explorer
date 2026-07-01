@@ -9,6 +9,7 @@ from install.base import BaseInstallModule
 from install.registry import ModuleRegistry
 from core.utils import info, success, error, warn
 from core.sources_discovery import discover_workspace_sources
+from install.modules.java.jqassistant.check import JavaJQAssistantChecker
 
 @ModuleRegistry.register_installer
 class JavaJQAssistantInstaller(BaseInstallModule):
@@ -29,13 +30,13 @@ class JavaJQAssistantInstaller(BaseInstallModule):
 
     def fetch_and_extract_jqassistant(self):
         version = self.context.get_tool_setting("jqassistant", "version", "2.9.1")
-        sandbox_root = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/java/jqassistant"
-        target_folder = os.path.join(sandbox_root, f"jqassistant-{version}")
+        jqa_tool_root = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/java/jqassistant"
+        target_folder = os.path.join(jqa_tool_root, f"jqassistant-{version}")
 
         if os.path.exists(target_folder): return
 
-        os.makedirs(sandbox_root, exist_ok=True)
-        local_zip_path = os.path.join(sandbox_root, "jqassistant.zip")
+        os.makedirs(jqa_tool_root, exist_ok=True)
+        local_zip_path = os.path.join(jqa_tool_root, "jqassistant.zip")
         default_url = f"https://github.com/jQAssistant/jqassistant/releases/download/{version}/jqassistant-commandline-neo4jv5-{version}-distribution.zip"
         url = self.context.get_tool_setting("jqassistant", "downloadUrl", default_url).replace("${version}", version)
 
@@ -119,25 +120,27 @@ class JavaJQAssistantInstaller(BaseInstallModule):
             json.dump(mcp_data, f, indent=4)
         success(f"MCP server config injected successfully into {mcp_path}", component=self.name)
 
-    def provision_sandboxed_config_and_rules(self):
+    def install_config_and_rules(self):
         workspace_root = self.context.workspace_root
         exclude_regex = self.context.get_tool_setting("excludePathsRegex", "")
 
-        sandbox_root = f"{workspace_root}/.graph-rag-explorer/target/tools/java/jqassistant"
-        config_dir = f"{sandbox_root}/config"
+        jqa_tool_root = f"{workspace_root}/.graph-rag-explorer/target/tools/java/jqassistant"
+        config_dir = f"{jqa_tool_root}/config"
         rules_dir = f"{config_dir}/rules"
-        jqa_run_dir = f"{workspace_root}/.graph-rag-explorer/target/raw_outputs/java"
+        jqa_results_dir = f"{workspace_root}/.graph-rag-explorer/target/raw_outputs/java"
 
         os.makedirs(config_dir, exist_ok=True)
         os.makedirs(rules_dir, exist_ok=True)
-        os.makedirs(jqa_run_dir, exist_ok=True)
+        os.makedirs(jqa_results_dir, exist_ok=True)
 
+        #-----------
         # 1. Run Discovery during install phase to establish the immutable base config
-        discovery_output = f"{jqa_run_dir}/jqassistant/sources_discovered.json"
+        discovery_output = f"{jqa_results_dir}/jqassistant/sources_discovered.json"
         discovered = discover_workspace_sources(workspace_root, exclude_regex, discovery_output)
 
+        #-----------
         # 2. Render .jqassistant.yml directly into the isolated tools config directory once
-        template_config = f"{os.path.dirname(__file__)}/config/templates/custom-config-template.yaml"
+        template_config = os.path.join(os.path.dirname(__file__), "config", "templates", ".jqassistant-template.yml")
         custom_config_path = f"{config_dir}/.jqassistant.yml"
 
         with open(template_config, "r", encoding="utf-8") as f:
@@ -159,8 +162,11 @@ class JavaJQAssistantInstaller(BaseInstallModule):
         with open(custom_config_path, "w", encoding="utf-8") as f:
             f.write(content)
 
+        success(f"JQAssistant configuration dropped into {custom_config_path}", component=self.name)
+
+        #-----------
         # 3. Render rules into sandbox
-        template_rules = f"{os.path.dirname(__file__)}/config/templates/analysis-rules-template.xml"
+        template_rules = os.path.join(os.path.dirname(__file__), "config", "templates", "analysis-rules-template.xml")
         target_rules = f"{rules_dir}/{project_name}-rules.xml"
 
         with open(template_rules, "r", encoding="utf-8") as f:
@@ -169,10 +175,22 @@ class JavaJQAssistantInstaller(BaseInstallModule):
         with open(target_rules, "w", encoding="utf-8") as f:
             f.write(rules_content)
 
-        success(f"Sandboxed configuration dropped into {custom_config_path}", component=self.name)
+        success(f"JQAssistant rules dropped into {target_rules}", component=self.name)
 
     def execute_all_installations(self) -> None:
-        self.create_isolated_java_raw_target_folder()
-        self.fetch_and_extract_jqassistant()
-        self.inject_mcp_server_config()
-        self.provision_sandboxed_config_and_rules()
+        """Selectively runs installation workflows based on dynamic environmental validation status layers."""
+        checker = JavaJQAssistantChecker(self.context)
+        status = checker.execute_all_checks()
+
+        if status.get("raw_outputs_java", {}).get("status") != "✅":
+            self.create_isolated_java_raw_target_folder()
+
+        if status.get("jqassistant_binary", {}).get("status") != "✅":
+            self.fetch_and_extract_jqassistant()
+
+        if status.get("mcp_server_config", {}).get("status") != "✅":
+            self.inject_mcp_server_config()
+
+        if (status.get("jqassistant_custom_config", {}).get("status") != "✅" or
+            status.get("jqassistant_custom_rules", {}).get("status") != "✅"):
+            self.install_config_and_rules()

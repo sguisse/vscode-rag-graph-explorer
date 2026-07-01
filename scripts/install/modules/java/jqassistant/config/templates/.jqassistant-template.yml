@@ -2,16 +2,16 @@
 # https://jqassistant.github.io/jqassistant/current/#core:Configuration
 #
 jqassistant:
-  maven:
+  #maven:
     # Force the module where 'mvn' is being executed to be used as root module. The database will be created in this module and contain all information of the reactor. Rules will be read from the rules folder of this module.
     #
     # jqassistant.maven.use-execution-root-as-project-root: true|false
-    use-execution-root-as-project-root: true
+  #  use-execution-root-as-project-root: true
     # Re-use store instances across all modules of the Maven reactor. Can be set to false for mitigating problems in specific setups,
     # the jQAssistant Maven plugin will display an according hint when this is necessary.
     #
     # jqassistant.maven.reuse-store: true|false
-    reuse-store: true
+  #  reuse-store: true
 
   # ---------------------------------------------------------------------------
   # Plugins — full Maven coordinates required (group-id/artifact-id/version)
@@ -50,14 +50,14 @@ jqassistant:
       username: '{{JQA_BOLT_USERNAME}}'
       password: '{{JQA_BOLT_PASSWORD}}'
       # Activate encryption level for 'bolt' connections.
-      encryption: true
+      encryption: false
       # trustAllCertificates|trustCustomCaSignedCertificates|trustSystemCaSignedCertificates
       trust-strategy: trustAllCertificates
       # -Djqassistant.store.trust-certificate
       trust-certificate:
 
       # Additional properties to be passed to the remote store as key-value pairs.
-      properties:
+      #properties:
 
   # ---------------------------------------------------------------------------
   # Scan targets
@@ -74,8 +74,7 @@ jqassistant:
   scan:
     include:
       files:
-        - ${project.basedir}/src/main/java
-  #     - target/classes
+  {{JAVA_SRC_DIRS_YAML_LIST}}
   #     - target/test-classes
 
   # ---------------------------------------------------------------------------
@@ -98,7 +97,7 @@ jqassistant:
 
     # Severity defaults for custom rules (lowercase: blocker, critical, major, minor, info)
     rule:
-      directory: '.github/skills/rvng-jqassistant-analysis/scripts/config/jqassistant-rules'
+      directory: '{{JQA_RULES_DIRECTORY}}'
       default-concept-severity: minor
       default-constraint-severity: major
 

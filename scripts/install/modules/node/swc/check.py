@@ -36,6 +36,9 @@ class NodeSwcChecker(BaseCheckModule):
             self.ko_count += 1
 
     def execute_all_checks(self) -> dict:
+        self.steps_count = 0
+        self.ko_count = 0
+        self.status = {}
         self.check_node_binary()
         self.check_npm_binary()
         self.check_swc_core_package()

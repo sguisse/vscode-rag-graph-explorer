@@ -28,7 +28,6 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => 
 
     const terminalEndRef = useRef<HTMLDivElement>(null);
     const logsContainerRef = useRef<HTMLDivElement>(null);
-    const globalMatchCounterRef = useRef<number>(0);
 
     const severityMap: Record<string, number> = { debug: 0, info: 1, warn: 2, error: 3 };
 
@@ -37,37 +36,56 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => 
         return logs.filter(log => (severityMap[log.level] ?? 1) >= targetSeverity);
     }, [logs, selectedLevel]);
 
-    useEffect(() => {
+    // Deterministically pre-calculate sequential match start indices for each log line item
+    const logsWithMatchIndices = useMemo(() => {
         if (!searchQuery) {
-            setTotalMatches(0);
-            return;
+            return filteredLogs.map(log => ({ log, startIndex: 0, matchCount: 0 }));
         }
         let pattern = useRegex ? searchQuery : searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         if (wholeWord) pattern = `\\b${pattern}\\b`;
 
         try {
             const regex = new RegExp(pattern, caseSensitive ? 'g' : 'gi');
-            let count = 0;
-            filteredLogs.forEach(log => {
+            let currentGlobalIndex = 0;
+
+            return filteredLogs.map(log => {
                 const matches = log.message.match(regex);
-                if (matches) count += matches.length;
+                const matchCount = matches ? matches.length : 0;
+                const startIndex = currentGlobalIndex;
+                currentGlobalIndex += matchCount;
+                return { log, startIndex, matchCount };
             });
-            setTotalMatches(count);
         } catch (e) {
-            setTotalMatches(0);
+            return filteredLogs.map(log => ({ log, startIndex: 0, matchCount: 0 }));
         }
     }, [filteredLogs, searchQuery, caseSensitive, wholeWord, useRegex]);
+
+    // Keep total matches state accurately updated in sync with calculation matrix
+    useEffect(() => {
+        if (logsWithMatchIndices.length === 0) {
+            setTotalMatches(0);
+            return;
+        }
+        const lastItem = logsWithMatchIndices[logsWithMatchIndices.length - 1];
+        setTotalMatches(lastItem.startIndex + lastItem.matchCount);
+    }, [logsWithMatchIndices]);
 
     useEffect(() => {
         setCurrentMatchIndex(0);
     }, [searchQuery, caseSensitive, wholeWord, useRegex, selectedLevel]);
 
+    // Seamlessly handles automatic alignment scrolling to active index nodes with brief render paint delay padding
     useEffect(() => {
         if (totalMatches === 0 || !showFind) return;
-        const targetActiveElement = logsContainerRef.current?.querySelector(`[data-match-index="${currentMatchIndex}"]`);
-        if (targetActiveElement) {
-            targetActiveElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
+
+        const timeoutId = setTimeout(() => {
+            const targetActiveElement = logsContainerRef.current?.querySelector(`[data-match-index="${currentMatchIndex}"]`);
+            if (targetActiveElement) {
+                targetActiveElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 40);
+
+        return () => clearTimeout(timeoutId);
     }, [currentMatchIndex, totalMatches, showFind]);
 
     useEffect(() => {
@@ -94,8 +112,6 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => 
         }
     };
 
-    globalMatchCounterRef.current = 0;
-
     return (
         <div id="tab-terminal-content" className="flex flex-col bg-[var(--vscode-editor-background)] pt-[5px] pr-0 pb-0 pl-0 w-full h-full overflow-hidden">
             <div className="relative flex flex-col gap-4 mx-auto p-2 w-full h-full">
@@ -120,7 +136,7 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => 
                         </select>
                         <button
                             onClick={() => setShowFind(!showFind)}
-                            className={`px-3 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5 ${showFind ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-blue-600/10 text-blue-500'}`}
+                            className={`px-3 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5 \${showFind ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-blue-600/10 text-blue-500'}`}
                         >
                             <span className="codicon codicon-search"></span> Find
                         </button>
@@ -154,18 +170,18 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => 
                     ref={logsContainerRef}
                     className="relative flex flex-col flex-1 gap-1 bg-black p-4 border border-[var(--vscode-panel-border)] rounded-lg overflow-y-auto font-mono text-xs select-text"
                 >
-                    {filteredLogs.length > 0 ? (
-                        filteredLogs.map((log, idx) => (
+                    {logsWithMatchIndices.length > 0 ? (
+                        logsWithMatchIndices.map((item, idx) => (
                             <div key={idx} className="flex items-start gap-2 break-all leading-relaxed whitespace-pre-wrap select-text">
-                                <span className={getLogColor(log.level)}>
+                                <span className={getLogColor(item.log.level)}>
                                     <FinderHtml
-                                        text={log.message}
+                                        text={item.log.message}
                                         searchQuery={searchQuery}
                                         caseSensitive={caseSensitive}
                                         wholeWord={wholeWord}
                                         useRegex={useRegex}
                                         currentMatchIndex={currentMatchIndex}
-                                        globalMatchCounterRef={globalMatchCounterRef}
+                                        matchStartIndex={item.startIndex}
                                     />
                                 </span>
                             </div>

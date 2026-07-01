@@ -13,7 +13,7 @@ interface FinderHtmlProps {
     wholeWord: boolean;
     useRegex: boolean;
     currentMatchIndex: number;
-    globalMatchCounterRef?: React.MutableRefObject<number>;
+    matchStartIndex: number;
 }
 
 export const FinderHtml: React.FC<FinderHtmlProps> = ({
@@ -23,7 +23,7 @@ export const FinderHtml: React.FC<FinderHtmlProps> = ({
     wholeWord,
     useRegex,
     currentMatchIndex,
-    globalMatchCounterRef
+    matchStartIndex
 }) => {
     const chunks = useMemo(() => {
         const rawText = text || '';
@@ -41,20 +41,20 @@ export const FinderHtml: React.FC<FinderHtmlProps> = ({
             const result: TextChunk[] = [];
             let lastIndex = 0;
             let match;
+            let localMatchCounter = 0;
 
             while ((match = regex.exec(rawText)) !== null) {
                 if (match.index > lastIndex) {
                     result.push({ text: rawText.substring(lastIndex, match.index), isMatch: false });
                 }
 
-                const currentIdx = globalMatchCounterRef ? globalMatchCounterRef.current++ : 0;
-
                 result.push({
                     text: match[0],
                     isMatch: true,
-                    globalIndex: currentIdx
+                    globalIndex: matchStartIndex + localMatchCounter
                 });
 
+                localMatchCounter++;
                 lastIndex = regex.lastIndex;
                 if (match[0].length === 0) {
                     regex.lastIndex++;
@@ -69,32 +69,27 @@ export const FinderHtml: React.FC<FinderHtmlProps> = ({
         } catch (e) {
             return [{ text: rawText, isMatch: false }];
         }
-    }, [text, searchQuery, caseSensitive, wholeWord, useRegex, globalMatchCounterRef]);
+    }, [text, searchQuery, caseSensitive, wholeWord, useRegex, matchStartIndex]);
 
-    // SOLID CLICK ROUTER: Safely delegates link routing out of the webview sandbox sandbox environment
     const handleLinkClickIntercept = (e: React.MouseEvent<HTMLSpanElement>) => {
         const targetElement = e.target as HTMLElement;
         const closestAnchor = targetElement.closest('a');
 
         if (closestAnchor) {
-            // Prevent the internal sandbox from trying to process file:// or bolt:// routes
             e.preventDefault();
             e.stopPropagation();
 
             const targetUrl = closestAnchor.getAttribute('href');
             if (!targetUrl) return;
 
-            // Resolve access to the global VS Code API instance acquired in your extension page boilerplate
             const vscode = (window as any).vscodeApi || (typeof (window as any).acquireVsCodeApi === 'function' ? (window as any).acquireVsCodeApi() : null);
 
             if (vscode) {
-                // Post command up to your Extension Host message router listener
                 vscode.postMessage({
                     command: 'openExternal',
                     url: targetUrl
                 });
             } else {
-                // Standalone web browser testing fallback mode profiles
                 window.open(targetUrl, '_blank', 'noopener,noreferrer');
             }
         }
@@ -108,7 +103,7 @@ export const FinderHtml: React.FC<FinderHtmlProps> = ({
                     if (chunk.isMatch) {
                         const isActive = chunk.globalIndex === currentMatchIndex;
                         const markClass = isActive
-                            ? 'bg-orange-500 text-black font-extrabold shadow-sm outline outline-1 outline-white z-10 px-0.5 rounded-sm'
+                            ? 'bg-orange-500 text-black font-extrabold shadow-sm outline outline-1 outline-white z-10 px-0.5 rounded-sm animate-pulse'
                             : 'bg-yellow-400 text-black px-0.5 rounded-sm';
                         return `<mark data-match-index="${chunk.globalIndex}" class="${markClass}">${chunk.text}</mark>`;
                     }

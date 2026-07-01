@@ -24,6 +24,9 @@ class NodeDependencyCruiserChecker(BaseCheckModule):
             self.ko_count += 1
 
     def execute_all_checks(self) -> dict:
+        self.steps_count = 0
+        self.ko_count = 0
+        self.status = {}
         self.check_node_executable()
         self.check_dependency_cruiser_modules()
         return self.generate_summary()

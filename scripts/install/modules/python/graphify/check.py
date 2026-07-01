@@ -13,5 +13,8 @@ class PythonGraphifyChecker(BaseCheckModule):
         else: self.status["uvx"] = {"status": "⚠️", "message": "Optimized compilation layer binaries absent."}
 
     def execute_all_checks(self) -> dict:
+        self.steps_count = 0
+        self.ko_count = 0
+        self.status = {}
         self.check_uvx_runtime_utility()
         return self.generate_summary()
