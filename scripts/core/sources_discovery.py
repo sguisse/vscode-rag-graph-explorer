@@ -23,8 +23,6 @@ def discover_workspace_sources(workspace_root: str, exclude_regex: str, output_p
         # Standard heuristics for folder discovery
         if norm_root.endswith("src/main/java"):
             discovered["java_src"].add(norm_root)
-        elif norm_root.endswith("target/classes") or norm_root.endswith("build/classes"):
-            discovered["java_classes"].add(norm_root)
         elif norm_root.endswith("src") or norm_root.endswith("src/main/ts"):
             if any(f.endswith(".ts") for f in files):
                 discovered["typescript_src"].add(norm_root)
@@ -32,8 +30,8 @@ def discover_workspace_sources(workspace_root: str, exclude_regex: str, output_p
                 discovered["javascript_src"].add(norm_root)
 
         # Fallback: Catch raw Java files outside standard layouts
-        if any(f.endswith(".java") for f in files) and not norm_root.endswith("src/main/java"):
-            discovered["java_src"].add(norm_root)
+        #if any(f.endswith(".java") for f in files) and not norm_root.endswith("src/main/java"):
+        #    discovered["java_src"].add(norm_root)
 
     # Convert sets to lists for JSON serialization
     final_payload = {k: list(v) for k, v in discovered.items()}

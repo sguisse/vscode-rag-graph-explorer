@@ -166,16 +166,6 @@ class SystemNeo4jInstaller(BaseInstallModule):
                 f.write(str(proc.pid))
         time.sleep(12)
 
-    def provision_custom_user(self, shell_cmd, host, bolt_port, user, password):
-        if user != "neo4j" :
-            info(f"Provisioning custom database administrator profile: '{user}'...", component=self.name)
-            try:
-                cypher_query = f"CREATE USER {user} IF NOT EXISTS SET PASSWORD '{password}';";
-                # ALTER USER {user} SET STATUS ACTIVE; GRANT ROLE admin TO {user};" not allowed in neo4j community edition, so we only create the user and set the password
-                subprocess.run([shell_cmd, "-a", f"bolt://{host}:{bolt_port}", "-u", "neo4j", "-p", password, cypher_query], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                success(f"Custom admin '{user}' successfully provisioned with full global system privileges.", component=self.name)
-            except subprocess.CalledProcessError as e:
-                error(f"Failed to inject custom user via Cypher-Shell blueprint: {e.stderr.decode()}", component=self.name)
 
     def initialize_remote_database_token(self, shell_cmd, host, bolt_port, user, password):
         """Adds Remote-Database=true if missing. Bypasses blocking errors."""
@@ -230,10 +220,9 @@ class SystemNeo4jInstaller(BaseInstallModule):
                     os.chmod(cmd, 0o755)
 
           self.set_initial_admin_password(admin_cmd, password)
-          self.boot_neo4j_process(neo4j_cmd)
 
-        if installStatus.get("custom_user_admin", {}).get("status") != "✅":
-            self.provision_custom_user(shell_cmd, host, bolt_port, user, password)
+        if installStatus.get("neo4j_db_running", {}).get("status") != "✅":
+            self.boot_neo4j_process(neo4j_cmd)
 
         if installStatus.get("remote_database_token", {}).get("status") != "✅":
             self.initialize_remote_database_token(shell_cmd, host, bolt_port, user, password)

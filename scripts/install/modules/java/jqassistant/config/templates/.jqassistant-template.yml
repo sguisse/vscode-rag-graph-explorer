@@ -28,6 +28,9 @@ jqassistant:
   # Store — NEO4J database configuration (embedded or remote)
   # ---------------------------------------------------------------------------
   store:
+    # URI of the database to connect to. Supported URI schemes are 'file' for embedded databases and 'bolt' for connecting to a running Neo4j instance (3.x+), e.g.
+    uri: '{{JQA_BOLT_URL}}'
+
     # embedded:
     #   neo4j-version: 5.26.20
     #   # Specify the ports here
@@ -44,8 +47,6 @@ jqassistant:
     #       version: 5.26.2
 
     remote:
-      # Specify the bolt URL here (e.g. bolt://localhost:7687)
-      url: '{{JQA_BOLT_URL}}'
       # Optional: specify username and password for authentication
       username: '{{JQA_BOLT_USERNAME}}'
       password: '{{JQA_BOLT_PASSWORD}}'
@@ -75,7 +76,8 @@ jqassistant:
     include:
       files:
   {{JAVA_SRC_DIRS_YAML_LIST}}
-        - target/classes
+
+      urls:
 
   # ---------------------------------------------------------------------------
   # Analyze — mixed strategy
@@ -104,3 +106,7 @@ jqassistant:
     # Reporting
     report:
       continue-on-failure: true
+
+  server:
+    daemon: false
+    open-browser: false

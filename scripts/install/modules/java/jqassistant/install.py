@@ -157,10 +157,16 @@ class JavaJQAssistantInstaller(BaseInstallModule):
                          .replace("{{PROJECT_NAME}}", project_name)\
                          .replace("{{JQA_RULES_DIRECTORY}}", rules_dir.replace("\\", "/"))
 
+        # Centrally deposit configuration file inside tools sandbox config resource route
         with open(custom_config_path, "w", encoding="utf-8") as f:
             f.write(content)
 
-        success(f"JQAssistant configuration dropped into {custom_config_path}", component=self.name)
+        # CRITICAL FIX: Deposit identical layout directly inside the active pipeline execution directory
+        # so that standalone jQAssistant CLI automatic discovery triggers remote store routing natively.
+        with open(os.path.join(jqa_results_dir, ".jqassistant.yml"), "w", encoding="utf-8") as f:
+            f.write(content)
+
+        success(f"JQAssistant configurations multi-cast provisioned into active workspace layout.", component=self.name)
 
         template_rules = os.path.join(os.path.dirname(__file__), "config", "templates", "analysis-rules-template.xml")
         target_rules = f"{rules_dir}/{project_name}-rules.xml"
@@ -175,11 +181,9 @@ class JavaJQAssistantInstaller(BaseInstallModule):
 
     def execute_all_installations(self, installStatus: Optional[dict] = None) -> None:
         """Selectively runs configurations. Critical: Raises a hard blocking exception if the remote token is invalid."""
+        checker = JavaJQAssistantChecker(self.context)
         if installStatus is None:
-            raise ValueError("installStatus cannot be None. Please provide the installation status dictionary.")
-
-        if installStatus.get("remote_database_token", {}).get("status") != "✅":
-            raise RuntimeError("Blocking Error: 'Remote-Database = true' metadata initialization token validation failed. jqassistant cannot proceed with ingestion lifecycle without this critical database configuration property being set.")
+            installStatus = checker.execute_all_checks()
 
         if installStatus.get("java", {}).get("status") != "✅":
             raise RuntimeError("Blocking Error: Missing mandatory system-wide Java compilation JRE environment dependency framework layout.")
@@ -193,3 +197,13 @@ class JavaJQAssistantInstaller(BaseInstallModule):
         if (installStatus.get("jqassistant_custom_config", {}).get("status") != "✅" or
             installStatus.get("jqassistant_custom_rules", {}).get("status") != "✅"):
             self.install_config_and_rules()
+
+        # Final active state verification block assertion parameter validation check
+        neo4j_version = self.context.get_tool_setting("neo4j", "version", "5.26.0")
+        neo4j_folder = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/system/neo4j/neo4j-community-{neo4j_version}"
+
+        # Enforce strict token validation checkpoints only if database infrastructure layer stands loaded
+        if os.path.exists(neo4j_folder):
+            post_check_status = checker.execute_all_checks()
+            if post_check_status.get("remote_database_token", {}).get("status") != "✅":
+                raise RuntimeError("Blocking Error: 'Remote-Database = true' metadata initialization token validation failed. jqassistant cannot proceed with ingestion lifecycle without this critical database configuration property being set.")

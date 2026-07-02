@@ -9,9 +9,9 @@ def build_statistics(neo4j_client, workspace_root: str):
     """
     info("Extracting Neo4j advanced architectural matrix statistics...", component="StatisticsExtractor")
 
-    stats_dir = os.path.join(workspace_root, ".graph-rag-explorer", "target", "raw_outputs", "neo4j")
-    os.makedirs(stats_dir, exist_ok=True)
-    stats_file = os.path.join(stats_dir, "statistics.json")
+    stats_target_dir = os.path.join(workspace_root, ".graph-rag-explorer", "target", "raw_outputs", "neo4j")
+    os.makedirs(stats_target_dir, exist_ok=True)
+    stats_file = os.path.join(stats_target_dir, "statistics.json")
 
     # Reconfigured matrix adapting renamed parameter metrics keys and variable array looping nodes
     queries_matrix = {
