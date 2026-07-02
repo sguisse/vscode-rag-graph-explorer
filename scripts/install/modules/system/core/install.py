@@ -2,10 +2,12 @@ import os
 from install.base import BaseInstallModule
 from install.registry import ModuleRegistry
 
+CORE_MODULE_NAME = "01_system_core"
+
 @ModuleRegistry.register_installer
 class SystemCoreInstaller(BaseInstallModule):
     @property
-    def name(self) -> str: return "system_core"
+    def name(self) -> str: return CORE_MODULE_NAME
 
     def append_gitignore_exclusion(self):
         gi_path = f"{self.context.workspace_root}/.gitignore"
@@ -17,5 +19,5 @@ class SystemCoreInstaller(BaseInstallModule):
             with open(gi_path, "a", encoding="utf-8") as f:
                 f.write("\n# [Graph RAG Explorer]\n.graph-rag-explorer/\n")
 
-    def execute_all_installations(self) -> None:
+    def execute_all_installations(self, installStatus=None) -> None:
         self.append_gitignore_exclusion()

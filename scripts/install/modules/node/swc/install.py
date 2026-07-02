@@ -15,7 +15,7 @@ class NodeSwcInstaller(BaseInstallModule):
     def install_swc_core(self, target_env: str):
         execute_tracked_command(["npm", "install", "@swc/core@1.15.43"], "swc_install", cwd=target_env)
 
-    def execute_all_installations(self) -> None:
+    def execute_all_installations(self, installStatus=None) -> None:
         target_env = f"{self.context.tools_dir}/node"
         os.makedirs(target_env, exist_ok=True)
         self.init_package_json(target_env)

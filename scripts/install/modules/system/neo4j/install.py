@@ -8,9 +8,12 @@ import tarfile
 import zipfile
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
+from typing import Optional
 from install.base import BaseInstallModule
 from install.registry import ModuleRegistry
 from core.utils import info, success, error, warn
+
+NEO4J_MODULE_NAME = "01_system_neo4j"
 
 @ModuleRegistry.register_installer
 class SystemNeo4jInstaller(BaseInstallModule):
@@ -19,7 +22,7 @@ class SystemNeo4jInstaller(BaseInstallModule):
         self._last_reported_percent = -5
 
     @property
-    def name(self) -> str: return "system_neo4j"
+    def name(self) -> str: return NEO4J_MODULE_NAME
 
     def _download_file(self, url, local_path, asset_name, headers, ctx):
         if os.path.exists(local_path):
@@ -149,7 +152,7 @@ class SystemNeo4jInstaller(BaseInstallModule):
             pass
 
     def boot_neo4j_process(self, neo4j_cmd):
-        info("Spinning up native standalone data cluster mapping engine operations...", component="SystemNeo4j")
+        info("Spinning up native standalone data cluster mapping engine operations...", component="self.name")
         pids_dir = f"{self.context.workspace_root}/.graph-rag-explorer/target/pids"
         os.makedirs(pids_dir, exist_ok=True)
 
@@ -163,40 +166,31 @@ class SystemNeo4jInstaller(BaseInstallModule):
                 f.write(str(proc.pid))
         time.sleep(12)
 
-    def provision_custom_user(self, shell_cmd, bolt_port, user, password):
-        if user != "neo4j":
+    def provision_custom_user(self, shell_cmd, host, bolt_port, user, password):
+        if user != "neo4j" :
             info(f"Provisioning custom database administrator profile: '{user}'...", component=self.name)
             try:
-                cypher_query = f"CREATE USER {user} IF NOT EXISTS SET PASSWORD '{password}'; ALTER USER {user} SET STATUS ACTIVE; GRANT ROLE admin TO {user};"
-                subprocess.run([shell_cmd, "-a", f"bolt://localhost:{bolt_port}", "-u", "neo4j", "-p", password, cypher_query], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                cypher_query = f"CREATE USER {user} IF NOT EXISTS SET PASSWORD '{password}';";
+                # ALTER USER {user} SET STATUS ACTIVE; GRANT ROLE admin TO {user};" not allowed in neo4j community edition, so we only create the user and set the password
+                subprocess.run([shell_cmd, "-a", f"bolt://{host}:{bolt_port}", "-u", "neo4j", "-p", password, cypher_query], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 success(f"Custom admin '{user}' successfully provisioned with full global system privileges.", component=self.name)
             except subprocess.CalledProcessError as e:
                 error(f"Failed to inject custom user via Cypher-Shell blueprint: {e.stderr.decode()}", component=self.name)
 
-    def initialize_remote_database_token(self, shell_cmd, bolt_port, user, password):
+    def initialize_remote_database_token(self, shell_cmd, host, bolt_port, user, password):
         """Adds Remote-Database=true if missing. Bypasses blocking errors."""
         try:
             info("Ensuring verification environment metadata label presence...", component=self.name)
             verification_query = "MERGE (m:SystemMetadata {id: 'global_config'}) SET m.`Remote-Database` = true;"
-            subprocess.run([shell_cmd, "-a", f"bolt://localhost:{bolt_port}", "-u", user, "-p", password, verification_query], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            success("Successfully guaranteed 'Remote-Database = true' token inside Neo4j instance.", component=self.name)
+            subprocess.run([shell_cmd, "-a", f"bolt://{host}:{bolt_port}", "-u", user, "-p", password, verification_query], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            success("Successfully added 'Remote-Database = true' token inside Neo4j instance.", component=self.name)
         except Exception as err:
             warn(f"Bypassed metadata injection (non-blocking exception caught): {err}", component=self.name)
 
-    def verify_remote_database_token(self, shell_cmd, bolt_port, user, password):
-        """Validates database operational status by tracing token values. Bypasses critical exits on failure."""
-        info("Performing post-installation integrity verification check for Remote-Database identity marker...", component=self.name)
-        try:
-            check_query = "MATCH (m:SystemMetadata {id: 'global_config'}) RETURN m.`Remote-Database` AS status;"
-            res = subprocess.run([shell_cmd, "-a", f"bolt://localhost:{bolt_port}", "-u", user, "-p", password, check_query], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
-            if "TRUE" in res.stdout:
-                success("Database integrity verification satisfied: 'Remote-Database = true' confirmed online.", component=self.name)
-            else:
-                warn(f"Post-installation verification warning: 'Remote-Database = true' token could not be immediately parsed via cypher-shell : res = {res.stdout}", component=self.name)
-        except Exception as ex:
-            warn(f"Post-installation verification warning: Encountered a connection/query anomaly while validating metadata token status: {ex}", component=self.name)
+    def execute_all_installations(self, installStatus: Optional[dict] = None) -> None:
+        if installStatus is None:
+            raise ValueError("installStatus cannot be None. Please provide the installation status dictionary.")
 
-    def execute_all_installations(self) -> None:
         version = self.context.get_tool_setting("neo4j", "version", "5.26.0")
         gds_version = self.context.get_tool_setting("neo4j", "gds_version", "2026.05.0")
         password = self.context.get_tool_setting("neo4j", "password", "password")
@@ -224,20 +218,24 @@ class SystemNeo4jInstaller(BaseInstallModule):
         gds_tmp_path = os.path.join(sandbox_root, gds_zip_name)
         gds_jar_path = os.path.join(plugins_dir, f"neo4j-graph-data-science-{gds_version}.jar")
 
-        self.fetch_distribution_packages(sandbox_root, archive_name, apoc_tmp_path, gds_zip_name, gds_tmp_path, admin_cmd, apoc_jar_path, gds_jar_path, version, gds_version)
-        self.extract_distribution(sandbox_root, archive_name)
-        self.provision_plugins(plugins_dir, apoc_tmp_path, apoc_jar_path, gds_tmp_path, gds_jar_path)
-        self.configure_neo4j_settings(target_folder)
+        if installStatus.get("neo4j_local_installation", {}).get("status") != "✅" or installStatus.get("neo4j_plugins_compliance", {}).get("status") != "✅":
+          self.fetch_distribution_packages(sandbox_root, archive_name, apoc_tmp_path, gds_zip_name, gds_tmp_path, admin_cmd, apoc_jar_path, gds_jar_path, version, gds_version)
+          self.extract_distribution(sandbox_root, archive_name)
+          self.provision_plugins(plugins_dir, apoc_tmp_path, apoc_jar_path, gds_tmp_path, gds_jar_path)
+          self.configure_neo4j_settings(target_folder)
 
-        if not is_windows:
+          if not is_windows:
             for cmd in [admin_cmd, neo4j_cmd, shell_cmd]:
                 if os.path.exists(cmd):
                     os.chmod(cmd, 0o755)
 
-        self.set_initial_admin_password(admin_cmd, password)
-        self.boot_neo4j_process(neo4j_cmd)
-        self.provision_custom_user(shell_cmd, bolt_port, user, password)
-        self.initialize_remote_database_token(shell_cmd, bolt_port, user, password)
-        self.verify_remote_database_token(shell_cmd, bolt_port, user, password)
+          self.set_initial_admin_password(admin_cmd, password)
+          self.boot_neo4j_process(neo4j_cmd)
+
+        if installStatus.get("custom_user_admin", {}).get("status") != "✅":
+            self.provision_custom_user(shell_cmd, host, bolt_port, user, password)
+
+        if installStatus.get("remote_database_token", {}).get("status") != "✅":
+            self.initialize_remote_database_token(shell_cmd, host, bolt_port, user, password)
 
         success(f"Neo4j instance initialized smoothly. Browser UI: http://{host}:{http_port} | Bolt profile: bolt://{host}:{bolt_port} [User: {user} | Pass: {password}]", component=self.name)

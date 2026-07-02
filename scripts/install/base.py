@@ -1,6 +1,6 @@
 import os
 from abc import ABC, abstractmethod
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 class EnvironmentContext:
     def __init__(self, workspace_root: str, configuration_matrix: Dict[str, Any]):
@@ -52,5 +52,5 @@ class BaseInstallModule(ABC):
         pass
 
     @abstractmethod
-    def execute_all_installations(self) -> None:
+    def execute_all_installations(self, installStatus: Optional[Dict[str, Any]] = None) -> None:
         pass

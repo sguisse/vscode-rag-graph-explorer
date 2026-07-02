@@ -1,11 +1,12 @@
 import os
 from install.base import BaseCheckModule
 from install.registry import ModuleRegistry
+from install.modules.system.core.install import CORE_MODULE_NAME
 
 @ModuleRegistry.register_checker
 class SystemCoreChecker(BaseCheckModule):
     @property
-    def name(self) -> str: return "system_core"
+    def name(self) -> str: return CORE_MODULE_NAME
 
     def check_gitignore_rule(self):
         self.steps_count += 1

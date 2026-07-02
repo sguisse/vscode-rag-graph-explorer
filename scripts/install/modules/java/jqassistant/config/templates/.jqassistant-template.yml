@@ -75,7 +75,7 @@ jqassistant:
     include:
       files:
   {{JAVA_SRC_DIRS_YAML_LIST}}
-  #     - target/test-classes
+        - target/classes
 
   # ---------------------------------------------------------------------------
   # Analyze — mixed strategy

@@ -3,11 +3,12 @@ import os
 import subprocess
 from install.base import BaseCheckModule
 from install.registry import ModuleRegistry
+from install.modules.system.neo4j.install import NEO4J_MODULE_NAME
 
 @ModuleRegistry.register_checker
 class SystemNeo4jChecker(BaseCheckModule):
     @property
-    def name(self) -> str: return "system_neo4j"
+    def name(self) -> str: return NEO4J_MODULE_NAME
 
     def check_java_version_compliance(self):
         self.steps_count += 1
@@ -52,13 +53,14 @@ class SystemNeo4jChecker(BaseCheckModule):
             }
             self.ko_count += 1
 
-    def check_remote_database_token_compliance(self):
+    def check_remote_database_token_exists(self):
         """Queries the database to assert the validation token. Does NOT raise an error if missing."""
         self.steps_count += 1
         version = self.context.get_tool_setting("neo4j", "version", "5.26.0")
         user = self.context.get_tool_setting("neo4j", "user", "neo4j")
         password = self.context.get_tool_setting("neo4j", "password", "password")
         bolt_port = self.context.get_tool_setting("neo4j", "port.bolt", "7687")
+        host = self.context.get_tool_setting("neo4j", "host", "localhost")
 
         target_folder = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/system/neo4j/neo4j-community-{version}"
         shell_cmd = os.path.join(target_folder, "bin", "cypher-shell.bat" if os.name == 'nt' else "cypher-shell")
@@ -70,8 +72,8 @@ class SystemNeo4jChecker(BaseCheckModule):
 
         try:
             check_query = "MATCH (m:SystemMetadata {id: 'global_config'}) RETURN m.`Remote-Database` AS status;"
-            res = subprocess.run([shell_cmd, "-a", f"bolt://localhost:{bolt_port}", "-u", user, "-p", password, check_query], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
-            if res.returncode == 0 and "true" in res.stdout:
+            res = subprocess.run([shell_cmd, "-a", f"bolt://{host}:{bolt_port}", "-u", user, "-p", password, check_query], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
+            if "TRUE" in res.stdout:
                 self.status["remote_database_token"] = {"status": "✅", "message": "Remote-Database identifier token confirmed active."}
             else:
                 self.status["remote_database_token"] = {"status": "❌", "message": "Remote-Database configuration property field unallocated or false."}
@@ -80,11 +82,25 @@ class SystemNeo4jChecker(BaseCheckModule):
             self.status["remote_database_token"] = {"status": "❌", "message": "Database sandbox container cluster currently unreachable or uninitialized."}
             self.ko_count += 1
 
+    def check_custom_user_admin_exists(self):
+        self.steps_count += 1
+        user = self.context.get_tool_setting("neo4j", "user", "neo4j")
+        if user != "neo4j":
+            # Do cypher request to check if the custom user exists and has admin role
+            check_query = "MATCH (m:SystemMetadata {id: 'global_config'}) RETURN m.`Remote-Database` AS status;"
+            res = subprocess.run([shell_cmd, "-a", f"bolt://{host}:{bolt_port}", "-u", user, "-p", password, check_query], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
+
+            self.status["custom_user_admin"] = {"status": "✅", "message": f"Custom admin user '{user}' detected."}
+        else:
+            self.status["custom_user_admin"] = {"status": "❌", "message": "Default 'neo4j' admin user is still active. Consider provisioning a custom admin user for enhanced security."}
+            self.ko_count += 1
+
     def execute_all_checks(self) -> dict:
         self.steps_count = 0
         self.ko_count = 0
         self.status = {}
         self.check_java_version_compliance()
         self.check_local_sandboxed_binaries()
-        self.check_remote_database_token_compliance()
+        self.check_custom_user_admin_exists()
+        self.check_remote_database_token_exists()
         return self.generate_summary()

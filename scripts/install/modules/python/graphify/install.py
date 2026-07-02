@@ -11,5 +11,5 @@ class PythonGraphifyInstaller(BaseInstallModule):
         graphify_args = self.context.get_tool_setting("graphify", "arguments", "--deep-scan")
         info(f"Injecting background python graphify execution parameter matrices: {graphify_args}", component=self.name)
 
-    def execute_all_installations(self) -> None:
+    def execute_all_installations(self, installStatus=None) -> None:
         self.verify_graphify_arguments_setting()

@@ -11,7 +11,7 @@ class NodeDependencyCruiserInstaller(BaseInstallModule):
     def provisioning_dependency_cruiser(self, target_env: str):
         execute_tracked_command(["npm", "install", "dependency-cruiser@18.0.0"], "dc_install", cwd=target_env)
 
-    def execute_all_installations(self) -> None:
+    def execute_all_installations(self, installStatus=None) -> None:
         target_env = f"{self.context.tools_dir}/node"
         os.makedirs(target_env, exist_ok=True)
         if not os.path.exists(f"{target_env}/package.json"):

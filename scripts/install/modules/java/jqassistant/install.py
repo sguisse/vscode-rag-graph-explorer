@@ -6,6 +6,7 @@ import re
 import zipfile
 import urllib.request
 import urllib.error
+from typing import Optional
 from install.base import BaseInstallModule
 from install.registry import ModuleRegistry
 from core.utils import info, success, error, warn
@@ -172,30 +173,23 @@ class JavaJQAssistantInstaller(BaseInstallModule):
 
         success(f"JQAssistant rules dropped into {target_rules}", component=self.name)
 
-    def execute_all_installations(self) -> None:
+    def execute_all_installations(self, installStatus: Optional[dict] = None) -> None:
         """Selectively runs configurations. Critical: Raises a hard blocking exception if the remote token is invalid."""
-        checker = JavaJQAssistantChecker(self.context)
-        status = checker.execute_all_checks()
+        if installStatus is None:
+            raise ValueError("installStatus cannot be None. Please provide the installation status dictionary.")
 
-        if status.get("java", {}).get("status") != "✅":
+        if installStatus.get("remote_database_token", {}).get("status") != "✅":
+            raise RuntimeError("Blocking Error: 'Remote-Database = true' metadata initialization token validation failed. jqassistant cannot proceed with ingestion lifecycle without this critical database configuration property being set.")
+
+        if installStatus.get("java", {}).get("status") != "✅":
             raise RuntimeError("Blocking Error: Missing mandatory system-wide Java compilation JRE environment dependency framework layout.")
 
-        if status.get("jqassistant_binary", {}).get("status") != "✅":
+        if installStatus.get("jqassistant_binary", {}).get("status") != "✅":
             self.fetch_and_extract_jqassistant()
 
-        if status.get("mcp_server_config", {}).get("status") != "✅":
+        if installStatus.get("mcp_server_config", {}).get("status") != "✅":
             self.inject_mcp_server_config()
 
-        if (status.get("jqassistant_custom_config", {}).get("status") != "✅" or
-            status.get("jqassistant_custom_rules", {}).get("status") != "✅"):
+        if (installStatus.get("jqassistant_custom_config", {}).get("status") != "✅" or
+            installStatus.get("jqassistant_custom_rules", {}).get("status") != "✅"):
             self.install_config_and_rules()
-
-        # Final active state verification block assertion parameter validation check
-        neo4j_version = self.context.get_tool_setting("neo4j", "version", "5.26.0")
-        neo4j_folder = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/system/neo4j/neo4j-community-{neo4j_version}"
-
-        # Enforce strict token validation checkpoints only if database infrastructure layer stands loaded
-        if os.path.exists(neo4j_folder):
-            post_check_status = checker.execute_all_checks()
-            if post_check_status.get("remote_database_token", {}).get("status") != "✅":
-                raise RuntimeError("Blocking Error: 'Remote-Database = true' metadata initialization token validation failed. jqassistant cannot proceed with ingestion lifecycle without this critical database configuration property being set.")
