@@ -1,4 +1,7 @@
+import os
+from typing import Any
 from core.vscode_settings_4_backend import vsCodeSettings
+from core.utils import info
 
 class EnvironmentContext:
     def __init__(self):
@@ -12,8 +15,11 @@ class EnvironmentContext:
     def get_vscode_setting(self, key_part_1: str, key_part_2: str = "", default: Any = None) -> Any:
         flat_key = f"{key_part_1}.{key_part_2}" if key_part_2 else key_part_1
         value = vsCodeSettings.get(flat_key)
+
         if value is None and key_part_2:
            flat_key = f"{key_part_1}_{key_part_2}"
            value = vsCodeSettings.get(flat_key, default)
+
+        info(f"get_vscode_setting : {flat_key} = {value}", component="EnvironmentContext")
 
         return value

@@ -130,7 +130,8 @@ class JavaJQAssistantInstaller(BaseInstallModule):
         os.makedirs(jqa_results_dir, exist_ok=True)
 
         discovery_output = f"{jqa_results_dir}/jqassistant/sources_discovered.json"
-        discovered = discover_workspace_sources(self.context.workspace_root)
+        jqa_exclude_paths_regex = self.context.get_vscode_setting("excludePathsRegex")
+        discovered = discover_workspace_sources(self.context.workspace_root, jqa_exclude_paths_regex)
 
         #---------------
         template_config = os.path.join(os.path.dirname(__file__), "config", "templates", ".jqassistant-template.yml")
