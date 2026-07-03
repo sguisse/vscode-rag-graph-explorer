@@ -89,7 +89,7 @@ def main():
         workspace_root=args.workspace,
         enabled=config.get("logFileEnabled", True),
         max_size=config.get("logFileMaxSize", 5),
-        retention=config.get("logFileMaxCountRetension", 5)
+        retention=config.get("logFileMaxCountRetention", 5)
     )
 
     analyzer = GitDeltaAnalyzer(args.workspace, args.output)

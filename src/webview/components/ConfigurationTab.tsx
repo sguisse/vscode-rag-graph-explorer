@@ -6,7 +6,7 @@ interface ConfigProps {
 }
 
 export const ConfigurationTab: React.FC<ConfigProps> = ({ config }) => {
-    const [jsonString, setJsonString] = useState<string>(JSON.stringify(config.EntitiesTypesList, null, 4));
+    const [jsonString, setJsonString] = useState<string>(JSON.stringify(config.entitiesTypesList, null, 4));
 
     const handleSave = () => {
         try {
@@ -19,33 +19,33 @@ export const ConfigurationTab: React.FC<ConfigProps> = ({ config }) => {
     };
 
     return (
-        <div id="tab-config-content" className="w-full h-full p-6 flex flex-col overflow-hidden bg-[var(--vscode-editor-background)]">
-            <div className="w-full max-w-4xl mx-auto flex flex-col gap-4 h-full">
-                <div className="bg-[var(--vscode-editorWidget-background)] p-5 rounded-xl border border-[var(--vscode-panel-border)] shadow-md flex flex-col h-full gap-4">
+        <div id="tab-config-content" className="flex flex-col bg-[var(--vscode-editor-background)] p-6 w-full h-full overflow-hidden">
+            <div className="flex flex-col gap-4 mx-auto w-full max-w-4xl h-full">
+                <div className="flex flex-col gap-4 bg-[var(--vscode-editorWidget-background)] shadow-md p-5 border border-[var(--vscode-panel-border)] rounded-xl h-full">
 
-                    <div className="flex items-center justify-between flex-shrink-0 border-b border-[var(--vscode-panel-border)] pb-4">
+                    <div className="flex flex-shrink-0 justify-between items-center pb-4 border-[var(--vscode-panel-border)] border-b">
                         <div className="flex items-center gap-3">
-                            <span className="codicon codicon-settings-gear text-blue-500 text-lg"></span>
-                            <h2 className="text-sm font-bold tracking-wide uppercase text-[var(--vscode-foreground)]">Node Types Configuration</h2>
+                            <span className="text-blue-500 text-lg codicon codicon-settings-gear"></span>
+                            <h2 className="font-bold text-[var(--vscode-foreground)] text-sm uppercase tracking-wide">Node Types Configuration</h2>
                         </div>
                         <button
                             onClick={handleSave}
-                            className="px-5 py-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white rounded-md text-xs font-semibold shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+                            className="flex items-center gap-2 bg-gradient-to-r from-blue-600 hover:from-blue-500 to-blue-500 hover:to-blue-400 shadow-md hover:shadow-lg px-5 py-2 rounded-md font-semibold text-white text-xs transition-all"
                         >
                             <span className="codicon codicon-save"></span> Save and Apply
                         </button>
                     </div>
 
-                    <p className="text-xs text-[var(--vscode-descriptionForeground)] leading-relaxed flex-shrink-0 bg-[var(--vscode-input-background)]/30 p-3 rounded-lg border border-[var(--vscode-panel-border)]/50">
-                        <span className="codicon codicon-info text-blue-400 mr-2 align-middle"></span>
+                    <p className="flex-shrink-0 bg-[var(--vscode-input-background)]/30 p-3 border border-[var(--vscode-panel-border)]/50 rounded-lg text-[var(--vscode-descriptionForeground)] text-xs leading-relaxed">
+                        <span className="mr-2 text-blue-400 align-middle codicon codicon-info"></span>
                         Modify the structure below to configure the exact list of entity groups recognized by the Graph RAG lexical engine. Changes will apply immediately to the current parsing context.
                     </p>
 
-                    <div className="flex-1 border border-[var(--vscode-input-border)] rounded-lg overflow-hidden flex flex-col shadow-inner bg-[var(--vscode-input-background)] focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500/50 transition-all">
+                    <div className="flex flex-col flex-1 bg-[var(--vscode-input-background)] shadow-inner border border-[var(--vscode-input-border)] focus-within:border-blue-500 rounded-lg focus-within:ring-1 focus-within:ring-blue-500/50 overflow-hidden transition-all">
                         <textarea
                             value={jsonString}
                             onChange={(e) => setJsonString(e.target.value)}
-                            className="w-full flex-1 p-5 bg-transparent text-[var(--vscode-input-foreground)] font-mono text-[13px] resize-none outline-none leading-relaxed border-none"
+                            className="flex-1 bg-transparent p-5 border-none outline-none w-full font-mono text-[13px] text-[var(--vscode-input-foreground)] leading-relaxed resize-none"
                             spellCheck={false}
                         />
                     </div>

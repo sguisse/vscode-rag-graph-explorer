@@ -8,9 +8,9 @@ from install.base import EnvironmentContext, BaseCheckModule, BaseInstallModule
 from install.registry import ModuleRegistry
 from install.report_handler import ReportHandler
 
-def run_installation_pipeline(workspace_root: str, config_matrix: dict):
+def run_installation_pipeline():
     info("Bootstrapping Phase 1: Prerequisite Environment Installation Pipeline...", component="InstallRunner")
-    context = EnvironmentContext(workspace_root, config_matrix)
+    context = EnvironmentContext()
     report_handler = ReportHandler(context)
 
     install_dir = os.path.dirname(os.path.abspath(__file__))

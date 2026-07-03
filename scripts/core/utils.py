@@ -6,6 +6,8 @@ import signal
 from datetime import datetime
 from typing import List, Dict, Any
 
+from core.vscode_settings_4_backend import vsCodeSettings
+
 for stream in (sys.stdout, sys.stderr):
     if hasattr(stream, "reconfigure"):
         try: stream.reconfigure(encoding="utf-8", errors="replace")
@@ -27,7 +29,8 @@ def configure_logger(workspace_root: str, enabled: bool, max_size: int, retentio
     MAX_SIZE_MB = max_size
     MAX_RETENTION = retention
     if LOG_ENABLED and WORKSPACE_ROOT:
-        logs_dir = f"{WORKSPACE_ROOT}/.graph-rag-explorer/logs"
+        beScriptsPath = vsCodeSettings.get("beScriptsPath")
+        logs_dir = f"{WORKSPACE_ROOT}/{beScriptsPath}/logs"
         os.makedirs(logs_dir, exist_ok=True)
         active_idx = 1
         for i in range(1, 100):
@@ -52,7 +55,8 @@ def _log(level: str, component: str, message: str):
 
     if LOG_ENABLED and WORKSPACE_ROOT:
         try:
-            logs_dir = f"{WORKSPACE_ROOT}/.graph-rag-explorer/logs"
+            beScriptsPath = vsCodeSettings.get("beScriptsPath")
+            logs_dir = f"{WORKSPACE_ROOT}/{beScriptsPath}/logs"
             log_path = f"{logs_dir}/logs_dir/graph-rag-explorer-{CURRENT_FILE_INDEX:02d}.log"
             with open(f"{logs_dir}/graph-rag-explorer-{CURRENT_FILE_INDEX:02d}.log", "a", encoding="utf-8") as lf:
                 lf.write(full_message + "\n")
@@ -71,7 +75,9 @@ def resolve_executable_name(base_command: str) -> str:
         return f"{base_command}.cmd" if base_command != "jqassistant.sh" else "jqassistant.cmd"
     return base_command
 
-def get_pids_dir() -> str: return f"{WORKSPACE_ROOT}/.graph-rag-explorer/target/pids"
+def get_pids_dir() -> str:
+    beScriptsPath = vsCodeSettings.get("beScriptsPath")
+    return f"{WORKSPACE_ROOT}/{beScriptsPath}/target/pids"
 
 def cleanup_orphan_pids():
     pids_dir = get_pids_dir()

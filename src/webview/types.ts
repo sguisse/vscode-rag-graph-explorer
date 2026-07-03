@@ -13,8 +13,8 @@ export interface GraphEdge {
 }
 
 export interface ExtensionConfig {
-    EntitiesTypesList: string[];
+    entitiesTypesList: string[];
     regexFilterEnabled: boolean;
-    TreeFilterEnabled: boolean;
+    treeFilterEnabled: boolean;
     geminiApiKey: string;
 }

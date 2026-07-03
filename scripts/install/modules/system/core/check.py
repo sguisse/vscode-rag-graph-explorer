@@ -3,6 +3,8 @@ from install.base import BaseCheckModule
 from install.registry import ModuleRegistry
 from install.modules.system.core.install import CORE_MODULE_NAME
 
+from core.vscode_settings_4_backend import vsCodeSettings
+
 @ModuleRegistry.register_checker
 class SystemCoreChecker(BaseCheckModule):
     @property
@@ -12,15 +14,16 @@ class SystemCoreChecker(BaseCheckModule):
         self.steps_count += 1
         gi_path = f"{self.context.workspace_root}/.gitignore"
         has_rule = False
+        beScriptsPath = vsCodeSettings.get("beScriptsPath")
         if os.path.exists(gi_path):
             with open(gi_path, "r", encoding="utf-8") as f:
-                if ".graph-rag-explorer" in f.read():
+                if beScriptsPath in f.read():
                     has_rule = True
 
         if has_rule:
             self.status["gitignore_rule_mapped"] = {"status": "✅"}
         else:
-            self.status["gitignore_rule_mapped"] = {"status": "❌", "message": ".graph-rag-explorer exclusion pattern unlisted."}
+            self.status["gitignore_rule_mapped"] = {"status": "❌", "message": f"{beScriptsPath} exclusion pattern unlisted."}
             self.ko_count += 1
 
     def execute_all_checks(self) -> dict:

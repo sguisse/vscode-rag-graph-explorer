@@ -31,16 +31,15 @@ class JavaJQAssistantInstaller(BaseInstallModule):
             self._last_reported_percent = percent
 
     def fetch_and_extract_jqassistant(self):
-        version = self.context.get_tool_setting("jqassistant", "version", "2.9.1")
-        jqa_tool_root = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/java/jqassistant"
+        version = self.context.get_vscode_setting("jqassistant", "version")
+        jqa_tool_root = f"{self.context.tools_dir}/java/jqassistant"
         target_folder = os.path.join(jqa_tool_root, f"jqassistant-{version}")
 
         if os.path.exists(target_folder): return
 
         os.makedirs(jqa_tool_root, exist_ok=True)
         local_zip_path = os.path.join(jqa_tool_root, "jqassistant.zip")
-        default_url = f"https://github.com/jQAssistant/jqassistant/releases/download/{version}/jqassistant-commandline-neo4jv5-{version}-distribution.zip"
-        url = self.context.get_tool_setting("jqassistant", "downloadUrl", default_url).replace("${version}", version)
+        url = self.context.get_vscode_setting("jqassistant", "downloadUrl", "")
 
         download_success = False
         original_context = ssl._create_default_https_context
@@ -89,8 +88,8 @@ class JavaJQAssistantInstaller(BaseInstallModule):
         with open(template_path, "r", encoding="utf-8") as f:
             template_content = f.read()
 
-        mcp_host = self.context.get_tool_setting("jqassistant", "mcp.host", "127.0.0.1")
-        mcp_port = self.context.get_tool_setting("jqassistant", "mcp.port", 8800)
+        mcp_host = self.context.get_vscode_setting("jqassistant", "mcp.host")
+        mcp_port = self.context.get_vscode_setting("jqassistant", "mcp.port")
         template_content = template_content.replace("{{JQA_MCP_HOST}}", str(mcp_host)).replace("{{JQA_MCP_PORT}}", str(mcp_port))
 
         try:
@@ -121,21 +120,19 @@ class JavaJQAssistantInstaller(BaseInstallModule):
         success(f"MCP server config injected successfully into {mcp_path}", component=self.name)
 
     def install_config_and_rules(self):
-        workspace_root = self.context.workspace_root
-        exclude_regex = self.context.get_tool_setting("excludePathsRegex", "")
-
-        jqa_tool_root = f"{workspace_root}/.graph-rag-explorer/target/tools/java/jqassistant"
+        jqa_tool_root = f"{self.context.tools_dir}/java/jqassistant"
         config_dir = f"{jqa_tool_root}/config"
         rules_dir = f"{config_dir}/rules"
-        jqa_results_dir = f"{workspace_root}/.graph-rag-explorer/target/raw_outputs/java"
+        jqa_results_dir = f"{self.context.raw_outputs_dir}/java"
 
         os.makedirs(config_dir, exist_ok=True)
         os.makedirs(rules_dir, exist_ok=True)
         os.makedirs(jqa_results_dir, exist_ok=True)
 
         discovery_output = f"{jqa_results_dir}/jqassistant/sources_discovered.json"
-        discovered = discover_workspace_sources(workspace_root, exclude_regex, discovery_output)
+        discovered = discover_workspace_sources(self.context.workspace_root)
 
+        #---------------
         template_config = os.path.join(os.path.dirname(__file__), "config", "templates", ".jqassistant-template.yml")
         custom_config_path = f"{config_dir}/.jqassistant.yml"
 
@@ -143,10 +140,10 @@ class JavaJQAssistantInstaller(BaseInstallModule):
             content = f.read()
 
         java_src_yaml = "\n".join([f"        - '{path}'" for path in discovered["java_src"]])
-        neo4j_uri = self.context.get_tool_setting("neo4j", "uri", "bolt://localhost:7687")
-        neo4j_user = self.context.get_tool_setting("neo4j", "username", "neo4j")
-        neo4j_pass = self.context.get_tool_setting("neo4j", "password", "password")
-        project_name = os.path.basename(workspace_root)
+        neo4j_uri = self.context.get_vscode_setting("neo4j", "uri")
+        neo4j_user = self.context.get_vscode_setting("neo4j", "username")
+        neo4j_pass = self.context.get_vscode_setting("neo4j", "password")
+        project_name = os.path.basename(self.context.workspace_root)
 
         content = re.sub(r'[ \t]*\{\{JAVA_SRC_DIRS_YAML_LIST\}\}', '{{JAVA_SRC_DIRS_YAML_LIST}}', content)
 
@@ -161,13 +158,7 @@ class JavaJQAssistantInstaller(BaseInstallModule):
         with open(custom_config_path, "w", encoding="utf-8") as f:
             f.write(content)
 
-        # CRITICAL FIX: Deposit identical layout directly inside the active pipeline execution directory
-        # so that standalone jQAssistant CLI automatic discovery triggers remote store routing natively.
-        with open(os.path.join(jqa_results_dir, ".jqassistant.yml"), "w", encoding="utf-8") as f:
-            f.write(content)
-
-        success(f"JQAssistant configurations multi-cast provisioned into active workspace layout.", component=self.name)
-
+        #---------------
         template_rules = os.path.join(os.path.dirname(__file__), "config", "templates", "analysis-rules-template.xml")
         target_rules = f"{rules_dir}/{project_name}-rules.xml"
 
@@ -199,8 +190,8 @@ class JavaJQAssistantInstaller(BaseInstallModule):
             self.install_config_and_rules()
 
         # Final active state verification block assertion parameter validation check
-        neo4j_version = self.context.get_tool_setting("neo4j", "version", "5.26.0")
-        neo4j_folder = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/system/neo4j/neo4j-community-{neo4j_version}"
+        neo4j_version = self.context.get_vscode_setting("neo4j", "version")
+        neo4j_folder = f"{self.context.tools_dir}/system/neo4j/neo4j-community-{neo4j_version}"
 
         # Enforce strict token validation checkpoints only if database infrastructure layer stands loaded
         if os.path.exists(neo4j_folder):

@@ -5,6 +5,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as childProcess from 'child_process';
+import { VsCodeSettings } from './core/VsCodeSettings';
 
 let activeChildProcess: any = null;
 const SCRIPT_SYNC_IGNORED_NAMES = new Set(["__pycache__", ".python_packages", ".bootstrap.lock"]);
@@ -14,6 +15,9 @@ function shouldSkipScriptSyncEntry(fileName: string): boolean {
 }
 
 export function activate(context: vscode.ExtensionContext) {
+    // Set your global main key prefix here
+    VsCodeSettings.init('graphRagExplorer');
+
     let disposable = vscode.commands.registerCommand('graphRagExplorer.openTool', () => {
         const panel = vscode.window.createWebviewPanel(
             'graphRagExplorer', 'Graph RAG Explorer', vscode.ViewColumn.One,
@@ -24,8 +28,7 @@ export function activate(context: vscode.ExtensionContext) {
             }
         );
 
-        const graphConfig = vscode.workspace.getConfiguration('graphRagExplorer');
-        if (graphConfig.get('pinFilesExporter') !== false) {
+        if (VsCodeSettings.get('pinFilesExporter') !== false) {
             vscode.commands.executeCommand('workbench.action.pinEditor');
         }
 
@@ -147,8 +150,7 @@ function syncCoreScripts(context: vscode.ExtensionContext, workspaceRoot: string
     const versionFilePath = path.join(targetDir, "version.json");
     const currentVersion = context.extension.packageJSON.version;
     const sourceDir = path.join(context.extensionPath, "scripts");
-    const graphConfig = vscode.workspace.getConfiguration("graphRagExplorer");
-    let needsSync = graphConfig.get("forceScriptSync") === true || !fs.existsSync(targetDir) || !fs.existsSync(versionFilePath);
+    let needsSync = VsCodeSettings.get("forceScriptSync") === true || !fs.existsSync(targetDir) || !fs.existsSync(versionFilePath);
 
     if (!needsSync && fs.existsSync(versionFilePath)) {
         try {
@@ -172,8 +174,8 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
     if (!workspaceFolders || workspaceFolders.length === 0) return;
 
     const workspaceRoot = workspaceFolders[0].uri.fsPath;
-    const graphConfig = vscode.workspace.getConfiguration("graphRagExplorer");
-    const targetDir = path.join(workspaceRoot, ".graph-rag-explorer", "scripts");
+    const backendScriptsPath : string = VsCodeSettings.get('graphRagExplorer.beScriptsPath');
+    const targetDir4Scripts = path.join(workspaceRoot, backendScriptsPath, "scripts");
 
     syncCoreScripts(context, workspaceRoot);
     panel.webview.postMessage({ command: "updateStatus", payload: "building" });
@@ -193,38 +195,14 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
         });
     };
 
-    const runnerScript = path.join(targetDir, "main.py");
+    const runnerScript = path.join(targetDir4Scripts, "main.py");
     let args = [runnerScript];
 
     const isWindows = process.platform === 'win32';
     const pythonBinary = isWindows ? 'python' : 'python3';
 
-    const payloadConfig = {
-        workspaceRoot: workspaceRoot,
-        excludePathsRegex: graphConfig.get("excludePathsRegex") ?? "",
-        includeExtensions: [".java", ".ts", ".js", ".py", ".md"],
-        logFileEnabled: graphConfig.get("logFileEnabled") ?? true,
-        logFileMaxSize: graphConfig.get("logFileMaxSize") ?? 5,
-        logFileMaxCountRetension: graphConfig.get("logFileMaxCountRetension") ?? 5,
-        neo4j: {
-            version: graphConfig.get("neo4j.version") ?? "5.26.0",
-            host: graphConfig.get("neo4j.host") ?? "localhost",
-            portBolt: graphConfig.get("neo4j.port.bolt") ?? 7687,
-            portHttp: graphConfig.get("neo4j.port.http") ?? 7474,
-            uri: `bolt://${graphConfig.get("neo4j.host") ?? "localhost"}:${graphConfig.get("neo4j.port.bolt") ?? 7687}`,
-            username: graphConfig.get("neo4j.username") ?? "neo4j",
-            password: graphConfig.get("neo4j.password") ?? "password"
-        },
-        jqassistant: {
-            xmlReportPath: graphConfig.get("jqassistant.xmlReportPath") ?? "./target/jqassistant/report/jacoco/jacoco.xml"
-        },
-        dependencyCruiser: {
-            configFile: graphConfig.get("dependencyCruiser.configFile") ?? ".dependency-cruiser.json"
-        },
-        graphify: {
-            arguments: graphConfig.get("graphify.arguments") ?? "--deep-scan"
-        }
-    };
+    const payloadConfig = VsCodeSettings.toJson();
+    payloadConfig["graphRagExplorer"]["workspaceRoot"] = workspaceRoot;
 
     if (activeChildProcess) {
         try { activeChildProcess.kill('SIGKILL'); } catch(e){}
@@ -243,7 +221,7 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
         if (activeChildProcess === child) activeChildProcess = null;
         if (code === 0) {
             panel.webview.postMessage({ command: "updateStatus", payload: "ready" });
-            const finalUiPayloadPath = path.join(workspaceRoot, ".graph-rag-explorer", "target", "ui_outputs", "graph-ui-payload.json");
+            const finalUiPayloadPath = path.join(workspaceRoot, backendScriptsPath, "target", "ui_outputs", "graph-ui-payload.json");
             if (fs.existsSync(finalUiPayloadPath)) {
                 try {
                     const rawPayload = JSON.parse(fs.readFileSync(finalUiPayloadPath, "utf-8"));
@@ -257,19 +235,18 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
 }
 
 function sendConfig(panel: vscode.WebviewPanel, context: vscode.ExtensionContext) {
-    const config = vscode.workspace.getConfiguration('graphRagExplorer');
-    const host = config.get('neo4j.host') || 'localhost';
-    const portHttp = config.get('neo4j.port.http') || 7474;
+    const host = VsCodeSettings.get('neo4j.host') || 'localhost';
+    const portHttp = VsCodeSettings.get('neo4j.port.http') || 7474;
     const neo4jUrl = `http://${host}:${portHttp}/browser/preview/`;
 
     panel.webview.postMessage({
         command: 'setConfig',
         config: {
-            EntitiesTypesList: config.get('EntitiesTypesList'),
-            regexFilterEnabled: config.get('regexFilterEnabled'),
-            TreeFilterEnabled: config.get('TreeFilterEnabled'),
-            geminiApiKey: config.get('geminiApiKey'),
-            tooltipDelay: config.get('tooltipDelay') ?? 2000,
+            entitiesTypesList: VsCodeSettings.get('entitiesTypesList'),
+            regexFilterEnabled: VsCodeSettings.get('regexFilterEnabled'),
+            treeFilterEnabled: VsCodeSettings.get('treeFilterEnabled'),
+            geminiApiKey: VsCodeSettings.get('geminiApiKey'),
+            tooltipDelay: VsCodeSettings.get('tooltipDelay') ?? 2000,
             extensionVersion: context.extension.packageJSON.version,
             neo4jUrl: neo4jUrl
         }

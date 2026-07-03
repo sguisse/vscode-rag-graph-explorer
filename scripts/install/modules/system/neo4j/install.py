@@ -119,8 +119,8 @@ class SystemNeo4jInstaller(BaseInstallModule):
         if not os.path.exists(conf_path):
             return
 
-        bolt_port = self.context.get_tool_setting("neo4j", "port.bolt", "7687")
-        http_port = self.context.get_tool_setting("neo4j", "port.http", "7474")
+        bolt_port = self.context.get_vscode_setting("neo4j", "port.bolt", "7687")
+        http_port = self.context.get_vscode_setting("neo4j", "port.http", "7474")
 
         info("Tuning configuration layout files for semantic graph expansion...", component=self.name)
 
@@ -181,13 +181,13 @@ class SystemNeo4jInstaller(BaseInstallModule):
         if installStatus is None:
             raise ValueError("installStatus cannot be None. Please provide the installation status dictionary.")
 
-        version = self.context.get_tool_setting("neo4j", "version", "5.26.0")
-        gds_version = self.context.get_tool_setting("neo4j", "gds_version", "2026.05.0")
-        password = self.context.get_tool_setting("neo4j", "password", "password")
-        user = self.context.get_tool_setting("neo4j", "user", "neo4j")
-        host = self.context.get_tool_setting("neo4j", "host", "localhost")
-        bolt_port = self.context.get_tool_setting("neo4j", "port.bolt", "7687")
-        http_port = self.context.get_tool_setting("neo4j", "port.http", "7474")
+        version = self.context.get_vscode_setting("neo4j", "version", "5.26.0")
+        gds_version = self.context.get_vscode_setting("neo4j", "gds_version", "2026.05.0")
+        password = self.context.get_vscode_setting("neo4j", "password", "password")
+        user = self.context.get_vscode_setting("neo4j", "user", "neo4j")
+        host = self.context.get_vscode_setting("neo4j", "host", "localhost")
+        bolt_port = self.context.get_vscode_setting("neo4j", "port.bolt", "7687")
+        http_port = self.context.get_vscode_setting("neo4j", "port.http", "7474")
         is_windows = (os.name == 'nt')
 
         sandbox_root = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/system/neo4j"

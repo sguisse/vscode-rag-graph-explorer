@@ -47,7 +47,7 @@ class SystemNeo4jChecker(BaseCheckModule):
 
     def check_local_sandboxed_binaries(self):
         self.steps_count += 1
-        version = self.context.get_tool_setting("neo4j", "version", "5.26.0")
+        version = self.context.get_vscode_setting("neo4j", "version", "5.26.0")
 
         target_folder = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/system/neo4j/neo4j-community-{version}"
         bin_dir = os.path.join(target_folder, "bin")
@@ -80,10 +80,10 @@ class SystemNeo4jChecker(BaseCheckModule):
         """Queries the database to assert the validation token. Does NOT raise an error if missing."""
         self.steps_count += 1
 
-        user = self.context.get_tool_setting("neo4j", "user", "neo4j")
-        password = self.context.get_tool_setting("neo4j", "password", "password")
-        bolt_port = self.context.get_tool_setting("neo4j", "port.bolt", "7687")
-        host = self.context.get_tool_setting("neo4j", "host", "localhost")
+        user = self.context.get_vscode_setting("neo4j", "user", "neo4j")
+        password = self.context.get_vscode_setting("neo4j", "password", "password")
+        bolt_port = self.context.get_vscode_setting("neo4j", "port.bolt", "7687")
+        host = self.context.get_vscode_setting("neo4j", "host", "localhost")
         shell_cmd = self.get_cypher_shell_command()
 
         if not os.path.exists(shell_cmd):
@@ -104,7 +104,7 @@ class SystemNeo4jChecker(BaseCheckModule):
             self.ko_count += 1
 
     def get_cypher_shell_command(self):
-        version = self.context.get_tool_setting("neo4j", "version", "5.26.0")
+        version = self.context.get_vscode_setting("neo4j", "version", "5.26.0")
         target_folder = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/system/neo4j/neo4j-community-{version}"
         shell_cmd = os.path.join(target_folder, "bin", "cypher-shell.bat" if os.name == 'nt' else "cypher-shell")
         return shell_cmd

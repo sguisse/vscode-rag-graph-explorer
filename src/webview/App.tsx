@@ -21,9 +21,9 @@ export const App: React.FC = () => {
     const [activeTab, setActiveTab] = useState<string>('explorer');
 
     const [config, setConfig] = useState<any>({
-        EntitiesTypesList: ['file', 'class', 'method', 'document'],
+        entitiesTypesList: ['file', 'class', 'method', 'document'],
         regexFilterEnabled: false,
-        TreeFilterEnabled: true,
+        treeFilterEnabled: true,
         geminiApiKey: '',
         tooltipDelay: 2000,
         graphLegendEnabled: true,
@@ -65,7 +65,7 @@ export const App: React.FC = () => {
             if (message.command === 'setConfig') {
                 setConfig(message.config);
                 setIsRegexEnabled(message.config.regexFilterEnabled);
-                setApplyOnTree(message.config.TreeFilterEnabled);
+                setApplyOnTree(message.config.treeFilterEnabled);
             } else if (message.command === 'updateGraphData') {
                 handleGraphLoad(message.payload);
             } else if (message.command === 'blastRadiusReport') {
@@ -171,7 +171,7 @@ export const App: React.FC = () => {
 
             <main className="flex flex-col flex-1 min-h-0">
                 <ExplorationFilters
-                    typesList={config.EntitiesTypesList || ['file', 'class', 'method', 'document']}
+                    typesList={config.entitiesTypesList || ['file', 'class', 'method', 'document']}
                     selectedTypes={selectedTypes}
                     setSelectedTypes={setSelectedTypes}
                     searchMode={searchMode}

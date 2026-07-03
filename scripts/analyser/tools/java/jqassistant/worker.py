@@ -14,21 +14,31 @@ from core.sources_discovery import discover_workspace_sources
 @dataclass(frozen=True)
 class JQAssistantContext:
     """Immutable parameter object to encapsulate the jQAssistant environment topologies."""
-    workspace_root: str
-    version: str
-    exclude_regex: str
-    jqa_tools_root: str
-    config_dir: str
-    custom_config_path: str
-    jqa_target_dir: str
-    discovery_output: str
+    workspaceRoot: str
+    excludePathsRegex: str
+    includeExtensions: list
+    logFileEnabled: bool
+    logFileMaxSize: int
+    logFileMaxCountRetention: int
+    neo4j_version: str
+    neo4j_host: str
+    neo4j_port_bolt: int
+    neo4j_port_http: int
+    neo4j_uri: str
+    neo4j_username: str
+    neo4j_password: str
+    jqassistant_xmlReportPath: str
+    jqassistant_version: str
+    jqassistant_downloadUrl: str
+    dependencyCruiser_configFile: str
+    graphify_arguments: str
 
     @classmethod
     def build_from_matrices(cls, manifest_data: dict, config_matrix: dict) -> "JQAssistantContext":
         """Factory method to cleanly parse raw dict input data structures."""
         workspace_root = manifest_data.get("workspace_root", os.getcwd())
-        version = config_matrix.get("jqassistant", {}).get("version", "2.9.1")
-        exclude_regex = config_matrix.get("excludePathsRegex", "")
+        version = config_matrix.get("jqassistant", "version")
+        exclude_regex = config_matrix.get("scanner", "excludePathsRegex")
 
         jqa_tools_root = f"{workspace_root}/.graph-rag-explorer/target/tools/java/jqassistant"
         config_dir = f"{jqa_tools_root}/config"
@@ -48,6 +58,11 @@ class JQAssistantContext:
             discovery_output=discovery_output
         )
 
+    @classmethod
+    def log_context(cls, ctx: "JQAssistantContext") -> None:
+        """Utility method to log the context parameters for debugging purposes."""
+        info(f"JQAssistantContext: {json.dumps(ctx.__dict__, indent=2)}", component="JQAssistantWorker")
+
 
 @AnalyserRegistry.register
 class JQAssistantWorker(BaseAnalyser):
@@ -64,6 +79,8 @@ class JQAssistantWorker(BaseAnalyser):
     def run_analysis(self, manifest_data: dict, neo4j_client: Neo4jClient, config_matrix: dict) -> None:
         """Main orchestrator for the jQAssistant analysis pipeline."""
         ctx = JQAssistantContext.build_from_matrices(manifest_data, config_matrix)
+        JQAssistantContext.log_context(ctx)
+
         os.makedirs(ctx.jqa_target_dir, exist_ok=True)
 
         # 1. Discovery Phase
@@ -92,7 +109,7 @@ class JQAssistantWorker(BaseAnalyser):
 
     def _run_discovery(self, ctx: JQAssistantContext) -> dict:
         info("Running dynamic workspace path discovery for jQAssistant...", component=self.name)
-        return discover_workspace_sources(ctx.workspace_root, ctx.exclude_regex, ctx.discovery_output)
+        return discover_workspace_sources(ctx.workspace_root, ctx.exclude_regex)
 
     def _resolve_binary(self, ctx: JQAssistantContext) -> str:
         base_cmd = "jqassistant.cmd" if os.name == 'nt' else "jqassistant"

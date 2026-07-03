@@ -29,11 +29,11 @@ class JavaJQAssistantChecker(BaseCheckModule):
 
     def check_jqassistant_executable_availability(self):
         self.steps_count += 1
-        version = self.context.get_tool_setting("jqassistant", "version", "2.9.1")
+        version = self.context.get_vscode_setting("jqassistant", "version")
         base_cmd = "jqassistant.cmd" if os.name == 'nt' else "jqassistant.sh"
 
         global_bin = shutil.which(base_cmd) or shutil.which("jqassistant")
-        sandbox_root = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/java/jqassistant/jqassistant-{version}"
+        sandbox_root = f"{self.context.tools_dir}/java/jqassistant/jqassistant-{version}"
         local_bin = self._find_sandboxed_binary(sandbox_root, base_cmd)
 
         if global_bin or local_bin:
@@ -41,13 +41,13 @@ class JavaJQAssistantChecker(BaseCheckModule):
         else:
             self.status["jqassistant_binary"] = {
                 "status": "❌",
-                "message": f"jQAssistant command line binary '{base_cmd}' was unmapped globally and inside target/tools/java/jqassistant/ structures."
+                "message": f"jQAssistant command line binary '{base_cmd}' was unmapped globally and inside {sandbox_root} structures."
             }
             self.ko_count += 1
 
     def check_workspace_raw_outputs_dir(self):
         self.steps_count += 1
-        if os.path.exists(f"{self.context.workspace_root}/.graph-rag-explorer/target/raw_outputs/java"):
+        if os.path.exists(f"{self.context.raw_outputs_dir}/java"):
             self.status["raw_outputs_java"] = {"status": "✅"}
         else:
             self.status["raw_outputs_java"] = {
@@ -58,7 +58,7 @@ class JavaJQAssistantChecker(BaseCheckModule):
 
     def check_sandboxed_config(self):
         self.steps_count += 1
-        if os.path.exists(f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/java/jqassistant/config/.jqassistant.yml"):
+        if os.path.exists(f"{self.context.tools_dir}/java/jqassistant/config/.jqassistant.yml"):
             self.status["jqassistant_custom_config"] = {"status": "✅"}
         else:
             self.status["jqassistant_custom_config"] = {
@@ -69,7 +69,7 @@ class JavaJQAssistantChecker(BaseCheckModule):
 
     def check_sandboxed_rules(self):
         self.steps_count += 1
-        rules_dir = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/java/jqassistant/config/rules"
+        rules_dir = f"{self.context.tools_dir}/java/jqassistant/config/rules"
         if os.path.exists(rules_dir) and any(f.endswith(".xml") for f in os.listdir(rules_dir)):
             self.status["jqassistant_custom_rules"] = {"status": "✅"}
         else:
@@ -105,12 +105,12 @@ class JavaJQAssistantChecker(BaseCheckModule):
     def check_remote_database_token_compliance(self):
         """Queries the active Neo4j container database safely without throwing unhandled lifecycle registration breaks."""
         self.steps_count += 1
-        neo4j_version = self.context.get_tool_setting("neo4j", "version", "5.26.0")
-        user = self.context.get_tool_setting("neo4j", "user", "neo4j")
-        password = self.context.get_tool_setting("neo4j", "password", "password")
-        bolt_port = self.context.get_tool_setting("neo4j", "port.bolt", "7687")
+        neo4j_version = self.context.get_vscode_setting("neo4j", "version")
+        user = self.context.get_vscode_setting("neo4j", "username")
+        password = self.context.get_vscode_setting("neo4j", "password")
+        neo4jUri = self.context.get_vscode_setting("neo4j", "uri")
 
-        target_folder = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/system/neo4j/neo4j-community-{neo4j_version}"
+        target_folder = f"{self.context.tools_dir}/system/neo4j/neo4j-community-{neo4j_version}"
         shell_cmd = os.path.join(target_folder, "bin", "cypher-shell.bat" if os.name == 'nt' else "cypher-shell")
 
         if not os.path.exists(shell_cmd):
@@ -119,7 +119,7 @@ class JavaJQAssistantChecker(BaseCheckModule):
 
         try:
             check_query = "MATCH (m:SystemMetadata {id: 'global_config'}) RETURN m.`Remote-Database` AS status;"
-            res = subprocess.run([shell_cmd, "-a", f"bolt://localhost:{bolt_port}", "-u", user, "-p", password, check_query], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
+            res = subprocess.run([shell_cmd, "-a", neo4jUri, "-u", user, "-p", password, check_query], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
             if "TRUE" in res.stdout:
                 self.status["remote_database_token"] = {"status": "✅"}
             else:

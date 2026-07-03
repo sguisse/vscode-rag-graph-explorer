@@ -37,7 +37,7 @@
     "configuration": {
       "title": "🕸️Graph RAG Explorer",
       "properties": {
-        "graphRagExplorer.EntitiesTypesList": {
+        "graphRagExplorer.entitiesTypesList": {
           "type": "array",
           "description": "List of predefined entity types for the graph exploration.",
           "items": {
@@ -55,7 +55,7 @@
           "default": false,
           "description": "Enable Regex matching in the filter bar by default."
         },
-        "graphRagExplorer.TreeFilterEnabled": {
+        "graphRagExplorer.treeFilterEnabled": {
           "type": "boolean",
           "default": true,
           "description": "Apply search filters on the Tree View by default."
@@ -90,10 +90,20 @@
           "default": 1,
           "description": "Default callees downstream lookup relationship parsing depth."
         },
+        "graphRagExplorer.beScriptsPath": {
+          "type": "string",
+          "default": ".graph-rag-explorer",
+          "description": "Local User Path where the back-end scripts and treatment results will be stored (relative to the workspace root)."
+        },
         "graphRagExplorer.excludePathsRegex": {
           "type": "string",
-          "default": ".*/node_modules/.*|.*/target/.*|.*/\\.git/.*|.*/dist/.*|.*/.*-tmp/.*|.*/.*-out/.*|.*/.idea/.*|.*/.vscode/.*|.*/.history/.*|.*/exported-files/.*,/\\.[^/]+",
-          "description": "Regex to exclude paths containing specific directories (e.g., node_modules, target, .git, dist, /\\.[^/]+)."
+          "default": "(^|.*/)(node_modules|target|\\.git|\\.github|dist|.*-tmp|.*-out|\\.idea|\\.vscode|\\.history|exported-files|\\.[^/]+)(/.*|$)",
+          "description": "Regex to exclude paths containing specific directories."
+        },
+        "graphRagExplorer.includeExtensionsRegex": {
+          "type": "string",
+          "default": ".*\\.(java|ts|tsx|js|html|css|json|xml|yaml|yml|py|md|properties)$",
+          "description": "Regex to include paths containing specific file extensions."
         },
         "graphRagExplorer.forceScriptSync": {
           "type": "boolean",
@@ -110,7 +120,7 @@
           "default": 5,
           "description": "Maximum size per log file before rotation triggers (in Megabytes)."
         },
-        "graphRagExplorer.logFileMaxCountRetension": {
+        "graphRagExplorer.logFileMaxCountRetention": {
           "type": "number",
           "default": 5,
           "description": "Maximum number of historical log file nodes to keep before cycling."
@@ -162,8 +172,18 @@
         },
         "graphRagExplorer.jqassistant.downloadUrl": {
           "type": "string",
-          "default": "https://github.com/jQAssistant/jqassistant/releases/download/${version}/jqassistant-commandline-neo4jv5-${version}-distribution.zip",
+          "default": "https://github.com/jQAssistant/jqassistant/releases/download/${graphRagExplorer.jqassistant.version}/jqassistant-commandline-neo4jv5-${graphRagExplorer.jqassistant.version}-distribution.zip",
           "description": "The absolute parameterized GitHub Releases download link for fetching portable jQAssistant distribution packages."
+        },
+        "graphRagExplorer.jqassistant.mcp.host": {
+          "type": "string",
+          "default": "127.0.0.1",
+          "description": "The host address for the jqassistant MCP server."
+        },
+        "graphRagExplorer.jqassistant.mcp.port": {
+          "type": "number",
+          "default": 8800,
+          "description": "The port for the jqassistant MCP server."
         },
         "graphRagExplorer.jqassistant.xmlReportPath": {
           "type": "string",
