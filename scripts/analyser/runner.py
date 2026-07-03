@@ -1,41 +1,49 @@
 import json
 import os
 import sys
+
+from typing import Dict, Any, Optional
+
 from concurrent.futures import ThreadPoolExecutor
 from analyser.tools.neo4j.neo4j_client import Neo4jClient
 from analyser.registry import AnalyserRegistry
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from core.vscode_settings_4_backend import vsCodeSettings
+from core.context import EnvironmentContext
+from analyser.base import BaseAnalyser
+
 from core.utils import info, success, error
 from analyser.tools.neo4j.neo4j_statistics_extractor import build_statistics
 
-def run_analysis_pipeline(manifest_path: str, neo4j_config: dict, global_config_matrix: dict):
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+def run_analysis_pipeline():
     info("Launching background data parsing threads targeting embedded storage context...", component="AnalyserRunner")
 
-    if not os.path.exists(manifest_path):
-        error(f"Execution terminated: Manifest file target unmapped at {manifest_path}", component="AnalyserRunner")
-        return
+    context = EnvironmentContext()
 
-    with open(manifest_path, "r", encoding="utf-8") as f:
-        manifest_data = json.load(f)
-
-    db_client = Neo4jClient(
-        uri=neo4j_config.get("uri", "bolt://localhost:7687"),
-        auth=(neo4j_config.get("username", "neo4j"), neo4j_config.get("password", "password"))
+    neo4j_client = Neo4jClient(
+        uri=context.get_vscode_setting("neo4j", "uri"),
+        auth=(context.get_vscode_setting("neo4j", "username"), context.get_vscode_setting("neo4j", "password"))
     )
 
-    analyser_root = os.path.dirname(os.path.abspath(__file__))
-    AnalyserRegistry.discover_and_load_workers(analyser_root)
-    worker_classes = AnalyserRegistry.get_all_analysers()
+    analyser_dir = os.path.dirname(os.path.abspath(__file__))
+    AnalyserRegistry.discover_and_load_analysers(analyser_dir)
+    analysers : Dict[str, BaseAnalyser] = {cls(context).name: cls(context) for cls in AnalyserRegistry.get_analysers()}
 
-    info(f"Spawning {len(worker_classes)} background workers to feed the knowledge graph container context.", component="AnalyserRunner")
+    #-------
+    info(f"Registered Analyser Workers: {[analyser.name for analyser in analysers.values()]}", component="AnalyserRunner")
+    info(f"Total number of registered workers: {len(analysers)}", component="AnalyserRunner")
+    info(f"Neo4j connection established: {neo4j_client._connected}", component="AnalyserRunner")
 
-    with ThreadPoolExecutor(max_workers=len(worker_classes)) as executor:
+    info(f"Spawning {len(analysers)} background workers to feed the knowledge graph container context.", component="AnalyserRunner")
+
+    with ThreadPoolExecutor(max_workers=len(analysers)) as executor:
         futures = []
-        for cls in worker_classes:
-            worker = cls()
-            info(f"Allocating execution thread targeting analytics worker node: [{worker.name}]", component="AnalyserRunner")
-            futures.append(executor.submit(worker.run_analysis, manifest_data, db_client, global_config_matrix))
+        for cls in analysers:
+            analyzer = analysers[cls]
+            info(f"Allocating execution thread targeting analytics worker node: [{analyzer.name}]", component="AnalyserRunner")
+            futures.append(executor.submit(analyzer.run_analysis, neo4j_client))
 
         for future in futures:
             try:
@@ -45,17 +53,9 @@ def run_analysis_pipeline(manifest_path: str, neo4j_config: dict, global_config_
 
     # Execute fallback query session verification to report Java entities metrics before disconnect
     try:
-        if hasattr(db_client, 'driver') and db_client._connected:
-            with db_client.driver.session() as session:
-                result = session.run("MATCH (f:File:Java) RETURN count(f) AS javaFilesCount")
-                record = result.single()
-                java_count = record["javaFilesCount"] if record else 0
-                info(f"Number of Java files found in Neo4j database: {java_count}", component="AnalyserRunner")
-
-            # Call the newly integrated Neo4j global statistics extractor
-            build_statistics(db_client, manifest_data.get("workspace_root", os.getcwd()))
-
+        # Call the newly integrated Neo4j global statistics extractor
+        build_statistics(neo4j_client, vsCodeSettings.get("workspaceRoot"))
     except Exception as err:
         error(f"Failed executing database node summary verification query: {err}", component="AnalyserRunner")
 
-    db_client.close()
+    neo4j_client.close()

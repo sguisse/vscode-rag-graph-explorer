@@ -2,14 +2,11 @@ import os
 import re
 import json
 
-from core.vscode_settings_4_backend import vsCodeSettings
-
 from core.utils import info
 
-def discover_workspace_sources(workspace_root: str):
-    excludePathsRegex = vsCodeSettings.get("excludePathsRegex")
-    info(f"Starting workspace source discovery in: {workspace_root} with exclusion pattern: {excludePathsRegex}", component="SourceDiscovery")
-    exclude_pattern = re.compile(excludePathsRegex, re.IGNORECASE)
+def discover_workspace_sources(workspace_root: str, exclude_paths_regex: str) -> dict:
+    info(f"Starting workspace source discovery in: {workspace_root} with exclusion pattern: {exclude_paths_regex}", component="SourceDiscovery")
+    exclude_pattern = re.compile(exclude_paths_regex, re.IGNORECASE)
 
     discovered = {
         "java_src": set(),

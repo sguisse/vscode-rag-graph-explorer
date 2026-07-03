@@ -1,9 +1,9 @@
 import os
 from install.base import BaseInstallModule
-from install.registry import ModuleRegistry
+from install.registry import InstallerRegistry
 from core.utils import execute_tracked_command
 
-@ModuleRegistry.register_installer
+@InstallerRegistry.register_installer
 class NodeDependencyCruiserInstaller(BaseInstallModule):
     @property
     def name(self) -> str: return "node_dependency_cruiser"

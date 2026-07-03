@@ -1,11 +1,11 @@
 import os
 from install.base import BaseCheckModule
-from install.registry import ModuleRegistry
+from install.registry import InstallerRegistry
 from install.modules.system.core.install import CORE_MODULE_NAME
 
 from core.vscode_settings_4_backend import vsCodeSettings
 
-@ModuleRegistry.register_checker
+@InstallerRegistry.register_checker
 class SystemCoreChecker(BaseCheckModule):
     @property
     def name(self) -> str: return CORE_MODULE_NAME

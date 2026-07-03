@@ -4,7 +4,7 @@ import importlib.util
 from typing import List, Type
 from install.base import BaseCheckModule, BaseInstallModule
 
-class ModuleRegistry:
+class InstallerRegistry:
     _checker_classes: List[Type[BaseCheckModule]] = []
     _installer_classes: List[Type[BaseInstallModule]] = []
 
@@ -27,7 +27,7 @@ class ModuleRegistry:
         return cls._installer_classes
 
     @classmethod
-    def discover_and_load_lifecycle_nodes(cls, install_root_dir: str):
+    def discover_and_load_checkers_and_installers(cls, install_root_dir: str):
         cls._checker_classes.clear()
         cls._installer_classes.clear()
         for root, _, files in os.walk(install_root_dir):

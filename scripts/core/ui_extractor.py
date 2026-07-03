@@ -4,9 +4,9 @@ from analyser.tools.neo4j.neo4j_client import Neo4jClient
 from core.utils import info, success, error, normalize_path
 
 class UIExtractor:
-    def __init__(self, workspace_root: str, db_client: Neo4jClient):
+    def __init__(self, workspace_root: str, neo4j_client: Neo4jClient):
         self.workspace_root = normalize_path(workspace_root)
-        self.db_client = db_client
+        self.neo4j_client = neo4j_client
         self.output_file = f"{self.workspace_root}/.graph-rag-explorer/target/ui_outputs/graph-ui-payload.json"
 
     def build_tree_view(self, files: list) -> dict:
@@ -39,9 +39,9 @@ class UIExtractor:
         edges_payload = []
         resolved_nodes = {}
 
-        if hasattr(self.db_client, 'driver') and self.db_client._connected:
+        if hasattr(self.neo4j_client, 'driver') and self.neo4j_client._connected:
             try:
-                with self.db_client.driver.session() as session:
+                with self.neo4j_client.driver.session() as session:
                     # Access unindexed keys using dynamic map brackets properties(n)['key'] to bypass database static schema warnings completely
                     nodes_query = """
                     MATCH (n)

@@ -1,8 +1,8 @@
 import shutil
 from install.base import BaseCheckModule
-from install.registry import ModuleRegistry
+from install.registry import InstallerRegistry
 
-@ModuleRegistry.register_checker
+@InstallerRegistry.register_checker
 class PythonGraphifyChecker(BaseCheckModule):
     @property
     def name(self) -> str: return "python_graphify"

@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-from core.vscode_settings_4_backend import vsCodeSettings
 import sys
 import os
 import json
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+
+from core.vscode_settings_4_backend import vsCodeSettings
 
 from dataclasses import dataclass
 from core.utils import info, success, error, configure_logger, cleanup_orphan_pids
@@ -29,20 +30,16 @@ def main():
         run_installation_pipeline()
 
         # PHASE 2: NEW BLOCK - Initialization Phase (Discovery Manifest + Early Database Ignite)
-        #manifest_path = run_initialization_pipeline(workspace_root, graphRagExplorerSettings)
-
-        #with open(manifest_path, "r", encoding="utf-8") as f:
-        #    manifest_data = json.load(f)
+        run_initialization_pipeline()
 
         # PHASE 3: Parallelized ETL Ingestion to Neo4j
-        #neo4j_config = graphRagExplorerSettings.get("neo4j", {"uri": "bolt://localhost:7687", "username": "neo4j", "password": "password"})
-        #run_analysis_pipeline(manifest_path, neo4j_config, graphRagExplorerSettings)
+        run_analysis_pipeline()
 
         # PHASE 4: Compact UI Render Payload Packager
-        #db_client = Neo4jClient(uri=neo4j_config["uri"], auth=(neo4j_config["username"], neo4j_config["password"]))
-        #extractor = UIExtractor(workspace_root, db_client)
+        #neo4j_client = Neo4jClient(uri=neo4j_config["uri"], auth=(neo4j_config["username"], neo4j_config["password"]))
+        #extractor = UIExtractor(workspace_root, neo4j_client)
         #extractor.extract_and_save(manifest_data["files"])
-        #db_client.close()
+        #neo4j_client.close()
 
         success("🎉 Core analytics engine sequence completed. Layout files generated successfully.", component="Main")
 

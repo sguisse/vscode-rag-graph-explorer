@@ -10,12 +10,12 @@ import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 from install.base import BaseInstallModule
-from install.registry import ModuleRegistry
+from install.registry import InstallerRegistry
 from core.utils import info, success, error, warn
 
 NEO4J_MODULE_NAME = "01_system_neo4j"
 
-@ModuleRegistry.register_installer
+@InstallerRegistry.register_installer
 class SystemNeo4jInstaller(BaseInstallModule):
     def __init__(self, context):
         super().__init__(context)

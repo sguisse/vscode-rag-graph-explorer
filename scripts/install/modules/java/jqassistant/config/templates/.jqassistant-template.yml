@@ -75,6 +75,8 @@ jqassistant:
   scan:
     include:
       files:
+      # TODO: Adjust the following to your project structure if needed (after a fresh installation).
+      # ! The jqa.plugin.maven3 plugin auto-scans target/classes and target/test-classes, so do not list them here.
   {{JAVA_SRC_DIRS_YAML_LIST}}
 
       urls:

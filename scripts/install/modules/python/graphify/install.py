@@ -1,8 +1,8 @@
 from install.base import BaseInstallModule
-from install.registry import ModuleRegistry
+from install.registry import InstallerRegistry
 from core.utils import info
 
-@ModuleRegistry.register_installer
+@InstallerRegistry.register_installer
 class PythonGraphifyInstaller(BaseInstallModule):
     @property
     def name(self) -> str: return "python_graphify"

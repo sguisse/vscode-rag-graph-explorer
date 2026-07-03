@@ -1,9 +1,9 @@
 import shutil
 import os
 from install.base import BaseCheckModule
-from install.registry import ModuleRegistry
+from install.registry import InstallerRegistry
 
-@ModuleRegistry.register_checker
+@InstallerRegistry.register_checker
 class NodeDependencyCruiserChecker(BaseCheckModule):
     @property
     def name(self) -> str: return "node_dependency_cruiser"

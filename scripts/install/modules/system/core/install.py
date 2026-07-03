@@ -1,12 +1,12 @@
 import os
 from install.base import BaseInstallModule
-from install.registry import ModuleRegistry
+from install.registry import InstallerRegistry
 
 from core.vscode_settings_4_backend import vsCodeSettings
 
 CORE_MODULE_NAME = "01_system_core"
 
-@ModuleRegistry.register_installer
+@InstallerRegistry.register_installer
 class SystemCoreInstaller(BaseInstallModule):
     @property
     def name(self) -> str: return CORE_MODULE_NAME

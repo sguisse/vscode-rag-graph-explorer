@@ -5,7 +5,7 @@ from typing import Dict, Any, Optional
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from core.utils import info, success, warn
 from install.base import EnvironmentContext, BaseCheckModule, BaseInstallModule
-from install.registry import ModuleRegistry
+from install.registry import InstallerRegistry
 from install.report_handler import ReportHandler
 
 def run_installation_pipeline():
@@ -14,10 +14,10 @@ def run_installation_pipeline():
     report_handler = ReportHandler(context)
 
     install_dir = os.path.dirname(os.path.abspath(__file__))
-    ModuleRegistry.discover_and_load_lifecycle_nodes(install_dir)
+    InstallerRegistry.discover_and_load_checkers_and_installers(install_dir)
 
-    checkers: Dict[str, BaseCheckModule] = {cls(context).name: cls(context) for cls in ModuleRegistry.get_checkers()}
-    installers: Dict[str, BaseInstallModule] = {cls(context).name: cls(context) for cls in ModuleRegistry.get_installers()}
+    checkers: Dict[str, BaseCheckModule] = {cls(context).name: cls(context) for cls in InstallerRegistry.get_checkers()}
+    installers: Dict[str, BaseInstallModule] = {cls(context).name: cls(context) for cls in InstallerRegistry.get_installers()}
 
 
     info(f"Discovered these {len(checkers)} modules to check/install in this order:", component="InstallRunner")
