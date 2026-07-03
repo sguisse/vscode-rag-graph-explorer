@@ -97,8 +97,8 @@
         },
         "graphRagExplorer.excludePathsRegex": {
           "type": "string",
-          "default": "(^|.*/)(node_modules|target|\\.git|\\.github|dist|.*-tmp|.*-out|\\.idea|\\.vscode|\\.history|exported-files|\\.[^/]+)(/.*|$)",
-          "description": "Regex to exclude paths containing specific directories."
+          "default": "(^|.*/)(node_modules|\\.git|\\.github|dist|.*-tmp|.*-out|\\.idea|\\.vscode|\\.history|exported-files|\\.[^/]+)(/.*|$)",
+          "description": "Regex to exclude paths containing specific directories (! /target is not included because we need classes)."
         },
         "graphRagExplorer.includeExtensionsRegex": {
           "type": "string",

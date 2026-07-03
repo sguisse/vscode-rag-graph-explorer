@@ -1,85 +1,557 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <jqa:jqassistant-rules xmlns:jqa="http://www.buschmais.com/jqassistant/core/analysis/rules/schema/v1.0">
+
     <concept id="{{PROJECT_NAME}}:MarkSpringController">
-        <description>Labels every class annotated with @RestController or @Controller with :Controller</description>
+        <description>Labels every class annotated with @Controller as :Controller</description>
         <cypher><![CDATA[
             MATCH (c:Class)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(t:Type)
-            WHERE t.fqn IN [
-                'org.springframework.web.bind.annotation.RestController',
-                'org.springframework.stereotype.Controller'
-            ]
+            WHERE t.fqn = 'org.springframework.stereotype.Controller'
             SET c:Controller
             RETURN count(c) AS MarkedControllers
-        ]]>        </cypher>
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkSpringRestController">
+        <description>Labels every class annotated with @RestController as :RestController and :Controller</description>
+        <cypher><![CDATA[
+            MATCH (c:Class)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(t:Type)
+            WHERE t.fqn = 'org.springframework.web.bind.annotation.RestController'
+            SET c:RestController, c:Controller
+            RETURN count(c) AS MarkedRestControllers
+        ]]></cypher>
     </concept>
 
     <concept id="{{PROJECT_NAME}}:MarkSpringService">
-        <description>Labels every class annotated with @Service with :Service</description>
+        <description>Labels every class annotated with @Service as :Service</description>
         <cypher><![CDATA[
             MATCH (c:Class)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(t:Type)
             WHERE t.fqn = 'org.springframework.stereotype.Service'
             SET c:Service
             RETURN count(c) AS MarkedServices
-        ]]>        </cypher>
+        ]]></cypher>
     </concept>
 
     <concept id="{{PROJECT_NAME}}:MarkSpringRepository">
-        <description>Labels every class annotated with @Repository with :Repository</description>
+        <description>Labels every class annotated with @Repository as :Repository</description>
         <cypher><![CDATA[
             MATCH (c:Class)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(t:Type)
             WHERE t.fqn = 'org.springframework.stereotype.Repository'
             SET c:Repository
             RETURN count(c) AS MarkedRepositories
-        ]]>        </cypher>
+        ]]></cypher>
     </concept>
 
-    <concept id="{{PROJECT_NAME}}:MarkApiLayer">
-        <description>Labels classes in packages ending in .api as :ApiLayer</description>
+    <concept id="{{PROJECT_NAME}}:MarkDbEntity">
+        <description>Labels every class annotated with JPA/Hibernate entity markers as :DbEntity</description>
         <cypher><![CDATA[
-            MATCH (p:Package)-[:CONTAINS]->(c:Class)
-            WHERE p.fqn ENDS WITH '.api'
-            SET c:ApiLayer
-            RETURN count(c) AS MarkedApiClasses
-        ]]>        </cypher>
+            MATCH (c:Class)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(t:Type)
+            WHERE t.fqn IN [
+                'javax.persistence.Entity',
+                'jakarta.persistence.Entity',
+                'javax.persistence.Table',
+                'jakarta.persistence.Table'
+            ]
+            SET c:DbEntity
+            RETURN count(c) AS MarkedDbEntities
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkDomainObject">
+        <description>Labels classes located inside domain packages without framework annotations as :DomainObject</description>
+        <cypher><![CDATA[
+            MATCH (p:Package)-[:CONTAINS*]->(c:Class)
+            WHERE p.fqn CONTAINS '.domain'
+              AND NOT c:Controller AND NOT c:Service AND NOT c:Repository AND NOT c:DbEntity
+            SET c:DomainObject
+            RETURN count(c) AS MarkedDomainObjects
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkLayeredArchitecture">
+        <description>Identifies and labels packages participating in a standard Layered Architecture</description>
+        <cypher><![CDATA[
+            MATCH (p:Package)
+            WHERE p.fqn CONTAINS '.controller' OR p.fqn CONTAINS '.service' OR p.fqn CONTAINS '.repository'
+            SET p:LayeredArchitecturePackage
+            RETURN count(p) AS MarkedLayeredPackages
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkHexagonalArchitecture">
+        <description>Identifies and labels packages participating in a Hexagonal Architecture</description>
+        <cypher><![CDATA[
+            MATCH (p:Package)
+            WHERE p.fqn CONTAINS '.domain' OR p.fqn CONTAINS '.infrastructure' OR p.fqn CONTAINS '.adapter' OR p.fqn CONTAINS '.port'
+            SET p:HexagonalArchitecturePackage
+            RETURN count(p) AS MarkedHexagonalPackages
+        ]]></cypher>
     </concept>
 
     <concept id="{{PROJECT_NAME}}:MarkDomainLayer">
-        <description>Labels classes in packages ending in .domain as :DomainLayer</description>
+        <description>Labels classes inside the core domain package structure as :DomainLayer</description>
         <cypher><![CDATA[
-            MATCH (p:Package)-[:CONTAINS]->(c:Class)
-            WHERE p.fqn ENDS WITH '.domain'
+            MATCH (p:Package)-[:CONTAINS*]->(c:Class)
+            WHERE p.fqn ENDS WITH '.domain' OR p.fqn CONTAINS '.domain.'
             SET c:DomainLayer
-            RETURN count(c) AS MarkedDomainClasses
-        ]]>        </cypher>
+            RETURN count(c) AS MarkedDomainLayerClasses
+        ]]></cypher>
     </concept>
 
-    <concept id="{{PROJECT_NAME}}:MarkInfrastructureLayer">
-        <description>Labels classes in packages ending in .infrastructure as :InfrastructureLayer</description>
+    <concept id="{{PROJECT_NAME}}:MarkExternalApiCallLayer">
+        <description>Labels classes interacting with or exposing external systems/clients</description>
         <cypher><![CDATA[
-            MATCH (p:Package)-[:CONTAINS]->(c:Class)
-            WHERE p.fqn ENDS WITH '.infrastructure'
-            SET c:InfrastructureLayer
-            RETURN count(c) AS MarkedInfraClasses
-        ]]>        </cypher>
+            MATCH (p:Package)-[:CONTAINS*]->(c:Class)
+            WHERE p.fqn CONTAINS '.client' OR p.fqn CONTAINS '.external' OR p.fqn CONTAINS '.integration'
+            SET c:ExternalApiCallLayer
+            RETURN count(c) AS MarkedExternalApiClasses
+        ]]></cypher>
     </concept>
 
-    <constraint id="{{PROJECT_NAME}}:ControllerMustNotDependOnRepository" severity="major">
-        <requiresConcept refId="{{PROJECT_NAME}}:MarkSpringController"/>
-        <requiresConcept refId="{{PROJECT_NAME}}:MarkSpringRepository"/>
-        <description>Controllers must not directly depend on Repositories.</description>
+    <concept id="{{PROJECT_NAME}}:MarkAdapter">
+        <description>Labels classes located in adapter packages as :Adapter</description>
         <cypher><![CDATA[
-            MATCH (ctrl:Controller)-[:DEPENDS_ON]->(repo:Repository)
-            RETURN ctrl.fqn AS Controller, repo.fqn AS Repository
-        ]]>        </cypher>
-    </constraint>
+            MATCH (p:Package)-[:CONTAINS*]->(c:Class)
+            WHERE p.fqn CONTAINS '.adapter'
+            SET c:Adapter
+            RETURN count(c) AS MarkedAdapters
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkPortIn">
+        <description>Labels inbound interfaces/use-cases as :PortIn</description>
+        <cypher><![CDATA[
+            MATCH (p:Package)-[:CONTAINS*]->(i:Interface)
+            WHERE p.fqn CONTAINS '.port.in' OR p.fqn CONTAINS '.ports.in' OR i.name ENDS WITH 'UseCase'
+            SET i:PortIn
+            RETURN count(i) AS MarkedPortsIn
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkPortOut">
+        <description>Labels outbound interfaces/SPIs as :PortOut</description>
+        <cypher><![CDATA[
+            MATCH (p:Package)-[:CONTAINS*]->(i:Interface)
+            WHERE p.fqn CONTAINS '.port.out' OR p.fqn CONTAINS '.ports.out' OR i.name ENDS WITH 'Port'
+            SET i:PortOut
+            RETURN count(i) AS MarkedPortsOut
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkInfrastructurePrimary">
+        <description>Labels driving/primary infrastructure configurations and entry points</description>
+        <cypher><![CDATA[
+            MATCH (c:Class)
+            WHERE c:Controller OR c.fqn CONTAINS '.adapter.in' OR c.fqn CONTAINS '.infrastructure.web'
+            SET c:InfrastructurePrimary
+            RETURN count(c) AS MarkedPrimaryInfra
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkInfrastructureSecondary">
+        <description>Labels driven/secondary infrastructure components (persistence, messaging clients)</description>
+        <cypher><![CDATA[
+            MATCH (c:Class)
+            WHERE c:Repository OR c.fqn CONTAINS '.adapter.out' OR c.fqn CONTAINS '.infrastructure.persistence'
+            SET c:InfrastructureSecondary
+            RETURN count(c) AS MarkedSecondaryInfra
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkServiceAsUseCases">
+        <description>Labels core domain services acting explicitly as application Use Cases</description>
+        <cypher><![CDATA[
+            MATCH (c:Service)-[:IMPLEMENTS]->(i:PortIn)
+            SET c:UseCaseService
+            RETURN count(c) AS MarkedUseCaseServices
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkResilienceRetry">
+        <description>Labels elements protected by a Retry mechanism</description>
+        <cypher><![CDATA[
+            MATCH (e)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(t:Type)
+            WHERE t.fqn CONTAINS 'io.github.resilience4j.retry.annotation.Retry'
+            SET e:ResilienceRetry
+            RETURN count(e) AS MarkedRetryElements
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkResilienceCircuitBreaker">
+        <description>Labels elements protected by a Circuit Breaker</description>
+        <cypher><![CDATA[
+            MATCH (e)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(t:Type)
+            WHERE t.fqn CONTAINS 'io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker'
+            SET e:ResilienceCircuitBreaker
+            RETURN count(e) AS MarkedCircuitBreakers
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkResilienceRateLimiter">
+        <description>Labels elements throttled by a Rate Limiter</description>
+        <cypher><![CDATA[
+            MATCH (e)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(t:Type)
+            WHERE t.fqn CONTAINS 'io.github.resilience4j.ratelimiter.annotation.RateLimiter'
+            SET e:ResilienceRateLimiter
+            RETURN count(e) AS MarkedRateLimiters
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkResilienceBulkhead">
+        <description>Labels elements isolated via Bulkhead pattern</description>
+        <cypher><![CDATA[
+            MATCH (e)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(t:Type)
+            WHERE t.fqn CONTAINS 'io.github.resilience4j.bulkhead.annotation.Bulkhead'
+            SET e:ResilienceBulkhead
+            RETURN count(e) AS MarkedBulkheads
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkResilienceTimeout">
+        <description>Labels elements governed by a Time Limiter / Timeout configuration</description>
+        <cypher><![CDATA[
+            MATCH (e)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(t:Type)
+            WHERE t.fqn CONTAINS 'io.github.resilience4j.timelimiter.annotation.TimeLimiter'
+            SET e:ResilienceTimeout
+            RETURN count(e) AS MarkedTimeouts
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkResilienceFallback">
+        <description>Identifies methods serving explicitly as fallback execution paths</description>
+        <cypher><![CDATA[
+            MATCH (c:Class)-[:DECLARES]->(m:Method)
+            WHERE m.name STARTS WITH 'fallback' OR m.name CONTAINS 'Fallback'
+            SET m:ResilienceFallback
+            RETURN count(m) AS MarkedFallbacks
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkCaching">
+        <description>Labels methods or classes configured with caching capabilities</description>
+        <cypher><![CDATA[
+            MATCH (e)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(t:Type)
+            WHERE t.fqn IN [
+                'org.springframework.cache.annotation.Cacheable',
+                'org.springframework.cache.annotation.CachePut',
+                'org.springframework.cache.annotation.CacheEvict'
+            ]
+            SET e:CachedElement
+            RETURN count(e) AS MarkedCachedElements
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkMultithreading">
+        <description>Labels methods executing asynchronously or interacting with concurrency managers</description>
+        <cypher><![CDATA[
+            MATCH (e)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(t:Type)
+            WHERE t.fqn = 'org.springframework.scheduling.annotation.Async'
+            SET e:AsynchronousExecution
+            RETURN count(e) AS MarkedMultithreadedElements
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkPartOfWorkflow">
+        <description>Labels components identified as structural units inside a business workflow execution</description>
+        <cypher><![CDATA[
+            MATCH (c:Class)
+            WHERE c.fqn CONTAINS '.workflow.' OR c.fqn CONTAINS '.process.' OR c.name ENDS WITH 'Delegate'
+            SET c:WorkflowComponent
+            RETURN count(c) AS MarkedWorkflowComponents
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkUsedInBpmn">
+        <description>Labels Java components interacting with BPMN systems (e.g., Camunda Java Delegates)</description>
+        <cypher><![CDATA[
+            MATCH (c:Class)-[:IMPLEMENTS]->(t:Type)
+            WHERE t.fqn = 'org.camunda.bpm.engine.delegate.JavaDelegate'
+            SET c:BpmnTaskDelegate
+            RETURN count(c) AS MarkedBpmnDelegates
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkInheritance">
+        <description>Enriches class and interface nodes participating in deep hierarchies</description>
+        <cypher><![CDATA[
+            MATCH (sub:Type)-[:EXTENDS|IMPLEMENTS]->(sup:Type)
+            SET sub:HasSuperType, sup:HasSubType
+            RETURN count(sub) AS ProcessedInheritanceNodes
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkComposition">
+        <description>Marks strong composition fields (private lifecycle-bound custom internal types)</description>
+        <cypher><![CDATA[
+            MATCH (c1:Class)-[:DECLARES]->(f:Field)-[:OF_TYPE]->(c2:Class)
+            WHERE NOT f.type STARTS WITH 'java.' AND NOT f.type STARTS WITH 'org.springframework.'
+            SET f:CompositionField
+            RETURN count(f) AS MarkedCompositions
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkAggregation">
+        <description>Marks aggregation fields representing structural collection-based listings</description>
+        <cypher><![CDATA[
+            MATCH (c1:Class)-[:DECLARES]->(f:Field)
+            WHERE f.signature CONTAINS 'java.util.List'
+               OR f.signature CONTAINS 'java.util.Set'
+               OR f.signature CONTAINS 'java.util.Collection'
+            SET f:AggregationField
+            RETURN count(f) AS MarkedAggregations
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkAssociation">
+        <description>Identifies and labels simple behavioral associations/uses structural connections</description>
+        <cypher><![CDATA[
+            MATCH (c1:Class)-[:DEPENDS_ON]->(c2:Class)
+            WHERE NOT (c1)-[:DECLARES]->(:Field)-[:OF_TYPE]->(c2)
+            SET c1:AssociatedElement
+            RETURN count(c1) AS MarkedAssociations
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:ImpactMethodSignatureChange">
+        <description>Tags methods vulnerable to transitive propagation whenever a sibling signature or call contract changes</description>
+        <cypher><![CDATA[
+            MATCH (m2:Method)<-[:INVOKES]-(m1:Method)
+            SET m2:ImpactTraceable, m1:ImpactTraceable
+            RETURN count(m2) AS TraceableMethods
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:ImpactClassHierarchyChange">
+        <description>Tags structural inheritance endpoints vulnerable to changes up or down the graph tree</description>
+        <cypher><![CDATA[
+            MATCH path=(sub:Type)-[:EXTENDS|IMPLEMENTS*]->(sup:Type)
+            FOREACH (n IN nodes(path) | SET n:HierarchyImpactTraceable)
+            RETURN count(sub) AS TraceableHierarchies
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:ImpactFieldTypeAndVisibility">
+        <description>Maps and labels internal access operations linked tightly to attribute type structures</description>
+        <cypher><![CDATA[
+            MATCH (m:Method)-[r:READS|WRITES]->(f:Field)
+            SET f:FieldImpactTraceable, m:AccessorImpactTraceable
+            RETURN count(f) AS TraceableFields
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:ImpactAnnotationChange">
+        <description>Tags elements whose run/compile behaviors depend strictly on structural annotations</description>
+        <cypher><![CDATA[
+            MATCH (e)-[:ANNOTATED_BY]->(a:Annotation)
+            SET e:AnnotationImpactTraceable
+            RETURN count(e) AS TraceableAnnotatedElements
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:ImpactPackageAndDependencyStructure">
+        <description>Tags upstream layers and client spaces susceptible to package refactoring and structural shifts</description>
+        <cypher><![CDATA[
+            MATCH (p1:Package)-[:DEPENDS_ON]->(p2:Package)
+            SET p1:PackageImpactTraceable, p2:PackageImpactTraceable
+            RETURN count(p1) AS TraceablePackages
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:PatternSingleton">
+        <description>Identifies classic GoF Singletons structural signatures (Private constructor + Static self reference field)</description>
+        <cypher><![CDATA[
+            MATCH (c:Class)-[:DECLARES]->(f:Field)-[:OF_TYPE]->(c)
+            MATCH (c)-[:DECLARES]->(m:Method)
+            WHERE m.name = '<init>' AND m.visibility = 'private'
+            SET c:SingletonPattern
+            RETURN count(c) AS MarkedSingletons
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:PatternFactory">
+        <description>Identifies Factory patterns via naming conventions or dedicated instantiation types</description>
+        <cypher><![CDATA[
+            MATCH (c:Class)
+            WHERE c.name ENDS WITH 'Factory' OR c.name ENDS WITH 'Creator'
+            SET c:FactoryPattern
+            RETURN count(c) AS MarkedFactories
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:PatternStrategy">
+        <description>Identifies Strategy pattern structures (Context class referencing an interface implemented by multiple variants)</description>
+        <cypher><![CDATA[
+            MATCH (strategy:Interface)<-[:IMPLEMENTS]-(impl:Class)
+            MATCH (context:Class)-[:DECLARES]->(f:Field)-[:OF_TYPE]->(strategy)
+            SET strategy:StrategyPatternInterface, impl:StrategyPatternImplementation, context:StrategyPatternContext
+            RETURN count(strategy) AS MarkedStrategyInterfaces
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:PatternSaga">
+        <description>Identifies Saga Orchestrators or Participants in distributed transactions via framework markers or packaging</description>
+        <cypher><![CDATA[
+            MATCH (c:Class)
+            WHERE c.name CONTAINS 'Saga'
+               OR c.fqn CONTAINS '.saga'
+               OR EXISTS { MATCH (c)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(t:Type) WHERE t.fqn CONTAINS 'Saga' }
+            SET c:SagaPattern
+            RETURN count(c) AS MarkedSagas
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:PatternOutbox">
+        <description>Identifies Transactional Outbox components or event publishers dedicated to database reliability relay</description>
+        <cypher><![CDATA[
+            MATCH (c:Class)
+            WHERE c.name CONTAINS 'Outbox'
+               OR c.fqn CONTAINS '.outbox'
+            SET c:OutboxPattern
+            RETURN count(c) AS MarkedOutboxElements
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:LinkClassToAbsoluteSourceFile">
+        <description>
+            Links every Java :Class node to its corresponding physical .java :File node (absolute path)
+            by matching FQN with the file path, handling cross-platform separators and inner classes.
+        </description>
+        <cypher><![CDATA[
+            MATCH (c:Class)
+            // 1. Gérer les classes internes (on ne garde que la classe maîtresse avant le '$')
+            WITH c, split(c.fqn, '$')[0] AS baseFqn
+
+            // 2. Transformer le FQN en format de chemin de fichier (points -> slashs)
+            WITH c, replace(baseFqn, '.', '/') + '.java' AS expectedPathPattern
+
+            // 3. Matcher avec le fichier physique
+            MATCH (f:File)
+            WHERE f.fileName ENDS WITH expectedPathPattern
+            OR replace(f.fileName, '\\', '/') ENDS WITH expectedPathPattern // Sécurisation Windows
+
+            // 4. Créer la relation explicite dans le graphe
+            MERGE (c)-[:HAS_SOURCE_FILE]->(f)
+            RETURN count(c) AS LinkedClasses
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:LinkTestsToCode">
+        <description>Links Test classes to their corresponding production Classes based on naming convention.</description>
+        <cypher><![CDATA[
+            MATCH (test:Class) WHERE test.name ENDS WITH 'Test' OR test.name ENDS WITH 'IT'
+            WITH test, substring(test.name, 0, size(test.name) - 4) AS prodClassNameShort,
+                    substring(test.name, 0, size(test.name) - 2) AS prodClassNameIT
+            MATCH (prod:Class)
+            WHERE prod.name = prodClassNameShort OR prod.name = prodClassNameIT
+            MERGE (test)-[:TESTS]->(prod)
+            RETURN count(test) AS LinkedTests
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:LinkSpringValueProperties">
+        <description>Links Spring @Value annotations to the physical configuration properties used.</description>
+        <cypher><![CDATA[
+            MATCH (c:Class)-[:DECLARES]->(f:Field)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(t:Type)
+            WHERE t.fqn = 'org.springframework.beans.factory.annotation.Value'
+            // Extraction de la clé brute ex: ${my.config.key} -> my.config.key
+            WITH f, a.value AS rawValue
+            WHERE rawValue STARTS WITH '${'
+            WITH f, substring(rawValue, 2, size(rawValue) - 3) AS propertyKey
+            SET f.usesProperty = propertyKey
+            RETURN count(f) AS LinkedProperties
+        ]]></cypher>
+    </concept>
+
+    <concept id="smart-assessment-microservices-assessment:MarkDeadCodeCandidates">
+        <description>Identifies classes that are completely unreachable from the Spring Boot main application entry point.</description>
+        <cypher><![CDATA[
+            // 1. Trouver le point d'entrée Spring Boot
+            MATCH (main:Class)-[:ANNOTATED_BY]->()-[:OF_TYPE]->(t:Type)
+            WHERE t.fqn = 'org.springframework.boot.autoconfigure.SpringBootApplication'
+
+            // 2. Trouver les classes candidates de l'application
+            MATCH (c:Class)
+            WHERE NOT c.fqn STARTS WITH 'java.'
+            AND NOT c.fqn STARTS WITH 'org.spring'
+            AND NOT c:Controller
+            AND NOT c.name ENDS WITH 'Test'
+            AND NOT c.name ENDS WITH 'Application'
+            // Fusion des conditions : Aucun chemin de dépendance depuis la Main
+            AND NOT (main)-[:DEPENDS_ON|INVOKES*]->(c)
+
+            // 3. Marquage
+            SET c:DeadCodeCandidate
+            RETURN count(c) AS DeadCodeCandidates
+        ]]></cypher>
+</concept>
+
+    <concept id="{{PROJECT_NAME}}:LinkExceptionToHandlers">
+        <description>Links methods throwing custom exceptions to their respective Spring @ExceptionHandler.</description>
+        <cypher><![CDATA[
+            MATCH (m:Method)-[:INVOKES]->(:Method {name: '<init>'})<-[:DECLARES]-(ex:Class)-[:EXTENDS*]->(:Type {fqn: 'java.lang.Exception'})
+            MATCH (handler:Method)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(t:Type)
+            WHERE t.fqn = 'org.springframework.web.bind.annotation.ExceptionHandler'
+            // Idéalement on matcherait la valeur de l'annotation, ici on simplifie par correspondance de type
+            SET m:ThrowsException, handler:ExceptionInterceptor
+            MERGE (m)-[:PROPAGATES_ERROR_TO]->(ex)
+            RETURN count(m) AS LinkedExceptionPaths
+        ]]></cypher>
+    </concept>
 
     <group id="{{PROJECT_NAME}}:Default">
+        <includeConcept refId="java:MethodOverrides"/>
+
         <includeConcept refId="{{PROJECT_NAME}}:MarkSpringController"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkSpringRestController"/>
         <includeConcept refId="{{PROJECT_NAME}}:MarkSpringService"/>
         <includeConcept refId="{{PROJECT_NAME}}:MarkSpringRepository"/>
-        <includeConcept refId="{{PROJECT_NAME}}:MarkApiLayer"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkDbEntity"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkDomainObject"/>
+
+        <includeConcept refId="{{PROJECT_NAME}}:MarkLayeredArchitecture"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkHexagonalArchitecture"/>
         <includeConcept refId="{{PROJECT_NAME}}:MarkDomainLayer"/>
-        <includeConcept refId="{{PROJECT_NAME}}:MarkInfrastructureLayer"/>
-        <includeConstraint refId="{{PROJECT_NAME}}:ControllerMustNotDependOnRepository"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkExternalApiCallLayer"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkAdapter"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkPortIn"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkPortOut"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkInfrastructurePrimary"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkInfrastructureSecondary"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkServiceAsUseCases"/>
+
+        <includeConcept refId="{{PROJECT_NAME}}:MarkResilienceRetry"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkResilienceCircuitBreaker"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkResilienceRateLimiter"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkResilienceBulkhead"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkResilienceTimeout"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkResilienceFallback"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkCaching"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkMultithreading"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkPartOfWorkflow"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkUsedInBpmn"/>
+
+        <includeConcept refId="{{PROJECT_NAME}}:MarkInheritance"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkComposition"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkAggregation"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkAssociation"/>
+
+        <includeConcept refId="{{PROJECT_NAME}}:ImpactMethodSignatureChange"/>
+        <includeConcept refId="{{PROJECT_NAME}}:ImpactClassHierarchyChange"/>
+        <includeConcept refId="{{PROJECT_NAME}}:ImpactFieldTypeAndVisibility"/>
+        <includeConcept refId="{{PROJECT_NAME}}:ImpactAnnotationChange"/>
+        <includeConcept refId="{{PROJECT_NAME}}:ImpactPackageAndDependencyStructure"/>
+
+        <includeConcept refId="{{PROJECT_NAME}}:PatternSingleton"/>
+        <includeConcept refId="{{PROJECT_NAME}}:PatternFactory"/>
+        <includeConcept refId="{{PROJECT_NAME}}:PatternStrategy"/>
+        <includeConcept refId="{{PROJECT_NAME}}:PatternSaga"/>
+        <includeConcept refId="{{PROJECT_NAME}}:PatternOutbox"/>
+
+        <includeConcept refId="{{PROJECT_NAME}}:LinkClassToAbsoluteSourceFile"/>
+        <includeConcept refId="{{PROJECT_NAME}}:LinkTestsToCode"/>
+        <includeConcept refId="{{PROJECT_NAME}}:LinkSpringValueProperties"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkDeadCodeCandidates"/>
+        <includeConcept refId="{{PROJECT_NAME}}:LinkExceptionToHandlers"/>
+
     </group>
+
 </jqa:jqassistant-rules>

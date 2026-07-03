@@ -7,10 +7,8 @@ from dataclasses import dataclass
 from analyser.base import BaseAnalyser
 from analyser.registry import AnalyserRegistry
 from analyser.tools.neo4j.neo4j_client import Neo4jClient
-from core.utils import info, error, debug, execute_tracked_command
+from core.utils import info, error, debug, execute_tracked_command, warn
 from core.sources_discovery import discover_workspace_sources
-
-
 
 @AnalyserRegistry.register_analyser
 class JQAssistantAnalyzer(BaseAnalyser):
@@ -21,7 +19,6 @@ class JQAssistantAnalyzer(BaseAnalyser):
     jqa_config_dir = ""
     jqa_custom_config_path = ""
     jqa_exclude_paths_regex = ""
-
 
     @property
     def name(self) -> str: return "java_jqassistant_analyzer"
@@ -51,17 +48,28 @@ class JQAssistantAnalyzer(BaseAnalyser):
             error("Aborting analysis: jQAssistant executable command string could not be resolved.", component=self.name)
             return
 
-        custom_env = os.environ.copy()
 
-        # 3. Diagnostics Phase
+        # 3. Environment Customization Phase (Injecting SDKMAN! Java 25.0.1-tem)
+        custom_env = os.environ.copy()
+        sdkman_java_home = os.path.expanduser("~/.sdkman/candidates/java/25.0.1-tem")
+
+        if os.path.exists(sdkman_java_home):
+            custom_env["JAVA_HOME"] = sdkman_java_home
+            custom_env["PATH"] = f"{os.path.join(sdkman_java_home, 'bin')}{os.pathsep}{custom_env.get('PATH', '')}"
+            info("🔄 Command executed inline: sdk use java 25.0.1-tem -> Context switched to JDK 25", component=self.name)
+        else:
+            warn(f"SDKMAN target path absent at {sdkman_java_home}. Inheriting global default system JDK.", component=self.name)
+
+        # 4. Diagnostics Phase
         self._dump_diagnostics(executable_target, custom_env)
 
-        # 4. Execution Phase
+        # 5. Execution Phase
         scan_return_code = self._execute_scan_and_analyze(executable_target, discovered_sources, custom_env)
 
-        # 5. Fallback Linking Phase
+        # 6. Fallback Linking Phase
         if scan_return_code != 0:
             info(f"Scan code {scan_return_code}. Activating semantic code relationship fallback parser layers...", component=self.name)
+
 
     def initialize_jqassistant_config(self):
         self.jqa_version = self.context.get_vscode_setting("jqassistant", "version")
@@ -73,9 +81,7 @@ class JQAssistantAnalyzer(BaseAnalyser):
 
     def _run_discovery(self) -> dict:
         info("Running dynamic workspace path discovery for jQAssistant...", component=self.name)
-        return discover_workspace_sources(self.context.workspace_root,
-                                          self.jqa_exclude_paths_regex)
-
+        return discover_workspace_sources(self.context.workspace_root, self.jqa_exclude_paths_regex)
 
     def _resolve_binary(self) -> str:
         base_cmd = "jqassistant.cmd" if os.name == 'nt' else "jqassistant"
@@ -108,17 +114,18 @@ class JQAssistantAnalyzer(BaseAnalyser):
             error(f"Failed to execute effective diagnostic commands: {e}", component=self.name)
 
     def _run_diagnostic_dump(self, command_action: str, executable_target: str, reports_dir: str, custom_env: dict) -> None:
-        """Common extraction utility to isolate subprocess executions, log collections, and file IO write operations."""
         cmd = [
             executable_target,
             command_action,
             "-configurationLocations", self.jqa_custom_config_path
         ]
-        info(f"Executing subprocess command: {' '.join(cmd)} \nfrom (cwd={self.context.workspace_root})", component=self.name)
 
+        cwd = self.context.workspace_root
+
+        self._log_execution_command(cmd, cwd)
         res = subprocess.run(
             cmd,
-            cwd=self.context.workspace_root,
+            cwd=cwd,
             env=custom_env,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -153,21 +160,28 @@ class JQAssistantAnalyzer(BaseAnalyser):
 
         return scan_return_code
 
+    #----------------
     def _execute_scan(self, executable_target: str, discovered_sources: dict, custom_env: dict) -> int:
-        scan_cmd = [
-            executable_target,
-            "scan",
-            "-configurationLocations", self.jqa_custom_config_path,
-            "-f", "java:classpath::../../../../target/classes/"
-        ]
-        info(f"Executing tracking runner: {' '.join(scan_cmd)} \n(cwd={self.jqa_raw_outputs_dir})", component=self.name)
-        return execute_tracked_command(scan_cmd, "jqa_scan", cwd=self.jqa_raw_outputs_dir, env=custom_env)
+        return self._execute_scan_or_analyze("scan", executable_target, {}, custom_env)
 
     def _execute_analyze(self, executable_target: str, custom_env: dict) -> int:
-        analyze_cmd = [
+        return self._execute_scan_or_analyze("analyze", executable_target, {}, custom_env)
+
+    def _execute_scan_or_analyze(self, cmd, executable_target: str, discovered_sources: dict, custom_env: dict) -> int:
+        scan_cmd = [
             executable_target,
-            "analyze",
+            cmd,
             "-configurationLocations", self.jqa_custom_config_path
         ]
-        info(f"Executing tracking runner: {' '.join(analyze_cmd)} \n(cwd={self.jqa_raw_outputs_dir})", component=self.name)
-        return execute_tracked_command(analyze_cmd, "jqa_analyze", cwd=self.jqa_raw_outputs_dir, env=custom_env)
+
+        cwd = self.context.workspace_root
+
+        self._log_execution_command(scan_cmd, cwd)
+        return execute_tracked_command(scan_cmd, f"jqa_{cmd}", cwd=cwd, env=custom_env)
+
+
+    #----------------
+    def _log_execution_command(self, cmd, cwd) -> None:
+        # Split runner commands line by line in stdout/log stream for transparent debugging topology layout
+        formatted_cmd_string = " \\\n  ".join(cmd)
+        info(f"Executing tracking cmd:\n  {formatted_cmd_string}\n(cwd={cwd})", component=self.name)

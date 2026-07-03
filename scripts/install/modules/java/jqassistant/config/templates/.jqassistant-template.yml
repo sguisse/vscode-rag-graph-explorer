@@ -73,13 +73,16 @@ jqassistant:
   #   with absolute_path properties. These are required by the graph-rag main.py
   #   enrichment query:  MATCH (f:SourceFile) WHERE f.absolute_path ENDS WITH '.java'
   scan:
+    reset: true
+    continue-on-error: true
     include:
       files:
       # TODO: Adjust the following to your project structure if needed (after a fresh installation).
       # ! The jqa.plugin.maven3 plugin auto-scans target/classes and target/test-classes, so do not list them here.
-  {{JAVA_SRC_DIRS_YAML_LIST}}
+  {{JQA_SRC_DIRS_YAML_LIST}}
 
-      urls:
+
+      #urls:
 
   # ---------------------------------------------------------------------------
   # Analyze — mixed strategy
@@ -110,5 +113,5 @@ jqassistant:
       continue-on-failure: true
 
   server:
-    daemon: false
+    daemon: true
     open-browser: false

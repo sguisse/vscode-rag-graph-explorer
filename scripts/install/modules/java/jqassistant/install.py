@@ -140,18 +140,21 @@ class JavaJQAssistantInstaller(BaseInstallModule):
         with open(template_config, "r", encoding="utf-8") as f:
             content = f.read()
 
-        java_src_yaml = "\n".join([f"        - '{path}'" for path in discovered["java_src"]])
+        jqa_src_yaml  = "\n".join([f"        - '{path}'" for path in discovered["java_src"]])
+        jqa_src_yaml += "\n"
+        jqa_src_yaml += "\n".join([f"        - '{path}'" for path in discovered["java_classes"]])
+
         neo4j_uri = self.context.get_vscode_setting("neo4j", "uri")
         neo4j_user = self.context.get_vscode_setting("neo4j", "username")
         neo4j_pass = self.context.get_vscode_setting("neo4j", "password")
         project_name = os.path.basename(self.context.workspace_root)
 
-        content = re.sub(r'[ \t]*\{\{JAVA_SRC_DIRS_YAML_LIST\}\}', '{{JAVA_SRC_DIRS_YAML_LIST}}', content)
+        content = re.sub(r'[ \t]*\{\{JQA_SRC_DIRS_YAML_LIST\}\}', '{{JQA_SRC_DIRS_YAML_LIST}}', content)
 
         content = content.replace("{{JQA_BOLT_URL}}", neo4j_uri)\
                          .replace("{{JQA_BOLT_USERNAME}}", neo4j_user)\
                          .replace("{{JQA_BOLT_PASSWORD}}", neo4j_pass)\
-                         .replace("{{JAVA_SRC_DIRS_YAML_LIST}}", java_src_yaml)\
+                         .replace("{{JQA_SRC_DIRS_YAML_LIST}}", jqa_src_yaml)\
                          .replace("{{PROJECT_NAME}}", project_name)\
                          .replace("{{JQA_RULES_DIRECTORY}}", rules_dir.replace("\\", "/"))
 

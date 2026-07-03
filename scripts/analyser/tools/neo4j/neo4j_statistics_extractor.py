@@ -1,6 +1,6 @@
 import os
 import json
-from core.utils import info, success, error
+from core.utils import info, success, error, debug
 
 def build_statistics(neo4j_client, workspace_root: str):
     """
@@ -165,6 +165,10 @@ def build_statistics(neo4j_client, workspace_root: str):
 
     try:
         with neo4j_client.driver.session() as session:
+
+            diag = session.run("MATCH (n) RETURN count(n) as total").single()
+            info(f"Diagnostic Check - Total Nodes found by Python driver: {diag.data().get('total', 0)}", component="StatisticsExtractor")
+
             for category, subcategories in queries_matrix.items():
                 report[category] = {}
                 for subcat, entries in subcategories.items():
@@ -177,7 +181,11 @@ def build_statistics(neo4j_client, workspace_root: str):
                         if not loops:
                             try:
                                 run_res = session.run(query_tmpl).single()
-                                result_val = run_res["n"] if (run_res and "n" in run_res) else 0
+                                # LOG DE L'OBJET RETOURNE
+                                dict_res = run_res.data() if run_res else None
+                                debug(f"Returned object for '{scope_tmpl}': {run_res} | Data dict: {dict_res}", component="StatisticsExtractor")
+
+                                result_val = dict_res.get("n", 0) if dict_res else 0
                                 status_val = "✅" if result_val > 0 else "⚠️"
                                 message_val = f"Found {result_val} elements." if result_val > 0 else "No tracking elements recorded."
                             except Exception as ex:
@@ -198,7 +206,11 @@ def build_statistics(neo4j_client, workspace_root: str):
                                 current_query = query_tmpl.format(**item)
                                 try:
                                     run_res = session.run(current_query).single()
-                                    result_val = run_res["n"] if (run_res and "n" in run_res) else 0
+                                    # LOG DE L'OBJET RETOURNE
+                                    dict_res = run_res.data() if run_res else None
+                                    debug(f"Returned object for '{current_scope}': {run_res} | Data dict: {dict_res}", component="StatisticsExtractor")
+
+                                    result_val = dict_res.get("n", 0) if dict_res else 0
                                     status_val = "✅" if result_val > 0 else "⚠️"
                                     message_val = f"Found {result_val} matching items successfully." if result_val > 0 else "No matching component tracked."
                                 except Exception as ex:
@@ -217,7 +229,7 @@ def build_statistics(neo4j_client, workspace_root: str):
         with open(stats_file, "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2, ensure_ascii=False)
 
-        success(f"Graph statistics matching explicit loops successfully extracted and saved into {stats_file}", component="StatisticsExtractor")
+        success(f"Graph statistics successfully extracted and saved into {stats_file}", component="StatisticsExtractor")
 
     except Exception as e:
         error(f"Failed to generate and dump updated matrix statistics report: {e}", component="StatisticsExtractor")
