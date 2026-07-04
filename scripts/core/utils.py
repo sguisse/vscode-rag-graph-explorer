@@ -83,7 +83,7 @@ def cleanup_orphan_pids():
     pids_dir = get_pids_dir()
     if not os.path.exists(pids_dir): return
     for file_name in os.listdir(pids_dir):
-        if file_name.endswith(".pid"):
+        if file_name.endswith(".pid") and not file_name.startswith("neo4j"):
             pid_path = os.path.join(pids_dir, file_name)
             try:
                 with open(pid_path, "r", encoding="utf-8") as pf: pid = int(pf.read().strip())

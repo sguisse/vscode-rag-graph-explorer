@@ -158,12 +158,12 @@
         "graphRagExplorer.neo4j.username": {
           "type": "string",
           "default": "neo4j",
-          "description": "Database account access identifier username."
+          "description": "Database account access identifier username. Should not change with the default Neo4j community installation."
         },
         "graphRagExplorer.neo4j.password": {
           "type": "string",
           "default": "password",
-          "description": "Database secure transaction authorization secret credentials."
+          "description": "Database secure transaction authorization secret credentials. Should not change with the default Neo4j community installation."
         },
         "graphRagExplorer.jqassistant.version": {
           "type": "string",
