@@ -56,7 +56,7 @@ class SystemNeo4jInstaller(BaseInstallModule):
 
             # Rendre les scripts exécutables sous Unix
             if not self.context.is_windows:
-                for cmd in [self.neo4j_ctx.admin_cmd, self.neo4j_ctx.neo4j_cmd, self.neo4j_ctx.shell_cmd]:
+                for cmd in [self.neo4j_ctx.admin_cmd, self.neo4j_ctx.neo4j_cmd, self.neo4j_ctx.cypher_shell_cmd]:
                     if os.path.exists(cmd):
                         os.chmod(cmd, 0o755)
 
@@ -69,7 +69,7 @@ class SystemNeo4jInstaller(BaseInstallModule):
         # 3. Initialisation du Token Métadonnées
         if installStatus.get("remote_database_token", {}).get("status") != "✅":
             self.initialize_remote_database_token(
-                self.neo4j_ctx.shell_cmd
+                self.neo4j_ctx.cypher_shell_cmd
             )
 
         success(f"Neo4j instance initialized smoothly. Browser UI: {self.neo4j_ctx.http_url} | Bolt profile: {self.neo4j_ctx.bolt_uri} [User: {self.neo4j_ctx.user} | Pass: {self.neo4j_ctx.password}]", component=self.name)
@@ -215,11 +215,11 @@ class SystemNeo4jInstaller(BaseInstallModule):
 
 
     def initialize_remote_database_token(self, shell_cmd):
-        """Adds Remote-Database=true if missing. Bypasses blocking errors."""
+        """Adds Remote Database token if missing. Bypasses blocking errors."""
         try:
             info("Ensuring verification environment metadata label presence...", component=self.name)
-            verification_query = "MERGE (m:SystemMetadata {id: 'global_config'}) SET m.`Remote-Database` = true;"
-            subprocess.run([shell_cmd, "-a", f"{self.neo4j_ctx.bolt_uri}", "-u", self.neo4j_ctx.user, "-p", self.neo4j_ctx.password, verification_query], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            success("Successfully added 'Remote-Database = true' token inside Neo4j instance.", component=self.name)
+            insertion_query = f"MERGE (m:SystemMetadata {{id: 'global_config'}}) SET m.`{self.neo4j_ctx.remote_database_token_name}` = {self.neo4j_ctx.remote_database_token_value};"
+            subprocess.run([shell_cmd, "-a", f"{self.neo4j_ctx.bolt_uri}", "-u", self.neo4j_ctx.user, "-p", self.neo4j_ctx.password, insertion_query], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            success(f"Successfully added '{self.neo4j_ctx.remote_database_token_name} = {self.neo4j_ctx.remote_database_token_value}' token inside Neo4j instance.", component=self.name)
         except Exception as err:
             warn(f"Bypassed metadata injection (non-blocking exception caught): {err}", component=self.name)

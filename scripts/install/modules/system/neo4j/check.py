@@ -4,7 +4,8 @@ import subprocess
 from install.base import BaseCheckModule
 from install.registry import InstallerRegistry
 from install.modules.system.neo4j.install import NEO4J_MODULE_NAME
-from install.modules.system.neo4j.context import Neo4jContext # <-- L'import de votre nouveau contexte
+from install.modules.system.neo4j.context import Neo4jContext
+from core.utils import info
 
 @InstallerRegistry.register_checker
 class SystemNeo4jChecker(BaseCheckModule):
@@ -43,6 +44,7 @@ class SystemNeo4jChecker(BaseCheckModule):
                 neo4j_running = True
 
         if neo4j_running:
+            info("Neo4j database is already running.", component=self.name)
             self.status["neo4j_db_running"] = {"status": "✅", "message": "Neo4j database is running."}
         else:
             self.status["neo4j_db_running"] = {
@@ -77,30 +79,33 @@ class SystemNeo4jChecker(BaseCheckModule):
             }
             self.ko_count += 1
 
-    def check_remote_database_token_exists(self):
+    def check_remote_database_token_exists(self) -> bool:
         """Queries the database to assert the validation token. Does NOT raise an error if missing."""
         self.steps_count += 1
 
-        if not os.path.exists(self.neo4j_ctx.shell_cmd):
+        if not os.path.exists(self.neo4j_ctx.cypher_shell_cmd):
             self.status["remote_database_token"] = {"status": "❌", "message": "cypher-shell script missing from server bin structures."}
             self.ko_count += 1
-            return
+            return False
 
         try:
-            check_query = "MATCH (m:SystemMetadata {id: 'global_config'}) RETURN m.`Remote-Database` AS status;"
+            check_query = f"MATCH (m:SystemMetadata {{id: 'global_config'}}) RETURN m.`{self.neo4j_ctx.remote_database_token_name}` AS status;"
 
             res = subprocess.run(
-                [self.neo4j_ctx.shell_cmd, "-a", self.neo4j_ctx.bolt_uri, "-u", self.neo4j_ctx.user, "-p", self.neo4j_ctx.password, check_query],
+                [self.neo4j_ctx.cypher_shell_cmd, "-a", self.neo4j_ctx.bolt_uri, "-u", self.neo4j_ctx.user, "-p", self.neo4j_ctx.password, check_query],
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5
             )
-            if "TRUE" in res.stdout:
-                self.status["remote_database_token"] = {"status": "✅", "message": "Remote-Database identifier token confirmed active."}
+            if self.neo4j_ctx.remote_database_token_value.upper() in res.stdout:
+                self.status["remote_database_token"] = {"status": "✅", "message": f"{self.neo4j_ctx.remote_database_token_name} identifier token confirmed active."}
+                return True
             else:
-                self.status["remote_database_token"] = {"status": "❌", "message": "Remote-Database configuration property field unallocated or false."}
+                self.status["remote_database_token"] = {"status": "❌", "message": f"{self.neo4j_ctx.remote_database_token_name} configuration property field unallocated or false."}
                 self.ko_count += 1
+                return False
         except Exception:
             self.status["remote_database_token"] = {"status": "❌", "message": "Database sandbox container cluster currently unreachable or uninitialized."}
             self.ko_count += 1
+            return False
 
     def execute_all_checks(self) -> dict:
         self.steps_count = 0

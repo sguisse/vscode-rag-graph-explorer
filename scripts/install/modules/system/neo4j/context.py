@@ -3,6 +3,10 @@ from core.context import EnvironmentContext
 
 class Neo4jContext:
     def __init__(self, ctx: EnvironmentContext):
+        # The Neo4j token to verify if the remote database is visible for jQAssistant
+        self.remote_database_token_name = "Remote-Database"
+        self.remote_database_token_value = "true"
+
         # Configuration Settings
         self.version = ctx.get_vscode_setting("neo4j", "version", "5.26.0")
         self.gds_version = ctx.get_vscode_setting("neo4j", "gds_version", "2026.05.0")
@@ -25,7 +29,7 @@ class Neo4jContext:
         # Executable Commands
         self.admin_cmd = os.path.join(self.bin_dir, "neo4j-admin.bat" if ctx.is_windows else "neo4j-admin")
         self.neo4j_cmd = os.path.join(self.bin_dir, "neo4j.bat" if ctx.is_windows else "neo4j")
-        self.shell_cmd = os.path.join(self.bin_dir, "cypher-shell.bat" if ctx.is_windows else "cypher-shell")
+        self.cypher_shell_cmd = os.path.join(self.bin_dir, "cypher-shell.bat" if ctx.is_windows else "cypher-shell")
 
         # Distribution Archive & Plugins Paths
         self.archive_name = f"neo4j-community-{self.version}-windows.zip" if ctx.is_windows else f"neo4j-community-{self.version}-unix.tar.gz"

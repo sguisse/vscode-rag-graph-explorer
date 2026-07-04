@@ -76,7 +76,7 @@ class JQAssistantAnalyzer(BaseAnalyser):
         return discover_workspace_sources(self.context.workspace_root, self.jqa.exclude_paths_regex)
 
     def _resolve_binary(self) -> str:
-        base_cmd = "jqassistant.cmd" if os.name == 'nt' else "jqassistant"
+        base_cmd = "jqassistant.cmd" if self.context.is_windows else "jqassistant"
         executable_target = shutil.which(base_cmd) or shutil.which("jqassistant")
 
         if not executable_target:
@@ -84,7 +84,7 @@ class JQAssistantAnalyzer(BaseAnalyser):
             local_bin_path = self._find_sandboxed_binary(sandbox_bin_root, base_cmd)
             if local_bin_path and os.path.exists(local_bin_path):
                 executable_target = local_bin_path
-                if os.name != 'nt':
+                if not self.context.is_windows:
                     for walk_root, _, walk_files in os.walk(sandbox_bin_root):
                         for file in walk_files:
                             if file.endswith(".sh") or "bin" in walk_root.replace("\\", "/").split("/"):
@@ -93,7 +93,7 @@ class JQAssistantAnalyzer(BaseAnalyser):
         return executable_target
 
     def _dump_diagnostics(self, executable_target: str, custom_env: dict) -> None:
-        reports_dir = os.path.join(self.jqa.raw_outputs_dir, "computed_configs")
+        reports_dir = os.path.join(self.jqa.raw_outputs_dir, "jqassistant", "computed_configs")
         os.makedirs(reports_dir, exist_ok=True)
 
         info(f"Dumping effective jQAssistant configuration and available rules to {reports_dir}...", component=self.name)
@@ -149,6 +149,8 @@ class JQAssistantAnalyzer(BaseAnalyser):
 
         if scan_return_code == 0:
             self._execute_analyze(executable_target, custom_env)
+        else:
+            error(f"jQAssistant 'scan' failed with code {scan_return_code}. Skipping 'analyze' phase.", component=self.name)
 
         return scan_return_code
 
@@ -160,7 +162,7 @@ class JQAssistantAnalyzer(BaseAnalyser):
             "-configurationLocations", self.jqa.custom_config_path
         ]
 
-        cwd = self.context.workspace_root
+        cwd = self.jqa.raw_outputs_dir
 
         self._log_execution_command(scan_cmd, cwd)
         return execute_tracked_command(scan_cmd, f"jqa_{cmd}", cwd=cwd, env=custom_env)

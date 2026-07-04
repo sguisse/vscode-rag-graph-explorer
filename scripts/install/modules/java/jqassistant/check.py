@@ -1,11 +1,19 @@
+from typing import cast
 import shutil
 import os
 import subprocess
 from install.base import BaseCheckModule
 from install.registry import InstallerRegistry
+from install.modules.java.jqassistant.context import JQAssistantContext
+from install.modules.system.neo4j.check import SystemNeo4jChecker
 
 @InstallerRegistry.register_checker
 class JavaJQAssistantChecker(BaseCheckModule):
+    def __init__(self, context):
+        super().__init__(context)
+        self.jqa = JQAssistantContext(context)
+
+
     @property
     def name(self) -> str: return "java_jqassistant"
 
@@ -105,22 +113,12 @@ class JavaJQAssistantChecker(BaseCheckModule):
     def check_remote_database_token_compliance(self):
         """Queries the active Neo4j container database safely without throwing unhandled lifecycle registration breaks."""
         self.steps_count += 1
-        neo4j_version = self.context.get_vscode_setting("neo4j", "version")
-        user = self.context.get_vscode_setting("neo4j", "username")
-        password = self.context.get_vscode_setting("neo4j", "password")
-        neo4jUri = self.context.get_vscode_setting("neo4j", "uri")
-
-        target_folder = f"{self.context.tools_dir}/system/neo4j/neo4j-community-{neo4j_version}"
-        shell_cmd = os.path.join(target_folder, "bin", "cypher-shell.bat" if os.name == 'nt' else "cypher-shell")
-
-        if not os.path.exists(shell_cmd):
-            self.status["remote_database_token"] = {"status": "❌", "message": "cypher-shell missing from system infrastructure layout routes."}
-            return
 
         try:
-            check_query = "MATCH (m:SystemMetadata {id: 'global_config'}) RETURN m.`Remote-Database` AS status;"
-            res = subprocess.run([shell_cmd, "-a", neo4jUri, "-u", user, "-p", password, check_query], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
-            if "TRUE" in res.stdout:
+            neo4j_checker = SystemNeo4jChecker(self.context)
+            check_remote_database_token_exists = getattr(neo4j_checker, "check_remote_database_token_exists", None)
+            res = check_remote_database_token_exists() if check_remote_database_token_exists else False
+            if res:
                 self.status["remote_database_token"] = {"status": "✅"}
             else:
                 self.status["remote_database_token"] = {"status": "❌", "message": "'Remote-Database = true' token missing or invalid on targeted instance profile."}
