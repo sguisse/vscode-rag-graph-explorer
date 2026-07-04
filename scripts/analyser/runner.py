@@ -26,18 +26,19 @@ def run_analysis_pipeline():
         uri=context.get_vscode_setting("neo4j", "uri"),
         auth=(context.get_vscode_setting("neo4j", "username"), context.get_vscode_setting("neo4j", "password"))
     )
+    info(f"Neo4j connection established: {neo4j_client._connected}", component="AnalyserRunner")
 
     analyser_dir = os.path.dirname(os.path.abspath(__file__))
     AnalyserRegistry.discover_and_load_analysers(analyser_dir)
     analysers : Dict[str, BaseAnalyser] = {cls(context).name: cls(context) for cls in AnalyserRegistry.get_analysers()}
 
     #-------
-    info(f"Registered Analyser Workers: {[analyser.name for analyser in analysers.values()]}", component="AnalyserRunner")
-    info(f"Total number of registered workers: {len(analysers)}", component="AnalyserRunner")
-    info(f"Neo4j connection established: {neo4j_client._connected}", component="AnalyserRunner")
+    info(f"Discovered these {len(analysers)} Analyzers (Registered) :", component="AnalyserRunner")
+    for name in sorted(analysers):
+        info(f"   - {name}", component="AnalyserRunner")
 
+    #-------
     info(f"Spawning {len(analysers)} background workers to feed the knowledge graph container context.", component="AnalyserRunner")
-
     with ThreadPoolExecutor(max_workers=len(analysers)) as executor:
         futures = []
         for cls in analysers:

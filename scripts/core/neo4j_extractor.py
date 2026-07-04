@@ -2,12 +2,15 @@ import os
 import json
 from analyser.tools.neo4j.neo4j_client import Neo4jClient
 from core.utils import info, success, error, normalize_path
+from core.context import EnvironmentContext
+from install.modules.system.neo4j.context import Neo4jContext
 
 class UIExtractor:
-    def __init__(self, workspace_root: str, neo4j_client: Neo4jClient):
-        self.workspace_root = normalize_path(workspace_root)
+    def __init__(self, env_context: EnvironmentContext, neo4j_client: Neo4jClient):
+        self.ui_outputs_dir = normalize_path(f"{env_context.ui_outputs_dir}")
+        self.workspace_root = normalize_path(env_context.workspace_root)
         self.neo4j_client = neo4j_client
-        self.output_file = f"{self.workspace_root}/.graph-rag-explorer/target/ui_outputs/graph-ui-payload.json"
+        self.output_file = f"{self.ui_outputs_dir}/graph-ui-payload.json"
 
     def build_tree_view(self, files: list) -> dict:
         tree = {"name": "root", "type": "directory", "children": []}
@@ -32,7 +35,7 @@ class UIExtractor:
                     current = existing
         return tree
 
-    def extract_and_save(self, manifest_files: list):
+    def extract_and_save(self, manifest_files: list = None):
         info("Extracting live graph topology and relationships from active Neo4j instance...", component="UIExtractor")
 
         nodes_payload = []
@@ -114,7 +117,12 @@ class UIExtractor:
             except Exception as ex:
                 error(f"Failed extracting live payload elements from Neo4j: {ex}", component="UIExtractor")
 
-        if not nodes_payload:
+        # Auto-reconstruct manifest_files from database nodes if omitted
+        if manifest_files is None or len(manifest_files) == 0:
+            manifest_files = list(set([n["source_file"] for n in resolved_nodes.values() if n["source_file"]]))
+
+        # Fallback mechanism if both DB is empty and no manifest is provided
+        if not nodes_payload and manifest_files:
             for file in manifest_files:
                 nodes_payload.append({
                     "data": {
@@ -141,3 +149,25 @@ class UIExtractor:
             json.dump(final_payload, f, indent=2, ensure_ascii=False)
 
         success(f"UI presentation payload generated with {len(nodes_payload)} nodes and {len(edges_payload)} edges, stored under: {self.output_file}", component="UIExtractor")
+
+
+def run_ui_extractor_pipeline():
+    """Executes Phase 4: Composing the UI payload using dedicated contexts."""
+    info("Bootstrapping Phase 4: UI render payload generation...", component="UIExtractorPipeline")
+
+    # 1. Instantiate the Contexts
+    env_context = EnvironmentContext()
+    neo4j_ctx = Neo4jContext(env_context)
+
+    # 2. Connect to the Database
+    neo4j_client = Neo4jClient(
+        uri=neo4j_ctx.bolt_uri,
+        auth=(neo4j_ctx.user, neo4j_ctx.password)
+    )
+
+    # 3. Extract and Save (Passing an empty list triggers the auto-reconstruction feature)
+    extractor = UIExtractor(env_context, neo4j_client)
+    extractor.extract_and_save([])
+
+    # 4. Clean up
+    neo4j_client.close()

@@ -9,19 +9,20 @@ from analyser.registry import AnalyserRegistry
 from analyser.tools.neo4j.neo4j_client import Neo4jClient
 from core.utils import info, error, debug, execute_tracked_command, warn
 from core.sources_discovery import discover_workspace_sources
+from core.context import EnvironmentContext
+from install.modules.java.jqassistant.context import JQAssistantContext
 
 @AnalyserRegistry.register_analyser
 class JQAssistantAnalyzer(BaseAnalyser):
 
-    jqa_version = ""
-    jqa_raw_outputs_dir = ""
-    jqa_tools_dir= ""
-    jqa_config_dir = ""
-    jqa_custom_config_path = ""
-    jqa_exclude_paths_regex = ""
+    def __init__(self, context: EnvironmentContext):
+        # 1.Call the parent class (BaseAnalyser) to store the global context
+        super().__init__(context)
+        # 2. Compose the specific jQAssistant context
+        self.jqa = JQAssistantContext(context)
 
     @property
-    def name(self) -> str: return "java_jqassistant_analyzer"
+    def name(self) -> str: return "01-java_jqassistant_analyzer"
 
     def _find_sandboxed_binary(self, base_dir: str, target_name: str) -> str:
         if not os.path.exists(base_dir): return None
@@ -32,9 +33,7 @@ class JQAssistantAnalyzer(BaseAnalyser):
 
     def run_analysis(self, neo4j_client: Neo4jClient) -> None:
         """Main orchestrator for the jQAssistant analysis pipeline."""
-        self.initialize_jqassistant_config()
-
-        os.makedirs(self.jqa_raw_outputs_dir, exist_ok=True)
+        os.makedirs(self.jqa.raw_outputs_dir, exist_ok=True)
 
         # 1. Discovery Phase
         discovered_sources = self._run_discovery()
@@ -50,6 +49,7 @@ class JQAssistantAnalyzer(BaseAnalyser):
 
 
         # 3. Environment Customization Phase (Injecting SDKMAN! Java 25.0.1-tem)
+        # TODO: Externalize JDK in package.json for user-defined overrides, to move in installation pipeline later. For now, hardcoded to ensure JDK 25 is used for jQAssistant analysis.
         custom_env = os.environ.copy()
         sdkman_java_home = os.path.expanduser("~/.sdkman/candidates/java/25.0.1-tem")
 
@@ -71,24 +71,16 @@ class JQAssistantAnalyzer(BaseAnalyser):
             info(f"Scan code {scan_return_code}. Activating semantic code relationship fallback parser layers...", component=self.name)
 
 
-    def initialize_jqassistant_config(self):
-        self.jqa_version = self.context.get_vscode_setting("jqassistant", "version")
-        self.jqa_raw_outputs_dir = f"{self.context.raw_outputs_dir}/java"
-        self.jqa_tools_dir = f"{self.context.tools_dir}/java/jqassistant"
-        self.jqa_config_dir = f"{self.jqa_tools_dir}/config"
-        self.jqa_custom_config_path = f"{self.jqa_config_dir}/.jqassistant.yml"
-        self.jqa_exclude_paths_regex = self.context.get_vscode_setting("excludePathsRegex")
-
     def _run_discovery(self) -> dict:
         info("Running dynamic workspace path discovery for jQAssistant...", component=self.name)
-        return discover_workspace_sources(self.context.workspace_root, self.jqa_exclude_paths_regex)
+        return discover_workspace_sources(self.context.workspace_root, self.jqa.exclude_paths_regex)
 
     def _resolve_binary(self) -> str:
         base_cmd = "jqassistant.cmd" if os.name == 'nt' else "jqassistant"
         executable_target = shutil.which(base_cmd) or shutil.which("jqassistant")
 
         if not executable_target:
-            sandbox_bin_root = f"{self.jqa_tools_dir}/jqassistant-{self.jqa_version}"
+            sandbox_bin_root = f"{self.jqa.tools_dir}/jqassistant-{self.jqa.version}"
             local_bin_path = self._find_sandboxed_binary(sandbox_bin_root, base_cmd)
             if local_bin_path and os.path.exists(local_bin_path):
                 executable_target = local_bin_path
@@ -101,7 +93,7 @@ class JQAssistantAnalyzer(BaseAnalyser):
         return executable_target
 
     def _dump_diagnostics(self, executable_target: str, custom_env: dict) -> None:
-        reports_dir = os.path.join(self.jqa_raw_outputs_dir, "computed_configs")
+        reports_dir = os.path.join(self.jqa.raw_outputs_dir, "computed_configs")
         os.makedirs(reports_dir, exist_ok=True)
 
         info(f"Dumping effective jQAssistant configuration and available rules to {reports_dir}...", component=self.name)
@@ -117,7 +109,7 @@ class JQAssistantAnalyzer(BaseAnalyser):
         cmd = [
             executable_target,
             command_action,
-            "-configurationLocations", self.jqa_custom_config_path
+            "-configurationLocations", self.jqa.custom_config_path
         ]
 
         cwd = self.context.workspace_root
@@ -161,23 +153,23 @@ class JQAssistantAnalyzer(BaseAnalyser):
         return scan_return_code
 
     #----------------
-    def _execute_scan(self, executable_target: str, discovered_sources: dict, custom_env: dict) -> int:
-        return self._execute_scan_or_analyze("scan", executable_target, {}, custom_env)
-
-    def _execute_analyze(self, executable_target: str, custom_env: dict) -> int:
-        return self._execute_scan_or_analyze("analyze", executable_target, {}, custom_env)
-
     def _execute_scan_or_analyze(self, cmd, executable_target: str, discovered_sources: dict, custom_env: dict) -> int:
         scan_cmd = [
             executable_target,
             cmd,
-            "-configurationLocations", self.jqa_custom_config_path
+            "-configurationLocations", self.jqa.custom_config_path
         ]
 
         cwd = self.context.workspace_root
 
         self._log_execution_command(scan_cmd, cwd)
         return execute_tracked_command(scan_cmd, f"jqa_{cmd}", cwd=cwd, env=custom_env)
+
+    def _execute_scan(self, executable_target: str, discovered_sources: dict, custom_env: dict) -> int:
+        return self._execute_scan_or_analyze("scan", executable_target, {}, custom_env)
+
+    def _execute_analyze(self, executable_target: str, custom_env: dict) -> int:
+        return self._execute_scan_or_analyze("analyze", executable_target, {}, custom_env)
 
 
     #----------------

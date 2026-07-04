@@ -25,14 +25,14 @@ def build_statistics(neo4j_client, workspace_root: str):
                 {"scope": "Count of Methods", "query": "MATCH (m:Method) RETURN count(m) AS n", "config": []},
                 {"scope": "Count of Fields", "query": "MATCH (f:Field) RETURN count(f) AS n", "config": []},
                 {"scope": "Count of Packages", "query": "MATCH (p:Package) RETURN count(p) AS n", "config": []},
-                {"scope": "Count of SourceFiles (.java)", "query": "MATCH (f:SourceFile) WHERE f.absolute_path ENDS WITH '.java' RETURN count(f) AS n", "config": []}
+                {"scope": "Count of SourceFiles (.java)", "query": "MATCH (f:File) WHERE f.absolute_path ENDS WITH '.java' RETURN count(f) AS n", "config": []}
             ],
             "Java Relationship Metrics": [
                 {"scope": "EXTENDS Relationships", "query": "MATCH ()-[r:EXTENDS]->() RETURN count(r) AS n", "config": []},
                 {"scope": "IMPLEMENTS Relationships", "query": "MATCH ()-[r:IMPLEMENTS]->() RETURN count(r) AS n", "config": []},
                 {"scope": "ANNOTATED_BY Relationships", "query": "MATCH ()-[r:ANNOTATED_BY]->() RETURN count(r) AS n", "config": []},
                 {"scope": "INVOKES Relationships", "query": "MATCH ()-[r:INVOKES]->() RETURN count(r) AS n", "config": []},
-                {"scope": "WITH_SOURCE Relationships", "query": "MATCH ()-[r:WITH_SOURCE]->() RETURN count(r) AS n", "config": []}
+                {"scope": "HAS_SOURCE_FILE Relationships", "query": "MATCH ()-[r:HAS_SOURCE_FILE]->() RETURN count(r) AS n", "config": []}
             ],
             "Spring Stereotype Labels": [
                 {
@@ -153,6 +153,25 @@ def build_statistics(neo4j_client, workspace_root: str):
                 {"scope": "RAG Enrichment Node Entities Count", "query": "MATCH (n:Entity) RETURN count(n) AS n", "config": []},
                 {"scope": "Summary Embeddings Vector Layout Node Count", "query": "MATCH (n) WHERE n.summaryEmbedding IS NOT NULL RETURN count(n) AS n", "config": []},
                 {"scope": "Method Analysis Metadata processing Count", "query": "MATCH (m:Method) WHERE m.code_analysis IS NOT NULL RETURN count(m) AS n", "config": []}
+            ]
+        },
+        "NEO4J db schema": {
+            "Database Metadata": [
+                {
+                    "scope": "Total Distinct Node Labels (Existing concepts)",
+                    "query": "CALL db.labels() YIELD label RETURN count(label) AS n",
+                    "config": []
+                },
+                {
+                    "scope": "Total Distinct Relationship Types (Existing relationship types)",
+                    "query": "CALL db.relationshipTypes() YIELD relationshipType RETURN count(relationshipType) AS n",
+                    "config": []
+                },
+                {
+                    "scope": "Total Distinct Property Keys (Existing property keys)",
+                    "query": "CALL db.propertyKeys() YIELD propertyKey RETURN count(propertyKey) AS n",
+                    "config": []
+                }
             ]
         }
     }

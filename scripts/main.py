@@ -9,11 +9,11 @@ from core.vscode_settings_4_backend import vsCodeSettings
 
 from dataclasses import dataclass
 from core.utils import info, success, error, configure_logger, cleanup_orphan_pids
-from core.ui_extractor import UIExtractor
+from core.neo4j_extractor import UIExtractor
 from install.runner import run_installation_pipeline
 from initialization.runner import run_initialization_pipeline
 from analyser.runner import run_analysis_pipeline
-from analyser.tools.neo4j.neo4j_client import Neo4jClient
+from core.neo4j_extractor import run_ui_extractor_pipeline
 
 
 def main():
@@ -36,10 +36,7 @@ def main():
         run_analysis_pipeline()
 
         # PHASE 4: Compact UI Render Payload Packager
-        #neo4j_client = Neo4jClient(uri=neo4j_config["uri"], auth=(neo4j_config["username"], neo4j_config["password"]))
-        #extractor = UIExtractor(workspace_root, neo4j_client)
-        #extractor.extract_and_save(manifest_data["files"])
-        #neo4j_client.close()
+        run_ui_extractor_pipeline()
 
         success("🎉 Core analytics engine sequence completed. Layout files generated successfully.", component="Main")
 

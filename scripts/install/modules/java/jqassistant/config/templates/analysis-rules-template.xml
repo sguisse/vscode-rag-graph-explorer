@@ -32,12 +32,21 @@
     </concept>
 
     <concept id="{{PROJECT_NAME}}:MarkSpringRepository">
-        <description>Labels every class annotated with @Repository as :Repository</description>
+        <description>Labels classes or interfaces as :Repository via @Repository annotation OR Spring Data interface inheritance</description>
         <cypher><![CDATA[
-            MATCH (c:Class)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(t:Type)
-            WHERE t.fqn = 'org.springframework.stereotype.Repository'
-            SET c:Repository
-            RETURN count(c) AS MarkedRepositories
+            MATCH (t:Type)
+            // Condition 1: Présence explicite de l'annotation
+            WHERE EXISTS {
+                MATCH (t)-[:ANNOTATED_BY]->()-[:OF_TYPE]->(:Type {fqn: 'org.springframework.stereotype.Repository'})
+            }
+            // Condition 2: Héritage d'une interface de la famille Spring Data Repository
+            OR EXISTS {
+                MATCH (t)-[:IMPLEMENTS|EXTENDS*]->(super:Type)
+                WHERE super.fqn STARTS WITH 'org.springframework.data.'
+                  AND super.name ENDS WITH 'Repository'
+            }
+            SET t:Repository
+            RETURN count(DISTINCT t) AS MarkedRepositories
         ]]></cypher>
     </concept>
 
@@ -97,13 +106,13 @@
         ]]></cypher>
     </concept>
 
-    <concept id="{{PROJECT_NAME}}:MarkExternalApiCallLayer">
+    <concept id="{{PROJECT_NAME}}:MarkApiLayer">
         <description>Labels classes interacting with or exposing external systems/clients</description>
         <cypher><![CDATA[
             MATCH (p:Package)-[:CONTAINS*]->(c:Class)
             WHERE p.fqn CONTAINS '.client' OR p.fqn CONTAINS '.external' OR p.fqn CONTAINS '.integration'
-            SET c:ExternalApiCallLayer
-            RETURN count(c) AS MarkedExternalApiClasses
+            SET c:ApiLayer
+            RETURN count(c) AS MarkedApiLayerClasses
         ]]></cypher>
     </concept>
 
@@ -137,11 +146,21 @@
         ]]></cypher>
     </concept>
 
+    <concept id="{{PROJECT_NAME}}:MarkInfrastructure">
+        <description>Labels driving/primary infrastructure configurations and entry points</description>
+        <cypher><![CDATA[
+            MATCH (c:Class)
+            WHERE c:Controller OR c.fqn CONTAINS '.adapter' OR c.fqn CONTAINS '.infrastructure'
+            SET c:Infrastructure
+            RETURN count(c) AS MarkedInfrastructure
+        ]]></cypher>
+    </concept>
+
     <concept id="{{PROJECT_NAME}}:MarkInfrastructurePrimary">
         <description>Labels driving/primary infrastructure configurations and entry points</description>
         <cypher><![CDATA[
             MATCH (c:Class)
-            WHERE c:Controller OR c.fqn CONTAINS '.adapter.in' OR c.fqn CONTAINS '.infrastructure.web'
+            WHERE c:Controller OR c:Repository OR c.fqn CONTAINS '.adapter.in' OR c.fqn CONTAINS '.infrastructure.web'
             SET c:InfrastructurePrimary
             RETURN count(c) AS MarkedPrimaryInfra
         ]]></cypher>
@@ -510,10 +529,11 @@
         <includeConcept refId="{{PROJECT_NAME}}:MarkLayeredArchitecture"/>
         <includeConcept refId="{{PROJECT_NAME}}:MarkHexagonalArchitecture"/>
         <includeConcept refId="{{PROJECT_NAME}}:MarkDomainLayer"/>
-        <includeConcept refId="{{PROJECT_NAME}}:MarkExternalApiCallLayer"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkApiLayer"/>
         <includeConcept refId="{{PROJECT_NAME}}:MarkAdapter"/>
         <includeConcept refId="{{PROJECT_NAME}}:MarkPortIn"/>
         <includeConcept refId="{{PROJECT_NAME}}:MarkPortOut"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkInfrastructure"/>
         <includeConcept refId="{{PROJECT_NAME}}:MarkInfrastructurePrimary"/>
         <includeConcept refId="{{PROJECT_NAME}}:MarkInfrastructureSecondary"/>
         <includeConcept refId="{{PROJECT_NAME}}:MarkServiceAsUseCases"/>

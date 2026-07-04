@@ -4,9 +4,14 @@ import subprocess
 from install.base import BaseCheckModule
 from install.registry import InstallerRegistry
 from install.modules.system.neo4j.install import NEO4J_MODULE_NAME
+from install.modules.system.neo4j.context import Neo4jContext # <-- L'import de votre nouveau contexte
 
 @InstallerRegistry.register_checker
 class SystemNeo4jChecker(BaseCheckModule):
+    def __init__(self, context):
+        super().__init__(context)
+        self.neo4j_ctx = Neo4jContext(context)
+
     @property
     def name(self) -> str: return NEO4J_MODULE_NAME
 
@@ -25,7 +30,8 @@ class SystemNeo4jChecker(BaseCheckModule):
     def check_neo4j_db_is_running(self):
         self.steps_count += 1
         neo4j_running = False
-        if os.name == 'nt':
+
+        if self.context.is_windows:
             check_process_cmd = ["tasklist", "/FI", "IMAGENAME eq neo4j.bat"]
             result = subprocess.run(check_process_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             if "neo4j.bat" in result.stdout:
@@ -47,19 +53,14 @@ class SystemNeo4jChecker(BaseCheckModule):
 
     def check_local_sandboxed_binaries(self):
         self.steps_count += 1
-        version = self.context.get_vscode_setting("neo4j", "version", "5.26.0")
 
-        target_folder = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/system/neo4j/neo4j-community-{version}"
-        bin_dir = os.path.join(target_folder, "bin")
-        admin_executable = os.path.join(bin_dir, "neo4j-admin.bat" if os.name == 'nt' else "neo4j-admin")
-
-        if os.path.exists(admin_executable):
-            self.status["neo4j_local_installation"] = {"status": "✅", "location": target_folder}
+        # Plus besoin de reconstruire les chemins, ils sont servis par le contexte
+        if os.path.exists(self.neo4j_ctx.admin_cmd):
+            self.status["neo4j_local_installation"] = {"status": "✅", "location": self.neo4j_ctx.target_folder}
 
             self.steps_count += 1
-            plugins_dir = os.path.join(target_folder, "plugins")
-            has_apoc = any("apoc" in file and file.endswith(".jar") for file in os.listdir(plugins_dir)) if os.path.exists(plugins_dir) else False
-            has_gds = any("graph-data-science" in file and file.endswith(".jar") for file in os.listdir(plugins_dir)) if os.path.exists(plugins_dir) else False
+            has_apoc = any("apoc" in file and file.endswith(".jar") for file in os.listdir(self.neo4j_ctx.plugins_dir)) if os.path.exists(self.neo4j_ctx.plugins_dir) else False
+            has_gds = any("graph-data-science" in file and file.endswith(".jar") for file in os.listdir(self.neo4j_ctx.plugins_dir)) if os.path.exists(self.neo4j_ctx.plugins_dir) else False
 
             if has_apoc and has_gds:
                 self.status["neo4j_plugins_compliance"] = {"status": "✅", "message": "APOC Core and GDS extensions detected inside sandbox context."}
@@ -80,20 +81,18 @@ class SystemNeo4jChecker(BaseCheckModule):
         """Queries the database to assert the validation token. Does NOT raise an error if missing."""
         self.steps_count += 1
 
-        user = self.context.get_vscode_setting("neo4j", "user", "neo4j")
-        password = self.context.get_vscode_setting("neo4j", "password", "password")
-        bolt_port = self.context.get_vscode_setting("neo4j", "port.bolt", "7687")
-        host = self.context.get_vscode_setting("neo4j", "host", "localhost")
-        shell_cmd = self.get_cypher_shell_command()
-
-        if not os.path.exists(shell_cmd):
+        if not os.path.exists(self.neo4j_ctx.shell_cmd):
             self.status["remote_database_token"] = {"status": "❌", "message": "cypher-shell script missing from server bin structures."}
             self.ko_count += 1
             return
 
         try:
             check_query = "MATCH (m:SystemMetadata {id: 'global_config'}) RETURN m.`Remote-Database` AS status;"
-            res = subprocess.run([shell_cmd, "-a", f"bolt://{host}:{bolt_port}", "-u", user, "-p", password, check_query], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
+
+            res = subprocess.run(
+                [self.neo4j_ctx.shell_cmd, "-a", self.neo4j_ctx.bolt_uri, "-u", self.neo4j_ctx.user, "-p", self.neo4j_ctx.password, check_query],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5
+            )
             if "TRUE" in res.stdout:
                 self.status["remote_database_token"] = {"status": "✅", "message": "Remote-Database identifier token confirmed active."}
             else:
@@ -102,13 +101,6 @@ class SystemNeo4jChecker(BaseCheckModule):
         except Exception:
             self.status["remote_database_token"] = {"status": "❌", "message": "Database sandbox container cluster currently unreachable or uninitialized."}
             self.ko_count += 1
-
-    def get_cypher_shell_command(self):
-        version = self.context.get_vscode_setting("neo4j", "version", "5.26.0")
-        target_folder = f"{self.context.workspace_root}/.graph-rag-explorer/target/tools/system/neo4j/neo4j-community-{version}"
-        shell_cmd = os.path.join(target_folder, "bin", "cypher-shell.bat" if os.name == 'nt' else "cypher-shell")
-        return shell_cmd
-
 
     def execute_all_checks(self) -> dict:
         self.steps_count = 0
