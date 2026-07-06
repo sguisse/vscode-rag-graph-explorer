@@ -19,7 +19,7 @@ export function useTreeData(
     const { parentMap, childrenMap } = useMemo(() => {
         const pMap: { [key: string]: string } = {};
         const cMap: { [key: string]: string[] } = {};
-        edges.forEach(e => {
+        (edges || []).forEach(e => {
             if (e.type === 'contains' || e.type === 'relation') {
                 pMap[e.to] = e.from;
                 if (!cMap[e.from]) cMap[e.from] = [];
@@ -33,14 +33,14 @@ export function useTreeData(
         const incoming = new Map<string, Set<string>>();
         const outgoing = new Map<string, Set<string>>();
 
-        nodes.forEach(n => {
+        (nodes || []).forEach(n => {
             if (n.group === 'file' || n.group === 'file_unreferenced') {
                 incoming.set(n.id, new Set());
                 outgoing.set(n.id, new Set());
             }
         });
 
-        edges.forEach(e => {
+        (edges || []).forEach(e => {
             if (incoming.has(e.to) && outgoing.has(e.from)) {
                 outgoing.get(e.from)?.add(e.to);
                 incoming.get(e.to)?.add(e.from);
@@ -54,14 +54,14 @@ export function useTreeData(
 
     const strictlyVisibleIds = useMemo(() => {
         const visible = new Set<string>();
-        nodes.forEach(n => {
+        (nodes || []).forEach(n => {
             if (!applyOnTree) {
                 visible.add(n.id);
                 return;
             }
 
             if (treeSelectionDep && !treeSelectionDep.has(n.id)) return;
-            if (selectedTypes.length > 0 && !selectedTypes.includes(n.group)) return;
+            if (selectedTypes && selectedTypes.length > 0 && !selectedTypes.includes(n.group)) return;
             if (!searchText) {
                 visible.add(n.id);
                 return;
@@ -107,6 +107,7 @@ export function useTreeData(
     }, [strictlyVisibleIds, parentMap]);
 
     const treeData = useMemo((): TreeElement[] => {
+        if (!nodes || nodes.length === 0) return [];
         const visibleNodes = nodes.filter(n => hierarchicallyVisibleIds.has(n.id));
         const sortNodes = (arr: GraphNode[]) => arr.sort((a, b) => a.label.localeCompare(b.label));
 
@@ -117,19 +118,21 @@ export function useTreeData(
         const fileNodes = nodes.filter(n => (n.group === 'file' || n.group === 'file_unreferenced') && n.source_file);
         if (fileNodes.length > 0) {
             const splitPaths = fileNodes.map(n => n.source_file!.split('/').filter(Boolean));
-            for (let i = 0; i < splitPaths[0].length; i++) {
-                const part = splitPaths[0][i];
-                if (splitPaths.every(p => p[i] === part)) {
-                    commonPrefix.push(part);
-                } else {
-                    break;
+            if (splitPaths.length > 0 && splitPaths[0]) {
+                for (let i = 0; i < splitPaths[0].length; i++) {
+                    const part = splitPaths[0][i];
+                    if (splitPaths.every(p => p && p[i] === part)) {
+                        commonPrefix.push(part);
+                    } else {
+                        break;
+                    }
                 }
             }
             workspaceName = commonPrefix.length > 0 ? commonPrefix[commonPrefix.length - 1] : 'Workspace';
 
             const firstPath = fileNodes[0].source_file as string;
             commonPrefixPath = commonPrefix.join('/');
-            if (firstPath.startsWith('/')) {
+            if (firstPath && firstPath.startsWith('/')) {
                 commonPrefixPath = '/' + commonPrefixPath;
             }
         }
@@ -188,8 +191,10 @@ export function useTreeData(
 
         let result: TreeElement[] = [];
 
-        if (treeGrouping === 'root') {
-            result = sortedRoots.map(rn => buildNodeSubtree(rn));
+        if (treeGrouping === 'root' || sortedRoots.length === 0) {
+            // Fallback strategy: If there are no structured parent-child relationship lines, map all visible nodes as flat items
+            const targetRoots = sortedRoots.length > 0 ? sortedRoots : visibleNodes;
+            result = sortNodes(targetRoots).map(rn => buildNodeSubtree(rn));
         } else if (treeGrouping === 'extension') {
             const extGroups: { [key: string]: GraphNode[] } = {};
             const nonExtRoots: GraphNode[] = [];

@@ -1,45 +1,98 @@
-you are an expert in NEO4J, and JQAssitant
-provide a rules.xml, which allow to do request to identify impact of a modification on File, method, class,attribute name change
-with depth impact on parent and children
-relation between class
-relation between packages
-identify controller
-indentify RestController
-identify Service
-identify Repository
-identify DB Entity
-idendity domain Object
-identify if we are in HExagonal Archi
-identify if we are in Layered Archi
-MarkExternalApiCallLayer
-MarkDomainLayer
-MarkPortOut
-MarkPortIn
-MarkAdapter
-MarkResilienceRetry
-MarkResilienceCircuitBreaker
-MarkResilienceRateLimiter
-MarkResilienceBulkhead
-MarkResilienceTimeout
-MarkResilienceFallback
-MarkCaching
-MarkMultithreading
-MarkInfrastructurePrimary
-MarkInfrastructureSecondary
-MarkServiceAsUseCases
-MarkPArtOfWorkflow
-MarkUsedInBpmn
+MATCH (f:File)<-[:HAS_SOURCE_FILE]-(c:Class)
+RETURN f, c
+LIMIT 3
 
-Also all other rules to identify the impact of a modification on the codebase, including but not limited to:
-- Identify changes in method signatures (parameters, return types)
-- Identify changes in class hierarchies (inheritance, interfaces)
-- Identify changes in field types and visibility
-- Identify changes in annotations
-- Identify changes in package structure
-- Identify changes in dependencies
+f,c
+(:File {fileName: /com/dkt/smartassessment/assessmentservice/domain/assessmentitem/manager/ActionManager.java}),"(:Type:File:Java:ByteCode:Class:HierarchyImpactTraceable:AnnotationImpactTraceable:HasSuperType:DeadCodeCandidate:DomainLayer:AssociatedElement:DomainObject {valid: true, sourceFileName: ActionManager.java, fqn: com.dkt.smartassessment.assessmentservice.domain.assessmentitem.manager.ActionManager, fileName: /com/dkt/smartassessment/assessmentservice/domain/assessmentitem/manager/ActionManager.class, visibility: public, name: ActionManager, byteCodeVersion: 69})"
+(:File {fileName: /com/dkt/smartassessment/assessmentservice/domain/assessmentitem/persistence/model/Action.java}),"(:Type:File:Java:ByteCode:Class:DbEntity:HierarchyImpactTraceable:AnnotationImpactTraceable:HasSuperType:DeadCodeCandidate:DomainLayer {valid: true, sourceFileName: Action.java, fqn: com.dkt.smartassessment.assessmentservice.domain.assessmentitem.persistence.model.Action, fileName: /com/dkt/smartassessment/assessmentservice/domain/assessmentitem/persistence/model/Action.class, visibility: public, name: Action, byteCodeVersion: 69})"
+(:File {fileName: /com/dkt/smartassessment/assessmentservice/domain/assessment/persistence/model/Assessment.java}),"(:Type:File:Java:ByteCode:Class:DbEntity:HierarchyImpactTraceable:AnnotationImpactTraceable:HasSuperType:DeadCodeCandidate:DomainLayer:AssociatedElement {valid: true, sourceFileName: Assessment.java, fqn: com.dkt.smartassessment.assessmentservice.domain.assessment.persistence.model.Assessment, fileName: /com/dkt/smartassessment/assessmentservice/domain/assessment/persistence/model/Assessment.class, visibility: public, name: Assessment, byteCodeVersion: 69})"
 
-add also Relationships between classes, methods, and fields, including but not limited to:
-- Inheritance relationships (extends, implements)
-- Composition relationships (has-a)
-- Aggregation relationships (part-of)
-- Association relationships (uses)
+
+
+MATCH (c:Class)-[:DECLARES]->(m1:Method)-[r:INVOKES]->(m2:Method)
+RETURN c.name, m1, r, m2
+LIMIT 3
+
+c.name,m1,r,m2
+ActionManager,"(:Java:ByteCode:Member:Method:ImpactTraceable:AccessorImpactTraceable {firstLineNumber: 24, visibility: public, signature: java.util.Map countByAssessmentItemIds(java.util.List), name: countByAssessmentItemIds, lastLineNumber: 26, effectiveLineCount: 3, cyclomaticComplexity: 1})",[:INVOKES {lineNumber: 24}],"(:Java:ByteCode:Member:Method:ImpactTraceable:AnnotationImpactTraceable {visibility: public, signature: java.util.List countByAssessmentItemIds(java.util.List), name: countByAssessmentItemIds, abstract: true, cyclomaticComplexity: 0})"
+ActionManager,"(:Java:ByteCode:Member:Method:ImpactTraceable:AccessorImpactTraceable {firstLineNumber: 24, visibility: public, signature: java.util.Map countByAssessmentItemIds(java.util.List), name: countByAssessmentItemIds, lastLineNumber: 26, effectiveLineCount: 3, cyclomaticComplexity: 1})",[:INVOKES {lineNumber: 26}],"(:Java:ByteCode:Member:Method:ImpactTraceable {signature: java.util.stream.Collector toMap(java.util.function.Function,java.util.function.Function)})"
+ActionManager,"(:Java:ByteCode:Member:Method:ImpactTraceable:AccessorImpactTraceable {firstLineNumber: 24, visibility: public, signature: java.util.Map countByAssessmentItemIds(java.util.List), name: countByAssessmentItemIds, lastLineNumber: 26, effectiveLineCount: 3, cyclomaticComplexity: 1})",[:INVOKES {lineNumber: 26}],(:Java:ByteCode:Member:Method:ImpactTraceable {signature: java.lang.Object collect(java.util.stream.Collector)})
+
+
+
+
+MATCH (n)
+UNWIND labels(n) AS label
+RETURN label, count(*) AS count
+ORDER BY count DESC
+
+label,count
+Java,29693
+ByteCode,29489
+Value,10444
+Member,10443
+Method,7549
+Annotation,6529
+AnnotationImpactTraceable,5623
+Parameter,5158
+AccessorImpactTraceable,4958
+ImpactTraceable,4474
+Bound,3978
+Field,2894
+FieldImpactTraceable,2751
+Primitive,2090
+File,1742
+ParameterizedType,1249
+Type,829
+Constructor,662
+Yaml,631
+Json,539
+Scalar,535
+Class,505
+HierarchyImpactTraceable,478
+Key,471
+HasSuperType,451
+Property,392
+Lambda,372
+Directory,369
+Enum,360
+DeadCodeCandidate,353
+Array,333
+Simple,289
+AssociatedElement,244
+Package,196
+AggregationField,128
+DomainLayer,87
+Map,82
+DomainObject,68
+Object,60
+HexagonalArchitecturePackage,58
+jQAssistant,57
+Rule,56
+Concept,55
+Inner,51
+HasSubType,50
+Interface,48
+Item,47
+Service,36
+Repository,22
+Throwable,21
+Controller,21
+RestController,20
+DbEntity,19
+LayeredArchitecturePackage,19
+Infrastructure,18
+TypeVariable,15
+Sequence,10
+Last,10
+First,10
+GenericDeclaration,8
+Properties,7
+WildcardType,6
+GenericArrayType,5
+AsynchronousExecution,3
+Document,2
+Artifact,1
+Analyze,1
+Task,1
+Group,1

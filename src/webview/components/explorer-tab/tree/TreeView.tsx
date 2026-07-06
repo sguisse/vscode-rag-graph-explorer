@@ -38,8 +38,9 @@ export const TreeView: React.FC<TreeViewProps> = ({
         return elements.map(el => {
             if (el.isGroup) {
                 const isGroupOpen = !collapsedIds.has(el.id);
-                const isChecked = el.allLeafIds.length > 0 && el.allLeafIds.every(id => exactSelectedIds.has(id));
-                const isIndeterminate = !isChecked && el.allLeafIds.some(id => exactSelectedIds.has(id));
+                const safeLeafIds = el.allLeafIds || [];
+                const isChecked = safeLeafIds.length > 0 && safeLeafIds.every(id => exactSelectedIds.has(id));
+                const isIndeterminate = !isChecked && safeLeafIds.some(id => exactSelectedIds.has(id));
 
                 const tooltipMessage = el.id === 'workspace-root'
                     ? (el.folderPath ? `Workspace Absolute Context: ${el.folderPath}` : 'Workspace')
@@ -70,13 +71,13 @@ export const TreeView: React.FC<TreeViewProps> = ({
                                 type="checkbox"
                                 className="flex-shrink-0 w-3.5 h-3.5 accent-blue-500 cursor-pointer"
                                 checked={isChecked}
-                                ref={el => { if (el) el.indeterminate = isIndeterminate; }}
+                                ref={elem => { if (elem) elem.indeterminate = isIndeterminate; }}
                                 onChange={(e) => {
                                     const checked = e.target.checked;
                                     if (typeof (window as any).logToTerminal === 'function') {
-                                        (window as any).logToTerminal('debug', `🌳 TreeView Group Checkbox Changed: ID=[${el.id}] | TargetState=${checked} | Total Children: ${el.allLeafIds.length}`);
+                                        (window as any).logToTerminal('debug', `🌳 TreeView Group Checkbox Changed: ID=[${el.id}] | TargetState=${checked} | Total Children: ${safeLeafIds.length}`);
                                     }
-                                    setNodesSelectionState(el.allLeafIds, checked);
+                                    setNodesSelectionState(safeLeafIds, checked);
                                 }}
                                 onClick={(e) => e.stopPropagation()}
                             />
@@ -208,10 +209,10 @@ export const TreeView: React.FC<TreeViewProps> = ({
             </div>
 
             <div className="flex-1 space-y-0 bg-[var(--vscode-sideBar-background)] inner-shadow p-3 overflow-y-auto">
-                {treeData.length > 0 ? renderTreeElements(treeData) : (
+                {treeData && treeData.length > 0 && treeData[0].children && treeData[0].children.length > 0 ? renderTreeElements(treeData) : (
                     <div className="flex flex-col justify-center items-center opacity-60 py-12">
                         <span className="mb-2 text-3xl codicon-list-tree codicon"></span>
-                        <span className="text-[var(--vscode-descriptionForeground)] text-xs italic">No visible elements.</span>
+                        <span className="text-[var(--vscode-descriptionForeground)] text-xs italic">No visible elements loaded. Double-check your active database connection or load a valid graph.json file.</span>
                     </div>
                 )}
             </div>

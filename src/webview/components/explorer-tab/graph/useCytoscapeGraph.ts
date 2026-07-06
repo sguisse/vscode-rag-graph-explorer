@@ -45,19 +45,29 @@ export function useCytoscapeGraph({
     useEffect(() => {
         if (!containerRef.current) return;
 
-        const fileNodes = nodes.filter(n => n.group === 'file' || n.group === 'file_unreferenced');
+        // Core adjustment: render Class topology natively instead of forcing high-level file aggregation blocks
+        const classNodes = nodes.filter(n => n.group === 'class');
+        const classIds = new Set(classNodes.map(n => n.id));
         const cyElements: any[] = [];
 
-        fileNodes.forEach(f => {
+        classNodes.forEach(c => {
             cyElements.push({
-                data: { id: f.id, label: f.label, group: f.group }
+                data: { id: c.id, label: c.label, group: c.group }
             });
         });
 
+        // Loop through the precise filtered edge collection mapped straight out of GraphService
         fileLevelEdges.forEach((fe, index) => {
-            cyElements.push({
-                data: { id: `edge-${index}`, source: fe.from, target: fe.to, type: Array.from(fe.types).join(', ') }
-            });
+            if (classIds.has(fe.from) && classIds.has(fe.to)) {
+                cyElements.push({
+                    data: {
+                        id: `edge-${index}`,
+                        source: fe.from,
+                        target: fe.to,
+                        type: fe.type
+                    }
+                });
+            }
         });
 
         const cy = cytoscape({
@@ -83,12 +93,10 @@ export function useCytoscapeGraph({
                 if (cyRef.current) {
                     const targetNode = cyRef.current.$(`[id = "${nodeId}"]`);
                     if (targetNode.length) {
-                        // Core camera repositioning workflow
                         cyRef.current.animate({
                             center: { eles: targetNode },
                             zoom: options?.scale || 1.1,
                             duration: options?.animation?.duration || 450,
-                            // High visibility flashing pipeline triggered only when camera translation is fully done
                             complete: () => {
                                 const targetBg = targetNode.style('background-color');
                                 const targetBorderColor = targetNode.style('border-color');
@@ -158,58 +166,36 @@ export function useCytoscapeGraph({
                 const id = node.id();
                 let isVisible = true;
 
-                if (applyOnGraph) {
-                    const relatedNodes = nodes.filter(n => nodeToFileIdMap.get(n.id) === id);
-                    const filteredRelated = selectedTypes.length > 0 ? relatedNodes.filter(rn => selectedTypes.includes(rn.group)) : relatedNodes;
-                    if (filteredRelated.length === 0) isVisible = false;
-                    else if (searchText) {
-                        const queryStr = ignoreCase ? searchText.toLowerCase() : searchText;
-                        const matchesSearch = filteredRelated.some(rn => {
-                            const labelStr = ignoreCase ? rn.label.toLowerCase() : rn.label;
-                            const pathStr = rn.source_file ? (ignoreCase ? rn.source_file.toLowerCase() : rn.source_file) : '';
-
-                            if (isRegexEnabled) {
-                                try {
-                                    return new RegExp(queryStr).test(labelStr) || new RegExp(queryStr).test(pathStr);
-                                } catch { return true; }
-                            } else {
-                                if (searchMode === 'exact') {
-                                    return labelStr === queryStr || pathStr === queryStr;
-                                } else if (searchMode === 'starts') {
-                                    return labelStr.startsWith(queryStr) || pathStr.startsWith(queryStr);
-                                } else {
-                                    return labelStr.includes(queryStr) || pathStr.includes(queryStr);
-                                }
-                            }
-                        });
-                        if (!matchesSearch) isVisible = false;
-                    }
+                if (applyOnGraph && searchText) {
+                    const queryStr = ignoreCase ? searchText.toLowerCase() : searchText;
+                    const labelStr = ignoreCase ? node.data('label').toLowerCase() : node.data('label');
+                    if (!labelStr.includes(queryStr)) isVisible = false;
                 }
 
-                const isContextuallySelected = effectiveFileIds.has(id);
                 const isExactlySelected = exactSelectedIds.has(id);
+                const isContextuallySelected = effectiveFileIds.has(id);
 
                 let opacity = 1;
-                if (effectiveFileIds.size > 0) {
-                    opacity = isContextuallySelected ? 1 : 0.15;
+                if (exactSelectedIds.size > 0) {
+                    opacity = (isExactlySelected || isContextuallySelected) ? 1 : 0.15;
                 }
 
                 node.style({
                     'display': isVisible ? 'element' : 'none',
                     'opacity': opacity,
-                    'border-width': isExactlySelected ? 4 : (isContextuallySelected ? 2.5 : (node.data('group') === 'file_unreferenced' ? 2.5 : 2)),
-                    'border-color': isExactlySelected ? '#007acc' : (isContextuallySelected ? '#3b82f6' : (node.data('group') === 'file_unreferenced' ? '#000000' : '#1177bb')),
-                    'background-color': isExactlySelected ? '#1f8ad2' : (node.data('group') === 'file_unreferenced' ? '#3a1e22' : '#0e639c')
+                    'border-width': isExactlySelected ? 4 : 2,
+                    'border-color': isExactlySelected ? '#007acc' : '#1177bb',
+                    'background-color': isExactlySelected ? '#1f8ad2' : '#0e639c'
                 });
             });
 
             cyRef.current!.edges().forEach(edge => {
                 const sourceId = edge.source().id();
                 const targetId = edge.target().id();
-                const isHighlighted = effectiveFileIds.has(sourceId) && effectiveFileIds.has(targetId);
+                const isHighlighted = exactSelectedIds.has(sourceId) || exactSelectedIds.has(targetId);
 
                 let opacity = 0.65;
-                if (effectiveFileIds.size > 0) {
+                if (exactSelectedIds.size > 0) {
                     opacity = isHighlighted ? 1 : 0.05;
                 }
 

@@ -36,34 +36,20 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
         }
     }, [config]);
 
+    // Re-map entity lookup bounds to classes exclusively
     const nodeToFileIdMap = useMemo(() => {
         const map = new Map<string, string>();
-        const fileNodes = nodes.filter(n => n.group === 'file' || n.group === 'file_unreferenced');
-        fileNodes.forEach(f => map.set(f.id, f.id));
-        nodes.forEach(n => {
-            if (n.group !== 'file' && n.group !== 'file_unreferenced' && n.source_file) {
-                const matchingFile = fileNodes.find(f => f.source_file === n.source_file || f.id === n.source_file);
-                if (matchingFile) map.set(n.id, matchingFile.id);
-            }
-        });
+        (nodes || []).filter(n => n.group === 'class').forEach(c => map.set(c.id, c.id));
         return map;
     }, [nodes]);
 
     const fileLevelEdges = useMemo(() => {
-        const fileEdgesMap = new Map<string, { from: string; to: string; types: Set<string> }>();
-        edges.forEach(e => {
-            const fromFileId = nodeToFileIdMap.get(e.from);
-            const toFileId = nodeToFileIdMap.get(e.to);
-            if (fromFileId && toFileId && fromFileId !== toFileId) {
-                const key = `${fromFileId}->${toFileId}`;
-                if (!fileEdgesMap.has(key)) {
-                    fileEdgesMap.set(key, { from: fromFileId, to: toFileId, types: new Set() });
-                }
-                fileEdgesMap.get(key)!.types.add(e.type);
-            }
-        });
-        return Array.from(fileEdgesMap.values());
-    }, [edges, nodeToFileIdMap]);
+        return (edges || []).map(e => ({
+            from: e.from,
+            to: e.to,
+            types: new Set([e.type])
+        }));
+    }, [edges]);
 
     const {
         exactSelectedIds,
