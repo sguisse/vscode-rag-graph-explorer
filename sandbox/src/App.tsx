@@ -3,7 +3,7 @@ import {
   Network, Search, Download, Upload, Moon, Sun, RotateCcw, EyeOff, Eye,
   ChevronRight, ChevronLeft, LayoutDashboard, FolderTree, Scale, Terminal,
   History, HelpCircle, FileJson, Server, Database, ShieldAlert, Play,
-  Minus, Plus, Focus, X, CheckCircle2, XCircle, CircleArrowRight,
+  Minus, Plus, Focus, X, CheckCircle2, XCircle, CircleArrowRight, File, Folder,
   Shrink, Maximize, Minimize, Menu, Settings
 } from 'lucide-react';
 import { Button } from './components/ui/button';
@@ -652,15 +652,15 @@ export default function App() {
                 className="relative flex flex-col bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 border-b w-full shrink-0"
               >
                 <div id="ctn-app-workspace-top-title-bar" className="flex justify-between items-center bg-zinc-100 dark:bg-zinc-900 px-3 border-zinc-200 dark:border-zinc-800/50 border-b h-8 font-semibold text-[11px] text-zinc-500 uppercase tracking-wider shrink-0">
-                  <div id="ctn-app-workspace-top-title-bar-left">Selected files</div>
+                  <div id="ctn-app-workspace-top-title-bar-left">Selected paths</div>
                   <div id="ctn-app-workspace-top-title-bar-center" className="flex-1"></div>
                 </div>
 
-                <div id="ctn-app-workspace-top-content" className="flex-1 space-y-2 p-3 w-full overflow-y-auto text-xs">
-                  <ul id="files-list" className="space-y-2 text-zinc-600 dark:text-zinc-400">
-                    <li className="flex items-center gap-2"><CircleArrowRight size={14} /> <span>zz-tmp/temp-01.txt</span></li>
-                    <li className="flex items-center gap-2"><CircleArrowRight size={14} /> <span>zz-tmp/temp-02.txt</span></li>
-                    <li className="flex items-center gap-2"><CircleArrowRight size={14} /> <span>zz-tmp/temp-03.txt</span></li>
+                <div id="ctn-app-workspace-top-content" className="flex-1 space-y-2 p-1 w-full overflow-y-auto text-xs">
+                  <ul id="paths-list" className="space-y-1 text-zinc-600 dark:text-zinc-400">
+                    <li className="flex items-center gap-2"><Folder size={14} /> <span>workspace/src/main/java</span></li>
+                    <li className="flex items-center gap-2"><File size={14} /> <span>workspace/src/main/resources/application.properties</span></li>
+                    <li className="flex items-center gap-2"><Folder size={14} /> <span>workspace//src/main/resources/templates</span></li>
                   </ul>
                 </div>
 
