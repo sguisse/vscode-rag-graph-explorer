@@ -42,11 +42,11 @@
 
   /* Success - High Contrast Forest Mint */
   --success: oklch(0.95 0.04 145);
-  --success-foreground: oklch(0.35 0.14 145);
+  --success-foreground: oklch(56.929% 0.19252 142.534);
 
   /* Error/Destructive - Vivid Deep Crimson */
-  --destructive: oklch(0.94 0.05 25);
-  --destructive-foreground: oklch(0.45 0.19 25);
+  --destructive: oklch(72.511% 0.13565 30.077);
+  --destructive-foreground: oklch(44.463% 0.15275 20.104 / 0.769);
 
   /* Warning - Deep Amber/Bronze (No longer invisible on white) */
   --warning: oklch(0.96 0.05 75);
@@ -103,7 +103,7 @@
   --success-foreground: oklch(0.86 0.14 145);
 
   /* Error/Destructive - Punchy Coral Red (Fixed Missing Var) */
-  --destructive: oklch(0.24 0.06 25);
+  --destructive: oklch(49.319% 0.1778 28.578);
   --destructive-foreground: oklch(0.65 0.21 25);
 
   /* Warning - Vivid Gold Warning */

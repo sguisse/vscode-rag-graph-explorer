@@ -177,12 +177,12 @@ export default function App() {
   const [sidebarLeftMode, setSidebarLeftMode] = useState('normal');
 
   // Visibility states
-  const [isCtnAppWorkspaceVisible, setIsCtnAppWorkspaceVisible] = useState(true);
-  const [isCtnAppWorkspaceTopVisible, setIsCtnAppWorkspaceTopVisible] = useState(true);
-  const [isCtnAppWorkspaceLeftVisible, setIsCtnAppWorkspaceLeftVisible] = useState(true);
-  const [isCtnAppWorkspaceCenterVisible, setIsCtnAppWorkspaceCenterVisible] = useState(true);
-  const [isCtnAppWorkspaceRightVisible, setIsCtnAppWorkspaceRightVisible] = useState(true);
-  const [isCtnAppWorkspaceBottomVisible, setIsCtnAppWorkspaceBottomVisible] = useState(true);
+  const [isCtnWorkspaceVisible, setIsCtnWorkspaceVisible] = useState(true);
+  const [isCtnWorkspaceTopVisible, setIsCtnWorkspaceTopVisible] = useState(true);
+  const [isCtnWorkspaceLeftVisible, setIsCtnWorkspaceLeftVisible] = useState(true);
+  const [isCtnWorkspaceCenterVisible, setIsCtnWorkspaceCenterVisible] = useState(true);
+  const [isCtnWorkspaceRightVisible, setIsCtnWorkspaceRightVisible] = useState(true);
+  const [isCtnWorkspaceBottomVisible, setIsCtnWorkspaceBottomVisible] = useState(true);
 
   const [isSidebarRightVisible, setIsSidebarRightVisible] = useState(true);
   const [isGraphMaximized, setIsGraphMaximized] = useState(false);
@@ -193,8 +193,8 @@ export default function App() {
   const [sidebarLeftWidth, startSidebarLeftResize] = useResizable(220, 160, 400, true);
   const [mainLeftWidth, startmainLeftResize] = useResizable(30, 15, 60, true);
   const [mainRightWidth, startmainRightResize] = useResizable(30, 15, 60, true, true);
-  const [ctnAppWorkspaceTopHeight, startCtnAppWorkspaceTopResize] = useResizable(120, 50, 250, false);
-  const [ctnAppWorkspaceBottomHeight, startCtnAppWorkspaceBottomResize] = useResizable(30, 30, 400, false, true);
+  const [ctnWorkspaceTopHeight, startCtnWorkspaceTopResize] = useResizable(120, 50, 250, false);
+  const [ctnWorkspaceBottomHeight, startCtnWorkspaceBottomResize] = useResizable(30, 30, 400, false, true);
   const [sidebarRightWidth, startSidebarRightResize] = useResizable(300, 180, 600, true, true);
 
   // --- DATA & SELECTION STATES ---
@@ -227,7 +227,7 @@ export default function App() {
         cyRef.current.fit();
       }, 180);
     }
-  }, [isCtnAppWorkspaceLeftVisible, isCtnAppWorkspaceRightVisible, isCtnAppWorkspaceCenterVisible, mainLeftWidth, mainRightWidth]);
+  }, [isCtnWorkspaceLeftVisible, isCtnWorkspaceRightVisible, isCtnWorkspaceCenterVisible, mainLeftWidth, mainRightWidth]);
 
   // --- CYTOSCAPE LOADING ---
   useEffect(() => {
@@ -516,7 +516,7 @@ export default function App() {
   // --- RENDER ---
   return (
     <TooltipProvider>
-      <div id="ctn-app-root" className={`flex flex-col h-screen w-screen overflow-hidden font-sans text-sm select-none transition-colors duration-200 bg-background text-foreground ${isDarkMode ? 'dark' : ''}`}>
+      <div id="ctn-root" className={`flex flex-col h-screen w-screen overflow-hidden font-sans text-sm select-none transition-colors duration-200 bg-background text-foreground ${isDarkMode ? 'dark' : ''}`}>
 
         {/* SECURITY LOCK (Overlay) */}
         {isLocked && (
@@ -526,7 +526,7 @@ export default function App() {
               <h2 className="mb-2 font-bold text-foreground text-base tracking-tight">Sandbox locked</h2>
               <p className="mb-4 text-muted-foreground text-xs leading-relaxed">Connection to the local Neo4j cluster was interrupted. Analysis modules are suspended for safety.</p>
               <div id="panel-security-lock-actions">
-              <Button variant="destructive" size="sm" id="btn-restore-connection" onClick={() => setIsLocked(false)}>
+              <Button variant="destructive"  id="btn-restore-connection" onClick={() => setIsLocked(false)}>
                 Restore connection
               </Button>
               </div>
@@ -535,8 +535,8 @@ export default function App() {
         )}
 
         {/* A. FIXED HEADER */}
-        <div id="ctn-app-header" className="z-20 flex justify-between items-center bg-card px-3 border-border border-b h-[40px] shrink-0">
-          <div id="panel-app-header-left" className="flex items-center gap-2">
+        <div id="ctn-header" className="z-20 flex justify-between items-center bg-card px-3 border-border border-b h-[40px] shrink-0">
+          <div id="panel-header-left" className="flex items-center gap-2">
             <Button
               id="btn-toggle-sidebar-collapse"
               variant="ghost"
@@ -560,7 +560,7 @@ export default function App() {
             </Tooltip>
           </div>
 
-          <div id="panel-app-header-center" className="flex-1 mx-4 max-w-md">
+          <div id="panel-header-center" className="flex-1 mx-4 max-w-md">
             <div className="relative flex items-center w-full">
               <Search className="left-2 absolute text-muted-foreground" size={14} />
               <Input
@@ -573,7 +573,7 @@ export default function App() {
             </div>
           </div>
 
-          <div id="panel-app-header-right" className="flex items-center gap-1">
+          <div id="panel-header-right" className="flex items-center gap-1">
             <button id="btn-import-dialog" onClick={() => setImportOpen(true)} className="hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors" title="Import"><Upload size={16} /></button>
             <button id="btn-export-dialog" onClick={() => setExportOpen(true)} className="hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors" title="Export"><Download size={16} /></button>
             <div className="mx-1 bg-border w-px h-4"></div>
@@ -586,26 +586,26 @@ export default function App() {
 
              <div className="mx-1 bg-border w-px h-4"></div>
 
-            <button id="btn-toggle-main" onClick={() => setIsCtnAppWorkspaceVisible(!isCtnAppWorkspaceVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnAppWorkspaceVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`} title="Toggle Full Main">
+            <button id="btn-toggle-workspace" onClick={() => setIsCtnWorkspaceVisible(!isCtnWorkspaceVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`} title="Toggle Full Workspace">
                <Eye size={16} />
             </button>
-            <button id="btn-toggle-main-header" onClick={() => setIsCtnAppWorkspaceTopVisible(!isCtnAppWorkspaceTopVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnAppWorkspaceTopVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`} title="Toggle File Header">
+            <button id="btn-toggle-workspace-top" onClick={() => setIsCtnWorkspaceTopVisible(!isCtnWorkspaceTopVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceTopVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`} title="Toggle workspace Top">
                <Eye size={16} />
             </button>
-            <button id="btn-toggle-main-left" onClick={() => setIsCtnAppWorkspaceLeftVisible(!isCtnAppWorkspaceLeftVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnAppWorkspaceLeftVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`} title="Toggle Main Content">
+            <button id="btn-toggle-workspace-left" onClick={() => setIsCtnWorkspaceLeftVisible(!isCtnWorkspaceLeftVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceLeftVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`} title="Toggle Workspace left">
                <Eye size={16} />
             </button>
-            <button id="btn-toggle-main-center" onClick={() => setIsCtnAppWorkspaceCenterVisible(!isCtnAppWorkspaceCenterVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnAppWorkspaceCenterVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`} title="Toggle Graph">
+            <button id="btn-toggle-workspace-center" onClick={() => setIsCtnWorkspaceCenterVisible(!isCtnWorkspaceCenterVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceCenterVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`} title="Toggle Workspace Center (Graph)">
                <Eye size={16} />
             </button>
-            <button id="btn-toggle-workspace-right" onClick={() => setIsCtnAppWorkspaceRightVisible(!isCtnAppWorkspaceRightVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnAppWorkspaceRightVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`} title="Toggle Workspace Right">
+            <button id="btn-toggle-workspace-right" onClick={() => setIsCtnWorkspaceRightVisible(!isCtnWorkspaceRightVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceRightVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`} title="Toggle Workspace Right">
                <Eye size={16} />
             </button>
-            <button id="btn-toggle-workspace-bottom" onClick={() => setIsCtnAppWorkspaceBottomVisible(!isCtnAppWorkspaceBottomVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnAppWorkspaceBottomVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`} title="Toggle Workspace Bottom">
+            <button id="btn-toggle-workspace-bottom" onClick={() => setIsCtnWorkspaceBottomVisible(!isCtnWorkspaceBottomVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceBottomVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`} title="Toggle Workspace Bottom">
                <Eye size={16} />
             </button>
              <div className="mx-1 bg-border w-px h-4"></div>
-            <button id="btn-toggle-main-right" onClick={() => setIsSidebarRightVisible(!isSidebarRightVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isSidebarRightVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`} title="Toggle Inspector (Detail)">
+            <button id="btn-toggle-sidebar-right" onClick={() => setIsSidebarRightVisible(!isSidebarRightVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isSidebarRightVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`} title="Toggle Inspector (Detail)">
                <Eye size={16} />
             </button>
           </div>
@@ -635,16 +635,16 @@ export default function App() {
           </DialogContent>
         </Dialog>
 
-        {/* CENTRAL STAGE */}
-        <div id="ctn-app-main" className="relative flex flex-1 overflow-hidden">
+        {/* B. CENTRAL STAGE */}
+        <div id="ctn-workspace" className="relative flex flex-1 overflow-hidden">
 
-          {/* B. SIDEBAR */}
+          {/* B.1. SIDEBAR */}
           {sidebarLeftMode !== 'collapsed' && (
             <Sidebar
-              id="ctn-app-sidebar-left"
+              id="ctn-sidebar-left"
               width={sidebarLeftMode === 'minimal' ? '56px' : `${sidebarLeftWidth}px`}
             >
-              <SidebarContent id="panel-app-sidebar-left-top">
+              <SidebarContent id="panel-sidebar-left-top">
                 <SidebarGroup>
                   <SidebarMenu>
                     {SIDEBAR_MENU_ITEMS.filter(item => !item.bottom).map(renderSidebarMenuItem)}
@@ -657,7 +657,7 @@ export default function App() {
                 </SidebarGroup>
               </SidebarContent>
 
-              <SidebarFooter id="panel-app-sidebar-left-bottom" className="p-0">
+              <SidebarFooter id="panel-sidebar-left-bottom" className="p-0">
                 <Button
                   id="btn-sidebar-toggle-mode"
                   variant="ghost"
@@ -671,7 +671,7 @@ export default function App() {
 
               {sidebarLeftMode === 'normal' && (
                 <div
-                  id="ctn-app-sidebar-left-handle"
+                  id="ctn-sidebar-left-handle"
                   className="group top-0 right-0 bottom-0 z-20 absolute hover:bg-sidebar-border w-1 cursor-col-resize"
                   onMouseDown={startSidebarLeftResize}
                 >
@@ -681,25 +681,25 @@ export default function App() {
             </Sidebar>
           )}
 
-        {/* C. CENTRAL WORKSPACE STAGE */}
-        <div id="ctn-app-workspace" style={{ display: isCtnAppWorkspaceVisible ? 'flex' : 'none' }} className="relative flex flex-1 bg-background min-w-0">
-          <div id="ctn-app-workspace-wrapper-lvl-1" className="relative flex flex-col flex-1 min-w-0">
+        {/* B.2. CENTRAL WORKSPACE STAGE */}
+        <div id="ctn-workspace" style={{ display: isCtnWorkspaceVisible ? 'flex' : 'none' }} className="relative flex flex-1 bg-background min-w-0">
+          <div id="ctn-workspace-wrapper-lvl-1" className="relative flex flex-col flex-1 min-w-0">
 
-            {/* TOP COLLAPSIBLE FILE HEADER */}
+            {/* B.2.1. TOP COLLAPSIBLE FILE HEADER */}
             <div
-              id="ctn-app-workspace-top"
+              id="ctn-workspace-top"
               style={{
-                height: `${ctnAppWorkspaceTopHeight}px`,
-                display: isCtnAppWorkspaceTopVisible ? 'flex' : 'none'
+                height: `${ctnWorkspaceTopHeight}px`,
+                display: isCtnWorkspaceTopVisible ? 'flex' : 'none'
               }}
               className="relative flex flex-col bg-muted border-border border-b w-full shrink-0"
             >
-              <div id="ctn-app-workspace-top-title-bar" className="flex justify-between items-center bg-secondary px-3 border-border border-b h-8 font-semibold text-[11px] text-muted-foreground uppercase tracking-wider shrink-0">
-                <div id="ctn-app-workspace-top-title-bar-left">Selected paths</div>
-                <div id="ctn-app-workspace-top-title-bar-center" className="flex-1"></div>
+              <div id="ctn-workspace-top-title-bar" className="flex justify-between items-center bg-secondary px-3 border-border border-b h-8 font-semibold text-[11px] text-muted-foreground uppercase tracking-wider shrink-0">
+                <div id="ctn-workspace-top-title-bar-left">Selected paths</div>
+                <div id="ctn-workspace-top-title-bar-center" className="flex-1"></div>
               </div>
 
-              <div id="ctn-app-workspace-top-content" className="flex-1 space-y-2 p-1 w-full overflow-y-auto text-xs">
+              <div id="ctn-workspace-top-content" className="flex-1 space-y-2 bg-background p-1 w-full overflow-y-auto text-xs">
                 <ul id="paths-list" className="space-y-2 text-muted-foreground">
                   <li className="flex items-center gap-2"><Folder size={14} /> <span>workspace/src/main/java</span></li>
                   <li className="flex items-center gap-2"><File size={14} /> <span>workspace/src/main/resources/application.properties</span></li>
@@ -708,29 +708,29 @@ export default function App() {
               </div>
 
               <div
-                id="ctn-app-workspace-top-handle"
+                id="ctn-workspace-top-handle"
                 className="right-0 bottom-0 left-0 z-10 absolute hover:bg-border h-1 cursor-row-resize"
-                onMouseDown={startCtnAppWorkspaceTopResize}
+                onMouseDown={startCtnWorkspaceTopResize}
               ></div>
             </div>
 
-            {/* MIDDLE MATRIX LAYOUT SPLIT */}
-            <div id="ctn-app-workspace-middle-row" className="flex flex-1 min-h-0 overflow-hidden">
+            {/* B.2.2. MIDDLE MATRIX LAYOUT SPLIT WRAPPER */}
+            <div id="ctn-workspace-middle-row-wrapper" className="flex flex-1 min-h-0 overflow-hidden">
 
-              {/* LEFT VIEW CONTAINER */}
+              {/* B.2.2.1. LEFT VIEW CONTAINER */}
               <div
-                id="ctn-app-workspace-left"
+                id="ctn-workspace-left"
                 style={{
-                  display: isCtnAppWorkspaceLeftVisible ? 'flex' : 'none',
+                  display: isCtnWorkspaceLeftVisible ? 'flex' : 'none',
                   width: `${mainLeftWidth}%`
                 }}
                 className="relative flex flex-col bg-card border-border border-r min-w-[200px] overflow-hidden shrink-0"
               >
-                 <div id="ctn-app-workspace-left-title-bar" className="flex justify-between items-center bg-secondary px-3 border-border border-b h-8 font-semibold text-[11px] text-muted-foreground uppercase tracking-wider shrink-0">
-                    <div id="ctn-app-workspace-left-title-left">{getActiveViewLabel()}</div>
+                 <div id="ctn-workspace-left-title-bar" className="flex justify-between items-center bg-secondary px-3 border-border border-b h-8 font-semibold text-[11px] text-muted-foreground uppercase tracking-wider shrink-0">
+                    <div id="ctn-workspace-left-title-left">{getActiveViewLabel()}</div>
                  </div>
 
-                 <div id="ctn-app-workspace-left-content" className="flex-1 overflow-auto scrollbar-hide">
+                 <div id="ctn-workspace-left-content" className="flex-1 overflow-auto scrollbar-hide">
                     {renderViewContent()}
                  </div>
 
@@ -745,24 +745,24 @@ export default function App() {
                  </div>
 
                  <div
-                    id="ctn-app-workspace-left-handle"
+                    id="ctn-workspace-left-handle"
                     className="top-0 right-0 bottom-0 z-10 absolute hover:bg-border w-1 cursor-col-resize"
                     onMouseDown={startmainLeftResize}
                   ></div>
               </div>
 
-              {/* CENTER CORE CONTAINER */}
+              {/* B.2.2.2. CENTER CORE CONTAINER */}
               <div
-                id="ctn-app-workspace-center"
+                id="ctn-workspace-center"
                 style={{
-                  display: isCtnAppWorkspaceCenterVisible || isGraphMaximized ? 'flex' : 'none',
+                  display: isCtnWorkspaceCenterVisible || isGraphMaximized ? 'flex' : 'none',
                   ...(isGraphMaximized ? { position: 'fixed', top: '40px', bottom: '40px', left: '0', right: '0', zIndex: 50 } : {})
                 }}
                 className={`relative bg-background overflow-hidden flex flex-col ${!isGraphMaximized ? 'flex-1' : ''}`}
               >
-                <div id="ctn-app-workspace-center-top-bar" className="z-10 relative flex justify-between items-center bg-secondary px-3 border-border border-b h-8 font-semibold text-[11px] text-muted-foreground uppercase tracking-wider shrink-0">
+                <div id="ctn-workspace-center-top-bar" className="z-10 relative flex justify-between items-center bg-secondary px-3 border-border border-b h-8 font-semibold text-[11px] text-muted-foreground uppercase tracking-wider shrink-0">
                   <div>Topological Graph</div>
-                  <div id="ctn-app-workspace-center-top-right" className="flex items-center gap-0.5">
+                  <div id="ctn-workspace-center-top-right" className="flex items-center gap-0.5">
                     <Button variant="ghost" size="icon" className="w-6 h-6 text-muted-foreground" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() + 0.1)}><Plus size={12}/></Button>
                     <Button variant="ghost" size="icon" className="w-6 h-6 text-muted-foreground" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() - 0.1)}><Minus size={12}/></Button>
                     <Button variant="ghost" size="icon" className="w-6 h-6 text-muted-foreground" onClick={() => cyRef.current?.fit()}><Shrink size={12}/></Button>
@@ -780,31 +780,31 @@ export default function App() {
                   </div>
                 </div>
 
-                <div id="ctn-app-workspace-center-content" className="relative flex-1 w-full h-full">
+                <div id="ctn-workspace-center-content" className="relative flex-1 w-full h-full">
                    <div id="panel-graph-canvas" ref={graphContainerRef} className="relative outline-none w-full h-full"></div>
                 </div>
-                {isLocked && <div id="ctn-app-workspace-center-locked-overlay" className="z-20 absolute inset-0 bg-background/40 pointer-events-none"></div>}
+                {isLocked && <div id="ctn-workspace-center-locked-overlay" className="z-20 absolute inset-0 bg-background/40 pointer-events-none"></div>}
               </div>
 
-              {/* RIGHT VIEW CONTAINER */}
+              {/* B.2.2.3. RIGHT VIEW CONTAINER */}
               <div
-                id="ctn-app-workspace-right"
+                id="ctn-workspace-right"
                 style={{
-                  display: isCtnAppWorkspaceRightVisible ? 'flex' : 'none',
-                  width: !isCtnAppWorkspaceCenterVisible ? '100%' : `${mainRightWidth}%`
+                  display: isCtnWorkspaceRightVisible ? 'flex' : 'none',
+                  width: !isCtnWorkspaceCenterVisible ? '100%' : `${mainRightWidth}%`
                 }}
-                className={`relative flex flex-col bg-card border-border border-l min-w-[200px] overflow-hidden shrink-0 ${!isCtnAppWorkspaceCenterVisible ? 'flex-1' : ''}`}
+                className={`relative flex flex-col bg-card border-border border-l min-w-[200px] overflow-hidden shrink-0 ${!isCtnWorkspaceCenterVisible ? 'flex-1' : ''}`}
               >
-                 <div id="ctn-app-workspace-right-title-bar" className="flex justify-between items-center bg-secondary px-3 border-border border-b h-8 font-semibold text-[11px] text-muted-foreground uppercase tracking-wider shrink-0">
+                 <div id="ctn-workspace-right-title-bar" className="flex justify-between items-center bg-secondary px-3 border-border border-b h-8 font-semibold text-[11px] text-muted-foreground uppercase tracking-wider shrink-0">
                     <div>Workspace Left title</div>
                  </div>
-                 <div id="ctn-app-workspace-right-content" className="flex-1 p-4 text-muted-foreground text-xs">
+                 <div id="ctn-workspace-right-content" className="flex-1 p-4 text-muted-foreground text-xs">
                     Not used at this moment
                  </div>
 
-                 {isCtnAppWorkspaceCenterVisible && (
+                 {isCtnWorkspaceCenterVisible && (
                    <div
-                      id="ctn-app-workspace-right-handle"
+                      id="ctn-workspace-right-handle"
                       className="top-0 bottom-0 left-0 z-10 absolute hover:bg-border w-1 cursor-col-resize"
                       onMouseDown={startmainRightResize}
                     >
@@ -815,34 +815,34 @@ export default function App() {
 
             </div>
 
-            {/* BOTTOM PANEL CONTAINER */}
+            {/* B.2.3. BOTTOM PANEL CONTAINER */}
             <div
-              id="ctn-app-workspace-bottom"
+              id="ctn-workspace-bottom"
               style={{
-                display: isCtnAppWorkspaceBottomVisible ? 'flex' : 'none',
-                height: `${ctnAppWorkspaceBottomHeight}px`
+                display: isCtnWorkspaceBottomVisible ? 'flex' : 'none',
+                height: `${ctnWorkspaceBottomHeight}px`
               }}
               className="relative flex justify-between items-center bg-secondary px-4 border-border border-t w-full font-medium text-muted-foreground text-xs shrink-0"
             >
               <div
-                id="ctn-app-workspace-bottom-handle"
+                id="ctn-workspace-bottom-handle"
                 className="group top-0 right-0 left-0 z-20 absolute hover:bg-border h-1 cursor-row-resize"
-                onMouseDown={startCtnAppWorkspaceBottomResize}
+                onMouseDown={startCtnWorkspaceBottomResize}
               >
                  <div className="top-[1px] left-1/2 absolute bg-border rounded-full w-8 h-[2px] -translate-x-1/2"></div>
               </div>
 
-              <div id="ctn-app-workspace-bottom-left">Wksp Bottom Left</div>
-              <div id="ctn-app-workspace-bottom-center">Wksp Bottom Center</div>
-              <div id="ctn-app-workspace-bottom-right">Wksp Bottom Right</div>
+              <div id="ctn-workspace-bottom-left">Wksp Bottom Left</div>
+              <div id="ctn-workspace-bottom-center">Wksp Bottom Center</div>
+              <div id="ctn-workspace-bottom-right">Wksp Bottom Right</div>
             </div>
 
           </div>
         </div>
 
-        {/* D. RIGHT SIDEBAR INSPECTOR */}
+        {/* B.3. RIGHT SIDEBAR INSPECTOR */}
         <div
-          id="ctn-app-sidebar-right"
+          id="ctn-sidebar-right"
           style={{
             display: isSidebarRightVisible ? 'flex' : 'none',
             width: `${sidebarRightWidth}px`,
@@ -851,19 +851,19 @@ export default function App() {
           className="z-30 relative flex flex-col bg-card ml-auto border-border h-full shrink-0"
         >
           <div
-            id="ctn-app-sidebar-right-handle"
+            id="ctn-sidebar-right-handle"
             className="group top-0 bottom-0 left-0 z-40 absolute hover:bg-border w-1 cursor-col-resize"
             onMouseDown={startSidebarRightResize}
           >
              <div className="top-1/2 left-[1px] absolute bg-border rounded-full w-[2px] h-8 -translate-y-1/2"></div>
           </div>
 
-          <div id="panel-app-sidebar-right-title-bar" className="flex justify-between items-center bg-secondary px-3 border-border border-b h-8 font-semibold text-[11px] text-muted-foreground uppercase tracking-wider shrink-0">
+          <div id="panel-sidebar-right-title-bar" className="flex justify-between items-center bg-secondary px-3 border-border border-b h-8 font-semibold text-[11px] text-muted-foreground uppercase tracking-wider shrink-0">
             <div className="flex items-center gap-1.5"><Database size={13}/> <span>Inspector</span></div>
             <Button variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => setSelectedIds([])}><X size={12}/></Button>
           </div>
 
-          <div id="panel-app-sidebar-right-content" className="flex-1 p-4 overflow-y-auto text-xs">
+          <div id="panel-sidebar-right-content" className="flex-1 p-4 overflow-y-auto text-xs">
             {selectedIds.length === 0 ? (
               <div className="flex flex-col justify-center items-center gap-1.5 h-full text-muted-foreground text-center">
                 <Focus size={24} className="opacity-40" /> <span>No selection active</span>
@@ -898,8 +898,8 @@ export default function App() {
 
       </div>
 
-      {/* E. FIXED FOOTER */}
-      <div id="ctn-app-footer" className="z-20 flex justify-between items-center bg-primary px-3 h-[35px] font-sans text-primary-foreground text-xs select-none shrink-0">
+      {/* C. FIXED FOOTER */}
+      <div id="ctn-footer" className="z-20 flex justify-between items-center bg-primary px-3 h-[35px] font-sans text-primary-foreground text-xs select-none shrink-0">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5 font-medium"><Server size={13}/> <span>{isLocked ? "Disconnected" : "Neo4j Connected"}</span></div>
         </div>
