@@ -23,7 +23,6 @@
   --muted-foreground: oklch(0.55 0.02 264.41);
   --accent: oklch(0.95 0.03 233.56);
   --accent-foreground: oklch(0.38 0.14 265.59);
-  --destructive: oklch(0.64 0.21 25.39);
   --border: oklch(0.93 0.01 261.82);
   --input: oklch(0.93 0.01 261.82);
   --ring: oklch(0.62 0.19 259.76);
@@ -36,13 +35,26 @@
   --sidebar-foreground: oklch(0.14 0 0);
   --sidebar-primary: oklch(0.20 0 0);
   --sidebar-primary-foreground: oklch(0.98 0 0);
-
-  /* Sidebar Selection Alignment: text-primary bg-primary/10 look and feel */
   --sidebar-accent: oklch(0.62 0.19 259.76 / 0.12);
   --sidebar-accent-foreground: oklch(0.62 0.19 259.76);
-
   --sidebar-border: oklch(0.92 0 0);
   --sidebar-ring: oklch(0.71 0 0);
+
+  /* Success - High Contrast Forest Mint */
+  --success: oklch(0.95 0.04 145);
+  --success-foreground: oklch(0.35 0.14 145);
+
+  /* Error/Destructive - Vivid Deep Crimson */
+  --destructive: oklch(0.94 0.05 25);
+  --destructive-foreground: oklch(0.45 0.19 25);
+
+  /* Warning - Deep Amber/Bronze (No longer invisible on white) */
+  --warning: oklch(0.96 0.05 75);
+  --warning-foreground: oklch(0.42 0.14 75);
+
+  /* Info - Deep Cobalt Sky */
+  --info: oklch(0.94 0.04 240);
+  --info-foreground: oklch(0.38 0.15 240);
 
   --shadow-2xs: 0 1px 3px 0px oklch(0.00 0 0 / 0.05);
   --shadow-xs: 0 1px 3px 0px oklch(0.00 0 0 / 0.05);
@@ -69,7 +81,6 @@
   --muted-foreground: oklch(0.72 0 0);
   --accent: oklch(0.38 0.14 265.59);
   --accent-foreground: oklch(0.88 0.06 254.63);
-  --destructive: oklch(0.64 0.21 25.39);
   --border: oklch(0.37 0 0);
   --input: oklch(0.37 0 0);
   --ring: oklch(0.62 0.19 259.76);
@@ -82,13 +93,26 @@
   --sidebar-foreground: oklch(0.99 0 0);
   --sidebar-primary: oklch(0.49 0.24 264.40);
   --sidebar-primary-foreground: oklch(0.99 0 0);
-
-  /* Dark mode sidebar active state optimization */
   --sidebar-accent: oklch(0.62 0.19 259.76 / 0.20);
   --sidebar-accent-foreground: oklch(0.62 0.19 259.76);
-
   --sidebar-border: oklch(1.00 0 0 / 10%);
   --sidebar-ring: oklch(0.55 0.02 285.93);
+
+  /* Success - Vibrant Neon Mint */
+  --success: oklch(0.25 0.06 145);
+  --success-foreground: oklch(0.86 0.14 145);
+
+  /* Error/Destructive - Punchy Coral Red (Fixed Missing Var) */
+  --destructive: oklch(0.24 0.06 25);
+  --destructive-foreground: oklch(0.65 0.21 25);
+
+  /* Warning - Vivid Gold Warning */
+  --warning: oklch(0.25 0.06 75);
+  --warning-foreground: oklch(0.86 0.15 75);
+
+  /* Info - Electric Ice Blue */
+  --info: oklch(0.23 0.06 240);
+  --info-foreground: oklch(0.82 0.14 240);
 }
 
 @theme {
@@ -112,6 +136,13 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -135,63 +166,8 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
-  }
-
-  h1 {
-    font-family: var(--font-heading);
-    font-size: 2.25rem;
-    line-height: 1.2;
-    letter-spacing: -0.025em;
-    font-weight: 700;
-  }
-
-  h2 {
-    font-family: var(--font-heading);
-    font-size: 1.875rem;
-    line-height: 1.25;
-    letter-spacing: -0.02em;
-    font-weight: 600;
-  }
-
-  h3 {
-    font-family: var(--font-heading);
-    font-size: 1.5rem;
-    line-height: 1.3;
-    letter-spacing: -0.015em;
-    font-weight: 600;
-  }
-
-  h4 {
-    font-family: var(--font-heading);
-    font-size: 1.25rem;
-    line-height: 1.4;
-    letter-spacing: -0.01em;
-    font-weight: 600;
-  }
-
-  h5 {
-    font-family: var(--font-heading);
-    font-size: 1.125rem;
-    line-height: 1.5;
-    letter-spacing: -0.01em;
-    font-weight: 600;
-  }
-
-  h6 {
-    font-family: var(--font-heading);
-    font-size: 1rem;
-    line-height: 1.5;
-    letter-spacing: 0;
-    font-weight: 600;
-  }
-
-  body {
-    font-family: var(--font-body);
-    line-height: 1.65;
-  }
-
-  code,
-  pre {
-    font-family: var(--font-mono);
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
   }
 }

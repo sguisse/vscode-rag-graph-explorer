@@ -214,7 +214,20 @@ export default function App() {
     } else {
       htmlElement.classList.remove('dark');
     }
+    if (cyRef.current) {
+      cyRef.current.style(getCyStyles(isDarkMode));
+    }
   }, [isDarkMode]);
+
+  // --- TRIGGER CYTOSCAPE CANVAS RE-LAYOUT ON VIEWCHANGES ---
+  useEffect(() => {
+    if (cyRef.current) {
+      setTimeout(() => {
+        cyRef.current.resize();
+        cyRef.current.fit();
+      }, 180);
+    }
+  }, [isCtnAppWorkspaceLeftVisible, isCtnAppWorkspaceRightVisible, isCtnAppWorkspaceCenterVisible, mainLeftWidth, mainRightWidth]);
 
   // --- CYTOSCAPE LOADING ---
   useEffect(() => {
@@ -356,8 +369,8 @@ export default function App() {
                 const isNeo4j = check.includes('Neo4j') || check.includes('jQAssistant');
                 const isFail = isLocked && isNeo4j;
                 return (
-                  <div key={i} className={`flex items-center gap-2 p-2 rounded border transition-colors ${isFail ? 'border-destructive/30 bg-destructive/10 text-destructive' : 'border-border bg-card text-muted-foreground'}`}>
-                    {isFail ? <XCircle size={14} /> : <CheckCircle2 size={14} className="text-primary" />}
+                  <div key={i} className={`flex items-center gap-2 p-2 rounded border transition-colors ${isFail ? 'border-destructive/30 bg-destructive text-destructive-foreground' : 'border-success/30 bg-success text-success-foreground'}`}>
+                    {isFail ? <XCircle size={14} className="text-destructive-foreground" /> : <CheckCircle2 size={14} />}
                     <span className="text-foreground">{check}</span>
                   </div>
                 );
@@ -407,9 +420,9 @@ export default function App() {
         return (
           <div id="panel-rules" className="flex flex-col gap-4 p-4 h-full">
              <div id="panel-rules-selector" className="space-y-1.5">
-              <label className="text-muted-foreground text-xs font-medium">Pre-configured Rule</label>
+              <label className="font-medium text-muted-foreground text-xs">Pre-configured Rule</label>
               <Select defaultValue="layer-bypass">
-                <SelectTrigger className="w-full bg-card">
+                <SelectTrigger className="bg-card w-full">
                   <SelectValue placeholder="Select Rule" />
                 </SelectTrigger>
                 <SelectContent side="bottom">
@@ -420,15 +433,15 @@ export default function App() {
               </Select>
              </div>
              <div id="panel-rules-editor" className="flex flex-col flex-1 space-y-1.5">
-               <label className="flex justify-between items-center text-muted-foreground text-xs font-medium">
+               <label className="flex justify-between items-center font-medium text-muted-foreground text-xs">
                  <span>Cypher Editor</span>
-                 <Button variant="ghost" size="sm" id="btn-execute-cypher" className="text-primary h-6 px-2">
+                 <Button variant="ghost" size="sm" id="btn-execute-cypher" className="px-2 h-6 text-primary">
                    <Play size={12} className="mr-1"/> Execute
                  </Button>
                </label>
                <Textarea
                   id="textarea-cypher-editor"
-                  className="flex-1 font-mono text-foreground text-xs resize-none bg-muted/50 border-border"
+                  className="flex-1 bg-muted/50 border-border font-mono text-foreground text-xs resize-none"
                   defaultValue={"MATCH (c:Controller)-[r:CALLS]->(repo:Repository)\nRETURN c.name, repo.name, type(r)"}
                />
              </div>
@@ -439,18 +452,38 @@ export default function App() {
         return (
           <div id="panel-help" className="space-y-4 p-4 text-muted-foreground text-xs">
             <h3 className="mb-2 font-semibold text-foreground">Navigation Guide</h3>
-            <p>Use <kbd className="bg-muted px-1 border border-border rounded text-foreground text-[10px]">Ctrl</kbd> or <kbd className="bg-muted px-1 border border-border rounded text-foreground text-[10px]">Cmd</kbd> + Click on the explorer or graph to enable multiple selection.</p>
+            <p>Use <kbd className="bg-muted px-1 border border-border rounded text-[10px] text-foreground">Ctrl</kbd> or <kbd className="bg-muted px-1 border border-border rounded text-[10px] text-foreground">Cmd</kbd> + Click on the explorer or graph to enable multiple selection.</p>
             <div id="panel-help-legend" className="space-y-2 mt-4 pt-4 border-border border-t">
               <p className="font-semibold text-foreground">Impact Legend</p>
               <div className="flex items-center gap-2"><div className="bg-primary/20 border border-primary rounded w-3 h-3"></div> Selected source</div>
-              <div className="flex items-center gap-2"><div className="bg-destructive/20 border border-destructive rounded w-3 h-3"></div> Callers (Upstream)</div>
-              <div className="flex items-center gap-2"><div className="bg-accent border border-ring rounded w-3 h-3"></div> Callees (Downstream)</div>
+              <div className="flex items-center gap-2"><div className="bg-destructive border border-destructive rounded w-3 h-3"></div> Callers (Upstream)</div>
+              <div className="flex items-center gap-2"><div className="bg-warning border border-warning rounded w-3 h-3"></div> Callees (Downstream)</div>
             </div>
           </div>
         );
 
       default:
-        return <div id="panel-fallback" className="p-4 text-muted-foreground text-xs text-center">Module under construction...</div>;
+        return (
+          <div id="panel-fallback" className="space-y-2 p-4 text-xs">
+            <div className="mb-1 font-medium text-muted-foreground text-center">Module Showcase Fallback</div>
+            <div className="flex items-center gap-2 bg-success p-2 border border-success/30 rounded text-success-foreground transition-colors">
+              <CheckCircle2 size={14} className="shrink-0" />
+              <span><strong>Success state:</strong> Action completed using soft semantic oklch properties.</span>
+            </div>
+            <div className="flex items-center gap-2 bg-destructive p-2 border border-destructive/30 rounded text-destructive-foreground transition-colors">
+              <XCircle size={14} className="shrink-0" />
+              <span><strong>Error state:</strong> High contrast destructive fallback triggered safely.</span>
+            </div>
+            <div className="flex items-center gap-2 bg-warning p-2 border border-warning/30 rounded text-warning-foreground transition-colors">
+              <ShieldAlert size={14} className="shrink-0" />
+              <span><strong>Warning state:</strong> Muted gold context limits validation parameters.</span>
+            </div>
+            <div className="flex items-center gap-2 bg-info p-2 border border-info/30 rounded text-info-foreground transition-colors">
+              <HelpCircle size={14} className="shrink-0" />
+              <span><strong>Info state:</strong> Sky blue layout indicator maps container dimensions cleanly.</span>
+            </div>
+          </div>
+        );
     }
   };
 
@@ -465,7 +498,7 @@ export default function App() {
         onClick={() => setActiveView(item.id)}
         title={sidebarLeftMode === 'minimal' ? item.label : undefined}
       >
-        <item.icon size={16} className="shrink-0 mr-2.5" />
+        <item.icon size={16} className="mr-2.5 shrink-0" />
         {sidebarLeftMode === 'normal' && (
           <>
             <span className="truncate">{item.label}</span>
@@ -487,15 +520,15 @@ export default function App() {
 
         {/* SECURITY LOCK (Overlay) */}
         {isLocked && (
-          <div id="panel-security-lock-overlay" className="z-40 absolute inset-0 flex justify-center items-center bg-background/80 backdrop-blur-sm pointer-events-auto animate-in fade-in duration-200">
-            <div id="panel-security-lock-modal" className="bg-card shadow-2xl p-6 border border-border rounded-lg max-w-md text-center zoom-in-95 duration-200">
-              <ShieldAlert className="mx-auto mb-4 text-destructive" size={44} />
+          <div id="panel-security-lock-overlay" className="z-40 absolute inset-0 flex justify-center items-center bg-background/80 backdrop-blur-sm animate-in duration-200 pointer-events-auto fade-in">
+            <div id="panel-security-lock-modal" className="bg-card shadow-2xl p-6 border border-border rounded-lg max-w-md text-center duration-200 zoom-in-95">
+              <ShieldAlert className="mx-auto mb-4 text-destructive-foreground" size={44} />
               <h2 className="mb-2 font-bold text-foreground text-base tracking-tight">Sandbox locked</h2>
               <p className="mb-4 text-muted-foreground text-xs leading-relaxed">Connection to the local Neo4j cluster was interrupted. Analysis modules are suspended for safety.</p>
               <div id="panel-security-lock-actions">
-                <Button variant="destructive" size="sm" id="btn-restore-connection" onClick={() => setIsLocked(false)}>
-                  Restore connection
-                </Button>
+              <Button variant="destructive" size="sm" id="btn-restore-connection" onClick={() => setIsLocked(false)}>
+                Restore connection
+              </Button>
               </div>
             </div>
           </div>
@@ -509,20 +542,18 @@ export default function App() {
               variant="ghost"
               size="icon"
               onClick={() => setSidebarLeftMode(m => m === 'collapsed' ? 'normal' : 'collapsed')}
-              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              className="w-8 h-8 text-muted-foreground hover:text-foreground"
               title="Toggle Main Menu"
             >
               <Menu size={16} />
             </Button>
 
             <Tooltip>
-              <TooltipTrigger
-                render={
-                  <div id="header-logo" className="flex items-center gap-2 text-primary cursor-help ml-1">
-                    <span className="font-bold tracking-tight text-xs text-foreground">Graph-Impact</span>
-                  </div>
-                }
-              />
+              <TooltipTrigger render={
+                <div id="header-logo" className="flex items-center gap-2 ml-1 text-primary cursor-help">
+                  <span className="font-bold text-foreground text-xs tracking-tight">Graph-Impact</span>
+                </div>
+              } />
               <TooltipContent side="bottom">
                 Active GraphRAG engine - Real-time topological analysis
               </TooltipContent>
@@ -536,45 +567,45 @@ export default function App() {
                 id="input-global-search"
                 type="text"
                 placeholder="Search for an AST entity (e.g., UserController)..."
-                className="pl-8 bg-muted text-xs h-8"
+                className="bg-muted pl-8 h-8 text-xs"
                 disabled={isLocked}
               />
             </div>
           </div>
 
           <div id="panel-app-header-right" className="flex items-center gap-1">
-            <button id="btn-import-dialog" onClick={() => setImportOpen(true)} className="hover:bg-zinc-100 dark:hover:bg-zinc-800 p-1.5 rounded text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors" title="Import"><Upload size={16} /></button>
-            <button id="btn-export-dialog" onClick={() => setExportOpen(true)} className="hover:bg-zinc-100 dark:hover:bg-zinc-800 p-1.5 rounded text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors" title="Export"><Download size={16} /></button>
-            <div className="bg-zinc-300 dark:bg-zinc-700 mx-1 w-px h-4"></div>
+            <button id="btn-import-dialog" onClick={() => setImportOpen(true)} className="hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors" title="Import"><Upload size={16} /></button>
+            <button id="btn-export-dialog" onClick={() => setExportOpen(true)} className="hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors" title="Export"><Download size={16} /></button>
+            <div className="mx-1 bg-border w-px h-4"></div>
 
-            <button id="btn-toggle-theme" onClick={() => setIsDarkMode(!isDarkMode)} className="hover:bg-zinc-100 dark:hover:bg-zinc-800 p-1.5 rounded text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors" title={isDarkMode ? "Switch to Light Theme" : "Switch to Dark Theme"}>
+            <button id="btn-toggle-theme" onClick={() => setIsDarkMode(!isDarkMode)} className="hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors" title={isDarkMode ? "Switch to Light Theme" : "Switch to Dark Theme"}>
               {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
             </button>
 
-            <button id="btn-reset-graphe" onClick={() => { setSelectedIds([]); setExplorerFilter('folder'); if(cyRef.current) cyRef.current.fit(); }} className="hover:bg-zinc-100 dark:hover:bg-zinc-800 p-1.5 rounded text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors" title="Reset"><RotateCcw size={16} /></button>
+            <button id="btn-reset-graphe" onClick={() => { setSelectedIds([]); setExplorerFilter('folder'); if(cyRef.current) cyRef.current.fit(); }} className="hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors" title="Reset"><RotateCcw size={16} /></button>
 
-             <div className="bg-zinc-300 dark:bg-zinc-700 mx-1 w-px h-4"></div>
+             <div className="mx-1 bg-border w-px h-4"></div>
 
-            <button id="btn-toggle-main" onClick={() => setIsCtnAppWorkspaceVisible(!isCtnAppWorkspaceVisible)} className={`p-1.5 rounded transition-colors ml-1 ${!isCtnAppWorkspaceVisible ? 'text-zinc-400 dark:text-zinc-500' : 'text-primary bg-primary/10 hover:bg-primary/20'}`} title="Toggle Full Main">
+            <button id="btn-toggle-main" onClick={() => setIsCtnAppWorkspaceVisible(!isCtnAppWorkspaceVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnAppWorkspaceVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`} title="Toggle Full Main">
                <Eye size={16} />
             </button>
-            <button id="btn-toggle-main-header" onClick={() => setIsCtnAppWorkspaceTopVisible(!isCtnAppWorkspaceTopVisible)} className={`p-1.5 rounded transition-colors ml-1 ${!isCtnAppWorkspaceTopVisible ? 'text-zinc-400 dark:text-zinc-500' : 'text-primary bg-primary/10 hover:bg-primary/20'}`} title="Toggle File Header">
+            <button id="btn-toggle-main-header" onClick={() => setIsCtnAppWorkspaceTopVisible(!isCtnAppWorkspaceTopVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnAppWorkspaceTopVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`} title="Toggle File Header">
                <Eye size={16} />
             </button>
-            <button id="btn-toggle-main-left" onClick={() => setIsCtnAppWorkspaceLeftVisible(!isCtnAppWorkspaceLeftVisible)} className={`p-1.5 rounded transition-colors ml-1 ${!isCtnAppWorkspaceLeftVisible ? 'text-zinc-400 dark:text-zinc-500' : 'text-primary bg-primary/10 hover:bg-primary/20'}`} title="Toggle Main Content">
+            <button id="btn-toggle-main-left" onClick={() => setIsCtnAppWorkspaceLeftVisible(!isCtnAppWorkspaceLeftVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnAppWorkspaceLeftVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`} title="Toggle Main Content">
                <Eye size={16} />
             </button>
-            <button id="btn-toggle-main-center" onClick={() => setIsCtnAppWorkspaceCenterVisible(!isCtnAppWorkspaceCenterVisible)} className={`p-1.5 rounded transition-colors ml-1 ${!isCtnAppWorkspaceCenterVisible ? 'text-zinc-400 dark:text-zinc-500' : 'text-primary bg-primary/10 hover:bg-primary/20'}`} title="Toggle Graph">
+            <button id="btn-toggle-main-center" onClick={() => setIsCtnAppWorkspaceCenterVisible(!isCtnAppWorkspaceCenterVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnAppWorkspaceCenterVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`} title="Toggle Graph">
                <Eye size={16} />
             </button>
-            <button id="btn-toggle-workspace-right" onClick={() => setIsCtnAppWorkspaceRightVisible(!isCtnAppWorkspaceRightVisible)} className={`p-1.5 rounded transition-colors ml-1 ${!isCtnAppWorkspaceRightVisible ? 'text-zinc-400 dark:text-zinc-500' : 'text-primary bg-primary/10 hover:bg-primary/20'}`} title="Toggle Workspace Right">
+            <button id="btn-toggle-workspace-right" onClick={() => setIsCtnAppWorkspaceRightVisible(!isCtnAppWorkspaceRightVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnAppWorkspaceRightVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`} title="Toggle Workspace Right">
                <Eye size={16} />
             </button>
-            <button id="btn-toggle-workspace-bottom" onClick={() => setIsCtnAppWorkspaceBottomVisible(!isCtnAppWorkspaceBottomVisible)} className={`p-1.5 rounded transition-colors ml-1 ${!isCtnAppWorkspaceBottomVisible ? 'text-zinc-400 dark:text-zinc-500' : 'text-primary bg-primary/10 hover:bg-primary/20'}`} title="Toggle Workspace Bottom">
+            <button id="btn-toggle-workspace-bottom" onClick={() => setIsCtnAppWorkspaceBottomVisible(!isCtnAppWorkspaceBottomVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnAppWorkspaceBottomVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`} title="Toggle Workspace Bottom">
                <Eye size={16} />
             </button>
-             <div className="bg-zinc-300 dark:bg-zinc-700 mx-1 w-px h-4"></div>
-            <button id="btn-toggle-main-right" onClick={() => setIsSidebarRightVisible(!isSidebarRightVisible)} className={`p-1.5 rounded transition-colors ml-1 ${!isSidebarRightVisible ? 'text-zinc-400 dark:text-zinc-500' : 'text-primary bg-primary/10 hover:bg-primary/20'}`} title="Toggle Inspector (Detail)">
+             <div className="mx-1 bg-border w-px h-4"></div>
+            <button id="btn-toggle-main-right" onClick={() => setIsSidebarRightVisible(!isSidebarRightVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isSidebarRightVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`} title="Toggle Inspector (Detail)">
                <Eye size={16} />
             </button>
           </div>
@@ -587,7 +618,7 @@ export default function App() {
               <DialogTitle className="font-semibold text-foreground text-sm">Import AST Graph</DialogTitle>
             </DialogHeader>
             <p className="my-2 text-muted-foreground text-xs">Select a JSON file generated by the SWC extractor.</p>
-            <Button id="btn-import-browse" className="w-full mt-2">Browse...</Button>
+            <Button id="btn-import-browse" className="mt-2 w-full">Browse...</Button>
           </DialogContent>
         </Dialog>
 
@@ -650,243 +681,241 @@ export default function App() {
             </Sidebar>
           )}
 
-          {/* C. CENTRAL WORKSPACE STAGE */}
-          <div id="ctn-app-workspace" style={{ display: isCtnAppWorkspaceVisible ? 'flex' : 'none' }} className="relative flex flex-1 bg-background min-w-0">
-            <div id="ctn-app-workspace-wrapper-lvl-1" className="relative flex flex-col flex-1 min-w-0">
+        {/* C. CENTRAL WORKSPACE STAGE */}
+        <div id="ctn-app-workspace" style={{ display: isCtnAppWorkspaceVisible ? 'flex' : 'none' }} className="relative flex flex-1 bg-background min-w-0">
+          <div id="ctn-app-workspace-wrapper-lvl-1" className="relative flex flex-col flex-1 min-w-0">
 
-              {/* TOP COLLAPSIBLE FILE HEADER */}
-              <div
-                id="ctn-app-workspace-top"
-                style={{
-                  height: `${ctnAppWorkspaceTopHeight}px`,
-                  display: isCtnAppWorkspaceTopVisible ? 'flex' : 'none'
-                }}
-                className="relative flex flex-col bg-muted border-border border-b w-full shrink-0"
-              >
-                <div id="ctn-app-workspace-top-title-bar" className="flex justify-between items-center bg-secondary px-3 border-border border-b h-8 font-semibold text-[11px] text-muted-foreground uppercase tracking-wider shrink-0">
-                  <div id="ctn-app-workspace-top-title-bar-left">Selected files</div>
-                  <div id="ctn-app-workspace-top-title-bar-center" className="flex-1"></div>
-                </div>
-
-                <div id="ctn-app-workspace-top-content" className="flex-1 space-y-2 p-3 w-full overflow-y-auto text-xs">
-                  <ul id="files-list" className="space-y-2 text-muted-foreground">
-                    <li className="flex items-center gap-2"><CircleArrowRight size={14} /> <span>zz-tmp/temp-01.txt</span></li>
-                    <li className="flex items-center gap-2"><CircleArrowRight size={14} /> <span>zz-tmp/temp-02.txt</span></li>
-                    <li className="flex items-center gap-2"><CircleArrowRight size={14} /> <span>zz-tmp/temp-03.txt</span></li>
-                  </ul>
-                </div>
-
-                <div
-                  id="ctn-app-workspace-top-handle"
-                  className="right-0 bottom-0 left-0 z-10 absolute hover:bg-border h-1 cursor-row-resize"
-                  onMouseDown={startCtnAppWorkspaceTopResize}
-                ></div>
-              </div>
-
-              {/* MIDDLE MATRIX LAYOUT SPLIT */}
-              <div id="ctn-app-workspace-middle-row" className="flex flex-1 min-h-0 overflow-hidden">
-
-                {/* LEFT VIEW CONTAINER */}
-                <div
-                  id="ctn-app-workspace-left"
-                  style={{
-                    display: isCtnAppWorkspaceLeftVisible ? 'flex' : 'none',
-                    width: `${mainLeftWidth}%`
-                  }}
-                  className="relative flex flex-col bg-card border-border border-r min-w-[200px] overflow-hidden shrink-0"
-                >
-                   <div id="ctn-app-workspace-left-title-bar" className="flex justify-between items-center bg-secondary px-3 border-border border-b h-8 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider shrink-0">
-                      <div id="ctn-app-workspace-left-title-left">{getActiveViewLabel()}</div>
-                   </div>
-
-                   <div id="ctn-app-workspace-left-content" className="flex-1 overflow-auto scrollbar-hide">
-                      {renderViewContent()}
-                   </div>
-
-                   <div id="panel-logs" className="flex flex-col bg-muted border-border border-t h-[140px] shrink-0">
-                      <div id="panel-logs-title-bar" className="flex items-center gap-4 bg-secondary px-3 border-border border-b h-7 text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-                        <span className="text-foreground border-b border-primary h-full flex items-center">Parser Logs</span>
-                      </div>
-                      <div id="panel-logs-content" className="flex-1 space-y-1 bg-card p-2 overflow-auto font-mono text-[11px] text-muted-foreground">
-                        <div><span className="text-primary">[INFO]</span> AST Parser initiated on 3 files.</div>
-                        <div><span className="text-primary">[INFO]</span> Topological graph built: 18 nodes.</div>
-                      </div>
-                   </div>
-
-                   <div
-                      id="ctn-app-workspace-left-handle"
-                      className="top-0 right-0 bottom-0 z-10 absolute hover:bg-border w-1 cursor-col-resize"
-                      onMouseDown={startmainLeftResize}
-                    ></div>
-                </div>
-
-                {/* CENTER CORE CONTAINER */}
-                <div
-                  id="ctn-app-workspace-center"
-                  style={{
-                    display: isCtnAppWorkspaceCenterVisible || isGraphMaximized ? 'flex' : 'none',
-                    ...(isGraphMaximized ? { position: 'fixed', top: '40px', bottom: '40px', left: '0', right: '0', zIndex: 50 } : {})
-                  }}
-                  className={`relative bg-background overflow-hidden flex flex-col ${!isGraphMaximized ? 'flex-1' : ''}`}
-                >
-                  <div id="ctn-app-workspace-center-top-bar" className="z-10 relative flex justify-between items-center bg-secondary px-3 border-border border-b h-8 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider shrink-0">
-                    <div>Topological Graph</div>
-                    <div id="ctn-app-workspace-center-top-right" className="flex items-center gap-0.5">
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() + 0.1)}><Plus size={12}/></Button>
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() - 0.1)}><Minus size={12}/></Button>
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" onClick={() => cyRef.current?.fit()}><Shrink size={12}/></Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 text-muted-foreground"
-                        onClick={() => {
-                          setIsGraphMaximized(!isGraphMaximized);
-                          setTimeout(() => { cyRef.current?.resize(); cyRef.current?.fit(); }, 50);
-                        }}
-                      >
-                        {isGraphMaximized ? <Minimize size={12}/> : <Maximize size={12}/>}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div id="ctn-app-workspace-center-content" className="relative flex-1 w-full h-full">
-                     <div id="panel-graph-canvas" ref={graphContainerRef} className="relative outline-none w-full h-full"></div>
-                  </div>
-                  {isLocked && <div id="ctn-app-workspace-center-locked-overlay" className="z-20 absolute inset-0 bg-background/40 pointer-events-none"></div>}
-                </div>
-
-                {/* RIGHT VIEW CONTAINER */}
-                <div
-                  id="ctn-app-workspace-right"
-                  style={{
-                    display: isCtnAppWorkspaceRightVisible ? 'flex' : 'none',
-                    width: !isCtnAppWorkspaceCenterVisible ? '100%' : `${mainRightWidth}%`
-                  }}
-                  className={`relative flex flex-col bg-card border-border border-l min-w-[200px] overflow-hidden shrink-0 ${!isCtnAppWorkspaceCenterVisible ? 'flex-1' : ''}`}
-                >
-                   <div id="ctn-app-workspace-right-title-bar" className="flex justify-between items-center bg-secondary px-3 border-border border-b h-8 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider shrink-0">
-                      <div>Workspace Left title</div>
-                   </div>
-                   <div id="ctn-app-workspace-right-content" className="flex-1 p-4 text-muted-foreground text-xs">
-                      Not used at this moment
-                   </div>
-
-                   {isCtnAppWorkspaceCenterVisible && (
-                     <div
-                        id="ctn-app-workspace-right-handle"
-                        className="top-0 bottom-0 left-0 z-10 absolute hover:bg-border w-1 cursor-col-resize"
-                        onMouseDown={startmainRightResize}
-                      >
-                         <div className="top-1/2 left-[1px] absolute bg-border rounded-full w-[2px] h-8 -translate-y-1/2"></div>
-                      </div>
-                   )}
-                </div>
-
-              </div>
-
-              {/* BOTTOM PANEL CONTAINER */}
-              <div
-                id="ctn-app-workspace-bottom"
-                style={{
-                  display: isCtnAppWorkspaceBottomVisible ? 'flex' : 'none',
-                  height: `${ctnAppWorkspaceBottomHeight}px`
-                }}
-                className="relative bg-secondary border-border border-t w-full items-center px-4 flex justify-between shrink-0 text-xs font-medium text-muted-foreground"
-              >
-                <div
-                  id="ctn-app-workspace-bottom-handle"
-                  className="group top-0 right-0 left-0 z-20 absolute hover:bg-border h-1 cursor-row-resize"
-                  onMouseDown={startCtnAppWorkspaceBottomResize}
-                >
-                   <div className="top-[1px] left-1/2 absolute bg-border rounded-full w-8 h-[2px] -translate-x-1/2"></div>
-                </div>
-
-                <div id="ctn-app-workspace-bottom-left" className="py-2">Wksp Bottom Left</div>
-                <div id="ctn-app-workspace-bottom-center" className="py-2">Wksp Bottom Center</div>
-                <div id="ctn-app-workspace-bottom-right" className="py-2">Wksp Bottom Right</div>
-              </div>
-
-            </div>
-          </div>
-
-          {/* D. RIGHT SIDEBAR INSPECTOR */}
-          <div
-            id="ctn-app-sidebar-right"
-            style={{
-              display: isSidebarRightVisible ? 'flex' : 'none',
-              width: `${sidebarRightWidth}px`,
-              borderLeftWidth: '1px'
-            }}
-            className="z-30 relative flex flex-col bg-card ml-auto border-border h-full shrink-0"
-          >
+            {/* TOP COLLAPSIBLE FILE HEADER */}
             <div
-              id="ctn-app-sidebar-right-handle"
-              className="group top-0 bottom-0 left-0 z-40 absolute hover:bg-border w-1 cursor-col-resize"
-              onMouseDown={startSidebarRightResize}
+              id="ctn-app-workspace-top"
+              style={{
+                height: `${ctnAppWorkspaceTopHeight}px`,
+                display: isCtnAppWorkspaceTopVisible ? 'flex' : 'none'
+              }}
+              className="relative flex flex-col bg-muted border-border border-b w-full shrink-0"
             >
-               <div className="top-1/2 left-[1px] absolute bg-border rounded-full w-[2px] h-8 -translate-y-1/2"></div>
+              <div id="ctn-app-workspace-top-title-bar" className="flex justify-between items-center bg-secondary px-3 border-border border-b h-8 font-semibold text-[11px] text-muted-foreground uppercase tracking-wider shrink-0">
+                <div id="ctn-app-workspace-top-title-bar-left">Selected paths</div>
+                <div id="ctn-app-workspace-top-title-bar-center" className="flex-1"></div>
+              </div>
+
+              <div id="ctn-app-workspace-top-content" className="flex-1 space-y-2 p-1 w-full overflow-y-auto text-xs">
+                <ul id="paths-list" className="space-y-2 text-muted-foreground">
+                  <li className="flex items-center gap-2"><Folder size={14} /> <span>workspace/src/main/java</span></li>
+                  <li className="flex items-center gap-2"><File size={14} /> <span>workspace/src/main/resources/application.properties</span></li>
+                  <li className="flex items-center gap-2"><Folder size={14} /> <span>workspace//src/main/resources/templates</span></li>
+                </ul>
+              </div>
+
+              <div
+                id="ctn-app-workspace-top-handle"
+                className="right-0 bottom-0 left-0 z-10 absolute hover:bg-border h-1 cursor-row-resize"
+                onMouseDown={startCtnAppWorkspaceTopResize}
+              ></div>
             </div>
 
-            <div id="panel-app-sidebar-right-title-bar" className="flex justify-between items-center bg-secondary px-3 border-border border-b h-8 font-semibold text-[11px] text-muted-foreground uppercase tracking-wider shrink-0">
-              <div className="flex items-center gap-1.5"><Database size={13}/> <span>Inspector</span></div>
-              <Button variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => setSelectedIds([])}><X size={12}/></Button>
-            </div>
+            {/* MIDDLE MATRIX LAYOUT SPLIT */}
+            <div id="ctn-app-workspace-middle-row" className="flex flex-1 min-h-0 overflow-hidden">
 
-            <div id="panel-app-sidebar-right-content" className="flex-1 p-4 overflow-y-auto text-xs">
-              {selectedIds.length === 0 ? (
-                <div className="flex flex-col justify-center items-center gap-1.5 h-full text-muted-foreground text-center">
-                  <Focus size={24} className="opacity-40" /> <span>No selection active</span>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="bg-muted p-3 border border-border rounded-md text-center">
-                    <div className="text-xl font-bold text-primary">{selectedIds.length}</div>
-                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Nodes Selected</div>
+              {/* LEFT VIEW CONTAINER */}
+              <div
+                id="ctn-app-workspace-left"
+                style={{
+                  display: isCtnAppWorkspaceLeftVisible ? 'flex' : 'none',
+                  width: `${mainLeftWidth}%`
+                }}
+                className="relative flex flex-col bg-card border-border border-r min-w-[200px] overflow-hidden shrink-0"
+              >
+                 <div id="ctn-app-workspace-left-title-bar" className="flex justify-between items-center bg-secondary px-3 border-border border-b h-8 font-semibold text-[11px] text-muted-foreground uppercase tracking-wider shrink-0">
+                    <div id="ctn-app-workspace-left-title-left">{getActiveViewLabel()}</div>
+                 </div>
+
+                 <div id="ctn-app-workspace-left-content" className="flex-1 overflow-auto scrollbar-hide">
+                    {renderViewContent()}
+                 </div>
+
+                 <div id="panel-logs" className="flex flex-col bg-muted border-border border-t h-[140px] shrink-0">
+                    <div id="panel-logs-title-bar" className="flex items-center gap-4 bg-secondary px-3 border-border border-b h-7 font-semibold text-[10px] text-muted-foreground uppercase tracking-widest">
+                      <span className="flex items-center border-primary border-b h-full text-foreground">Parser Logs</span>
+                    </div>
+                    <div id="panel-logs-content" className="flex-1 space-y-1 bg-card p-2 overflow-auto font-mono text-[11px] text-muted-foreground">
+                      <div><span className="text-primary">[INFO]</span> AST Parser initiated on 3 files.</div>
+                      <div><span className="text-primary">[INFO]</span> Topological graph built: 18 nodes.</div>
+                    </div>
+                 </div>
+
+                 <div
+                    id="ctn-app-workspace-left-handle"
+                    className="top-0 right-0 bottom-0 z-10 absolute hover:bg-border w-1 cursor-col-resize"
+                    onMouseDown={startmainLeftResize}
+                  ></div>
+              </div>
+
+              {/* CENTER CORE CONTAINER */}
+              <div
+                id="ctn-app-workspace-center"
+                style={{
+                  display: isCtnAppWorkspaceCenterVisible || isGraphMaximized ? 'flex' : 'none',
+                  ...(isGraphMaximized ? { position: 'fixed', top: '40px', bottom: '40px', left: '0', right: '0', zIndex: 50 } : {})
+                }}
+                className={`relative bg-background overflow-hidden flex flex-col ${!isGraphMaximized ? 'flex-1' : ''}`}
+              >
+                <div id="ctn-app-workspace-center-top-bar" className="z-10 relative flex justify-between items-center bg-secondary px-3 border-border border-b h-8 font-semibold text-[11px] text-muted-foreground uppercase tracking-wider shrink-0">
+                  <div>Topological Graph</div>
+                  <div id="ctn-app-workspace-center-top-right" className="flex items-center gap-0.5">
+                    <Button variant="ghost" size="icon" className="w-6 h-6 text-muted-foreground" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() + 0.1)}><Plus size={12}/></Button>
+                    <Button variant="ghost" size="icon" className="w-6 h-6 text-muted-foreground" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() - 0.1)}><Minus size={12}/></Button>
+                    <Button variant="ghost" size="icon" className="w-6 h-6 text-muted-foreground" onClick={() => cyRef.current?.fit()}><Shrink size={12}/></Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="w-6 h-6 text-muted-foreground"
+                      onClick={() => {
+                        setIsGraphMaximized(!isGraphMaximized);
+                        setTimeout(() => { cyRef.current?.resize(); cyRef.current?.fit(); }, 50);
+                      }}
+                    >
+                      {isGraphMaximized ? <Minimize size={12}/> : <Maximize size={12}/>}
+                    </Button>
                   </div>
-                  {selectedIds.map(id => {
-                    const node = AST_DATA.nodes.find(n => n.data.id === id);
-                    if(!node) return null;
-                    return (
-                      <div key={id} className="border border-border rounded-md overflow-hidden bg-background">
-                        <div className="bg-secondary px-2.5 py-1.5 border-b border-border flex justify-between items-center">
-                          <span className="font-semibold text-foreground">{node.data.label}</span>
-                          <span className="text-[9px] bg-primary/10 text-primary border border-primary/20 px-1 py-0.5 rounded uppercase font-bold">{node.data.layer}</span>
-                        </div>
-                        <div className="p-2 space-y-1 text-[11px] text-muted-foreground">
-                           <div className="flex justify-between"><span>Parent:</span> <span className="text-foreground">{node.data.parent || 'N/A'}</span></div>
-                           <div className="flex justify-between"><span>Incoming:</span> <span className="text-destructive font-bold">{AST_DATA.edges.filter(e => e.data.target === id).length}</span></div>
-                           <div className="flex justify-between"><span>Outgoing:</span> <span className="text-primary font-bold">{AST_DATA.edges.filter(e => e.data.source === id).length}</span></div>
-                        </div>
-                      </div>
-                    )
-                  })}
                 </div>
-              )}
+
+                <div id="ctn-app-workspace-center-content" className="relative flex-1 w-full h-full">
+                   <div id="panel-graph-canvas" ref={graphContainerRef} className="relative outline-none w-full h-full"></div>
+                </div>
+                {isLocked && <div id="ctn-app-workspace-center-locked-overlay" className="z-20 absolute inset-0 bg-background/40 pointer-events-none"></div>}
+              </div>
+
+              {/* RIGHT VIEW CONTAINER */}
+              <div
+                id="ctn-app-workspace-right"
+                style={{
+                  display: isCtnAppWorkspaceRightVisible ? 'flex' : 'none',
+                  width: !isCtnAppWorkspaceCenterVisible ? '100%' : `${mainRightWidth}%`
+                }}
+                className={`relative flex flex-col bg-card border-border border-l min-w-[200px] overflow-hidden shrink-0 ${!isCtnAppWorkspaceCenterVisible ? 'flex-1' : ''}`}
+              >
+                 <div id="ctn-app-workspace-right-title-bar" className="flex justify-between items-center bg-secondary px-3 border-border border-b h-8 font-semibold text-[11px] text-muted-foreground uppercase tracking-wider shrink-0">
+                    <div>Workspace Left title</div>
+                 </div>
+                 <div id="ctn-app-workspace-right-content" className="flex-1 p-4 text-muted-foreground text-xs">
+                    Not used at this moment
+                 </div>
+
+                 {isCtnAppWorkspaceCenterVisible && (
+                   <div
+                      id="ctn-app-workspace-right-handle"
+                      className="top-0 bottom-0 left-0 z-10 absolute hover:bg-border w-1 cursor-col-resize"
+                      onMouseDown={startmainRightResize}
+                    >
+                       <div className="top-1/2 left-[1px] absolute bg-border rounded-full w-[2px] h-8 -translate-y-1/2"></div>
+                    </div>
+                 )}
+              </div>
+
             </div>
-          </div>
 
+            {/* BOTTOM PANEL CONTAINER */}
+            <div
+              id="ctn-app-workspace-bottom"
+              style={{
+                display: isCtnAppWorkspaceBottomVisible ? 'flex' : 'none',
+                height: `${ctnAppWorkspaceBottomHeight}px`
+              }}
+              className="relative flex justify-between items-center bg-secondary px-4 border-border border-t w-full font-medium text-muted-foreground text-xs shrink-0"
+            >
+              <div
+                id="ctn-app-workspace-bottom-handle"
+                className="group top-0 right-0 left-0 z-20 absolute hover:bg-border h-1 cursor-row-resize"
+                onMouseDown={startCtnAppWorkspaceBottomResize}
+              >
+                 <div className="top-[1px] left-1/2 absolute bg-border rounded-full w-8 h-[2px] -translate-x-1/2"></div>
+              </div>
+
+              <div id="ctn-app-workspace-bottom-left">Wksp Bottom Left</div>
+              <div id="ctn-app-workspace-bottom-center">Wksp Bottom Center</div>
+              <div id="ctn-app-workspace-bottom-right">Wksp Bottom Right</div>
+            </div>
+
+          </div>
         </div>
 
-        {/* E. FIXED FOOTER */}
-        <div id="ctn-app-footer" className="z-20 flex justify-between items-center bg-[#005cb8] dark:bg-[#004a94] px-3 h-[40px] font-sans text-white text-xs select-none shrink-0">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1.5 font-medium"><Server size={13}/> <span>{isLocked ? "Disconnected" : "Neo4j Connected"}</span></div>
+        {/* D. RIGHT SIDEBAR INSPECTOR */}
+        <div
+          id="ctn-app-sidebar-right"
+          style={{
+            display: isSidebarRightVisible ? 'flex' : 'none',
+            width: `${sidebarRightWidth}px`,
+            borderLeftWidth: '1px'
+          }}
+          className="z-30 relative flex flex-col bg-card ml-auto border-border h-full shrink-0"
+        >
+          <div
+            id="ctn-app-sidebar-right-handle"
+            className="group top-0 bottom-0 left-0 z-40 absolute hover:bg-border w-1 cursor-col-resize"
+            onMouseDown={startSidebarRightResize}
+          >
+             <div className="top-1/2 left-[1px] absolute bg-border rounded-full w-[2px] h-8 -translate-y-1/2"></div>
           </div>
-          <div className="flex items-center gap-4 font-mono">
-             <div>Callers: <span className="font-bold text-white/90">{impacts.callers.length}</span></div>
-             <div>Callees: <span className="font-bold text-white/90">{impacts.callees.length}</span></div>
+
+          <div id="panel-app-sidebar-right-title-bar" className="flex justify-between items-center bg-secondary px-3 border-border border-b h-8 font-semibold text-[11px] text-muted-foreground uppercase tracking-wider shrink-0">
+            <div className="flex items-center gap-1.5"><Database size={13}/> <span>Inspector</span></div>
+            <Button variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => setSelectedIds([])}><X size={12}/></Button>
           </div>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <div className="opacity-90 text-[11px] cursor-help">Impact count: {selectedIds.length + impacts.callers.length + impacts.callees.length} node(s)</div>
-              }
-            />
-            <TooltipContent side="top">
-              Total node visualization tracking metric matrix context
-            </TooltipContent>
-          </Tooltip>
+
+          <div id="panel-app-sidebar-right-content" className="flex-1 p-4 overflow-y-auto text-xs">
+            {selectedIds.length === 0 ? (
+              <div className="flex flex-col justify-center items-center gap-1.5 h-full text-muted-foreground text-center">
+                <Focus size={24} className="opacity-40" /> <span>No selection active</span>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-muted p-3 border border-border rounded-md text-center">
+                  <div className="font-bold text-primary text-xl">{selectedIds.length}</div>
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Nodes Selected</div>
+                </div>
+                {selectedIds.map(id => {
+                  const node = AST_DATA.nodes.find(n => n.data.id === id);
+                  if(!node) return null;
+                  return (
+                    <div key={id} className="bg-background border border-border rounded-md overflow-hidden">
+                      <div className="flex justify-between items-center bg-secondary px-2.5 py-1.5 border-border border-b">
+                        <span className="font-semibold text-foreground">{node.data.label}</span>
+                        <span className="bg-primary/10 px-1 py-0.5 border border-primary/20 rounded font-bold text-[9px] text-primary uppercase">{node.data.layer}</span>
+                      </div>
+                      <div className="space-y-1 p-2 text-[11px] text-muted-foreground">
+                         <div className="flex justify-between"><span>Parent:</span> <span className="text-foreground">{node.data.parent || 'N/A'}</span></div>
+                         <div className="flex justify-between"><span>Incoming:</span> <span className="font-bold text-destructive-foreground">{AST_DATA.edges.filter(e => e.data.target === id).length}</span></div>
+                         <div className="flex justify-between"><span>Outgoing:</span> <span className="font-bold text-primary">{AST_DATA.edges.filter(e => e.data.source === id).length}</span></div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </div>
+
+      </div>
+
+      {/* E. FIXED FOOTER */}
+      <div id="ctn-app-footer" className="z-20 flex justify-between items-center bg-primary px-3 h-[35px] font-sans text-primary-foreground text-xs select-none shrink-0">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5 font-medium"><Server size={13}/> <span>{isLocked ? "Disconnected" : "Neo4j Connected"}</span></div>
+        </div>
+        <div className="flex items-center gap-4 font-mono">
+           <div>Callers: <span className="font-bold text-primary-foreground/90">{impacts.callers.length}</span></div>
+           <div>Callees: <span className="font-bold text-primary-foreground/90">{impacts.callees.length}</span></div>
+        </div>
+        <Tooltip>
+          <TooltipTrigger render={
+            <div className="opacity-90 text-[11px] cursor-help">Impact count: {selectedIds.length + impacts.callers.length + impacts.callees.length} node(s)</div>
+          } />
+          <TooltipContent side="top">
+            Total node visualization tracking metric matrix context
+          </TooltipContent>
+        </Tooltip>
+      </div>
 
       </div>
     </TooltipProvider>
