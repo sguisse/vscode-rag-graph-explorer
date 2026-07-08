@@ -78,7 +78,7 @@ const AST_DATA = {
 // 2. DYNAMIC CYTOSCAPE STYLES (Light/Dark)
 // ==========================================
 const getCyStyles = (isDark) => [
-  { selector: 'node', style: { 'background-color': isDark ? '#27272a' : '#ffffff', 'color': isDark ? '#e4e4e7' : '#27272a', 'label': 'data(label)', 'font-family': 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', 'font-size': '12px', 'text-valign': 'center', 'text-halign': 'center', 'border-width': 1, 'border-color': isDark ? '#3f3f46' : '#d4d4d8', 'shape': 'round-rectangle', 'width': 'label', 'height': 'label', 'padding': '10px' } },
+  { selector: 'node', style: { 'background-color': isDark ? '#27272a' : '#ffffff', 'color': isDark ? '#e4e4e7' : '#27272a', 'label': 'data(label)', 'font-family': 'system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif', 'font-size': '12px', 'text-valign': 'center', 'text-halign': 'center', 'border-width': 1, 'border-color': isDark ? '#3f3f46' : '#d4d4d8', 'shape': 'round-rectangle', 'width': 'label', 'height': 'label', 'padding': '10px' } },
 
   { selector: ':parent', style: {
       'background-color': isDark ? '#18181b' : '#f4f4f5',
@@ -206,6 +206,16 @@ export default function App() {
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
 
+  // --- SYNC DARK MODE CLASS WITH ROOT ELEMENT ---
+  useEffect(() => {
+    const htmlElement = document.documentElement;
+    if (isDarkMode) {
+      htmlElement.classList.add('dark');
+    } else {
+      htmlElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
+
   // --- CYTOSCAPE LOADING ---
   useEffect(() => {
     if (window.cytoscape) { setCyLoaded(true); return; }
@@ -327,18 +337,18 @@ export default function App() {
         return (
           <div id="panel-welcome" className="space-y-6 p-4">
             <div id="panel-welcome-header">
-              <h2 className="flex items-center gap-2 font-semibold text-zinc-900 dark:text-zinc-100 text-sm tracking-tight">
-                <ShieldAlert className="text-blue-600 dark:text-blue-500" size={18} /> Installation Diagnostics
+              <h2 className="flex items-center gap-2 font-semibold text-foreground text-sm tracking-tight">
+                <ShieldAlert className="text-primary" size={18} /> Installation Diagnostics
               </h2>
-              <p className="mt-1 text-zinc-500 text-xs">Verifying the integrity of the local environment.</p>
+              <p className="mt-1 text-muted-foreground text-xs">Verifying the integrity of the local environment.</p>
             </div>
 
-            <div id="panel-security-breaker" className="flex justify-between items-center bg-zinc-50 dark:bg-zinc-900 p-3 border border-zinc-200 dark:border-zinc-800 rounded-md">
+            <div id="panel-security-breaker" className="flex justify-between items-center bg-muted p-3 border border-border rounded-md">
               <div>
-                <span className="font-medium text-zinc-900 dark:text-zinc-200 text-xs">Security Breaker</span>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Simulate a connection loss with the graph database.</p>
+                <span className="font-medium text-foreground text-xs">Security Breaker</span>
+                <p className="text-[11px] text-muted-foreground">Simulate a connection loss with the graph database.</p>
               </div>
-              <Switch id="checkbox-security-breaker" className="dark:peer-checked:bg-blue-500 peer-checked:bg-blue-600" checked={isLocked} onCheckedChange={(val) => setIsLocked(val)} />
+              <Switch id="checkbox-security-breaker" checked={isLocked} onCheckedChange={(val) => setIsLocked(val)} />
             </div>
 
             <div id="panel-diagnostic-grid" className="gap-2 grid grid-cols-2 text-xs">
@@ -346,9 +356,9 @@ export default function App() {
                 const isNeo4j = check.includes('Neo4j') || check.includes('jQAssistant');
                 const isFail = isLocked && isNeo4j;
                 return (
-                  <div key={i} className={`flex items-center gap-2 p-2 rounded border transition-colors ${isFail ? 'border-red-200 dark:border-red-900/50 bg-red-50/50 dark:bg-red-950/20 text-red-600 dark:text-red-400' : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 text-zinc-700 dark:text-zinc-300'}`}>
-                    {isFail ? <XCircle size={14} /> : <CheckCircle2 size={14} className="text-emerald-500" />}
-                    <span>{check}</span>
+                  <div key={i} className={`flex items-center gap-2 p-2 rounded border transition-colors ${isFail ? 'border-destructive/30 bg-destructive/10 text-destructive' : 'border-border bg-card text-muted-foreground'}`}>
+                    {isFail ? <XCircle size={14} /> : <CheckCircle2 size={14} className="text-primary" />}
+                    <span className="text-foreground">{check}</span>
                   </div>
                 );
               })}
@@ -359,7 +369,7 @@ export default function App() {
       case 'panel-explorer':
         return (
           <div id="panel-explorer" className="flex flex-col h-full">
-            <div id="panel-explorer-filters" className="flex gap-1 bg-zinc-50 dark:bg-zinc-900 p-2 border-zinc-200 dark:border-zinc-800 border-b">
+            <div id="panel-explorer-filters" className="flex gap-1 bg-muted p-2 border-border border-b">
               {['folder', 'ext', 'layer', 'list'].map(f => (
                 <Button
                   key={f}
@@ -367,7 +377,7 @@ export default function App() {
                   variant="ghost"
                   size="sm"
                   onClick={() => setExplorerFilter(f)}
-                  className={`capitalize text-xs h-7 px-2.5 ${explorerFilter === f ? 'bg-blue-100 dark:bg-blue-600/20 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50' : 'text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-800'}`}
+                  className={`capitalize text-xs h-7 px-2.5 ${explorerFilter === f ? 'bg-primary/10 text-primary border border-primary/20' : 'text-muted-foreground hover:bg-muted'}`}
                 >
                   {f}
                 </Button>
@@ -382,12 +392,10 @@ export default function App() {
                     const isMulti = e.ctrlKey || e.metaKey;
                     setSelectedIds(prev => isMulti ? (prev.includes(node.data.id) ? prev.filter(id => id !== node.data.id) : [...prev, node.data.id]) : [node.data.id]);
                   }}
-                  className={`flex items-center gap-2 p-1.5 text-xs rounded cursor-pointer border border-transparent hover:border-zinc-300 dark:hover:border-zinc-700
-                    ${selectedIds.includes(node.data.id) ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800/50 font-medium' : 'text-zinc-600 dark:text-zinc-400'}`}
+                  className={`flex items-center gap-2 p-1.5 text-xs rounded cursor-pointer border border-transparent hover:border-border
+                    ${selectedIds.includes(node.data.id) ? 'bg-primary/10 text-primary border border-primary/20 font-medium' : 'text-foreground/80'}`}
                 >
-                  <FileJson size={14} className={explorerFilter === 'layer' ?
-                    (node.data.layer === 'controller' ? 'text-blue-600 dark:text-blue-400' : node.data.layer === 'service' ? 'text-purple-600 dark:text-purple-400' : node.data.layer === 'repository' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400')
-                    : 'text-zinc-400 dark:text-zinc-500'} />
+                  <FileJson size={14} className={explorerFilter === 'layer' ? 'text-primary' : 'text-muted-foreground'} />
                   <span className="truncate">{node.data.parent}.{node.data.label}</span>
                 </div>
               ))}
@@ -399,9 +407,9 @@ export default function App() {
         return (
           <div id="panel-rules" className="flex flex-col gap-4 p-4 h-full">
              <div id="panel-rules-selector" className="space-y-1.5">
-              <label className="font-medium text-zinc-500 text-xs">Pre-configured Rule</label>
+              <label className="text-muted-foreground text-xs font-medium">Pre-configured Rule</label>
               <Select defaultValue="layer-bypass">
-                <SelectTrigger className="bg-white dark:bg-zinc-950 w-full">
+                <SelectTrigger className="w-full bg-card">
                   <SelectValue placeholder="Select Rule" />
                 </SelectTrigger>
                 <SelectContent side="bottom">
@@ -412,15 +420,15 @@ export default function App() {
               </Select>
              </div>
              <div id="panel-rules-editor" className="flex flex-col flex-1 space-y-1.5">
-               <label className="flex justify-between items-center font-medium text-zinc-500 text-xs">
+               <label className="flex justify-between items-center text-muted-foreground text-xs font-medium">
                  <span>Cypher Editor</span>
-                 <Button variant="ghost" size="sm" id="btn-execute-cypher" className="px-2 h-6 text-blue-600 dark:text-blue-400">
+                 <Button variant="ghost" size="sm" id="btn-execute-cypher" className="text-primary h-6 px-2">
                    <Play size={12} className="mr-1"/> Execute
                  </Button>
                </label>
                <Textarea
                   id="textarea-cypher-editor"
-                  className="flex-1 bg-zinc-50/50 dark:bg-[#121214] font-mono text-emerald-700 dark:text-emerald-400 text-xs resize-none"
+                  className="flex-1 font-mono text-foreground text-xs resize-none bg-muted/50 border-border"
                   defaultValue={"MATCH (c:Controller)-[r:CALLS]->(repo:Repository)\nRETURN c.name, repo.name, type(r)"}
                />
              </div>
@@ -429,20 +437,20 @@ export default function App() {
 
       case 'panel-help':
         return (
-          <div id="panel-help" className="space-y-4 p-4 text-zinc-600 dark:text-zinc-400 text-xs">
-            <h3 className="mb-2 font-semibold text-zinc-900 dark:text-zinc-200">Navigation Guide</h3>
-            <p>Use <kbd className="bg-zinc-100 dark:bg-zinc-800 px-1 border border-zinc-300 dark:border-zinc-700 rounded text-[10px] text-zinc-800 dark:text-zinc-200">Ctrl</kbd> or <kbd className="bg-zinc-100 dark:bg-zinc-800 px-1 border border-zinc-300 dark:border-zinc-700 rounded text-[10px] text-zinc-800 dark:text-zinc-200">Cmd</kbd> + Click on the explorer or graph to enable multiple selection.</p>
-            <div id="panel-help-legend" className="space-y-2 mt-4 pt-4 border-zinc-200 dark:border-zinc-800 border-t">
-              <p className="font-semibold text-zinc-900 dark:text-zinc-300">Impact Legend</p>
-              <div className="flex items-center gap-2"><div className="bg-[#bfdbfe] dark:bg-[#93c5fd] border border-[#3b82f6] dark:border-[#2563eb] rounded w-3 h-3"></div> Selected source</div>
-              <div className="flex items-center gap-2"><div className="bg-[#fecaca] dark:bg-[#f87171] border border-[#ef4444] dark:border-[#dc2626] rounded w-3 h-3"></div> Callers (Upstream)</div>
-              <div className="flex items-center gap-2"><div className="bg-[#fed7aa] dark:bg-[#fb923c] border border-[#f97316] dark:border-[#ea580c] rounded w-3 h-3"></div> Callees (Downstream)</div>
+          <div id="panel-help" className="space-y-4 p-4 text-muted-foreground text-xs">
+            <h3 className="mb-2 font-semibold text-foreground">Navigation Guide</h3>
+            <p>Use <kbd className="bg-muted px-1 border border-border rounded text-foreground text-[10px]">Ctrl</kbd> or <kbd className="bg-muted px-1 border border-border rounded text-foreground text-[10px]">Cmd</kbd> + Click on the explorer or graph to enable multiple selection.</p>
+            <div id="panel-help-legend" className="space-y-2 mt-4 pt-4 border-border border-t">
+              <p className="font-semibold text-foreground">Impact Legend</p>
+              <div className="flex items-center gap-2"><div className="bg-primary/20 border border-primary rounded w-3 h-3"></div> Selected source</div>
+              <div className="flex items-center gap-2"><div className="bg-destructive/20 border border-destructive rounded w-3 h-3"></div> Callers (Upstream)</div>
+              <div className="flex items-center gap-2"><div className="bg-accent border border-ring rounded w-3 h-3"></div> Callees (Downstream)</div>
             </div>
           </div>
         );
 
       default:
-        return <div id="panel-fallback" className="p-4 text-zinc-500 text-xs text-center">Module under construction...</div>;
+        return <div id="panel-fallback" className="p-4 text-muted-foreground text-xs text-center">Module under construction...</div>;
     }
   };
 
@@ -457,7 +465,7 @@ export default function App() {
         onClick={() => setActiveView(item.id)}
         title={sidebarLeftMode === 'minimal' ? item.label : undefined}
       >
-        <item.icon size={16} className="mr-2.5 shrink-0" />
+        <item.icon size={16} className="shrink-0 mr-2.5" />
         {sidebarLeftMode === 'normal' && (
           <>
             <span className="truncate">{item.label}</span>
@@ -475,42 +483,46 @@ export default function App() {
   // --- RENDER ---
   return (
     <TooltipProvider>
-      <div id="ctn-app-root" className={`flex flex-col h-screen w-screen overflow-hidden font-sans text-sm select-none transition-colors duration-200 ${isDarkMode ? 'dark bg-zinc-950 text-zinc-300' : 'bg-zinc-50 text-zinc-800'}`}>
+      <div id="ctn-app-root" className={`flex flex-col h-screen w-screen overflow-hidden font-sans text-sm select-none transition-colors duration-200 bg-background text-foreground ${isDarkMode ? 'dark' : ''}`}>
 
         {/* SECURITY LOCK (Overlay) */}
         {isLocked && (
-          <div id="panel-security-lock-overlay" className="z-40 absolute inset-0 flex justify-center items-center bg-white/80 dark:bg-zinc-950/80 backdrop-blur-sm animate-in duration-200 pointer-events-auto fade-in">
-            <div id="panel-security-lock-modal" className="bg-white dark:bg-zinc-900 shadow-2xl p-6 border border-zinc-200 dark:border-zinc-800 rounded-lg max-w-md text-center duration-200 zoom-in-95">
-              <ShieldAlert className="mx-auto mb-4 text-red-500" size={44} />
-              <h2 className="mb-2 font-bold text-zinc-900 dark:text-zinc-100 text-base tracking-tight">Sandbox locked</h2>
-              <p className="mb-4 text-zinc-500 dark:text-zinc-400 text-xs leading-relaxed">Connection to the local Neo4j cluster was interrupted. Analysis modules are suspended for safety.</p>
-              <Button variant="destructive" size="sm" id="btn-restore-connection" onClick={() => setIsLocked(false)}>
-                Restore connection
-              </Button>
+          <div id="panel-security-lock-overlay" className="z-40 absolute inset-0 flex justify-center items-center bg-background/80 backdrop-blur-sm pointer-events-auto animate-in fade-in duration-200">
+            <div id="panel-security-lock-modal" className="bg-card shadow-2xl p-6 border border-border rounded-lg max-w-md text-center zoom-in-95 duration-200">
+              <ShieldAlert className="mx-auto mb-4 text-destructive" size={44} />
+              <h2 className="mb-2 font-bold text-foreground text-base tracking-tight">Sandbox locked</h2>
+              <p className="mb-4 text-muted-foreground text-xs leading-relaxed">Connection to the local Neo4j cluster was interrupted. Analysis modules are suspended for safety.</p>
+              <div id="panel-security-lock-actions">
+                <Button variant="destructive" size="sm" id="btn-restore-connection" onClick={() => setIsLocked(false)}>
+                  Restore connection
+                </Button>
+              </div>
             </div>
           </div>
         )}
 
         {/* A. FIXED HEADER */}
-        <div id="ctn-app-header" className="z-20 flex justify-between items-center bg-white dark:bg-zinc-900 px-3 border-zinc-200 dark:border-zinc-800 border-b h-[40px] shrink-0">
+        <div id="ctn-app-header" className="z-20 flex justify-between items-center bg-card px-3 border-border border-b h-[40px] shrink-0">
           <div id="panel-app-header-left" className="flex items-center gap-2">
             <Button
               id="btn-toggle-sidebar-collapse"
               variant="ghost"
               size="icon"
               onClick={() => setSidebarLeftMode(m => m === 'collapsed' ? 'normal' : 'collapsed')}
-              className="w-8 h-8 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground"
               title="Toggle Main Menu"
             >
               <Menu size={16} />
             </Button>
 
             <Tooltip>
-              <TooltipTrigger>
-                <div id="header-logo" className="flex items-center gap-2 ml-1 text-blue-600 dark:text-blue-500 cursor-help">
-                  <span className="font-bold text-zinc-900 dark:text-zinc-100 text-xs tracking-tight">Graph-Impact</span>
-                </div>
-              </TooltipTrigger>
+              <TooltipTrigger
+                render={
+                  <div id="header-logo" className="flex items-center gap-2 text-primary cursor-help ml-1">
+                    <span className="font-bold tracking-tight text-xs text-foreground">Graph-Impact</span>
+                  </div>
+                }
+              />
               <TooltipContent side="bottom">
                 Active GraphRAG engine - Real-time topological analysis
               </TooltipContent>
@@ -519,12 +531,12 @@ export default function App() {
 
           <div id="panel-app-header-center" className="flex-1 mx-4 max-w-md">
             <div className="relative flex items-center w-full">
-              <Search className="left-2 absolute text-zinc-400 dark:text-zinc-500" size={14} />
-              <input
+              <Search className="left-2 absolute text-muted-foreground" size={14} />
+              <Input
                 id="input-global-search"
                 type="text"
                 placeholder="Search for an AST entity (e.g., UserController)..."
-                className="bg-zinc-50/50 dark:bg-zinc-900 py-1 pr-3 pl-8 border border-zinc-200 focus:border-blue-500 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 w-full text-zinc-900 dark:placeholder:text-zinc-600 dark:text-zinc-200 placeholder:text-zinc-500 text-xs transition-all"
+                className="pl-8 bg-muted text-xs h-8"
                 disabled={isLocked}
               />
             </div>
@@ -543,26 +555,26 @@ export default function App() {
 
              <div className="bg-zinc-300 dark:bg-zinc-700 mx-1 w-px h-4"></div>
 
-            <button id="btn-toggle-main" onClick={() => setIsCtnAppWorkspaceVisible(!isCtnAppWorkspaceVisible)} className={`p-1.5 rounded transition-colors ml-1 ${!isCtnAppWorkspaceVisible ? 'text-zinc-400 dark:text-zinc-500' : 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40'}`} title="Toggle Full Main">
+            <button id="btn-toggle-main" onClick={() => setIsCtnAppWorkspaceVisible(!isCtnAppWorkspaceVisible)} className={`p-1.5 rounded transition-colors ml-1 ${!isCtnAppWorkspaceVisible ? 'text-zinc-400 dark:text-zinc-500' : 'text-primary bg-primary/10 hover:bg-primary/20'}`} title="Toggle Full Main">
                <Eye size={16} />
             </button>
-            <button id="btn-toggle-main-header" onClick={() => setIsCtnAppWorkspaceTopVisible(!isCtnAppWorkspaceTopVisible)} className={`p-1.5 rounded transition-colors ml-1 ${!isCtnAppWorkspaceTopVisible ? 'text-zinc-400 dark:text-zinc-500' : 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40'}`} title="Toggle File Header">
+            <button id="btn-toggle-main-header" onClick={() => setIsCtnAppWorkspaceTopVisible(!isCtnAppWorkspaceTopVisible)} className={`p-1.5 rounded transition-colors ml-1 ${!isCtnAppWorkspaceTopVisible ? 'text-zinc-400 dark:text-zinc-500' : 'text-primary bg-primary/10 hover:bg-primary/20'}`} title="Toggle File Header">
                <Eye size={16} />
             </button>
-            <button id="btn-toggle-main-left" onClick={() => setIsCtnAppWorkspaceLeftVisible(!isCtnAppWorkspaceLeftVisible)} className={`p-1.5 rounded transition-colors ml-1 ${!isCtnAppWorkspaceLeftVisible ? 'text-zinc-400 dark:text-zinc-500' : 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40'}`} title="Toggle Main Content">
+            <button id="btn-toggle-main-left" onClick={() => setIsCtnAppWorkspaceLeftVisible(!isCtnAppWorkspaceLeftVisible)} className={`p-1.5 rounded transition-colors ml-1 ${!isCtnAppWorkspaceLeftVisible ? 'text-zinc-400 dark:text-zinc-500' : 'text-primary bg-primary/10 hover:bg-primary/20'}`} title="Toggle Main Content">
                <Eye size={16} />
             </button>
-            <button id="btn-toggle-main-center" onClick={() => setIsCtnAppWorkspaceCenterVisible(!isCtnAppWorkspaceCenterVisible)} className={`p-1.5 rounded transition-colors ml-1 ${!isCtnAppWorkspaceCenterVisible ? 'text-zinc-400 dark:text-zinc-500' : 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40'}`} title="Toggle Graph">
+            <button id="btn-toggle-main-center" onClick={() => setIsCtnAppWorkspaceCenterVisible(!isCtnAppWorkspaceCenterVisible)} className={`p-1.5 rounded transition-colors ml-1 ${!isCtnAppWorkspaceCenterVisible ? 'text-zinc-400 dark:text-zinc-500' : 'text-primary bg-primary/10 hover:bg-primary/20'}`} title="Toggle Graph">
                <Eye size={16} />
             </button>
-            <button id="btn-toggle-workspace-right" onClick={() => setIsCtnAppWorkspaceRightVisible(!isCtnAppWorkspaceRightVisible)} className={`p-1.5 rounded transition-colors ml-1 ${!isCtnAppWorkspaceRightVisible ? 'text-zinc-400 dark:text-zinc-500' : 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40'}`} title="Toggle Workspace Right">
+            <button id="btn-toggle-workspace-right" onClick={() => setIsCtnAppWorkspaceRightVisible(!isCtnAppWorkspaceRightVisible)} className={`p-1.5 rounded transition-colors ml-1 ${!isCtnAppWorkspaceRightVisible ? 'text-zinc-400 dark:text-zinc-500' : 'text-primary bg-primary/10 hover:bg-primary/20'}`} title="Toggle Workspace Right">
                <Eye size={16} />
             </button>
-            <button id="btn-toggle-workspace-bottom" onClick={() => setIsCtnAppWorkspaceBottomVisible(!isCtnAppWorkspaceBottomVisible)} className={`p-1.5 rounded transition-colors ml-1 ${!isCtnAppWorkspaceBottomVisible ? 'text-zinc-400 dark:text-zinc-500' : 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40'}`} title="Toggle Workspace Bottom">
+            <button id="btn-toggle-workspace-bottom" onClick={() => setIsCtnAppWorkspaceBottomVisible(!isCtnAppWorkspaceBottomVisible)} className={`p-1.5 rounded transition-colors ml-1 ${!isCtnAppWorkspaceBottomVisible ? 'text-zinc-400 dark:text-zinc-500' : 'text-primary bg-primary/10 hover:bg-primary/20'}`} title="Toggle Workspace Bottom">
                <Eye size={16} />
             </button>
              <div className="bg-zinc-300 dark:bg-zinc-700 mx-1 w-px h-4"></div>
-            <button id="btn-toggle-main-right" onClick={() => setIsSidebarRightVisible(!isSidebarRightVisible)} className={`p-1.5 rounded transition-colors ml-1 ${!isSidebarRightVisible ? 'text-zinc-400 dark:text-zinc-500' : 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40'}`} title="Toggle Inspector (Detail)">
+            <button id="btn-toggle-main-right" onClick={() => setIsSidebarRightVisible(!isSidebarRightVisible)} className={`p-1.5 rounded transition-colors ml-1 ${!isSidebarRightVisible ? 'text-zinc-400 dark:text-zinc-500' : 'text-primary bg-primary/10 hover:bg-primary/20'}`} title="Toggle Inspector (Detail)">
                <Eye size={16} />
             </button>
           </div>
@@ -570,21 +582,21 @@ export default function App() {
 
         {/* IMPORT/EXPORT MODALS */}
         <Dialog open={importOpen} onOpenChange={setImportOpen}>
-          <DialogContent className="bg-white dark:bg-zinc-900 border">
+          <DialogContent className="bg-card border border-border">
             <DialogHeader>
-              <DialogTitle className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm">Import AST Graph</DialogTitle>
+              <DialogTitle className="font-semibold text-foreground text-sm">Import AST Graph</DialogTitle>
             </DialogHeader>
-            <p className="my-2 text-zinc-500 text-xs">Select a JSON file generated by the SWC extractor.</p>
-            <Button id="btn-import-browse" className="mt-2 w-full">Browse...</Button>
+            <p className="my-2 text-muted-foreground text-xs">Select a JSON file generated by the SWC extractor.</p>
+            <Button id="btn-import-browse" className="w-full mt-2">Browse...</Button>
           </DialogContent>
         </Dialog>
 
         <Dialog open={exportOpen} onOpenChange={setExportOpen}>
-          <DialogContent className="bg-white dark:bg-zinc-900 border">
+          <DialogContent className="bg-card border border-border">
             <DialogHeader>
-              <DialogTitle className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm">Export Topology</DialogTitle>
+              <DialogTitle className="font-semibold text-foreground text-sm">Export Topology</DialogTitle>
             </DialogHeader>
-            <p className="my-2 text-zinc-500 text-xs">Exporting metadata and current adjacency matrix.</p>
+            <p className="my-2 text-muted-foreground text-xs">Exporting metadata and current adjacency matrix.</p>
             <div id="panel-export-actions" className="flex gap-2">
               <Button variant="outline" size="sm" id="btn-export-json" className="flex-1">JSON</Button>
               <Button variant="default" size="sm" id="btn-export-cypher" className="flex-1">Cypher DDL</Button>
@@ -607,7 +619,7 @@ export default function App() {
                     {SIDEBAR_MENU_ITEMS.filter(item => !item.bottom).map(renderSidebarMenuItem)}
                   </SidebarMenu>
                 </SidebarGroup>
-                <SidebarGroup className="mt-auto pt-2 border-zinc-200 dark:border-zinc-800 border-t">
+                <SidebarGroup className="mt-auto pt-2 border-sidebar-border border-t">
                   <SidebarMenu>
                     {SIDEBAR_MENU_ITEMS.filter(item => item.bottom).map(renderSidebarMenuItem)}
                   </SidebarMenu>
@@ -620,7 +632,7 @@ export default function App() {
                   variant="ghost"
                   size="sm"
                   onClick={() => setSidebarLeftMode(m => m === 'normal' ? 'minimal' : 'normal')}
-                  className={`w-full text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 ${sidebarLeftMode === 'normal' ? 'justify-end' : 'justify-center'}`}
+                  className={`w-full text-muted-foreground hover:text-foreground ${sidebarLeftMode === 'normal' ? 'justify-end' : 'justify-center'}`}
                 >
                   {sidebarLeftMode === 'normal' ? <ChevronLeft size={16}/> : <ChevronRight size={16}/>}
                 </Button>
@@ -629,17 +641,17 @@ export default function App() {
               {sidebarLeftMode === 'normal' && (
                 <div
                   id="ctn-app-sidebar-left-handle"
-                  className="group top-0 right-0 bottom-0 z-20 absolute hover:bg-zinc-400/50 w-1 cursor-col-resize"
+                  className="group top-0 right-0 bottom-0 z-20 absolute hover:bg-sidebar-border w-1 cursor-col-resize"
                   onMouseDown={startSidebarLeftResize}
                 >
-                   <div className="top-1/2 right-[1px] absolute bg-zinc-300 dark:bg-zinc-700 rounded-full w-[2px] h-8 -translate-y-1/2"></div>
+                   <div className="top-1/2 right-[1px] absolute bg-sidebar-border rounded-full w-[2px] h-8 -translate-y-1/2"></div>
                 </div>
               )}
             </Sidebar>
           )}
 
           {/* C. CENTRAL WORKSPACE STAGE */}
-          <div id="ctn-app-workspace" style={{ display: isCtnAppWorkspaceVisible ? 'flex' : 'none' }} className="relative flex flex-1 bg-white dark:bg-zinc-950 min-w-0">
+          <div id="ctn-app-workspace" style={{ display: isCtnAppWorkspaceVisible ? 'flex' : 'none' }} className="relative flex flex-1 bg-background min-w-0">
             <div id="ctn-app-workspace-wrapper-lvl-1" className="relative flex flex-col flex-1 min-w-0">
 
               {/* TOP COLLAPSIBLE FILE HEADER */}
@@ -649,24 +661,24 @@ export default function App() {
                   height: `${ctnAppWorkspaceTopHeight}px`,
                   display: isCtnAppWorkspaceTopVisible ? 'flex' : 'none'
                 }}
-                className="relative flex flex-col bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 border-b w-full shrink-0"
+                className="relative flex flex-col bg-muted border-border border-b w-full shrink-0"
               >
-                <div id="ctn-app-workspace-top-title-bar" className="flex justify-between items-center bg-zinc-100 dark:bg-zinc-900 px-3 border-zinc-200 dark:border-zinc-800/50 border-b h-8 font-semibold text-[11px] text-zinc-500 uppercase tracking-wider shrink-0">
-                  <div id="ctn-app-workspace-top-title-bar-left">Selected paths</div>
+                <div id="ctn-app-workspace-top-title-bar" className="flex justify-between items-center bg-secondary px-3 border-border border-b h-8 font-semibold text-[11px] text-muted-foreground uppercase tracking-wider shrink-0">
+                  <div id="ctn-app-workspace-top-title-bar-left">Selected files</div>
                   <div id="ctn-app-workspace-top-title-bar-center" className="flex-1"></div>
                 </div>
 
-                <div id="ctn-app-workspace-top-content" className="flex-1 space-y-2 p-1 w-full overflow-y-auto text-xs">
-                  <ul id="paths-list" className="space-y-1 text-zinc-600 dark:text-zinc-400">
-                    <li className="flex items-center gap-2"><Folder size={14} /> <span>workspace/src/main/java</span></li>
-                    <li className="flex items-center gap-2"><File size={14} /> <span>workspace/src/main/resources/application.properties</span></li>
-                    <li className="flex items-center gap-2"><Folder size={14} /> <span>workspace//src/main/resources/templates</span></li>
+                <div id="ctn-app-workspace-top-content" className="flex-1 space-y-2 p-3 w-full overflow-y-auto text-xs">
+                  <ul id="files-list" className="space-y-2 text-muted-foreground">
+                    <li className="flex items-center gap-2"><CircleArrowRight size={14} /> <span>zz-tmp/temp-01.txt</span></li>
+                    <li className="flex items-center gap-2"><CircleArrowRight size={14} /> <span>zz-tmp/temp-02.txt</span></li>
+                    <li className="flex items-center gap-2"><CircleArrowRight size={14} /> <span>zz-tmp/temp-03.txt</span></li>
                   </ul>
                 </div>
 
                 <div
                   id="ctn-app-workspace-top-handle"
-                  className="right-0 bottom-0 left-0 z-10 absolute hover:bg-zinc-400/50 h-1 cursor-row-resize"
+                  className="right-0 bottom-0 left-0 z-10 absolute hover:bg-border h-1 cursor-row-resize"
                   onMouseDown={startCtnAppWorkspaceTopResize}
                 ></div>
               </div>
@@ -681,9 +693,9 @@ export default function App() {
                     display: isCtnAppWorkspaceLeftVisible ? 'flex' : 'none',
                     width: `${mainLeftWidth}%`
                   }}
-                  className="relative flex flex-col bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 border-r min-w-[200px] overflow-hidden shrink-0"
+                  className="relative flex flex-col bg-card border-border border-r min-w-[200px] overflow-hidden shrink-0"
                 >
-                   <div id="ctn-app-workspace-left-title-bar" className="flex justify-between items-center bg-zinc-100 dark:bg-zinc-900 px-3 border-zinc-200 dark:border-zinc-800/50 border-b h-8 font-semibold text-[11px] text-zinc-500 uppercase tracking-wider shrink-0">
+                   <div id="ctn-app-workspace-left-title-bar" className="flex justify-between items-center bg-secondary px-3 border-border border-b h-8 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider shrink-0">
                       <div id="ctn-app-workspace-left-title-left">{getActiveViewLabel()}</div>
                    </div>
 
@@ -691,19 +703,19 @@ export default function App() {
                       {renderViewContent()}
                    </div>
 
-                   <div id="panel-logs" className="flex flex-col bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 border-t h-[140px] shrink-0">
-                      <div id="panel-logs-title-bar" className="flex items-center gap-4 bg-zinc-100 dark:bg-zinc-900 px-3 border-zinc-200 dark:border-zinc-800 border-b h-7 font-semibold text-[10px] text-zinc-400 uppercase tracking-widest">
-                        <span className="flex items-center border-zinc-800 dark:border-zinc-200 border-b h-full text-zinc-800 dark:text-zinc-200">Parser Logs</span>
+                   <div id="panel-logs" className="flex flex-col bg-muted border-border border-t h-[140px] shrink-0">
+                      <div id="panel-logs-title-bar" className="flex items-center gap-4 bg-secondary px-3 border-border border-b h-7 text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
+                        <span className="text-foreground border-b border-primary h-full flex items-center">Parser Logs</span>
                       </div>
-                      <div id="panel-logs-content" className="flex-1 space-y-1 bg-white dark:bg-zinc-950 p-2 overflow-auto font-mono text-[11px] text-zinc-500">
-                        <div><span className="text-emerald-600">[INFO]</span> AST Parser initiated on 3 files.</div>
-                        <div><span className="text-emerald-600">[INFO]</span> Topological graph built: 18 nodes.</div>
+                      <div id="panel-logs-content" className="flex-1 space-y-1 bg-card p-2 overflow-auto font-mono text-[11px] text-muted-foreground">
+                        <div><span className="text-primary">[INFO]</span> AST Parser initiated on 3 files.</div>
+                        <div><span className="text-primary">[INFO]</span> Topological graph built: 18 nodes.</div>
                       </div>
                    </div>
 
                    <div
                       id="ctn-app-workspace-left-handle"
-                      className="top-0 right-0 bottom-0 z-10 absolute hover:bg-zinc-400/50 w-1 cursor-col-resize"
+                      className="top-0 right-0 bottom-0 z-10 absolute hover:bg-border w-1 cursor-col-resize"
                       onMouseDown={startmainLeftResize}
                     ></div>
                 </div>
@@ -715,18 +727,18 @@ export default function App() {
                     display: isCtnAppWorkspaceCenterVisible || isGraphMaximized ? 'flex' : 'none',
                     ...(isGraphMaximized ? { position: 'fixed', top: '40px', bottom: '40px', left: '0', right: '0', zIndex: 50 } : {})
                   }}
-                  className={`relative bg-zinc-50 dark:bg-[#0c0c0e] overflow-hidden flex flex-col ${!isGraphMaximized ? 'flex-1' : ''}`}
+                  className={`relative bg-background overflow-hidden flex flex-col ${!isGraphMaximized ? 'flex-1' : ''}`}
                 >
-                  <div id="ctn-app-workspace-center-top-bar" className="z-10 relative flex justify-between items-center bg-zinc-100 dark:bg-zinc-900 px-3 border-zinc-200 dark:border-zinc-800/50 border-b h-8 font-semibold text-[11px] text-zinc-500 uppercase tracking-wider shrink-0">
+                  <div id="ctn-app-workspace-center-top-bar" className="z-10 relative flex justify-between items-center bg-secondary px-3 border-border border-b h-8 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider shrink-0">
                     <div>Topological Graph</div>
                     <div id="ctn-app-workspace-center-top-right" className="flex items-center gap-0.5">
-                      <Button variant="ghost" size="icon" className="w-6 h-6 text-zinc-500" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() + 0.1)}><Plus size={12}/></Button>
-                      <Button variant="ghost" size="icon" className="w-6 h-6 text-zinc-500" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() - 0.1)}><Minus size={12}/></Button>
-                      <Button variant="ghost" size="icon" className="w-6 h-6 text-zinc-500" onClick={() => cyRef.current?.fit()}><Shrink size={12}/></Button>
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() + 0.1)}><Plus size={12}/></Button>
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() - 0.1)}><Minus size={12}/></Button>
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" onClick={() => cyRef.current?.fit()}><Shrink size={12}/></Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="w-6 h-6 text-zinc-500"
+                        className="h-6 w-6 text-muted-foreground"
                         onClick={() => {
                           setIsGraphMaximized(!isGraphMaximized);
                           setTimeout(() => { cyRef.current?.resize(); cyRef.current?.fit(); }, 50);
@@ -740,7 +752,7 @@ export default function App() {
                   <div id="ctn-app-workspace-center-content" className="relative flex-1 w-full h-full">
                      <div id="panel-graph-canvas" ref={graphContainerRef} className="relative outline-none w-full h-full"></div>
                   </div>
-                  {isLocked && <div id="ctn-app-workspace-center-locked-overlay" className="z-20 absolute inset-0 bg-white/40 dark:bg-black/40 pointer-events-none"></div>}
+                  {isLocked && <div id="ctn-app-workspace-center-locked-overlay" className="z-20 absolute inset-0 bg-background/40 pointer-events-none"></div>}
                 </div>
 
                 {/* RIGHT VIEW CONTAINER */}
@@ -750,22 +762,22 @@ export default function App() {
                     display: isCtnAppWorkspaceRightVisible ? 'flex' : 'none',
                     width: !isCtnAppWorkspaceCenterVisible ? '100%' : `${mainRightWidth}%`
                   }}
-                  className={`relative flex flex-col bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 border-l min-w-[200px] overflow-hidden shrink-0 ${!isCtnAppWorkspaceCenterVisible ? 'flex-1' : ''}`}
+                  className={`relative flex flex-col bg-card border-border border-l min-w-[200px] overflow-hidden shrink-0 ${!isCtnAppWorkspaceCenterVisible ? 'flex-1' : ''}`}
                 >
-                   <div id="ctn-app-workspace-right-title-bar" className="flex justify-between items-center bg-zinc-100 dark:bg-zinc-900 px-3 border-zinc-200 dark:border-zinc-800/50 border-b h-8 font-semibold text-[11px] text-zinc-500 uppercase tracking-wider shrink-0">
+                   <div id="ctn-app-workspace-right-title-bar" className="flex justify-between items-center bg-secondary px-3 border-border border-b h-8 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider shrink-0">
                       <div>Workspace Left title</div>
                    </div>
-                   <div id="ctn-app-workspace-right-content" className="flex-1 p-4 text-zinc-500 text-xs">
+                   <div id="ctn-app-workspace-right-content" className="flex-1 p-4 text-muted-foreground text-xs">
                       Not used at this moment
                    </div>
 
                    {isCtnAppWorkspaceCenterVisible && (
                      <div
                         id="ctn-app-workspace-right-handle"
-                        className="top-0 bottom-0 left-0 z-10 absolute hover:bg-zinc-400/50 w-1 cursor-col-resize"
+                        className="top-0 bottom-0 left-0 z-10 absolute hover:bg-border w-1 cursor-col-resize"
                         onMouseDown={startmainRightResize}
                       >
-                         <div className="top-1/2 left-[1px] absolute bg-zinc-300 dark:bg-zinc-700 rounded-full w-[2px] h-8 -translate-y-1/2"></div>
+                         <div className="top-1/2 left-[1px] absolute bg-border rounded-full w-[2px] h-8 -translate-y-1/2"></div>
                       </div>
                    )}
                 </div>
@@ -779,14 +791,14 @@ export default function App() {
                   display: isCtnAppWorkspaceBottomVisible ? 'flex' : 'none',
                   height: `${ctnAppWorkspaceBottomHeight}px`
                 }}
-                className="relative flex justify-between items-center bg-zinc-50 dark:bg-zinc-900 px-4 border-zinc-200 dark:border-zinc-800 border-t w-full font-medium text-zinc-500 text-xs shrink-0"
+                className="relative bg-secondary border-border border-t w-full items-center px-4 flex justify-between shrink-0 text-xs font-medium text-muted-foreground"
               >
                 <div
                   id="ctn-app-workspace-bottom-handle"
-                  className="group top-0 right-0 left-0 z-20 absolute hover:bg-zinc-400/50 h-1 cursor-row-resize"
+                  className="group top-0 right-0 left-0 z-20 absolute hover:bg-border h-1 cursor-row-resize"
                   onMouseDown={startCtnAppWorkspaceBottomResize}
                 >
-                   <div className="top-[1px] left-1/2 absolute bg-zinc-300 dark:bg-zinc-700 rounded-full w-8 h-[2px] -translate-x-1/2"></div>
+                   <div className="top-[1px] left-1/2 absolute bg-border rounded-full w-8 h-[2px] -translate-x-1/2"></div>
                 </div>
 
                 <div id="ctn-app-workspace-bottom-left" className="py-2">Wksp Bottom Left</div>
@@ -805,45 +817,45 @@ export default function App() {
               width: `${sidebarRightWidth}px`,
               borderLeftWidth: '1px'
             }}
-            className="z-30 relative flex flex-col bg-white dark:bg-zinc-900 ml-auto border-zinc-200 dark:border-zinc-800 h-full shrink-0"
+            className="z-30 relative flex flex-col bg-card ml-auto border-border h-full shrink-0"
           >
             <div
               id="ctn-app-sidebar-right-handle"
-              className="group top-0 bottom-0 left-0 z-40 absolute hover:bg-zinc-400/50 w-1 cursor-col-resize"
+              className="group top-0 bottom-0 left-0 z-40 absolute hover:bg-border w-1 cursor-col-resize"
               onMouseDown={startSidebarRightResize}
             >
-               <div className="top-1/2 left-[1px] absolute bg-zinc-300 dark:bg-zinc-700 rounded-full w-[2px] h-8 -translate-y-1/2"></div>
+               <div className="top-1/2 left-[1px] absolute bg-border rounded-full w-[2px] h-8 -translate-y-1/2"></div>
             </div>
 
-            <div id="panel-app-sidebar-right-title-bar" className="flex justify-between items-center bg-zinc-100 dark:bg-zinc-900 px-3 border-zinc-200 dark:border-zinc-800/50 border-b h-8 font-semibold text-[11px] text-zinc-500 uppercase tracking-wider shrink-0">
+            <div id="panel-app-sidebar-right-title-bar" className="flex justify-between items-center bg-secondary px-3 border-border border-b h-8 font-semibold text-[11px] text-muted-foreground uppercase tracking-wider shrink-0">
               <div className="flex items-center gap-1.5"><Database size={13}/> <span>Inspector</span></div>
-              <Button variant="ghost" size="icon" className="w-5 h-5 text-zinc-400" onClick={() => setSelectedIds([])}><X size={12}/></Button>
+              <Button variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => setSelectedIds([])}><X size={12}/></Button>
             </div>
 
             <div id="panel-app-sidebar-right-content" className="flex-1 p-4 overflow-y-auto text-xs">
               {selectedIds.length === 0 ? (
-                <div className="flex flex-col justify-center items-center gap-1.5 h-full text-zinc-400 dark:text-zinc-600 text-center">
+                <div className="flex flex-col justify-center items-center gap-1.5 h-full text-muted-foreground text-center">
                   <Focus size={24} className="opacity-40" /> <span>No selection active</span>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="bg-white dark:bg-zinc-950 p-3 border border-zinc-200 dark:border-zinc-800 rounded-md text-center">
-                    <div className="font-bold text-blue-600 dark:text-blue-400 text-xl">{selectedIds.length}</div>
-                    <div className="text-[10px] text-zinc-400 uppercase tracking-wider">Nodes Selected</div>
+                  <div className="bg-muted p-3 border border-border rounded-md text-center">
+                    <div className="text-xl font-bold text-primary">{selectedIds.length}</div>
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Nodes Selected</div>
                   </div>
                   {selectedIds.map(id => {
                     const node = AST_DATA.nodes.find(n => n.data.id === id);
                     if(!node) return null;
                     return (
-                      <div key={id} className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md overflow-hidden">
-                        <div className="flex justify-between items-center bg-zinc-50 dark:bg-zinc-900 px-2.5 py-1.5 border-zinc-200 dark:border-zinc-800 border-b">
-                          <span className="font-semibold text-zinc-800 dark:text-zinc-200">{node.data.label}</span>
-                          <span className="bg-blue-100 dark:bg-blue-900/30 px-1 py-0.5 border border-blue-200 dark:border-blue-800/50 rounded font-bold text-[9px] text-blue-700 dark:text-blue-400 uppercase">{node.data.layer}</span>
+                      <div key={id} className="border border-border rounded-md overflow-hidden bg-background">
+                        <div className="bg-secondary px-2.5 py-1.5 border-b border-border flex justify-between items-center">
+                          <span className="font-semibold text-foreground">{node.data.label}</span>
+                          <span className="text-[9px] bg-primary/10 text-primary border border-primary/20 px-1 py-0.5 rounded uppercase font-bold">{node.data.layer}</span>
                         </div>
-                        <div className="space-y-1 p-2 text-[11px] text-zinc-500">
-                           <div className="flex justify-between"><span>Parent:</span> <span className="text-zinc-800 dark:text-zinc-300">{node.data.parent || 'N/A'}</span></div>
-                           <div className="flex justify-between"><span>Incoming:</span> <span className="font-bold text-red-500">{AST_DATA.edges.filter(e => e.data.target === id).length}</span></div>
-                           <div className="flex justify-between"><span>Outgoing:</span> <span className="font-bold text-orange-500">{AST_DATA.edges.filter(e => e.data.source === id).length}</span></div>
+                        <div className="p-2 space-y-1 text-[11px] text-muted-foreground">
+                           <div className="flex justify-between"><span>Parent:</span> <span className="text-foreground">{node.data.parent || 'N/A'}</span></div>
+                           <div className="flex justify-between"><span>Incoming:</span> <span className="text-destructive font-bold">{AST_DATA.edges.filter(e => e.data.target === id).length}</span></div>
+                           <div className="flex justify-between"><span>Outgoing:</span> <span className="text-primary font-bold">{AST_DATA.edges.filter(e => e.data.source === id).length}</span></div>
                         </div>
                       </div>
                     )
@@ -861,13 +873,15 @@ export default function App() {
             <div className="flex items-center gap-1.5 font-medium"><Server size={13}/> <span>{isLocked ? "Disconnected" : "Neo4j Connected"}</span></div>
           </div>
           <div className="flex items-center gap-4 font-mono">
-             <div>Callers: <span className="font-bold text-red-200">{impacts.callers.length}</span></div>
-             <div>Callees: <span className="font-bold text-orange-200">{impacts.callees.length}</span></div>
+             <div>Callers: <span className="font-bold text-white/90">{impacts.callers.length}</span></div>
+             <div>Callees: <span className="font-bold text-white/90">{impacts.callees.length}</span></div>
           </div>
           <Tooltip>
-            <TooltipTrigger>
-              <div className="opacity-90 text-[11px] cursor-help">Impact count: {selectedIds.length + impacts.callers.length + impacts.callees.length} node(s)</div>
-            </TooltipTrigger>
+            <TooltipTrigger
+              render={
+                <div className="opacity-90 text-[11px] cursor-help">Impact count: {selectedIds.length + impacts.callers.length + impacts.callees.length} node(s)</div>
+              }
+            />
             <TooltipContent side="top">
               Total node visualization tracking metric matrix context
             </TooltipContent>
