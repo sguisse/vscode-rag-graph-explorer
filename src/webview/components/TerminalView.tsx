@@ -8,12 +8,12 @@ interface LogEntry {
     timestamp: string;
 }
 
-interface TerminalTabProps {
+interface TerminalViewProps {
     logs: LogEntry[];
     clearLogs: () => void;
 }
 
-export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => {
+export const TerminalView: React.FC<TerminalViewProps> = ({ logs, clearLogs }) => {
     const [selectedLevel, setSelectedLevel] = useState<string>('info');
     const [copied, setCopied] = useState<boolean>(false);
 
@@ -36,7 +36,6 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => 
         return logs.filter(log => (severityMap[log.level] ?? 1) >= targetSeverity);
     }, [logs, selectedLevel]);
 
-    // Deterministically pre-calculate sequential match start indices for each log line item
     const logsWithMatchIndices = useMemo(() => {
         if (!searchQuery) {
             return filteredLogs.map(log => ({ log, startIndex: 0, matchCount: 0 }));
@@ -60,7 +59,6 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => 
         }
     }, [filteredLogs, searchQuery, caseSensitive, wholeWord, useRegex]);
 
-    // Keep total matches state accurately updated in sync with calculation matrix
     useEffect(() => {
         if (logsWithMatchIndices.length === 0) {
             setTotalMatches(0);
@@ -74,7 +72,6 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => 
         setCurrentMatchIndex(0);
     }, [searchQuery, caseSensitive, wholeWord, useRegex, selectedLevel]);
 
-    // Seamlessly handles automatic alignment scrolling to active index nodes with brief render paint delay padding
     useEffect(() => {
         if (totalMatches === 0 || !showFind) return;
 
@@ -113,7 +110,7 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => 
     };
 
     return (
-        <div id="tab-terminal-content" className="flex flex-col bg-[var(--vscode-editor-background)] pt-[5px] pr-0 pb-0 pl-0 w-full h-full overflow-hidden">
+        <div id="view-terminal-content" className="flex flex-col bg-[var(--vscode-editor-background)] pt-[5px] pr-0 pb-0 pl-0 w-full h-full overflow-hidden">
             <div className="relative flex flex-col gap-4 mx-auto p-2 w-full h-full">
 
                 {/* Top Control Panel */}
@@ -125,6 +122,7 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => 
                     <div className="flex items-center gap-3">
                         <label className="font-medium text-[var(--vscode-descriptionForeground)] text-xs">Filter Level:</label>
                         <select
+                            id="terminal-select-filter-level"
                             value={selectedLevel}
                             onChange={(e) => setSelectedLevel(e.target.value)}
                             className="bg-[var(--vscode-input-background)] shadow-sm px-2 py-1 border border-[var(--vscode-input-border)] rounded-md outline-none font-semibold text-[var(--vscode-input-foreground)] text-xs"
@@ -135,15 +133,16 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => 
                             <option value="error">❌ Error</option>
                         </select>
                         <button
+                            id="terminal-btn-toggle-find"
                             onClick={() => setShowFind(!showFind)}
-                            className={`px-3 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5 \${showFind ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-blue-600/10 text-blue-500'}`}
+                            className={`px-3 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5 ${showFind ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-blue-600/10 text-blue-500'}`}
                         >
                             <span className="codicon codicon-search"></span> Find
                         </button>
-                        <button onClick={handleCopy} className="flex items-center gap-1.5 bg-blue-600/10 px-3 py-1 rounded-md font-semibold text-blue-500 text-xs">
+                        <button id="terminal-btn-copy-logs" onClick={handleCopy} className="flex items-center gap-1.5 bg-blue-600/10 px-3 py-1 rounded-md font-semibold text-blue-500 text-xs">
                             <span className={"codicon " + (copied ? "codicon-check" : "codicon-copy")}></span> {copied ? "Copied!" : "Copy Logs"}
                         </button>
-                        <button onClick={clearLogs} className="flex items-center gap-1.5 bg-red-600/10 px-3 py-1 rounded-md font-semibold text-red-500 text-xs">
+                        <button id="terminal-btn-clear-output" onClick={clearLogs} className="flex items-center gap-1.5 bg-red-600/10 px-3 py-1 rounded-md font-semibold text-red-500 text-xs">
                             <span className="codicon codicon-trash"></span> Clear Output
                         </button>
                     </div>
@@ -168,6 +167,7 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({ logs, clearLogs }) => 
                 {/* Logs Text Area Stream Viewport */}
                 <div
                     ref={logsContainerRef}
+                    id="terminal-logs-viewport"
                     className="relative flex flex-col flex-1 gap-1 bg-black p-4 border border-[var(--vscode-panel-border)] rounded-lg overflow-y-auto font-mono text-xs select-text"
                 >
                     {logsWithMatchIndices.length > 0 ? (

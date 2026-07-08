@@ -5,7 +5,7 @@ interface ConfigProps {
     config: ExtensionConfig;
 }
 
-export const ConfigurationTab: React.FC<ConfigProps> = ({ config }) => {
+export const ConfigurationView: React.FC<ConfigProps> = ({ config }) => {
     const [jsonString, setJsonString] = useState<string>(JSON.stringify(config.entitiesTypesList, null, 4));
 
     const handleSave = () => {
@@ -19,7 +19,7 @@ export const ConfigurationTab: React.FC<ConfigProps> = ({ config }) => {
     };
 
     return (
-        <div id="tab-config-content" className="flex flex-col bg-[var(--vscode-editor-background)] p-6 w-full h-full overflow-hidden">
+        <div id="view-config-content" className="flex flex-col bg-[var(--vscode-editor-background)] p-6 w-full h-full overflow-hidden">
             <div className="flex flex-col gap-4 mx-auto w-full max-w-4xl h-full">
                 <div className="flex flex-col gap-4 bg-[var(--vscode-editorWidget-background)] shadow-md p-5 border border-[var(--vscode-panel-border)] rounded-xl h-full">
 
@@ -29,6 +29,7 @@ export const ConfigurationTab: React.FC<ConfigProps> = ({ config }) => {
                             <h2 className="font-bold text-[var(--vscode-foreground)] text-sm uppercase tracking-wide">Node Types Configuration</h2>
                         </div>
                         <button
+                            id="config-btn-save"
                             onClick={handleSave}
                             className="flex items-center gap-2 bg-gradient-to-r from-blue-600 hover:from-blue-500 to-blue-500 hover:to-blue-400 shadow-md hover:shadow-lg px-5 py-2 rounded-md font-semibold text-white text-xs transition-all"
                         >
@@ -43,6 +44,7 @@ export const ConfigurationTab: React.FC<ConfigProps> = ({ config }) => {
 
                     <div className="flex flex-col flex-1 bg-[var(--vscode-input-background)] shadow-inner border border-[var(--vscode-input-border)] focus-within:border-blue-500 rounded-lg focus-within:ring-1 focus-within:ring-blue-500/50 overflow-hidden transition-all">
                         <textarea
+                            id="config-textarea-node-types"
                             value={jsonString}
                             onChange={(e) => setJsonString(e.target.value)}
                             className="flex-1 bg-transparent p-5 border-none outline-none w-full font-mono text-[13px] text-[var(--vscode-input-foreground)] leading-relaxed resize-none"

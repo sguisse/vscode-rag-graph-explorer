@@ -49,7 +49,7 @@ export const TreeView: React.FC<TreeViewProps> = ({
                 return (
                     <details key={el.id} className="w-full select-none" open={isGroupOpen}>
                         <summary
-                            className="clean-summary flex items-center gap-1.5 px-1.5 py-0.5 rounded-md font-bold text-xs transition-colors cursor-pointer list-none hover:bg-[var(--vscode-list-hoverBackground)]"
+                            className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md font-bold text-xs transition-colors cursor-pointer list-none hover:bg-[var(--vscode-list-hoverBackground)] clean-summary"
                             data-tooltip={tooltipMessage}
                             onClick={(e) => {
                                 e.preventDefault();
@@ -60,8 +60,8 @@ export const TreeView: React.FC<TreeViewProps> = ({
                                 }
                                 setCollapsedIds(prev => {
                                     const next = new Set(prev);
-                                    if (next.has(el.id)) next.delete(el.id);
-                                    else next.add(el.id);
+                                    if (next.has(el.id)) next.add(el.id);
+                                    else next.delete(el.id);
                                     return next;
                                 });
                             }}
@@ -95,7 +95,7 @@ export const TreeView: React.FC<TreeViewProps> = ({
 
                 return (
                     <div key={el.id} className="group flex items-center gap-1.5 px-1.5 py-0.5 rounded-md w-full transition-colors hover:bg-[var(--vscode-list-hoverBackground)]">
-                        <span className="w-3 flex-shrink-0" />
+                        <span className="flex-shrink-0 w-3" />
                         <input
                             type="checkbox"
                             className="flex-shrink-0 w-3.5 h-3.5 accent-blue-500 cursor-pointer"
@@ -129,7 +129,7 @@ export const TreeView: React.FC<TreeViewProps> = ({
                             }}
                             onDoubleClick={() => {
                                 if (typeof (window as any).logToTerminal === 'function') {
-                                    (window as any).logToTerminal('warn', `🌳 TreeView Text Node DoubleClick (Open Document editor tab context): ID=[${el.id}]`);
+                                    (window as any).logToTerminal('warn', `🌳 TreeView Text Node DoubleClick (Open Document editor View context): ID=[${el.id}]`);
                                 }
                                 clearSelection();
                                 toggleNodeSelection(el.id);
@@ -151,28 +151,30 @@ export const TreeView: React.FC<TreeViewProps> = ({
 
     return (
         <>
-            <div className="z-10 relative flex flex-col flex-shrink-0 justify-center bg-[var(--vscode-editorGroupHeader-tabsBackground)] shadow-[0_2px_4px_var(--vscode-widget-shadow)] px-3 border-[var(--vscode-panel-border)] border-b h-10">
+            <div className="z-10 relative flex flex-col flex-shrink-0 justify-center bg-[var(--vscode-editorGroupHeader-ViewsBackground)] shadow-[0_2px_4px_var(--vscode-widget-shadow)] px-3 border-[var(--vscode-panel-border)] border-b h-10">
                 <div className="flex justify-between items-center w-full">
                     <span className="font-bold text-[11px] uppercase tracking-wider">Tree&nbsp;View</span>
                     <div className="flex items-center">
-                        <button onClick={() => setSortOrder('asc')} className={`w-7 h-7 flex items-center justify-center rounded-md text-xs ${sortOrder === 'asc' ? 'text-blue-500 bg-blue-500/10 shadow-sm' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)]'}`}>▲</button>
-                        <button onClick={() => setSortOrder('desc')} className={`w-7 h-7 flex items-center justify-center rounded-md text-xs ${sortOrder === 'desc' ? 'text-blue-500 bg-blue-500/10 shadow-sm' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)]'}`}>▼</button>
-                        <button onClick={() => setIgnoreCase(!ignoreCase)} className={`w-7 h-7 flex items-center justify-center text-xs font-mono rounded-md ${ignoreCase ? 'text-blue-500 bg-blue-500/10 shadow-sm' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)]'}`}>Aa</button>
+                        <button id="tree-btn-sort-asc" onClick={() => setSortOrder('asc')} className={`w-7 h-7 flex items-center justify-center rounded-md text-xs ${sortOrder === 'asc' ? 'text-blue-500 bg-blue-500/10 shadow-sm' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)]'}`}>▲</button>
+                        <button id="tree-btn-sort-desc" onClick={() => setSortOrder('desc')} className={`w-7 h-7 flex items-center justify-center rounded-md text-xs ${sortOrder === 'desc' ? 'text-blue-500 bg-blue-500/10 shadow-sm' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)]'}`}>▼</button>
+                        <button id="tree-btn-toggle-case" onClick={() => setIgnoreCase(!ignoreCase)} className={`w-7 h-7 flex items-center justify-center text-xs font-mono rounded-md ${ignoreCase ? 'text-blue-500 bg-blue-500/10 shadow-sm' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)]'}`}>Aa</button>
 
                         <div className="block flex-shrink-0 bg-[var(--vscode-panel-border)] mx-1.5 w-[1px] h-5" />
 
-                        <button onClick={handleExpandAll} className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] rounded-md w-7 h-7 codicon codicon-expand-all"></button>
-                        <button onClick={handleCollapseAll} className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] rounded-md w-7 h-7 codicon codicon-collapse-all"></button>
+                        <button id="tree-btn-expand-all" onClick={handleExpandAll} className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] rounded-md w-7 h-7 codicon codicon-expand-all"></button>
+                        <button id="tree-btn-collapse-all" onClick={handleCollapseAll} className="codicon-collapse-all flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] rounded-md w-7 h-7 codicon"></button>
 
                         <div className="block flex-shrink-0 bg-[var(--vscode-panel-border)] mx-1.5 w-[1px] h-5" />
 
                         <button
+                            id="tree-btn-toggle-hierarchy"
                             onClick={() => setIsHierarchyEnabled(!isHierarchyEnabled)}
                             className={`w-7 h-7 mr-1 flex items-center justify-center codicon codicon-references rounded-md transition-all duration-200 ${isHierarchyEnabled ? 'text-blue-500 bg-blue-500/10 border border-blue-500/20 shadow-sm' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)] opacity-60'}`}
                             data-tooltip={isHierarchyEnabled ? "Hierarchy Link Sync active (Forcing Callers/Callees)" : "Hierarchy Link Sync inactive (Manual Tuning enabled)"}
                         />
 
                         <select
+                            id="tree-select-grouping"
                             value={treeGrouping}
                             onChange={(e: any) => setTreeGrouping(e.target.value)}
                             className="bg-[var(--vscode-input-background)] shadow-sm py-1 pr-2 border border-[var(--vscode-input-border)] focus:border-blue-500 rounded-md outline-none max-w-[95px] h-7 font-semibold text-[var(--vscode-input-foreground)] text-xs cursor-pointer"
@@ -182,9 +184,10 @@ export const TreeView: React.FC<TreeViewProps> = ({
                             <option value="root">📄 Flat</option>
                         </select>
 
-                        <button onClick={() => setShowOnlySelected(!showOnlySelected)} className={`w-7 h-7 flex items-center justify-center codicon codicon-eye rounded-md ${showOnlySelected ? 'text-blue-500 bg-blue-500/10 shadow-sm' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)]'}`}></button>
+                        <button id="tree-btn-show-selected" onClick={() => setShowOnlySelected(!showOnlySelected)} className={`w-7 h-7 flex items-center justify-center codicon codicon-eye rounded-md ${showOnlySelected ? 'text-blue-500 bg-blue-500/10 shadow-sm' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)]'}`}></button>
 
                         <button
+                            id="tree-btn-publish-shared"
                             onClick={() => {
                                 const paths = Array.from(new Set(nodes.filter(n => effectiveFileIds.has(n.id) && n.source_file).map(n => n.source_file as string)));
                                 if (paths.length > 0) {
@@ -203,12 +206,12 @@ export const TreeView: React.FC<TreeViewProps> = ({
 
                         <div className="block flex-shrink-0 bg-[var(--vscode-panel-border)] mx-1.5 w-[1px] h-5" />
 
-                        <button onClick={handleClearSelectionWithConfirm} className="flex justify-center items-center hover:bg-red-500/10 rounded-md w-7 h-7 hover:text-red-500 codicon codicon-trash"></button>
+                        <button id="tree-btn-clear-selection" onClick={handleClearSelectionWithConfirm} className="flex justify-center items-center hover:bg-red-500/10 rounded-md w-7 h-7 hover:text-red-500 codicon codicon-trash"></button>
                     </div>
                 </div>
             </div>
 
-            <div className="flex-1 space-y-0 bg-[var(--vscode-sideBar-background)] inner-shadow p-3 overflow-y-auto">
+            <div id="tree-viewport-container" className="flex-1 space-y-0 bg-[var(--vscode-sideBar-background)] inner-shadow p-3 overflow-y-auto">
                 {treeData && treeData.length > 0 && treeData[0].children && treeData[0].children.length > 0 ? renderTreeElements(treeData) : (
                     <div className="flex flex-col justify-center items-center opacity-60 py-12">
                         <span className="mb-2 text-3xl codicon-list-tree codicon"></span>

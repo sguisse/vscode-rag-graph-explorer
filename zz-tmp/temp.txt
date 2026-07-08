@@ -1,98 +1,47 @@
-MATCH (f:File)<-[:HAS_SOURCE_FILE]-(c:Class)
-RETURN f, c
-LIMIT 3
+id="root" (Point d'ancrage principal React dans index.html)
+├── id="ctn-header" (En-tête de l'application / anciennement id="panel-main-header")
+│   ├── id="ctn-header-left" (Logo & Titre de l'extension)
+│   ├── id="ctn-header-center" (Barre de recherche globale / Fil d'ariane)
+│   └── id="ctn-header-right" (Actions globales : Import, Export, Toggle Thème)
+├── id="ctn-main-wrapper" (Conteneur flex central englobant tout le layout)
+│   ├── id="ctn-sidebar-left" (Navigation latérale principale / anciennement id="panel-main-left")
+│   │   ├── id="ctn-sidebar-left-top" (Liens de bascule des panneaux : Home, AST, Cypher...)
+│   │   └── id="ctn-sidebar-left-bottom" (Liens secondaires : Settings, Help)
+│   ├── id="ctn-workspace" (Zone d'affichage centrale / anciennement id="panel-main-center")
+│   │   ├── id="ctn-workspace-top" (En-tête de la vue courante / anciennement id="panel-main-center-title")
+│   │   │   └── id="ctn-workspace-top-center" (Barre d'outils contextuelle / anciennement id="panel-main-center-title-center")
+│   │   │       ├── id="graph-input-callers-depth" <input type="number">
+│   │   │       ├── id="graph-input-callees-depth" <input type="number">
+│   │   │       └── id="ctn-workspace-top-right" (Boutons de filtres, Freeze, Reset layout)
+│   │   └── id="ctn-workspace-left" (Conteneur d'aiguillage dynamique de contenu - activeView)
+│   │       ├── id="pnl-welcome" (Panneau d'accueil / anciennement id="view-welcome")
+│   │       │   ├── id="center" (Conteneur d'alignement de la zone héro)
+│   │       │   ├── id="next-steps" (Grille des prochaines étapes de configuration)
+│   │       │   └── id="docs" (Section d'accès rapide à la documentation)
+│   │       ├── id="pnl-explorer" (Panneau Explorateur de graphe AST / anciennement id="view-explorer")
+│   │       │   ├── id="panel-explorer-graph" (Conteneur qui reçoit l'instance Cytoscape.js)
+│   │       │   └── id="panel-explorer-controls" (Boutons flottants de zoom : +, -, focus, fit)
+│   │       ├── id="pnl-rules" (Panneau de gestion des règles Cypher / anciennement id="view-rules")
+│   │       ├── id="pnl-prompt" (Panneau de configuration du Prompt GraphRAG / anciennement id="view-prompt")
+│   │       ├── id="pnl-terminal" (Panneau Console CLI / Terminal intégré / anciennement id="view-terminal")
+│   │       ├── id="pnl-history" (Panneau d'historique des requêtes / anciennement id="view-history")
+│   │       ├── id="pnl-configuration" (Panneau de configuration globale / anciennement id="view-configuration")
+│   │       └── id="pnl-help" (Panneau d'aide et liste des raccourcis / anciennement id="view-help")
+│   └── id="ctn-sidebar-right" (Inspecteur de détails & Métadonnées / anciennement id="panel-main-right")
+│       ├── id="ctn-sidebar-right-top" (Titre du nœud ou de la relation sélectionnée)
+│       └── id="ctn-sidebar-right-content" (Formulaire ou table d'affichage des propriétés AST/Graph)
+└── id="ctn-footer" (Barre d'état inférieure / anciennement id="panel-main-bottom")
+    ├── id="ctn-footer-left" (Zone d'indicateurs de statut gauche)
+    │   ├── id="ctn-footer-connection" (Statut de synchronisation API / Connexion serveur de graphe)
+    │   └── id="ctn-footer-context" (Branche courante, chemin du workspace ou fichier chargé)
+    ├── id="ctn-footer-center" (Zone centrale pour les messages d'arrière-plan ou indexation RAG)
+    └── id="ctn-footer-right" (Zone de statistiques de performance droite)
+        ├── id="ctn-footer-counters" (Compteur d'éléments : X nœuds, Y relations chargés)
+        └── id="ctn-footer-version" (Version de l'application sandbox)
 
-f,c
-(:File {fileName: /com/dkt/smartassessment/assessmentservice/domain/assessmentitem/manager/ActionManager.java}),"(:Type:File:Java:ByteCode:Class:HierarchyImpactTraceable:AnnotationImpactTraceable:HasSuperType:DeadCodeCandidate:DomainLayer:AssociatedElement:DomainObject {valid: true, sourceFileName: ActionManager.java, fqn: com.dkt.smartassessment.assessmentservice.domain.assessmentitem.manager.ActionManager, fileName: /com/dkt/smartassessment/assessmentservice/domain/assessmentitem/manager/ActionManager.class, visibility: public, name: ActionManager, byteCodeVersion: 69})"
-(:File {fileName: /com/dkt/smartassessment/assessmentservice/domain/assessmentitem/persistence/model/Action.java}),"(:Type:File:Java:ByteCode:Class:DbEntity:HierarchyImpactTraceable:AnnotationImpactTraceable:HasSuperType:DeadCodeCandidate:DomainLayer {valid: true, sourceFileName: Action.java, fqn: com.dkt.smartassessment.assessmentservice.domain.assessmentitem.persistence.model.Action, fileName: /com/dkt/smartassessment/assessmentservice/domain/assessmentitem/persistence/model/Action.class, visibility: public, name: Action, byteCodeVersion: 69})"
-(:File {fileName: /com/dkt/smartassessment/assessmentservice/domain/assessment/persistence/model/Assessment.java}),"(:Type:File:Java:ByteCode:Class:DbEntity:HierarchyImpactTraceable:AnnotationImpactTraceable:HasSuperType:DeadCodeCandidate:DomainLayer:AssociatedElement {valid: true, sourceFileName: Assessment.java, fqn: com.dkt.smartassessment.assessmentservice.domain.assessment.persistence.model.Assessment, fileName: /com/dkt/smartassessment/assessmentservice/domain/assessment/persistence/model/Assessment.class, visibility: public, name: Assessment, byteCodeVersion: 69})"
-
-
-
-MATCH (c:Class)-[:DECLARES]->(m1:Method)-[r:INVOKES]->(m2:Method)
-RETURN c.name, m1, r, m2
-LIMIT 3
-
-c.name,m1,r,m2
-ActionManager,"(:Java:ByteCode:Member:Method:ImpactTraceable:AccessorImpactTraceable {firstLineNumber: 24, visibility: public, signature: java.util.Map countByAssessmentItemIds(java.util.List), name: countByAssessmentItemIds, lastLineNumber: 26, effectiveLineCount: 3, cyclomaticComplexity: 1})",[:INVOKES {lineNumber: 24}],"(:Java:ByteCode:Member:Method:ImpactTraceable:AnnotationImpactTraceable {visibility: public, signature: java.util.List countByAssessmentItemIds(java.util.List), name: countByAssessmentItemIds, abstract: true, cyclomaticComplexity: 0})"
-ActionManager,"(:Java:ByteCode:Member:Method:ImpactTraceable:AccessorImpactTraceable {firstLineNumber: 24, visibility: public, signature: java.util.Map countByAssessmentItemIds(java.util.List), name: countByAssessmentItemIds, lastLineNumber: 26, effectiveLineCount: 3, cyclomaticComplexity: 1})",[:INVOKES {lineNumber: 26}],"(:Java:ByteCode:Member:Method:ImpactTraceable {signature: java.util.stream.Collector toMap(java.util.function.Function,java.util.function.Function)})"
-ActionManager,"(:Java:ByteCode:Member:Method:ImpactTraceable:AccessorImpactTraceable {firstLineNumber: 24, visibility: public, signature: java.util.Map countByAssessmentItemIds(java.util.List), name: countByAssessmentItemIds, lastLineNumber: 26, effectiveLineCount: 3, cyclomaticComplexity: 1})",[:INVOKES {lineNumber: 26}],(:Java:ByteCode:Member:Method:ImpactTraceable {signature: java.lang.Object collect(java.util.stream.Collector)})
-
-
-
-
-MATCH (n)
-UNWIND labels(n) AS label
-RETURN label, count(*) AS count
-ORDER BY count DESC
-
-label,count
-Java,29693
-ByteCode,29489
-Value,10444
-Member,10443
-Method,7549
-Annotation,6529
-AnnotationImpactTraceable,5623
-Parameter,5158
-AccessorImpactTraceable,4958
-ImpactTraceable,4474
-Bound,3978
-Field,2894
-FieldImpactTraceable,2751
-Primitive,2090
-File,1742
-ParameterizedType,1249
-Type,829
-Constructor,662
-Yaml,631
-Json,539
-Scalar,535
-Class,505
-HierarchyImpactTraceable,478
-Key,471
-HasSuperType,451
-Property,392
-Lambda,372
-Directory,369
-Enum,360
-DeadCodeCandidate,353
-Array,333
-Simple,289
-AssociatedElement,244
-Package,196
-AggregationField,128
-DomainLayer,87
-Map,82
-DomainObject,68
-Object,60
-HexagonalArchitecturePackage,58
-jQAssistant,57
-Rule,56
-Concept,55
-Inner,51
-HasSubType,50
-Interface,48
-Item,47
-Service,36
-Repository,22
-Throwable,21
-Controller,21
-RestController,20
-DbEntity,19
-LayeredArchitecturePackage,19
-Infrastructure,18
-TypeVariable,15
-Sequence,10
-Last,10
-First,10
-GenericDeclaration,8
-Properties,7
-WildcardType,6
-GenericArrayType,5
-AsynchronousExecution,3
-Document,2
-Artifact,1
-Analyze,1
-Task,1
-Group,1
+[Modales globales injectées à la racine]
+└── id="{id}" (Overlay d'arrière-plan d'une boîte de dialogue, ex: id="import-dialog")
+    └── id="{id}-panel" (Fenêtre conteneur de la modale, ex: id="import-dialog-panel")
+        ├── id="{id}-header" (Section en-tête, ex: id="import-dialog-header")
+        │   └── id="btn-{id}-close" (Bouton de fermeture X, ex: id="btn-import-dialog-close")
+        └── id="{id}-content" (Zone de contenu du formulaire, ex: id="import-dialog-content")

@@ -7,7 +7,10 @@ import * as fs from 'fs';
 import * as childProcess from 'child_process';
 import { VsCodeSettings } from './core/VsCodeSettings';
 
+let APP_NORMALIZED_NAME = "graphRagExplorer"
+
 let activeChildProcess: any = null;
+let logOutputChannel: vscode.OutputChannel;
 const SCRIPT_SYNC_IGNORED_NAMES = new Set(["__pycache__", ".python_packages", ".bootstrap.lock"]);
 
 function shouldSkipScriptSyncEntry(fileName: string): boolean {
@@ -15,12 +18,19 @@ function shouldSkipScriptSyncEntry(fileName: string): boolean {
 }
 
 export function activate(context: vscode.ExtensionContext) {
-    // Set your global main key prefix here
-    VsCodeSettings.init('graphRagExplorer');
+    const packageData = context.extension.packageJSON;
+    // Initialize dedicated Output Channel with APP_NORMALIZED_NAME
+    logOutputChannel = vscode.window.createOutputChannel(packageData.name);
+    context.subscriptions.push(logOutputChannel);
+    logOutputChannel.appendLine(`[INFO] ${packageData.name} output channel initialized.`);
 
-    let disposable = vscode.commands.registerCommand('graphRagExplorer.openTool', () => {
+    // Set your global main key prefix here
+    VsCodeSettings.init(APP_NORMALIZED_NAME);
+
+    let disposable = vscode.commands.registerCommand(`${APP_NORMALIZED_NAME}.openTool`, () => {
+        logOutputChannel.appendLine(`[INFO] Command ${APP_NORMALIZED_NAME}.openTool invoked.`);
         const panel = vscode.window.createWebviewPanel(
-            'graphRagExplorer', 'Graph RAG Explorer', vscode.ViewColumn.One,
+            packageData.name, packageData.displayName, vscode.ViewColumn.One,
             {
                 enableScripts: true,
                 retainContextWhenHidden: true,
@@ -37,37 +47,46 @@ export function activate(context: vscode.ExtensionContext) {
         const saveListener = vscode.workspace.onDidSaveTextDocument((document) => {
             if (document.uri.scheme !== 'file') return;
             const relativePath = vscode.workspace.asRelativePath(document.uri);
+            logOutputChannel.appendLine(`[INFO] File saved: ${relativePath}. Triggering delta scan.`);
             runPythonScan(context, panel, "delta", relativePath);
         });
         context.subscriptions.push(saveListener);
 
         panel.onDidDispose(() => {
+            logOutputChannel.appendLine('[INFO] Webview panel disposed.');
             saveListener.dispose();
             if (activeChildProcess) {
-                try { activeChildProcess.kill('SIGKILL'); } catch(e){}
+                try {
+                    logOutputChannel.appendLine('[WARN] Killing active background analysis process due to panel disposal.');
+                    activeChildProcess.kill('SIGKILL');
+                } catch(e){}
                 activeChildProcess = null;
             }
         });
 
         panel.webview.onDidReceiveMessage(async message => {
             if (message.command === 'ready') {
+                logOutputChannel.appendLine('[INFO] Webview ready. Sending configuration and launching deep scan.');
                 sendConfig(panel, context);
                 runPythonScan(context, panel, "deep");
             } else if (message.command === 'forceRefreshScan') {
                 const mode = message.mode || "deep";
                 let targetFile = "";
+                logOutputChannel.appendLine(`[INFO] Force refresh scan requested. Mode: ${mode}`);
                 if (mode === "delta") {
                     const activeEditor = vscode.window.activeTextEditor;
                     if (activeEditor && activeEditor.document.uri.scheme === 'file') {
                         targetFile = vscode.workspace.asRelativePath(activeEditor.document.uri);
                     } else {
                         vscode.window.showWarningMessage("Delta Reload parsing rules require an active text file window context.");
+                        logOutputChannel.appendLine('[WARN] Delta Reload aborted: No active text file window context found.');
                         panel.webview.postMessage({ command: "updateStatus", payload: "ready" });
                         return;
                     }
                 }
                 runPythonScan(context, panel, mode, targetFile);
             } else if (message.command === 'killAnalysis') {
+                logOutputChannel.appendLine('[INFO] Manual analysis termination requested by user.');
                 if (activeChildProcess) {
                     try { activeChildProcess.kill('SIGKILL'); } catch (err) {}
                     activeChildProcess = null;
@@ -76,8 +95,10 @@ export function activate(context: vscode.ExtensionContext) {
             } else if (message.command === 'openExternal') {
                 if (message.url) {
                     try {
+                        logOutputChannel.appendLine(`[INFO] Opening external URL: ${message.url}`);
                         vscode.env.openExternal(vscode.Uri.parse(message.url));
                     } catch (err) {
+                        logOutputChannel.appendLine(`[ERROR] Failed to open external URL: ${message.url}`);
                         vscode.window.showErrorMessage(`Failed to open external link: ${message.url}`);
                     }
                 }
@@ -88,6 +109,7 @@ export function activate(context: vscode.ExtensionContext) {
                     const fullPath = path.isAbsolute(message.path) ? message.path : path.join(workspaceRoot, message.path);
                     if (fs.existsSync(fullPath)) {
                         try {
+                            logOutputChannel.appendLine(`[INFO] Revealing file: ${message.path}`);
                             const doc = await vscode.workspace.openTextDocument(fullPath);
                             await vscode.window.showTextDocument(doc, {
                                 viewColumn: message.openEditor ? vscode.ViewColumn.One : undefined,
@@ -146,9 +168,15 @@ function hasOutdatedFiles(source: string, target: string): boolean {
 }
 
 function syncCoreScripts(context: vscode.ExtensionContext, workspaceRoot: string): boolean {
-    const targetDir = path.join(workspaceRoot, ".graph-rag-explorer", "scripts");
+    const packageData = context.extension.packageJSON;
+    const config = vscode.workspace.getConfiguration(APP_NORMALIZED_NAME);
+    const beBasScriptPath = config.get<string>("beScriptsPath") || ""
+    if ("" === beBasScriptPath)
+      throw new Error("Something went wrong!");
+
+    const targetDir = path.join(workspaceRoot, beBasScriptPath, "scripts");
     const versionFilePath = path.join(targetDir, "version.json");
-    const currentVersion = context.extension.packageJSON.version;
+    const currentVersion = packageData.version;
     const sourceDir = path.join(context.extensionPath, "scripts");
     let needsSync = VsCodeSettings.get("forceScriptSync") === true || !fs.existsSync(targetDir) || !fs.existsSync(versionFilePath);
 
@@ -162,9 +190,13 @@ function syncCoreScripts(context: vscode.ExtensionContext, workspaceRoot: string
     }
     if (needsSync) {
         try {
+            logOutputChannel.appendLine('[INFO] Core scripts are outdated or missing. Syncing scripts directory...');
             copyFolderRecursiveSync(sourceDir, targetDir);
             fs.writeFileSync(versionFilePath, JSON.stringify({ version: currentVersion }), "utf-8");
-        } catch (err) { return false; }
+        } catch (err) {
+            logOutputChannel.appendLine(`[ERROR] Script sync failed: ${err}`);
+            return false;
+        }
     }
     return true;
 }
@@ -174,7 +206,7 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
     if (!workspaceFolders || workspaceFolders.length === 0) return;
 
     const workspaceRoot = workspaceFolders[0].uri.fsPath;
-    const backendScriptsPath : string = VsCodeSettings.get('graphRagExplorer.beScriptsPath');
+    const backendScriptsPath : string = VsCodeSettings.get(`${APP_NORMALIZED_NAME}.beScriptsPath`);
     const targetDir4Scripts = path.join(workspaceRoot, backendScriptsPath, "scripts");
 
     syncCoreScripts(context, workspaceRoot);
@@ -189,9 +221,14 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
         else if (cleanLine.includes("❌") || cleanLine.includes("[ERROR]")) level = "error";
         else if (cleanLine.includes("ℹ️") || cleanLine.includes("[INFO]") || cleanLine.includes("✅")) level = "info";
 
+        const timestamp = new Date().toLocaleTimeString();
+
+        // Relay background execution logs to the VS Code Output Channel
+        logOutputChannel.appendLine(`[${timestamp}] [${level.toUpperCase()}] ${cleanLine}`);
+
         panel.webview.postMessage({
             command: "logTrace",
-            payload: { level: level, message: cleanLine, timestamp: new Date().toLocaleTimeString() }
+            payload: { level: level, message: cleanLine, timestamp: timestamp }
         });
     };
 
@@ -202,12 +239,16 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
     const pythonBinary = isWindows ? 'python' : 'python3';
 
     const payloadConfig = VsCodeSettings.toJson();
-    payloadConfig["graphRagExplorer"]["workspaceRoot"] = workspaceRoot;
+    payloadConfig[APP_NORMALIZED_NAME]["workspaceRoot"] = workspaceRoot;
 
     if (activeChildProcess) {
-        try { activeChildProcess.kill('SIGKILL'); } catch(e){}
+        try {
+            logOutputChannel.appendLine('[WARN] Terminating previous background execution context before launching new process.');
+            activeChildProcess.kill('SIGKILL');
+        } catch(e){}
     }
 
+    logOutputChannel.appendLine(`[INFO] Spawning Python background process: ${pythonBinary} with script ${runnerScript}`);
     const child = childProcess.spawn(pythonBinary, args, { cwd: workspaceRoot });
     activeChildProcess = child;
 
@@ -220,15 +261,19 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
     child.on("close", (code: number) => {
         if (activeChildProcess === child) activeChildProcess = null;
         if (code === 0) {
+            logOutputChannel.appendLine('[INFO] Python background process completed successfully.');
             panel.webview.postMessage({ command: "updateStatus", payload: "ready" });
             const finalUiPayloadPath = path.join(workspaceRoot, backendScriptsPath, "target", "ui_outputs", "graph-ui-payload.json");
             if (fs.existsSync(finalUiPayloadPath)) {
                 try {
                     const rawPayload = JSON.parse(fs.readFileSync(finalUiPayloadPath, "utf-8"));
                     panel.webview.postMessage({ command: "updateGraphData", payload: rawPayload.graph });
-                } catch (err) {}
+                } catch (err) {
+                    logOutputChannel.appendLine(`[ERROR] Failed to parse UI payload JSON structure: ${err}`);
+                }
             }
         } else {
+            logOutputChannel.appendLine(`[ERROR] Python background process exited with non-zero exit code: ${code}`);
             panel.webview.postMessage({ command: "updateStatus", payload: "error" });
         }
     });
@@ -268,4 +313,8 @@ function getWebviewContent(webview: vscode.Webview, extensionPath: string): stri
     </body></html>`;
 }
 
-export function deactivate() {}
+export function deactivate() {
+    if (activeChildProcess) {
+        try { activeChildProcess.kill('SIGKILL'); } catch(e){}
+    }
+}

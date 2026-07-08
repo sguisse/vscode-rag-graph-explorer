@@ -2,11 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { ExplorationFilters } from './components/ExplorationFilters';
-import { TabsNavigation } from './components/TabsNavigation';
-import { ExplorerTab } from './components/ExplorerTab';
-import { AIAssistantTab } from './components/AIAssistantTab';
-import { ConfigurationTab } from './components/ConfigurationTab';
-import { TerminalTab } from './components/TerminalTab';
+import { ViewsNavigation } from './components/ViewsNavigation';
+import { ExplorerView } from './components/ExplorerView';
+import { AIAssistantView } from './components/AIAssistantView';
+import { ConfigurationView } from './components/ConfigurationView';
+import { TerminalView } from './components/TerminalView';
 import { GraphNode, GraphEdge } from './types';
 import { GraphService } from './services/GraphService';
 
@@ -18,7 +18,7 @@ export const App: React.FC = () => {
     const [theme, setTheme] = useState<'light' | 'dark'>('dark');
     const [status, setStatus] = React.useState<'ready' | 'building' | 'error'>('ready');
     const [progress, setProgress] = React.useState<{ current: number; total: number }>({ current: 0, total: 0 });
-    const [activeTab, setActiveTab] = useState<string>('explorer');
+    const [activeView, setActiveView] = useState<string>('explorer');
 
     const [config, setConfig] = useState<any>({
         entitiesTypesList: ['file', 'class', 'method', 'document'],
@@ -186,11 +186,11 @@ export const App: React.FC = () => {
                     setApplyOnGraph={setApplyOnGraph}
                 />
 
-                <TabsNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
+                <ViewsNavigation activeView={activeView} setActiveView={setActiveView} />
 
                 <div className="relative flex-1 min-h-0">
-                    <div className={activeTab === 'explorer' ? 'absolute inset-0 flex' : 'hidden'}>
-                        <ExplorerTab
+                    <div className={activeView === 'explorer' ? 'absolute inset-0 flex' : 'hidden'}>
+                        <ExplorerView
                             nodes={nodes}
                             edges={edges}
                             selectedNodeIds={selectedNodeIds}
@@ -199,19 +199,19 @@ export const App: React.FC = () => {
                             config={config}
                         />
                     </div>
-                    <div className={activeTab === 'ai' ? 'absolute inset-0 flex' : 'hidden'}>
-                        <AIAssistantTab
+                    <div className={activeView === 'ai' ? 'absolute inset-0 flex' : 'hidden'}>
+                        <AIAssistantView
                             nodes={nodes}
                             edges={edges}
                             selectedNodeIds={selectedNodeIds}
                             apiKey={config.geminiApiKey}
                         />
                     </div>
-                    <div className={activeTab === 'terminal' ? 'absolute inset-0 flex' : 'hidden'}>
-                        <TerminalTab logs={logs} clearLogs={() => setLogs([])} />
+                    <div className={activeView === 'terminal' ? 'absolute inset-0 flex' : 'hidden'}>
+                        <TerminalView logs={logs} clearLogs={() => setLogs([])} />
                     </div>
-                    <div className={activeTab === 'config' ? 'absolute inset-0 flex' : 'hidden'}>
-                        <ConfigurationTab config={config} />
+                    <div className={activeView === 'config' ? 'absolute inset-0 flex' : 'hidden'}>
+                        <ConfigurationView config={config} />
                     </div>
                 </div>
             </main>

@@ -68,18 +68,26 @@ export const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, onGraphLoade
             </div>
 
             <div className="flex items-center gap-2">
-                <button onClick={toggleTheme} className="hover:bg-[var(--vscode-toolbar-hoverBackground)] p-1.5 rounded-md text-[var(--vscode-foreground)] transition-colors duration-200">
+                <button
+                    id="header-btn-theme-toggle"
+                    onClick={toggleTheme}
+                    className="hover:bg-[var(--vscode-toolbar-hoverBackground)] p-1.5 rounded-md text-[var(--vscode-foreground)] transition-colors duration-200"
+                >
                     <span className={`codicon ${theme === 'dark' ? 'codicon-sun' : 'codicon-moon'}`}></span>
                 </button>
 
                 <div className="bg-[var(--vscode-panel-border)] mx-1 w-[1px] h-5" />
 
-                <label className="flex items-center gap-1.5 bg-gradient-to-r from-blue-600 hover:from-blue-500 to-blue-500 hover:to-blue-400 shadow-md hover:shadow-lg px-3 py-1.5 rounded-md text-white text-xs transition-all duration-200 cursor-pointer">
+                <label
+                    id="header-btn-load-graph"
+                    className="flex items-center gap-1.5 bg-gradient-to-r from-blue-600 hover:from-blue-500 to-blue-500 hover:to-blue-400 shadow-md hover:shadow-lg px-3 py-1.5 rounded-md text-white text-xs transition-all duration-200 cursor-pointer"
+                >
                     <span className="codicon codicon-file-symlink-file"></span> Load graph.json
                     <input type="file" accept=".json" onChange={handleFileChange} className="hidden" />
                 </label>
 
                 <button
+                    id="header-btn-reload"
                     onClick={() => onReload(isModifierActive ? 'delta' : 'deep')}
                     className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 shadow-md px-3 py-1.5 rounded-md font-semibold text-white text-xs transition-all duration-200 cursor-pointer select-none"
                     data-tooltip={isModifierActive ? "Force the delta parsing of the updated files" : "Force the parsing of the codebase"}

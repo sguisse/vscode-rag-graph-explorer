@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { GraphNode, GraphEdge } from '../types';
-import { TreeView } from './explorer-tab/tree/TreeView';
-import { GraphView } from './explorer-tab/graph/GraphView';
+import { TreeView } from './explorer-view/tree/TreeView';
+import { GraphView } from './explorer-view/graph/GraphView';
 import { useGraphSelection } from '../hooks/useGraphSelection';
-import { useCytoscapeGraph } from './explorer-tab/graph/useCytoscapeGraph';
+import { useCytoscapeGraph } from './explorer-view/graph/useCytoscapeGraph';
 
-interface ExplorerTabProps {
+interface ExplorerViewProps {
     nodes: GraphNode[];
     edges: GraphEdge[];
     selectedNodeIds: Set<string>;
@@ -14,7 +14,7 @@ interface ExplorerTabProps {
     config?: any;
 }
 
-export const ExplorerTab: React.FC<ExplorerTabProps> = ({
+export const ExplorerView: React.FC<ExplorerViewProps> = ({
     nodes, edges, selectedNodeIds, setSelectedNodeIds, filters, config
 }) => {
     const { applyOnGraph, selectedTypes, searchText, searchMode, isRegexEnabled, ignoreCase } = filters;
@@ -90,7 +90,7 @@ export const ExplorerTab: React.FC<ExplorerTabProps> = ({
     });
 
     return (
-        <div id="tab-explorer-content" className="relative flex items-stretch w-full h-full min-h-0">
+        <div id="view-explorer-content" className="relative flex items-stretch w-full h-full min-h-0">
             <div className={`min-w-[250px] max-w-[70%] border-r border-[var(--vscode-panel-border)] shadow-[2px_0_8px_var(--vscode-widget-shadow)] z-0 bg-[var(--vscode-sideBar-background)] flex flex-col h-full overflow-hidden resize-x ${isTreeCollapsed || isMaximized ? 'hidden' : 'w-[465px]'}`}>
                 <TreeView
                     nodes={nodes}

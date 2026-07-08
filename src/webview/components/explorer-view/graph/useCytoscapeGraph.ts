@@ -129,7 +129,7 @@ export function useCytoscapeGraph({
                 }
             },
             setOptions: () => {},
-            stabilize: () => {}
+            sviewilize: () => {}
         };
 
         cy.on('tap', 'node', (evt) => {

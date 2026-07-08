@@ -92,7 +92,7 @@
         },
         "graphRagExplorer.beScriptsPath": {
           "type": "string",
-          "default": ".graph-rag-explorer",
+          "default": ".graph-rag-explorer-v2",
           "description": "Local User Path where the back-end scripts and treatment results will be stored (relative to the workspace root)."
         },
         "graphRagExplorer.excludePathsRegex": {
