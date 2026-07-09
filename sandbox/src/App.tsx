@@ -641,10 +641,14 @@ export default function App() {
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        <div className="bg-muted p-3 border border-border rounded-md text-center">
-                          <div className="font-bold text-primary text-xl">{selectedIds.length}</div>
-                          <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Nodes Selected</div>
-                        </div>
+                        <Card className="bg-muted shadow-none border-border rounded-md">
+                            <CardContent className="p-0 text-center">
+                                <div className="font-bold text-primary text-xl">{selectedIds.length}</div>
+                                <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                                Nodes Selected
+                                </div>
+                            </CardContent>
+                        </Card>
                         {selectedIds.map(id => {
                           const node = AST_DATA.nodes.find(n => n.data.id === id);
                           if(!node) return null;
