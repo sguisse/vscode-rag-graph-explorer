@@ -19,8 +19,8 @@
     "cytoscape": "^3.34.0",
     "lucide-react": "^1.23.0",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7",
-    "react-resizable-panels": "^4.12.1"
+    "react-dom": "^19.2.7"
+
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.11",

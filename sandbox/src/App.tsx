@@ -101,7 +101,7 @@ const useResizable = (initialSize: number, minSize: number, maxSize: number, isH
 
   const startResizing = useCallback((mouseDownEvent: React.MouseEvent | MouseEvent | any) => {
     mouseDownEvent.preventDefault();
-    const startSize = sizeRef.current;
+    const startSize = startSize || sizeRef.current;
     const startPosition = isHorizontal ? mouseDownEvent.clientX : mouseDownEvent.clientY;
 
     const onMouseMove = (mouseMoveEvent: MouseEvent) => {
@@ -128,7 +128,7 @@ const useResizable = (initialSize: number, minSize: number, maxSize: number, isH
 // ==========================================
 const SIDEBAR_MENU_ITEMS = [
   { id: 'panel-welcome', icon: LayoutDashboard, label: 'Home' },
-  { id: 'panel-explorer', icon: FolderTree, label: 'AST Explorer', badge: AST_DATA.nodes.length },
+  { id: 'panel-explorer', icon: FolderTree, label: 'AST Explorer' },
   { id: 'panel-rules', icon: Scale, label: 'Cypher Rules' },
   { id: 'panel-prompt', icon: FileJson, label: 'GraphRAG Prompt' },
   { id: 'panel-terminal', icon: Terminal, label: 'CLI Terminal' },
@@ -163,6 +163,11 @@ export default function App() {
   const [callersDepth, setCallersDepth] = useState(1);
   const [calleesDepth, setCalleesDepth] = useState(0);
 
+  // --- NOUVEAUX ÉTATS POUR L'IMPORT ET LES FILTRES DE GRANULARITÉ ---
+  const [graphData, setGraphData] = useState(AST_DATA);
+  const [displayLevel, setDisplayLevel] = useState('all'); // 'all' | 'File' | 'Class' | 'Method'
+  const [maxNodesLimit, setMaxNodesLimit] = useState(50); // Limite initiale à 500 pour garder le DOM fluide
+
   // --- DIMENSIONAL STATES ---
   const [sidebarLeftWidth, startSidebarLeftResize] = useResizable(220, 160, 400, true);
   const [mainLeftWidth, startmainLeftResize] = useResizable(30, 15, 60, true);
@@ -185,6 +190,62 @@ export default function App() {
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [neo4jOpen, setNeo4jOpen] = useState(false);
+
+  // --- LOGIQUE FILTRAGE ET DE LIMITATION DES ELEMENTS ---
+  const getFilteredElements = useCallback(() => {
+    let nodes = graphData.nodes;
+
+    // 1. Filtrage par niveau de granularité (Fichier, Classe, Méthode)
+    if (displayLevel !== 'all') {
+      nodes = nodes.filter(n => {
+        const type = n.data.type ? n.data.type.toLowerCase() : '';
+        return type === displayLevel.toLowerCase();
+      });
+    }
+
+    // 2. Limitation quantitative stricte
+    nodes = nodes.slice(0, maxNodesLimit);
+
+    // 3. Nettoyage des arrêtes orphelines
+    const nodeIds = new Set(nodes.map(n => n.data.id));
+    const edges = graphData.edges.filter(e => nodeIds.has(e.data.source) && nodeIds.has(e.data.target));
+
+    return { nodes, edges };
+  }, [graphData, displayLevel, maxNodesLimit]);
+
+  // --- LOGIQUE D'IMPORTATION DE FICHIER JSON payload ---
+  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const json = JSON.parse(e.target?.result as string);
+        let importedNodes = [];
+        let importedEdges = [];
+
+        // Supporte à la fois la clé imbriquée .graph ou la structure racine directe
+        if (json.graph && json.graph.nodes && json.graph.edges) {
+          importedNodes = json.graph.nodes;
+          importedEdges = json.graph.edges;
+        } else if (json.nodes && json.edges) {
+          importedNodes = json.nodes;
+          importedEdges = json.edges;
+        } else {
+          alert("Format invalide. Le fichier doit contenir un objet graph ou des listes nodes/edges.");
+          return;
+        }
+
+        setGraphData({ nodes: importedNodes, edges: importedEdges });
+        setSelectedIds([]);
+        setImportOpen(false);
+      } catch (err) {
+        alert("Erreur lors de la lecture ou du parsing du fichier JSON.");
+      }
+    };
+    reader.readAsText(file);
+  };
 
   // --- SYNC DARK MODE CLASS WITH ROOT ELEMENT ---
   useEffect(() => {
@@ -209,7 +270,7 @@ export default function App() {
     document.body.appendChild(script);
   }, []);
 
-  // --- CENTRALIZED TRAVERSAL LOGIC (Respects depths) ---
+  // --- CENTRALIZED TRAVERSAL LOGIC (Respects depths & imported graph) ---
   useEffect(() => {
     if (!selectedIds.length) {
       setImpacts({ callers: [], callees: [], edges: [], callerEdges: [], calleeEdges: [] });
@@ -218,16 +279,14 @@ export default function App() {
     const callers = new Set(), callees = new Set();
     const callerEdges = new Set(), calleeEdges = new Set();
 
-    // --- Callers Traversal (Upstream) ---
     let queue = selectedIds.map(id => ({ id, depth: 0 }));
     let visited = new Set(selectedIds);
 
     while(queue.length > 0) {
       const { id: current, depth } = queue.shift();
-
       if (depth >= callersDepth) continue;
 
-      AST_DATA.edges.filter(e => e.data.target === current).forEach(e => {
+      graphData.edges.filter(e => e.data.target === current).forEach(e => {
         callerEdges.add(e.data.id);
         if (!visited.has(e.data.source)) {
           visited.add(e.data.source);
@@ -237,16 +296,14 @@ export default function App() {
       });
     }
 
-    // --- Callees Traversal (Downstream) ---
     queue = selectedIds.map(id => ({ id, depth: 0 }));
     visited = new Set(selectedIds);
 
     while(queue.length > 0) {
       const { id: current, depth } = queue.shift();
-
       if (depth >= calleesDepth) continue;
 
-      AST_DATA.edges.filter(e => e.data.source === current).forEach(e => {
+      graphData.edges.filter(e => e.data.source === current).forEach(e => {
         calleeEdges.add(e.data.id);
         if (!visited.has(e.data.target)) {
           visited.add(e.data.target);
@@ -262,83 +319,23 @@ export default function App() {
       callerEdges: Array.from(callerEdges),
       calleeEdges: Array.from(calleeEdges)
     });
-  }, [selectedIds, callersDepth, calleesDepth]);
+  }, [selectedIds, callersDepth, calleesDepth, graphData]);
 
-  // --- REACT TO GRAPH LAYOUT ENGINE CHANGES ---
-  useEffect(() => {
-    if (cyRef.current && cyLoaded) {
-        let layoutOpts: any = {
-          name: graphLayout,
-          padding: 60,
-          animate: true,
-          animationDuration: 400
-        };
-
-        if (graphLayout === 'cose') {
-          layoutOpts = {
-            ...layoutOpts,
-            nodeOverlap: 60,
-            componentSpacing: 160,
-            nodeRepulsion: () => 12000000,
-            idealEdgeLength: () => 140,
-            edgeElasticity: () => 100,
-            nestingFactor: 1.8,
-            gravity: 0.15,
-            numIter: 2000,
-            initialTemp: 1200,
-            coolingFactor: 0.98,
-          };
-        }
-        else if (graphLayout === 'breadthfirst') {
-          layoutOpts = {
-            ...layoutOpts,
-            directed: true,
-            circle: false,
-            grid: true,
-            spacingFactor: 2.2
-          };
-        }
-        else if (graphLayout === 'grid') {
-          layoutOpts = {
-            ...layoutOpts,
-            avoidOverlap: true,
-            spacingFactor: 1.8,
-            rows: 3
-          };
-        }
-
-        cyRef.current.layout(layoutOpts).run();
-    }
-  }, [graphLayout, cyLoaded]);
-
-  // --- CYTOSCAPE CANVAS & RENDER CLASS HIGHLIGHT TIER ---
+  // --- CYTOSCAPE CANVAS & RENDER HIGHLIGHT + FILTERING ENGINE ---
   useEffect(() => {
     if (!cyLoaded || !graphContainerRef.current) return;
+
+    const currentElements = getFilteredElements();
 
     if (!cyRef.current) {
         cyRef.current = window.cytoscape({
             container: graphContainerRef.current,
-            elements: AST_DATA,
+            elements: currentElements,
             style: getCyStyles(isDarkMode),
             userZoomingEnabled: true,
             userPanningEnabled: true,
             boxSelectionEnabled: false
         });
-
-        setTimeout(() => {
-          if (cyRef.current) {
-            cyRef.current.layout({
-              name: 'cose',
-              padding: 60,
-              animate: false,
-              nodeOverlap: 60,
-              nodeRepulsion: () => 12000000,
-              idealEdgeLength: () => 140,
-              nestingFactor: 1.8,
-              gravity: 0.15
-            }).run();
-          }
-        }, 150);
 
       cyRef.current.on('tap', 'node', (evt) => {
         const node = evt.target;
@@ -351,7 +348,36 @@ export default function App() {
       cyRef.current.on('tap', (evt) => {
         if (evt.target === cyRef.current) setSelectedIds([]);
       });
+    } else {
+        // Injection dynamique des nœuds filtrés et limités
+        cyRef.current.json({ elements: currentElements });
     }
+
+    // Gestion de l'agencement sans superposition
+    let layoutOpts: any = {
+      name: graphLayout,
+      padding: 60,
+      animate: false
+    };
+
+    if (graphLayout === 'cose') {
+      layoutOpts = {
+        ...layoutOpts,
+        nodeOverlap: 60,
+        componentSpacing: 160,
+        nodeRepulsion: () => 12000000,
+        idealEdgeLength: () => 140,
+        nestingFactor: 1.8,
+        gravity: 0.15,
+        numIter: 2000,
+      };
+    } else if (graphLayout === 'breadthfirst') {
+      layoutOpts = { ...layoutOpts, directed: true, circle: false, grid: true, spacingFactor: 2.2 };
+    } else if (graphLayout === 'grid') {
+      layoutOpts = { ...layoutOpts, avoidOverlap: true, spacingFactor: 1.8, rows: 3 };
+    }
+
+    cyRef.current.layout(layoutOpts).run();
 
     const cy = cyRef.current;
     cy.batch(() => {
@@ -370,7 +396,7 @@ export default function App() {
           impacts.calleeEdges.forEach(eId => cy.$id(eId).addClass('callee-edge'));
         }
     });
-  }, [cyLoaded, selectedIds, impacts, explorerFilter, isDarkMode]);
+  }, [cyLoaded, selectedIds, impacts, explorerFilter, isDarkMode, graphData, displayLevel, maxNodesLimit, graphLayout, getFilteredElements]);
 
   const handleOpenNeo4j = useCallback(() => {
     console.log("You will be redirected to Neo4J webapp tool");
@@ -419,7 +445,7 @@ export default function App() {
               className="bg-muted p-2 border-border border-b h-auto"
             />
             <div id="panel-explorer-list" className="flex-1 space-y-1 p-2 overflow-y-auto">
-              {AST_DATA.nodes.filter(n => n.data.type !== 'class').map(node => (
+              {graphData.nodes.filter(n => n.data.type?.toLowerCase() !== 'file').map(node => (
                 <div key={node.data.id} id={`item-explorer-${node.data.id}`} onClick={(e) => {
                     const isMulti = e.ctrlKey || e.metaKey;
                     setSelectedIds(prev => isMulti ? (prev.includes(node.data.id) ? prev.filter(id => id !== node.data.id) : [...prev, node.data.id]) : [node.data.id]);
@@ -427,7 +453,7 @@ export default function App() {
                   className={`flex items-center gap-2 p-1.5 text-xs rounded cursor-pointer border border-transparent hover:border-border ${selectedIds.includes(node.data.id) ? 'bg-primary/10 text-primary border border-primary/20 font-medium' : 'text-foreground/80'}`}
                 >
                   <FileJson size={14} className={explorerFilter === 'layer' ? 'text-primary' : 'text-muted-foreground'} />
-                  <span className="truncate">{node.data.parent}.{node.data.label}</span>
+                  <span className="truncate">{node.data.parent || 'Global'}.{node.data.label}</span>
                 </div>
               ))}
             </div>
@@ -490,7 +516,7 @@ export default function App() {
       <SidebarMenuButton id={`btn-menu-${item.id}`} isActive={activeView === item.id} onClick={() => setActiveView(item.id)} title={sidebarLeftMode === 'minimal' ? item.label : undefined}>
         <item.icon size={16} className="mr-2.5 shrink-0" />
         {sidebarLeftMode === 'normal' && (
-          <><span className="truncate">{item.label}</span>{item.badge && <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>}</>
+          <><span className="truncate">{item.label}</span>{item.id === 'panel-explorer' ? <SidebarMenuBadge>{graphData.nodes.length}</SidebarMenuBadge> : item.badge && <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>}</>
         )}
       </SidebarMenuButton>
     </SidebarMenuItem>
@@ -547,7 +573,7 @@ export default function App() {
               <button id="btn-toggle-theme" onClick={() => setIsDarkMode(!isDarkMode)} className="hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors" title={isDarkMode ? "Switch to Light Theme" : "Switch to Dark Theme"}>
                 {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
               </button>
-              <button id="btn-reset-graphe" onClick={() => { setSelectedIds([]); setExplorerFilter('folder'); setGraphLayout('cose'); if(cyRef.current) cyRef.current.fit(); }} className="hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors" title="Reset"><RotateCcw size={16} /></button>
+              <button id="btn-reset-graphe" onClick={() => { setSelectedIds([]); setExplorerFilter('folder'); setGraphLayout('cose'); setGraphData(AST_DATA); setDisplayLevel('all'); setMaxNodesLimit(50); if(cyRef.current) cyRef.current.fit(); }} className="hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors" title="Reset"><RotateCcw size={16} /></button>
               <div className="mx-1 bg-border w-px h-4"></div>
               <button id="btn-toggle-main" onClick={() => setIsCtnWorkspaceVisible(!isCtnWorkspaceVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`}><Eye size={16} /></button>
               <button id="btn-toggle-main-header" onClick={() => setIsCtnWorkspaceTopVisible(!isCtnWorkspaceTopVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceTopVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`}><Eye size={16} /></button>
@@ -566,7 +592,22 @@ export default function App() {
           <DialogContent className="bg-card border border-border">
             <DialogHeader><DialogTitle className="font-semibold text-foreground text-sm">Import AST Graph</DialogTitle></DialogHeader>
             <p className="my-2 text-muted-foreground text-xs">Select a JSON file generated by the SWC extractor.</p>
-            <Button id="btn-import-browse" className="mt-2 w-full">Browse...</Button>
+            <div className="relative">
+              <input
+                type="file"
+                id="file-import-input"
+                accept=".json"
+                className="hidden"
+                onChange={handleFileImport}
+              />
+              <Button
+                id="btn-import-browse"
+                className="mt-2 w-full"
+                onClick={() => document.getElementById('file-import-input')?.click()}
+              >
+                Browse...
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
 
@@ -666,12 +707,13 @@ export default function App() {
                   headerLeft="Topological Graph"
                   headerCenter={
                     <>
-                    <div className="flex items-center gap-2 bg-[var(--vscode-input-background)]/50 shadow-inner px-2 py-1">
-                        <User size={15} data-tooltip="Number of parent files levels to select"/>
-                        <Input type="number" id="graph-input-callers-depth" min={0} max={20}
-                               className="bg-[var(--vscode-input-background)] shadow-sm px-0 border border-[var(--vscode-input-border)] focus:border-blue-500 rounded-sm outline-none focus:ring-1 focus:ring-blue-500/50 w-10 h-5 text-[var(--vscode-input-foreground)] text-xs text-center transition-all"
-                                value={callersDepth}
-                                onChange={(e) => setCallersDepth(Number(e.target.value) || 0)}  />
+                    {/* CHAMP QUANTITATIF AJOUTÉ À CÔTÉ DU BOUTON NEO4J ET ENFANT */}
+                    <div className="flex items-center gap-1.5 bg-[var(--vscode-input-background)]/50 shadow-inner px-2 py-1" title="Nombre maximal de nœuds à charger à l'écran">
+                        <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">Limite:</span>
+                        <Input type="number" id="graph-input-limit" min={1} max={100}
+                               className="bg-[var(--vscode-input-background)] shadow-sm px-1 border border-[var(--vscode-input-border)] focus:border-blue-500 rounded-sm outline-none focus:ring-1 focus:ring-blue-500/50 w-16 h-5 font-bold text-[var(--vscode-input-foreground)] text-xs text-center transition-all"
+                               value={maxNodesLimit}
+                               onChange={(e) => setMaxNodesLimit(Number(e.target.value) || 50)}  />
                     </div>
 
                     <Button id="btn-open-neo4j"
@@ -680,11 +722,34 @@ export default function App() {
                             data-tooltip="Open embedded Neo4j Web Console Client Browser"><Database /> Neo4j</Button>
 
                     <div className="flex items-center gap-2 bg-[var(--vscode-input-background)]/50 shadow-inner px-2 py-1">
+                        <User size={15} data-tooltip="Number of parent files levels to select"/>
+                        <Input type="number" id="graph-input-callers-depth" min={0} max={20}
+                               className="bg-[var(--vscode-input-background)] shadow-sm px-0 border border-[var(--vscode-input-border)] focus:border-blue-500 rounded-sm outline-none focus:ring-1 focus:ring-blue-500/50 w-10 h-5 text-[var(--vscode-input-foreground)] text-xs text-center transition-all"
+                                value={callersDepth}
+                                onChange={(e) => setCallersDepth(Number(e.target.value) || 0)}  />
+                    </div>
+
+                    <div className="flex items-center gap-2 bg-[var(--vscode-input-background)]/50 shadow-inner px-2 py-1">
+                        <Baby size={19} data-tooltip="Number of child files levels to select"/>
                         <Input type="number" id="graph-input-callees-depth" min={0} max={20}
                                className="bg-[var(--vscode-input-background)] shadow-sm px-0 border border-[var(--vscode-input-border)] focus:border-blue-500 rounded-sm outline-none focus:ring-1 focus:ring-blue-500/50 w-10 h-5 font-bold text-[var(--vscode-input-foreground)] text-xs text-center transition-all"
                                value={calleesDepth}
                                onChange={(e) => setCalleesDepth(Number(e.target.value) || 0)}  />
-                        <Baby size={19} data-tooltip="Number of child files levels to select"/>
+                    </div>
+
+                    {/* SELECTEUR DU NIVEAU D'AFFICHAGE (GRANULARITÉ AST) */}
+                    <div className="flex items-center bg-[var(--vscode-input-background)]/50 shadow-inner px-1.5 py-0.5 border border-[var(--vscode-input-border)] rounded">
+                        <Select value={displayLevel} onValueChange={setDisplayLevel}>
+                            <SelectTrigger id="select-display-level" className="bg-transparent shadow-none px-0.5 border-0 focus:ring-0 w-28 h-2 text-foreground text-xs">
+                                <SelectValue placeholder="Niveau" />
+                            </SelectTrigger>
+                            <SelectContent side="bottom">
+                                <SelectItem value="all">Tout afficher</SelectItem>
+                                <SelectItem value="File">Fichier</SelectItem>
+                                <SelectItem value="Class">Classe</SelectItem>
+                                <SelectItem value="Method">Méthode</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                     </>
                   }
@@ -816,32 +881,32 @@ export default function App() {
                         </CardContent>
                     </Card>
                   {selectedIds.map(id => {
-                    const node = AST_DATA.nodes.find(n => n.data.id === id);
+                    const node = graphData.nodes.find(n => n.data.id === id);
                     if(!node) return null;
                     return (
                           <Card key={id} className="gap-0 bg-background shadow-none p-0 rounded-md overflow-hidden" >
                               <CardHeader className="flex flex-row justify-between items-center space-y-0 bg-secondary px-2.5 py-1.5 border-b rounded-t-md" style={{ paddingBottom: '6px' }}>
                           <span className="font-semibold text-foreground">{node.data.label}</span>
                                   <span className="bg-primary/10 px-1 py-0.5 border border-primary/20 rounded font-bold text-[9px] text-primary uppercase">
-                                  {node.data.layer}
+                                  {node.data.layer || node.data.type || 'N/A'}
                                   </span>
                               </CardHeader>
 
                               <CardContent className="space-y-1 p-1 pt-1 text-[11px] text-muted-foreground">
                                   <div className="flex justify-between">
                                   <span>Parent:</span>
-                                  <span className="text-foreground">{node.data.parent || 'N/A'}</span>
+                                  <span className="text-foreground">{node.data.parent || node.data.source_file || 'N/A'}</span>
                         </div>
                                   <div className="flex justify-between">
                                   <span>Incoming:</span>
                                   <span className="font-bold text-destructive-foreground">
-                                      {AST_DATA.edges.filter(e => e.data.target === id).length}
+                                      {graphData.edges.filter(e => e.data.target === id).length}
                                   </span>
                         </div>
                                   <div className="flex justify-between">
                                   <span>Outgoing:</span>
                                   <span className="font-bold text-primary">
-                                      {AST_DATA.edges.filter(e => e.data.source === id).length}
+                                      {graphData.edges.filter(e => e.data.source === id).length}
                                   </span>
                       </div>
                               </CardContent>

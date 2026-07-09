@@ -7,6 +7,7 @@ import urllib.request
 import tarfile
 import zipfile
 import subprocess
+import socket
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 from install.base import BaseInstallModule
@@ -21,9 +22,7 @@ class SystemNeo4jInstaller(BaseInstallModule):
     def __init__(self, context):
         super().__init__(context)
         self.neo4j_ctx = Neo4jContext(context)
-
         self._last_reported_percent = -5
-
 
     @property
     def name(self) -> str: return NEO4J_MODULE_NAME
@@ -32,10 +31,15 @@ class SystemNeo4jInstaller(BaseInstallModule):
         if installStatus is None:
             raise ValueError("installStatus cannot be None. Please provide the installation status dictionary.")
 
-        # Création du dossier racine
+        # 🛠️ REMEDIATION: If Java runtime compliance check failed, attempt auto-discovery right here
+        if installStatus.get("java_runtime_executable", {}).get("status") != "✅":
+            warn("Java runtime anomaly signaled by checker module. Launching targeted Java 21 host environment lookup...", component=self.name)
+            self._discover_and_apply_java21()
+
+        # Create root sandbox directory
         os.makedirs(self.neo4j_ctx.sandbox_root, exist_ok=True)
 
-        # 1. Vérification et installation des binaires et plugins
+        # 1. Verify and install binaries and plugins
         if installStatus.get("neo4j_local_installation", {}).get("status") != "✅" or \
            installStatus.get("neo4j_plugins_compliance", {}).get("status") != "✅":
 
@@ -52,28 +56,58 @@ class SystemNeo4jInstaller(BaseInstallModule):
                 self.neo4j_ctx.apoc_jar_path, self.neo4j_ctx.gds_tmp_path,
                 self.neo4j_ctx.gds_jar_path
             )
-            self.configure_neo4j_settings(self.neo4j_ctx.target_folder)
 
-            # Rendre les scripts exécutables sous Unix
+            # Grant executable permissions recursively to all internal utility scripts on Unix/macOS
             if not self.context.is_windows:
-                for cmd in [self.neo4j_ctx.admin_cmd, self.neo4j_ctx.neo4j_cmd, self.neo4j_ctx.cypher_shell_cmd]:
-                    if os.path.exists(cmd):
-                        os.chmod(cmd, 0o755)
+                bin_dir = self.neo4j_ctx.bin_dir
+                if os.path.exists(bin_dir):
+                    info("Granting executable permissions to all internal utility scripts...", component=self.name)
+                    for root, dirs, files in os.walk(bin_dir):
+                        for file in files:
+                            try: os.chmod(os.path.join(root, file), 0o755)
+                            except OSError: pass
 
             self.set_initial_admin_password(self.neo4j_ctx.admin_cmd, self.neo4j_ctx.password)
 
-        # 2. Démarrage de la base de données
-        if installStatus.get("neo4j_db_running", {}).get("status") != "✅":
-            self.boot_neo4j_process(self.neo4j_ctx.neo4j_cmd)
+        # Enforce configuration alignment rules on every execution lifecycle
+        self.configure_neo4j_settings(self.neo4j_ctx.target_folder)
 
-        # 3. Initialisation du Token Métadonnées
-        if installStatus.get("remote_database_token", {}).get("status") != "✅":
-            self.initialize_remote_database_token(
-                self.neo4j_ctx.cypher_shell_cmd
-            )
+        # 2. Boot database process
+        if installStatus.get("neo4j_db_running", {}).get("status") != "✅":
+            self.boot_neo4j_process(self.neo4j_cmd)
+
+        # 3. Initialize Remote Metadata Token Verification Schema
+        self.initialize_remote_database_token(self.neo4j_ctx.cypher_shell_cmd)
 
         success(f"Neo4j instance initialized smoothly. Browser UI: {self.neo4j_ctx.http_url} | Bolt profile: {self.neo4j_ctx.bolt_uri} [User: {self.neo4j_ctx.user} | Pass: {self.neo4j_ctx.password}]", component=self.name)
 
+    def _discover_and_apply_java21(self):
+        """Active installation lifecycle remediation method to locate and register Java 21 runtime."""
+        if not self.context.is_windows:
+            try:
+                res = subprocess.run(["/usr/libexec/java_home", "-v", "21"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=3)
+                if res.returncode == 0 and res.stdout.strip():
+                    jdk_path = res.stdout.strip()
+                    os.environ["JAVA_HOME"] = jdk_path
+                    os.environ["PATH"] = os.path.join(jdk_path, "bin") + os.pathsep + os.environ.get("PATH", "")
+                    success(f"Successfully bound local environment context to Java 21 platform: {jdk_path}", component=self.name)
+                    return
+            except Exception:
+                pass
+        else:
+            standard_paths = [
+                r"C:\Program Files\Java\jdk-21",
+                r"C:\Program Files\Eclipse Foundation\jdk-21",
+                r"C:\Program Files\Amazon Corretto\jdk21",
+                r"C:\Program Files\Microsoft\jdk-21",
+            ]
+            for path in standard_paths:
+                if os.path.exists(path):
+                    os.environ["JAVA_HOME"] = path
+                    os.environ["PATH"] = os.path.join(path, "bin") + os.pathsep + os.environ.get("PATH", "")
+                    success(f"Successfully bound local environment context to Windows Java 21 location: {path}", component=self.name)
+                    return
+        warn("Host automated fallback search failed to assert any localized Java 21 layout instances.", component=self.name)
 
     def _download_file(self, url, local_path, asset_name, headers, ctx):
         if os.path.exists(local_path):
@@ -166,29 +200,48 @@ class SystemNeo4jInstaller(BaseInstallModule):
             except OSError: pass
 
     def configure_neo4j_settings(self, target_folder):
-        conf_path = os.path.join(target_folder, "conf", "neo4j.conf")
-        if not os.path.exists(conf_path):
+        conf_dir = os.path.join(target_folder, "conf")
+        neo4j_conf_path = os.path.join(conf_dir, "neo4j.conf")
+        apoc_conf_path = os.path.join(conf_dir, "apoc.conf")
+
+        if not os.path.exists(neo4j_conf_path):
             return
 
         info("Tuning configuration layout files for semantic graph expansion...", component=self.name)
+        marker = "# 🔓 Sandbox UI Additions for Graph RAG Explorer Security Adjustments"
 
-        security_configs = (
-            "\n# 🔓 Sandbox UI Additions for Graph RAG Explorer Security Adjustments\n"
+        neo4j_configs = (
+            f"\n{marker}\n"
             "dbms.security.procedures.unrestricted=apoc.*,gds.*\n"
             "dbms.security.procedures.allowlist=apoc.*,gds.*\n"
-            "apoc.export.file.enabled=true\n"
-            "apoc.import.file.enabled=true\n"
-            "apoc.import.file.use_neo4j_config=true\n"
             f"server.bolt.listen_address=0.0.0.0:{self.neo4j_ctx.bolt_port}\n"
             f"server.http.listen_address=0.0.0.0:{self.neo4j_ctx.http_port}\n"
         )
 
+        apoc_configs = (
+            f"{marker}\n"
+            "apoc.export.file.enabled=true\n"
+            "apoc.import.file.enabled=true\n"
+            "apoc.import.file.use_neo4j_config=true\n"
+        )
+
         try:
-            with open(conf_path, "r", encoding="utf-8") as f:
+            with open(neo4j_conf_path, "r", encoding="utf-8") as f:
                 content = f.read()
-            if "dbms.security.procedures.unrestricted" not in content:
-                with open(conf_path, "a", encoding="utf-8") as f:
-                    f.write(security_configs)
+            if marker not in content:
+                with open(neo4j_conf_path, "a", encoding="utf-8") as f:
+                    f.write(neo4j_configs)
+
+            apoc_content = ""
+            if os.path.exists(apoc_conf_path):
+                with open(apoc_conf_path, "r", encoding="utf-8") as f:
+                    apoc_content = f.read()
+
+            if marker not in apoc_content:
+                with open(apoc_conf_path, "a", encoding="utf-8") as f:
+                    f.write(apoc_configs)
+
+            success("Configuration files split and validated for Neo4j v5 compliance.", component=self.name)
         except Exception as e:
             error(f"Failed to patch config parameters: {e}", component=self.name)
 
@@ -200,26 +253,69 @@ class SystemNeo4jInstaller(BaseInstallModule):
             pass
 
     def boot_neo4j_process(self, neo4j_cmd):
-        info("Spinning up native standalone data cluster mapping engine operations...", component="self.name")
+        info("Spinning up native standalone data cluster mapping engine operations...", component=self.name)
         os.makedirs(self.context.pids_dir, exist_ok=True)
 
         if self.context.is_windows:
             proc = subprocess.Popen([neo4j_cmd, "console"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 512))
             with open(os.path.join(self.context.pids_dir, f"neo4j_instance_{proc.pid}.pid"), "w", encoding="utf-8") as f:
                 f.write(str(proc.pid))
+            time.sleep(12)
         else:
             proc = subprocess.Popen([neo4j_cmd, "start"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, preexec_fn=os.setsid)
-            with open(os.path.join(self.context.pids_dir, f"neo4j_instance_{proc.pid}.pid"), "w", encoding="utf-8") as f:
-                f.write(str(proc.pid))
-        time.sleep(12)
+            stdout, stderr = proc.communicate()
 
+            if proc.returncode != 0:
+                error_output = stderr.decode('utf-8', errors='ignore').strip()
+                error(f"Neo4j failed to daemonize (Exit Code {proc.returncode}): {error_output}", component=self.name)
+                raise RuntimeError(f"Neo4j startup script aborted: {error_output}")
+            else:
+                boot_message = stdout.decode('utf-8', errors='ignore').strip()
+                info(f"Neo4j process manager acknowledged: {boot_message}", component=self.name)
+                with open(os.path.join(self.context.pids_dir, f"neo4j_instance_{proc.pid}.pid"), "w", encoding="utf-8") as f:
+                    f.write(str(proc.pid))
 
     def initialize_remote_database_token(self, shell_cmd):
-        """Adds Remote Database token if missing. Bypasses blocking errors."""
-        try:
-            info("Ensuring verification environment metadata label presence...", component=self.name)
-            insertion_query = f"MERGE (m:SystemMetadata {{id: 'global_config'}}) SET m.`{self.neo4j_ctx.remote_database_token_name}` = {self.neo4j_ctx.remote_database_token_value};"
-            subprocess.run([shell_cmd, "-a", f"{self.neo4j_ctx.bolt_uri}", "-u", self.neo4j_ctx.user, "-p", self.neo4j_ctx.password, insertion_query], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            success(f"Successfully added '{self.neo4j_ctx.remote_database_token_name} = {self.neo4j_ctx.remote_database_token_value}' token inside Neo4j instance.", component=self.name)
-        except Exception as err:
-            warn(f"Bypassed metadata injection (non-blocking exception caught): {err}", component=self.name)
+        host = self.neo4j_ctx.host
+        port = int(self.neo4j_ctx.bolt_port)
+
+        info(f"Waiting for Neo4j Bolt port {port} to accept connections...", component=self.name)
+        timeout = 45
+        start_time = time.time()
+        port_ready = False
+
+        while time.time() - start_time < timeout:
+            try:
+                with socket.create_connection((host, port), timeout=2):
+                    port_ready = True
+                    break
+            except (socket.timeout, ConnectionRefusedError):
+                time.sleep(2)
+
+        if not port_ready:
+            raise TimeoutError(f"Neo4j Bolt port {port} didn't open within {timeout} seconds.")
+
+        time.sleep(4)
+        insertion_query = f"MERGE (m:SystemMetadata {{id: 'global_config'}}) SET m.`{self.neo4j_ctx.remote_database_token_name}` = {self.neo4j_ctx.remote_database_token_value};"
+
+        max_attempts = 3
+        for attempt in range(1, max_attempts + 1):
+            try:
+                info(f"Injecting metadata token (attempt {attempt}/{max_attempts})...", component=self.name)
+                subprocess.run([
+                    shell_cmd,
+                    "-a", f"{self.neo4j_ctx.bolt_uri}",
+                    "-u", self.neo4j_ctx.user,
+                    "-p", self.neo4j_ctx.password,
+                    insertion_query
+                ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+                success(f"Successfully added '{self.neo4j_ctx.remote_database_token_name} = {self.neo4j_ctx.remote_database_token_value}' token inside Neo4j instance.", component=self.name)
+                return
+            except subprocess.CalledProcessError as err:
+                stderr_output = err.stderr.decode('utf-8', errors='ignore') if err.stderr else str(err)
+                warn(f"Attempt {attempt} failed: {stderr_output.strip()}", component=self.name)
+                if attempt < max_attempts:
+                    time.sleep(5)
+                else:
+                    raise RuntimeWarning(f"Metadata injection failed after {max_attempts} attempts. Last error: {stderr_output}")
