@@ -4,7 +4,8 @@ import {
   ChevronRight, ChevronLeft, LayoutDashboard, FolderTree, Scale, Terminal,
   History, HelpCircle, FileJson, Server, Database, ShieldAlert, Play,
   Minus, Plus, Focus, X, CheckCircle2, XCircle, CircleArrowRight, File, Folder,
-  Shrink, Maximize, Minimize, Menu, Settings
+  Shrink, Maximize, Minimize, Menu, Settings,
+  User, Baby, Layers
 } from 'lucide-react';
 import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
@@ -72,8 +73,11 @@ const AST_DATA = {
 // 2. DYNAMIC CYTOSCAPE STYLES (Light/Dark)
 // ==========================================
 const getCyStyles = (isDark) => [
-  { selector: 'node', style: { 'background-color': isDark ? '#27272a' : '#ffffff', 'color': isDark ? '#e4e4e7' : '#27272a', 'label': 'data(label)', 'font-family': 'system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif', 'font-size': '12px', 'text-valign': 'center', 'text-halign': 'center', 'border-width': 1, 'border-color': isDark ? '#3f3f46' : '#d4d4d8', 'shape': 'round-rectangle', 'width': 'label', 'height': 'label', 'padding': '10px' } },
+  // Changed width/height from 'label' to explicit padding/formatting rules to solve deprecation warnings
+  { selector: 'node', style: { 'background-color': isDark ? '#27272a' : '#ffffff', 'color': isDark ? '#e4e4e7' : '#27272a', 'label': 'data(label)', 'font-family': 'system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif', 'font-size': '12px', 'text-valign': 'center', 'text-halign': 'center', 'border-width': 1, 'border-color': isDark ? '#3f3f46' : '#d4d4d8', 'shape': 'round-rectangle', 'padding': '12px', 'width': 'label', 'height': 'label' }},
+
   { selector: ':parent', style: { 'background-color': isDark ? '#18181b' : '#f4f4f5', 'background-opacity': 0.8, 'border-width': 1, 'border-color': isDark ? '#3f3f46' : '#d4d4d8', 'border-style': 'solid', 'text-valign': 'top', 'text-halign': 'center', 'text-margin-y': -8, 'color': isDark ? '#e4e4e7' : '#3f3f46', 'font-size': '12px', 'font-weight': 'bold', 'padding': '16px' } },
+
   { selector: 'edge', style: { 'width': 1.5, 'line-color': isDark ? '#3f3f46' : '#a1a1aa', 'target-arrow-color': isDark ? '#3f3f46' : '#a1a1aa', 'target-arrow-shape': 'triangle', 'curve-style': 'bezier', 'arrow-scale': 1.2 } },
   { selector: 'node.selected', style: { 'background-color': isDark ? '#93c5fd' : '#bfdbfe', 'color': isDark ? '#172554' : '#1e3a8a', 'border-color': isDark ? '#2563eb' : '#3b82f6', 'border-width': 2, 'z-index': 10 } },
   { selector: 'node.caller', style: { 'background-color': isDark ? '#f87171' : '#fecaca', 'color': isDark ? '#450a0a' : '#7f1d1d', 'border-color': isDark ? '#dc2626' : '#ef4444', 'border-width': 2 } },
@@ -156,6 +160,9 @@ export default function App() {
 
   const [explorerFilter, setExplorerFilter] = useState('folder');
 
+  const [callersDepth, setCallersDepth] = useState(1);
+  const [calleesDepth, setCalleesDepth] = useState(0);
+
   // --- DIMENSIONAL STATES ---
   const [sidebarLeftWidth, startSidebarLeftResize] = useResizable(220, 160, 400, true);
   const [mainLeftWidth, startmainLeftResize] = useResizable(30, 15, 60, true);
@@ -167,10 +174,17 @@ export default function App() {
   const cyRef = useRef(null);
   const graphContainerRef = useRef(null);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [impacts, setImpacts] = useState({ callers: [], callees: [], edges: [] });
+  const [impacts, setImpacts] = useState<{
+  callers: string[];
+  callees: string[];
+  edges: string[];
+  callerEdges: string[];
+  calleeEdges: string[];
+}>({ callers: [], callees: [], edges: [], callerEdges: [], calleeEdges: [] });
 
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [neo4jOpen, setNeo4jOpen] = useState(false);
 
   // --- SYNC DARK MODE CLASS WITH ROOT ELEMENT ---
   useEffect(() => {
@@ -195,44 +209,62 @@ export default function App() {
     document.body.appendChild(script);
   }, []);
 
+  // --- CENTRALIZED TRAVERSAL LOGIC (Respects depths) ---
   useEffect(() => {
-    if (!selectedIds.length) {
-      setImpacts({ callers: [], callees: [], edges: [] });
-      return;
-    }
-    const callers = new Set(), callees = new Set(), impactEdges = new Set();
+  if (!selectedIds.length) {
+    setImpacts({ callers: [], callees: [], edges: [], callerEdges: [], calleeEdges: [] });
+    return;
+  }
+  const callers = new Set(), callees = new Set();
+  const callerEdges = new Set(), calleeEdges = new Set();
 
-    let queue = [...selectedIds];
-    let visited = new Set(selectedIds);
-    while(queue.length > 0) {
-      const current = queue.shift();
-      AST_DATA.edges.filter(e => e.data.target === current).forEach(e => {
-        impactEdges.add(e.data.id);
-        if (!visited.has(e.data.source)) {
-          visited.add(e.data.source);
-          callers.add(e.data.source);
-          queue.push(e.data.source);
-        }
-      });
-    }
+  // --- Callers Traversal (Upstream) ---
+  let queue = selectedIds.map(id => ({ id, depth: 0 }));
+  let visited = new Set(selectedIds);
 
-    queue = [...selectedIds];
-    visited = new Set(selectedIds);
-    while(queue.length > 0) {
-      const current = queue.shift();
-      AST_DATA.edges.filter(e => e.data.source === current).forEach(e => {
-        impactEdges.add(e.data.id);
-        if (!visited.has(e.data.target)) {
-          visited.add(e.data.target);
-          callees.add(e.data.target);
-          queue.push(e.data.target);
-        }
-      });
-    }
+  while(queue.length > 0) {
+    const { id: current, depth } = queue.shift();
 
-    setImpacts({ callers: Array.from(callers), callees: Array.from(callees), edges: Array.from(impactEdges) });
-  }, [selectedIds]);
+    if (depth >= callersDepth) continue;
 
+    AST_DATA.edges.filter(e => e.data.target === current).forEach(e => {
+      callerEdges.add(e.data.id);
+      if (!visited.has(e.data.source)) {
+        visited.add(e.data.source);
+        callers.add(e.data.source);
+        queue.push({ id: e.data.source, depth: depth + 1 });
+      }
+    });
+  }
+
+  // --- Callees Traversal (Downstream) ---
+  queue = selectedIds.map(id => ({ id, depth: 0 }));
+  visited = new Set(selectedIds);
+
+  while(queue.length > 0) {
+    const { id: current, depth } = queue.shift();
+
+    if (depth >= calleesDepth) continue;
+
+    AST_DATA.edges.filter(e => e.data.source === current).forEach(e => {
+      calleeEdges.add(e.data.id);
+      if (!visited.has(e.data.target)) {
+        visited.add(e.data.target);
+        callees.add(e.data.target);
+        queue.push({ id: e.data.target, depth: depth + 1 });
+      }
+    });
+  }
+
+  setImpacts({
+    callers: Array.from(callers),
+    callees: Array.from(callees),
+    callerEdges: Array.from(callerEdges),
+    calleeEdges: Array.from(calleeEdges)
+  });
+}, [selectedIds, callersDepth, calleesDepth]);
+
+  // --- CYTOSCAPE CANVAS & RENDER CLASS HIGHLIGHT TIER ---
   useEffect(() => {
     if (!cyLoaded || !graphContainerRef.current) return;
 
@@ -262,18 +294,29 @@ export default function App() {
 
     const cy = cyRef.current;
     cy.batch(() => {
-      cy.elements().removeClass('selected caller callee layer-colored caller-edge callee-edge');
-      if (explorerFilter === 'layer') cy.nodes().addClass('layer-colored');
-      selectedIds.forEach(id => cy.$id(id).addClass('selected'));
-      impacts.callers.forEach(id => cy.$id(id).addClass('caller'));
-      impacts.callees.forEach(id => cy.$id(id).addClass('callee'));
-      impacts.edges.forEach(eId => {
-         const edge = cy.$id(eId);
-         if (selectedIds.includes(edge.data('source'))) edge.addClass('callee-edge');
-         if (selectedIds.includes(edge.data('target'))) edge.addClass('caller-edge');
-      });
+        // Clear old classes
+        cy.elements().removeClass('selected caller callee layer-colored caller-edge callee-edge');
+
+        if (explorerFilter === 'layer') cy.nodes().addClass('layer-colored');
+
+        // Highlight nodes
+        selectedIds.forEach(id => cy.$id(id).addClass('selected'));
+        impacts.callers.forEach(id => cy.$id(id).addClass('caller'));
+        impacts.callees.forEach(id => cy.$id(id).addClass('callee'));
+
+        // Highlight path relationship arrows directly from computed deep traversals
+        if (impacts.callerEdges) {
+        impacts.callerEdges.forEach(eId => cy.$id(eId).addClass('caller-edge'));
+        }
+        if (impacts.calleeEdges) {
+        impacts.calleeEdges.forEach(eId => cy.$id(eId).addClass('callee-edge'));
+        }
     });
   }, [cyLoaded, selectedIds, impacts, explorerFilter, isDarkMode]);
+
+  const handleOpenNeo4j = useCallback(() => {
+    console.log("You will be redirected to Neo4J webapp tool");
+  }, []);
 
   const renderViewContent = () => {
     switch(activeView) {
@@ -416,7 +459,6 @@ export default function App() {
         {/* A. FIXED HEADER */}
         <LayoutPanel
           id="ctn-header"
-
           className="z-20 bg-card px-3 border-border border-b h-[40px] shrink-0"
           left={
             <>
@@ -522,7 +564,7 @@ export default function App() {
                   <ul id="paths-list" className="space-y-0.5 p-1 text-muted-foreground">
                     <li className="flex items-center gap-2"><Folder size={14} /> <span>workspace/src/main/java</span></li>
                     <li className="flex items-center gap-2"><File size={14} /> <span>workspace/src/main/resources/application.properties</span></li>
-                    <li className="flex items-center gap-2"><Folder size={14} /> <span>workspace//src/main/resources/templates</span></li>
+                    <li className="flex items-center gap-2"><Folder size={14} /> <span>workspace/src/main/resources/templates</span></li>
                   </ul>
                 </div>
               </ResizableContainer>
@@ -564,14 +606,53 @@ export default function App() {
                   visible={isCtnWorkspaceCenterVisible || isGraphMaximized}
                   style={isGraphMaximized ? { position: 'fixed', top: '40px', bottom: '40px', left: '0', right: '0', zIndex: 50 } : { flex: 1 }}
                   headerLeft="Topological Graph"
+                  headerCenter={
+                    <>
+                    <div className="flex items-center gap-2 bg-[var(--vscode-input-background)]/50 shadow-inner px-2 py-1">
+                        <User size={15} data-tooltip="Number of parent files levels to select"/>
+                        <Input type="number" id="graph-input-callers-depth" min={0} max={20}
+                               className="bg-[var(--vscode-input-background)] shadow-sm px-0 border border-[var(--vscode-input-border)] focus:border-blue-500 rounded-sm outline-none focus:ring-1 focus:ring-blue-500/50 w-10 h-5 text-[var(--vscode-input-foreground)] text-xs text-center transition-all"
+                                value={callersDepth}
+                                onChange={(e) => setCallersDepth(Number(e.target.value) || 0)}  />
+                    </div>
+
+                    <Button id="btn-open-neo4j"
+                            className="flex items-center gap-1.5 bg-gradient-to-r from-orange-600 hover:from-orange-500 to-orange-500 hover:to-orange-400 shadow-sm px-2.5 rounded-md h-7 font-bold text-[10px] text-white uppercase tracking-wider transition-all cursor-pointer select-none"
+                            onClick={() => handleOpenNeo4j()}
+                            data-tooltip="Open embedded Neo4j Web Console Client Browser"><Database /> Neo4j</Button>
+
+                    <div className="flex items-center gap-2 bg-[var(--vscode-input-background)]/50 shadow-inner px-2 py-1">
+                        <Input type="number" id="graph-input-callees-depth" min={0} max={20}
+                               className="bg-[var(--vscode-input-background)] shadow-sm px-0 border border-[var(--vscode-input-border)] focus:border-blue-500 rounded-sm outline-none focus:ring-1 focus:ring-blue-500/50 w-10 h-5 font-bold text-[var(--vscode-input-foreground)] text-xs text-center transition-all"
+                               value={calleesDepth}
+                               onChange={(e) => setCalleesDepth(Number(e.target.value) || 0)}  />
+                        <Baby size={19} data-tooltip="Number of child files levels to select"/>
+                    </div>
+                    </>
+                  }
                   headerRight={
                     <div className="flex items-center gap-0.5">
-                      <Button variant="ghost" size="icon" className="w-6 h-6 text-muted-foreground" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() + 0.1)}><Plus size={12}/></Button>
-                      <Button variant="ghost" size="icon" className="w-6 h-6 text-muted-foreground" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() - 0.1)}><Minus size={12}/></Button>
-                      <Button variant="ghost" size="icon" className="w-6 h-6 text-muted-foreground" onClick={() => cyRef.current?.fit()}><Shrink size={12}/></Button>
-                      <Button variant="ghost" size="icon" className="w-6 h-6 text-muted-foreground" onClick={() => { setIsGraphMaximized(!isGraphMaximized); setTimeout(() => { cyRef.current?.resize(); cyRef.current?.fit(); }, 50); }}>
-                        {isGraphMaximized ? <Minimize size={12}/> : <Maximize size={12}/>}
-                      </Button>
+
+                        <div className="mx-1 bg-border w-px h-4"></div>
+                        <Button
+                            id="btn-toggle-layer-view"
+                            variant="ghost"
+                            size="icon"
+                            className={`w-6 h-6 transition-colors ${explorerFilter === 'layer' ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`}
+                            onClick={() => setExplorerFilter(prev => prev === 'layer' ? 'folder' : 'layer')}
+                            title="Toggle Layer Color-coding"
+                        >
+                            <Layers size={12}/>
+                        </Button>
+
+                        <div className="mx-1 bg-border w-px h-4"></div>
+
+                        <Button id="btn-zoom-in" variant="ghost" size="icon" className="w-6 h-6 text-muted-foreground" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() + 0.1)}><Plus size={12}/></Button>
+                        <Button id="btn-zoom-out" variant="ghost" size="icon" className="w-6 h-6 text-muted-foreground" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() - 0.1)}><Minus size={12}/></Button>
+                        <Button id="btn-fit" variant="ghost" size="icon" className="w-6 h-6 text-muted-foreground" onClick={() => cyRef.current?.fit()}><Shrink size={12}/></Button>
+                        <Button id="btn-maximize" variant="ghost" size="icon" className="w-6 h-6 text-muted-foreground" onClick={() => { setIsGraphMaximized(!isGraphMaximized); setTimeout(() => { cyRef.current?.resize(); cyRef.current?.fit(); }, 50); }}>
+                            {isGraphMaximized ? <Minimize size={12}/> : <Maximize size={12}/>}
+                        </Button>
                     </div>
                   }
                   className="bg-background"

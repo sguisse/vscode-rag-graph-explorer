@@ -85,7 +85,7 @@ export function ResizableContainer({
           className={cn("group z-20 absolute hover:bg-primary/20 transition-colors", handleClasses[resizeHandle])}
           onMouseDown={onResizeStart}
         >
-          <div className={cn("absolute bg-border rounded-full", handleInnerClasses[resizeHandle])}></div>
+          <div className={cn("absolute bg-border rounded-full", handleInnerClasses[resizeHandle])} style={{display: 'none'}}></div>
         </div>
       )}
     </div>
