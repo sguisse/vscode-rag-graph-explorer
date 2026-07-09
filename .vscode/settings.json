@@ -62,5 +62,7 @@
 
 
    ],
+   "filesExporter.maxFileSizeKb": 500,
+   "filesExporter.excludeExtensionsRegex": "^[^.]+$|.*\\.(?:log|tmp|lock|zip|tar|png|jpg|gif|pyc|vsix|svg)$",
 
 }

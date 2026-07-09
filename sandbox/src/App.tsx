@@ -514,8 +514,8 @@ export default function App() {
                 onResizeStart={startCtnWorkspaceTopResize}
                 className="bg-muted border-b"
               >
-                <div className="p-1">
-                  <ul id="paths-list" className="space-y-1.5 p-2 text-muted-foreground">
+                <div className="px-1">
+                  <ul id="paths-list" className="space-y-0.5 p-1 text-muted-foreground">
                     <li className="flex items-center gap-2"><Folder size={14} /> <span>workspace/src/main/java</span></li>
                     <li className="flex items-center gap-2"><File size={14} /> <span>workspace/src/main/resources/application.properties</span></li>
                     <li className="flex items-center gap-2"><Folder size={14} /> <span>workspace//src/main/resources/templates</span></li>
