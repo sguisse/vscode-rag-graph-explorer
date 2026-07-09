@@ -5,7 +5,7 @@ import {
   History, HelpCircle, FileJson, Server, Database, ShieldAlert, Play,
   Minus, Plus, Focus, X, CheckCircle2, XCircle, CircleArrowRight, File, Folder,
   Shrink, Maximize, Minimize, Menu, Settings,
-  User, Baby, Layers
+  User, Baby, Layers, Grid, Milestone
 } from 'lucide-react';
 import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
@@ -73,10 +73,9 @@ const AST_DATA = {
 // 2. DYNAMIC CYTOSCAPE STYLES (Light/Dark)
 // ==========================================
 const getCyStyles = (isDark) => [
-  // Changed width/height from 'label' to explicit padding/formatting rules to solve deprecation warnings
-  { selector: 'node', style: { 'background-color': isDark ? '#27272a' : '#ffffff', 'color': isDark ? '#e4e4e7' : '#27272a', 'label': 'data(label)', 'font-family': 'system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif', 'font-size': '12px', 'text-valign': 'center', 'text-halign': 'center', 'border-width': 1, 'border-color': isDark ? '#3f3f46' : '#d4d4d8', 'shape': 'round-rectangle', 'padding': '12px', 'width': 'label', 'height': 'label' }},
+  { selector: 'node', style: { 'background-color': isDark ? '#27272a' : '#ffffff', 'color': isDark ? '#e4e4e7' : '#27272a', 'label': 'data(label)', 'font-family': 'system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif', 'font-size': '12px', 'text-valign': 'center', 'text-halign': 'center', 'border-width': 1, 'border-color': isDark ? '#3f3f46' : '#d4d4d8', 'shape': 'round-rectangle', 'padding': '14px', 'width': 'label', 'height': 'label' }},
 
-  { selector: ':parent', style: { 'background-color': isDark ? '#18181b' : '#f4f4f5', 'background-opacity': 0.8, 'border-width': 1, 'border-color': isDark ? '#3f3f46' : '#d4d4d8', 'border-style': 'solid', 'text-valign': 'top', 'text-halign': 'center', 'text-margin-y': -8, 'color': isDark ? '#e4e4e7' : '#3f3f46', 'font-size': '12px', 'font-weight': 'bold', 'padding': '16px' } },
+  { selector: ':parent', style: { 'background-color': isDark ? '#18181b' : '#f4f4f5', 'background-opacity': 0.8, 'border-width': 1, 'border-color': isDark ? '#3f3f46' : '#d4d4d8', 'border-style': 'solid', 'text-valign': 'top', 'text-halign': 'center', 'text-margin-y': -10, 'color': isDark ? '#e4e4e7' : '#3f3f46', 'font-size': '12px', 'font-weight': 'bold', 'padding': '26px' } },
 
   { selector: 'edge', style: { 'width': 1.5, 'line-color': isDark ? '#3f3f46' : '#a1a1aa', 'target-arrow-color': isDark ? '#3f3f46' : '#a1a1aa', 'target-arrow-shape': 'triangle', 'curve-style': 'bezier', 'arrow-scale': 1.2 } },
   { selector: 'node.selected', style: { 'background-color': isDark ? '#93c5fd' : '#bfdbfe', 'color': isDark ? '#172554' : '#1e3a8a', 'border-color': isDark ? '#2563eb' : '#3b82f6', 'border-width': 2, 'z-index': 10 } },
@@ -159,6 +158,7 @@ export default function App() {
   const [isGraphMaximized, setIsGraphMaximized] = useState(false);
 
   const [explorerFilter, setExplorerFilter] = useState('folder');
+  const [graphLayout, setGraphLayout] = useState('cose');
 
   const [callersDepth, setCallersDepth] = useState(1);
   const [calleesDepth, setCalleesDepth] = useState(0);
@@ -175,12 +175,12 @@ export default function App() {
   const graphContainerRef = useRef(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [impacts, setImpacts] = useState<{
-  callers: string[];
-  callees: string[];
-  edges: string[];
-  callerEdges: string[];
-  calleeEdges: string[];
-}>({ callers: [], callees: [], edges: [], callerEdges: [], calleeEdges: [] });
+    callers: string[];
+    callees: string[];
+    edges: string[];
+    callerEdges: string[];
+    calleeEdges: string[];
+  }>({ callers: [], callees: [], edges: [], callerEdges: [], calleeEdges: [] });
 
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
@@ -211,73 +211,134 @@ export default function App() {
 
   // --- CENTRALIZED TRAVERSAL LOGIC (Respects depths) ---
   useEffect(() => {
-  if (!selectedIds.length) {
-    setImpacts({ callers: [], callees: [], edges: [], callerEdges: [], calleeEdges: [] });
-    return;
-  }
-  const callers = new Set(), callees = new Set();
-  const callerEdges = new Set(), calleeEdges = new Set();
+    if (!selectedIds.length) {
+      setImpacts({ callers: [], callees: [], edges: [], callerEdges: [], calleeEdges: [] });
+      return;
+    }
+    const callers = new Set(), callees = new Set();
+    const callerEdges = new Set(), calleeEdges = new Set();
 
-  // --- Callers Traversal (Upstream) ---
-  let queue = selectedIds.map(id => ({ id, depth: 0 }));
-  let visited = new Set(selectedIds);
+    // --- Callers Traversal (Upstream) ---
+    let queue = selectedIds.map(id => ({ id, depth: 0 }));
+    let visited = new Set(selectedIds);
 
-  while(queue.length > 0) {
-    const { id: current, depth } = queue.shift();
+    while(queue.length > 0) {
+      const { id: current, depth } = queue.shift();
 
-    if (depth >= callersDepth) continue;
+      if (depth >= callersDepth) continue;
 
-    AST_DATA.edges.filter(e => e.data.target === current).forEach(e => {
-      callerEdges.add(e.data.id);
-      if (!visited.has(e.data.source)) {
-        visited.add(e.data.source);
-        callers.add(e.data.source);
-        queue.push({ id: e.data.source, depth: depth + 1 });
-      }
+      AST_DATA.edges.filter(e => e.data.target === current).forEach(e => {
+        callerEdges.add(e.data.id);
+        if (!visited.has(e.data.source)) {
+          visited.add(e.data.source);
+          callers.add(e.data.source);
+          queue.push({ id: e.data.source, depth: depth + 1 });
+        }
+      });
+    }
+
+    // --- Callees Traversal (Downstream) ---
+    queue = selectedIds.map(id => ({ id, depth: 0 }));
+    visited = new Set(selectedIds);
+
+    while(queue.length > 0) {
+      const { id: current, depth } = queue.shift();
+
+      if (depth >= calleesDepth) continue;
+
+      AST_DATA.edges.filter(e => e.data.source === current).forEach(e => {
+        calleeEdges.add(e.data.id);
+        if (!visited.has(e.data.target)) {
+          visited.add(e.data.target);
+          callees.add(e.data.target);
+          queue.push({ id: e.data.target, depth: depth + 1 });
+        }
+      });
+    }
+
+    setImpacts({
+      callers: Array.from(callers),
+      callees: Array.from(callees),
+      callerEdges: Array.from(callerEdges),
+      calleeEdges: Array.from(calleeEdges)
     });
-  }
+  }, [selectedIds, callersDepth, calleesDepth]);
 
-  // --- Callees Traversal (Downstream) ---
-  queue = selectedIds.map(id => ({ id, depth: 0 }));
-  visited = new Set(selectedIds);
+  // --- REACT TO GRAPH LAYOUT ENGINE CHANGES ---
+  useEffect(() => {
+    if (cyRef.current && cyLoaded) {
+        let layoutOpts: any = {
+          name: graphLayout,
+          padding: 60,
+          animate: true,
+          animationDuration: 400
+        };
 
-  while(queue.length > 0) {
-    const { id: current, depth } = queue.shift();
+        if (graphLayout === 'cose') {
+          layoutOpts = {
+            ...layoutOpts,
+            nodeOverlap: 60,
+            componentSpacing: 160,
+            nodeRepulsion: () => 12000000,
+            idealEdgeLength: () => 140,
+            edgeElasticity: () => 100,
+            nestingFactor: 1.8,
+            gravity: 0.15,
+            numIter: 2000,
+            initialTemp: 1200,
+            coolingFactor: 0.98,
+          };
+        }
+        else if (graphLayout === 'breadthfirst') {
+          layoutOpts = {
+            ...layoutOpts,
+            directed: true,
+            circle: false,
+            grid: true,
+            spacingFactor: 2.2
+          };
+        }
+        else if (graphLayout === 'grid') {
+          layoutOpts = {
+            ...layoutOpts,
+            avoidOverlap: true,
+            spacingFactor: 1.8,
+            rows: 3
+          };
+        }
 
-    if (depth >= calleesDepth) continue;
-
-    AST_DATA.edges.filter(e => e.data.source === current).forEach(e => {
-      calleeEdges.add(e.data.id);
-      if (!visited.has(e.data.target)) {
-        visited.add(e.data.target);
-        callees.add(e.data.target);
-        queue.push({ id: e.data.target, depth: depth + 1 });
-      }
-    });
-  }
-
-  setImpacts({
-    callers: Array.from(callers),
-    callees: Array.from(callees),
-    callerEdges: Array.from(callerEdges),
-    calleeEdges: Array.from(calleeEdges)
-  });
-}, [selectedIds, callersDepth, calleesDepth]);
+        cyRef.current.layout(layoutOpts).run();
+    }
+  }, [graphLayout, cyLoaded]);
 
   // --- CYTOSCAPE CANVAS & RENDER CLASS HIGHLIGHT TIER ---
   useEffect(() => {
     if (!cyLoaded || !graphContainerRef.current) return;
 
     if (!cyRef.current) {
-      cyRef.current = window.cytoscape({
-        container: graphContainerRef.current,
-        elements: AST_DATA,
-        style: getCyStyles(isDarkMode),
-        layout: { name: 'cose', padding: 50, animate: false },
-        userZoomingEnabled: true,
-        userPanningEnabled: true,
-        boxSelectionEnabled: false
-      });
+        cyRef.current = window.cytoscape({
+            container: graphContainerRef.current,
+            elements: AST_DATA,
+            style: getCyStyles(isDarkMode),
+            userZoomingEnabled: true,
+            userPanningEnabled: true,
+            boxSelectionEnabled: false
+        });
+
+        setTimeout(() => {
+          if (cyRef.current) {
+            cyRef.current.layout({
+              name: 'cose',
+              padding: 60,
+              animate: false,
+              nodeOverlap: 60,
+              nodeRepulsion: () => 12000000,
+              idealEdgeLength: () => 140,
+              nestingFactor: 1.8,
+              gravity: 0.15
+            }).run();
+          }
+        }, 150);
 
       cyRef.current.on('tap', 'node', (evt) => {
         const node = evt.target;
@@ -294,22 +355,19 @@ export default function App() {
 
     const cy = cyRef.current;
     cy.batch(() => {
-        // Clear old classes
         cy.elements().removeClass('selected caller callee layer-colored caller-edge callee-edge');
 
         if (explorerFilter === 'layer') cy.nodes().addClass('layer-colored');
 
-        // Highlight nodes
         selectedIds.forEach(id => cy.$id(id).addClass('selected'));
         impacts.callers.forEach(id => cy.$id(id).addClass('caller'));
         impacts.callees.forEach(id => cy.$id(id).addClass('callee'));
 
-        // Highlight path relationship arrows directly from computed deep traversals
         if (impacts.callerEdges) {
-        impacts.callerEdges.forEach(eId => cy.$id(eId).addClass('caller-edge'));
+          impacts.callerEdges.forEach(eId => cy.$id(eId).addClass('caller-edge'));
         }
         if (impacts.calleeEdges) {
-        impacts.calleeEdges.forEach(eId => cy.$id(eId).addClass('callee-edge'));
+          impacts.calleeEdges.forEach(eId => cy.$id(eId).addClass('callee-edge'));
         }
     });
   }, [cyLoaded, selectedIds, impacts, explorerFilter, isDarkMode]);
@@ -489,7 +547,7 @@ export default function App() {
               <button id="btn-toggle-theme" onClick={() => setIsDarkMode(!isDarkMode)} className="hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors" title={isDarkMode ? "Switch to Light Theme" : "Switch to Dark Theme"}>
                 {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
               </button>
-              <button id="btn-reset-graphe" onClick={() => { setSelectedIds([]); setExplorerFilter('folder'); if(cyRef.current) cyRef.current.fit(); }} className="hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors" title="Reset"><RotateCcw size={16} /></button>
+              <button id="btn-reset-graphe" onClick={() => { setSelectedIds([]); setExplorerFilter('folder'); setGraphLayout('cose'); if(cyRef.current) cyRef.current.fit(); }} className="hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors" title="Reset"><RotateCcw size={16} /></button>
               <div className="mx-1 bg-border w-px h-4"></div>
               <button id="btn-toggle-main" onClick={() => setIsCtnWorkspaceVisible(!isCtnWorkspaceVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`}><Eye size={16} /></button>
               <button id="btn-toggle-main-header" onClick={() => setIsCtnWorkspaceTopVisible(!isCtnWorkspaceTopVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceTopVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`}><Eye size={16} /></button>
@@ -632,6 +690,38 @@ export default function App() {
                   }
                   headerRight={
                     <div className="flex items-center gap-0.5">
+
+                        {/* GRAPH LAYOUT PICKERS */}
+                        <Button
+                            id="btn-layout-hierarchical"
+                            variant="ghost"
+                            size="icon"
+                            className={`w-6 h-6 transition-colors ${graphLayout === 'breadthfirst' ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`}
+                            onClick={() => setGraphLayout('breadthfirst')}
+                            title="Hierarchical Layout"
+                        >
+                            <Network size={12}/>
+                        </Button>
+                        <Button
+                            id="btn-layout-current"
+                            variant="ghost"
+                            size="icon"
+                            className={`w-6 h-6 transition-colors ${graphLayout === 'cose' ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`}
+                            onClick={() => setGraphLayout('cose')}
+                            title="Current (COSE Layout)"
+                        >
+                            <Milestone size={12}/>
+                        </Button>
+                        <Button
+                            id="btn-layout-grid"
+                            variant="ghost"
+                            size="icon"
+                            className={`w-6 h-6 transition-colors ${graphLayout === 'grid' ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground'}`}
+                            onClick={() => setGraphLayout('grid')}
+                            title="Grid Matrix Layout"
+                        >
+                            <Grid size={12}/>
+                        </Button>
 
                         <div className="mx-1 bg-border w-px h-4"></div>
                         <Button
