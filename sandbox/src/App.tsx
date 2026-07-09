@@ -24,15 +24,11 @@ import { Sidebar, SidebarContent, SidebarGroup, SidebarMenu, SidebarMenuItem, Si
 import { LayoutPanel } from './components/app/layout-panel';
 import { ResizableContainer } from './components/app/resizable-container';
 
-// CRITICAL FIX: The v4 API uses Group and Separator (not PanelGroup and PanelResizeHandle)
 import { Group, Panel, Separator } from 'react-resizable-panels';
 
 const hResizeHandleClass = "w-[1px] bg-border hover:bg-primary/40 focus-visible:bg-primary/40 data-[resize-handle-state=drag]:bg-primary transition-colors cursor-col-resize relative flex items-center justify-center z-10 shrink-0 outline-none";
 const vResizeHandleClass = "h-[1px] bg-border hover:bg-primary/40 focus-visible:bg-primary/40 data-[resize-handle-state=drag]:bg-primary transition-colors cursor-row-resize relative flex items-center justify-center z-10 shrink-0 outline-none";
 
-// ==========================================
-// 1. INITIAL AST DATA
-// ==========================================
 const AST_DATA = {
   nodes: [
     { data: { id: 'UserController', label: 'UserController.ts', type: 'class', layer: 'controller' } },
@@ -74,14 +70,9 @@ const AST_DATA = {
   ]
 };
 
-// ==========================================
-// 2. DYNAMIC CYTOSCAPE STYLES (Light/Dark)
-// ==========================================
 const getCyStyles = (isDark) => [
   { selector: 'node', style: { 'background-color': isDark ? '#27272a' : '#ffffff', 'color': isDark ? '#e4e4e7' : '#27272a', 'label': 'data(label)', 'font-family': 'system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif', 'font-size': '12px', 'text-valign': 'center', 'text-halign': 'center', 'border-width': 1, 'border-color': isDark ? '#3f3f46' : '#d4d4d8', 'shape': 'round-rectangle', 'width': 'label', 'height': 'label', 'padding': '10px' } },
-
   { selector: ':parent', style: { 'background-color': isDark ? '#18181b' : '#f4f4f5', 'background-opacity': 0.8, 'border-width': 1, 'border-color': isDark ? '#3f3f46' : '#d4d4d8', 'border-style': 'solid', 'text-valign': 'top', 'text-halign': 'center', 'text-margin-y': -8, 'color': isDark ? '#e4e4e7' : '#3f3f46', 'font-size': '12px', 'font-weight': 'bold', 'padding': '16px' } },
-
   { selector: 'edge', style: { 'width': 1.5, 'line-color': isDark ? '#3f3f46' : '#a1a1aa', 'target-arrow-color': isDark ? '#3f3f46' : '#a1a1aa', 'target-arrow-shape': 'triangle', 'curve-style': 'bezier', 'arrow-scale': 1.2 } },
   { selector: 'node.selected', style: { 'background-color': isDark ? '#93c5fd' : '#bfdbfe', 'color': isDark ? '#172554' : '#1e3a8a', 'border-color': isDark ? '#2563eb' : '#3b82f6', 'border-width': 2, 'z-index': 10 } },
   { selector: 'node.caller', style: { 'background-color': isDark ? '#f87171' : '#fecaca', 'color': isDark ? '#450a0a' : '#7f1d1d', 'border-color': isDark ? '#dc2626' : '#ef4444', 'border-width': 2 } },
@@ -95,9 +86,6 @@ const getCyStyles = (isDark) => [
   { selector: ':parent.layer-colored[layer]', style: { 'color': isDark ? '#e4e4e7' : '#3f3f46', 'background-opacity': 0.15 } },
 ];
 
-// ==========================================
-// 3. SIDEBAR MENU CONFIGURATION
-// ==========================================
 const SIDEBAR_MENU_ITEMS = [
   { id: 'panel-welcome', icon: LayoutDashboard, label: 'Home' },
   { id: 'panel-explorer', icon: FolderTree, label: 'AST Explorer', badge: AST_DATA.nodes.length },
@@ -109,9 +97,6 @@ const SIDEBAR_MENU_ITEMS = [
   { id: 'panel-help', icon: HelpCircle, label: 'Help & Shortcuts', bottom: true }
 ];
 
-// ==========================================
-// 4. MAIN APPLICATION
-// ==========================================
 export default function App() {
   const [cyLoaded, setCyLoaded] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
@@ -439,260 +424,258 @@ export default function App() {
           </DialogContent>
         </Dialog>
 
-        <Dialog id="modal-export" open={exportOpen} onOpenChange={setExportOpen}>
-          <DialogContent className="bg-card border border-border">
-            <DialogHeader><DialogTitle className="font-semibold text-foreground text-sm">Export Topology</DialogTitle></DialogHeader>
-            <p className="my-2 text-muted-foreground text-xs">Exporting metadata and current adjacency matrix.</p>
-            <div id="panel-export-actions" className="flex gap-2">
-              <Button id="btn-export-json" variant="outline" size="sm" className="flex-1">JSON</Button>
-              <Button id="btn-export-cypher" variant="default" size="sm" className="flex-1">Cypher DDL</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
         {/* MAIN APPLICATION CONTAINER MATRIX */}
-        <div id="ctn-main" className="relative flex flex-1 overflow-hidden">
-          <Group id="main-horizontal-layout" orientation="horizontal" onLayoutChanged={handleGraphLayoutResize}>
+        <Group
+          id="main-horizontal-layout"
+          orientation="horizontal"
+          onLayoutChanged={handleGraphLayoutResize}
+          autoSaveId="graph-impact-main-layout" // FIX : Mémorise l'état proprement sans recréer le DOM
+        >
 
-            {/* B. SIDEBAR LEFT */}
-            {sidebarLeftMode !== 'collapsed' && (
-              <Panel id="panel-sidebar-left" defaultSize={200} minSize={5} maxSize={600} order={1}>
-                <ResizableContainer id="ctn-sidebar-left-container" className="border-r h-full">
-                  <Sidebar id="ctn-sidebar-left" width="100%">
-                    <SidebarContent id="panel-app-sidebar-left-top">
-                      <SidebarGroup><SidebarMenu>{SIDEBAR_MENU_ITEMS.filter(item => !item.bottom).map(renderSidebarMenuItem)}</SidebarMenu></SidebarGroup>
-                      <SidebarGroup className="mt-auto pt-2 border-sidebar-border border-t"><SidebarMenu>{SIDEBAR_MENU_ITEMS.filter(item => item.bottom).map(renderSidebarMenuItem)}</SidebarMenu></SidebarGroup>
-                    </SidebarContent>
-                    <SidebarFooter id="panel-app-sidebar-left-bottom" className="p-0">
-                      <Button id="btn-sidebar-toggle-mode" variant="ghost" size="sm" onClick={() => setSidebarLeftMode(m => m === 'normal' ? 'minimal' : 'normal')} className={`w-full text-muted-foreground hover:text-foreground ${sidebarLeftMode === 'normal' ? 'justify-end' : 'justify-center'}`}>
-                        {sidebarLeftMode === 'normal' ? <ChevronLeft size={16}/> : <ChevronRight size={16}/>}
-                      </Button>
-                    </SidebarFooter>
-                  </Sidebar>
-                </ResizableContainer>
-              </Panel>
-            )}
+          {/* B. SIDEBAR LEFT */}
+          {sidebarLeftMode !== 'collapsed' && (
+            <Panel id="panel-sidebar-left" defaultSize="15%" minSize="0%" maxSize="100%" order={1}>
+              <ResizableContainer id="ctn-sidebar-left-container" className="border-r h-full">
+                <Sidebar id="ctn-sidebar-left" width="100%">
+                  <SidebarContent id="panel-app-sidebar-left-top">
+                    <SidebarGroup><SidebarMenu>{SIDEBAR_MENU_ITEMS.filter(item => !item.bottom).map(renderSidebarMenuItem)}</SidebarMenu></SidebarGroup>
+                    <SidebarGroup className="mt-auto pt-2 border-sidebar-border border-t"><SidebarMenu>{SIDEBAR_MENU_ITEMS.filter(item => item.bottom).map(renderSidebarMenuItem)}</SidebarMenu></SidebarGroup>
+                  </SidebarContent>
+                  <SidebarFooter id="panel-app-sidebar-left-bottom" className="p-0">
+                    <Button id="btn-sidebar-toggle-mode" variant="ghost" size="sm" onClick={() => setSidebarLeftMode(m => m === 'normal' ? 'minimal' : 'normal')} className={`w-full text-muted-foreground hover:text-foreground ${sidebarLeftMode === 'normal' ? 'justify-end' : 'justify-center'}`}>
+                      {sidebarLeftMode === 'normal' ? <ChevronLeft size={16}/> : <ChevronRight size={16}/>}
+                    </Button>
+                  </SidebarFooter>
+                </Sidebar>
+              </ResizableContainer>
+            </Panel>
+          )}
 
-            {sidebarLeftMode !== 'collapsed' && (isCtnWorkspaceVisible || isSidebarRightVisible) && (
-              <Separator id="ctn-sidebar-left-handle" className={hResizeHandleClass}>
-                <div className="bg-border/50 rounded-full w-[2px] h-8" />
-              </Separator>
-            )}
+          {sidebarLeftMode !== 'collapsed' && (isCtnWorkspaceVisible || isSidebarRightVisible) && (
+            <Separator id="ctn-sidebar-left-handle" className={hResizeHandleClass}>
+              <div className="bg-border/50 rounded-full w-[2px] h-8" />
+            </Separator>
+          )}
 
-            {/* C. CENTRAL WORKSPACE STAGE */}
-            {isCtnWorkspaceVisible && (
-              <Panel id="panel-workspace-stage" order={2} defaultSize={200}>
-                <div id="ctn-workspace" className="relative flex flex-col flex-1 min-w-0 h-full">
-                  <div id="ctn-workspace-wrapper-lvl-1" className="relative flex flex-col flex-1 min-w-0 h-full">
-                    <Group id="workspace-vertical-layout" orientation="vertical" onLayoutChanged={handleGraphLayoutResize}>
+          {/* C. CENTRAL WORKSPACE STAGE */}
+          {isCtnWorkspaceVisible && (
+            <Panel id="panel-workspace-stage" order={2} defaultSize="60%" minSize="0%" maxSize="100%">
+              <div id="ctn-workspace" className="relative flex flex-col flex-1 min-w-0 h-full">
+                <div id="ctn-workspace-wrapper-lvl-1" className="relative flex flex-col flex-1 min-w-0 h-full">
+                  <Group
+                    id="workspace-vertical-layout"
+                    orientation="vertical"
+                    onLayoutChanged={handleGraphLayoutResize}
+                    autoSaveId="graph-impact-workspace-vertical"
+                  >
 
-                      {/* TOP COLLAPSIBLE CONTAINER */}
-                      {isCtnWorkspaceTopVisible && (
-                        <Panel id="panel-workspace-top" defaultSize={200} minSize={5} maxSize={600} order={1}>
-                          <ResizableContainer id="ctn-workspace-top" headerLeft="Selected paths" className="bg-muted border-b h-full">
-                            <div className="p-0.5">
-                              <ul id="paths-list" className="space-y-0 p-1 text-muted-foreground text-xs">
-                                <li className="flex items-center gap-2"><Folder size={14} /> <span>workspace/src/main/java</span></li>
-                                <li className="flex items-center gap-2"><File size={14} /> <span>workspace/src/main/resources/application.properties</span></li>
-                                <li className="flex items-center gap-2"><Folder size={14} /> <span>workspace/src/main/resources/templates</span></li>
-                              </ul>
-                            </div>
-                          </ResizableContainer>
-                        </Panel>
-                      )}
-
-                      {isCtnWorkspaceTopVisible && (
-                        <Separator id="ctn-workspace-top-handle" className={vResizeHandleClass}>
-                          <div className="bg-border/50 rounded-full w-8 h-[2px]" />
-                        </Separator>
-                      )}
-
-                      {/* MIDDLE LAYOUT TIER SPLITS */}
-                      <Panel id="panel-workspace-middle-row" order={2} defaultSize={200}>
-                        <div id="ctn-workspace-middle-row" className="flex flex-1 w-full h-full min-h-0 overflow-hidden">
-                          <Group id="middle-row-horizontal-layout" orientation="horizontal" onLayoutChanged={handleGraphLayoutResize}>
-
-                            {/* LEFT TIER CONTAINER */}
-                            {isCtnWorkspaceLeftVisible && (
-                              <Panel id="panel-workspace-left-tier" defaultSize={200} minSize={15} maxSize={600} order={1}>
-                                <ResizableContainer id="ctn-workspace-left" headerLeft={getActiveViewLabel()} className="border-r min-w-[200px] h-full">
-                                  <div className="flex flex-col justify-between h-full">
-                                    <div className="flex-1 bg-background overflow-auto scrollbar-hide">
-                                      {renderViewContent()}
-                                    </div>
-                                    <ResizableContainer id="panel-logs" headerLeft="Parser Logs" className="border-t h-[140px]" titleBarId="panel-logs-title-bar">
-                                      <div className="flex-1 bg-background p-2 overflow-auto font-mono text-[11px] text-muted-foreground">
-                                        <div><span className="text-primary">[INFO]</span> AST Parser initiated on 3 files.</div>
-                                        <div><span className="text-primary">[INFO]</span> Topological graph built: 18 nodes.</div>
-                                      </div>
-                                    </ResizableContainer>
-                                  </div>
-                                </ResizableContainer>
-                              </Panel>
-                            )}
-
-                            {isCtnWorkspaceLeftVisible && (isCtnWorkspaceCenterVisible || isGraphMaximized || isCtnWorkspaceRightVisible) && (
-                              <Separator id="ctn-workspace-left-handle" className={hResizeHandleClass}>
-                                <div className="bg-border/50 rounded-full w-[2px] h-8" />
-                              </Separator>
-                            )}
-
-                            {/* CENTER CORE CANVAS CONTAINER */}
-                            {(isCtnWorkspaceCenterVisible || isGraphMaximized) && (
-                              <Panel
-                                id="panel-workspace-canvas"
-                                order={2}
-                                defaultSize={isCtnWorkspaceLeftVisible && isCtnWorkspaceRightVisible ? 200 : 300}
-                                minSize={100}
-                                style={isGraphMaximized ? { position: 'fixed', top: '40px', bottom: '35px', left: '0', right: '0', zIndex: 50 } : undefined}
-                              >
-                                <ResizableContainer
-                                  id="ctn-workspace-center"
-                                  headerLeft="Topological Graph"
-                                  className="bg-background h-full"
-                                  titleBarId="ctn-workspace-center-title-bar"
-                                  headerRight={
-                                    <div className="flex items-center gap-0.5">
-                                      <Button variant="ghost" size="icon" className="w-6 h-6 text-muted-foreground" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() + 0.1)}><Plus size={12}/></Button>
-                                      <Button variant="ghost" size="icon" className="w-6 h-6 text-muted-foreground" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() - 0.1)}><Minus size={12}/></Button>
-                                      <Button variant="ghost" size="icon" className="w-6 h-6 text-muted-foreground" onClick={() => cyRef.current?.fit()}><Shrink size={12}/></Button>
-                                      <Button variant="ghost" size="icon" className="w-6 h-6 text-muted-foreground" onClick={() => { setIsGraphMaximized(!isGraphMaximized); setTimeout(() => { cyRef.current?.resize(); cyRef.current?.fit(); }, 50); }}>
-                                        {isGraphMaximized ? <Minimize size={12}/> : <Maximize size={12}/>}
-                                      </Button>
-                                    </div>
-                                  }
-                                >
-                                  <div className="relative flex-1 bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
-                                    <div id="panel-graph-canvas" ref={graphContainerRef} className="absolute inset-0 outline-none w-full h-full"></div>
-                                    {isLocked && <div id="ctn-workspace-center-locked-overlay" className="z-20 absolute inset-0 bg-background/40 pointer-events-none"></div>}
-                                  </div>
-                                </ResizableContainer>
-                              </Panel>
-                            )}
-
-                            {(isCtnWorkspaceCenterVisible || isGraphMaximized) && isCtnWorkspaceRightVisible && (
-                              <Separator id="ctn-workspace-center-handle" className={hResizeHandleClass}>
-                                <div className="bg-border/50 rounded-full w-[2px] h-8" />
-                              </Separator>
-                            )}
-
-                            {/* RIGHT TIER CONTAINER */}
-                            {isCtnWorkspaceRightVisible && (
-                              <Panel id="panel-workspace-right-tier" defaultSize={200} minSize={100} maxSize={600} order={3}>
-                                <ResizableContainer id="ctn-workspace-right" headerLeft="Workspace Right" className="border-l min-w-[200px] h-full" titleBarId="ctn-workspace-right-title-bar">
-                                  <div className="bg-background p-4 h-full overflow-auto text-muted-foreground text-xs">
-                                    Not used at this moment
-                                  </div>
-                                </ResizableContainer>
-                              </Panel>
-                            )}
-
-                          </Group>
-                        </div>
+                    {/* TOP COLLAPSIBLE CONTAINER */}
+                    {isCtnWorkspaceTopVisible && (
+                      <Panel id="panel-workspace-top" defaultSize="8%" minSize="0%" maxSize="100%" order={1}>
+                        <ResizableContainer id="ctn-workspace-top" headerLeft="Selected paths" className="bg-muted border-b h-full">
+                          <div className="p-0.5">
+                            <ul id="paths-list" className="space-y-0 p-1 text-muted-foreground text-xs">
+                              <li className="flex items-center gap-2"><Folder size={14} /> <span>workspace/src/main/java</span></li>
+                              <li className="flex items-center gap-2"><File size={14} /> <span>workspace/src/main/resources/application.properties</span></li>
+                              <li className="flex items-center gap-2"><Folder size={14} /> <span>workspace/src/main/resources/templates</span></li>
+                            </ul>
+                          </div>
+                        </ResizableContainer>
                       </Panel>
-
-                      {/* BOTTOM HORIZONTAL TIER CONTAINER */}
-                      {isCtnWorkspaceBottomVisible && (
-                        <Separator id="ctn-workspace-bottom-handle" className={vResizeHandleClass}>
-                          <div className="bg-border/50 rounded-full w-8 h-[2px]" />
-                        </Separator>
-                      )}
-
-                      {isCtnWorkspaceBottomVisible && (
-                        <Panel id="panel-workspace-bottom-pane" defaultSize={200} minSize={100} maxSize={600} order={3}>
-                          <ResizableContainer id="ctn-workspace-bottom" className="bg-secondary border-t h-full">
-                            <LayoutPanel
-                               id="panel-workspace-bottom"
-                               className="px-4 h-full font-medium text-muted-foreground text-xs"
-                               left={"Wksp Bottom Left"}
-                               center={"Wksp Bottom Center"}
-                               right={"Wksp Bottom Right"}
-                            />
-                          </ResizableContainer>
-                        </Panel>
-                      )}
-
-                    </Group>
-                  </div>
-                </div>
-              </Panel>
-            )}
-
-            {/* D. RIGHT SIDEBAR INSPECTOR */}
-            {isCtnWorkspaceVisible && isSidebarRightVisible && (
-              <Separator id="ctn-sidebar-right-handle" className={hResizeHandleClass}>
-                <div className="bg-border/50 rounded-full w-[2px] h-8" />
-              </Separator>
-            )}
-
-            {isSidebarRightVisible && (
-              <Panel id="panel-sidebar-right-inspector" defaultSize={200} minSize={15} maxSize={600} order={3}>
-                <ResizableContainer
-                  id="ctn-sidebar-right"
-                  headerLeft={<><Database size={13} className="mr-1.5"/> <span>Inspector</span></>}
-                  headerRight={<Button variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => setSelectedIds([])}><X size={12}/></Button>}
-                  titleBarId="ctn-sidebar-right-title-bar"
-                  className="border-l h-full shrink-0"
-                >
-                  <div className="flex-1 bg-background p-4 h-full overflow-y-auto text-xs">
-                    {selectedIds.length === 0 ? (
-                      <div className="flex flex-col justify-center items-center gap-1.5 h-full text-muted-foreground text-center">
-                        <Focus size={24} className="opacity-40" /> <span>No selection active</span>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <Card className="bg-muted shadow-none border-border rounded-md">
-                            <CardContent className="p-0 text-center">
-                                <div className="font-bold text-primary text-xl">{selectedIds.length}</div>
-                                <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                                Nodes Selected
-                                </div>
-                            </CardContent>
-                        </Card>
-                        {selectedIds.map(id => {
-                          const node = AST_DATA.nodes.find(n => n.data.id === id);
-                          if(!node) return null;
-                          return (
-                            <Card key={id} className="gap-0 bg-background shadow-none p-0 border border-border rounded-md overflow-hidden">
-                                {/* On utilise CardHeader mais on garde un simple <span> pour éviter le style massif de CardTitle */}
-                                <CardHeader className="flex flex-row justify-between items-center space-y-0 bg-secondary px-2.5 py-1.5 border-b rounded-t-md" style={{ paddingBottom: '6px' }}>
-                                    <span className="font-semibold text-foreground">{node.data.label}</span>
-                                    <span className="bg-primary/10 px-1 py-0.5 border border-primary/20 rounded font-bold text-[9px] text-primary uppercase">
-                                    {node.data.layer}
-                                    </span>
-                                </CardHeader>
-
-                                {/* IMPORTANT : On ajoute pt-2 explicitement pour forcer l'annulation du pt-0 par défaut de shadcn */}
-                                <CardContent className="gap-0 space-y-1 p-2 pt-2 text-[11px] text-muted-foreground">
-                                    <div className="flex justify-between">
-                                    <span>Parent:</span>
-                                    <span className="text-foreground">{node.data.parent || 'N/A'}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                    <span>Incoming:</span>
-                                    <span className="font-bold text-destructive-foreground">
-                                        {AST_DATA.edges.filter(e => e.data.target === id).length}
-                                    </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                    <span>Outgoing:</span>
-                                    <span className="font-bold text-primary">
-                                        {AST_DATA.edges.filter(e => e.data.source === id).length}
-                                    </span>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                          )
-                        })}
-                      </div>
                     )}
-                  </div>
-                </ResizableContainer>
-              </Panel>
-            )}
 
-          </Group>
-        </div>
+                    {isCtnWorkspaceTopVisible && (
+                      <Separator id="ctn-workspace-top-handle" className={vResizeHandleClass}>
+                        <div className="bg-border/50 rounded-full w-8 h-[2px]" />
+                      </Separator>
+                    )}
+
+                    {/* MIDDLE LAYOUT TIER SPLITS */}
+                    <Panel id="panel-workspace-middle-row" order={2} defaultSize="70%">
+                      <div id="ctn-workspace-middle-row" className="flex flex-1 w-full h-full min-h-0 overflow-hidden">
+                        <Group
+                          id="middle-row-horizontal-layout"
+                          orientation="horizontal"
+                          onLayoutChanged={handleGraphLayoutResize}
+                          autoSaveId="graph-impact-middle-horizontal"
+                        >
+
+                          {/* LEFT TIER CONTAINER */}
+                          {isCtnWorkspaceLeftVisible && (
+                            <Panel id="panel-workspace-left-tier" defaultSize="28%" minSize="0%" maxSize="100%" order={1}>
+                              <ResizableContainer id="ctn-workspace-left" headerLeft={getActiveViewLabel()} className="border-r h-full">
+                                <div className="flex flex-col justify-between h-full">
+                                  <div className="flex-1 bg-background overflow-auto scrollbar-hide">
+                                    {renderViewContent()}
+                                  </div>
+                                  <ResizableContainer id="panel-logs" headerLeft="Parser Logs" className="border-t h-[140px]" titleBarId="panel-logs-title-bar">
+                                    <div className="flex-1 bg-background p-2 overflow-auto font-mono text-[11px] text-muted-foreground">
+                                      <div><span className="text-primary">[INFO]</span> AST Parser initiated on 3 files.</div>
+                                      <div><span className="text-primary">[INFO]</span> Topological graph built: 18 nodes.</div>
+                                    </div>
+                                  </ResizableContainer>
+                                </div>
+                              </ResizableContainer>
+                            </Panel>
+                          )}
+
+                          {isCtnWorkspaceLeftVisible && (isCtnWorkspaceCenterVisible || isGraphMaximized || isCtnWorkspaceRightVisible) && (
+                            <Separator id="ctn-workspace-left-handle" className={hResizeHandleClass}>
+                              <div className="bg-border/50 rounded-full w-[2px] h-8" />
+                            </Separator>
+                          )}
+
+                          {/* CENTER CORE CANVAS CONTAINER */}
+                          {(isCtnWorkspaceCenterVisible || isGraphMaximized) && (
+                            <Panel
+                              id="panel-workspace-canvas"
+                              order={2}
+                              defaultSize="44%"
+                              minSize="5%" // FIX : 5% comme demandé pour que ça puisse se réduire presque entièrement
+                              style={isGraphMaximized ? { position: 'fixed', top: '40px', bottom: '35px', left: '0', right: '0', zIndex: 50 } : undefined}
+                            >
+                              <ResizableContainer
+                                id="ctn-workspace-center"
+                                headerLeft="Topological Graph"
+                                className="bg-background h-full"
+                                titleBarId="ctn-workspace-center-title-bar"
+                                headerRight={
+                                  <div className="flex items-center gap-0.5">
+                                    <Button variant="ghost" size="icon" className="w-6 h-6 text-muted-foreground" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() + 0.1)}><Plus size={12}/></Button>
+                                    <Button variant="ghost" size="icon" className="w-6 h-6 text-muted-foreground" onClick={() => { setIsGraphMaximized(!isGraphMaximized); setTimeout(() => { cyRef.current?.resize(); cyRef.current?.fit(); }, 50); }}>
+                                      {isGraphMaximized ? <Minimize size={12}/> : <Maximize size={12}/>}
+                                    </Button>
+                                  </div>
+                                }
+                              >
+                                <div className="relative flex-1 bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
+                                  <div id="panel-graph-canvas" ref={graphContainerRef} className="absolute inset-0 outline-none w-full h-full"></div>
+                                  {isLocked && <div id="ctn-workspace-center-locked-overlay" className="z-20 absolute inset-0 bg-background/40 pointer-events-none"></div>}
+                                </div>
+                              </ResizableContainer>
+                            </Panel>
+                          )}
+
+                          {(isCtnWorkspaceCenterVisible || isGraphMaximized) && isCtnWorkspaceRightVisible && (
+                            <Separator id="ctn-workspace-center-handle" className={hResizeHandleClass}>
+                              <div className="bg-border/50 rounded-full w-[2px] h-8" />
+                            </Separator>
+                          )}
+
+                          {/* RIGHT TIER CONTAINER */}
+                          {isCtnWorkspaceRightVisible && (
+                            <Panel id="panel-workspace-right-tier" defaultSize="28%" minSize="0%" maxSize="100%" order={3}>
+                              <ResizableContainer id="ctn-workspace-right" headerLeft="Workspace Right" className="border-l h-full" titleBarId="ctn-workspace-right-title-bar">
+                                <div className="bg-background p-4 h-full overflow-auto text-muted-foreground text-xs">
+                                  Not used at this moment
+                                </div>
+                              </ResizableContainer>
+                            </Panel>
+                          )}
+
+                        </Group>
+                      </div>
+                    </Panel>
+
+                    {/* BOTTOM HORIZONTAL TIER CONTAINER */}
+                    {isCtnWorkspaceBottomVisible && (
+                      <Separator id="ctn-workspace-bottom-handle" className={vResizeHandleClass}>
+                        <div className="bg-border/50 rounded-full w-8 h-[2px]" />
+                      </Separator>
+                    )}
+
+                    {isCtnWorkspaceBottomVisible && (
+                      <Panel id="panel-workspace-bottom-pane" defaultSize="2%" minSize="0%" maxSize="100%" order={3}>
+                        <ResizableContainer id="ctn-workspace-bottom" className="bg-secondary border-t h-full">
+                          <LayoutPanel
+                             id="panel-workspace-bottom"
+                             className="px-4 h-full font-medium text-muted-foreground text-xs"
+                             left={"Wksp Bottom Left"}
+                             center={"Wksp Bottom Center"}
+                             right={"Wksp Bottom Right"}
+                          />
+                        </ResizableContainer>
+                      </Panel>
+                    )}
+
+                  </Group>
+                </div>
+              </div>
+            </Panel>
+          )}
+
+          {/* D. RIGHT SIDEBAR INSPECTOR */}
+          {isCtnWorkspaceVisible && isSidebarRightVisible && (
+            <Separator id="ctn-sidebar-right-handle" className={hResizeHandleClass}>
+              <div className="bg-border/50 rounded-full w-[2px] h-8" />
+            </Separator>
+          )}
+
+          {isSidebarRightVisible && (
+            <Panel id="panel-sidebar-right-inspector" defaultSize="15%" minSize="0%" maxSize="100%" order={3}>
+              <ResizableContainer
+                id="ctn-sidebar-right"
+                headerLeft={<><Database size={13} className="mr-1.5"/> <span>Inspector</span></>}
+                headerRight={<Button variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => setSelectedIds([])}><X size={12}/></Button>}
+                titleBarId="ctn-sidebar-right-title-bar"
+                className="border-l h-full shrink-0"
+              >
+                <div className="flex-1 bg-background p-4 h-full overflow-y-auto text-xs">
+                  {selectedIds.length === 0 ? (
+                    <div className="flex flex-col justify-center items-center gap-1.5 h-full text-muted-foreground text-center">
+                      <Focus size={24} className="opacity-40" /> <span>No selection active</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <Card className="bg-muted shadow-none border-border rounded-md">
+                          <CardContent className="p-3 pt-3 text-center">
+                              <div className="font-bold text-primary text-xl">{selectedIds.length}</div>
+                              <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                              Nodes Selected
+                              </div>
+                          </CardContent>
+                      </Card>
+                      {selectedIds.map(id => {
+                        const node = AST_DATA.nodes.find(n => n.data.id === id);
+                        if(!node) return null;
+                        return (
+                          <Card key={id} className="bg-background shadow-none p-0 border border-border rounded-md overflow-hidden">
+                              <CardHeader className="flex flex-row justify-between items-center space-y-0 bg-secondary px-2.5 py-1.5 border-b rounded-t-md">
+                                  <span className="font-semibold text-foreground">{node.data.label}</span>
+                                  <span className="bg-primary/10 px-1 py-0.5 border border-primary/20 rounded font-bold text-[9px] text-primary uppercase">
+                                  {node.data.layer}
+                                  </span>
+                              </CardHeader>
+
+                              <CardContent className="space-y-1 p-2 pt-2 text-[11px] text-muted-foreground">
+                                  <div className="flex justify-between">
+                                  <span>Parent:</span>
+                                  <span className="text-foreground">{node.data.parent || 'N/A'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                  <span>Incoming:</span>
+                                  <span className="font-bold text-destructive-foreground">
+                                      {AST_DATA.edges.filter(e => e.data.target === id).length}
+                                  </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                  <span>Outgoing:</span>
+                                  <span className="font-bold text-primary">
+                                      {AST_DATA.edges.filter(e => e.data.source === id).length}
+                                  </span>
+                                  </div>
+                              </CardContent>
+                          </Card>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </ResizableContainer>
+            </Panel>
+          )}
+
+        </Group>
 
         {/* E. FIXED FOOTER */}
         <LayoutPanel
