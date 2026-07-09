@@ -424,6 +424,17 @@ export default function App() {
           </DialogContent>
         </Dialog>
 
+        <Dialog id="modal-export" open={exportOpen} onOpenChange={setExportOpen}>
+          <DialogContent className="bg-card border border-border">
+            <DialogHeader><DialogTitle className="font-semibold text-foreground text-sm">Export Topology</DialogTitle></DialogHeader>
+            <p className="my-2 text-muted-foreground text-xs">Exporting metadata and current adjacency matrix.</p>
+            <div id="panel-export-actions" className="flex gap-2">
+              <Button id="btn-export-json" variant="outline" size="sm" className="flex-1">JSON</Button>
+              <Button id="btn-export-cypher" variant="default" size="sm" className="flex-1">Cypher DDL</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* MAIN APPLICATION CONTAINER MATRIX */}
         <Group
           id="main-horizontal-layout"
@@ -627,7 +638,7 @@ export default function App() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <Card className="bg-muted shadow-none border-border rounded-md">
+                      <Card className="bg-muted shadow-none p-0 border-border rounded-md">
                           <CardContent className="p-3 pt-3 text-center">
                               <div className="font-bold text-primary text-xl">{selectedIds.length}</div>
                               <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
@@ -639,15 +650,15 @@ export default function App() {
                         const node = AST_DATA.nodes.find(n => n.data.id === id);
                         if(!node) return null;
                         return (
-                          <Card key={id} className="bg-background shadow-none p-0 border border-border rounded-md overflow-hidden">
-                              <CardHeader className="flex flex-row justify-between items-center space-y-0 bg-secondary px-2.5 py-1.5 border-b rounded-t-md">
+                          <Card key={id} className="bg-background shadow-none p-0 border border-border rounded-md overflow-hidden gap-0" >
+                              <CardHeader className="flex flex-row justify-between items-center space-y-0 bg-secondary px-2.5 py-1.5 border-b rounded-t-md" style={{ paddingBottom: '6px' }}>
                                   <span className="font-semibold text-foreground">{node.data.label}</span>
                                   <span className="bg-primary/10 px-1 py-0.5 border border-primary/20 rounded font-bold text-[9px] text-primary uppercase">
                                   {node.data.layer}
                                   </span>
                               </CardHeader>
 
-                              <CardContent className="space-y-1 p-2 pt-2 text-[11px] text-muted-foreground">
+                              <CardContent className="space-y-1 p-1 pt-1 text-[11px] text-muted-foreground">
                                   <div className="flex justify-between">
                                   <span>Parent:</span>
                                   <span className="text-foreground">{node.data.parent || 'N/A'}</span>
