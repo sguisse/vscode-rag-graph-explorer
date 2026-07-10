@@ -26,6 +26,7 @@ import { Sidebar, SidebarContent, SidebarGroup, SidebarMenu, SidebarMenuItem, Si
 
 import { LayoutPanel } from './components/app/layout-panel';
 import { ResizableContainer } from './components/app/resizable-container';
+import { GlobalTooltip } from './components/app/tooltip';
 
 // ==========================================
 // 1. DATASETS & UML RELATIONSHIPS SCHEMAS
@@ -1266,7 +1267,7 @@ export default function App() {
               <ResizableContainer id="ctn-workspace-right" visible={isCtnWorkspaceRightVisible} style={{ width: !isCtnWorkspaceCenterVisible ? '100%' : `${ctnWorkspaceRightWidth}%` }} headerLeft="Metadata & Inspector Tab Matrices" className={!isCtnWorkspaceCenterVisible ? 'flex-1 border-l min-w-[200px]' : 'border-l min-w-[200px]'} resizeHandle={isCtnWorkspaceCenterVisible ? "left" : "none"} onResizeStart={isCtnWorkspaceCenterVisible ? startCtnWorkspaceRightResize : undefined}>
                 <div className="flex flex-col bg-card h-full">
                   <div className="flex bg-muted/40 border-border border-b shrink-0">
-                    <Button id="btn-inspector-tab-inspect" variant="ghost" onClick={() => setRightPanelTab('inspect')} className={`flex-1 py-2 text-center font-mono text-[11px] font-bold h-auto rounded-none border-b-2 ${rightPanelTab === 'inspect' ? 'border-b-primary text-primary bg-background' : 'text-muted-foreground border-transparent'}`} data-tooltip="Inspect detailed structural properties, docs, and impact records of selection">Inspector</Button>
+                    <Button id="btn-inspector-tab-inspect" variant="ghost" onClick={() => setRightPanelTab('inspect')} className={`flex-1 py-2 text-center font-mono text-[11px] font-bold h-auto rounded-none border-b-2 ${rightPanelTab === 'inspect' ? 'border-b-primary text-primary bg-background' : 'text-muted-foreground border-transparent'}`} data-tooltip="Inspect detailed structural properties, docs, and impact records of <span style='color:red'><strong>selection</strong></span>">Inspector</Button>
                     <Button id="btn-inspector-tab-plantuml" variant="ghost" onClick={() => setRightPanelTab('plantuml')} className={`flex-1 py-2 text-center font-mono text-[11px] font-bold h-auto rounded-none border-b-2 ${rightPanelTab === 'plantuml' ? 'border-b-primary text-primary bg-background' : 'text-muted-foreground border-transparent'}`} data-tooltip="Generate and copy standard PlantUML class diagram code models">PlantUML</Button>
                     <Button id="btn-inspector-tab-jsonschema" variant="ghost" onClick={() => setRightPanelTab('json_schema')} className={`flex-1 py-2 text-center font-mono text-[11px] font-bold h-auto rounded-none border-b-2 ${rightPanelTab === 'json_schema' ? 'border-b-primary text-primary bg-background' : 'text-muted-foreground border-transparent'}`} data-tooltip="View data specification guidelines for the system dependency parser">JSON Schema</Button>
                   </div>
@@ -1386,11 +1387,7 @@ export default function App() {
       <LayoutPanel id="ctn-footer" className="z-20 bg-primary px-3 h-[35px] text-primary-foreground text-xs select-none shrink-0" left={<><Server size={13} className="mr-1.5"/><span className="font-medium">Analysis Subsystems Synced</span></>} center={<div className="font-mono">Active Topology Nodes Rendered: {visibleCount}</div>} right={<div>Cytoscape Pipeline Core</div>} />
 
       {/* OPTIMIZED ULTRA-LIGHTWEIGHT CUSTOM GLOBAL TOOLTIP COMPONENT CONTAINER */}
-      <div
-        id="global-cursor-tooltip"
-        className="hidden z-50 fixed bg-slate-900/95 dark:bg-slate-950/95 shadow-xl px-2.5 py-1.5 border border-slate-800 rounded-md max-w-xs font-sans font-medium text-[11px] text-slate-100 break-words leading-normal pointer-events-none"
-        style={{ display: 'none' }}
-      />
+      <GlobalTooltip delay={1500} />
 
     </div>
   );
