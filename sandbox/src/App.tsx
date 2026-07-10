@@ -494,7 +494,7 @@ export default function App() {
       container: containerRef.current,
       style: [
         {
-          selector: 'node',
+          selector: 'node[width][height]',
           style: {
             'shape': 'rectangle',
             'opacity': 0.0,
@@ -520,7 +520,7 @@ export default function App() {
             'border-width': '2px',
             'border-color': isDarkMode ? '#334155' : '#cbd5e1',
             'border-style': 'dashed',
-            'padding': 40
+            'padding': '40'
           }
         },
         {
