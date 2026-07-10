@@ -1,6 +1,6 @@
 import React from "react";
 import { cn } from "../../../lib/utils";
-import { LayoutPanel } from "../layout-panel";
+import { LeftCenterRightPanel } from "../left-center-right-panel";
 
 export interface ResizableContainerProps extends React.HTMLAttributes<HTMLDivElement> {
   id: string;
@@ -63,7 +63,7 @@ export function ResizableContainer({
       {...props}
     >
       {hasHeader && (
-        <LayoutPanel
+        <LeftCenterRightPanel
           id={titleBarId || `${id}-title-bar`}
           left={headerLeft}
           center={headerCenter}

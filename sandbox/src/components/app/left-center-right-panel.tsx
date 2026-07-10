@@ -1,7 +1,7 @@
 import React from "react";
 import { cn } from "../../lib/utils";
 
-export interface LayoutPanelProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface LeftCenterRightPanelProps extends React.HTMLAttributes<HTMLDivElement> {
   id: string;
   left?: React.ReactNode;
   center?: React.ReactNode;
@@ -11,7 +11,7 @@ export interface LayoutPanelProps extends React.HTMLAttributes<HTMLDivElement> {
   rightId?: string;
 }
 
-export function LayoutPanel({
+export function LeftCenterRightPanel({
   id,
   left,
   center,
@@ -21,7 +21,7 @@ export function LayoutPanel({
   rightId,
   className,
   ...props
-}: LayoutPanelProps) {
+}: LeftCenterRightPanelProps) {
   return (
     <div id={id} className={cn("flex justify-between items-center w-full", className)} {...props}>
       <div id={leftId ?? `${id}-left`} className="empty:hidden flex items-center gap-2">{left}</div>

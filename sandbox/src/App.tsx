@@ -24,7 +24,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from './components/u
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from './components/ui/select';
 import { Sidebar, SidebarContent, SidebarGroup, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarMenuBadge, SidebarFooter } from './components/ui/sidebar';
 
-import { LayoutPanel } from './components/app/layout-panel';
+import { LeftCenterRightPanel } from './components/app/left-center-right-panel';
 import { ResizableContainer } from './components/app/container/resizable-container';
 import { Tooltip } from './components/app/tooltip';
 import { useResizable } from './components/app/container/hooks/use-resizable';
@@ -932,7 +932,7 @@ export default function App() {
               </Select>
              </div>
              <div id="panel-rules-editor" className="flex flex-col flex-1 space-y-1.5">
-               <LayoutPanel
+               <LeftCenterRightPanel
                  id="panel-cypher-editor"
                  left={<span className="font-medium text-muted-foreground text-xs">Cypher Editor</span>}
                  right={<Button id="btn-execute-cypher" variant="ghost" size="sm" className="px-2 h-6 text-primary" data-tooltip="Execute the current Cypher query script against the model"><Play size={12} className="mr-1"/> Execute</Button>}
@@ -1002,7 +1002,7 @@ export default function App() {
       )}
 
       {/* A. FIXED NAVIGATION HEADER ROW */}
-      <LayoutPanel
+      <LeftCenterRightPanel
         id="ctn-header"
         className="z-20 bg-card px-3 border-border border-b h-[40px] shrink-0"
         left={
@@ -1397,7 +1397,7 @@ export default function App() {
 
             {/* BOTTOM PANEL RUNTIME LOGGERS AND MONITOR CHANNELS BAR */}
             <ResizableContainer id="ctn-workspace-bottom" visible={isCtnWorkspaceBottomVisible} style={{ height: `${ctnWorkspaceBottomHeight}px` }} className="bg-secondary border-t" resizeHandle="top" onResizeStart={startCtnWorkspaceBottomResize}>
-              <LayoutPanel id="panel-workspace-bottom" className="px-4 h-full font-medium text-muted-foreground text-xs" left="Topological AST Compilation Matrix State Logs:" center="Execution Thread Idle Pool" right="OK" />
+              <LeftCenterRightPanel id="panel-workspace-bottom" className="px-4 h-full font-medium text-muted-foreground text-xs" left="Topological AST Compilation Matrix State Logs:" center="Execution Thread Idle Pool" right="OK" />
             </ResizableContainer>
 
           </div>
@@ -1433,7 +1433,7 @@ export default function App() {
       </div>
 
       {/* E. FIXED MAIN APPLICATION STATUS BAR FOOTER CHANNELS */}
-      <LayoutPanel id="ctn-footer" className="z-20 bg-primary px-3 h-[35px] text-primary-foreground text-xs select-none shrink-0" left={<><Server size={13} className="mr-1.5"/><span className="font-medium">Analysis Subsystems Synced</span></>} center={<div className="font-mono">Active Topology Nodes Rendered: {visibleCount}</div>} right={<div>Cytoscape Pipeline Core</div>} />
+      <LeftCenterRightPanel id="ctn-footer" className="z-20 bg-primary px-3 h-[35px] text-primary-foreground text-xs select-none shrink-0" left={<><Server size={13} className="mr-1.5"/><span className="font-medium">Analysis Subsystems Synced</span></>} center={<div className="font-mono">Active Topology Nodes Rendered: {visibleCount}</div>} right={<div>Cytoscape Pipeline Core</div>} />
 
       {/* OPTIMIZED ULTRA-LIGHTWEIGHT CUSTOM GLOBAL TOOLTIP COMPONENT CONTAINER */}
       <Tooltip delay={1500} />
