@@ -1,7 +1,3 @@
-#!/bin/bash
-# Refactor JsonViewer to a recursive React component for advanced structural styling
-
-cat << 'EOF' > src/components/ui/json-viewer.tsx
 import React from 'react';
 
 const TYPE_COLORS: Record<string, string> = {
@@ -102,6 +98,3 @@ export function JsonViewer({ data, className }: JsonViewerProps) {
     </pre>
   );
 }
-EOF
-
-echo "✅ feat(ui): Rewrote JsonViewer recursively! Attributes bearing a 'type' now inherit the specific color of their type (e.g. green for number, sable for boolean)."
