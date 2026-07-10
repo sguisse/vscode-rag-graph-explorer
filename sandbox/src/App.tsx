@@ -21,7 +21,6 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './components/ui/dialog';
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './components/ui/tooltip';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from './components/ui/select';
 import { Sidebar, SidebarContent, SidebarGroup, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarMenuBadge, SidebarFooter } from './components/ui/sidebar';
 
@@ -33,27 +32,81 @@ import { ResizableContainer } from './components/app/resizable-container';
 // ==========================================
 
 const JSON_SCHEMA_SPEC = {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "PolyglotDependencyUmlSchema",
-  "description": "Data structure defining a polyglot ecosystem with multi-level UML relationships",
-  "type": "object",
-  "required": ["files", "dependencies"],
-  "properties": {
-    "files": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["id", "name", "type", "path", "language"],
-        "properties": {
-          "id": { "type": "string" },
-          "name": { "type": "string" },
-          "type": { "type": "string", "enum": ["class", "interface", "component", "module", "config"] },
-          "path": { "type": "string" },
-          "language": { "type": "string" }
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "PolyglotDependencyUmlSchema",
+    "description": "Structure de données définissant un écosystème polyglotte avec ses relations UML multi-niveaux",
+    "type": "object",
+    "required": ["files", "dependencies"],
+    "properties": {
+        "files": {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "required": ["id", "name", "type", "path", "language"],
+            "properties": {
+            "id": { "type": "string", "description": "Identifiant unique du fichier (ex: OrderController.java)" },
+            "name": { "type": "string" },
+            "type": { "type": "string", "enum": ["class", "interface", "component", "module", "config"] },
+            "path": { "type": "string", "description": "Chemin système dans l'arborescence" },
+            "language": { "type": "string" },
+            "size": { "type": "number", "description": "Lignes de code (LOC)" },
+            "complexity": { "type": "number", "description": "Complexité cyclomatique" },
+            "attributes": {
+                "type": "array",
+                "items": {
+                "type": "object",
+                "required": ["name", "visibility"],
+                "properties": {
+                    "name": { "type": "string" },
+                    "visibility": { "type": "string", "enum": ["public", "private", "protected"] }
+                }
+                }
+            },
+            "methods": {
+                "type": "array",
+                "items": {
+                "type": "object",
+                "required": ["id", "name"],
+                "properties": {
+                    "id": { "type": "string", "description": "ID local pour raccordement port-à-port" },
+                    "name": { "type": "string" },
+                    "description": { "type": "string" }
+                }
+                }
+            },
+            "configProperties": {
+                "type": "array",
+                "items": {
+                "type": "object",
+                "required": ["key", "value"],
+                "properties": {
+                    "key": { "type": "string" },
+                    "value": { "type": "string" }
+                }
+                }
+            }
+            }
         }
-      }
+        },
+        "dependencies": {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "required": ["id", "source", "target", "relation"],
+            "properties": {
+            "id": { "type": "string" },
+            "source": { "type": "string", "description": "ID formaté: nodeId__memberId ou nodeId" },
+            "target": { "type": "string", "description": "ID formaté: nodeId__memberId ou nodeId" },
+            "relation": {
+                "type": "string",
+                "enum": ["extends", "implementation", "association", "aggregation", "dependency"],
+                "description": "Type de lien UML normé"
+            },
+            "label": { "type": "string" }
+            }
+        }
+        }
     }
-  }
 };
 
 const initialCodebase = {
@@ -112,13 +165,8 @@ const FOLDER_POSITIONS = {
 // 2. RENDERING COMPONENT LAYERS (DOM OVERLAY)
 // ==========================================
 
-const FolderNode = ({ data }: any) => (
-  <div className="relative bg-slate-100/40 dark:bg-slate-900/10 border-2 border-slate-300 dark:border-slate-700 border-dashed rounded-xl w-full h-full transition-all pointer-events-none select-none">
-    <div className="top-3 left-4 absolute flex items-center gap-2 bg-background/80 shadow-sm backdrop-blur px-2 py-1 border border-border/40 rounded font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">
-      <Folder size={14} className="fill-yellow-500/30 text-yellow-500" />
-      {data.label}
-    </div>
-  </div>
+const FolderNode = ({ data, isSelected }: any) => (
+  <div className={`w-full h-full rounded-lg transition-all ${isSelected ? 'ring-2 ring-primary' : ''}`} />
 );
 
 const UmlClassNode = ({ id, data }: any) => {
@@ -248,8 +296,8 @@ export default function App() {
 
   // --- DIMENSIONAL SIZE HANDLERS ---
   const [sidebarLeftWidth, startSidebarLeftResize] = useResizable(220, 160, 400, true);
-  const [mainLeftWidth, startmainLeftResize] = useResizable(25, 15, 60, true);
-  const [mainRightWidth, startmainRightResize] = useResizable(30, 15, 60, true, true);
+  const [ctnWorkspaceLeftWidth, startCtnWorkspaceLeftResize] = useResizable(15, 15, 60, true);
+  const [ctnWorkspaceRightWidth, startCtnWorkspaceRightResize] = useResizable(15, 15, 60, true, true);
   const [ctnWorkspaceTopHeight, startCtnWorkspaceTopResize] = useResizable(120, 50, 250, false);
   const [ctnWorkspaceBottomHeight, startCtnWorkspaceBottomResize] = useResizable(30, 30, 400, false, true);
 
@@ -273,6 +321,83 @@ export default function App() {
 
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+
+  // --- HIGH SPEED TOOLTIP LISTENERS ENGINE ---
+  const [config] = useState({ tooltipDelay: 1500 });
+
+  useEffect(() => {
+    const tooltipEl = document.getElementById('global-cursor-tooltip');
+    let tooltipTimeout: NodeJS.Timeout | null = null;
+    let activeTarget: Element | null = null;
+
+    const handleMouseMove = (e: MouseEvent) => {
+        const target = (e.target as Element).closest('[data-tooltip]');
+        if (target) {
+            if (activeTarget !== target) {
+                activeTarget = target;
+                if (tooltipTimeout) clearTimeout(tooltipTimeout);
+                if (tooltipEl) tooltipEl.style.display = 'none';
+                tooltipTimeout = setTimeout(() => {
+                    if (tooltipEl && activeTarget) {
+                        tooltipEl.innerHTML = activeTarget.getAttribute('data-tooltip') || '';
+                        tooltipEl.style.display = 'block';
+                        let targetTop = e.clientY - 20;
+                        tooltipEl.style.top = `${targetTop}px`;
+                        tooltipEl.style.left = `${e.clientX + 15}px`;
+                    }
+                }, config.tooltipDelay ?? 2000);
+            } else if (tooltipEl && tooltipEl.style.display === 'block') {
+                tooltipEl.style.top = `${e.clientY - 20}px`;
+                tooltipEl.style.left = `${e.clientX + 15}px`;
+            }
+        } else {
+            if (activeTarget) {
+                activeTarget = null;
+                if (tooltipTimeout) clearTimeout(tooltipTimeout);
+                if (tooltipEl) tooltipEl.style.display = 'none';
+            }
+        }
+    };
+
+    document.body.addEventListener('mousemove', handleMouseMove);
+    return () => {
+        document.body.removeEventListener('mousemove', handleMouseMove);
+        if (tooltipTimeout) clearTimeout(tooltipTimeout);
+    };
+  }, [config.tooltipDelay]);
+
+  // --- LAYOUT ENGINE STATES & AUTOLAYOUT DISPATCHER ---
+  const [currentLayout, setCurrentLayout] = useState('preset');
+
+  const applyLayout = useCallback((layoutName: string) => {
+    if (!cyRef.current) return;
+    setCurrentLayout(layoutName);
+
+    if (layoutName === 'preset') {
+      cyRef.current.trigger('refreshPreset');
+      return;
+    }
+
+    let options: any = {
+      name: layoutName,
+      animate: true,
+      animationDuration: 400,
+      fit: true,
+      padding: 40
+    };
+
+    if (layoutName === 'cose') {
+      options.nodeRepulsion = () => 950000;
+      options.idealEdgeLength = () => 140;
+    } else if (layoutName === 'breadthfirst') {
+      options.directed = true;
+      options.maximal = true;
+    } else if (layoutName === 'grid') {
+      options.columns = 3;
+    }
+
+    cyRef.current.layout(options).run();
+  }, []);
 
   // --- REAL-TIME CYTOSCAPE VIEWPORT STATE SYNC ---
   const [graphState, setGraphState] = useState<{
@@ -375,15 +500,21 @@ export default function App() {
           selector: 'node.folder',
           style: {
             'shape': 'rectangle',
-            'opacity': 0.05,
+            'opacity': 1.0,
+            'label': 'data(label)',
+            'text-valign': 'top',
+            'text-halign': 'center',
+            'text-margin-y': -12,
+            'font-size': '12px',
+            'font-family': 'monospace',
+            'font-weight': 'bold',
+            'color': isDarkMode ? '#94a3b8' : '#475569',
+            'background-opacity': 0.02,
             'background-color': isDarkMode ? '#475569' : '#94a3b8',
             'border-width': '2px',
             'border-color': isDarkMode ? '#334155' : '#cbd5e1',
             'border-style': 'dashed',
-            'padding-top': '54px',
-            'padding-left': '24px',
-            'padding-right': '24px',
-            'padding-bottom': '24px'
+            'padding': 40
           }
         },
         {
@@ -422,17 +553,21 @@ export default function App() {
 
     cyRef.current = cy;
 
+    cy.on('tap', 'node', (evt) => {
+      const node = evt.target;
+      setSelectedEntity({ type: 'node', nodeId: node.id() });
+    });
+
     const syncGraph = () => {
       const positions: Record<string, { x: number; y: number; w: number; h: number }> = {};
       cy.nodes().forEach(node => {
-        const pos = node.position();
-        const w = node.width();
-        const h = node.height();
+        if (node.hasClass('folder')) return;
+        const bb = node.boundingBox({ includeLabels: false, includeEdges: false });
         positions[node.id()] = {
-          x: pos.x - w / 2,
-          y: pos.y - h / 2,
-          w,
-          h
+          x: bb.x1,
+          y: bb.y1,
+          w: bb.w,
+          h: bb.h
         };
       });
 
@@ -466,27 +601,35 @@ export default function App() {
       filesByFolder[folderKey].push(file);
     });
 
-    const PADDING_TOP = 65;
-    const PADDING_LEFT = 24;
-    const GAP_X = 40;
-    const GAP_Y = 40;
+    const PADDING_TOP = 85;
+    const PADDING_LEFT = 30;
+    const GAP_X = 50;
+    const GAP_Y = 50;
 
     const folderBaseX: Record<string, number> = { 'frontend': 40, 'backend': 460, 'config': 1270 };
     const folderBaseY: Record<string, number> = { 'frontend': 80, 'backend': 30, 'config': 160 };
     const folderMaxCols: Record<string, number> = { 'frontend': 1, 'backend': 2, 'config': 1 };
 
-    Object.entries(FOLDER_POSITIONS).forEach(([folderKey, initialPos]) => {
+    Object.keys(FOLDER_POSITIONS).forEach(folderKey => {
+      const folderFiles = filesByFolder[folderKey] || [];
+      if (folderFiles.length === 0) return;
+
+      cy.add({
+        data: {
+          id: `folder__${folderKey}`,
+          label: FOLDER_POSITIONS[folderKey].label
+        },
+        classes: 'folder'
+      });
+    });
+
+    Object.entries(FOLDER_POSITIONS).forEach(([folderKey]) => {
       const folderFiles = filesByFolder[folderKey] || [];
       if (folderFiles.length === 0) return;
 
       const maxCols = folderMaxCols[folderKey] || 1;
       const maxNodeWidth = folderKey === 'config' ? 320 : 288;
       const maxNodeHeight = folderKey === 'config' ? 240 : 280;
-
-      cy.add({
-        data: { id: `folder__${folderKey}` },
-        classes: 'folder'
-      });
 
       folderFiles.forEach((file, index) => {
         const colIdx = index % maxCols;
@@ -517,7 +660,6 @@ export default function App() {
         const tgtKey = dep.targetHandle === 'header' ? dep.targetNode : `${dep.targetNode}__member__${dep.targetHandle}`;
         const isEdgeImpacted = impactedSet.has(srcKey) && impactedSet.has(tgtKey);
 
-        // --- CALCUL CHIRURGICAL DU PORT DES MÉTHODES ---
         const sourceFile = initialCodebase.files.find(f => f.id === dep.sourceNode);
         const targetFile = initialCodebase.files.find(f => f.id === dep.targetNode);
 
@@ -564,8 +706,39 @@ export default function App() {
       }
     });
 
-    cy.trigger('render');
-  }, [searchFilteredFiles, visibleFiles, impactedSet]);
+    const triggerDefaultLayout = () => {
+      if (currentLayout !== 'preset') {
+        cy.layout({ name: currentLayout, animate: false }).run();
+      } else {
+        cy.fit();
+        cy.center();
+      }
+    };
+
+    cy.off('refreshPreset').on('refreshPreset', () => {
+      cy.nodes().forEach(node => {
+        if (node.hasClass('folder')) return;
+        const fileId = node.id();
+        const fKey = initialCodebase.files.find(f => f.id === fileId)?.path.split('/')[0] || 'other';
+        const folderFiles = filesByFolder[fKey] || [];
+        const index = folderFiles.findIndex(f => f.id === fileId);
+        const maxCols = folderMaxCols[fKey] || 1;
+        const maxNodeWidth = fKey === 'config' ? 320 : 288;
+        const maxNodeHeight = fKey === 'config' ? 240 : 280;
+
+        const colIdx = index % maxCols;
+        const rowIdx = Math.floor(index / maxCols);
+
+        const absX = folderBaseX[fKey] + PADDING_LEFT + colIdx * (maxNodeWidth + GAP_X) + maxNodeWidth / 2;
+        const absY = folderBaseY[fKey] + PADDING_TOP + rowIdx * (maxNodeHeight + GAP_Y) + maxNodeHeight / 2;
+        node.position({ x: absX, y: absY });
+      });
+      cy.fit();
+      cy.center();
+    });
+
+    triggerDefaultLayout();
+  }, [searchFilteredFiles, visibleFiles, impactedSet, currentLayout]);
 
   const generatedPlantUML = useMemo(() => {
     let puml = `' Real-time synchronization state\n@startuml Codebase_Architecture_State\n\n`;
@@ -629,7 +802,7 @@ export default function App() {
               </h3>
               <div className="relative">
                 <Search className="top-2.5 left-2.5 absolute w-4 h-4 text-muted-foreground" />
-                <input type="text" placeholder="Filter by FQN or file extension..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-background px-3 py-1.5 pl-9 border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary w-full font-mono text-foreground text-xs" />
+                <Input id="input-explorer-search" type="text" placeholder="Filter by FQN or file extension..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-background px-3 py-1.5 pl-9 border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary w-full font-mono text-foreground text-xs" data-tooltip="Filter local explorer trees by extension or substring match" />
               </div>
             </div>
             <div className="flex-1 p-4 overflow-y-auto font-mono text-xs">
@@ -640,7 +813,7 @@ export default function App() {
                     <Folder size={15} className="fill-yellow-500/20 text-yellow-500" />
                     <span className="font-bold">frontend/</span>
                   </div>
-                  <input type="checkbox" checked={initialCodebase.files.filter(f => f.path.startsWith('frontend')).every(f => visibleFiles[f.id])} onChange={() => toggleFolderCheckbox('frontend')} className="rounded w-3.5 h-3.5 text-primary cursor-pointer" />
+                  <input type="checkbox" id="checkbox-folder-frontend" checked={initialCodebase.files.filter(f => f.path.startsWith('frontend')).every(f => visibleFiles[f.id])} onChange={() => toggleFolderCheckbox('frontend')} className="rounded w-3.5 h-3.5 text-primary cursor-pointer" data-tooltip="Toggle visibility of all files under frontend/ package group" />
                 </div>
                 {expandedFolders['frontend'] && (
                   <div className="space-y-1 mt-1 ml-2.5 pl-6 border-border border-l">
@@ -650,7 +823,7 @@ export default function App() {
                           <FileCode size={13} className="text-emerald-500" />
                           {file.name}
                         </span>
-                        <input type="checkbox" checked={visibleFiles[file.id]} onChange={() => toggleFileCheckbox(file.id)} className="rounded w-3.5 h-3.5 text-primary cursor-pointer" />
+                        <input type="checkbox" id={`checkbox-file-${file.id}`} checked={visibleFiles[file.id]} onChange={() => toggleFileCheckbox(file.id)} className="rounded w-3.5 h-3.5 text-primary cursor-pointer" data-tooltip={`Toggle canvas visibility for ${file.name}`} />
                       </div>
                     ))}
                   </div>
@@ -664,7 +837,7 @@ export default function App() {
                     <Folder size={15} className="fill-indigo-500/20 text-indigo-500" />
                     <span className="font-bold">backend/</span>
                   </div>
-                  <input type="checkbox" checked={initialCodebase.files.filter(f => f.path.startsWith('backend')).every(f => visibleFiles[f.id])} onChange={() => toggleFolderCheckbox('backend')} className="rounded w-3.5 h-3.5 text-primary cursor-pointer" />
+                  <input type="checkbox" id="checkbox-folder-backend" checked={initialCodebase.files.filter(f => f.path.startsWith('backend')).every(f => visibleFiles[f.id])} onChange={() => toggleFolderCheckbox('backend')} className="rounded w-3.5 h-3.5 text-primary cursor-pointer" data-tooltip="Toggle visibility of all files under backend/ package group" />
                 </div>
                 {expandedFolders['backend'] && (
                   <div className="space-y-1 mt-1 ml-2.5 pl-6 border-border border-l">
@@ -676,7 +849,7 @@ export default function App() {
                             <FileCode size={13} className={color} />
                             {file.name}
                           </span>
-                          <input type="checkbox" checked={visibleFiles[file.id]} onChange={() => toggleFileCheckbox(file.id)} className="rounded w-3.5 h-3.5 text-primary cursor-pointer" />
+                          <input type="checkbox" id={`checkbox-file-${file.id}`} checked={visibleFiles[file.id]} onChange={() => toggleFileCheckbox(file.id)} className="rounded w-3.5 h-3.5 text-primary cursor-pointer" data-tooltip={`Toggle canvas visibility for ${file.name}`} />
                         </div>
                       );
                     })}
@@ -691,7 +864,7 @@ export default function App() {
                     <Settings size={15} className="text-amber-500" />
                     <span className="font-bold">config/</span>
                   </div>
-                  <input type="checkbox" checked={initialCodebase.files.filter(f => f.path.startsWith('config')).every(f => visibleFiles[f.id])} onChange={() => toggleFolderCheckbox('config')} className="rounded w-3.5 h-3.5 text-primary cursor-pointer" />
+                  <input type="checkbox" id="checkbox-folder-config" checked={initialCodebase.files.filter(f => f.path.startsWith('config')).every(f => visibleFiles[f.id])} onChange={() => toggleFolderCheckbox('config')} className="rounded w-3.5 h-3.5 text-primary cursor-pointer" data-tooltip="Toggle visibility of all files under config/ package group" />
                 </div>
                 {expandedFolders['config'] && (
                   <div className="space-y-1 mt-1 ml-2.5 pl-6 border-border border-l">
@@ -701,7 +874,7 @@ export default function App() {
                           <Database size={13} className="text-amber-500" />
                           {file.name}
                         </span>
-                        <input type="checkbox" checked={visibleFiles[file.id]} onChange={() => toggleFileCheckbox(file.id)} className="rounded w-3.5 h-3.5 text-primary cursor-pointer" />
+                        <input type="checkbox" id={`checkbox-file-${file.id}`} checked={visibleFiles[file.id]} onChange={() => toggleFileCheckbox(file.id)} className="rounded w-3.5 h-3.5 text-primary cursor-pointer" data-tooltip={`Toggle canvas visibility for ${file.name}`} />
                       </div>
                     ))}
                   </div>
@@ -721,7 +894,9 @@ export default function App() {
                 <span className="font-medium text-foreground text-xs">Security Breaker</span>
                 <p className="text-[11px] text-muted-foreground">Simulate a connection loss with the graph database.</p>
               </div>
-              <Switch id="checkbox-security-breaker" checked={isLocked} onCheckedChange={setIsLocked} />
+              <div className="flex items-center" data-tooltip="Simulate an active connection loss with the graph database cluster">
+                <Switch id="checkbox-security-breaker" checked={isLocked} onCheckedChange={setIsLocked} />
+              </div>
             </div>
             <div id="panel-diagnostic-grid" className="gap-2 grid grid-cols-2 text-xs">
               {['Node.js v20', 'Dependency Cruiser', 'SWC Parser', 'Python 3.11', 'jQAssistant', 'Neo4j Community v5'].map((check, i) => {
@@ -739,7 +914,7 @@ export default function App() {
         case 'panel-rules':
         return (
           <div id="panel-rules" className="flex flex-col gap-4 p-4 h-full">
-             <div id="panel-rules-selector" className="space-y-1.5">
+             <div id="panel-rules-selector" className="space-y-1.5" data-tooltip="Select a pre-configured AST validation rule pattern">
               <label className="font-medium text-muted-foreground text-xs">Pre-configured Rule</label>
               <Select defaultValue="layer-bypass">
                 <SelectTrigger id="select-cypher-rules" className="bg-card w-full"><SelectValue placeholder="Select Rule" /></SelectTrigger>
@@ -754,9 +929,9 @@ export default function App() {
                <LayoutPanel
                  id="panel-cypher-editor"
                  left={<span className="font-medium text-muted-foreground text-xs">Cypher Editor</span>}
-                 right={<Button id="btn-execute-cypher" variant="ghost" size="sm" className="px-2 h-6 text-primary"><Play size={12} className="mr-1"/> Execute</Button>}
+                 right={<Button id="btn-execute-cypher" variant="ghost" size="sm" className="px-2 h-6 text-primary" data-tooltip="Execute the current Cypher query script against the model"><Play size={12} className="mr-1"/> Execute</Button>}
                />
-               <Textarea id="textarea-cypher-editor" className="flex-1 bg-muted/50 border-border font-mono text-foreground text-xs resize-none" defaultValue={"MATCH (c:Controller)-[r:CALLS]->(repo:Repository)\nRETURN c.name, repo.name, type(r)"} />
+               <Textarea id="textarea-cypher-editor" className="flex-1 bg-muted/50 border-border font-mono text-foreground text-xs resize-none" defaultValue={"MATCH (c:Controller)-[r:CALLS]->(repo:Repository)\nRETURN c.name, repo.name, type(r)"} data-tooltip="Enter your Cypher graph query here" />
              </div>
           </div>
         );
@@ -780,7 +955,7 @@ export default function App() {
             <div className="flex items-center gap-2 bg-success p-2 border border-success/30 rounded text-success-foreground transition-colors"><CheckCircle2 size={14} className="shrink-0" /><span><strong>Success state:</strong> Action completed.</span></div>
             <div className="flex items-center gap-2 bg-destructive p-2 border border-destructive/30 rounded text-destructive-foreground transition-colors"><XCircle size={14} className="shrink-0" /><span><strong>Error state:</strong> Destructive fallback triggered.</span></div>
             <div className="flex items-center gap-2 bg-warning p-2 border border-warning/30 rounded text-warning-foreground transition-colors"><ShieldAlert size={14} className="shrink-0" /><span><strong>Warning state:</strong> Muted gold context limits.</span></div>
-            <div className="flex items-center gap-2 bg-info p-2 border border-info/30 rounded text-info-foreground transition-colors"><HelpCircle size={14} className="shrink-0" /><span><strong>Info state:</strong> Sky blue layout indicator maps.</span></div>
+            <div className="flex items-center gap-2 bg-info p-2 border border-info/30 rounded text-info-foreground transition-colors"><HelpCircle size={14} className="shrink-0" /><span>// --- REAL-TIME CYTOSCAPE VIEWPORT STATE SYNC ---</span></div>
           </div>
         );
     }
@@ -800,400 +975,424 @@ export default function App() {
   );
 
   return (
-    <TooltipProvider>
-      <div id="ctn-root" className={`flex flex-col h-screen w-screen overflow-hidden font-sans text-sm select-none transition-colors duration-200 bg-background text-foreground ${isDarkMode ? 'dark' : ''}`}>
+    <div id="ctn-root" className={`flex flex-col h-screen w-screen overflow-hidden font-sans text-sm select-none transition-colors duration-200 bg-background text-foreground ${isDarkMode ? 'dark' : ''}`}>
 
-        {/* TOAST NOTIFICATION WINDOW */}
-        {copiedNotification && (
-          <div className="top-12 left-1/2 z-50 fixed flex items-center gap-2 bg-primary slide-in-from-top-4 shadow-2xl px-4 py-2.5 rounded-full font-mono text-primary-foreground text-xs -translate-x-1/2 animate-in transform fade-in">
-            <Check size={14} /> {copiedNotification}
+      {/* TOAST NOTIFICATION WINDOW */}
+      {copiedNotification && (
+        <div className="top-12 left-1/2 z-50 fixed flex items-center gap-2 bg-primary slide-in-from-top-4 shadow-2xl px-4 py-2.5 rounded-full font-mono text-primary-foreground text-xs -translate-x-1/2 animate-in transform fade-in">
+          <Check size={14} /> {copiedNotification}
+        </div>
+      )}
+
+      {/* ISOLATION BLOCKER OVERLAY */}
+      {isLocked && (
+        <div className="z-40 absolute inset-0 flex justify-center items-center bg-background/80 backdrop-blur-sm pointer-events-auto">
+          <div className="bg-card shadow-2xl p-6 border border-border rounded-lg max-w-md text-center">
+            <ShieldAlert className="mx-auto mb-4 text-destructive" size={44} />
+            <h2 className="mb-2 font-bold text-foreground text-base">Sandbox Cluster Suspended</h2>
+            <Button id="btn-restore-sandbox-connection" variant="destructive" size="sm" onClick={() => setIsLocked(false)} data-tooltip="Reconnect to the local database cluster node process">Restore connection</Button>
           </div>
+        </div>
+      )}
+
+      {/* A. FIXED NAVIGATION HEADER ROW */}
+      <LayoutPanel
+        id="ctn-header"
+        className="z-20 bg-card px-3 border-border border-b h-[40px] shrink-0"
+        left={
+          <>
+            <Button id="btn-toggle-sidebar-collapse" variant="ghost" size="icon" onClick={() => setSidebarLeftMode(m => m === 'collapsed' ? 'normal' : 'collapsed')} className="w-8 h-8 text-muted-foreground hover:text-foreground" data-tooltip="Toggle primary navigation drawer"><Menu size={16} /></Button>
+            <div className="flex items-center gap-2 ml-1 text-primary cursor-help"><span className="font-bold text-foreground text-xs tracking-tight">Archi-Polyglot Workspace (Cytoscape)</span></div>
+          </>
+        }
+        center={
+          <div className="relative flex items-center w-full max-w-md">
+            <Search className="left-2 absolute text-muted-foreground" size={14} />
+            <Input id="input-global-search" type="text" placeholder="Search for an AST entity (e.g., UserController)..." className="bg-muted pl-8 h-8 text-xs" disabled={isLocked} data-tooltip="Enter FQN token to globally query code index structures" />
+          </div>
+        }
+        right={
+          <div className="flex items-center gap-1">
+            <Button id="btn-import-dialog" variant="ghost" size="icon" onClick={() => setImportOpen(true)} className="hover:bg-muted p-1.5 rounded w-8 h-8 text-muted-foreground hover:text-foreground transition-colors" data-tooltip="Import local AST JSON/YAML schema payload extracts"><Upload size={16} /></Button>
+            <Button id="btn-export-dialog" variant="ghost" size="icon" onClick={() => setExportOpen(true)} className="hover:bg-muted p-1.5 rounded w-8 h-8 text-muted-foreground hover:text-foreground transition-colors" data-tooltip="Export current topological session structure"><Download size={16} /></Button>
+
+            <div className="mx-1 bg-border w-px h-4"></div>
+
+            <Button id="btn-toggle-theme" variant="ghost" size="icon" onClick={() => setIsDarkMode(!isDarkMode)} className="hover:bg-muted p-1.5 rounded w-8 h-8 text-muted-foreground hover:text-foreground transition-colors" data-tooltip={isDarkMode ? "Switch to crisp light mode theme" : "Switch to immersive dark mode theme"}>
+              {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
+            </Button>
+
+            <Button id="btn-reset-graphe" variant="ghost" size="icon" onClick={resetAllFilters} className="hover:bg-muted p-1.5 rounded w-8 h-8 text-muted-foreground hover:text-foreground transition-colors" data-tooltip="Reset all workspace visual states, filters, and matrices"><RotateCcw size={16} /></Button>
+
+            <div className="mx-1 bg-border w-px h-4"></div>
+
+            <Button id="btn-toggle-main" variant="ghost" size="icon" onClick={() => setIsCtnWorkspaceVisible(!isCtnWorkspaceVisible)} className={`p-1.5 rounded transition-colors ml-1 w-8 h-8 ${isCtnWorkspaceVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground hover:bg-muted'}`} data-tooltip="Toggle core workspace frame canvas wrapper"><Eye size={16} /></Button>
+            <Button id="btn-toggle-main-header" variant="ghost" size="icon" onClick={() => setIsCtnWorkspaceTopVisible(!isCtnWorkspaceTopVisible)} className={`p-1.5 rounded transition-colors ml-1 w-8 h-8 ${isCtnWorkspaceTopVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted'}`} data-tooltip="Toggle workspace mapping path summary rows"><Eye size={16} /></Button>
+            <Button id="btn-toggle-main-left" variant="ghost" size="icon" onClick={() => setIsCtnWorkspaceLeftVisible(!isCtnWorkspaceLeftVisible)} className={`p-1.5 rounded transition-colors ml-1 w-8 h-8 ${isCtnWorkspaceLeftVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted'}`} data-tooltip="Toggle multi-layer filter explorer stream"><Eye size={16} /></Button>
+            <Button id="btn-toggle-main-center" variant="ghost" size="icon" onClick={() => setIsCtnWorkspaceCenterVisible(!isCtnWorkspaceCenterVisible)} className={`p-1.5 rounded transition-colors ml-1 w-8 h-8 ${isCtnWorkspaceCenterVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted'}`} data-tooltip="Toggle center Cytoscape interactive graph stage"><Eye size={16} /></Button>
+            <Button id="btn-toggle-workspace-right" variant="ghost" size="icon" onClick={() => setIsCtnWorkspaceRightVisible(!isCtnWorkspaceRightVisible)} className={`p-1.5 rounded transition-colors ml-1 w-8 h-8 ${isCtnWorkspaceRightVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted'}`} data-tooltip="Toggle right sub-workspace tab inspect matrices"><Eye size={16} /></Button>
+            <Button id="btn-toggle-workspace-bottom" variant="ghost" size="icon" onClick={() => setIsCtnWorkspaceBottomVisible(!isCtnWorkspaceBottomVisible)} className={`p-1.5 rounded transition-colors ml-1 w-8 h-8 ${isCtnWorkspaceBottomVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted'}`} data-tooltip="Toggle bottom system real-time runtime status log bars"><Eye size={16} /></Button>
+
+            <div className="mx-1 bg-border w-px h-4"></div>
+
+            <Button id="btn-toggle-main-right" variant="ghost" size="icon" onClick={() => setIsSidebarRightVisible(!isSidebarRightVisible)} className={`p-1.5 rounded transition-colors ml-1 w-8 h-8 ${isSidebarRightVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted'}`} data-tooltip="Toggle far-right global identity properties side-drawer"><Eye size={16} /></Button>
+          </div>
+        }
+      />
+
+      {/* MODALS MAP */}
+      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+        <DialogContent className="bg-card border border-border">
+          <DialogHeader><DialogTitle className="text-foreground text-sm">Import AST Data Schema</DialogTitle></DialogHeader>
+          <div className="p-2 border border-dashed rounded text-muted-foreground text-xs text-center">Select local extraction file payload</div>
+        </DialogContent>
+      </Dialog>
+
+      {/* CORE APPLICATION CONTENT INTERACTIVE FRAME MESH */}
+      <div id="ctn-main" className="relative flex flex-1 overflow-hidden">
+
+        {/* B. SIDEBAR VIEW SELECTOR */}
+        {sidebarLeftMode !== 'collapsed' && (
+          <Sidebar id="ctn-sidebar-left" width={sidebarLeftMode === 'minimal' ? '56px' : `${sidebarLeftWidth}px`}>
+            <SidebarContent id="panel-app-sidebar-left-top">
+              <SidebarGroup><SidebarMenu>{SIDEBAR_MENU_ITEMS.filter(item => !item.bottom).map(renderSidebarMenuItem)}</SidebarMenu></SidebarGroup>
+              <SidebarGroup className="mt-auto pt-2 border-sidebar-border border-t"><SidebarMenu>{SIDEBAR_MENU_ITEMS.filter(item => item.bottom).map(renderSidebarMenuItem)}</SidebarMenu></SidebarGroup>
+            </SidebarContent>
+            <SidebarFooter id="panel-app-sidebar-left-bottom" className="p-0">
+              <Button id="btn-sidebar-toggle-drawer-mode" variant="ghost" size="sm" onClick={() => setSidebarLeftMode(m => m === 'normal' ? 'minimal' : 'normal')} className={`w-full text-muted-foreground hover:text-foreground ${sidebarLeftMode === 'normal' ? 'justify-end' : 'justify-center'}`} data-tooltip={sidebarLeftMode === 'normal' ? "Collapse sidebar drawer panel" : "Expand sidebar drawer panel"}>
+                {sidebarLeftMode === 'normal' ? <ChevronLeft size={16}/> : <ChevronRight size={16}/>}
+              </Button>
+            </SidebarFooter>
+            {sidebarLeftMode === 'normal' && (
+              <div id="ctn-sidebar-left-handle" className="group top-0 right-0 bottom-0 z-20 absolute hover:bg-sidebar-border w-1 cursor-col-resize" onMouseDown={startSidebarLeftResize}>
+                 <div className="top-1/2 right-[1px] absolute bg-sidebar-border rounded-full w-[2px] h-8 -translate-y-1/2"></div>
+              </div>
+            )}
+          </Sidebar>
         )}
 
-        {/* ISOLATION BLOCKER OVERLAY */}
-        {isLocked && (
-          <div className="z-40 absolute inset-0 flex justify-center items-center bg-background/80 backdrop-blur-sm pointer-events-auto">
-            <div className="bg-card shadow-2xl p-6 border border-border rounded-lg max-w-md text-center">
-              <ShieldAlert className="mx-auto mb-4 text-destructive" size={44} />
-              <h2 className="mb-2 font-bold text-foreground text-base">Sandbox Cluster Suspended</h2>
-              <Button variant="destructive" size="sm" onClick={() => setIsLocked(false)}>Restore connection</Button>
-            </div>
-          </div>
-        )}
+        {/* C. SYSTEM TIERS WORKSPACE MATRIX BLOCK */}
+        <div id="ctn-workspace" style={{ display: isCtnWorkspaceVisible ? 'flex' : 'none' }} className="relative flex flex-1 bg-background min-w-0">
+          <div className="relative flex flex-col flex-1 min-w-0">
 
-        {/* A. FIXED NAVIGATION HEADER ROW */}
-        <LayoutPanel
-          id="ctn-header"
-          className="z-20 bg-card px-3 border-border border-b h-[40px] shrink-0"
-          left={
-            <>
-              <Button variant="ghost" size="icon" onClick={() => setSidebarLeftMode(m => m === 'collapsed' ? 'normal' : 'collapsed')} className="w-8 h-8 text-muted-foreground hover:text-foreground"><Menu size={16} /></Button>
-              <div className="flex items-center gap-2 ml-1 text-primary cursor-help"><span className="font-bold text-foreground text-xs tracking-tight">Archi-Polyglot Workspace (Cytoscape)</span></div>
-            </>
-          }
-          center={
-            <div className="relative flex items-center w-full max-w-md">
-              <Search className="left-2 absolute text-muted-foreground" size={14} />
-              <Input id="input-global-search" type="text" placeholder="Search for an AST entity (e.g., UserController)..." className="bg-muted pl-8 h-8 text-xs" disabled={isLocked} />
-            </div>
-          }
-          right={
-            <div className="flex items-center gap-1">
-              <button id="btn-import-dialog" onClick={() => setImportOpen(true)} className="hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors" title="Import"><Upload size={16} /></button>
-              <button id="btn-export-dialog" onClick={() => setExportOpen(true)} className="hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors" title="Export"><Download size={16} /></button>
-              <div className="mx-1 bg-border w-px h-4"></div>
-              <button id="btn-toggle-theme" onClick={() => setIsDarkMode(!isDarkMode)} className="hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors" title={isDarkMode ? "Switch to Light Theme" : "Switch to Dark Theme"}>
-                {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
-              </button>
-              <button id="btn-reset-graphe" onClick={resetAllFilters} className="hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors" title="Reset Workspace"><RotateCcw size={16} /></button>
-              <div className="mx-1 bg-border w-px h-4"></div>
+            {/* TOP DIRECTORY MAPPING PATH CONTAINER ROW */}
+            <ResizableContainer id="ctn-workspace-top" visible={isCtnWorkspaceTopVisible} style={{ height: `${ctnWorkspaceTopHeight}px` }} headerLeft="Target Path Mapping Streams" resizeHandle="bottom" onResizeStart={startCtnWorkspaceTopResize} className="bg-muted border-b">
+              <div className="p-3 font-mono text-muted-foreground text-xs">/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/vscode-rag-graph-explorer</div>
+            </ResizableContainer>
 
-              <button id="btn-toggle-main" onClick={() => setIsCtnWorkspaceVisible(!isCtnWorkspaceVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors'}`} title="Workspace Frame"><Eye size={16} /></button>
-              <button id="btn-toggle-main-header" onClick={() => setIsCtnWorkspaceTopVisible(!isCtnWorkspaceTopVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceTopVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors'}`} title="Top Paths Container"><Eye size={16} /></button>
-              <button id="btn-toggle-main-left" onClick={() => setIsCtnWorkspaceLeftVisible(!isCtnWorkspaceLeftVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceLeftVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors'}`} title="Left Filter Stream"><Eye size={16} /></button>
-              <button id="btn-toggle-main-center" onClick={() => setIsCtnWorkspaceCenterVisible(!isCtnWorkspaceCenterVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceCenterVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors'}`} title="Center Canvas Stage"><Eye size={16} /></button>
-              <button id="btn-toggle-workspace-right" onClick={() => setIsCtnWorkspaceRightVisible(!isCtnWorkspaceRightVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceRightVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors'}`} title="Right Side Workspace View"><Eye size={16} /></button>
-              <button id="btn-toggle-workspace-bottom" onClick={() => setIsCtnWorkspaceBottomVisible(!isCtnWorkspaceBottomVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceBottomVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors'}`} title="Bottom Terminals"><Eye size={16} /></button>
-              <div className="mx-1 bg-border w-px h-4"></div>
-              <button id="btn-toggle-main-right" onClick={() => setIsSidebarRightVisible(!isSidebarRightVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isSidebarRightVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors'}`} title="Inspector Panel"><Eye size={16} /></button>
-            </div>
-          }
-        />
+            {/* CENTER CORE INTERACTIVE STAGE AND EXTENSION TIERS */}
+            <div id="ctn-workspace-middle-row" className="flex flex-1 min-h-0 overflow-hidden">
 
-        {/* MODALS MAP */}
-        <Dialog open={importOpen} onOpenChange={setImportOpen}>
-          <DialogContent className="bg-card border border-border">
-            <DialogHeader><DialogTitle className="text-foreground text-sm">Import AST Data Schema</DialogTitle></DialogHeader>
-            <div className="p-2 border border-dashed rounded text-muted-foreground text-xs text-center">Select local extraction file payload</div>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={exportOpen} onOpenChange={setExportOpen}>
-          <DialogContent className="bg-card border border-border">
-            <DialogHeader><DialogTitle className="text-foreground text-sm">Export Topology Map</DialogTitle></DialogHeader>
-            <div className="flex gap-2 mt-2"><Button size="sm" className="flex-1">JSON Matrix</Button><Button size="sm" variant="outline" className="flex-1">DDL Query</Button></div>
-          </DialogContent>
-        </Dialog>
-
-        {/* CORE APPLICATION CONTENT INTERACTIVE FRAME MESH */}
-        <div id="ctn-main" className="relative flex flex-1 overflow-hidden">
-
-          {/* B. SIDEBAR VIEW SELECTOR */}
-          {sidebarLeftMode !== 'collapsed' && (
-            <Sidebar id="ctn-sidebar-left" width={sidebarLeftMode === 'minimal' ? '56px' : `${sidebarLeftWidth}px`}>
-              <SidebarContent id="panel-app-sidebar-left-top">
-                <SidebarGroup><SidebarMenu>{SIDEBAR_MENU_ITEMS.filter(item => !item.bottom).map(renderSidebarMenuItem)}</SidebarMenu></SidebarGroup>
-                <SidebarGroup className="mt-auto pt-2 border-sidebar-border border-t"><SidebarMenu>{SIDEBAR_MENU_ITEMS.filter(item => item.bottom).map(renderSidebarMenuItem)}</SidebarMenu></SidebarGroup>
-              </SidebarContent>
-              <SidebarFooter id="panel-app-sidebar-left-bottom" className="p-0">
-                <Button id="btn-sidebar-toggle-mode" variant="ghost" size="sm" onClick={() => setSidebarLeftMode(m => m === 'normal' ? 'minimal' : 'normal')} className={`w-full text-muted-foreground hover:text-foreground ${sidebarLeftMode === 'normal' ? 'justify-end' : 'justify-center'}`}>
-                  {sidebarLeftMode === 'normal' ? <ChevronLeft size={16}/> : <ChevronRight size={16}/>}
-                </Button>
-              </SidebarFooter>
-              {sidebarLeftMode === 'normal' && (
-                <div id="ctn-sidebar-left-handle" className="group top-0 right-0 bottom-0 z-20 absolute hover:bg-sidebar-border w-1 cursor-col-resize" onMouseDown={startSidebarLeftResize}>
-                   <div className="top-1/2 right-[1px] absolute bg-sidebar-border rounded-full w-[2px] h-8 -translate-y-1/2"></div>
-                </div>
-              )}
-            </Sidebar>
-          )}
-
-          {/* C. SYSTEM TIERS WORKSPACE MATRIX BLOCK */}
-          <div id="ctn-workspace" style={{ display: isCtnWorkspaceVisible ? 'flex' : 'none' }} className="relative flex flex-1 bg-background min-w-0">
-            <div className="relative flex flex-col flex-1 min-w-0">
-
-              {/* TOP DIRECTORY MAPPING PATH CONTAINER ROW */}
-              <ResizableContainer id="ctn-workspace-top" visible={isCtnWorkspaceTopVisible} style={{ height: `${ctnWorkspaceTopHeight}px` }} headerLeft="Target Path Mapping Streams" resizeHandle="bottom" onResizeStart={startCtnWorkspaceTopResize} className="bg-muted border-b">
-                <div className="p-3 font-mono text-muted-foreground text-xs">/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/vscode-rag-graph-explorer</div>
+              {/* LEFT ATTACHED MODULE PANEL CONTROL VIEWPORT */}
+              <ResizableContainer id="ctn-workspace-left" visible={isCtnWorkspaceLeftVisible} style={{ width: `${ctnWorkspaceLeftWidth}%` }} headerLeft={getActiveViewLabel()} className="border-r min-w-[200px]" resizeHandle="right" onResizeStart={startCtnWorkspaceLeftResize}>
+                {renderViewContent()}
               </ResizableContainer>
 
-              {/* CENTER CORE INTERACTIVE STAGE AND EXTENSION TIERS */}
-              <div id="ctn-workspace-middle-row" className="flex flex-1 min-h-0 overflow-hidden">
-
-                {/* LEFT ATTACHED MODULE PANEL CONTROL VIEWPORT */}
-                <ResizableContainer id="ctn-workspace-left" visible={isCtnWorkspaceLeftVisible} style={{ width: `${mainLeftWidth}%` }} headerLeft={getActiveViewLabel()} className="border-r min-w-[200px]" resizeHandle="right" onResizeStart={startmainLeftResize}>
-                  {renderViewContent()}
-                </ResizableContainer>
-
-                {/* CORE SYSTEM TOPOLOGICAL NETSTAGE CANVAS OVERLAY CONTROL TIERS */}
-                <ResizableContainer
-                  id="ctn-workspace-center"
-                  visible={isCtnWorkspaceCenterVisible || isGraphMaximized}
-                  style={isGraphMaximized ? { position: 'fixed', top: '40px', bottom: '40px', left: '0', right: '0', zIndex: 50 } : { flex: 1 }}
-                  headerLeft={
-                    <div className="flex items-center gap-2">
-                      <span>Topological Network</span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className={`h-5 w-5 rounded transition-colors ${showGrid ? 'text-primary bg-primary/10' : 'text-muted-foreground'}`}
-                        onClick={() => setShowGrid(!showGrid)}
-                        title="Toggle Background Dots Grid Visibility"
-                      >
-                        <Grid size={12} />
-                      </Button>
-                    </div>
-                  }
-                  headerCenter={
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-1.5 bg-background px-2 py-0.5 border border-border rounded-sm" title="Maximum sequential nodes rendering constraint limit">
-                        <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">Limit:</span>
-                        <Input type="number" id="graph-input-limit" min={1} max={100} className="bg-transparent shadow-none px-1 border-0 focus:ring-0 w-12 h-5 font-bold text-foreground text-xs text-center" value={maxNodesLimit} onChange={(e) => setMaxNodesLimit(Number(e.target.value) || 50)} />
-                      </div>
-
-                      <Button id="btn-open-neo4j" className="flex items-center gap-1.5 bg-gradient-to-r from-orange-600 hover:from-orange-500 to-orange-500 hover:to-orange-400 shadow-sm px-2.5 border border-orange-700 rounded-md h-6 font-bold text-[10px] text-white uppercase tracking-wider" onClick={() => console.log("Routing execution context...")}>
-                        <Database size={11} /> Neo4j
-                      </Button>
-
-                      <div className="flex items-center gap-1 bg-background px-1.5 py-0.5 border border-border rounded-sm" title="Upstream Callers Level Matrix Tracer">
-                        <User size={12} className="text-muted-foreground" />
-                        <Input type="number" id="graph-input-callers-depth" min={0} max={20} className="bg-transparent p-0 border-0 focus:ring-0 w-8 h-5 text-foreground text-xs text-center" value={callersDepth} onChange={(e) => setCallersDepth(Number(e.target.value) || 0)} />
-                      </div>
-
-                      <div className="flex items-center gap-1 bg-background px-1.5 py-0.5 border border-border rounded-sm" title="Downstream Callees Level Matrix Tracer">
-                        <Baby size={12} className="text-muted-foreground" />
-                        <Input type="number" id="graph-input-callees-depth" min={0} max={20} className="bg-transparent p-0 border-0 focus:ring-0 w-8 h-5 text-foreground text-xs text-center" value={calleesDepth} onChange={(e) => setCalleesDepth(Number(e.target.value) || 0)} />
-                      </div>
-
-                      <div className="flex items-center bg-background shadow-sm px-1 border border-border rounded h-6">
-                        <Select value={displayLevel} onValueChange={setDisplayLevel}>
-                          <SelectTrigger id="select-display-level" className="bg-transparent shadow-none px-1 border-0 focus:ring-0 w-24 h-5 text-[11px] text-foreground">
-                            <SelectValue placeholder="Granularity" />
-                          </SelectTrigger>
-                          <SelectContent side="bottom">
-                            <SelectItem value="all">Show All</SelectItem>
-                            <SelectItem value="component">Component</SelectItem>
-                            <SelectItem value="class">Class</SelectItem>
-                            <SelectItem value="interface">Interface</SelectItem>
-                            <SelectItem value="module">Module</SelectItem>
-                            <SelectItem value="config">Configuration</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  }
-                  headerRight={
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => cyRef.current?.zoom((cyRef.current?.zoom() || 1) * 1.2)}><Plus size={12}/></Button>
-                      <Button variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => cyRef.current?.zoom((cyRef.current?.zoom() || 1) / 1.2)}><Minus size={12}/></Button>
-                      <Button variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => { cyRef.current?.fit(); cyRef.current?.center(); }}><Focus size={12}/></Button>
-                      <Button variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => { setIsGraphMaximized(!isGraphMaximized); }}><Maximize size={12}/></Button>
-                    </div>
-                  }
-                  className="relative bg-background"
-                >
-                  <div id="panel-graph-canvas" className="absolute inset-0 outline-none w-full h-full overflow-hidden">
-
-                    {/* Conteneur natif Cytoscape (Calque Arrière) */}
-                    <div
-                      ref={containerRef}
-                      className="z-0 absolute inset-0 w-full h-full"
-                      style={showGrid ? {
-                        backgroundImage: isDarkMode ? 'radial-gradient(#334155 1.2px, transparent 1.2px)' : 'radial-gradient(#cbd5e1 1.2px, transparent 1.2px)',
-                        backgroundSize: `${16 * graphState.zoom}px ${16 * graphState.zoom}px`,
-                        backgroundPosition: `${graphState.pan.x}px ${graphState.pan.y}px`
-                      } : undefined}
-                    />
-
-                    {/* Calque HTML Synchrone (Calque Avant) */}
-                    <div
-                      className="z-10 absolute inset-0 origin-top-left pointer-events-none select-none"
-                      style={{
-                        transform: `translate(${graphState.pan.x}px, ${graphState.pan.y}px) scale(${graphState.zoom})`,
-                      }}
+              {/* CORE SYSTEM TOPOLOGICAL NETSTAGE CANVAS OVERLAY CONTROL TIERS */}
+              <ResizableContainer
+                id="ctn-workspace-center"
+                visible={isCtnWorkspaceCenterVisible || isGraphMaximized}
+                style={isGraphMaximized ? { position: 'fixed', top: '40px', bottom: '40px', left: '0', right: '0', zIndex: 50 } : { flex: 1 }}
+                headerLeft={
+                  <div className="flex items-center gap-2">
+                    <span>Topological Network</span>
+                    <Button
+                      id="btn-toggle-grid"
+                      variant="ghost"
+                      size="icon"
+                      className={`h-5 w-5 rounded transition-colors ${showGrid ? 'text-primary bg-primary/10' : 'text-muted-foreground'}`}
+                      onClick={() => setShowGrid(!showGrid)}
+                      data-tooltip="Toggle background grid alignment dot patterns"
                     >
-                      {/* Rendu dynamique des Packages / Folders */}
-                      {Object.entries(FOLDER_POSITIONS).map(([folderKey, initialPos]) => {
-                        const bounds = graphState.nodePositions[`folder__${folderKey}`];
-                        if (!bounds) return null;
-                        return (
-                          <div
-                            key={`folder-${folderKey}`}
-                            className="z-10 absolute transition-all duration-75 ease-out"
-                            style={{ left: bounds.x, top: bounds.y, width: bounds.w, height: bounds.h }}
-                          >
-                            <FolderNode data={{ label: initialPos.label }} />
-                          </div>
-                        );
-                      })}
-
-                      {/* Rendu dynamique des Classes / UML Nodes */}
-                      {searchFilteredFiles.map(file => {
-                        const bounds = graphState.nodePositions[file.id];
-                        if (!bounds) return null;
-
-                        const impactedMembers: string[] = [];
-                        impactedSet.forEach(item => {
-                          if (item.startsWith(`${file.id}__member__`)) {
-                            impactedMembers.push(item.split('__member__')[1]);
-                          }
-                        });
-                        const isNodeImpacted = impactedSet.has(file.id);
-                        const isDimmed = selectedEntity !== null && impactedSet.size > 0 && !isNodeImpacted;
-
-                        return (
-                          <div
-                            key={file.id}
-                            className="z-20 absolute transition-all duration-75 ease-out pointer-events-none"
-                            style={{ left: bounds.x, top: bounds.y, width: bounds.w, height: bounds.h }}
-                          >
-                            {file.type === 'config' ? (
-                              <ConfigNode
-                                id={file.id}
-                                data={{
-                                  ...file,
-                                  isDimmed,
-                                  impactedMembers,
-                                  selectedMember: selectedEntity?.nodeId === file.id ? selectedEntity?.memberId : undefined,
-                                  onSelectMember: handleSelectMember
-                                }}
-                              />
-                            ) : (
-                              <UmlClassNode
-                                id={file.id}
-                                data={{
-                                  ...file,
-                                  isDimmed,
-                                  impactedMembers,
-                                  selectedMember: selectedEntity?.nodeId === file.id ? selectedEntity?.memberId : undefined,
-                                  onSelectMember: handleSelectMember
-                                }}
-                              />
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <div className="top-4 left-4 z-20 absolute bg-card/90 shadow-md backdrop-blur p-3 border border-border rounded-lg max-w-sm font-mono text-xs pointer-events-auto">
-                      <div className="flex items-center gap-2 mb-1"><Info size={14} className="text-primary" /><span className="font-bold">Surgical Analysis (Cytoscape Engine)</span></div>
-                      <p className="text-[10px] text-muted-foreground">Le drag-and-drop sur les en-têtes et le zoom molette utilisent l'architecture réactive de Cytoscape. Les clics sur les méthodes restent gérés par React.</p>
-                    </div>
-
+                      <Grid size={12} />
+                    </Button>
                   </div>
-                </ResizableContainer>
-
-                {/* RIGHT SYSTEM EXTENDED INSPECTOR TABS CONTEXT CONTAINER PANEL */}
-                <ResizableContainer id="ctn-workspace-right" visible={isCtnWorkspaceRightVisible} style={{ width: !isCtnWorkspaceCenterVisible ? '100%' : `${mainRightWidth}%` }} headerLeft="Metadata & Inspector Tab Matrices" className={!isCtnWorkspaceCenterVisible ? 'flex-1 border-l min-w-[200px]' : 'border-l min-w-[200px]'} resizeHandle={isCtnWorkspaceCenterVisible ? "left" : "none"} onResizeStart={isCtnWorkspaceCenterVisible ? startmainRightResize : undefined}>
-                  <div className="flex flex-col bg-card h-full">
-                    <div className="flex bg-muted/40 border-border border-b shrink-0">
-                      <button onClick={() => setRightPanelTab('inspect')} className={`flex-1 py-2 text-center font-mono text-[11px] font-bold ${rightPanelTab === 'inspect' ? 'border-b-2 border-primary text-primary bg-background' : 'text-muted-foreground'}`}>Inspector</button>
-                      <button onClick={() => setRightPanelTab('plantuml')} className={`flex-1 py-2 text-center font-mono text-[11px] font-bold ${rightPanelTab === 'plantuml' ? 'border-b-2 border-primary text-primary bg-background' : 'text-muted-foreground'}`}>PlantUML</button>
-                      <button onClick={() => setRightPanelTab('json_schema')} className={`flex-1 py-2 text-center font-mono text-[11px] font-bold ${rightPanelTab === 'json_schema' ? 'border-b-2 border-primary text-primary bg-background' : 'text-muted-foreground'}`}>JSON Schema</button>
+                }
+                headerCenter={
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5 bg-background px-2 py-0.5 border border-border rounded-sm" data-tooltip="Set maximum number of topological node models to display simultaneously">
+                      <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">Limit:</span>
+                      <Input type="number" id="graph-input-limit" min={1} max={100} className="bg-transparent shadow-none px-1 border-0 focus:ring-0 w-12 h-5 font-bold text-foreground text-xs text-center" value={maxNodesLimit} onChange={(e) => setMaxNodesLimit(Number(e.target.value) || 50)} />
                     </div>
-                    <div className="flex-1 p-4 overflow-y-auto font-mono text-xs">
 
-                      {/* FULL IMMERSIVE COMPREHENSIVE INSPECTOR PANEL */}
-                      {rightPanelTab === 'inspect' && (
-                        selectedEntity ? (
-                          (() => {
-                            const currentFile = initialCodebase.files.find(f => f.id === selectedEntity.nodeId);
-                            if (!currentFile) return null;
-                            return (
-                              <div className="space-y-4 animate-in duration-200 fade-in">
-                                <div className="space-y-3 bg-primary/5 p-4 border border-primary/20 rounded-lg">
-                                  <div className="flex justify-between items-center">
-                                    <span className="font-mono font-bold text-[10px] text-primary uppercase tracking-wider">ACTIVE SUBSYSTEM</span>
-                                    <span className="bg-primary/10 px-2.5 py-0.5 rounded font-mono font-bold text-primary text-xs">{currentFile.language}</span>
-                                  </div>
-                                  <div className="flex items-start gap-2.5 mt-3">
-                                    <FileCode size={20} className="mt-1 text-primary shrink-0" />
-                                    <div className="overflow-hidden">
-                                      <h4 className="font-mono font-bold text-foreground text-sm truncate">
-                                        {selectedEntity.type === 'member' ? `${currentFile.name} ➔ ${selectedEntity.memberId}()` : currentFile.name}
-                                      </h4>
-                                      <span className="block mt-0.5 font-mono text-[10px] text-muted-foreground truncate">{currentFile.path}</span>
-                                    </div>
-                                  </div>
-                                  <div className="gap-3 grid grid-cols-2 pt-3 border-border border-t">
-                                    <div className="bg-background p-2 border border-border rounded">
-                                      <span className="block font-mono text-[10px] text-muted-foreground uppercase">Volume of Code</span>
-                                      <span className="font-mono font-bold text-foreground text-xs">{currentFile.size} LOC</span>
-                                    </div>
-                                    <div className="bg-background p-2 border border-border rounded">
-                                      <span className="block font-mono text-[10px] text-muted-foreground uppercase">Complexity V(g)</span>
-                                      <span className="font-mono font-bold text-foreground text-xs">Level {currentFile.complexity}</span>
-                                    </div>
-                                  </div>
+                    <Button id="btn-open-neo4j" className="flex items-center gap-1.5 bg-gradient-to-r from-orange-600 hover:from-orange-500 to-orange-500 hover:to-orange-400 shadow-sm px-2.5 border border-orange-700 rounded-md h-6 font-bold text-[10px] text-white uppercase tracking-wider" onClick={() => console.log("Routing execution context...")} data-tooltip="Launch the synced external Neo4j browser workspace utility">
+                      <Database size={11} /> Neo4j
+                    </Button>
 
-                                  <div className="bg-slate-950 mt-3 p-2.5 border border-slate-800 rounded font-mono text-slate-300 text-xs">
-                                    <div className="mb-1 font-bold text-[10px] text-amber-400 uppercase">Functional Documentation:</div>
-                                    {selectedEntity.type === 'member' ? (
-                                      currentFile.methods?.find(m => m.id === selectedEntity.memberId)?.description ||
-                                      currentFile.configProperties?.find(p => p.key === selectedEntity.memberId)?.value ||
-                                      "No dedicated structural descriptions mapped for this member item node."
-                                    ) : (
-                                      `File container encapsulating target polyglot implementation layers at specified location pathing.`
-                                    )}
+                    <div className="flex items-center gap-1 bg-background px-1.5 py-0.5 border border-border rounded-sm" data-tooltip="Define max graph path steps for upstream caller traversal (BFS depth)">
+                      <User size={12} className="text-muted-foreground" />
+                      <Input type="number" id="graph-input-callers-depth" min={0} max={20} className="bg-transparent p-0 border-0 focus:ring-0 w-8 h-5 text-foreground text-xs text-center" value={callersDepth} onChange={(e) => setCallersDepth(Number(e.target.value) || 0)} />
+                    </div>
+
+                    <div className="flex items-center gap-1 bg-background px-1.5 py-0.5 border border-border rounded-sm" data-tooltip="Define max graph path steps for downstream callee traversal (BFS depth)">
+                      <Baby size={12} className="text-muted-foreground" />
+                      <Input type="number" id="graph-input-callees-depth" min={0} max={20} className="bg-transparent p-0 border-0 focus:ring-0 w-8 h-5 text-foreground text-xs text-center" value={calleesDepth} onChange={(e) => setCalleesDepth(Number(e.target.value) || 0)} />
+                    </div>
+
+                    <div className="flex items-center bg-background shadow-sm px-1 border border-border rounded h-6" data-tooltip="Filter graph canvas to isolate specific node types or layers">
+                      <Select value={displayLevel} onValueChange={setDisplayLevel}>
+                        <SelectTrigger id="select-display-level" className="bg-transparent shadow-none px-1 border-0 focus:ring-0 w-24 h-5 text-[11px] text-foreground">
+                          <SelectValue placeholder="Granularity" />
+                        </SelectTrigger>
+                        <SelectContent side="bottom">
+                          <SelectItem value="all">Show All</SelectItem>
+                          <SelectItem value="component">Component</SelectItem>
+                          <SelectItem value="class">Class</SelectItem>
+                          <SelectItem value="interface">Interface</SelectItem>
+                          <SelectItem value="module">Module</SelectItem>
+                          <SelectItem value="config">Configuration</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center bg-background shadow-sm px-1 border border-border rounded h-6" data-tooltip="Trigger Cytoscape auto-layout geometry engines">
+                      <Select value={currentLayout} onValueChange={applyLayout}>
+                      <SelectTrigger id="select-layout-engine" className="bg-transparent shadow-none px-1 border-0 focus:ring-0 w-28 h-5 text-[11px] text-foreground">
+                          <SelectValue placeholder="Layout Architecture" />
+                      </SelectTrigger>
+                      <SelectContent side="bottom">
+                          <SelectItem value="preset">Default (Packages)</SelectItem>
+                          <SelectItem value="grid">Grid Distribution</SelectItem>
+                          <SelectItem value="breadthfirst">Hierarchical (BFS)</SelectItem>
+                          <SelectItem value="cose">Force-Directed (Cose)</SelectItem>
+                          <SelectItem value="circle">Circular Radial</SelectItem>
+                      </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                }
+                headerRight={
+                  <div className="flex items-center gap-1">
+                    <Button id="btn-graph-zoom-in" variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => cyRef.current?.zoom((cyRef.current?.zoom() || 1) * 1.2)} data-tooltip="Zoom closer into graph elements"><Plus size={12}/></Button>
+                    <Button id="btn-graph-zoom-out" variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => cyRef.current?.zoom((cyRef.current?.zoom() || 1) / 1.2)} data-tooltip="Zoom further away from graph elements"><Minus size={12}/></Button>
+                    <Button id="btn-graph-fit-center" variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => { cyRef.current?.fit(); cyRef.current?.center(); }} data-tooltip="Fit and re-center the full topology onto the active viewport"><Focus size={12}/></Button>
+                    <Button id="btn-graph-toggle-maximize" variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => { setIsGraphMaximized(!isGraphMaximized); }} data-tooltip="Maximize/Minimize the graph viewport overlay frame"><Maximize size={12}/></Button>
+                  </div>
+                }
+                className="relative bg-background"
+              >
+                <div id="panel-graph-canvas" className="absolute inset-0 outline-none w-full h-full overflow-hidden">
+
+                  {/* Conteneur natif Cytoscape (Calque Arrière) */}
+                  <div
+                    ref={containerRef}
+                    className="z-0 absolute inset-0 w-full h-full"
+                    style={showGrid ? {
+                      backgroundImage: isDarkMode ? 'radial-gradient(#334155 1.2px, transparent 1.2px)' : 'radial-gradient(#cbd5e1 1.2px, transparent 1.2px)',
+                      backgroundSize: `${16 * graphState.zoom}px ${16 * graphState.zoom}px`,
+                      backgroundPosition: `${graphState.pan.x}px ${graphState.pan.y}px`
+                    } : undefined}
+                  />
+
+                  {/* Calque HTML Synchrone (Calque Avant) */}
+                  <div
+                    className="z-10 absolute inset-0 origin-top-left pointer-events-none select-none"
+                    style={{
+                      transform: `translate(${graphState.pan.x}px, ${graphState.pan.y}px) scale(${graphState.zoom})`,
+                    }}
+                  >
+                    {/* Rendu dynamique des Packages / Folders */}
+                    {Object.entries(FOLDER_POSITIONS).map(([folderKey, initialPos]) => {
+                      const bounds = graphState.nodePositions[`folder__${folderKey}`];
+                      if (!bounds) return null;
+                      const isSelected = selectedEntity?.nodeId === `folder__${folderKey}`;
+                      return (
+                        <div
+                          key={`folder-box-${folderKey}`}
+                          className="z-10 absolute transition-all duration-75 ease-out"
+                          style={{ left: bounds.x, top: bounds.y, width: bounds.w, height: bounds.h }}
+                        >
+                          <FolderNode data={{ label: initialPos.label }} isSelected={isSelected} />
+                        </div>
+                      );
+                    })}
+
+                    {/* Rendu dynamique des Classes / UML Nodes */}
+                    {searchFilteredFiles.map(file => {
+                      const bounds = graphState.nodePositions[file.id];
+                      if (!bounds) return null;
+
+                      const impactedMembers: string[] = [];
+                      impactedSet.forEach(item => {
+                        if (item.startsWith(`${file.id}__member__`)) {
+                          impactedMembers.push(item.split('__member__')[1]);
+                        }
+                      });
+                      const isNodeImpacted = impactedSet.has(file.id);
+                      const isDimmed = selectedEntity !== null && impactedSet.size > 0 && !isNodeImpacted;
+
+                      return (
+                        <div
+                          key={file.id}
+                          className="z-20 absolute transition-all duration-75 ease-out pointer-events-none"
+                          style={{ left: bounds.x, top: bounds.y, width: bounds.w, height: bounds.h }}
+                        >
+                          {file.type === 'config' ? (
+                            <ConfigNode
+                              id={file.id}
+                              data={{
+                                ...file,
+                                isDimmed,
+                                impactedMembers,
+                                selectedMember: selectedEntity?.nodeId === file.id ? selectedEntity?.memberId : undefined,
+                                onSelectMember: handleSelectMember
+                              }}
+                            />
+                          ) : (
+                            <UmlClassNode
+                              id={file.id}
+                              data={{
+                                ...file,
+                                isDimmed,
+                                impactedMembers,
+                                selectedMember: selectedEntity?.nodeId === file.id ? selectedEntity?.memberId : undefined,
+                                onSelectMember: handleSelectMember
+                              }}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="top-4 left-4 z-20 absolute bg-card/90 shadow-md backdrop-blur p-3 border border-border rounded-lg max-w-sm font-mono text-xs pointer-events-auto">
+                    <div className="flex items-center gap-2 mb-1"><Info size={14} className="text-primary" /><span className="font-bold">Surgical Analysis (Cytoscape Engine)</span></div>
+                    <p className="text-[10px] text-muted-foreground">Le drag-and-drop sur les en-têtes et le zoom molette utilisent l'architecture réactive de Cytoscape. Les clics sur les méthodes restent gérés par React.</p>
+                  </div>
+
+                </div>
+              </ResizableContainer>
+
+              {/* RIGHT SYSTEM EXTENDED INSPECTOR TABS CONTEXT CONTAINER PANEL */}
+              <ResizableContainer id="ctn-workspace-right" visible={isCtnWorkspaceRightVisible} style={{ width: !isCtnWorkspaceCenterVisible ? '100%' : `${ctnWorkspaceRightWidth}%` }} headerLeft="Metadata & Inspector Tab Matrices" className={!isCtnWorkspaceCenterVisible ? 'flex-1 border-l min-w-[200px]' : 'border-l min-w-[200px]'} resizeHandle={isCtnWorkspaceCenterVisible ? "left" : "none"} onResizeStart={isCtnWorkspaceCenterVisible ? startCtnWorkspaceRightResize : undefined}>
+                <div className="flex flex-col bg-card h-full">
+                  <div className="flex bg-muted/40 border-border border-b shrink-0">
+                    <Button id="btn-inspector-tab-inspect" variant="ghost" onClick={() => setRightPanelTab('inspect')} className={`flex-1 py-2 text-center font-mono text-[11px] font-bold h-auto rounded-none border-b-2 ${rightPanelTab === 'inspect' ? 'border-b-primary text-primary bg-background' : 'text-muted-foreground border-transparent'}`} data-tooltip="Inspect detailed structural properties, docs, and impact records of selection">Inspector</Button>
+                    <Button id="btn-inspector-tab-plantuml" variant="ghost" onClick={() => setRightPanelTab('plantuml')} className={`flex-1 py-2 text-center font-mono text-[11px] font-bold h-auto rounded-none border-b-2 ${rightPanelTab === 'plantuml' ? 'border-b-primary text-primary bg-background' : 'text-muted-foreground border-transparent'}`} data-tooltip="Generate and copy standard PlantUML class diagram code models">PlantUML</Button>
+                    <Button id="btn-inspector-tab-jsonschema" variant="ghost" onClick={() => setRightPanelTab('json_schema')} className={`flex-1 py-2 text-center font-mono text-[11px] font-bold h-auto rounded-none border-b-2 ${rightPanelTab === 'json_schema' ? 'border-b-primary text-primary bg-background' : 'text-muted-foreground border-transparent'}`} data-tooltip="View data specification guidelines for the system dependency parser">JSON Schema</Button>
+                  </div>
+                  <div className="flex-1 p-4 overflow-y-auto font-mono text-xs">
+
+                    {/* FULL IMMERSIVE COMPREHENSIVE INSPECTOR PANEL */}
+                    {rightPanelTab === 'inspect' && (
+                      selectedEntity ? (
+                        (() => {
+                          const currentFile = initialCodebase.files.find(f => f.id === selectedEntity.nodeId);
+                          if (!currentFile) return null;
+                          return (
+                            <div className="space-y-4 animate-in duration-200 fade-in">
+                              <div className="space-y-3 bg-primary/5 p-4 border border-primary/20 rounded-lg">
+                                <div className="flex justify-between items-center">
+                                  <span className="font-mono font-bold text-[10px] text-primary uppercase tracking-wider">ACTIVE SUBSYSTEM</span>
+                                  <span className="bg-primary/10 px-2.5 py-0.5 rounded font-mono font-bold text-primary text-xs">{currentFile.language}</span>
+                                </div>
+                                <div className="flex items-start gap-2.5 mt-3">
+                                  <FileCode size={20} className="mt-1 text-primary shrink-0" />
+                                  <div className="overflow-hidden">
+                                    <h4 className="font-mono font-bold text-foreground text-sm truncate">
+                                      {selectedEntity.type === 'member' ? `${currentFile.name} ➔ ${selectedEntity.memberId}()` : currentFile.name}
+                                    </h4>
+                                    <span className="block mt-0.5 font-mono text-[10px] text-muted-foreground truncate">{currentFile.path}</span>
+                                  </div>
+                                </div>
+                                <div className="gap-3 grid grid-cols-2 pt-3 border-border border-t">
+                                  <div className="bg-background p-2 border border-border rounded">
+                                    <span className="block font-mono text-[10px] text-muted-foreground uppercase">Volume of Code</span>
+                                    <span className="font-mono font-bold text-foreground text-xs">{currentFile.size} LOC</span>
+                                  </div>
+                                  <div className="bg-background p-2 border border-border rounded">
+                                    <span className="block font-mono text-[10px] text-muted-foreground uppercase">Complexity V(g)</span>
+                                    <span className="font-mono font-bold text-foreground text-xs">Level {currentFile.complexity}</span>
                                   </div>
                                 </div>
 
-                                <div className="space-y-2">
-                                  <div className="flex justify-between items-center">
-                                    <label className="font-mono font-bold text-[11px] text-muted-foreground uppercase">Impact Propagation Traversal Direction</label>
-                                    <span className="bg-amber-500/10 px-2 py-0.5 border border-amber-500/30 rounded font-mono text-[10px] text-amber-500">Transitive BFS</span>
-                                  </div>
-                                  <div className="gap-2 grid grid-cols-2">
-                                    <button onClick={() => setImpactDirection('aval')} className={`flex items-center justify-center gap-1.5 py-2 px-3 font-mono text-xs font-bold rounded border transition-all ${impactDirection === 'aval' ? 'bg-orange-500 border-orange-400 text-white shadow-md' : 'bg-muted border-border text-foreground'}`}><GitFork size={13} className="rotate-180" />Downstream (Callees)</button>
-                                    <button onClick={() => setImpactDirection('amont')} className={`flex items-center justify-center gap-1.5 py-2 px-3 font-mono text-xs font-bold rounded border transition-all ${impactDirection === 'amont' ? 'bg-orange-500 border-orange-400 text-white shadow-md' : 'bg-muted border-border text-foreground'}`}><GitFork size={13} />Upstream (Callers)</button>
-                                  </div>
-                                </div>
-
-                                <div className="space-y-3 bg-orange-500/5 p-4 border border-orange-500/25 rounded-lg">
-                                  <div className="flex justify-between items-center">
-                                    <div className="flex items-center gap-1.5"><ShieldAlert size={14} className="text-orange-500" /><h5 className="font-mono font-bold text-orange-500 text-xs">Fluorescent Impact Plan</h5></div>
-                                    <button onClick={() => copyToClipboard(generatedMarkdownRecipe, "Markdown impact recipe copied to clip-board!")} className="flex items-center gap-1 bg-muted hover:bg-muted/80 px-2 py-1 border border-border rounded font-mono text-[10px] text-foreground"><Copy size={10} />Copy Recipes</button>
-                                  </div>
-                                  <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                                    {initialCodebase.files.map(f => impactedSet.has(f.id) ? (
-                                      <div key={f.id} className="flex justify-between items-center bg-background px-2 py-1.5 border border-orange-500/20 rounded font-mono text-[11px]"><span className="font-semibold text-foreground truncate">{f.name}</span><span className="bg-muted px-1.5 py-0.5 rounded text-[9px] text-muted-foreground">{f.language}</span></div>
-                                    ) : null)}
-                                  </div>
+                                <div className="bg-slate-950 mt-3 p-2.5 border border-slate-800 rounded font-mono text-slate-300 text-xs">
+                                  <div className="mb-1 font-bold text-[10px] text-amber-400 uppercase">Functional Documentation:</div>
+                                  {selectedEntity.type === 'member' ? (
+                                    currentFile.methods?.find(m => m.id === selectedEntity.memberId)?.description ||
+                                    currentFile.configProperties?.find(p => p.key === selectedEntity.memberId)?.value ||
+                                    "No dedicated structural descriptions mapped for this member item node."
+                                  ) : (
+                                    `File container encapsulating target polyglot implementation layers at specified location pathing.`
+                                  )}
                                 </div>
                               </div>
-                            );
-                          })()
-                        ) : <div className="py-12 text-muted-foreground text-center"><ShieldAlert size={36} className="opacity-40 mx-auto mb-2 text-muted-foreground" /><h4 className="font-mono font-bold text-sm">No Active Entity Inspected</h4><p className="mx-auto mt-1 max-w-[240px] text-muted-foreground text-xs">Click any file component link row or surgical grid handle item to initialize graph mapping parameters.</p></div>
-                      )}
-                      {rightPanelTab === 'plantuml' && <pre className="bg-black/90 p-3 rounded-lg overflow-x-auto text-[10px] text-white whitespace-pre-wrap">{generatedPlantUML}</pre>}
-                      {rightPanelTab === 'json_schema' && <pre className="bg-black/90 p-3 rounded-lg overflow-x-auto text-[10px] text-emerald-400 whitespace-pre-wrap">{JSON.stringify(JSON_SCHEMA_SPEC, null, 2)}</pre>}
-                    </div>
+
+                              <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                  <label className="font-mono font-bold text-[11px] text-muted-foreground uppercase">Impact Propagation Traversal Direction</label>
+                                  <span className="bg-amber-500/10 px-2 py-0.5 border border-amber-500/30 rounded font-mono text-[10px] text-amber-500">Transitive BFS</span>
+                                </div>
+                                <div className="gap-2 grid grid-cols-2">
+                                  <Button id="btn-impact-direction-downstream" onClick={() => setImpactDirection('aval')} className={`flex items-center justify-center gap-1.5 py-2 px-3 font-mono text-xs font-bold rounded border transition-all h-9 ${impactDirection === 'aval' ? 'bg-orange-500 border-orange-400 text-white shadow-md' : 'bg-muted border-border text-foreground'}`} data-tooltip="Trace downhill target nodes influenced by mutations in this asset"><GitFork size={13} className="rotate-180" />Downstream (Callees)</Button>
+                                  <Button id="btn-impact-direction-upstream" onClick={() => setImpactDirection('amont')} className={`flex items-center justify-center gap-1.5 py-2 px-3 font-mono text-xs font-bold rounded border transition-all h-9 ${impactDirection === 'amont' ? 'bg-orange-500 border-orange-400 text-white shadow-md' : 'bg-muted border-border text-foreground'}`} data-tooltip="Trace uphill source components that consume or depend on this asset"><GitFork size={13} />Upstream (Callers)</Button>
+                                </div>
+                              </div>
+
+                              <div className="space-y-3 bg-orange-500/5 p-4 border border-orange-500/25 rounded-lg">
+                                <div className="flex justify-between items-center">
+                                  <div className="flex items-center gap-1.5"><ShieldAlert size={14} className="text-orange-500" /><h5 className="font-mono font-bold text-orange-500 text-xs">Fluorescent Impact Plan</h5></div>
+                                  <Button id="btn-copy-impact-recipes" onClick={() => copyToClipboard(generatedMarkdownRecipe, "Markdown impact recipe copied to clip-board!")} className="flex items-center gap-1 bg-muted hover:bg-muted/80 px-2 py-1 border border-border rounded h-6 font-mono text-[10px] text-foreground" data-tooltip="Copy actionable test verification plan checklist to clipboard">
+                                    <Copy size={10} />Copy Recipes
+                                  </Button>
+                                </div>
+                                <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                                  {initialCodebase.files.map(f => impactedSet.has(f.id) ? (
+                                    <div key={f.id} className="flex justify-between items-center bg-background px-2 py-1.5 border border-orange-500/20 rounded font-mono text-[11px]"><span className="font-semibold text-foreground truncate">{f.name}</span><span className="bg-muted px-1.5 py-0.5 rounded text-[9px] text-muted-foreground">{f.language}</span></div>
+                                  ) : null)}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })()
+                      ) : <div className="py-12 text-muted-foreground text-center"><ShieldAlert size={36} className="opacity-40 mx-auto mb-2 text-muted-foreground" /><h4 className="font-mono font-bold text-sm">No Active Entity Inspected</h4><p className="mx-auto mt-1 max-w-[240px] text-muted-foreground text-xs">Click any file component link row or surgical grid handle item to initialize graph mapping parameters.</p></div>
+                    )}
+                    {rightPanelTab === 'plantuml' && <pre className="bg-black/90 p-3 rounded-lg overflow-x-auto text-[10px] text-white whitespace-pre-wrap">{generatedPlantUML}</pre>}
+                    {rightPanelTab === 'json_schema' && <pre className="bg-black/90 p-3 rounded-lg overflow-x-auto text-[10px] text-emerald-400 whitespace-pre-wrap">{JSON.stringify(JSON_SCHEMA_SPEC, null, 2)}</pre>}
                   </div>
-                </ResizableContainer>
-
-              </div>
-
-              {/* BOTTOM PANEL RUNTIME LOGGERS AND MONITOR CHANNELS BAR */}
-              <ResizableContainer id="ctn-workspace-bottom" visible={isCtnWorkspaceBottomVisible} style={{ height: `${ctnWorkspaceBottomHeight}px` }} className="bg-secondary border-t" resizeHandle="top" onResizeStart={startCtnWorkspaceBottomResize}>
-                <LayoutPanel id="panel-workspace-bottom" className="px-4 h-full font-medium text-muted-foreground text-xs" left="Topological AST Compilation Matrix State Logs:" center="Execution Thread Idle Pool" right="OK" />
+                </div>
               </ResizableContainer>
 
             </div>
+
+            {/* BOTTOM PANEL RUNTIME LOGGERS AND MONITOR CHANNELS BAR */}
+            <ResizableContainer id="ctn-workspace-bottom" visible={isCtnWorkspaceBottomVisible} style={{ height: `${ctnWorkspaceBottomHeight}px` }} className="bg-secondary border-t" resizeHandle="top" onResizeStart={startCtnWorkspaceBottomResize}>
+              <LayoutPanel id="panel-workspace-bottom" className="px-4 h-full font-medium text-muted-foreground text-xs" left="Topological AST Compilation Matrix State Logs:" center="Execution Thread Idle Pool" right="OK" />
+            </ResizableContainer>
+
           </div>
-
-          {/* D. RIGHT STRUCTURAL PANEL PANEL PROPERTIES MATRIX GRID */}
-          <ResizableContainer id="ctn-sidebar-right" visible={isSidebarRightVisible} style={{ width: `300px` }} headerLeft={<><Layers size={13} className="mr-1.5"/> <span>Entity Properties</span></>} headerRight={<Button variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => setSelectedEntity(null)}><X size={12}/></Button>} className="border-l shrink-0" resizeHandle="left">
-            <div className="space-y-3 p-4 text-xs">
-              {selectedEntity ? (
-                <Card className="bg-muted shadow-none border-border">
-                  <CardHeader className="bg-secondary/50 p-3 border-b"><span className="font-bold text-foreground">Global Identity attributes</span></CardHeader>
-                  <CardContent className="space-y-1 p-3 font-mono text-[11px] text-muted-foreground">
-                    <div>FQN: <span className="text-foreground">{selectedEntity.nodeId}</span></div>
-                    <div>Type: <span className="text-foreground">{selectedEntity.type}</span></div>
-                    {selectedEntity.memberId && <div>Target Member: <span className="text-foreground">{selectedEntity.memberId}()</span></div>}
-                  </CardContent>
-                </Card>
-              ) : <div className="py-8 text-muted-foreground text-center">No selection parameter state active</div>}
-            </div>
-          </ResizableContainer>
-
         </div>
 
-        {/* E. FIXED MAIN APPLICATION STATUS BAR FOOTER CHANNELS */}
-        <LayoutPanel id="ctn-footer" className="z-20 bg-primary px-3 h-[35px] text-primary-foreground text-xs select-none shrink-0" left={<><Server size={13} className="mr-1.5"/><span className="font-medium">Analysis Subsystems Synced</span></>} center={<div className="font-mono">Active Topology Nodes Rendered: {visibleCount}</div>} right={<div>Cytoscape Pipeline Core</div>} />
+        {/* D. RIGHT STRUCTURAL PANEL PANEL PROPERTIES MATRIX GRID */}
+        <ResizableContainer id="ctn-sidebar-right" visible={isSidebarRightVisible} style={{ width: `300px` }} headerLeft={<><Layers size={13} className="mr-1.5"/> <span>Entity Properties</span></>} headerRight={
+          <Button id="btn-close-properties-sidebar" variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => setSelectedEntity(null)} data-tooltip="Close global identity attributes section"><X size={12}/></Button>
+        } className="border-l shrink-0" resizeHandle="left">
+          <div className="space-y-3 p-4 text-xs">
+            {selectedEntity ? (
+              <Card className="bg-muted shadow-none border-border">
+                <CardHeader className="bg-secondary/50 p-3 border-b"><span className="font-bold text-foreground">Global Identity attributes</span></CardHeader>
+                <CardContent className="space-y-1 p-3 font-mono text-[11px] text-muted-foreground">
+                  <div>FQN: <span className="text-foreground">{selectedEntity.nodeId}</span></div>
+                  <div>Type: <span className="text-foreground">{selectedEntity.type}</span></div>
+                  {selectedEntity.memberId && <div>Target Member: <span className="text-foreground">{selectedEntity.memberId}()</span></div>}
+                </CardContent>
+              </Card>
+            ) : <div className="py-8 text-muted-foreground text-center">No selection parameter state active</div>}
+          </div>
+        </ResizableContainer>
 
       </div>
-    </TooltipProvider>
+
+      {/* E. FIXED MAIN APPLICATION STATUS BAR FOOTER CHANNELS */}
+      <LayoutPanel id="ctn-footer" className="z-20 bg-primary px-3 h-[35px] text-primary-foreground text-xs select-none shrink-0" left={<><Server size={13} className="mr-1.5"/><span className="font-medium">Analysis Subsystems Synced</span></>} center={<div className="font-mono">Active Topology Nodes Rendered: {visibleCount}</div>} right={<div>Cytoscape Pipeline Core</div>} />
+
+      {/* OPTIMIZED ULTRA-LIGHTWEIGHT CUSTOM GLOBAL TOOLTIP COMPONENT CONTAINER */}
+      <div
+        id="global-cursor-tooltip"
+        className="hidden z-50 fixed bg-slate-900/95 dark:bg-slate-950/95 shadow-xl px-2.5 py-1.5 border border-slate-800 rounded-md max-w-xs font-sans font-medium text-[11px] text-slate-100 break-words leading-normal pointer-events-none"
+        style={{ display: 'none' }}
+      />
+
+    </div>
   );
 }
 
