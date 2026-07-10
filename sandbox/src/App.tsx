@@ -1,16 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import {
-  ReactFlow,
-  Background,
-  Controls,
-  MiniMap,
-  useNodesState,
-  useEdgesState,
-  Handle,
-  Position,
-  MarkerType,
-} from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
+import cytoscape from 'cytoscape';
 
 import {
   Network, Search, Download, Upload, Moon, Sun, RotateCcw, EyeOff, Eye,
@@ -114,28 +103,18 @@ const initialCodebase = {
 };
 
 const FOLDER_POSITIONS = {
-  'frontend': { x: 40, y: 80, w: 320, h: 560, label: '📂 Client Frontend (TSX/TS)' },
-  'backend': { x: 400, y: 30, w: 710, h: 630, label: '📂 API Backend (Spring Boot / Java)' },
-  'config': { x: 1150, y: 160, w: 390, h: 360, label: '⚙️ Configurations d\'Écosystème' }
-};
-
-const FILE_COORDINATES = {
-  'OrderButton.tsx': { x: 30, y: 80 },
-  'orderApi.ts': { x: 30, y: 340 },
-  'OrderController.java': { x: 30, y: 80 },
-  'Order.java': { x: 380, y: 80 },
-  'OrderRepository.java': { x: 30, y: 340 },
-  'JpaOrderRepository.java': { x: 380, y: 340 },
-  'application.yml': { x: 30, y: 80 }
+  'frontend': { label: '📂 Client Frontend (TSX/TS)' },
+  'backend': { label: '📂 API Backend (Spring Boot / Java)' },
+  'config': { label: '⚙️ Configurations d\'Écosystème' }
 };
 
 // ==========================================
-// 2. CUSTOM RENDER NODE STRUCTS (REACT FLOW)
+// 2. RENDERING COMPONENT LAYERS (DOM OVERLAY)
 // ==========================================
 
 const FolderNode = ({ data }: any) => (
-  <div className="bg-slate-50/40 dark:bg-slate-900/10 p-4 border-2 border-slate-300 dark:border-slate-700 border-dashed rounded-xl w-full h-full transition-all pointer-events-none select-none">
-    <div className="flex items-center gap-2 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">
+  <div className="relative bg-slate-100/40 dark:bg-slate-900/10 border-2 border-slate-300 dark:border-slate-700 border-dashed rounded-xl w-full h-full transition-all pointer-events-none select-none">
+    <div className="top-3 left-4 absolute flex items-center gap-2 bg-background/80 shadow-sm backdrop-blur px-2 py-1 border border-border/40 rounded font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">
       <Folder size={14} className="fill-yellow-500/30 text-yellow-500" />
       {data.label}
     </div>
@@ -155,8 +134,6 @@ const UmlClassNode = ({ id, data }: any) => {
 
   return (
     <div className={`w-72 bg-card rounded-lg shadow-xl border-2 ${style.border} relative transition-all duration-300 ${data.isDimmed ? 'opacity-25' : 'opacity-100'}`}>
-      <Handle type="target" position={Position.Top} id={`${id}__header_target`} className="opacity-0 w-2 h-2" />
-      <Handle type="source" position={Position.Bottom} id={`${id}__header_source`} className="opacity-0 w-2 h-2" />
       <div className={`${style.bg} p-3 text-white relative rounded-t-[5px]`}>
         <div className="flex justify-between items-center">
           <span className="bg-black/30 opacity-85 px-2 py-0.5 rounded font-mono text-[10px] uppercase tracking-wider">{style.badge}</span>
@@ -190,15 +167,11 @@ const UmlClassNode = ({ id, data }: any) => {
             const isSelected = data.selectedMember === m.id;
             return (
               <div key={m.id} onClick={(e) => { e.stopPropagation(); data.onSelectMember(id, m.id); }}
-                className={`group relative flex items-center justify-between p-1.5 rounded border transition-all cursor-pointer ${
+                className={`pointer-events-auto group relative flex items-center justify-between p-1.5 rounded border transition-all cursor-pointer ${
                   isSelected ? 'border-primary bg-primary/10' : isMethodImpacted ? 'border-orange-500 bg-orange-500/15 animate-pulse' : 'border-transparent hover:bg-muted'
                 }`}
               >
-                <Handle type="target" position={Position.Left} id={`${id}__method__${m.id}__target`} style={{ left: '-6px', width: '10px', height: '10px', top: '50%', transform: 'translateY(-50%)' }}
-                  className={`border-2 transition-transform duration-200 group-hover:scale-125 z-10 ${isMethodImpacted ? 'bg-orange-500 border-orange-200' : 'bg-primary border-background'}`} />
                 <span className="font-mono text-foreground/90 text-xs">+ {m.name}</span>
-                <Handle type="source" position={Position.Right} id={`${id}__method__${m.id}__source`} style={{ right: '-6px', width: '10px', height: '10px', top: '50%', transform: 'translateY(-50%)' }}
-                  className={`border-2 transition-transform duration-200 group-hover:scale-125 z-10 ${isMethodImpacted ? 'bg-orange-500 border-orange-200' : 'bg-emerald-500 border-background'}`} />
               </div>
             );
           })}
@@ -223,12 +196,10 @@ const ConfigNode = ({ id, data }: any) => (
         const isSelected = data.selectedMember === prop.key;
         return (
           <div key={prop.key} onClick={(e) => { e.stopPropagation(); data.onSelectMember(id, prop.key); }}
-            className={`group relative p-2 rounded border transition-all cursor-pointer ${
+            className={`pointer-events-auto group relative p-2 rounded border transition-all cursor-pointer ${
               isSelected ? 'border-primary bg-primary/20 text-white' : isPropImpacted ? 'border-orange-500 bg-orange-950/50 text-orange-400' : 'border-slate-800 hover:bg-slate-900'
             }`}
           >
-            <Handle type="target" position={Position.Left} id={`${id}__prop__${prop.key}__target`} style={{ left: '-6px', width: '10px', height: '10px', top: '50%', transform: 'translateY(-50%)' }}
-              className={`border-2 z-10 ${isPropImpacted ? 'bg-orange-500 border-orange-200' : 'bg-amber-500 border-slate-900'}`} />
             <div className="font-semibold text-amber-400 truncate">{prop.key}:</div>
             <div className="pl-2 text-slate-400 truncate">{prop.value}</div>
           </div>
@@ -237,8 +208,6 @@ const ConfigNode = ({ id, data }: any) => (
     </div>
   </div>
 );
-
-const nodeTypesMap = { folder: FolderNode, umlClass: UmlClassNode, config: ConfigNode };
 
 // ==========================================
 // 3. SIDEBAR MENU CONFIGURATION
@@ -258,6 +227,9 @@ const SIDEBAR_MENU_ITEMS = [
 // 4. MAIN INTEGRATED LAYOUT CONTROLLER
 // ==========================================
 export default function App() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const cyRef = useRef<cytoscape.Core | null>(null);
+
   // --- LAYOUT ENGINE STATES ---
   const [isLocked, setIsLocked] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -302,11 +274,13 @@ export default function App() {
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
 
-  // --- REACT FLOW ELEMENTS STATES ---
-  const [rfNodes, setRfNodes, onNodesChange] = useNodesState([]);
-  const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState([]);
+  // --- REAL-TIME CYTOSCAPE VIEWPORT STATE SYNC ---
+  const [graphState, setGraphState] = useState<{
+    zoom: number;
+    pan: { x: number; y: number };
+    nodePositions: Record<string, { x: number; y: number; w: number; h: number }>;
+  }>({ zoom: 1, pan: { x: 0, y: 0 }, nodePositions: {} });
 
-  // --- GRAPH MATRIX DISPATCHERS ---
   const toggleFolder = (folderName: string) => setExpandedFolders(prev => ({ ...prev, [folderName]: !prev[folderName] }));
   const toggleFolderCheckbox = (folderName: string, forceState?: boolean) => {
     const isCurrentlyChecked = forceState !== undefined ? forceState : initialCodebase.files.filter(f => f.path.startsWith(folderName)).every(f => visibleFiles[f.id]);
@@ -331,7 +305,6 @@ export default function App() {
     triggerNotification('Configuration and filters reset successfully!');
   };
 
-  // --- SYNC DARK MODE ATTRIBUTES WITH ROOT ELEMENT ---
   useEffect(() => {
     const htmlElement = document.documentElement;
     if (isDarkMode) htmlElement.classList.add('dark');
@@ -372,7 +345,6 @@ export default function App() {
     setImpactedSet(visited);
   }, [selectedEntity, impactDirection]);
 
-  // --- SEARCH AND GRANULARITY RE-EVALUATION ---
   const searchFilteredFiles = useMemo(() => {
     return initialCodebase.files.filter(file => {
       const matchesSearch = file.name.toLowerCase().includes(searchTerm.toLowerCase()) || file.language.toLowerCase().includes(searchTerm.toLowerCase()) || file.path.toLowerCase().includes(searchTerm.toLowerCase());
@@ -381,10 +353,112 @@ export default function App() {
     }).slice(0, maxNodesLimit);
   }, [searchTerm, visibleFiles, displayLevel, maxNodesLimit]);
 
-  // =====================================================================================================
-  // 5. ATOMIC COMPONENT POSITIONING SYNCHRONIZER (ELIMINATES ERROR #005 AND DRAG COLLISION CHEVRONS)
-  // =====================================================================================================
+  // ==========================================
+  // 5. CYTOSCAPE INITIALIZATION ENGINE
+  // ==========================================
   useEffect(() => {
+    if (!containerRef.current) return;
+
+    const cy = cytoscape({
+      container: containerRef.current,
+      style: [
+        {
+          selector: 'node',
+          style: {
+            'shape': 'rectangle',
+            'opacity': 0.0,
+            'width': 'data(width)',
+            'height': 'data(height)'
+          }
+        },
+        {
+          selector: 'node.folder',
+          style: {
+            'shape': 'rectangle',
+            'opacity': 0.05,
+            'background-color': isDarkMode ? '#475569' : '#94a3b8',
+            'border-width': '2px',
+            'border-color': isDarkMode ? '#334155' : '#cbd5e1',
+            'border-style': 'dashed',
+            'padding-top': '54px',
+            'padding-left': '24px',
+            'padding-right': '24px',
+            'padding-bottom': '24px'
+          }
+        },
+        {
+          selector: 'edge',
+          style: {
+            'width': 2,
+            'line-color': isDarkMode ? '#475569' : '#cbd5e1',
+            'target-arrow-color': isDarkMode ? '#475569' : '#cbd5e1',
+            'target-arrow-shape': 'triangle',
+            'curve-style': 'bezier',
+            'label': 'data(label)',
+            'font-size': '9px',
+            'font-family': 'monospace',
+            'color': isDarkMode ? '#94a3b8' : '#475569',
+            'text-background-opacity': 1,
+            'text-background-color': isDarkMode ? '#18181b' : '#ffffff',
+            'text-background-padding': '3px',
+            'text-background-shape': 'roundrectangle',
+            'source-endpoint': 'data(sourceEndpoint)',
+            'target-endpoint': 'data(targetEndpoint)'
+          }
+        },
+        {
+          selector: 'edge.impacted',
+          style: {
+            'line-color': '#f97316',
+            'target-arrow-color': '#f97316',
+            'width': 4
+          }
+        }
+      ],
+      userZoomingEnabled: true,
+      userPanningEnabled: true,
+      boxSelectionEnabled: false
+    });
+
+    cyRef.current = cy;
+
+    const syncGraph = () => {
+      const positions: Record<string, { x: number; y: number; w: number; h: number }> = {};
+      cy.nodes().forEach(node => {
+        const pos = node.position();
+        const w = node.width();
+        const h = node.height();
+        positions[node.id()] = {
+          x: pos.x - w / 2,
+          y: pos.y - h / 2,
+          w,
+          h
+        };
+      });
+
+      setGraphState({
+        zoom: cy.zoom(),
+        pan: cy.pan(),
+        nodePositions: positions
+      });
+    };
+
+    cy.on('drag pan zoom render', syncGraph);
+
+    return () => {
+      cy.destroy();
+    };
+  }, [isDarkMode]);
+
+  // ==========================================
+  // 6. SYNCHRONISATION DE LA TOPOLOGIE DES ITEMS
+  // ==========================================
+  useEffect(() => {
+    if (!cyRef.current) return;
+    const cy = cyRef.current;
+
+    cy.elements().remove();
+
     const filesByFolder: Record<string, typeof searchFilteredFiles> = {};
     searchFilteredFiles.forEach(file => {
       const folderKey = file.path.split('/')[0] || 'other';
@@ -394,7 +468,6 @@ export default function App() {
 
     const PADDING_TOP = 65;
     const PADDING_LEFT = 24;
-    const PADDING_BOTTOM = 24;
     const GAP_X = 40;
     const GAP_Y = 40;
 
@@ -402,66 +475,34 @@ export default function App() {
     const folderBaseY: Record<string, number> = { 'frontend': 80, 'backend': 30, 'config': 160 };
     const folderMaxCols: Record<string, number> = { 'frontend': 1, 'backend': 2, 'config': 1 };
 
-    const calculatedNodes: any[] = [];
-    const calculatedEdges: any[] = [];
-
-    // CRITICAL: Parent group configurations are injected FIRST so lookup pipelines locate them during child parsing stages.
     Object.entries(FOLDER_POSITIONS).forEach(([folderKey, initialPos]) => {
       const folderFiles = filesByFolder[folderKey] || [];
       if (folderFiles.length === 0) return;
 
       const maxCols = folderMaxCols[folderKey] || 1;
-      const totalFiles = folderFiles.length;
-      const cols = Math.min(totalFiles, maxCols);
-      const rows = Math.ceil(totalFiles / maxCols);
-
       const maxNodeWidth = folderKey === 'config' ? 320 : 288;
       const maxNodeHeight = folderKey === 'config' ? 240 : 280;
 
-      const folderW = PADDING_LEFT * 2 + cols * maxNodeWidth + (cols - 1) * GAP_X;
-      const folderH = PADDING_TOP + PADDING_BOTTOM + rows * maxNodeHeight + (rows - 1) * GAP_Y;
-
-      calculatedNodes.push({
-        id: `folder__${folderKey}`,
-        type: 'folder',
-        position: { x: folderBaseX[folderKey], y: folderBaseY[folderKey] },
-        style: { width: folderW, height: folderH },
-        data: { label: initialPos.label },
-        draggable: true,
+      cy.add({
+        data: { id: `folder__${folderKey}` },
+        classes: 'folder'
       });
 
       folderFiles.forEach((file, index) => {
         const colIdx = index % maxCols;
         const rowIdx = Math.floor(index / maxCols);
 
-        // Strict RELATIVE positions mapped underneath the parent container envelope safely.
-        const posX = PADDING_LEFT + colIdx * (maxNodeWidth + GAP_X);
-        const posY = PADDING_TOP + rowIdx * (maxNodeHeight + GAP_Y);
+        const absX = folderBaseX[folderKey] + PADDING_LEFT + colIdx * (maxNodeWidth + GAP_X) + maxNodeWidth / 2;
+        const absY = folderBaseY[folderKey] + PADDING_TOP + rowIdx * (maxNodeHeight + GAP_Y) + maxNodeHeight / 2;
 
-        const impactedMembers: string[] = [];
-        impactedSet.forEach(item => {
-          if (item.startsWith(`${file.id}__member__`)) {
-            impactedMembers.push(item.split('__member__')[1]);
-          }
-        });
-
-        const isNodeImpacted = impactedSet.has(file.id);
-        const isDimmed = selectedEntity !== null && impactedSet.size > 0 && !isNodeImpacted;
-
-        calculatedNodes.push({
-          id: file.id,
-          type: file.type === 'config' ? 'config' : 'umlClass',
-          parentNode: `folder__${folderKey}`,
-          extent: 'parent', // Native coordinate containment validation rules enforcement.
-          position: { x: posX, y: posY },
+        cy.add({
           data: {
-            ...file,
-            isDark: isDarkMode,
-            isDimmed,
-            impactedMembers,
-            selectedMember: selectedEntity?.nodeId === file.id ? selectedEntity?.memberId : undefined,
-            onSelectMember: handleSelectMember
-          }
+            id: file.id,
+            parent: `folder__${folderKey}`,
+            width: maxNodeWidth,
+            height: maxNodeHeight
+          },
+          position: { x: absX, y: absY }
         });
       });
     });
@@ -475,38 +516,57 @@ export default function App() {
         const srcKey = dep.sourceHandle === 'header' ? dep.sourceNode : `${dep.sourceNode}__member__${dep.sourceHandle}`;
         const tgtKey = dep.targetHandle === 'header' ? dep.targetNode : `${dep.targetNode}__member__${dep.targetHandle}`;
         const isEdgeImpacted = impactedSet.has(srcKey) && impactedSet.has(tgtKey);
-        const isDimmed = selectedEntity !== null && impactedSet.size > 0 && !isEdgeImpacted;
 
-        const sourceHandleId = dep.sourceHandle === 'header' ? `${dep.sourceNode}__header_source` : `${dep.sourceNode}__method__${dep.sourceHandle}__source`;
-        const targetHandleId = dep.targetHandle === 'header' ? `${dep.targetNode}__header_target` : dep.targetNode === 'application.yml' ? `${dep.targetNode}__prop__${dep.targetHandle}__target` : `${dep.targetNode}__method__${dep.targetHandle}__target`;
+        // --- CALCUL CHIRURGICAL DU PORT DES MÉTHODES ---
+        const sourceFile = initialCodebase.files.find(f => f.id === dep.sourceNode);
+        const targetFile = initialCodebase.files.find(f => f.id === dep.targetNode);
 
-        let strokeColor = isDarkMode ? '#475569' : '#cbd5e1';
-        let strokeDash = '0';
-        if (isEdgeImpacted) strokeColor = '#f97316';
-        else {
-          switch (dep.relation) {
-            case 'extends': strokeColor = '#3b82f6'; strokeDash = '5,5'; break;
-            case 'implementation': strokeColor = '#818cf8'; strokeDash = '4,4'; break;
-            case 'aggregation': strokeColor = '#10b981'; break;
-            case 'dependency': strokeColor = '#f59e0b'; strokeDash = '2,2'; break;
+        let sourceXOffset = sourceFile?.type === 'config' ? 160 : 144;
+        let targetXOffset = targetFile?.type === 'config' ? -160 : -144;
+        let sourceYOffset = 0;
+        let targetYOffset = 0;
+
+        if (sourceFile) {
+          if (dep.sourceHandle !== 'header') {
+            if (sourceFile.type === 'config') {
+              const idx = sourceFile.configProperties?.findIndex(p => p.key === dep.sourceHandle) ?? 0;
+              sourceYOffset = -44 + idx * 42;
+            } else {
+              const idx = sourceFile.methods?.findIndex(m => m.id === dep.sourceHandle) ?? 0;
+              sourceYOffset = 36 + idx * 32;
+            }
           }
         }
 
-        calculatedEdges.push({
-          id: dep.id, source: dep.sourceNode, target: dep.targetNode, sourceHandle: sourceHandleId, targetHandle: targetHandleId, animated: isEdgeImpacted, label: dep.label,
-          labelStyle: { fill: isDarkMode ? '#94a3b8' : '#475569', fontSize: 9, fontFamily: 'monospace' },
-          style: { stroke: strokeColor, strokeWidth: isEdgeImpacted ? 3.5 : 2, strokeDasharray: strokeDash, opacity: isDimmed ? 0.15 : 1, transition: 'all 0.3s' },
-          markerEnd: { type: MarkerType.ArrowClosed, color: strokeColor, width: 15, height: 15 },
-          interactionWidth: 15
+        if (targetFile) {
+          if (dep.targetHandle !== 'header') {
+            if (targetFile.type === 'config') {
+              const idx = targetFile.configProperties?.findIndex(p => p.key === dep.targetHandle) ?? 0;
+              targetYOffset = -44 + idx * 42;
+            } else {
+              const idx = targetFile.methods?.findIndex(m => m.id === dep.targetHandle) ?? 0;
+              targetYOffset = 36 + idx * 32;
+            }
+          }
+        }
+
+        cy.add({
+          data: {
+            id: dep.id,
+            source: dep.sourceNode,
+            target: dep.targetNode,
+            label: dep.label,
+            sourceEndpoint: `${sourceXOffset}px ${sourceYOffset}px`,
+            targetEndpoint: `${targetXOffset}px ${targetYOffset}px`
+          },
+          classes: isEdgeImpacted ? 'impacted' : ''
         });
       }
     });
 
-    setRfNodes(calculatedNodes);
-    setRfEdges(calculatedEdges);
-  }, [searchFilteredFiles, visibleFiles, impactedSet, selectedEntity, isDarkMode, setRfNodes, setRfEdges]);
+    cy.trigger('render');
+  }, [searchFilteredFiles, visibleFiles, impactedSet]);
 
-  // --- AUTOMATED RECIPE AND EXPORTS BUILDERS ---
   const generatedPlantUML = useMemo(() => {
     let puml = `' Real-time synchronization state\n@startuml Codebase_Architecture_State\n\n`;
     ['frontend', 'backend', 'config'].forEach(f => {
@@ -557,7 +617,6 @@ export default function App() {
 
   const visibleCount = searchFilteredFiles.length;
 
-  // --- SUB-PANEL CONTROLS ROUTING ---
   const renderViewContent = () => {
     switch(activeView) {
       case 'panel-explorer':
@@ -574,7 +633,6 @@ export default function App() {
               </div>
             </div>
             <div className="flex-1 p-4 overflow-y-auto font-mono text-xs">
-              {/* Folder frontend / component mapping */}
               <div className="mb-4">
                 <div className="group flex justify-between items-center hover:bg-muted/50 px-1 py-1 rounded">
                   <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => toggleFolder('frontend')}>
@@ -599,7 +657,6 @@ export default function App() {
                 )}
               </div>
 
-              {/* Folder backend / class mapping */}
               <div className="mb-4">
                 <div className="group flex justify-between items-center hover:bg-muted/50 px-1 py-1 rounded">
                   <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => toggleFolder('backend')}>
@@ -627,7 +684,6 @@ export default function App() {
                 )}
               </div>
 
-              {/* Folder config / database configuration mapping */}
               <div className="mb-4">
                 <div className="group flex justify-between items-center hover:bg-muted/50 px-1 py-1 rounded">
                   <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => toggleFolder('config')}>
@@ -656,18 +712,92 @@ export default function App() {
         );
       case 'panel-welcome':
         return (
-          <div id="panel-welcome" className="space-y-4 p-4 text-xs">
-            <div className="font-semibold text-foreground text-sm">Security Diagnostic Rules</div>
-            <div className="flex justify-between items-center bg-muted p-3 border border-border rounded-md">
-              <div><span className="font-medium text-foreground text-xs">Security Breaker</span><p className="text-[11px] text-muted-foreground">Simulate isolation anomalies.</p></div>
-              <Switch checked={isLocked} onCheckedChange={setIsLocked} />
+          <div id="panel-welcome" className="space-y-6 p-4">
+            <div id="panel-welcome-header" className="flex items-center gap-2 font-semibold text-foreground text-sm tracking-tight">
+              <ShieldAlert className="text-primary" size={18} /> Installation Diagnostics
+            </div>
+            <div id="panel-security-breaker" className="flex justify-between items-center bg-muted p-3 border border-border rounded-md">
+              <div>
+                <span className="font-medium text-foreground text-xs">Security Breaker</span>
+                <p className="text-[11px] text-muted-foreground">Simulate a connection loss with the graph database.</p>
+              </div>
+              <Switch id="checkbox-security-breaker" checked={isLocked} onCheckedChange={setIsLocked} />
+            </div>
+            <div id="panel-diagnostic-grid" className="gap-2 grid grid-cols-2 text-xs">
+              {['Node.js v20', 'Dependency Cruiser', 'SWC Parser', 'Python 3.11', 'jQAssistant', 'Neo4j Community v5'].map((check, i) => {
+                const isFail = isLocked && (check.includes('Neo4j') || check.includes('jQAssistant'));
+                return (
+                  <div key={i} className={`flex items-center gap-2 p-2 rounded border transition-colors ${isFail ? 'border-destructive/30 bg-destructive/10 text-destructive-foreground' : 'border-success/30 bg-success/10 text-success-foreground'}`}>
+                    {isFail ? <XCircle size={14} className="text-destructive-foreground" /> : <CheckCircle2 size={14} />}
+                    <span className="text-foreground">{check}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+        case 'panel-rules':
+        return (
+          <div id="panel-rules" className="flex flex-col gap-4 p-4 h-full">
+             <div id="panel-rules-selector" className="space-y-1.5">
+              <label className="font-medium text-muted-foreground text-xs">Pre-configured Rule</label>
+              <Select defaultValue="layer-bypass">
+                <SelectTrigger id="select-cypher-rules" className="bg-card w-full"><SelectValue placeholder="Select Rule" /></SelectTrigger>
+                <SelectContent side="bottom">
+                  <SelectItem value="layer-bypass">Layer bypass detection (Controller -{'>'} Repo)</SelectItem>
+                  <SelectItem value="cyclic">Cyclic dependencies detected</SelectItem>
+                  <SelectItem value="orphan">Orphan methods (Dead Code)</SelectItem>
+                </SelectContent>
+              </Select>
+             </div>
+             <div id="panel-rules-editor" className="flex flex-col flex-1 space-y-1.5">
+               <LayoutPanel
+                 id="panel-cypher-editor"
+                 left={<span className="font-medium text-muted-foreground text-xs">Cypher Editor</span>}
+                 right={<Button id="btn-execute-cypher" variant="ghost" size="sm" className="px-2 h-6 text-primary"><Play size={12} className="mr-1"/> Execute</Button>}
+               />
+               <Textarea id="textarea-cypher-editor" className="flex-1 bg-muted/50 border-border font-mono text-foreground text-xs resize-none" defaultValue={"MATCH (c:Controller)-[r:CALLS]->(repo:Repository)\nRETURN c.name, repo.name, type(r)"} />
+             </div>
+          </div>
+        );
+      case 'panel-help':
+        return (
+          <div id="panel-help" className="space-y-4 p-4 text-muted-foreground text-xs">
+            <h3 className="mb-2 font-semibold text-foreground">Navigation Guide</h3>
+            <p>Use <kbd className="bg-muted px-1 border border-border rounded text-[10px] text-foreground">Ctrl</kbd> or <kbd className="bg-muted px-1 border border-border rounded text-[10px] text-foreground">Cmd</kbd> + Click on the explorer or graph to enable multiple selection.</p>
+            <div id="panel-help-legend" className="space-y-2 mt-4 pt-4 border-border border-t">
+              <p className="font-semibold text-foreground">Impact Legend</p>
+              <div className="flex items-center gap-2"><div className="bg-primary/20 border border-primary rounded w-3 h-3"></div> Selected source</div>
+              <div className="flex items-center gap-2"><div className="bg-destructive border border-destructive rounded w-3 h-3"></div> Callers (Upstream)</div>
+              <div className="flex items-center gap-2"><div className="bg-warning border border-warning rounded w-3 h-3"></div> Callees (Downstream)</div>
             </div>
           </div>
         );
       default:
-        return <div className="p-4 text-muted-foreground text-xs">Additional contextual view placeholder.</div>;
+        return (
+          <div id="panel-fallback" className="space-y-2 p-4 text-xs">
+            <div className="mb-1 font-medium text-muted-foreground text-center">Module Showcase Fallback</div>
+            <div className="flex items-center gap-2 bg-success p-2 border border-success/30 rounded text-success-foreground transition-colors"><CheckCircle2 size={14} className="shrink-0" /><span><strong>Success state:</strong> Action completed.</span></div>
+            <div className="flex items-center gap-2 bg-destructive p-2 border border-destructive/30 rounded text-destructive-foreground transition-colors"><XCircle size={14} className="shrink-0" /><span><strong>Error state:</strong> Destructive fallback triggered.</span></div>
+            <div className="flex items-center gap-2 bg-warning p-2 border border-warning/30 rounded text-warning-foreground transition-colors"><ShieldAlert size={14} className="shrink-0" /><span><strong>Warning state:</strong> Muted gold context limits.</span></div>
+            <div className="flex items-center gap-2 bg-info p-2 border border-info/30 rounded text-info-foreground transition-colors"><HelpCircle size={14} className="shrink-0" /><span><strong>Info state:</strong> Sky blue layout indicator maps.</span></div>
+          </div>
+        );
     }
   };
+
+  const getActiveViewLabel = () => SIDEBAR_MENU_ITEMS.find(i => i.id === activeView)?.label || 'Detailed Overview';
+
+  const renderSidebarMenuItem = (item) => (
+    <SidebarMenuItem key={item.id}>
+      <SidebarMenuButton id={`btn-menu-${item.id}`} isActive={activeView === item.id} onClick={() => setActiveView(item.id)} title={sidebarLeftMode === 'minimal' ? item.label : undefined}>
+        <item.icon size={16} className="mr-2.5 shrink-0" />
+        {sidebarLeftMode === 'normal' && (
+          <><span className="truncate">{item.label}</span>{item.id === 'panel-explorer' ? <SidebarMenuBadge>New</SidebarMenuBadge> : item.badge && <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>}</>
+        )}
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
 
   return (
     <TooltipProvider>
@@ -698,35 +828,34 @@ export default function App() {
           left={
             <>
               <Button variant="ghost" size="icon" onClick={() => setSidebarLeftMode(m => m === 'collapsed' ? 'normal' : 'collapsed')} className="w-8 h-8 text-muted-foreground hover:text-foreground"><Menu size={16} /></Button>
-              <div className="flex items-center gap-2 ml-1 text-primary cursor-help"><span className="font-bold text-foreground text-xs tracking-tight">Archi-Polyglot Workspace</span></div>
+              <div className="flex items-center gap-2 ml-1 text-primary cursor-help"><span className="font-bold text-foreground text-xs tracking-tight">Archi-Polyglot Workspace (Cytoscape)</span></div>
             </>
           }
           center={
             <div className="relative flex items-center w-full max-w-md">
               <Search className="left-2 absolute text-muted-foreground" size={14} />
-              <Input type="text" placeholder="FQN search routing entity mapping..." className="bg-muted pl-8 h-8 text-xs" disabled={isLocked} />
+              <Input id="input-global-search" type="text" placeholder="Search for an AST entity (e.g., UserController)..." className="bg-muted pl-8 h-8 text-xs" disabled={isLocked} />
             </div>
           }
           right={
             <div className="flex items-center gap-1">
-              <button onClick={() => setImportOpen(true)} className="hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors" title="Import"><Upload size={16} /></button>
-              <button onClick={() => setExportOpen(true)} className="hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors" title="Export"><Download size={16} /></button>
+              <button id="btn-import-dialog" onClick={() => setImportOpen(true)} className="hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors" title="Import"><Upload size={16} /></button>
+              <button id="btn-export-dialog" onClick={() => setExportOpen(true)} className="hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors" title="Export"><Download size={16} /></button>
               <div className="mx-1 bg-border w-px h-4"></div>
-              <button onClick={() => setIsDarkMode(!isDarkMode)} className="hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors" title="Toggle Theme">
+              <button id="btn-toggle-theme" onClick={() => setIsDarkMode(!isDarkMode)} className="hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors" title={isDarkMode ? "Switch to Light Theme" : "Switch to Dark Theme"}>
                 {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
               </button>
-              <button onClick={resetAllFilters} className="hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors" title="Reset Workspace"><RotateCcw size={16} /></button>
+              <button id="btn-reset-graphe" onClick={resetAllFilters} className="hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors" title="Reset Workspace"><RotateCcw size={16} /></button>
               <div className="mx-1 bg-border w-px h-4"></div>
 
-              {/* TOGGLE VISIBILITY CONTROL BUTTON ARRAYS */}
-              <button id="btn-toggle-main" onClick={() => setIsCtnWorkspaceVisible(!isCtnWorkspaceVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceVisible ? 'text-primary bg-primary/10' : 'text-muted-foreground'}`} title="Workspace Frame"><Eye size={16} /></button>
-              <button id="btn-toggle-main-header" onClick={() => setIsCtnWorkspaceTopVisible(!isCtnWorkspaceTopVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceTopVisible ? 'text-primary bg-primary/10' : 'text-muted-foreground'}`} title="Top Paths Container"><Eye size={16} /></button>
-              <button id="btn-toggle-main-left" onClick={() => setIsCtnWorkspaceLeftVisible(!isCtnWorkspaceLeftVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceLeftVisible ? 'text-primary bg-primary/10' : 'text-muted-foreground'}`} title="Left Filter Stream"><Eye size={16} /></button>
-              <button id="btn-toggle-main-center" onClick={() => setIsCtnWorkspaceCenterVisible(!isCtnWorkspaceCenterVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceCenterVisible ? 'text-primary bg-primary/10' : 'text-muted-foreground'}`} title="Center Canvas Stage"><Eye size={16} /></button>
-              <button id="btn-toggle-workspace-right" onClick={() => setIsCtnWorkspaceRightVisible(!isCtnWorkspaceRightVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceRightVisible ? 'text-primary bg-primary/10' : 'text-muted-foreground'}`} title="Right Side Workspace View"><Eye size={16} /></button>
-              <button id="btn-toggle-workspace-bottom" onClick={() => setIsCtnWorkspaceBottomVisible(!isCtnWorkspaceBottomVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceBottomVisible ? 'text-primary bg-primary/10' : 'text-muted-foreground'}`} title="Bottom Terminals"><Eye size={16} /></button>
+              <button id="btn-toggle-main" onClick={() => setIsCtnWorkspaceVisible(!isCtnWorkspaceVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors'}`} title="Workspace Frame"><Eye size={16} /></button>
+              <button id="btn-toggle-main-header" onClick={() => setIsCtnWorkspaceTopVisible(!isCtnWorkspaceTopVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceTopVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors'}`} title="Top Paths Container"><Eye size={16} /></button>
+              <button id="btn-toggle-main-left" onClick={() => setIsCtnWorkspaceLeftVisible(!isCtnWorkspaceLeftVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceLeftVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors'}`} title="Left Filter Stream"><Eye size={16} /></button>
+              <button id="btn-toggle-main-center" onClick={() => setIsCtnWorkspaceCenterVisible(!isCtnWorkspaceCenterVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceCenterVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors'}`} title="Center Canvas Stage"><Eye size={16} /></button>
+              <button id="btn-toggle-workspace-right" onClick={() => setIsCtnWorkspaceRightVisible(!isCtnWorkspaceRightVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceRightVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors'}`} title="Right Side Workspace View"><Eye size={16} /></button>
+              <button id="btn-toggle-workspace-bottom" onClick={() => setIsCtnWorkspaceBottomVisible(!isCtnWorkspaceBottomVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceBottomVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors'}`} title="Bottom Terminals"><Eye size={16} /></button>
               <div className="mx-1 bg-border w-px h-4"></div>
-              <button id="btn-toggle-main-right" onClick={() => setIsSidebarRightVisible(!isSidebarRightVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isSidebarRightVisible ? 'text-primary bg-primary/10' : 'text-muted-foreground'}`} title="Inspector Panel"><Eye size={16} /></button>
+              <button id="btn-toggle-main-right" onClick={() => setIsSidebarRightVisible(!isSidebarRightVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isSidebarRightVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors'}`} title="Inspector Panel"><Eye size={16} /></button>
             </div>
           }
         />
@@ -751,17 +880,21 @@ export default function App() {
 
           {/* B. SIDEBAR VIEW SELECTOR */}
           {sidebarLeftMode !== 'collapsed' && (
-            <Sidebar width={sidebarLeftMode === 'minimal' ? '56px' : `${sidebarLeftWidth}px`}>
-              <SidebarContent>
-                <SidebarGroup><SidebarMenu>{SIDEBAR_MENU_ITEMS.filter(item => !item.bottom).map(item => (
-                  <SidebarMenuItem key={item.id}>
-                    <SidebarMenuButton isActive={activeView === item.id} onClick={() => setActiveView(item.id)}>
-                      <item.icon size={16} className="mr-2.5 shrink-0" />
-                      {sidebarLeftMode === 'normal' && <span className="truncate">{item.label}</span>}
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}</SidebarMenu></SidebarGroup>
+            <Sidebar id="ctn-sidebar-left" width={sidebarLeftMode === 'minimal' ? '56px' : `${sidebarLeftWidth}px`}>
+              <SidebarContent id="panel-app-sidebar-left-top">
+                <SidebarGroup><SidebarMenu>{SIDEBAR_MENU_ITEMS.filter(item => !item.bottom).map(renderSidebarMenuItem)}</SidebarMenu></SidebarGroup>
+                <SidebarGroup className="mt-auto pt-2 border-sidebar-border border-t"><SidebarMenu>{SIDEBAR_MENU_ITEMS.filter(item => item.bottom).map(renderSidebarMenuItem)}</SidebarMenu></SidebarGroup>
               </SidebarContent>
+              <SidebarFooter id="panel-app-sidebar-left-bottom" className="p-0">
+                <Button id="btn-sidebar-toggle-mode" variant="ghost" size="sm" onClick={() => setSidebarLeftMode(m => m === 'normal' ? 'minimal' : 'normal')} className={`w-full text-muted-foreground hover:text-foreground ${sidebarLeftMode === 'normal' ? 'justify-end' : 'justify-center'}`}>
+                  {sidebarLeftMode === 'normal' ? <ChevronLeft size={16}/> : <ChevronRight size={16}/>}
+                </Button>
+              </SidebarFooter>
+              {sidebarLeftMode === 'normal' && (
+                <div id="ctn-sidebar-left-handle" className="group top-0 right-0 bottom-0 z-20 absolute hover:bg-sidebar-border w-1 cursor-col-resize" onMouseDown={startSidebarLeftResize}>
+                   <div className="top-1/2 right-[1px] absolute bg-sidebar-border rounded-full w-[2px] h-8 -translate-y-1/2"></div>
+                </div>
+              )}
             </Sidebar>
           )}
 
@@ -778,7 +911,7 @@ export default function App() {
               <div id="ctn-workspace-middle-row" className="flex flex-1 min-h-0 overflow-hidden">
 
                 {/* LEFT ATTACHED MODULE PANEL CONTROL VIEWPORT */}
-                <ResizableContainer id="ctn-workspace-left" visible={isCtnWorkspaceLeftVisible} style={{ width: `${mainLeftWidth}%` }} headerLeft="Structure Controls" className="border-r min-w-[200px]" resizeHandle="right" onResizeStart={startmainLeftResize}>
+                <ResizableContainer id="ctn-workspace-left" visible={isCtnWorkspaceLeftVisible} style={{ width: `${mainLeftWidth}%` }} headerLeft={getActiveViewLabel()} className="border-r min-w-[200px]" resizeHandle="right" onResizeStart={startmainLeftResize}>
                   {renderViewContent()}
                 </ResizableContainer>
 
@@ -787,8 +920,6 @@ export default function App() {
                   id="ctn-workspace-center"
                   visible={isCtnWorkspaceCenterVisible || isGraphMaximized}
                   style={isGraphMaximized ? { position: 'fixed', top: '40px', bottom: '40px', left: '0', right: '0', zIndex: 50 } : { flex: 1 }}
-
-                  /* INTEGRATED TOGGLE DOTS BACKGROUND CONTROLLER INSIDE THE HEADER LEFT FRAME FRAME */
                   headerLeft={
                     <div className="flex items-center gap-2">
                       <span>Topological Network</span>
@@ -803,8 +934,6 @@ export default function App() {
                       </Button>
                     </div>
                   }
-
-                  /* CORE ACTIONABLE CONTROLS METRICS LABELS STRINGS */
                   headerCenter={
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-1.5 bg-background px-2 py-0.5 border border-border rounded-sm" title="Maximum sequential nodes rendering constraint limit">
@@ -812,7 +941,7 @@ export default function App() {
                         <Input type="number" id="graph-input-limit" min={1} max={100} className="bg-transparent shadow-none px-1 border-0 focus:ring-0 w-12 h-5 font-bold text-foreground text-xs text-center" value={maxNodesLimit} onChange={(e) => setMaxNodesLimit(Number(e.target.value) || 50)} />
                       </div>
 
-                      <Button id="btn-open-neo4j" className="flex items-center gap-1.5 bg-gradient-to-r from-orange-600 hover:from-orange-500 to-orange-500 hover:to-orange-400 shadow-sm px-2.5 border border-orange-700 rounded-md h-6 font-bold text-[10px] text-white uppercase tracking-wider" onClick={() => console.log("Routing execution context down onto stand-alone browser frame layout terminal console.")}>
+                      <Button id="btn-open-neo4j" className="flex items-center gap-1.5 bg-gradient-to-r from-orange-600 hover:from-orange-500 to-orange-500 hover:to-orange-400 shadow-sm px-2.5 border border-orange-700 rounded-md h-6 font-bold text-[10px] text-white uppercase tracking-wider" onClick={() => console.log("Routing execution context...")}>
                         <Database size={11} /> Neo4j
                       </Button>
 
@@ -845,23 +974,102 @@ export default function App() {
                   }
                   headerRight={
                     <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => cyRef.current?.zoom((cyRef.current?.zoom() || 1) * 1.2)}><Plus size={12}/></Button>
+                      <Button variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => cyRef.current?.zoom((cyRef.current?.zoom() || 1) / 1.2)}><Minus size={12}/></Button>
+                      <Button variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => { cyRef.current?.fit(); cyRef.current?.center(); }}><Focus size={12}/></Button>
                       <Button variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => { setIsGraphMaximized(!isGraphMaximized); }}><Maximize size={12}/></Button>
                     </div>
                   }
-                  className="bg-background"
+                  className="relative bg-background"
                 >
-                  <div id="panel-graph-canvas" className="absolute inset-0 outline-none w-full h-full">
-                    {/* Floating Guide Description box */}
-                    <div className="top-4 left-4 z-10 absolute bg-card/90 shadow-md backdrop-blur p-3 border border-border rounded-lg max-w-sm font-mono text-xs pointer-events-auto">
-                      <div className="flex items-center gap-2 mb-1"><Info size={14} className="text-primary" /><span className="font-bold">Surgical Port-to-Port Analysis</span></div>
-                      <p className="text-[10px] text-muted-foreground">Each structural method block row features dedicated mapping anchor lines. Click on any method line item row to compute dynamic BFS tracking graphs instantly.</p>
+                  <div id="panel-graph-canvas" className="absolute inset-0 outline-none w-full h-full overflow-hidden">
+
+                    {/* Conteneur natif Cytoscape (Calque Arrière) */}
+                    <div
+                      ref={containerRef}
+                      className="z-0 absolute inset-0 w-full h-full"
+                      style={showGrid ? {
+                        backgroundImage: isDarkMode ? 'radial-gradient(#334155 1.2px, transparent 1.2px)' : 'radial-gradient(#cbd5e1 1.2px, transparent 1.2px)',
+                        backgroundSize: `${16 * graphState.zoom}px ${16 * graphState.zoom}px`,
+                        backgroundPosition: `${graphState.pan.x}px ${graphState.pan.y}px`
+                      } : undefined}
+                    />
+
+                    {/* Calque HTML Synchrone (Calque Avant) */}
+                    <div
+                      className="z-10 absolute inset-0 origin-top-left pointer-events-none select-none"
+                      style={{
+                        transform: `translate(${graphState.pan.x}px, ${graphState.pan.y}px) scale(${graphState.zoom})`,
+                      }}
+                    >
+                      {/* Rendu dynamique des Packages / Folders */}
+                      {Object.entries(FOLDER_POSITIONS).map(([folderKey, initialPos]) => {
+                        const bounds = graphState.nodePositions[`folder__${folderKey}`];
+                        if (!bounds) return null;
+                        return (
+                          <div
+                            key={`folder-${folderKey}`}
+                            className="z-10 absolute transition-all duration-75 ease-out"
+                            style={{ left: bounds.x, top: bounds.y, width: bounds.w, height: bounds.h }}
+                          >
+                            <FolderNode data={{ label: initialPos.label }} />
+                          </div>
+                        );
+                      })}
+
+                      {/* Rendu dynamique des Classes / UML Nodes */}
+                      {searchFilteredFiles.map(file => {
+                        const bounds = graphState.nodePositions[file.id];
+                        if (!bounds) return null;
+
+                        const impactedMembers: string[] = [];
+                        impactedSet.forEach(item => {
+                          if (item.startsWith(`${file.id}__member__`)) {
+                            impactedMembers.push(item.split('__member__')[1]);
+                          }
+                        });
+                        const isNodeImpacted = impactedSet.has(file.id);
+                        const isDimmed = selectedEntity !== null && impactedSet.size > 0 && !isNodeImpacted;
+
+                        return (
+                          <div
+                            key={file.id}
+                            className="z-20 absolute transition-all duration-75 ease-out pointer-events-none"
+                            style={{ left: bounds.x, top: bounds.y, width: bounds.w, height: bounds.h }}
+                          >
+                            {file.type === 'config' ? (
+                              <ConfigNode
+                                id={file.id}
+                                data={{
+                                  ...file,
+                                  isDimmed,
+                                  impactedMembers,
+                                  selectedMember: selectedEntity?.nodeId === file.id ? selectedEntity?.memberId : undefined,
+                                  onSelectMember: handleSelectMember
+                                }}
+                              />
+                            ) : (
+                              <UmlClassNode
+                                id={file.id}
+                                data={{
+                                  ...file,
+                                  isDimmed,
+                                  impactedMembers,
+                                  selectedMember: selectedEntity?.nodeId === file.id ? selectedEntity?.memberId : undefined,
+                                  onSelectMember: handleSelectMember
+                                }}
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
 
-                    <ReactFlow nodes={rfNodes} edges={rfEdges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} nodeTypes={nodeTypesMap} fitView minZoom={0.1} maxZoom={2}>
-                      {showGrid && <Background variant="dots" color={isDarkMode ? '#334155' : '#cbd5e1'} gap={16} size={1} />}
-                      <Controls className="!bg-card !shadow-md !border-border" />
-                      <MiniMap nodeColor={n => n.type === 'config' ? '#f59e0b' : '#3b82f6'} className="!bg-card !border-border" />
-                    </ReactFlow>
+                    <div className="top-4 left-4 z-20 absolute bg-card/90 shadow-md backdrop-blur p-3 border border-border rounded-lg max-w-sm font-mono text-xs pointer-events-auto">
+                      <div className="flex items-center gap-2 mb-1"><Info size={14} className="text-primary" /><span className="font-bold">Surgical Analysis (Cytoscape Engine)</span></div>
+                      <p className="text-[10px] text-muted-foreground">Le drag-and-drop sur les en-têtes et le zoom molette utilisent l'architecture réactive de Cytoscape. Les clics sur les méthodes restent gérés par React.</p>
+                    </div>
+
                   </div>
                 </ResizableContainer>
 
@@ -908,7 +1116,6 @@ export default function App() {
                                     </div>
                                   </div>
 
-                                  {/* Restored functional documentation block snippet */}
                                   <div className="bg-slate-950 mt-3 p-2.5 border border-slate-800 rounded font-mono text-slate-300 text-xs">
                                     <div className="mb-1 font-bold text-[10px] text-amber-400 uppercase">Functional Documentation:</div>
                                     {selectedEntity.type === 'member' ? (
@@ -937,7 +1144,6 @@ export default function App() {
                                     <div className="flex items-center gap-1.5"><ShieldAlert size={14} className="text-orange-500" /><h5 className="font-mono font-bold text-orange-500 text-xs">Fluorescent Impact Plan</h5></div>
                                     <button onClick={() => copyToClipboard(generatedMarkdownRecipe, "Markdown impact recipe copied to clip-board!")} className="flex items-center gap-1 bg-muted hover:bg-muted/80 px-2 py-1 border border-border rounded font-mono text-[10px] text-foreground"><Copy size={10} />Copy Recipes</button>
                                   </div>
-                                  <p className="font-mono text-[10px] text-muted-foreground">Impacted structures highlight in high-contrast orange across the layout stage canvas:</p>
                                   <div className="space-y-1.5 max-h-48 overflow-y-auto">
                                     {initialCodebase.files.map(f => impactedSet.has(f.id) ? (
                                       <div key={f.id} className="flex justify-between items-center bg-background px-2 py-1.5 border border-orange-500/20 rounded font-mono text-[11px]"><span className="font-semibold text-foreground truncate">{f.name}</span><span className="bg-muted px-1.5 py-0.5 rounded text-[9px] text-muted-foreground">{f.language}</span></div>
@@ -984,7 +1190,7 @@ export default function App() {
         </div>
 
         {/* E. FIXED MAIN APPLICATION STATUS BAR FOOTER CHANNELS */}
-        <LayoutPanel id="ctn-footer" className="z-20 bg-primary px-3 h-[35px] text-primary-foreground text-xs select-none shrink-0" left={<><Server size={13} className="mr-1.5"/><span className="font-medium">Analysis Subsystems Synced</span></>} center={<div className="font-mono">Active Topology Nodes Rendered: {visibleCount}</div>} right={<div>React Flow Pipeline Core</div>} />
+        <LayoutPanel id="ctn-footer" className="z-20 bg-primary px-3 h-[35px] text-primary-foreground text-xs select-none shrink-0" left={<><Server size={13} className="mr-1.5"/><span className="font-medium">Analysis Subsystems Synced</span></>} center={<div className="font-mono">Active Topology Nodes Rendered: {visibleCount}</div>} right={<div>Cytoscape Pipeline Core</div>} />
 
       </div>
     </TooltipProvider>

@@ -1,25 +1,5 @@
-#!/bin/bash
-
-# Navigate to the sandbox directory where the app is located
-
-# Ensure source directory exists
-mkdir -p src/components/ui src/components/app src/lib src/hooks
-
-# Overwrite App.tsx with the complete, fully repaired, production-ready application
-cat << 'EOF' > src/App.tsx
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import {
-  ReactFlow,
-  Background,
-  Controls,
-  MiniMap,
-  useNodesState,
-  useEdgesState,
-  Handle,
-  Position,
-  MarkerType,
-} from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
+import cytoscape from 'cytoscape';
 
 import {
   Network, Search, Download, Upload, Moon, Sun, RotateCcw, EyeOff, Eye,
@@ -39,8 +19,8 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from './components/dialog';
+} from "@/components/ui/card"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './components/ui/dialog';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './components/ui/tooltip';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from './components/ui/select';
 import { Sidebar, SidebarContent, SidebarGroup, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarMenuBadge, SidebarFooter } from './components/ui/sidebar';
@@ -129,7 +109,7 @@ const FOLDER_POSITIONS = {
 };
 
 // ==========================================
-// 2. CUSTOM RENDER NODE STRUCTS (REACT FLOW)
+// 2. RENDERING COMPONENT LAYERS (DOM OVERLAY)
 // ==========================================
 
 const FolderNode = ({ data }: any) => (
@@ -154,8 +134,6 @@ const UmlClassNode = ({ id, data }: any) => {
 
   return (
     <div className={`w-72 bg-card rounded-lg shadow-xl border-2 ${style.border} relative transition-all duration-300 ${data.isDimmed ? 'opacity-25' : 'opacity-100'}`}>
-      <Handle type="target" position={Position.Top} id={`${id}__header_target`} className="opacity-0 w-2 h-2" />
-      <Handle type="source" position={Position.Bottom} id={`${id}__header_source`} className="opacity-0 w-2 h-2" />
       <div className={`${style.bg} p-3 text-white relative rounded-t-[5px]`}>
         <div className="flex justify-between items-center">
           <span className="bg-black/30 opacity-85 px-2 py-0.5 rounded font-mono text-[10px] uppercase tracking-wider">{style.badge}</span>
@@ -189,15 +167,11 @@ const UmlClassNode = ({ id, data }: any) => {
             const isSelected = data.selectedMember === m.id;
             return (
               <div key={m.id} onClick={(e) => { e.stopPropagation(); data.onSelectMember(id, m.id); }}
-                className={`group relative flex items-center justify-between p-1.5 rounded border transition-all cursor-pointer ${
+                className={`pointer-events-auto group relative flex items-center justify-between p-1.5 rounded border transition-all cursor-pointer ${
                   isSelected ? 'border-primary bg-primary/10' : isMethodImpacted ? 'border-orange-500 bg-orange-500/15 animate-pulse' : 'border-transparent hover:bg-muted'
                 }`}
               >
-                <Handle type="target" position={Position.Left} id={`${id}__method__${m.id}__target`} style={{ left: '-6px', width: '10px', height: '10px', top: '50%', transform: 'translateY(-50%)' }}
-                  className={`border-2 transition-transform duration-200 group-hover:scale-125 z-10 ${isMethodImpacted ? 'bg-orange-500 border-orange-200' : 'bg-primary border-background'}`} />
                 <span className="font-mono text-foreground/90 text-xs">+ {m.name}</span>
-                <Handle type="source" position={Position.Right} id={`${id}__method__${m.id}__source`} style={{ right: '-6px', width: '10px', height: '10px', top: '50%', transform: 'translateY(-50%)' }}
-                  className={`border-2 transition-transform duration-200 group-hover:scale-125 z-10 ${isMethodImpacted ? 'bg-orange-500 border-orange-200' : 'bg-emerald-500 border-background'}`} />
               </div>
             );
           })}
@@ -222,12 +196,10 @@ const ConfigNode = ({ id, data }: any) => (
         const isSelected = data.selectedMember === prop.key;
         return (
           <div key={prop.key} onClick={(e) => { e.stopPropagation(); data.onSelectMember(id, prop.key); }}
-            className={`group relative p-2 rounded border transition-all cursor-pointer ${
+            className={`pointer-events-auto group relative p-2 rounded border transition-all cursor-pointer ${
               isSelected ? 'border-primary bg-primary/20 text-white' : isPropImpacted ? 'border-orange-500 bg-orange-950/50 text-orange-400' : 'border-slate-800 hover:bg-slate-900'
             }`}
           >
-            <Handle type="target" position={Position.Left} id={`${id}__prop__${prop.key}__target`} style={{ left: '-6px', width: '10px', height: '10px', top: '50%', transform: 'translateY(-50%)' }}
-              className={`border-2 z-10 ${isPropImpacted ? 'bg-orange-500 border-orange-200' : 'bg-amber-500 border-slate-900'}`} />
             <div className="font-semibold text-amber-400 truncate">{prop.key}:</div>
             <div className="pl-2 text-slate-400 truncate">{prop.value}</div>
           </div>
@@ -237,12 +209,27 @@ const ConfigNode = ({ id, data }: any) => (
   </div>
 );
 
-const nodeTypesMap = { folder: FolderNode, umlClass: UmlClassNode, config: ConfigNode };
+// ==========================================
+// 3. SIDEBAR MENU CONFIGURATION
+// ==========================================
+const SIDEBAR_MENU_ITEMS = [
+  { id: 'panel-welcome', icon: LayoutDashboard, label: 'Home' },
+  { id: 'panel-explorer', icon: FolderTree, label: 'AST Explorer' },
+  { id: 'panel-rules', icon: Scale, label: 'Cypher Rules' },
+  { id: 'panel-prompt', icon: FileJson, label: 'GraphRAG Prompt' },
+  { id: 'panel-terminal', icon: Terminal, label: 'CLI Terminal' },
+  { id: 'panel-history', icon: History, label: 'History' },
+  { id: 'panel-configuration', icon: Settings, label: 'Configuration', bottom: true },
+  { id: 'panel-help', icon: HelpCircle, label: 'Help & Shortcuts', bottom: true }
+];
 
 // ==========================================
-// 3. MAIN INTEGRATED LAYOUT CONTROLLER
+// 4. MAIN INTEGRATED LAYOUT CONTROLLER
 // ==========================================
 export default function App() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const cyRef = useRef<cytoscape.Core | null>(null);
+
   // --- LAYOUT ENGINE STATES ---
   const [isLocked, setIsLocked] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -287,11 +274,13 @@ export default function App() {
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
 
-  // --- REACT FLOW ELEMENTS STATES ---
-  const [rfNodes, setRfNodes, onNodesChange] = useNodesState([]);
-  const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState([]);
+  // --- REAL-TIME CYTOSCAPE VIEWPORT STATE SYNC ---
+  const [graphState, setGraphState] = useState<{
+    zoom: number;
+    pan: { x: number; y: number };
+    nodePositions: Record<string, { x: number; y: number; w: number; h: number }>;
+  }>({ zoom: 1, pan: { x: 0, y: 0 }, nodePositions: {} });
 
-  // --- GRAPH MATRIX DISPATCHERS ---
   const toggleFolder = (folderName: string) => setExpandedFolders(prev => ({ ...prev, [folderName]: !prev[folderName] }));
   const toggleFolderCheckbox = (folderName: string, forceState?: boolean) => {
     const isCurrentlyChecked = forceState !== undefined ? forceState : initialCodebase.files.filter(f => f.path.startsWith(folderName)).every(f => visibleFiles[f.id]);
@@ -316,7 +305,6 @@ export default function App() {
     triggerNotification('Configuration and filters reset successfully!');
   };
 
-  // --- SYNC DARK MODE ATTRIBUTES WITH ROOT ELEMENT ---
   useEffect(() => {
     const htmlElement = document.documentElement;
     if (isDarkMode) htmlElement.classList.add('dark');
@@ -357,7 +345,6 @@ export default function App() {
     setImpactedSet(visited);
   }, [selectedEntity, impactDirection]);
 
-  // --- SEARCH AND GRANULARITY RE-EVALUATION ---
   const searchFilteredFiles = useMemo(() => {
     return initialCodebase.files.filter(file => {
       const matchesSearch = file.name.toLowerCase().includes(searchTerm.toLowerCase()) || file.language.toLowerCase().includes(searchTerm.toLowerCase()) || file.path.toLowerCase().includes(searchTerm.toLowerCase());
@@ -366,10 +353,107 @@ export default function App() {
     }).slice(0, maxNodesLimit);
   }, [searchTerm, visibleFiles, displayLevel, maxNodesLimit]);
 
-  // =====================================================================================================
-  // 5. ATOMIC COMPONENT POSITIONING SYNCHRONIZER (ELIMINATES ERROR #005 AND DRAG COLLISION CHEVRONS)
-  // =====================================================================================================
+  // ==========================================
+  // 5. CYTOSCAPE INITIALIZATION ENGINE
+  // ==========================================
   useEffect(() => {
+    if (!containerRef.current) return;
+
+    const cy = cytoscape({
+      container: containerRef.current,
+      style: [
+        {
+          selector: 'node',
+          style: {
+            'shape': 'rectangle',
+            'opacity': 0.0, // Rendu invisible pour laisser passer les évènements de scroll/drag sur l'HTML
+            'width': 'data(width)',
+            'height': 'data(height)'
+          }
+        },
+        {
+          selector: 'node.folder',
+          style: {
+            'shape': 'rectangle',
+            'opacity': 0.05,
+            'background-color': isDarkMode ? '#475569' : '#94a3b8',
+            'border-width': '2px',
+            'border-color': isDarkMode ? '#334155' : '#cbd5e1',
+            'border-style': 'dashed'
+          }
+        },
+        {
+          selector: 'edge',
+          style: {
+            'width': 2,
+            'line-color': isDarkMode ? '#475569' : '#cbd5e1',
+            'target-arrow-color': isDarkMode ? '#475569' : '#cbd5e1',
+            'target-arrow-shape': 'triangle',
+            'curve-style': 'bezier',
+            'label': 'data(label)',
+            'font-size': '10px',
+            'font-family': 'monospace',
+            'color': isDarkMode ? '#94a3b8' : '#475569',
+            'text-background-opacity': 1,
+            'text-background-color': isDarkMode ? '#27272a' : '#ffffff',
+            'text-background-padding': '3px',
+            'text-background-shape': 'roundrectangle'
+          }
+        },
+        {
+          selector: 'edge.impacted',
+          style: {
+            'line-color': '#f97316',
+            'target-arrow-color': '#f97316',
+            'width': 4,
+            'animated': 'yes' as any
+          }
+        }
+      ],
+      userZoomingEnabled: true,
+      userPanningEnabled: true,
+      boxSelectionEnabled: false
+    ]);
+
+    cyRef.current = cy;
+
+    const syncGraph = () => {
+      const positions: Record<string, { x: number; y: number; w: number; h: number }> = {};
+      cy.nodes().forEach(node => {
+        const pos = node.position();
+        const w = node.width();
+        const h = node.height();
+        positions[node.id()] = {
+          x: pos.x - w / 2,
+          y: pos.y - h / 2,
+          w,
+          h
+        };
+      });
+
+      setGraphState({
+        zoom: cy.zoom(),
+        pan: cy.pan(),
+        nodePositions: positions
+      });
+    };
+
+    cy.on('drag pan zoom render', syncGraph);
+
+    return () => {
+      cy.destroy();
+    };
+  }, [isDarkMode]);
+
+  // ==========================================
+  // 6. SYNCHRONISATION DE LA TOPOLOGIE DES ITEMS
+  // ==========================================
+  useEffect(() => {
+    if (!cyRef.current) return;
+    const cy = cyRef.current;
+
+    cy.elements().remove();
+
     const filesByFolder: Record<string, typeof searchFilteredFiles> = {};
     searchFilteredFiles.forEach(file => {
       const folderKey = file.path.split('/')[0] || 'other';
@@ -379,7 +463,6 @@ export default function App() {
 
     const PADDING_TOP = 65;
     const PADDING_LEFT = 24;
-    const PADDING_BOTTOM = 24;
     const GAP_X = 40;
     const GAP_Y = 40;
 
@@ -387,70 +470,50 @@ export default function App() {
     const folderBaseY: Record<string, number> = { 'frontend': 80, 'backend': 30, 'config': 160 };
     const folderMaxCols: Record<string, number> = { 'frontend': 1, 'backend': 2, 'config': 1 };
 
-    const calculatedNodes: any[] = [];
-    const calculatedEdges: any[] = [];
-
-    // CRITICAL: Parent group configurations are injected FIRST so lookup pipelines locate them during child parsing stages.
     Object.entries(FOLDER_POSITIONS).forEach(([folderKey, initialPos]) => {
       const folderFiles = filesByFolder[folderKey] || [];
       if (folderFiles.length === 0) return;
 
       const maxCols = folderMaxCols[folderKey] || 1;
-      const totalFiles = folderFiles.length;
-      const cols = Math.min(totalFiles, maxCols);
-      const rows = Math.ceil(totalFiles / maxCols);
+      const cols = Math.min(folderFiles.length, maxCols);
+      const rows = Math.ceil(folderFiles.length / maxCols);
 
       const maxNodeWidth = folderKey === 'config' ? 320 : 288;
       const maxNodeHeight = folderKey === 'config' ? 240 : 280;
 
       const folderW = PADDING_LEFT * 2 + cols * maxNodeWidth + (cols - 1) * GAP_X;
-      const folderH = PADDING_TOP + PADDING_BOTTOM + rows * maxNodeHeight + (rows - 1) * GAP_Y;
+      const folderH = PADDING_TOP + PADDING_LEFT + rows * maxNodeHeight + (rows - 1) * GAP_Y;
 
-      calculatedNodes.push({
-        id: `folder__${folderKey}`,
-        type: 'folder',
-        position: { x: folderBaseX[folderKey], y: folderBaseY[folderKey] },
-        style: { width: folderW, height: folderH },
-        data: { label: initialPos.label },
-        draggable: true,
+      // Ajouter le dossier parent (Compound Node)
+      cy.add({
+        data: { id: `folder__${folderKey}` },
+        classes: 'folder',
+        position: { x: folderBaseX[folderKey] + folderW / 2, y: folderBaseY[folderKey] + folderH / 2 }
       });
+
+      // Configurer la dimension fixe du conteneur parent
+      cy.id(`folder__${folderKey}`).style({ 'width': folderW, 'height': folderH });
 
       folderFiles.forEach((file, index) => {
         const colIdx = index % maxCols;
         const rowIdx = Math.floor(index / maxCols);
 
-        // Strict RELATIVE positions mapped underneath the parent container envelope safely.
-        const posX = PADDING_LEFT + colIdx * (maxNodeWidth + GAP_X);
-        const posY = PADDING_TOP + rowIdx * (maxNodeHeight + GAP_Y);
+        const absX = folderBaseX[folderKey] + PADDING_LEFT + colIdx * (maxNodeWidth + GAP_X) + maxNodeWidth / 2;
+        const absY = folderBaseY[folderKey] + PADDING_TOP + rowIdx * (maxNodeHeight + GAP_Y) + maxNodeHeight / 2;
 
-        const impactedMembers: string[] = [];
-        impactedSet.forEach(item => {
-          if (item.startsWith(`${file.id}__member__`)) {
-            impactedMembers.push(item.split('__member__')[1]);
-          }
-        });
-
-        const isNodeImpacted = impactedSet.has(file.id);
-        const isDimmed = selectedEntity !== null && impactedSet.size > 0 && !isNodeImpacted;
-
-        calculatedNodes.push({
-          id: file.id,
-          type: file.type === 'config' ? 'config' : 'umlClass',
-          parentNode: `folder__${folderKey}`,
-          extent: 'parent', // Native coordinate containment validation rules enforcement.
-          position: { x: posX, y: posY },
+        cy.add({
           data: {
-            ...file,
-            isDark: isDarkMode,
-            isDimmed,
-            impactedMembers,
-            selectedMember: selectedEntity?.nodeId === file.id ? selectedEntity?.memberId : undefined,
-            onSelectMember: handleSelectMember
-          }
+            id: file.id,
+            parent: `folder__${folderKey}`,
+            width: maxNodeWidth,
+            height: maxNodeHeight
+          },
+          position: { x: absX, y: absY }
         });
       });
     });
 
+    // Insertion des liaisons architecturales
     initialCodebase.dependencies.forEach(dep => {
       if (visibleFiles[dep.sourceNode] && visibleFiles[dep.targetNode]) {
         const sourceActive = searchFilteredFiles.some(f => f.id === dep.sourceNode);
@@ -460,38 +523,22 @@ export default function App() {
         const srcKey = dep.sourceHandle === 'header' ? dep.sourceNode : `${dep.sourceNode}__member__${dep.sourceHandle}`;
         const tgtKey = dep.targetHandle === 'header' ? dep.targetNode : `${dep.targetNode}__member__${dep.targetHandle}`;
         const isEdgeImpacted = impactedSet.has(srcKey) && impactedSet.has(tgtKey);
-        const isDimmed = selectedEntity !== null && impactedSet.size > 0 && !isEdgeImpacted;
 
-        const sourceHandleId = dep.sourceHandle === 'header' ? `${dep.sourceNode}__header_source` : `${dep.sourceNode}__method__${dep.sourceHandle}__source`;
-        const targetHandleId = dep.targetHandle === 'header' ? `${dep.targetNode}__header_target` : dep.targetNode === 'application.yml' ? `${dep.targetNode}__prop__${dep.targetHandle}__target` : `${dep.targetNode}__method__${dep.targetHandle}__target`;
-
-        let strokeColor = isDarkMode ? '#475569' : '#cbd5e1';
-        let strokeDash = '0';
-        if (isEdgeImpacted) strokeColor = '#f97316';
-        else {
-          switch (dep.relation) {
-            case 'extends': strokeColor = '#3b82f6'; strokeDash = '5,5'; break;
-            case 'implementation': strokeColor = '#818cf8'; strokeDash = '4,4'; break;
-            case 'aggregation': strokeColor = '#10b981'; break;
-            case 'dependency': strokeColor = '#f59e0b'; strokeDash = '2,2'; break;
-          }
-        }
-
-        calculatedEdges.push({
-          id: dep.id, source: dep.sourceNode, target: dep.targetNode, sourceHandle: sourceHandleId, targetHandle: targetHandleId, animated: isEdgeImpacted, label: dep.label,
-          labelStyle: { fill: isDarkMode ? '#94a3b8' : '#475569', fontSize: 9, fontFamily: 'monospace' },
-          style: { stroke: strokeColor, strokeWidth: isEdgeImpacted ? 3.5 : 2, strokeDasharray: strokeDash, opacity: isDimmed ? 0.15 : 1, transition: 'all 0.3s' },
-          markerEnd: { type: MarkerType.ArrowClosed, color: strokeColor, width: 15, height: 15 },
-          interactionWidth: 15
+        cy.add({
+          data: {
+            id: dep.id,
+            source: dep.sourceNode,
+            target: dep.targetNode,
+            label: dep.label
+          },
+          classes: isEdgeImpacted ? 'impacted' : ''
         });
       }
     });
 
-    setRfNodes(calculatedNodes);
-    setRfEdges(calculatedEdges);
-  }, [searchFilteredFiles, visibleFiles, impactedSet, selectedEntity, isDarkMode, setRfNodes, setRfEdges]);
+    cy.trigger('render');
+  }, [searchFilteredFiles, visibleFiles, impactedSet]);
 
-  // --- AUTOMATED RECIPE AND EXPORTS BUILDERS ---
   const generatedPlantUML = useMemo(() => {
     let puml = `' Real-time synchronization state\n@startuml Codebase_Architecture_State\n\n`;
     ['frontend', 'backend', 'config'].forEach(f => {
@@ -542,7 +589,6 @@ export default function App() {
 
   const visibleCount = searchFilteredFiles.length;
 
-  // --- SUB-PANEL CONTROLS ROUTING ---
   const renderViewContent = () => {
     switch(activeView) {
       case 'panel-explorer':
@@ -559,7 +605,6 @@ export default function App() {
               </div>
             </div>
             <div className="flex-1 p-4 overflow-y-auto font-mono text-xs">
-              {/* Folder frontend / component mapping */}
               <div className="mb-4">
                 <div className="group flex justify-between items-center hover:bg-muted/50 px-1 py-1 rounded">
                   <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => toggleFolder('frontend')}>
@@ -584,7 +629,6 @@ export default function App() {
                 )}
               </div>
 
-              {/* Folder backend / class mapping */}
               <div className="mb-4">
                 <div className="group flex justify-between items-center hover:bg-muted/50 px-1 py-1 rounded">
                   <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => toggleFolder('backend')}>
@@ -612,7 +656,6 @@ export default function App() {
                 )}
               </div>
 
-              {/* Folder config / database configuration mapping */}
               <div className="mb-4">
                 <div className="group flex justify-between items-center hover:bg-muted/50 px-1 py-1 rounded">
                   <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => toggleFolder('config')}>
@@ -658,14 +701,32 @@ export default function App() {
     <TooltipProvider>
       <div id="ctn-root" className={`flex flex-col h-screen w-screen overflow-hidden font-sans text-sm select-none transition-colors duration-200 bg-background text-foreground ${isDarkMode ? 'dark' : ''}`}>
 
-        {/* FIXED NAVIGATION HEADER ROW */}
+        {/* TOAST NOTIFICATION WINDOW */}
+        {copiedNotification && (
+          <div className="top-12 left-1/2 z-50 fixed flex items-center gap-2 bg-primary slide-in-from-top-4 shadow-2xl px-4 py-2.5 rounded-full font-mono text-primary-foreground text-xs -translate-x-1/2 animate-in transform fade-in">
+            <Check size={14} /> {copiedNotification}
+          </div>
+        )}
+
+        {/* ISOLATION BLOCKER OVERLAY */}
+        {isLocked && (
+          <div className="z-40 absolute inset-0 flex justify-center items-center bg-background/80 backdrop-blur-sm pointer-events-auto">
+            <div className="bg-card shadow-2xl p-6 border border-border rounded-lg max-w-md text-center">
+              <ShieldAlert className="mx-auto mb-4 text-destructive" size={44} />
+              <h2 className="mb-2 font-bold text-foreground text-base">Sandbox Cluster Suspended</h2>
+              <Button variant="destructive" size="sm" onClick={() => setIsLocked(false)}>Restore connection</Button>
+            </div>
+          </div>
+        )}
+
+        {/* A. FIXED NAVIGATION HEADER ROW */}
         <LayoutPanel
           id="ctn-header"
           className="z-20 bg-card px-3 border-border border-b h-[40px] shrink-0"
           left={
             <>
               <Button variant="ghost" size="icon" onClick={() => setSidebarLeftMode(m => m === 'collapsed' ? 'normal' : 'collapsed')} className="w-8 h-8 text-muted-foreground hover:text-foreground"><Menu size={16} /></Button>
-              <div className="flex items-center gap-2 ml-1 text-primary cursor-help"><span className="font-bold text-foreground text-xs tracking-tight">Archi-Polyglot Workspace</span></div>
+              <div className="flex items-center gap-2 ml-1 text-primary cursor-help"><span className="font-bold text-foreground text-xs tracking-tight">Archi-Polyglot Workspace (Cytoscape)</span></div>
             </>
           }
           center={
@@ -685,7 +746,6 @@ export default function App() {
               <button onClick={resetAllFilters} className="hover:bg-muted p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors" title="Reset Workspace"><RotateCcw size={16} /></button>
               <div className="mx-1 bg-border w-px h-4"></div>
 
-              {/* TOGGLE VISIBILITY CONTROL BUTTON ARRAYS */}
               <button id="btn-toggle-main" onClick={() => setIsCtnWorkspaceVisible(!isCtnWorkspaceVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceVisible ? 'text-primary bg-primary/10' : 'text-muted-foreground'}`} title="Workspace Frame"><Eye size={16} /></button>
               <button id="btn-toggle-main-header" onClick={() => setIsCtnWorkspaceTopVisible(!isCtnWorkspaceTopVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceTopVisible ? 'text-primary bg-primary/10' : 'text-muted-foreground'}`} title="Top Paths Container"><Eye size={16} /></button>
               <button id="btn-toggle-main-left" onClick={() => setIsCtnWorkspaceLeftVisible(!isCtnWorkspaceLeftVisible)} className={`p-1.5 rounded transition-colors ml-1 ${isCtnWorkspaceLeftVisible ? 'text-primary bg-primary/10' : 'text-muted-foreground'}`} title="Left Filter Stream"><Eye size={16} /></button>
@@ -754,8 +814,6 @@ export default function App() {
                   id="ctn-workspace-center"
                   visible={isCtnWorkspaceCenterVisible || isGraphMaximized}
                   style={isGraphMaximized ? { position: 'fixed', top: '40px', bottom: '40px', left: '0', right: '0', zIndex: 50 } : { flex: 1 }}
-
-                  /* INTEGRATED TOGGLE DOTS BACKGROUND CONTROLLER INSIDE THE HEADER LEFT FRAME FRAME */
                   headerLeft={
                     <div className="flex items-center gap-2">
                       <span>Topological Network</span>
@@ -770,16 +828,14 @@ export default function App() {
                       </Button>
                     </div>
                   }
-
-                  /* CORE ACTIONABLE CONTROLS METRICS LABELS STRINGS */
                   headerCenter={
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-1.5 bg-background px-2 py-0.5 border border-border rounded-sm" title="Maximum sequential nodes rendering constraint limit">
                         <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">Limit:</span>
-                        <Input type="number" id="graph-input-limit" min={1} max={100} className="bg-transparent text-foreground shadow-none px-1 border-0 focus:ring-0 w-12 h-5 font-bold text-xs text-center" value={maxNodesLimit} onChange={(e) => setMaxNodesLimit(Number(e.target.value) || 50)} />
+                        <Input type="number" id="graph-input-limit" min={1} max={100} className="bg-transparent shadow-none px-1 border-0 focus:ring-0 w-12 h-5 font-bold text-foreground text-xs text-center" value={maxNodesLimit} onChange={(e) => setMaxNodesLimit(Number(e.target.value) || 50)} />
                       </div>
 
-                      <Button id="btn-open-neo4j" className="flex items-center gap-1.5 bg-gradient-to-r from-orange-600 hover:from-orange-500 to-orange-500 hover:to-orange-400 shadow-sm px-2.5 border border-orange-700 rounded-md h-6 font-bold text-[10px] text-white uppercase tracking-wider" onClick={() => console.log("Routing execution context down onto stand-alone browser frame layout terminal console.")}>
+                      <Button id="btn-open-neo4j" className="flex items-center gap-1.5 bg-gradient-to-r from-orange-600 hover:from-orange-500 to-orange-500 hover:to-orange-400 shadow-sm px-2.5 border border-orange-700 rounded-md h-6 font-bold text-[10px] text-white uppercase tracking-wider" onClick={() => console.log("Routing execution context...")}>
                         <Database size={11} /> Neo4j
                       </Button>
 
@@ -812,23 +868,102 @@ export default function App() {
                   }
                   headerRight={
                     <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => cyRef.current?.zoom((cyRef.current?.zoom() || 1) * 1.2)}><Plus size={12}/></Button>
+                      <Button variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => cyRef.current?.zoom((cyRef.current?.zoom() || 1) / 1.2)}><Minus size={12}/></Button>
+                      <Button variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => { cyRef.current?.fit(); cyRef.current?.center(); }}><Focus size={12}/></Button>
                       <Button variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => { setIsGraphMaximized(!isGraphMaximized); }}><Maximize size={12}/></Button>
                     </div>
                   }
-                  className="bg-background"
+                  className="bg-background relative"
                 >
-                  <div id="panel-graph-canvas" className="absolute inset-0 outline-none w-full h-full">
-                    {/* Floating Guide Description box */}
-                    <div className="top-4 left-4 z-10 absolute bg-card/90 shadow-md backdrop-blur p-3 border border-border rounded-lg max-w-sm font-mono text-xs pointer-events-auto">
-                      <div className="flex items-center gap-2 mb-1"><Info size={14} className="text-primary" /><span className="font-bold">Surgical Port-to-Port Analysis</span></div>
-                      <p className="text-[10px] text-muted-foreground">Each structural method block row features dedicated mapping anchor lines. Click on any method line item row to compute dynamic BFS tracking graphs instantly.</p>
+                  <div id="panel-graph-canvas" className="absolute inset-0 outline-none w-full h-full overflow-hidden">
+
+                    {/* Conteneur natif Cytoscape (Calque Arrière - Edges & Triggers de drag) */}
+                    <div
+                      ref={containerRef}
+                      className="absolute inset-0 w-full h-full z-0"
+                      style={showGrid ? {
+                        backgroundImage: isDarkMode ? 'radial-gradient(#334155 1.2px, transparent 1.2px)' : 'radial-gradient(#cbd5e1 1.2px, transparent 1.2px)',
+                        backgroundSize: `${16 * graphState.zoom}px ${16 * graphState.zoom}px`,
+                        backgroundPosition: `${graphState.pan.x}px ${graphState.pan.y}px`
+                      } : undefined}
+                    />
+
+                    {/* Calque HTML Synchrone (Calque Avant - UML Items deplacement fluide pass-through) */}
+                    <div
+                      className="absolute inset-0 pointer-events-none select-none z-10 origin-top-left"
+                      style={{
+                        transform: `translate(${graphState.pan.x}px, ${graphState.pan.y}px) scale(${graphState.zoom})`,
+                      }}
+                    >
+                      {/* Rendu dynamique des Packages / Folders */}
+                      {Object.entries(FOLDER_POSITIONS).map(([folderKey, initialPos]) => {
+                        const bounds = graphState.nodePositions[`folder__${folderKey}`];
+                        if (!bounds) return null;
+                        return (
+                          <div
+                            key={`folder-${folderKey}`}
+                            className="absolute transition-all duration-75 ease-out"
+                            style={{ left: bounds.x, top: bounds.y, width: bounds.w, height: bounds.h }}
+                          >
+                            <FolderNode data={{ label: initialPos.label }} />
+                          </div>
+                        );
+                      })}
+
+                      {/* Rendu dynamique des Classes / UML Nodes */}
+                      {searchFilteredFiles.map(file => {
+                        const bounds = graphState.nodePositions[file.id];
+                        if (!bounds) return null;
+
+                        const impactedMembers: string[] = [];
+                        impactedSet.forEach(item => {
+                          if (item.startsWith(`${file.id}__member__`)) {
+                            impactedMembers.push(item.split('__member__')[1]);
+                          }
+                        });
+                        const isNodeImpacted = impactedSet.has(file.id);
+                        const isDimmed = selectedEntity !== null && impactedSet.size > 0 && !isNodeImpacted;
+
+                        return (
+                          <div
+                            key={file.id}
+                            className="absolute pointer-events-none transition-all duration-75 ease-out"
+                            style={{ left: bounds.x, top: bounds.y, width: bounds.w, height: bounds.h }}
+                          >
+                            {file.type === 'config' ? (
+                              <ConfigNode
+                                id={file.id}
+                                data={{
+                                  ...file,
+                                  isDimmed,
+                                  impactedMembers,
+                                  selectedMember: selectedEntity?.nodeId === file.id ? selectedEntity?.memberId : undefined,
+                                  onSelectMember: handleSelectMember
+                                }}
+                              />
+                            ) : (
+                              <UmlClassNode
+                                id={file.id}
+                                data={{
+                                  ...file,
+                                  isDimmed,
+                                  impactedMembers,
+                                  selectedMember: selectedEntity?.nodeId === file.id ? selectedEntity?.memberId : undefined,
+                                  onSelectMember: handleSelectMember
+                                }}
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
 
-                    <ReactFlow nodes={rfNodes} edges={rfEdges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} nodeTypes={nodeTypesMap} fitView minZoom={0.1} maxZoom={2}>
-                      {showGrid && <Background variant="dots" color={isDarkMode ? '#334155' : '#cbd5e1'} gap={16} size={1} />}
-                      <Controls className="!bg-card !shadow-md !border-border" />
-                      <MiniMap nodeColor={n => n.type === 'config' ? '#f59e0b' : '#3b82f6'} className="!bg-card !border-border" />
-                    </ReactFlow>
+                    <div className="top-4 left-4 z-20 absolute bg-card/90 shadow-md backdrop-blur p-3 border border-border rounded-lg max-w-sm font-mono text-xs pointer-events-auto">
+                      <div className="flex items-center gap-2 mb-1"><Info size={14} className="text-primary" /><span className="font-bold">Surgical Analysis (Cytoscape Engine)</span></div>
+                      <p className="text-[10px] text-muted-foreground">Le drag-and-drop sur les en-têtes et le zoom molette utilisent l'architecture réactive de Cytoscape. Les clics sur les méthodes restent gérés par React.</p>
+                    </div>
+
                   </div>
                 </ResizableContainer>
 
@@ -875,7 +1010,6 @@ export default function App() {
                                     </div>
                                   </div>
 
-                                  {/* Restored functional documentation block snippet */}
                                   <div className="bg-slate-950 mt-3 p-2.5 border border-slate-800 rounded font-mono text-slate-300 text-xs">
                                     <div className="mb-1 font-bold text-[10px] text-amber-400 uppercase">Functional Documentation:</div>
                                     {selectedEntity.type === 'member' ? (
@@ -904,7 +1038,6 @@ export default function App() {
                                     <div className="flex items-center gap-1.5"><ShieldAlert size={14} className="text-orange-500" /><h5 className="font-mono font-bold text-orange-500 text-xs">Fluorescent Impact Plan</h5></div>
                                     <button onClick={() => copyToClipboard(generatedMarkdownRecipe, "Markdown impact recipe copied to clip-board!")} className="flex items-center gap-1 bg-muted hover:bg-muted/80 px-2 py-1 border border-border rounded font-mono text-[10px] text-foreground"><Copy size={10} />Copy Recipes</button>
                                   </div>
-                                  <p className="font-mono text-[10px] text-muted-foreground">Impacted structures highlight in high-contrast orange across the layout stage canvas:</p>
                                   <div className="space-y-1.5 max-h-48 overflow-y-auto">
                                     {initialCodebase.files.map(f => impactedSet.has(f.id) ? (
                                       <div key={f.id} className="flex justify-between items-center bg-background px-2 py-1.5 border border-orange-500/20 rounded font-mono text-[11px]"><span className="font-semibold text-foreground truncate">{f.name}</span><span className="bg-muted px-1.5 py-0.5 rounded text-[9px] text-muted-foreground">{f.language}</span></div>
@@ -951,7 +1084,7 @@ export default function App() {
         </div>
 
         {/* E. FIXED MAIN APPLICATION STATUS BAR FOOTER CHANNELS */}
-        <LayoutPanel id="ctn-footer" className="z-20 bg-primary px-3 h-[35px] text-primary-foreground text-xs select-none shrink-0" left={<><Server size={13} className="mr-1.5"/><span className="font-medium">Analysis Subsystems Synced</span></>} center={<div className="font-mono">Active Topology Nodes Rendered: {visibleCount}</div>} right={<div>React Flow Pipeline Core</div>} />
+        <LayoutPanel id="ctn-footer" className="z-20 bg-primary px-3 h-[35px] text-primary-foreground text-xs select-none shrink-0" left={<><Server size={13} className="mr-1.5"/><span className="font-medium">Analysis Subsystems Synced</span></>} center={<div className="font-mono">Active Topology Nodes Rendered: {visibleCount}</div>} right={<div>Cytoscape Pipeline Core</div>} />
 
       </div>
     </TooltipProvider>
@@ -982,7 +1115,3 @@ function useResizable(initialSize: number, minSize: number, maxSize: number, isH
   }, [isHorizontal, reverse, minSize, maxSize]);
   return [size, startResizing, setSize] as const;
 }
-EOF
-
-# Trigger standard production build to verify syntax and cross-module link integrity
-npm run build
