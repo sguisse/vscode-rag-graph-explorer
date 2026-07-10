@@ -16,14 +16,17 @@ export function LayoutPanel({
   left,
   center,
   right,
+  leftId,
+  centerId,
+  rightId,
   className,
   ...props
 }: LayoutPanelProps) {
   return (
     <div id={id} className={cn("flex justify-between items-center w-full", className)} {...props}>
-      <div id={`${id}-left`} className="empty:hidden flex items-center gap-2">{left}</div>
-      <div id={`${id}-center`} className="empty:hidden flex flex-1 justify-center items-center px-2 overflow-hidden">{center}</div>
-      <div id={`${id}-right`} className="empty:hidden flex justify-end items-center gap-2">{right}</div>
+      <div id={leftId ?? `${id}-left`} className="empty:hidden flex items-center gap-2">{left}</div>
+      <div id={centerId ?? `${id}-center`} className="empty:hidden flex flex-1 justify-center items-center px-2 overflow-hidden">{center}</div>
+      <div id={rightId ?? `${id}-right`} className="empty:hidden flex justify-end items-center gap-2">{right}</div>
     </div>
   );
 }

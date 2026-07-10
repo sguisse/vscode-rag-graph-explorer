@@ -3,11 +3,11 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { cn } from "@/lib/utils"
 
-interface GlobalTooltipProps {
+interface TooltipProps {
   delay?: number
 }
 
-export function GlobalTooltip({ delay = 1500 }: GlobalTooltipProps) {
+export function Tooltip({ delay = 1500 }: TooltipProps) {
   const [content, setContent] = useState('')
   const [visible, setVisible] = useState(false)
 

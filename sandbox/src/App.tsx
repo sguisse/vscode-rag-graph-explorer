@@ -25,8 +25,9 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '.
 import { Sidebar, SidebarContent, SidebarGroup, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarMenuBadge, SidebarFooter } from './components/ui/sidebar';
 
 import { LayoutPanel } from './components/app/layout-panel';
-import { ResizableContainer } from './components/app/resizable-container';
-import { GlobalTooltip } from './components/app/tooltip';
+import { ResizableContainer } from './components/app/container/resizable-container';
+import { Tooltip } from './components/app/tooltip';
+import { useResizable } from './components/app/container/hooks/use-resizable';
 
 // ==========================================
 // 1. DATASETS & UML RELATIONSHIPS SCHEMAS
@@ -296,11 +297,15 @@ export default function App() {
   const [showGrid, setShowGrid] = useState(true);
 
   // --- DIMENSIONAL SIZE HANDLERS ---
-  const [sidebarLeftWidth, startSidebarLeftResize] = useResizable(220, 160, 400, true);
-  const [ctnWorkspaceLeftWidth, startCtnWorkspaceLeftResize] = useResizable(15, 15, 60, true);
-  const [ctnWorkspaceRightWidth, startCtnWorkspaceRightResize] = useResizable(15, 15, 60, true, true);
-  const [ctnWorkspaceTopHeight, startCtnWorkspaceTopResize] = useResizable(120, 50, 250, false);
-  const [ctnWorkspaceBottomHeight, startCtnWorkspaceBottomResize] = useResizable(30, 30, 400, false, true);
+  // Map hook assignments cleanly. Optional: provide the 6th parameter for auto-collapse thresholds
+  const [sidebarLeftWidth, startSidebarLeftResize, isDraggingSidebarLeft] = useResizable(220, 160, 400, true, false, 60);
+  const [sidebarRightWidth, startSidebarRightResize, isDraggingSidebarRight] = useResizable(300, 200, 500, true, true, 80);
+  const [ctnWorkspaceLeftWidth, startCtnWorkspaceLeftResize, isDraggingLeftPane] = useResizable(260, 180, 500, true, false);
+  const [ctnWorkspaceRightWidth, startCtnWorkspaceRightResize, isDraggingRightPane] = useResizable(320, 200, 600, true, true);
+  const [ctnWorkspaceTopHeight, startCtnWorkspaceTopResize, isDraggingTopPane] = useResizable(120, 50, 250, false, false);
+  const [ctnWorkspaceBottomHeight, startCtnWorkspaceBottomResize, isDraggingBottomPane] = useResizable(30, 30, 400, false, true);
+  // Collect active dragging flags to protect underlying canvases
+  const isCurrentlyResizing = isDraggingSidebarLeft || isDraggingSidebarRight || isDraggingLeftPane || isDraggingRightPane || isDraggingTopPane || isDraggingBottomPane;
 
   // --- RENDERING CONFIGURATIONS ---
   const [maxNodesLimit, setMaxNodesLimit] = useState(50);
@@ -1066,7 +1071,6 @@ export default function App() {
             </SidebarFooter>
             {sidebarLeftMode === 'normal' && (
               <div id="ctn-sidebar-left-handle" className="group top-0 right-0 bottom-0 z-20 absolute hover:bg-sidebar-border w-1 cursor-col-resize" onMouseDown={startSidebarLeftResize}>
-                 <div className="top-1/2 right-[1px] absolute bg-sidebar-border rounded-full w-[2px] h-8 -translate-y-1/2"></div>
               </div>
             )}
           </Sidebar>
@@ -1085,7 +1089,12 @@ export default function App() {
             <div id="ctn-workspace-middle-row" className="flex flex-1 min-h-0 overflow-hidden">
 
               {/* LEFT ATTACHED MODULE PANEL CONTROL VIEWPORT */}
-              <ResizableContainer id="ctn-workspace-left" visible={isCtnWorkspaceLeftVisible} style={{ width: `${ctnWorkspaceLeftWidth}%` }} headerLeft={getActiveViewLabel()} className="border-r min-w-[200px]" resizeHandle="right" onResizeStart={startCtnWorkspaceLeftResize}>
+              <ResizableContainer id="ctn-workspace-left" visible={isCtnWorkspaceLeftVisible}
+              style={{ width: `${ctnWorkspaceLeftWidth}px` }}
+              headerLeft={getActiveViewLabel()}
+              className="border-r min-w-[200px]"
+              resizeHandle="right"
+              onResizeStart={startCtnWorkspaceLeftResize}>
                 {renderViewContent()}
               </ResizableContainer>
 
@@ -1260,11 +1269,29 @@ export default function App() {
                     <p className="text-[10px] text-muted-foreground">Le drag-and-drop sur les en-têtes et le zoom molette utilisent l'architecture réactive de Cytoscape. Les clics sur les méthodes restent gérés par React.</p>
                   </div>
 
+                  {/* ============================================================ */}
+                  {/* Overlay mask block: intercepts inputs during heavy reflows   */}
+                  {/* ============================================================ */}
+                  {isCurrentlyResizing && (
+                    <div
+                        className="z-30 absolute inset-0 bg-transparent pointer-events-auto select-none"
+                        style={{
+                            // Dynamically match cursor alignment to avoid snapping visual states
+                            cursor: isDraggingSidebarLeft || isDraggingSidebarRight || isDraggingLeftPane || isDraggingRightPane ? 'col-resize' : 'row-resize'
+                        }}
+                        />
+                    )}
+
                 </div>
               </ResizableContainer>
 
               {/* RIGHT SYSTEM EXTENDED INSPECTOR TABS CONTEXT CONTAINER PANEL */}
-              <ResizableContainer id="ctn-workspace-right" visible={isCtnWorkspaceRightVisible} style={{ width: !isCtnWorkspaceCenterVisible ? '100%' : `${ctnWorkspaceRightWidth}%` }} headerLeft="Metadata & Inspector Tab Matrices" className={!isCtnWorkspaceCenterVisible ? 'flex-1 border-l min-w-[200px]' : 'border-l min-w-[200px]'} resizeHandle={isCtnWorkspaceCenterVisible ? "left" : "none"} onResizeStart={isCtnWorkspaceCenterVisible ? startCtnWorkspaceRightResize : undefined}>
+              <ResizableContainer id="ctn-workspace-right" visible={isCtnWorkspaceRightVisible}
+              style={{ width: !isCtnWorkspaceCenterVisible ? '100%' : `${ctnWorkspaceRightWidth}px` }}
+              headerLeft="Metadata & Inspector Tab Matrices"
+              className={!isCtnWorkspaceCenterVisible ? 'flex-1 border-l min-w-[200px]' : 'border-l min-w-[200px]'}
+              resizeHandle={isCtnWorkspaceCenterVisible ? "left" : "none"}
+              onResizeStart={isCtnWorkspaceCenterVisible ? startCtnWorkspaceRightResize : undefined}>
                 <div className="flex flex-col bg-card h-full">
                   <div className="flex bg-muted/40 border-border border-b shrink-0">
                     <Button id="btn-inspector-tab-inspect" variant="ghost" onClick={() => setRightPanelTab('inspect')} className={`flex-1 py-2 text-center font-mono text-[11px] font-bold h-auto rounded-none border-b-2 ${rightPanelTab === 'inspect' ? 'border-b-primary text-primary bg-background' : 'text-muted-foreground border-transparent'}`} data-tooltip="Inspect detailed structural properties, docs, and impact records of <span style='color:red'><strong>selection</strong></span>">Inspector</Button>
@@ -1364,9 +1391,18 @@ export default function App() {
         </div>
 
         {/* D. RIGHT STRUCTURAL PANEL PANEL PROPERTIES MATRIX GRID */}
-        <ResizableContainer id="ctn-sidebar-right" visible={isSidebarRightVisible} style={{ width: `300px` }} headerLeft={<><Layers size={13} className="mr-1.5"/> <span>Entity Properties</span></>} headerRight={
-          <Button id="btn-close-properties-sidebar" variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => setSelectedEntity(null)} data-tooltip="Close global identity attributes section"><X size={12}/></Button>
-        } className="border-l shrink-0" resizeHandle="left">
+        <ResizableContainer
+            id="ctn-sidebar-right"
+            visible={isSidebarRightVisible}
+            style={{ width: `${sidebarRightWidth}px` }} // 1. Swap hardcoded 300px for your live state variable
+            headerLeft={<><Layers size={13} className="mr-1.5"/> <span>Entity Properties</span></>}
+            headerRight={
+                <Button id="btn-close-properties-sidebar" variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => setSelectedEntity(null)} data-tooltip="Close global identity attributes section"><X size={12}/></Button>
+            }
+            className="border-l shrink-0"
+            resizeHandle="left"
+            onResizeStart={startSidebarRightResize} // 2. Inject your mouse capture handle listener here!
+        >
           <div className="space-y-3 p-4 text-xs">
             {selectedEntity ? (
               <Card className="bg-muted shadow-none border-border">
@@ -1387,33 +1423,8 @@ export default function App() {
       <LayoutPanel id="ctn-footer" className="z-20 bg-primary px-3 h-[35px] text-primary-foreground text-xs select-none shrink-0" left={<><Server size={13} className="mr-1.5"/><span className="font-medium">Analysis Subsystems Synced</span></>} center={<div className="font-mono">Active Topology Nodes Rendered: {visibleCount}</div>} right={<div>Cytoscape Pipeline Core</div>} />
 
       {/* OPTIMIZED ULTRA-LIGHTWEIGHT CUSTOM GLOBAL TOOLTIP COMPONENT CONTAINER */}
-      <GlobalTooltip delay={1500} />
+      <Tooltip delay={1500} />
 
     </div>
   );
-}
-
-// Fluid resize handling controller abstraction layout layer
-function useResizable(initialSize: number, minSize: number, maxSize: number, isHorizontal: boolean = true, reverse: boolean = false) {
-  const [size, setSize] = useState(initialSize);
-  const sizeRef = useRef(size);
-  useEffect(() => { sizeRef.current = size; }, [size]);
-  const startResizing = useCallback((mouseDownEvent: any) => {
-    mouseDownEvent.preventDefault();
-    const startSize = sizeRef.current;
-    const startPosition = isHorizontal ? mouseDownEvent.clientX : mouseDownEvent.clientY;
-    const onMouseMove = (mouseMoveEvent: MouseEvent) => {
-      const currentPosition = isHorizontal ? mouseMoveEvent.clientX : mouseMoveEvent.clientY;
-      const delta = currentPosition - startPosition;
-      const newSize = reverse ? startSize - delta : startSize + delta;
-      setSize(Math.min(Math.max(newSize, minSize), maxSize));
-    };
-    const onMouseUp = () => {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-    };
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-  }, [isHorizontal, reverse, minSize, maxSize]);
-  return [size, startResizing, setSize] as const;
 }

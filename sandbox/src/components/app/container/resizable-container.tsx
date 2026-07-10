@@ -1,6 +1,6 @@
 import React from "react";
-import { cn } from "../../lib/utils";
-import { LayoutPanel } from "./layout-panel";
+import { cn } from "../../../lib/utils";
+import { LayoutPanel } from "../layout-panel";
 
 export interface ResizableContainerProps extends React.HTMLAttributes<HTMLDivElement> {
   id: string;
