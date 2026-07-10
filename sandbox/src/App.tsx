@@ -1059,21 +1059,34 @@ export default function App() {
 
         {/* B. SIDEBAR VIEW SELECTOR */}
         {sidebarLeftMode !== 'collapsed' && (
-          <Sidebar id="ctn-sidebar-left" width={sidebarLeftMode === 'minimal' ? '56px' : `${sidebarLeftWidth}px`}>
+        <Sidebar
+            id="ctn-sidebar-left"
+            width={sidebarLeftMode === 'minimal' ? '56px' : `${sidebarLeftWidth}px`}
+            // =========================================================================
+            // INJECT THIS STYLE BLOCK TO BYPASS INTERNAL COMPONENT RESISTANCE
+            // =========================================================================
+            style={{
+            width: sidebarLeftMode === 'minimal' ? '56px' : `${sidebarLeftWidth}px`,
+            // Lock standard internal CSS layout properties for deep nested trees
+            '--sidebar-width': `${sidebarLeftWidth}px`,
+            // Completely kills transition lagging fluidly while dragging handles
+            transition: isDraggingSidebarLeft ? 'none' : undefined
+            } as React.CSSProperties}
+        >
             <SidebarContent id="panel-app-sidebar-left-top">
-              <SidebarGroup><SidebarMenu>{SIDEBAR_MENU_ITEMS.filter(item => !item.bottom).map(renderSidebarMenuItem)}</SidebarMenu></SidebarGroup>
-              <SidebarGroup className="mt-auto pt-2 border-sidebar-border border-t"><SidebarMenu>{SIDEBAR_MENU_ITEMS.filter(item => item.bottom).map(renderSidebarMenuItem)}</SidebarMenu></SidebarGroup>
+                <SidebarGroup><SidebarMenu>{SIDEBAR_MENU_ITEMS.filter(item => !item.bottom).map(renderSidebarMenuItem)}</SidebarMenu></SidebarGroup>
+                <SidebarGroup className="mt-auto pt-2 border-sidebar-border border-t"><SidebarMenu>{SIDEBAR_MENU_ITEMS.filter(item => item.bottom).map(renderSidebarMenuItem)}</SidebarMenu></SidebarGroup>
             </SidebarContent>
             <SidebarFooter id="panel-app-sidebar-left-bottom" className="p-0">
-              <Button id="btn-sidebar-toggle-drawer-mode" variant="ghost" size="sm" onClick={() => setSidebarLeftMode(m => m === 'normal' ? 'minimal' : 'normal')} className={`w-full text-muted-foreground hover:text-foreground ${sidebarLeftMode === 'normal' ? 'justify-end' : 'justify-center'}`} data-tooltip={sidebarLeftMode === 'normal' ? "Collapse sidebar drawer panel" : "Expand sidebar drawer panel"}>
+                <Button id="btn-sidebar-toggle-drawer-mode" variant="ghost" size="sm" onClick={() => setSidebarLeftMode(m => m === 'normal' ? 'minimal' : 'normal')} className={`w-full text-muted-foreground hover:text-foreground ${sidebarLeftMode === 'normal' ? 'justify-end' : 'justify-center'}`} data-tooltip={sidebarLeftMode === 'normal' ? "Collapse sidebar drawer panel" : "Expand sidebar drawer panel"}>
                 {sidebarLeftMode === 'normal' ? <ChevronLeft size={16}/> : <ChevronRight size={16}/>}
-              </Button>
+                </Button>
             </SidebarFooter>
             {sidebarLeftMode === 'normal' && (
-              <div id="ctn-sidebar-left-handle" className="group top-0 right-0 bottom-0 z-20 absolute hover:bg-sidebar-border w-1 cursor-col-resize" onMouseDown={startSidebarLeftResize}>
-              </div>
+                <div id="ctn-sidebar-left-handle" className="group top-0 right-0 bottom-0 z-20 absolute hover:bg-sidebar-border w-1 cursor-col-resize" onMouseDown={startSidebarLeftResize}>
+                </div>
             )}
-          </Sidebar>
+        </Sidebar>
         )}
 
         {/* C. SYSTEM TIERS WORKSPACE MATRIX BLOCK */}
