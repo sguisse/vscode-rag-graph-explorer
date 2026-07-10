@@ -1,47 +1,503 @@
-id="root" (Point d'ancrage principal React dans index.html)
-├── id="ctn-header" (En-tête de l'application / anciennement id="panel-main-header")
-│   ├── id="ctn-header-left" (Logo & Titre de l'extension)
-│   ├── id="ctn-header-center" (Barre de recherche globale / Fil d'ariane)
-│   └── id="ctn-header-right" (Actions globales : Import, Export, Toggle Thème)
-├── id="ctn-main-wrapper" (Conteneur flex central englobant tout le layout)
-│   ├── id="ctn-sidebar-left" (Navigation latérale principale / anciennement id="panel-main-left")
-│   │   ├── id="ctn-sidebar-left-top" (Liens de bascule des panneaux : Home, AST, Cypher...)
-│   │   └── id="ctn-sidebar-left-bottom" (Liens secondaires : Settings, Help)
-│   ├── id="ctn-workspace" (Zone d'affichage centrale / anciennement id="panel-main-center")
-│   │   ├── id="ctn-workspace-top" (En-tête de la vue courante / anciennement id="panel-main-center-title")
-│   │   │   └── id="ctn-workspace-top-center" (Barre d'outils contextuelle / anciennement id="panel-main-center-title-center")
-│   │   │       ├── id="graph-input-callers-depth" <input type="number">
-│   │   │       ├── id="graph-input-callees-depth" <input type="number">
-│   │   │       └── id="ctn-workspace-top-right" (Boutons de filtres, Freeze, Reset layout)
-│   │   └── id="ctn-workspace-left" (Conteneur d'aiguillage dynamique de contenu - activeView)
-│   │       ├── id="pnl-welcome" (Panneau d'accueil / anciennement id="view-welcome")
-│   │       │   ├── id="center" (Conteneur d'alignement de la zone héro)
-│   │       │   ├── id="next-steps" (Grille des prochaines étapes de configuration)
-│   │       │   └── id="docs" (Section d'accès rapide à la documentation)
-│   │       ├── id="pnl-explorer" (Panneau Explorateur de graphe AST / anciennement id="view-explorer")
-│   │       │   ├── id="panel-explorer-graph" (Conteneur qui reçoit l'instance Cytoscape.js)
-│   │       │   └── id="panel-explorer-controls" (Boutons flottants de zoom : +, -, focus, fit)
-│   │       ├── id="pnl-rules" (Panneau de gestion des règles Cypher / anciennement id="view-rules")
-│   │       ├── id="pnl-prompt" (Panneau de configuration du Prompt GraphRAG / anciennement id="view-prompt")
-│   │       ├── id="pnl-terminal" (Panneau Console CLI / Terminal intégré / anciennement id="view-terminal")
-│   │       ├── id="pnl-history" (Panneau d'historique des requêtes / anciennement id="view-history")
-│   │       ├── id="pnl-configuration" (Panneau de configuration globale / anciennement id="view-configuration")
-│   │       └── id="pnl-help" (Panneau d'aide et liste des raccourcis / anciennement id="view-help")
-│   └── id="ctn-sidebar-right" (Inspecteur de détails & Métadonnées / anciennement id="panel-main-right")
-│       ├── id="ctn-sidebar-right-top" (Titre du nœud ou de la relation sélectionnée)
-│       └── id="ctn-sidebar-right-content" (Formulaire ou table d'affichage des propriétés AST/Graph)
-└── id="ctn-footer" (Barre d'état inférieure / anciennement id="panel-main-bottom")
-    ├── id="ctn-footer-left" (Zone d'indicateurs de statut gauche)
-    │   ├── id="ctn-footer-connection" (Statut de synchronisation API / Connexion serveur de graphe)
-    │   └── id="ctn-footer-context" (Branche courante, chemin du workspace ou fichier chargé)
-    ├── id="ctn-footer-center" (Zone centrale pour les messages d'arrière-plan ou indexation RAG)
-    └── id="ctn-footer-right" (Zone de statistiques de performance droite)
-        ├── id="ctn-footer-counters" (Compteur d'éléments : X nœuds, Y relations chargés)
-        └── id="ctn-footer-version" (Version de l'application sandbox)
+<html lang="en" data-theme="light"><head>
+    <meta charset="utf-8">
+<!-- ////////////////////////////////////////////////////////////////////////
+     // @license
+     // This demo file is part of yFiles for HTML 3.1.0.1+demo4.
+     // Copyright (c) 2026 by yWorks GmbH, Vor dem Kreuzberg 28,
+     // 72070 Tuebingen, Germany. All rights reserved.
+     //
+     // yFiles demo files exhibit yFiles for HTML functionalities. Any redistribution
+     // of demo files in source code or binary form, with or without
+     // modification, is not permitted.
+     //
+     // Owners of a valid software license for a yFiles for HTML version that this
+     // demo is shipped with are allowed to use the demo source code as basis
+     // for their own yFiles for HTML powered applications. Use of such programs is
+     // governed by the rights and conditions as set out in the yFiles for HTML
+     // license agreement.
+     //
+     // THIS SOFTWARE IS PROVIDED ''AS IS'' AND ANY EXPRESS OR IMPLIED
+     // WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+     // MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN
+     // NO EVENT SHALL yWorks BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+     // SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+     // TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+     // PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+     // LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+     // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+     // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+     //
+     ////////////////////////////////////////////////////////////////////////-->
 
-[Modales globales injectées à la racine]
-└── id="{id}" (Overlay d'arrière-plan d'une boîte de dialogue, ex: id="import-dialog")
-    └── id="{id}-panel" (Fenêtre conteneur de la modale, ex: id="import-dialog-panel")
-        ├── id="{id}-header" (Section en-tête, ex: id="import-dialog-header")
-        │   └── id="btn-{id}-close" (Bouton de fermeture X, ex: id="btn-import-dialog-close")
-        └── id="{id}-content" (Zone de contenu du formulaire, ex: id="import-dialog-content")
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+
+    <title>UML Editor Demo - yFiles for HTML</title>
+    <script src="../../assets-b177-fff2ee2/demo-app/set-theme.js"></script>
+
+    <style data-yfiles-defaults="" data-yfiles-style="">.yfiles-canvascomponent{min-width:100px;min-height:100px;position:relative;--yfiles-theme-primary:#000000;--yfiles-theme-secondary:#3399ff;--yfiles-theme-background:#ffffff;--yfiles-theme-variant:round-hatched;--yfiles-theme-scale:1;--yfiles-theme-handle-offset:2;--yfiles-theme-indicator-offset:2;--yfiles-scrollbar-size:12px;--yfiles-scrollbar-horizontal-size:var(--yfiles-scrollbar-size);--yfiles-scrollbar-vertical-size:var(--yfiles-scrollbar-size);display:grid !important;grid-template-columns:1fr var(--yfiles-scrollbar-vertical-size);grid-template-rows:1fr var(--yfiles-scrollbar-horizontal-size)}.yfiles-canvascomponent.yfiles-scrollbar-vertical-static .yfiles-rendertreepanel{grid-column-end:2}.yfiles-canvascomponent.yfiles-scrollbar-horizontal-static .yfiles-rendertreepanel{grid-row-end:2}.yfiles-canvascomponent:not(.yfiles-scrollbar-vertical-hidden):not(.yfiles-scrollbar-horizontal-hidden) .yfiles-scrollbar-vertical{grid-row-end:2}.yfiles-canvascomponent:not(.yfiles-scrollbar-vertical-hidden):not(.yfiles-scrollbar-horizontal-hidden) .yfiles-scrollbar-horizontal{grid-column-end:2}.yfiles-canvascomponent.yfiles-scrollbar-vertical-hidden .yfiles-scrollbar-vertical,.yfiles-canvascomponent.yfiles-scrollbar-horizontal-hidden .yfiles-scrollbar-horizontal{display:none !important}.yfiles-canvascomponent.yfiles-scrollbar-vertical-hidden .yfiles-scrollbar-corner,.yfiles-canvascomponent.yfiles-scrollbar-horizontal-hidden .yfiles-scrollbar-corner{display:none !important}.yfiles-rendertreepanel{grid-area:1 /1 /3 /3}.yfiles-scrollbar{position:absolute;width:100%;height:100%;direction:ltr;display:flex;justify-content:space-between;cursor:default}.yfiles-scrollbar-vertical{flex-direction:column;grid-area:1 /2 /3 /3}.yfiles-scrollbar-horizontal{grid-area:2 /1 /3 /3}.yfiles-scrollbar-range{flex-grow:1;display:flex;align-items:center}.yfiles-scrollbar-vertical .yfiles-scrollbar-range{flex-direction:column}.yfiles-scrollbar-vertical-dynamic .yfiles-scrollbar-disabled .yfiles-scrollbar-vertical.yfiles-scrollbar-slider,.yfiles-scrollbar-horizontal-dynamic .yfiles-scrollbar-disabled .yfiles-scrollbar-horizontal.yfiles-scrollbar-slider,.yfiles-scrollbar-vertical-dynamic .yfiles-scrollbar-vertical.yfiles-scrollbar-disabled,.yfiles-scrollbar-horizontal-dynamic .yfiles-scrollbar-horizontal.yfiles-scrollbar-disabled{display:none !important}.yfiles-scrollbar-slider{position:absolute;border:none;background:#cccccc;border-radius:0;overflow:hidden;box-sizing:border-box}.yfiles-scrollbar-slider:hover{background:#bbb}.yfiles-scrollbar-slider.yfiles-scrollbar-slider-dragging{background:#9b9b9b}.yfiles-scrollbar-vertical .yfiles-scrollbar-slider{width:calc(100% - 4px);height:var(--yfiles-scrollbar-length);margin-top:var(--yfiles-scrollbar-start)}.yfiles-scrollbar-horizontal .yfiles-scrollbar-slider{width:var(--yfiles-scrollbar-length);height:calc(100% - 4px);margin-left:var(--yfiles-scrollbar-start)}.yfiles-scrollbar .yfiles-button{flex-grow:0;flex-shrink:0;border:none;border-radius:0;background-position-x:center;background-position-y:center;background-size:contain;background-repeat:no-repeat;overflow:hidden;box-sizing:border-box}.yfiles-scrollbar .yfiles-button.yfiles-button-left{background-image:url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2215%22%20height%3D%2215%22%3E%3Cpath%20d%3D%22M5%207.5%20L10%204%20L10%2011%20Z%22/%3E%3C/svg%3E');flex-basis:var(--yfiles-scrollbar-horizontal-size)}.yfiles-scrollbar .yfiles-button.yfiles-button-right{background-image:url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2215%22%20height%3D%2215%22%3E%3Cpath%20d%3D%22M5%204%20L10%207.5%20L5%2011%20Z%22/%3E%3C/svg%3E');flex-basis:var(--yfiles-scrollbar-horizontal-size)}.yfiles-scrollbar .yfiles-button.yfiles-button-up{background-image:url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2215%22%20height%3D%2215%22%3E%3Cpath%20d%3D%22M4%2010%20L7.5%205%20L11%2010%20Z%22/%3E%3C/svg%3E');flex-basis:var(--yfiles-scrollbar-vertical-size)}.yfiles-scrollbar .yfiles-button.yfiles-button-down{background-image:url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2215%22%20height%3D%2215%22%3E%3Cpath%20d%3D%22M4%205%20L11%205%20L7.5%2010%20Z%22/%3E%3C/svg%3E');flex-basis:var(--yfiles-scrollbar-vertical-size)}.yfiles-scrollbar:not(.yfiles-scrollbar-disabled) .yfiles-button:not(.yfiles-button-disabled):hover{background-color:#bbb}.yfiles-scrollbar .yfiles-button.yfiles-button-disabled,.yfiles-scrollbar-disabled .yfiles-button{opacity:0.3}.yfiles-scrollbar:not(.yfiles-scrollbar-disabled) .yfiles-button:not(.yfiles-button-disabled).yfiles-scrollbar-button-down{background-color:#9b9b9b}.yfiles-scrollbar-corner{grid-area:2 /2 /3 /3;cursor:default}.yfiles-scrollbar-vertical-static .yfiles-scrollbar,.yfiles-scrollbar-horizontal-static .yfiles-scrollbar,.yfiles-scrollbar-vertical-dynamic .yfiles-scrollbar,.yfiles-scrollbar-horizontal-dynamic .yfiles-scrollbar{opacity:1;background:transparent;border-radius:6px}.yfiles-scrollbar-vertical-static .yfiles-scrollbar:is(:hover,:active),.yfiles-scrollbar-horizontal-static .yfiles-scrollbar:is(:hover,:active),.yfiles-scrollbar-vertical-dynamic .yfiles-scrollbar:is(:hover,:active),.yfiles-scrollbar-horizontal-dynamic .yfiles-scrollbar:is(:hover,:active){background:rgba(238, 238, 238, 0.85)}.yfiles-scrollbar-vertical-static .yfiles-scrollbar-vertical .yfiles-scrollbar-slider,.yfiles-scrollbar-horizontal-static .yfiles-scrollbar-horizontal .yfiles-scrollbar-slider,.yfiles-scrollbar-vertical-dynamic .yfiles-scrollbar-vertical .yfiles-scrollbar-slider,.yfiles-scrollbar-horizontal-dynamic .yfiles-scrollbar-horizontal .yfiles-scrollbar-slider{border-radius:4px;background:#666666}.yfiles-scrollbar-vertical-static .yfiles-scrollbar-vertical .yfiles-scrollbar-slider:hover,.yfiles-scrollbar-horizontal-static .yfiles-scrollbar-horizontal .yfiles-scrollbar-slider:hover,.yfiles-scrollbar-vertical-dynamic .yfiles-scrollbar-vertical .yfiles-scrollbar-slider:hover,.yfiles-scrollbar-horizontal-dynamic .yfiles-scrollbar-horizontal .yfiles-scrollbar-slider:hover{background:#888}.yfiles-scrollbar-vertical-static .yfiles-scrollbar-vertical .yfiles-scrollbar-slider.yfiles-scrollbar-slider-dragging,.yfiles-scrollbar-horizontal-static .yfiles-scrollbar-horizontal .yfiles-scrollbar-slider.yfiles-scrollbar-slider-dragging,.yfiles-scrollbar-vertical-dynamic .yfiles-scrollbar-vertical .yfiles-scrollbar-slider.yfiles-scrollbar-slider-dragging,.yfiles-scrollbar-horizontal-dynamic .yfiles-scrollbar-horizontal .yfiles-scrollbar-slider.yfiles-scrollbar-slider-dragging{background:#aaa}.yfiles-scrollbar-vertical-static .yfiles-scrollbar-vertical .yfiles-button,.yfiles-scrollbar-horizontal-static .yfiles-scrollbar-horizontal .yfiles-button,.yfiles-scrollbar-vertical-dynamic .yfiles-scrollbar-vertical .yfiles-button,.yfiles-scrollbar-horizontal-dynamic .yfiles-scrollbar-horizontal .yfiles-button{opacity:0.6;background-size:16px}.yfiles-scrollbar-vertical-static .yfiles-scrollbar-vertical.yfiles-scrollbar-inactive:not(:hover,:active),.yfiles-scrollbar-horizontal-static .yfiles-scrollbar-horizontal.yfiles-scrollbar-inactive:not(:hover,:active),.yfiles-scrollbar-vertical-dynamic .yfiles-scrollbar-vertical.yfiles-scrollbar-inactive:not(:hover,:active),.yfiles-scrollbar-horizontal-dynamic .yfiles-scrollbar-horizontal.yfiles-scrollbar-inactive:not(:hover,:active){transition-property:opacity, width, background;transition-duration:0.3s, 0.3s, 0.2s;transition-delay:1s;transition-timing-function:ease-in}.yfiles-scrollbar-vertical-dynamic .yfiles-scrollbar-vertical.yfiles-scrollbar-inactive:not(:hover,:active),.yfiles-scrollbar-horizontal-dynamic .yfiles-scrollbar-horizontal.yfiles-scrollbar-inactive:not(:hover,:active){opacity:0}.yfiles-scrollbar-vertical-static .yfiles-scrollbar-vertical:not(:hover,:active),.yfiles-scrollbar-horizontal-static .yfiles-scrollbar-horizontal:not(:hover,:active),.yfiles-scrollbar-vertical-dynamic .yfiles-scrollbar-vertical:not(:hover,:active),.yfiles-scrollbar-horizontal-dynamic .yfiles-scrollbar-horizontal:not(:hover,:active){transition:background 0.3s ease-in 1s}.yfiles-scrollbar-vertical-static .yfiles-scrollbar-vertical:not(:hover,:active) .yfiles-button,.yfiles-scrollbar-horizontal-static .yfiles-scrollbar-horizontal:not(:hover,:active) .yfiles-button,.yfiles-scrollbar-vertical-dynamic .yfiles-scrollbar-vertical:not(:hover,:active) .yfiles-button,.yfiles-scrollbar-horizontal-dynamic .yfiles-scrollbar-horizontal:not(:hover,:active) .yfiles-button{opacity:0;transition:opacity 0.3s ease-in 1s}.yfiles-scrollbar-vertical-static .yfiles-scrollbar-vertical:not(:hover,:active) .yfiles-scrollbar-slider,.yfiles-scrollbar-horizontal-static .yfiles-scrollbar-horizontal:not(:hover,:active) .yfiles-scrollbar-slider,.yfiles-scrollbar-vertical-dynamic .yfiles-scrollbar-vertical:not(:hover,:active) .yfiles-scrollbar-slider,.yfiles-scrollbar-horizontal-dynamic .yfiles-scrollbar-horizontal:not(:hover,:active) .yfiles-scrollbar-slider{transition-duration:0.3s;transition-timing-function:ease-in;transition-delay:1s}.yfiles-scrollbar-vertical-static .yfiles-scrollbar-vertical:not(:hover,:active) .yfiles-scrollbar-slider,.yfiles-scrollbar-vertical-dynamic .yfiles-scrollbar-vertical:not(:hover,:active) .yfiles-scrollbar-slider{transition-property:width;width:calc(100% - 8px)}.yfiles-scrollbar-horizontal-static .yfiles-scrollbar-horizontal:not(:hover,:active) .yfiles-scrollbar-slider,.yfiles-scrollbar-horizontal-dynamic .yfiles-scrollbar-horizontal:not(:hover,:active) .yfiles-scrollbar-slider{transition-property:height;height:calc(100% - 8px)}.yfiles-popover__container{position:absolute;overflow:visible;z-index:1070;border-style:none;background-color:transparent;box-sizing:content-box;margin:0;padding:0;outline:none;width:max-content}.yfiles-popover__container-entering{transition:opacity 0.2s ease-in}.yfiles-popover__container-enter{opacity:0}.yfiles-popover__container-enter-to{opacity:1}.yfiles-popover__container-leaving{transition:opacity 0.2s ease-out}.yfiles-popover__container-leave{opacity:1}.yfiles-popover__container-leave-to{opacity:0}.yfiles-tooltip{font-size:10pt;background-color:white;color:black;border:1px solid black;padding:6px 8px;overflow:visible;box-sizing:content-box;line-height:1}.yfiles-context-menu{display:flex;flex-direction:column;background:#fff;border:1px solid #d5d7d8;border-radius:8px;box-shadow:0 5px 5px -3px rgba(0, 0, 0, 0.3);user-select:none}.yfiles-context-menu:focus{outline:none}.yfiles-context-menu__item{margin:3px;padding:0;border:none;border-radius:5px;background-color:white;color:black;cursor:pointer;white-space:nowrap}.yfiles-context-menu__item.text{padding:0.4em 0.5em;text-align:left}.yfiles-context-menu__item.icon{background-repeat:no-repeat;background-position:0.2em center;background-size:1.1em 1.1em;padding-left:1.5em;min-height:1.5em}.yfiles-context-menu__item.icon.text{background-position:0.4em center;padding-left:2.1em;padding-right:1.0em}.yfiles-context-menu__item:hover{background-color:#f5f5f5 !important}.yfiles-context-menu__item[disabled]{pointer-events:none;opacity:0.5}.yfiles-context-menu__item:focus{outline:none;background-color:#f5f5f5}.yfiles-context-menu__separator{width:100%;height:1px;background-color:#ececec;min-width:100px}.yfiles-context-menu-entering{transition:opacity 0.2s ease-in}.yfiles-context-menu-enter{opacity:0}.yfiles-context-menu-enter-to{opacity:1}.yfiles-context-menu-leaving{transition:opacity 0.2s ease-out}.yfiles-context-menu-leave{opacity:1}.yfiles-context-menu-leave-to{opacity:0}.yfiles-popover__container::backdrop{backdrop-filter:none;background:transparent;opacity:0;border-radius:0;box-shadow:none;animation:none;transition:none}.yfiles-labeleditbox-container{border:1px solid black;background-color:white;padding:2px}.yfiles-labeleditbox-container-enter{opacity:0}.yfiles-labeleditbox-container-enter-to{opacity:1}.yfiles-labeleditbox-container-entering{transition:opacity 0.1s ease-in}.yfiles-labeleditbox-container-leave{opacity:1}.yfiles-labeleditbox-container-leave-to{opacity:0}.yfiles-labeleditbox-container-leaving{transition:opacity 0.1s ease-out}.yfiles-labeleditbox{color:black;background-color:transparent;border:0 none;padding:0;line-height:normal;font-family:sans-serif;font-size:10pt;font-stretch:normal;font-style:normal;font-variant:normal;font-weight:400;text-decoration:none;text-transform:none;letter-spacing:normal;word-spacing:0}.yfiles-collapsebutton{cursor:pointer}.yfiles-bend-template{fill:var(--yfiles-theme-primary)}.yfiles-port-candidate-template{transform:scale(var(--yfiles-theme-scale));stroke:var(--yfiles-theme-background);stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:10}.yfiles-port-candidate-template.yfiles-valid{fill:#61a044}.yfiles-port-candidate-template.yfiles-invalid{fill:#969696}.yfiles-stripe-resize-template,.yfiles-stripe-selection-template,.yfiles-stripe-drag-template{fill:var(--yfiles-theme-secondary);fill-opacity:0.25;stroke:var(--yfiles-theme-secondary);stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:10}.yfiles-label-position-highlight-template,.yfiles-label-position-candidate-template{stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:10}.yfiles-label-position-highlight-template{stroke:var(--yfiles-theme-secondary)}.yfiles-label-position-candidate-template{stroke:var(--yfiles-theme-primary)}.yfiles-handle-template{transform:scale(var(--yfiles-theme-scale));stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:10}.yfiles-handle-resize-template{fill:var(--yfiles-theme-background);stroke:var(--yfiles-theme-primary)}.yfiles-handle-move-template{fill:var(--yfiles-theme-primary);stroke:var(--yfiles-theme-background)}.yfiles-handle-move-variant2-template{fill:var(--yfiles-theme-primary);stroke:var(--yfiles-theme-background)}.yfiles-handle-move-variant3-template{fill:var(--yfiles-theme-background);stroke:var(--yfiles-theme-primary)}.yfiles-handle-custom1-template{fill:var(--yfiles-theme-background);stroke:var(--yfiles-theme-primary)}.yfiles-handle-custom2-template{fill:var(--yfiles-theme-background);stroke:var(--yfiles-theme-primary)}.yfiles-handle-custom3-template{fill:var(--yfiles-theme-primary);stroke:var(--yfiles-theme-background)}.yfiles-handle-custom4-template{fill:var(--yfiles-theme-primary);stroke:var(--yfiles-theme-background)}.yfiles-handle-custom5-template{fill:var(--yfiles-theme-background);stroke:var(--yfiles-theme-primary)}.yfiles-handle-custom6-template{fill:var(--yfiles-theme-background);stroke:var(--yfiles-theme-primary)}.yfiles-marquee-rect-template,.yfiles-overview-viewport-template{fill:var(--yfiles-theme-secondary);fill-opacity:0.25;stroke:var(--yfiles-theme-secondary);stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:10}.yfiles-lasso-template{fill:var(--yfiles-theme-secondary);fill-opacity:0.25;stroke:var(--yfiles-theme-secondary);stroke-width:1;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:10}.yfiles-label-focus-template,.yfiles-node-focus-template{fill:none;stroke:var(--yfiles-theme-primary);stroke-width:2;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:10;stroke-dasharray:4,4;stroke-dashoffset:3}.yfiles-port-selection-template{fill:var(--yfiles-theme-primary);stroke:var(--yfiles-theme-background);stroke-width:1;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:10}
+    .yfiles-popover__container[popover] {
+      transition: opacity 200ms ease, display 200ms allow-discrete;
+      opacity: 0;
+      &:popover-open {
+        opacity: 1;
+        @starting-style {
+          & {
+            opacity: 0;
+          }
+        }
+      }
+    }</style><style>
+      #splash-screen {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: var(--splash-bg-color);
+        color: var(--splash-text-color);
+        z-index: 99999;
+        transition:
+          opacity 0.15s ease-in-out,
+          visibility 0.15s;
+      }
+
+      :root {
+        /* Brand / glow color for light mode */
+        --splash-glow-color: oklch(0.55 0.12 215);
+        --splash-glow-color-transparent-90: oklch(0.55 0.12 215 / 0.9);
+        --splash-glow-color-transparent-85: oklch(0.55 0.12 215 / 0.85);
+        --splash-glow-color-transparent-35: oklch(0.55 0.12 215 / 0.35);
+        --splash-glow-color-transparent-0: oklch(0.55 0.12 215 / 0);
+        --splash-bg-color: #ffffff;
+        --splash-text-color: var(--splash-glow-color);
+      }
+
+      :root[data-theme='dark'] {
+        --splash-bg-color: oklch(0.2775 0.0279 242.63);
+        --splash-text-color: #ffffff;
+        --splash-glow-color: oklch(0.75 0.135 217);
+        --splash-glow-color-transparent-90: oklch(0.75 0.135 217 / 0.9);
+        --splash-glow-color-transparent-85: oklch(0.75 0.135 217 / 0.85);
+        --splash-glow-color-transparent-35: oklch(0.75 0.135 217 / 0.35);
+        --splash-glow-color-transparent-0: oklch(0.75 0.135 217 / 0);
+      }
+
+      .splash-glow-pulse {
+        position: relative;
+        width: 180px;
+        height: 180px;
+        display: inline-block;
+        isolation: isolate;
+        opacity: 0;
+        animation: splash-content-fade-in 0.4s ease-out 0.3s forwards;
+      }
+      @keyframes splash-content-fade-in {
+        from {
+          opacity: 0;
+          transform: scale(0.95);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      .splash-glow-pulse svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+        position: relative;
+        z-index: 1;
+        filter: drop-shadow(0 0 8px var(--splash-glow-color-transparent-85))
+          drop-shadow(0 0 24px var(--splash-glow-color-transparent-35));
+      }
+
+      .splash-glow-pulse::before {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 200px;
+        height: 200px;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle,
+          var(--splash-bg-color) 0%,
+          var(--splash-bg-color) 42%,
+          var(--splash-glow-color-transparent-90) 58%,
+          var(--splash-glow-color-transparent-0) 78%
+        );
+        transform: translate(-50%, -50%) scale(1);
+        pointer-events: none;
+        filter: blur(14px);
+        opacity: 0.75;
+        animation: radiate 1.3s ease-out infinite;
+        z-index: 0;
+      }
+
+      @keyframes radiate {
+        0% {
+          transform: translate(-50%, -50%) scale(1);
+          opacity: 0.75;
+          filter: blur(14px);
+        }
+        55% {
+          opacity: 0.2;
+        }
+        100% {
+          transform: translate(-50%, -50%) scale(2.15);
+          opacity: 0;
+          filter: blur(26px);
+        }
+      }
+    </style>
+
+
+
+    <style>
+      .uml-button {
+        cursor: pointer;
+      }
+      .uml-button:not(.disabled):hover path,
+      polygon.uml-button:not(.disabled):hover {
+        fill: #eee;
+      }
+      .context-button {
+        transition: opacity 0.1s ease-in-out;
+      }
+      .context-button g {
+        cursor: pointer;
+      }
+      .context-button g ellipse {
+        transition: fill 0.1s ease-in-out;
+      }
+      .context-button g:hover ellipse {
+        fill: #eceff1;
+      }
+      .context-button .interface-toggle.toggled rect {
+        fill: seagreen;
+      }
+      .context-button .interface-toggle.toggled text {
+        fill: white;
+      }
+      .context-button .interface-toggle:hover rect {
+        opacity: 0.5;
+      }
+      .context-button .abstract-toggle.toggled rect {
+        fill: crimson;
+      }
+      .context-button .abstract-toggle.toggled text {
+        fill: white;
+      }
+      .context-button .abstract-toggle:hover rect {
+        opacity: 0.5;
+      }
+    </style>
+    <script async="" type="module" crossorigin="" src="../../assets-b177-fff2ee2/showcase/uml-ab4JcTFW.js"></script>
+    <link rel="modulepreload" crossorigin="" href="../../assets-b177-fff2ee2/chunk-DnnKGVxx.js">
+    <link rel="modulepreload" crossorigin="" href="../../assets-b177-fff2ee2/modulepreload-polyfill-tSVIwrEV.js">
+    <link rel="modulepreload" crossorigin="" href="../../assets-b177-fff2ee2/license-DMRhHHX-.js">
+    <link rel="modulepreload" crossorigin="" href="../../assets-b177-fff2ee2/ButtonInputMode-DL8PlCtE.js">
+    <link rel="modulepreload" crossorigin="" href="../../assets-b177-fff2ee2/initialize-ui-Do9zziFv.js">
+    <link rel="modulepreload" crossorigin="" href="../../assets-b177-fff2ee2/finish-loading-mmB045Vs.js">
+    <link rel="modulepreload" crossorigin="" href="../../assets-b177-fff2ee2/file-support-DavbwSrS.js">
+    <link rel="modulepreload" crossorigin="" href="../../assets-b177-fff2ee2/graphml-support-BMarpQKP.js">
+    <link rel="modulepreload" crossorigin="" href="../../assets-b177-fff2ee2/BrowserDetection-B-m9ddIf.js">
+    <link rel="modulepreload" crossorigin="" href="../../assets-b177-fff2ee2/configure-two-pointer-panning-BEKrL-n8.js">
+    <link rel="stylesheet" crossorigin="" href="../../assets-b177-fff2ee2/initialize-ui-Bo0r7jKR.css">
+  <meta property="og:title" content="yFiles for HTML Demo Applications - UML Editor"><meta property="og:description" content="An editor for UML diagrams with a tailored UML node style, automatic layout, and a quick way to create new edges with the mouse or touch."><meta property="og:type" content="website"><meta property="og:url" content="https://live.yworks.com/demos/showcase/uml/"><meta property="og:site_name" content="yWorks, the diagramming experts"><meta property="og:image" content="https://www.yworks.com/resources/social-media/demos/tc-uml-editor.png"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image:alt" content="yFiles for HTML - Diagramming in the browser"><script async="" src="../../assets-b177-fff2ee2/head-script.js"></script></head>
+  <body class="demo-modern loaded description-panel-hidden">
+
+
+    <div class="header">
+      <span class="breadcrumb-wrapper yFiles-link">
+        <a href="https://www.yfiles.com/the-yfiles-sdk/web/yfiles-for-html" class="y-logo" target="_blank" title="yFiles Product Page"></a>
+        <span class="material-symbols-outlined">chevron_right</span>
+      </span>
+
+      <a href="../../index.html" class="breadcrumb-wrapper demo-overview" title="Demos Overview Page">Demos</a>
+      <span class="material-symbols-outlined demo-overview">chevron_right</span>
+
+      <span class="breadcrumb-wrapper demo-name"> UML Editor </span>
+
+      <button class="theme-toggle" aria-label="Toggle theme" title="Toggle theme">dark_mode</button>
+      <button class="fullscreen-button" aria-label="Full screen" title="Full screen">
+        fullscreen
+      </button>
+      <button class="burger-menu-button" aria-label="Menu">menu</button>
+    </div>
+
+    <div class="navbar rail rail-collapsed">
+      <nav>
+        <button class="guided-tour guided-tour-trigger hidden" aria-label="Walkthrough" title="Get a walkthrough of the demo">
+          <span class="icon">tooltip_2</span>
+          <span class="label">Walkthrough</span>
+        </button>
+
+        <a href="https://github.com/yWorks/yfiles-for-html-demos/tree/master/demos/showcase/uml/" target="_blank" class="github-link" title="View the source code on GitHub">
+          <span class="icon">
+            <svg role="img" class="svg-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"></path>
+            </svg>
+          </span>
+          <span class="label">GitHub</span>
+        </a>
+
+        <button class="linked-demos" aria-label="More demos" title="See a list of more yFiles demos" popovertarget="" popovertargetaction="toggle">
+          <span class="icon">browse</span>
+          <span class="label">Discover more</span>
+        </button>
+
+        <span class="spacer"></span>
+        <button class="live-demo" aria-label="Live demo" title="Book an appointment for a free live demo" popovertarget="" popovertargetaction="toggle">
+          <span class="icon">headset_mic</span>
+          <span class="label">Live demo</span>
+        </button>
+
+        <a class="try-yfiles" aria-label="Try yFiles" href="https://my.yworks.com/signup" target="_blank" title="Download yFiles from the yWorks Customer Center">
+          <span class="icon">download</span>
+          <span class="label">Try yFiles</span>
+        </a>
+      </nav>
+
+      <a aria-label="Legal Disclosure" style="margin-top: auto" href="https://www.yworks.com/company/legal/imprint" target="_blank" title="Open the Legal Disclosure page">
+        <span class="label">Legal Disclosure</span>
+      </a>
+      <a aria-label="Privacy Policy" href="https://www.yworks.com/company/legal/privacy" target="_blank" title="Open the Privacy Policy page">
+        <span class="label">Privacy Policy</span>
+      </a>
+    </div>
+    <dialog id="burger-menu" class="burger-menu" aria-label="Navigation menu">
+      <!-- Main Menu Section -->
+      <section class="active" data-level="main" aria-label="Main navigation">
+        <header>
+          <div class="breadcrumbs">
+            <a href="https://www.yfiles.com/the-yfiles-sdk/web/yfiles-for-html" class="breadcrumb-link" target="_blank">yFiles for HTML</a>
+            <span class="material-symbols-outlined breadcrumb-icon">chevron_right</span>
+            <a href="../../index.html" class="breadcrumb-link">Demos</a>
+            <span class="material-symbols-outlined breadcrumb-icon">chevron_right</span>
+
+            <span>UML Editor</span>
+          </div>
+          <button class="icon-button close" aria-label="Close menu">
+            <span aria-hidden="true">close</span>
+          </button>
+        </header>
+        <main>
+          <nav class="items" aria-label="Main menu">
+            <button class="item" id="open-description">Description</button>
+
+            <button class="item" data-navigate="linked-demos" aria-describedby="linked-demos-hint">
+              Discover more
+            </button>
+
+            <span id="linked-demos-hint" class="sr-only">Navigate to a submenu of links to more demos</span>
+            <button class="item guided-tour-trigger hidden" id="start-tour">Walkthrough</button>
+
+            <a class="link github-link" href="https://github.com/yWorks/yfiles-for-html-demos/tree/master/demos/showcase/uml/" target="_blank">
+              <span>GitHub</span>
+              <span class="icon"> open_in_new</span>
+            </a>
+            <hr class="horizontal-separator" aria-hidden="true">
+
+            <button class="item" id="toggle-theme">Switch theme</button>
+            <a href="https://www.yfiles.com/the-yfiles-sdk" class="link secondary" target="_blank">
+              <span>About yFiles</span>
+              <span class="icon">open_in_new</span>
+            </a>
+
+            <button class="item primary" data-navigate="live-demo" aria-describedby="live-demo-hint">
+              Book a live demo
+            </button>
+            <span id="live-demo-hint" class="sr-only">Navigate to live demo submenu</span>
+            <a href="https://my.yworks.com/signup" class="link primary" target="_blank">
+              <span>Try yFiles</span>
+              <span class="icon">open_in_new</span>
+            </a>
+          </nav>
+        </main>
+
+        <footer class="footer">
+          <a href="https://www.yworks.com/company/legal/imprint" target="_blank">Legal Disclosure</a>
+          <span class="vertical-separator" aria-hidden="true"></span>
+          <a href="https://www.yworks.com/company/legal/privacy" target="_blank">Privacy Policy</a>
+        </footer>
+      </section>
+
+      <!-- Linked Demos Submenu Section -->
+      <section data-level="linked-demos" aria-label="More demos navigation">
+        <header>
+          <button class="icon-button back" aria-label="Back to main menu" data-navigate="main">
+            <span aria-hidden="true">arrow_back</span>
+          </button>
+          <span class="headline">Discover more</span>
+          <button class="icon-button close" aria-label="Close menu">
+            <span aria-hidden="true">close</span>
+          </button>
+        </header>
+        <main>
+          <nav class="items" aria-label="Linked demos menu">
+            <div class="linked-demos-container">
+              <a href="../../showcase/supply-chain/" class="demo">Supply Chain Demo</a>
+
+              <a href="../../showcase/mindmap/" class="demo">Mindmap Editor Demo</a>
+
+              <a href="../../showcase/knowledge-graphs/" class="demo">Interactive Knowledge Graph Demo</a>
+
+              <a href="../../showcase/neighborhood/" class="demo">Neighborhood View Demo</a>
+
+              <a href="../../showcase/orgchart/" class="demo">Organization Chart Demo</a>
+            </div>
+
+            <a href="../../index.html" class="demo-overview-link" style="font-weight: 600">
+              Demos Overview
+            </a>
+          </nav>
+        </main>
+      </section>
+      <!-- Live Demo Submenu Section -->
+      <section data-level="live-demo" aria-label="Live demo navigation">
+        <header>
+          <button class="icon-button back" aria-label="Back to main menu" data-navigate="main">
+            <span aria-hidden="true">arrow_back</span>
+          </button>
+          <span class="headline">Book a live Demo</span>
+          <button class="icon-button close" aria-label="Close menu">
+            <span aria-hidden="true">close</span>
+          </button>
+        </header>
+        <main>
+          <div class="live-demo-container">
+            <h2 class="bold highlight">Live Demo — yFiles in Action</h2>
+            <p class="highlight">30–45 min | Online | No install required</p>
+            <p class="bold">For Developers, Product Mangers &amp; Executives</p>
+            <ul class="compact">
+              <li>Interactive graph visualization in real time</li>
+              <li>Integration example</li>
+              <li>Live Q&amp;A and next step recommendations</li>
+            </ul>
+            <p class="bold">30–45 minutes | 1:1 or team session</p>
+            <div class="live-demo-separator"></div>
+            <div class="button-container">
+              <a class="btn bold" href="https://www.yfiles.com/book-live-demo?demo-id=uml-editor&amp;demo-name=UML Editor" target="_blank">Book a free live demo</a>
+            </div>
+          </div>
+        </main>
+      </section>
+    </dialog>
+
+    <div id="linked-demos-popover" popover="auto" class="rail-popover dialog text-content">
+      <div class="linked-demos-container">
+        <a href="../../showcase/supply-chain/" class="demo">Supply Chain Demo</a>
+
+        <a href="../../showcase/mindmap/" class="demo">Mindmap Editor Demo</a>
+
+        <a href="../../showcase/knowledge-graphs/" class="demo">Interactive Knowledge Graph Demo</a>
+
+        <a href="../../showcase/neighborhood/" class="demo">Neighborhood View Demo</a>
+
+        <a href="../../showcase/orgchart/" class="demo">Organization Chart Demo</a>
+      </div>
+
+      <a href="../../index.html" class="demo-overview-link" style="font-weight: 600">
+        Demos Overview
+      </a>
+    </div>
+
+    <div id="live-demo-popover" popover="auto" class="rail-popover dialog text-content">
+      <div class="live-demo-container">
+        <h2 class="bold highlight">Live Demo — yFiles in Action</h2>
+        <p class="highlight">30–45 min | Online | No install required</p>
+        <p class="bold">For Developers, Product Mangers &amp; Executives</p>
+        <ul class="compact">
+          <li>Interactive graph visualization in real time</li>
+          <li>Integration example</li>
+          <li>Live Q&amp;A and next step recommendations</li>
+        </ul>
+        <p class="bold">30–45 minutes | 1:1 or team session</p>
+        <div class="live-demo-separator"></div>
+        <div class="button-container">
+          <a class="btn bold" href="https://www.yfiles.com/book-live-demo?demo-id=uml-editor&amp;demo-name=UML Editor" target="_blank">Book a free live demo</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-container">
+      <div class="graph-panel">
+        <div class="toolbar" data-tip-id="toolbar"><div class="toolbar-overflow-container"></div><button class="toolbar-overflow-button" title="More..." style="display: none;">more_horiz</button>
+          <button data-command="DECREASE_ZOOM" id="zoom-out-button" title="Decrease zoom" data-icon="zoom_out" data-command-registered="">
+            zoom_out
+          </button>
+          <button data-command="INCREASE_ZOOM" id="zoom-in-button" title="Increase zoom" data-icon="zoom_in" data-command-registered="">zoom_in</button>
+          <button data-command="FIT_GRAPH_BOUNDS" id="fit-graph-button" title="Fit content" data-icon="zoom_out_map" data-command-registered="">
+            zoom_out_map
+          </button>
+
+          <span class="separator"></span>
+
+          <button data-command="NEW" data-icon="new_window" title="New empty graph">new_window</button>
+          <button id="open-file-button" title="Open a GraphML file" class="icon" data-icon="file_open">file_open</button>
+          <button id="save-button" title="Save a GraphML file" class="icon" data-icon="save">save</button>
+
+          <span class="separator"></span>
+
+          <button data-command="CUT" data-icon="cut" data-command-registered="" title="Cut" disabled="disabled">cut</button>
+          <button data-command="COPY" data-icon="content_copy" data-command-registered="" title="Copy" disabled="disabled">content_copy</button>
+          <button data-command="PASTE" data-icon="content_paste" data-command-registered="" title="Paste" disabled="disabled">content_paste</button>
+          <button data-command="DELETE" data-icon="delete_forever" data-command-registered="" title="Delete" disabled="disabled">delete_forever</button>
+
+          <span class="separator"></span>
+
+          <button data-command="UNDO" data-icon="undo" data-command-registered="" title="Undo" disabled="disabled">undo</button>
+          <button data-command="REDO" data-icon="redo" data-command-registered="" title="Redo" disabled="disabled">redo</button>
+
+          <span class="separator"></span>
+
+          <button id="layout" title="Run Layout" class="labeled" data-icon="play_arrow
+            Layout">
+            <span class="material-symbols-outlined">play_arrow</span>
+            Layout
+          </button>
+        </div>
+        <div id="graphComponent" class="yfiles-canvascomponent yfiles-scrollbar-horizontal-dynamic yfiles-scrollbar-vertical-dynamic" style="overflow: hidden; touch-action: none; box-sizing: content-box; line-height: 1; outline: 0px; -webkit-tap-highlight-color: rgba(0, 0, 0, 0); user-select: none;"><div class="yfiles-rendertreepanel" tabindex="0" style="outline: 0px; -webkit-tap-highlight-color: rgba(0, 0, 0, 0); position: absolute; inset: 0px; overflow: hidden;"><div style="position: absolute; top: 0px; left: 0px; height: 100%; width: 100%; pointer-events: none;"><svg class="yfiles-canvascomponent-svg" style="position: absolute; top: 0px; left: 0px; height: 100%; width: 100%; display: block; pointer-events: none; outline: 0px; -webkit-tap-highlight-color: rgba(0, 0, 0, 0);"><g transform="translate(702.806 211.5)" image-rendering="auto" shape-rendering="auto" style="pointer-events: visiblepainted;"><g style="box-sizing: initial;"><g><path fill="none" stroke="rgb(0,0,0)" d="M 273.77817468419244,307 L 253.75,307" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"></path><g></g><use transform="matrix(-1 0 0 -1 282.778 307)" href="#ygc1_5"></use></g><g><path fill="none" stroke="rgb(0,0,0)" d="M 387.15490127648604,175.97182531580756 L 387.15490127648604,191 L 346.25,191 L 346.25,224" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"></path><g></g><use transform="matrix(0 1 -1 0 387.155 166.972)" href="#ygc1_2"></use></g><g><path fill="none" stroke="rgb(0,0,0)" d="M 475.33319396160914,175.97182531580756 L 475.33319396160914,191 L 516.2380952380952,191 L 516.2380952380952,216" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"></path><g></g><use transform="matrix(0 1 -1 0 475.333 166.972)" href="#ygc1_1"></use></g><g><path fill="none" stroke="rgb(0,0,0)" d="M 603.6972371886741,307 L 623.7255229607106,307" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"></path><g></g><use transform="translate(594.697 307)" href="#ygc1_6"></use></g><g><path fill="none" stroke="rgb(0,0,0)" d="M 191.25,423.4240006242196 L 191.25,439 L 423.75,439 L 423.75,464" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"></path><g></g><use transform="matrix(0 1 -1 0 191.25 415.424)" href="#ygc1_3"></use></g><g><path fill="none" stroke="rgb(0,0,0)" d="M 191.25,423.4240006242196 L 191.25,439 L 113.75,439 L 113.75,496" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"></path><g></g><use transform="matrix(0 1 -1 0 191.25 415.424)" href="#ygc1_0"></use></g><g><path fill="none" stroke="rgb(0,0,0)" d="M 191.25,167.4240006242196 L 191.25,200" stroke-opacity="1" stroke-width="1" stroke-dasharray="2,2" stroke-dashoffset="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"></path><g></g><use transform="matrix(0 1 -1 0 191.25 159.424)" href="#ygc1_4"></use></g><g><path fill="none" stroke="rgb(0,0,0)" d="M 176.25,587 L 198.8259993757804,587" stroke-opacity="1" stroke-width="1" stroke-dasharray="2,2" stroke-dashoffset="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"></path><use transform="matrix(-1 0 0 -1 204.826 587)" href="#ygc1_25"></use></g><g><path fill="none" stroke="rgb(0,0,0)" d="M 128.75,307 L 98.75,307" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"></path></g><g class="uml-node" transform="translate(128.75 8)"><rect fill="rgb(46,139,87)" stroke="rgb(46,139,87)" fill-opacity="1" stroke-opacity="1" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" x="0" y="0" width="125" height="150" rx="10" ry="10"></rect><g transform="translate(0 0)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="middle" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(62.5 18)">IAddressable</text></g><g transform="translate(0 5)"><text font-family="Arial" font-size="10px" font-style="italic" font-weight="normal" text-decoration="none" text-anchor="middle" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9em" xml:space="preserve" transform="translate(62.5 0)">&lt;&lt;interface&gt;&gt;</text></g><rect fill="white" x="1" y="50" width="123" height="2"></rect><g transform="translate(0 52)" cursor="pointer"><rect fill="rgb(46,139,87)" stroke="none" fill-opacity="1" x="0" y="0" width="125" height="20" rx="0" ry="0"></rect><polygon fill="white" points="-5,-3.5 5,-3.5 0,6" transform="translate(12 10)" class="uml-button"></polygon><g class="uml-button"><rect fill="rgb(46,139,87)" fill-opacity="1" x="88px" y="2px" width="16px" height="16px"></rect><path fill="white" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-4v4h-2v-4h-4v-2h4v-4h2v4h4V25.5z" transform="matrix(0.8 0 0 0.8 89 -10)"></path></g><g class="uml-button disabled"><rect fill="rgb(46,139,87)" fill-opacity="1" x="106px" y="2px" width="16px" height="16px"></rect><path fill="white" fill-opacity="0.5" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-10v-2h10V25.5z" transform="matrix(0.8 0 0 0.8 107 -10)"></path></g></g><g transform="translate(25 52)" cursor="pointer"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 3)">Attributes</text></g><rect fill="white" x="1" y="72" width="123" height="48"></rect><g transform="translate(25 72)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">name</text></g><g transform="translate(25 88)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">address</text></g><g transform="translate(25 104)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">email</text></g><g transform="translate(0 120)" cursor="pointer"><rect fill="rgb(46,139,87)" stroke="none" fill-opacity="1" x="0" y="0" width="125" height="20" rx="0" ry="0"></rect><polygon fill="white" points="-3.5,5 6,0 -3.5,-5" transform="translate(12 10)" class="uml-button"></polygon><g class="uml-button"><rect fill="rgb(46,139,87)" fill-opacity="1" x="88px" y="2px" width="16px" height="16px"></rect><path fill="white" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-4v4h-2v-4h-4v-2h4v-4h2v4h4V25.5z" transform="matrix(0.8 0 0 0.8 89 -10)"></path></g><g class="uml-button disabled"><rect fill="rgb(46,139,87)" fill-opacity="1" x="106px" y="2px" width="16px" height="16px"></rect><path fill="white" fill-opacity="0.5" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-10v-2h10V25.5z" transform="matrix(0.8 0 0 0.8 107 -10)"></path></g></g><g transform="translate(25 120)" cursor="pointer"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 3)">Operations</text></g><rect fill="white" x="1" y="140" width="123" height="0"></rect><rect fill="white" x="1" y="140" width="123" height="2"></rect></g><g class="uml-node" transform="translate(128.75 200)"><rect fill="#607d8b" stroke="#607d8b" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" x="0" y="0" width="125" height="214" rx="10" ry="10"></rect><g transform="translate(0 0)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="middle" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(62.5 18)">User</text></g><rect fill="white" x="1" y="50" width="123" height="2"></rect><g transform="translate(0 52)" cursor="pointer"><rect fill="#607d8b" stroke="none" x="0" y="0" width="125" height="20" rx="0" ry="0"></rect><polygon fill="white" points="-5,-3.5 5,-3.5 0,6" transform="translate(12 10)" class="uml-button"></polygon><g class="uml-button"><rect fill="#607d8b" x="88px" y="2px" width="16px" height="16px"></rect><path fill="white" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-4v4h-2v-4h-4v-2h4v-4h2v4h4V25.5z" transform="matrix(0.8 0 0 0.8 89 -10)"></path></g><g class="uml-button disabled"><rect fill="#607d8b" x="106px" y="2px" width="16px" height="16px"></rect><path fill="white" fill-opacity="0.5" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-10v-2h10V25.5z" transform="matrix(0.8 0 0 0.8 107 -10)"></path></g></g><g transform="translate(25 52)" cursor="pointer"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 3)">Attributes</text></g><rect fill="white" x="1" y="72" width="123" height="96"></rect><g transform="translate(25 72)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">name</text></g><g transform="translate(25 88)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">address</text></g><g transform="translate(25 104)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">email</text></g><g transform="translate(25 120)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">userId</text></g><g transform="translate(25 136)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">password</text></g><g transform="translate(25 152)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">loginState</text></g><g transform="translate(0 168)" cursor="pointer"><rect fill="#607d8b" stroke="none" x="0" y="0" width="125" height="20" rx="0" ry="0"></rect><polygon fill="white" points="-5,-3.5 5,-3.5 0,6" transform="translate(12 10)" class="uml-button"></polygon><g class="uml-button"><rect fill="#607d8b" x="88px" y="2px" width="16px" height="16px"></rect><path fill="white" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-4v4h-2v-4h-4v-2h4v-4h2v4h4V25.5z" transform="matrix(0.8 0 0 0.8 89 -10)"></path></g><g class="uml-button disabled"><rect fill="#607d8b" x="106px" y="2px" width="16px" height="16px"></rect><path fill="white" fill-opacity="0.5" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-10v-2h10V25.5z" transform="matrix(0.8 0 0 0.8 107 -10)"></path></g></g><g transform="translate(25 168)" cursor="pointer"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 3)">Operations</text></g><rect fill="white" x="1" y="188" width="123" height="16"></rect><g transform="translate(25 188)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">verifyLogin()</text></g><rect fill="white" x="1" y="204" width="123" height="0"></rect></g><g class="uml-node" transform="translate(283.75 224)"><rect fill="#607d8b" stroke="#607d8b" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" x="0" y="0" width="125" height="166" rx="10" ry="10"></rect><g transform="translate(0 0)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="middle" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(62.5 18)">SessionManager</text></g><rect fill="white" x="1" y="50" width="123" height="2"></rect><g transform="translate(0 52)" cursor="pointer"><rect fill="#607d8b" stroke="none" x="0" y="0" width="125" height="20" rx="0" ry="0"></rect><polygon fill="white" points="-5,-3.5 5,-3.5 0,6" transform="translate(12 10)" class="uml-button"></polygon><g class="uml-button"><rect fill="#607d8b" x="88px" y="2px" width="16px" height="16px"></rect><path fill="white" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-4v4h-2v-4h-4v-2h4v-4h2v4h4V25.5z" transform="matrix(0.8 0 0 0.8 89 -10)"></path></g><g class="uml-button disabled"><rect fill="#607d8b" x="106px" y="2px" width="16px" height="16px"></rect><path fill="white" fill-opacity="0.5" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-10v-2h10V25.5z" transform="matrix(0.8 0 0 0.8 107 -10)"></path></g></g><g transform="translate(25 52)" cursor="pointer"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 3)">Attributes</text></g><rect fill="white" x="1" y="72" width="123" height="32"></rect><g transform="translate(25 72)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">userId</text></g><g transform="translate(25 88)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">departmentName</text></g><g transform="translate(0 104)" cursor="pointer"><rect fill="#607d8b" stroke="none" x="0" y="0" width="125" height="20" rx="0" ry="0"></rect><polygon fill="white" points="-5,-3.5 5,-3.5 0,6" transform="translate(12 10)" class="uml-button"></polygon><g class="uml-button"><rect fill="#607d8b" x="88px" y="2px" width="16px" height="16px"></rect><path fill="white" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-4v4h-2v-4h-4v-2h4v-4h2v4h4V25.5z" transform="matrix(0.8 0 0 0.8 89 -10)"></path></g><g class="uml-button disabled"><rect fill="#607d8b" x="106px" y="2px" width="16px" height="16px"></rect><path fill="white" fill-opacity="0.5" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-10v-2h10V25.5z" transform="matrix(0.8 0 0 0.8 107 -10)"></path></g></g><g transform="translate(25 104)" cursor="pointer"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 3)">Operations</text></g><rect fill="white" x="1" y="124" width="123" height="32"></rect><g transform="translate(25 124)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">getUser()</text></g><g transform="translate(25 140)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">getDepartment()</text></g><rect fill="white" x="1" y="156" width="123" height="0"></rect></g><g class="uml-node" transform="translate(623.726 200)"><rect fill="#607d8b" stroke="#607d8b" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" x="0" y="0" width="132.912" height="214" rx="10" ry="10"></rect><g transform="translate(0 0)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="middle" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(66.45582624563855 18)">Product</text></g><rect fill="white" x="1" y="50" width="130.9116524912771" height="2"></rect><g transform="translate(0 52)" cursor="pointer"><rect fill="#607d8b" stroke="none" x="0" y="0" width="132.912" height="20" rx="0" ry="0"></rect><polygon fill="white" points="-5,-3.5 5,-3.5 0,6" transform="translate(12 10)" class="uml-button"></polygon><g class="uml-button"><rect fill="#607d8b" x="95.9116524912771px" y="2px" width="16px" height="16px"></rect><path fill="white" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-4v4h-2v-4h-4v-2h4v-4h2v4h4V25.5z" transform="matrix(0.8 0 0 0.8 96.9116524912771 -10)"></path></g><g class="uml-button disabled"><rect fill="#607d8b" x="113.9116524912771px" y="2px" width="16px" height="16px"></rect><path fill="white" fill-opacity="0.5" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-10v-2h10V25.5z" transform="matrix(0.8 0 0 0.8 114.9116524912771 -10)"></path></g></g><g transform="translate(25 52)" cursor="pointer"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 3)">Attributes</text></g><rect fill="white" x="1" y="72" width="130.9116524912771" height="80"></rect><g transform="translate(25 72)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">productId</text></g><g transform="translate(25 88)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">name</text></g><g transform="translate(25 104)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">description</text></g><g transform="translate(25 120)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">price</text></g><g transform="translate(25 136)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">imageFileName</text></g><g transform="translate(0 152)" cursor="pointer"><rect fill="#607d8b" stroke="none" x="0" y="0" width="132.912" height="20" rx="0" ry="0"></rect><polygon fill="white" points="-5,-3.5 5,-3.5 0,6" transform="translate(12 10)" class="uml-button"></polygon><g class="uml-button"><rect fill="#607d8b" x="95.9116524912771px" y="2px" width="16px" height="16px"></rect><path fill="white" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-4v4h-2v-4h-4v-2h4v-4h2v4h4V25.5z" transform="matrix(0.8 0 0 0.8 96.9116524912771 -10)"></path></g><g class="uml-button disabled"><rect fill="#607d8b" x="113.9116524912771px" y="2px" width="16px" height="16px"></rect><path fill="white" fill-opacity="0.5" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-10v-2h10V25.5z" transform="matrix(0.8 0 0 0.8 114.9116524912771 -10)"></path></g></g><g transform="translate(25 152)" cursor="pointer"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 3)">Operations</text></g><rect fill="white" x="1" y="172" width="130.9116524912771" height="32"></rect><g transform="translate(25 172)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">displayProduct()</text></g><g transform="translate(25 188)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">getProductDetails()</text></g><rect fill="white" x="1" y="204" width="130.9116524912771" height="0"></rect></g><g class="uml-node" transform="translate(438.751 216)"><rect fill="#607d8b" stroke="#607d8b" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" x="0" y="0" width="154.975" height="182" rx="10" ry="10"></rect><g transform="translate(0 0)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="middle" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(77.48731663477139 18)">Category</text></g><rect fill="white" x="1" y="50" width="152.97463326954278" height="2"></rect><g transform="translate(0 52)" cursor="pointer"><rect fill="#607d8b" stroke="none" x="0" y="0" width="154.975" height="20" rx="0" ry="0"></rect><polygon fill="white" points="-5,-3.5 5,-3.5 0,6" transform="translate(12 10)" class="uml-button"></polygon><g class="uml-button"><rect fill="#607d8b" x="117.97463326954278px" y="2px" width="16px" height="16px"></rect><path fill="white" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-4v4h-2v-4h-4v-2h4v-4h2v4h4V25.5z" transform="matrix(0.8 0 0 0.8 118.97463326954278 -10)"></path></g><g class="uml-button disabled"><rect fill="#607d8b" x="135.97463326954278px" y="2px" width="16px" height="16px"></rect><path fill="white" fill-opacity="0.5" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-10v-2h10V25.5z" transform="matrix(0.8 0 0 0.8 136.97463326954278 -10)"></path></g></g><g transform="translate(25 52)" cursor="pointer"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 3)">Attributes</text></g><rect fill="white" x="1" y="72" width="152.97463326954278" height="64"></rect><g transform="translate(25 72)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">categoryId</text></g><g transform="translate(25 88)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">departmentId</text></g><g transform="translate(25 104)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">name</text></g><g transform="translate(25 120)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">description</text></g><g transform="translate(0 136)" cursor="pointer"><rect fill="#607d8b" stroke="none" x="0" y="0" width="154.975" height="20" rx="0" ry="0"></rect><polygon fill="white" points="-5,-3.5 5,-3.5 0,6" transform="translate(12 10)" class="uml-button"></polygon><g class="uml-button"><rect fill="#607d8b" x="117.97463326954278px" y="2px" width="16px" height="16px"></rect><path fill="white" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-4v4h-2v-4h-4v-2h4v-4h2v4h4V25.5z" transform="matrix(0.8 0 0 0.8 118.97463326954278 -10)"></path></g><g class="uml-button disabled"><rect fill="#607d8b" x="135.97463326954278px" y="2px" width="16px" height="16px"></rect><path fill="white" fill-opacity="0.5" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-10v-2h10V25.5z" transform="matrix(0.8 0 0 0.8 136.97463326954278 -10)"></path></g></g><g transform="translate(25 136)" cursor="pointer"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 3)">Operations</text></g><rect fill="white" x="1" y="156" width="152.97463326954278" height="16"></rect><g transform="translate(25 156)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" transform="translate(0 1)"><tspan x="0" y="11" xml:space="preserve">getProductInCategor…</tspan></text></g><rect fill="white" x="1" y="172" width="152.97463326954278" height="0"></rect></g><g class="uml-node" transform="translate(343.066 0)"><rect fill="#607d8b" stroke="#607d8b" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" x="0" y="0" width="176.357" height="166" rx="10" ry="10"></rect><g transform="translate(0 0)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="middle" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(88.17829268512313 18)">Department</text></g><rect fill="white" x="1" y="50" width="174.35658537024625" height="2"></rect><g transform="translate(0 52)" cursor="pointer"><rect fill="#607d8b" stroke="none" x="0" y="0" width="176.357" height="20" rx="0" ry="0"></rect><polygon fill="white" points="-5,-3.5 5,-3.5 0,6" transform="translate(12 10)" class="uml-button"></polygon><g class="uml-button"><rect fill="#607d8b" x="139.35658537024625px" y="2px" width="16px" height="16px"></rect><path fill="white" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-4v4h-2v-4h-4v-2h4v-4h2v4h4V25.5z" transform="matrix(0.8 0 0 0.8 140.35658537024625 -10)"></path></g><g class="uml-button disabled"><rect fill="#607d8b" x="157.35658537024625px" y="2px" width="16px" height="16px"></rect><path fill="white" fill-opacity="0.5" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-10v-2h10V25.5z" transform="matrix(0.8 0 0 0.8 158.35658537024625 -10)"></path></g></g><g transform="translate(25 52)" cursor="pointer"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 3)">Attributes</text></g><rect fill="white" x="1" y="72" width="174.35658537024625" height="48"></rect><g transform="translate(25 72)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">departmentId</text></g><g transform="translate(25 88)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">name</text></g><g transform="translate(25 104)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">description</text></g><g transform="translate(0 120)" cursor="pointer"><rect fill="#607d8b" stroke="none" x="0" y="0" width="176.357" height="20" rx="0" ry="0"></rect><polygon fill="white" points="-5,-3.5 5,-3.5 0,6" transform="translate(12 10)" class="uml-button"></polygon><g class="uml-button"><rect fill="#607d8b" x="139.35658537024625px" y="2px" width="16px" height="16px"></rect><path fill="white" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-4v4h-2v-4h-4v-2h4v-4h2v4h4V25.5z" transform="matrix(0.8 0 0 0.8 140.35658537024625 -10)"></path></g><g class="uml-button disabled"><rect fill="#607d8b" x="157.35658537024625px" y="2px" width="16px" height="16px"></rect><path fill="white" fill-opacity="0.5" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-10v-2h10V25.5z" transform="matrix(0.8 0 0 0.8 158.35658537024625 -10)"></path></g></g><g transform="translate(25 120)" cursor="pointer"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 3)">Operations</text></g><rect fill="white" x="1" y="140" width="174.35658537024625" height="16"></rect><g transform="translate(25 140)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">getCategoryInDepartment()</text></g><rect fill="white" x="1" y="156" width="174.35658537024625" height="0"></rect></g><g class="uml-node" transform="translate(361.25 464)"><rect fill="#607d8b" stroke="#607d8b" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" x="0" y="0" width="125" height="246" rx="10" ry="10"></rect><g transform="translate(0 0)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="middle" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(62.5 18)">Customer</text></g><rect fill="white" x="1" y="50" width="123" height="2"></rect><g transform="translate(0 52)" cursor="pointer"><rect fill="#607d8b" stroke="none" x="0" y="0" width="125" height="20" rx="0" ry="0"></rect><polygon fill="white" points="-5,-3.5 5,-3.5 0,6" transform="translate(12 10)" class="uml-button"></polygon><g class="uml-button"><rect fill="#607d8b" x="88px" y="2px" width="16px" height="16px"></rect><path fill="white" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-4v4h-2v-4h-4v-2h4v-4h2v4h4V25.5z" transform="matrix(0.8 0 0 0.8 89 -10)"></path></g><g class="uml-button disabled"><rect fill="#607d8b" x="106px" y="2px" width="16px" height="16px"></rect><path fill="white" fill-opacity="0.5" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-10v-2h10V25.5z" transform="matrix(0.8 0 0 0.8 107 -10)"></path></g></g><g transform="translate(25 52)" cursor="pointer"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 3)">Attributes</text></g><rect fill="white" x="1" y="72" width="123" height="96"></rect><g transform="translate(25 72)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">name</text></g><g transform="translate(25 88)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">address</text></g><g transform="translate(25 104)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">email</text></g><g transform="translate(25 120)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">phone</text></g><g transform="translate(25 136)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">creditcardInfo</text></g><g transform="translate(25 152)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">shippingInfo</text></g><g transform="translate(0 168)" cursor="pointer"><rect fill="#607d8b" stroke="none" x="0" y="0" width="125" height="20" rx="0" ry="0"></rect><polygon fill="white" points="-5,-3.5 5,-3.5 0,6" transform="translate(12 10)" class="uml-button"></polygon><g class="uml-button"><rect fill="#607d8b" x="88px" y="2px" width="16px" height="16px"></rect><path fill="white" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-4v4h-2v-4h-4v-2h4v-4h2v4h4V25.5z" transform="matrix(0.8 0 0 0.8 89 -10)"></path></g><g class="uml-button disabled"><rect fill="#607d8b" x="106px" y="2px" width="16px" height="16px"></rect><path fill="white" fill-opacity="0.5" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-10v-2h10V25.5z" transform="matrix(0.8 0 0 0.8 107 -10)"></path></g></g><g transform="translate(25 168)" cursor="pointer"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 3)">Operations</text></g><rect fill="white" x="1" y="188" width="123" height="48"></rect><g transform="translate(25 188)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">register()</text></g><g transform="translate(25 204)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">login()</text></g><g transform="translate(25 220)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">search()</text></g><rect fill="white" x="1" y="236" width="123" height="0"></rect></g><g class="uml-node" transform="translate(51.25 496)"><rect fill="#607d8b" stroke="#607d8b" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" x="0" y="0" width="125" height="182" rx="10" ry="10"></rect><g transform="translate(0 0)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="middle" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(62.5 18)">Administrator</text></g><rect fill="white" x="1" y="50" width="123" height="2"></rect><g transform="translate(0 52)" cursor="pointer"><rect fill="#607d8b" stroke="none" x="0" y="0" width="125" height="20" rx="0" ry="0"></rect><polygon fill="white" points="-5,-3.5 5,-3.5 0,6" transform="translate(12 10)" class="uml-button"></polygon><g class="uml-button"><rect fill="#607d8b" x="88px" y="2px" width="16px" height="16px"></rect><path fill="white" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-4v4h-2v-4h-4v-2h4v-4h2v4h4V25.5z" transform="matrix(0.8 0 0 0.8 89 -10)"></path></g><g class="uml-button disabled"><rect fill="#607d8b" x="106px" y="2px" width="16px" height="16px"></rect><path fill="white" fill-opacity="0.5" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-10v-2h10V25.5z" transform="matrix(0.8 0 0 0.8 107 -10)"></path></g></g><g transform="translate(25 52)" cursor="pointer"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 3)">Attributes</text></g><rect fill="white" x="1" y="72" width="123" height="64"></rect><g transform="translate(25 72)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">name</text></g><g transform="translate(25 88)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">address</text></g><g transform="translate(25 104)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">email</text></g><g transform="translate(25 120)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">scope</text></g><g transform="translate(0 136)" cursor="pointer"><rect fill="#607d8b" stroke="none" x="0" y="0" width="125" height="20" rx="0" ry="0"></rect><polygon fill="white" points="-5,-3.5 5,-3.5 0,6" transform="translate(12 10)" class="uml-button"></polygon><g class="uml-button"><rect fill="#607d8b" x="88px" y="2px" width="16px" height="16px"></rect><path fill="white" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-4v4h-2v-4h-4v-2h4v-4h2v4h4V25.5z" transform="matrix(0.8 0 0 0.8 89 -10)"></path></g><g class="uml-button disabled"><rect fill="#607d8b" x="106px" y="2px" width="16px" height="16px"></rect><path fill="white" fill-opacity="0.5" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-10v-2h10V25.5z" transform="matrix(0.8 0 0 0.8 107 -10)"></path></g></g><g transform="translate(25 136)" cursor="pointer"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 3)">Operations</text></g><rect fill="white" x="1" y="156" width="123" height="16"></rect><g transform="translate(25 156)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 1)">updateCatalog()</text></g><rect fill="white" x="1" y="172" width="123" height="0"></rect></g><g class="uml-node" transform="translate(206.25 537)"><rect fill="#607d8b" stroke="#607d8b" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" x="0" y="0" width="125" height="100" rx="10" ry="10"></rect><g transform="translate(0 0)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="middle" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(62.5 18)">ClassName</text></g><rect fill="white" x="1" y="50" width="123" height="2"></rect><g transform="translate(0 52)" cursor="pointer"><rect fill="#607d8b" stroke="none" x="0" y="0" width="125" height="20" rx="0" ry="0"></rect><polygon fill="white" points="-3.5,5 6,0 -3.5,-5" transform="translate(12 10)" class="uml-button"></polygon><g class="uml-button"><rect fill="#607d8b" x="88px" y="2px" width="16px" height="16px"></rect><path fill="white" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-4v4h-2v-4h-4v-2h4v-4h2v4h4V25.5z" transform="matrix(0.8 0 0 0.8 89 -10)"></path></g><g class="uml-button disabled"><rect fill="#607d8b" x="106px" y="2px" width="16px" height="16px"></rect><path fill="white" fill-opacity="0.5" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-10v-2h10V25.5z" transform="matrix(0.8 0 0 0.8 107 -10)"></path></g></g><g transform="translate(25 52)" cursor="pointer"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 3)">Attributes</text></g><rect fill="white" x="1" y="72" width="123" height="0"></rect><g transform="translate(0 72)" cursor="pointer"><rect fill="#607d8b" stroke="none" x="0" y="0" width="125" height="20" rx="0" ry="0"></rect><polygon fill="white" points="-3.5,5 6,0 -3.5,-5" transform="translate(12 10)" class="uml-button"></polygon><g class="uml-button"><rect fill="#607d8b" x="88px" y="2px" width="16px" height="16px"></rect><path fill="white" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-4v4h-2v-4h-4v-2h4v-4h2v4h4V25.5z" transform="matrix(0.8 0 0 0.8 89 -10)"></path></g><g class="uml-button disabled"><rect fill="#607d8b" x="106px" y="2px" width="16px" height="16px"></rect><path fill="white" fill-opacity="0.5" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-10v-2h10V25.5z" transform="matrix(0.8 0 0 0.8 107 -10)"></path></g></g><g transform="translate(25 72)" cursor="pointer"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 3)">Operations</text></g><rect fill="white" x="1" y="92" width="123" height="0"></rect><rect fill="white" x="1" y="92" width="123" height="2"></rect></g><g class="uml-node" transform="translate(-26.25 257)"><rect fill="#607d8b" stroke="#607d8b" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" x="0" y="0" width="125" height="100" rx="10" ry="10"></rect><g transform="translate(0 0)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="middle" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(62.5 18)">ClassName</text></g><rect fill="white" x="1" y="50" width="123" height="2"></rect><g transform="translate(0 52)" cursor="pointer"><rect fill="#607d8b" stroke="none" x="0" y="0" width="125" height="20" rx="0" ry="0"></rect><polygon fill="white" points="-3.5,5 6,0 -3.5,-5" transform="translate(12 10)" class="uml-button"></polygon><g class="uml-button"><rect fill="#607d8b" x="88px" y="2px" width="16px" height="16px"></rect><path fill="white" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-4v4h-2v-4h-4v-2h4v-4h2v4h4V25.5z" transform="matrix(0.8 0 0 0.8 89 -10)"></path></g><g class="uml-button disabled"><rect fill="#607d8b" x="106px" y="2px" width="16px" height="16px"></rect><path fill="white" fill-opacity="0.5" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-10v-2h10V25.5z" transform="matrix(0.8 0 0 0.8 107 -10)"></path></g></g><g transform="translate(25 52)" cursor="pointer"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 3)">Attributes</text></g><rect fill="white" x="1" y="72" width="123" height="0"></rect><g transform="translate(0 72)" cursor="pointer"><rect fill="#607d8b" stroke="none" x="0" y="0" width="125" height="20" rx="0" ry="0"></rect><polygon fill="white" points="-3.5,5 6,0 -3.5,-5" transform="translate(12 10)" class="uml-button"></polygon><g class="uml-button"><rect fill="#607d8b" x="88px" y="2px" width="16px" height="16px"></rect><path fill="white" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-4v4h-2v-4h-4v-2h4v-4h2v4h4V25.5z" transform="matrix(0.8 0 0 0.8 89 -10)"></path></g><g class="uml-button disabled"><rect fill="#607d8b" x="106px" y="2px" width="16px" height="16px"></rect><path fill="white" fill-opacity="0.5" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-10v-2h10V25.5z" transform="matrix(0.8 0 0 0.8 107 -10)"></path></g></g><g transform="translate(25 72)" cursor="pointer"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 3)">Operations</text></g><rect fill="white" x="1" y="92" width="123" height="0"></rect><rect fill="white" x="1" y="92" width="123" height="2"></rect></g><g class="uml-node" transform="translate(-313.75 -136.5)"><rect fill="#607d8b" stroke="#607d8b" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" x="0" y="0" width="125" height="102" rx="10" ry="10"></rect><g transform="translate(0 0)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="middle" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(62.5 18)">ClassName</text></g><rect fill="white" x="1" y="50" width="123" height="2"></rect><g transform="translate(0 52)" cursor="pointer"><rect fill="#607d8b" stroke="none" x="0" y="0" width="125" height="20" rx="0" ry="0"></rect><polygon fill="white" points="-3.5,5 6,0 -3.5,-5" transform="translate(12 10)" class="uml-button"></polygon><g class="uml-button"><rect fill="#607d8b" x="88px" y="2px" width="16px" height="16px"></rect><path fill="white" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-4v4h-2v-4h-4v-2h4v-4h2v4h4V25.5z" transform="matrix(0.8 0 0 0.8 89 -10)"></path></g><g class="uml-button disabled"><rect fill="#607d8b" x="106px" y="2px" width="16px" height="16px"></rect><path fill="white" fill-opacity="0.5" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-10v-2h10V25.5z" transform="matrix(0.8 0 0 0.8 107 -10)"></path></g></g><g transform="translate(25 52)" cursor="pointer"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 3)">Attributes</text></g><rect fill="white" x="1" y="72" width="123" height="0"></rect><g transform="translate(0 72)" cursor="pointer"><rect fill="#607d8b" stroke="none" x="0" y="0" width="125" height="20" rx="0" ry="0"></rect><polygon fill="white" points="-3.5,5 6,0 -3.5,-5" transform="translate(12 10)" class="uml-button"></polygon><g class="uml-button"><rect fill="#607d8b" x="88px" y="2px" width="16px" height="16px"></rect><path fill="white" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-4v4h-2v-4h-4v-2h4v-4h2v4h4V25.5z" transform="matrix(0.8 0 0 0.8 89 -10)"></path></g><g class="uml-button disabled"><rect fill="#607d8b" x="106px" y="2px" width="16px" height="16px"></rect><path fill="white" fill-opacity="0.5" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-10v-2h10V25.5z" transform="matrix(0.8 0 0 0.8 107 -10)"></path></g></g><g transform="translate(25 72)" cursor="pointer"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 3)">Operations</text></g><rect fill="white" x="1" y="92" width="123" height="0"></rect><rect fill="white" x="1" y="92" width="123" height="2"></rect></g><g class="uml-node" transform="translate(-40.5 -107.5)"><rect fill="#607d8b" stroke="#607d8b" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" x="0" y="0" width="125" height="118" rx="10" ry="10"></rect><g transform="translate(0 0)"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="middle" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(62.5 18)">ClassName</text></g><rect fill="white" x="1" y="50" width="123" height="2"></rect><g transform="translate(0 52)" cursor="pointer"><rect fill="#607d8b" stroke="none" x="0" y="0" width="125" height="20" rx="0" ry="0"></rect><polygon fill="white" points="-5,-3.5 5,-3.5 0,6" transform="translate(12 10)" class="uml-button"></polygon><g class="uml-button"><rect fill="#607d8b" x="88px" y="2px" width="16px" height="16px"></rect><path fill="white" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-4v4h-2v-4h-4v-2h4v-4h2v4h4V25.5z" transform="matrix(0.8 0 0 0.8 89 -10)"></path></g><g class="uml-button"><rect fill="#607d8b" x="106px" y="2px" width="16px" height="16px"></rect><path fill="white" fill-opacity="1" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-10v-2h10V25.5z" transform="matrix(0.8 0 0 0.8 107 -10)"></path></g></g><g transform="translate(25 52)" cursor="pointer"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 3)">Attributes</text></g><rect fill="white" x="1" y="72" width="123" height="16"></rect><g transform="translate(1 72)"><rect fill="#a3f1bb" stroke="none" x="0" y="0" width="123" height="16" rx="0" ry="0"></rect></g><g transform="translate(25 72)"></g><g transform="translate(0 88)" cursor="pointer"><rect fill="#607d8b" stroke="none" x="0" y="0" width="125" height="20" rx="0" ry="0"></rect><polygon fill="white" points="-5,-3.5 5,-3.5 0,6" transform="translate(12 10)" class="uml-button"></polygon><g class="uml-button"><rect fill="#607d8b" x="88px" y="2px" width="16px" height="16px"></rect><path fill="white" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-4v4h-2v-4h-4v-2h4v-4h2v4h4V25.5z" transform="matrix(0.8 0 0 0.8 89 -10)"></path></g><g class="uml-button disabled"><rect fill="#607d8b" x="106px" y="2px" width="16px" height="16px"></rect><path fill="white" fill-opacity="0.5" d="M8.5,16.5c-4.418,0-8,3.582-8,8s3.582,8,8,8c4.418,0,8-3.582,8-8S12.918,16.5,8.5,16.5z M13.5,25.5h-10v-2h10V25.5z" transform="matrix(0.8 0 0 0.8 107 -10)"></path></g></g><g transform="translate(25 88)" cursor="pointer"><text font-family="Arial" font-size="12px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="start" fill="rgb(255,255,255)" fill-opacity="1" dy="0.9166666666666666em" xml:space="preserve" transform="translate(0 3)">Operations</text></g><rect fill="white" x="1" y="108" width="123" height="0"></rect><rect fill="white" x="1" y="108" width="123" height="2"></rect></g><g transform="translate(-741.5564122740061 -211.5)"></g><g transform="translate(-29.37744140625 -123.62255859375)"><g class="context-button"><g transform="translate(-11.12255859375 -11.12255859375)" class="interface-toggle"><rect fill="#FFF" stroke="#607D8B" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10" x="0" y="0" width="22.2451" height="22.2451" rx="0" ry="0"></rect><text font-family="monospace" font-size="18px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="middle" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9444444444444444em" xml:space="preserve" transform="translate(11.12255859375 0.5)">I</text></g></g></g><g transform="translate(-2.13232421875 -123.62255859375)"><g class="context-button"><g transform="translate(-11.12255859375 -11.12255859375)" class="abstract-toggle"><rect fill="#FFF" stroke="#607D8B" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10" x="0" y="0" width="22.2451" height="22.2451" rx="0" ry="0"></rect><text font-family="monospace" font-size="18px" font-style="normal" font-weight="normal" text-decoration="none" text-anchor="middle" fill="rgb(0,0,0)" fill-opacity="1" dy="0.9444444444444444em" xml:space="preserve" transform="translate(11.12255859375 0.5)">A</text></g></g></g><g transform="translate(109.5 -64.19872981077808)"><g><g transform="translate(-15 -15)"><rect fill="white" stroke="#607D8B" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10" x="0" y="0" width="30" height="30" rx="15" ry="15"></rect></g><g><path fill="none" stroke="rgb(0,0,0)" d="M -0.5759993757804125,0 L 10,0" stroke-opacity="1" stroke-width="1" stroke-dasharray="2,2" stroke-dashoffset="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"></path><g></g><use transform="translate(-8.575999375780412 0)" href="#ygc1_68"></use></g></g></g><g transform="translate(131.48463103929544 -90.39899283371656)"><g><g transform="translate(-15 -15)"><rect fill="white" stroke="#607D8B" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10" x="0" y="0" width="30" height="30" rx="15" ry="15"></rect></g><g><path fill="none" stroke="rgb(0,0,0)" d="M -0.5759993757804125,0 L 10,0" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"></path><g></g><use transform="translate(-8.575999375780412 0)" href="#ygc1_69"></use></g></g></g><g transform="translate(131.48463103929544 -124.60100716628345)"><g><g transform="translate(-15 -15)"><rect fill="white" stroke="#607D8B" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10" x="0" y="0" width="30" height="30" rx="15" ry="15"></rect></g><g><path fill="none" stroke="rgb(0,0,0)" d="M -0.028174684192450172,0 L 10,0" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"></path><g></g><use transform="translate(-9.02817468419245 0)" href="#ygc1_70"></use></g></g></g><g transform="translate(109.5 -150.80127018922195)"><g><g transform="translate(-15 -15)"><rect fill="white" stroke="#607D8B" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10" x="0" y="0" width="30" height="30" rx="15" ry="15"></rect></g><g><path fill="none" stroke="rgb(0,0,0)" d="M -10,0 L 2.5759993757804107,0" stroke-opacity="1" stroke-width="1" stroke-dasharray="2,2" stroke-dashoffset="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"></path><use transform="matrix(-1 0 0 -1 8.575999375780412 0)" href="#ygc1_71"></use></g></g></g><g transform="translate(75.81759111665349 -156.74038765061042)"><g><g transform="translate(-15 -15)"><rect fill="white" stroke="#607D8B" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10" x="0" y="0" width="30" height="30" rx="15" ry="15"></rect></g><g><path fill="none" stroke="rgb(0,0,0)" d="M -10,0 L 2.5759993757804107,0" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"></path><use transform="matrix(-1 0 0 -1 8.575999375780412 0)" href="#ygc1_72"></use></g></g></g><g transform="translate(46.19777784405119 -139.63938048432703)"><g><g transform="translate(-15 -15)"><rect fill="white" stroke="#607D8B" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10" x="0" y="0" width="30" height="30" rx="15" ry="15"></rect></g><g><path fill="none" stroke="rgb(0,0,0)" d="M -10,0 L 10,0" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"></path></g></g></g></g></g><defs><path fill="rgb(255,255,255)" stroke="rgb(0,0,0)" d="M 8,-3 L 0,0 L 8,3 Z" fill-opacity="1" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" id="ygc1_0"></path><path fill="rgb(255,255,255)" stroke="rgb(0,0,0)" d="M 0,0 L 5,-3 L 10,0 L 5,3 Z" fill-opacity="1" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" id="ygc1_1"></path><path fill="rgb(255,255,255)" stroke="rgb(0,0,0)" d="M 0,0 L 5,-3 L 10,0 L 5,3 Z" fill-opacity="1" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" id="ygc1_2"></path><path fill="rgb(255,255,255)" stroke="rgb(0,0,0)" d="M 8,-3 L 0,0 L 8,3 Z" fill-opacity="1" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" id="ygc1_3"></path><path fill="rgb(255,255,255)" stroke="rgb(0,0,0)" d="M 8,-3 L 0,0 L 8,3 Z" fill-opacity="1" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" id="ygc1_4"></path><path fill="rgb(255,255,255)" stroke="rgb(0,0,0)" d="M 0,0 L 5,-3 L 10,0 L 5,3 Z" fill-opacity="1" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" id="ygc1_5"></path><path fill="rgb(255,255,255)" stroke="rgb(0,0,0)" d="M 0,0 L 5,-3 L 10,0 L 5,3 Z" fill-opacity="1" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" id="ygc1_6"></path><path fill="rgb(0,0,0)" stroke="rgb(0,0,0)" d="M 0,0 L 8,-3 L 6,0 L 8,3 Z" fill-opacity="1" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" id="ygc1_25"></path><path fill="rgb(255,255,255)" stroke="rgb(0,0,0)" d="M 8,-3 L 0,0 L 8,3 Z" fill-opacity="1" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" id="ygc1_68"></path><path fill="rgb(255,255,255)" stroke="rgb(0,0,0)" d="M 8,-3 L 0,0 L 8,3 Z" fill-opacity="1" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" id="ygc1_69"></path><path fill="rgb(255,255,255)" stroke="rgb(0,0,0)" d="M 0,0 L 5,-3 L 10,0 L 5,3 Z" fill-opacity="1" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" id="ygc1_70"></path><path fill="rgb(0,0,0)" stroke="rgb(0,0,0)" d="M 0,0 L 8,-3 L 6,0 L 8,3 Z" fill-opacity="1" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" id="ygc1_71"></path><path fill="rgb(0,0,0)" stroke="rgb(0,0,0)" d="M 0,0 L 8,-3 L 6,0 L 8,3 Z" fill-opacity="1" stroke-opacity="1" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" id="ygc1_72"></path></defs></svg></div></div><div class="yfiles-scrollbar yfiles-scrollbar-vertical yfiles-scrollbar-disabled yfiles-scrollbar-inactive" aria-hidden="true" style=""><div class="yfiles-button yfiles-button-up"></div><div class="yfiles-scrollbar-range" style="--yfiles-scrollbar-start: 0px; --yfiles-scrollbar-length: 0px;"><div class="yfiles-scrollbar-slider"></div></div><div class="yfiles-button yfiles-button-down"></div></div><div class="yfiles-scrollbar yfiles-scrollbar-horizontal yfiles-scrollbar-inactive" aria-hidden="true" style=""><div class="yfiles-button yfiles-button-left yfiles-button-disabled"></div><div class="yfiles-scrollbar-range" style="--yfiles-scrollbar-start: 0px; --yfiles-scrollbar-length: 880.8057691094958px;"><div class="yfiles-scrollbar-slider"></div></div><div class="yfiles-button yfiles-button-right"></div></div><div class="yfiles-scrollbar-corner" aria-hidden="true"></div><div class="yfiles-labeleditbox-container" tabindex="-1" style="position: absolute; outline: 0px; box-sizing: content-box; line-height: 1; width: 10px; height: 15px; transform: translate(687px, 174px);"><textarea class="yfiles-labeleditbox" wrap="off" style="box-sizing: border-box; resize: none; overflow: hidden; width: 100%; height: 100%; outline: none; white-space: pre;"></textarea></div><svg class="yfiles-text-measuring" style="position: absolute; visibility: hidden; top: 0px; left: 0px; contain: content;"><text></text><text font-family="monospace" font-size="18px" font-style="normal" font-weight="normal" text-decoration="none" xml:space="preserve" dy="0em" x="0" y="100">|qWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWabcdefghijklmnopqrstuvwxyzABCEDFGHIJKLMNOPQRSTUVXYZ1234567890%%</text></svg></div>
+      <button class="mobile burger-menu plain" title="Menu"><span class="icon">menu</span></button></div>
+      <div class="description-panel"><div class="collapse-panel"><button class="collapse icon" title="Collapse Description panel">collapse_content</button></div>
+        <h1>UML Editor Demo</h1>
+
+        <p>
+          The UML Editor demo showcases a custom UML node style that renders an UML data set.
+          Additional control elements are provided to conveniently add/remove entries and to create
+          different type of UML edges as well as toggling the node's 'interface' or 'abstract'
+          state.
+        </p>
+
+        <p>
+          The node style uses an <a href="https://docs.yworks.com/yfileshtml/api/StretchNodeLabelModel" class="api" target="_blank">StretchNodeLabelModel</a> to stack the UML entries on
+          top of each other. A custom <a href="https://docs.yworks.com/yfileshtml/api/IEditLabelHelper" class="api" target="_blank">IEditLabelHelper</a> is provided by the UML node
+          style to enable editing of the different UML entries.
+        </p>
+
+        <h2>Things to Try</h2>
+        <ul>
+          <li>Click a node to bring up additional control elements.</li>
+          <li>
+            Create UML specific edges by dragging one of the edge creation controls. A layout will
+            route the new edge when the edge creation has finished.
+          </li>
+          <li>
+            Entries can be added/removed with the '+' and '-' buttons on the respective header
+            section.
+          </li>
+          <li>Toggle the node's 'interface' or 'abstract' state with the 'I' or 'A' buttons.</li>
+          <li>
+            The layout button in the toolbar will create a new layout from scratch and bundle
+            inheritance edges.
+          </li>
+        </ul>
+      </div>
+      <div class="panel-bar"><button class="expand-description-panel plain" title="Expand Description panel"><span class="icon">expand_content</span><span class="label">Description</span></button></div>
+    </div>
+
+
+
+</body></html>
