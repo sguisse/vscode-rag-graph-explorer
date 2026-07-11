@@ -1,5 +1,5 @@
 import React from 'react';
-import { Grid, Database, User, Baby, Plus, Minus, Focus, Maximize } from 'lucide-react';
+import { Grid, Database, User, Baby, Plus, Minus, Focus, Maximize, Minimize } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
@@ -50,6 +50,6 @@ export const GraphContainerHeaderRight = ({ cyRef, isGraphMaximized, setIsGraphM
     <Button variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => cyRef.current?.zoom((cyRef.current?.zoom() || 1) * 1.2)}><Plus size={12}/></Button>
     <Button variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => cyRef.current?.zoom((cyRef.current?.zoom() || 1) / 1.2)}><Minus size={12}/></Button>
     <Button variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => { cyRef.current?.fit(); cyRef.current?.center(); }}><Focus size={12}/></Button>
-    <Button variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => setIsGraphMaximized(!isGraphMaximized)}><Maximize size={12}/></Button>
+    <Button variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => setIsGraphMaximized(!isGraphMaximized)}>{isGraphMaximized ? <Minimize size={12}/> : <Maximize size={12}/>}</Button>
   </div>
 );

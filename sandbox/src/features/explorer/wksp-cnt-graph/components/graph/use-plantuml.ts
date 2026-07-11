@@ -27,7 +27,29 @@ export function usePlantUml(searchFilteredFiles: any[], visibleFiles: Record<str
 
     dependencies.forEach(dep => {
       if (visibleFiles[dep.sourceNode] && visibleFiles[dep.targetNode]) {
-        puml += `${dep.sourceNode.replace(/\.[^/.]+$/, "")} --> ${dep.targetNode.replace(/\.[^/.]+$/, "")} : "${dep.label}"\n`;
+        const sourceNode = dep.sourceNode.replace(/\.[^/.]+$/, "");
+        const targetNode = dep.targetNode.replace(/\.[^/.]+$/, "");
+        const label = `"${dep.label}"`;
+        // Use different arrow types based on relationship type
+        let arrow: string;
+        switch (dep.relation) {
+          case 'aggregation':
+            arrow = '--o';
+            break;
+          case 'composition':
+            arrow = '--*';
+            break;
+          case 'implementation':
+            arrow = '--|>';
+            break;
+          case 'extends':
+            arrow = '-->>';
+            break;
+          default:
+            arrow = '-->';
+            break;
+        }
+        puml += `${sourceNode} ${arrow} ${targetNode} : ${label}\n`;
       }
     });
 

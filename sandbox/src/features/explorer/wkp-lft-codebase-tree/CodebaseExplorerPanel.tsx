@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChevronDown, ChevronRight, Folder, FileCode, Database } from 'lucide-react';
-import { initialCodebase } from './graph/GraphData';
+import { initialCodebase } from '../wksp-cnt-graph/components/graph/GraphData';
 
 interface Props {
   searchFilteredFiles: any[];

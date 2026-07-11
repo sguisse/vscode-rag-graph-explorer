@@ -66,6 +66,7 @@ export interface AppLayoutProps {
   searchTerm?: string;
   onSearchChange?: (val: string) => void;
   notification?: string | null;
+  isGraphMaximized?: boolean;
 }
 
 export function AppLayout({
@@ -78,7 +79,8 @@ export function AppLayout({
   onResetFilters,
   searchTerm = "",
   onSearchChange,
-  notification
+  notification,
+  isGraphMaximized = false,
 }: AppLayoutProps) {
 
   const [sidebarLeftMode, setSidebarLeftMode] = useState<'normal' | 'minimal' | 'collapsed'>('normal');
@@ -93,7 +95,6 @@ export function AppLayout({
   const [isCtnWorkspaceRightVisible, setIsCtnWorkspaceRightVisible] = useState(layoutConfig.showRight ?? false);
   const [isCtnWorkspaceBottomVisible, setIsCtnWorkspaceBottomVisible] = useState(layoutConfig.showBottom ?? false);
   const [isSidebarRightVisible, setIsSidebarRightVisible] = useState(layoutConfig.showRightSidebar ?? false);
-  const [isGraphMaximized, setIsGraphMaximized] = useState(false);
 
   // Resizable hooks
   const [sidebarLeftWidth, startSidebarLeftResize, isDraggingSidebarLeft] = useResizable(220, 160, 400, true, false, 60);

@@ -1,6 +1,8 @@
 import React from 'react';
 
 const TYPE_COLORS: Record<string, string> = {
+  viewBg: 'bg-black/90',
+  keyword: 'text-[#676EC9]',
   number: 'text-green-400',
   string: 'text-blue-400',
   boolean: 'text-[#C2B280]',
@@ -8,13 +10,11 @@ const TYPE_COLORS: Record<string, string> = {
   array: 'text-orange-400',
 };
 
-const DEFAULT_KEY_COLOR = 'text-[#FF00FF]'; // Magenta
-
 function renderValue(value: any, keyName: string | null, isLast: boolean, depth: number): React.ReactNode {
   const indent = '  '.repeat(depth);
 
-  // L'attribut portant le type prend la même couleur que son type
-  let keyColor = DEFAULT_KEY_COLOR;
+  // The attribute carrying the type takes the same color as its type
+  let keyColor = TYPE_COLORS.keyword;
   if (value && typeof value === 'object' && !Array.isArray(value) && typeof value.type === 'string' && TYPE_COLORS[value.type]) {
     keyColor = TYPE_COLORS[value.type];
   }
@@ -32,16 +32,16 @@ function renderValue(value: any, keyName: string | null, isLast: boolean, depth:
   }
 
   if (typeof value === 'boolean') {
-    return <div key={keyName || 'bool'}>{indent}{renderKey()}{colon}<span className="text-[#C2B280]">{value ? 'true' : 'false'}</span>{comma}</div>;
+    return <div key={keyName || 'bool'}>{indent}{renderKey()}{colon}<span className={TYPE_COLORS.boolean}>{value ? 'true' : 'false'}</span>{comma}</div>;
   }
 
   if (typeof value === 'number') {
-    return <div key={keyName || 'num'}>{indent}{renderKey()}{colon}<span className="text-green-400">{value}</span>{comma}</div>;
+    return <div key={keyName || 'num'}>{indent}{renderKey()}{colon}<span className={TYPE_COLORS.number}>{value}</span>{comma}</div>;
   }
 
   if (typeof value === 'string') {
-    let valClass = 'text-blue-400';
-    // Les valeurs littérales définissant le type prennent également leur propre couleur
+    let valClass = TYPE_COLORS.string;
+    // Literal values ​​defining the type also take on their own color
     if (keyName === 'type' && TYPE_COLORS[value]) {
       valClass = TYPE_COLORS[value] + ' font-bold';
     }
@@ -89,11 +89,14 @@ function renderValue(value: any, keyName: string | null, isLast: boolean, depth:
 interface JsonViewerProps {
   data: any;
   className?: string;
+  onDoubleClick?: React.MouseEventHandler<HTMLPreElement>;
 }
 
-export function JsonViewer({ data, className }: JsonViewerProps) {
+export function JsonViewer({ data, className, onDoubleClick, ...props}: JsonViewerProps) {
   return (
-    <pre className={`bg-black/90 p-3 rounded-lg overflow-x-auto text-[10px] text-slate-300 whitespace-pre-wrap font-mono leading-relaxed ${className || ''}`}>
+    <pre className={`${TYPE_COLORS.viewBg} p-3 rounded-lg overflow-x-auto text-[10px] text-slate-300 whitespace-pre-wrap font-mono leading-relaxed ${className || ''}`}
+      onDoubleClick={onDoubleClick}
+      {...props}>
       {renderValue(data, null, true, 0)}
     </pre>
   );

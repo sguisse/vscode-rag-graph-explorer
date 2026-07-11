@@ -1,15 +1,19 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Layers, X, Info, ShieldAlert, GitFork, Copy, FileCode } from 'lucide-react';
+import { Layers, X, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AppLayout, AppLayoutProps } from '@/components/app/layout/AppLayout';
-import { JSON_SCHEMA_SPEC, initialCodebase, FOLDER_POSITIONS } from './components/graph/GraphData';
-import { EntityPropertiesSidebar } from './components/EntityPropertiesSidebar';
-import { CodebaseExplorerPanel } from './components/CodebaseExplorerPanel';
-import { GraphContainerHeaderLeft, GraphContainerHeaderCenter, GraphContainerHeaderRight } from './components/GraphContainerHeader';
-import { FolderNode, UmlClassNode, ConfigNode } from './components/graph/GraphUmlShapes';
-import { useGraph } from './components/graph/use-graph';
-import { usePlantUml } from './components/graph/use-plantuml';
-import { JsonViewer } from '@/components/ui/json-viewer';
+import { JSON_SCHEMA_SPEC, initialCodebase, FOLDER_POSITIONS } from './wksp-cnt-graph/components/graph/GraphData';
+import { EntityPropertiesPanel } from './sdb-rgt-properties/EntityPropertiesPanel';
+import { CodebaseExplorerPanel } from './wkp-lft-codebase-tree/CodebaseExplorerPanel';
+import { GraphContainerHeaderLeft, GraphContainerHeaderCenter, GraphContainerHeaderRight } from './wksp-cnt-graph/GraphContainerHeader';
+import { FolderNode, UmlClassNode, ConfigNode } from './wksp-cnt-graph/components/graph/GraphUmlShapes';
+import { useGraph } from './wksp-cnt-graph/components/graph/use-graph';
+import { usePlantUml } from './wksp-cnt-graph/components/graph/use-plantuml';
+import { useCopyToClipboard } from '@/hooks/use-clipboard';
+
+import { InspectorTabPanel } from './wkp-rgt-tabs-inspector/inspector-tab-panel';
+import { PlantUmlTabPanel } from './wkp-rgt-tabs-inspector/plantuml-tab-panel';
+import { JsonTabPanel } from './wkp-rgt-tabs-inspector/json-tab-panel';
 
 export function ExplorerFeature(props: Omit<AppLayoutProps, 'layoutConfig' | 'panels'>) {
   // States
@@ -22,6 +26,7 @@ export function ExplorerFeature(props: Omit<AppLayoutProps, 'layoutConfig' | 'pa
   const [impactDirection, setImpactDirection] = useState<'aval' | 'amont'>('aval');
   const [impactedSet, setImpactedSet] = useState<Set<string>>(new Set());
   const [rightPanelTab, setRightPanelTab] = useState<'inspect' | 'plantuml' | 'json_schema'>('inspect');
+  const [notification, setNotification] = useState<string | null>(null);
 
   const [maxNodesLimit, setMaxNodesLimit] = useState(50);
   const [callersDepth, setCallersDepth] = useState(1);
@@ -30,6 +35,15 @@ export function ExplorerFeature(props: Omit<AppLayoutProps, 'layoutConfig' | 'pa
   const [currentLayout, setCurrentLayout] = useState('preset');
   const [showGrid, setShowGrid] = useState(true);
   const [isGraphMaximized, setIsGraphMaximized] = useState(false);
+
+  const { copy } = useCopyToClipboard();
+
+  const handleCopy = (text: string, message: string) => {
+    copy(text, () => {
+      setNotification(message);
+      setTimeout(() => setNotification(null), 3000);
+    });
+  };
 
   // Graph Hook Setup
   const handleNodeSelect = useCallback((nodeId: string) => {
@@ -123,102 +137,24 @@ export function ExplorerFeature(props: Omit<AppLayoutProps, 'layoutConfig' | 'pa
       </div>
       <div className="flex-1 p-4 overflow-y-auto text-xs">
         {rightPanelTab === 'inspect' && (
-          selectedEntity ? (
-            (() => {
-              const currentFile = initialCodebase.files.find(f => f.id === selectedEntity.nodeId);
-              if (!currentFile) return null;
-              return (
-                <div className="space-y-4 animate-in duration-200 fade-in">
-
-                  {/* Active Element Properties Block */}
-                  <div className="space-y-3 bg-primary/5 p-4 border border-primary/20 rounded-lg">
-                    <div className="flex justify-between items-center">
-                      <span className="font-mono font-bold text-[10px] text-primary uppercase tracking-wider">ACTIVE SUBSYSTEM</span>
-                      <span className="bg-primary/10 px-2.5 py-0.5 rounded font-mono font-bold text-primary text-xs">{currentFile.language}</span>
-                    </div>
-                    <div className="flex items-start gap-2.5 mt-3">
-                      <FileCode size={20} className="mt-1 text-primary shrink-0" />
-                      <div className="overflow-hidden">
-                        <h4 className="font-mono font-bold text-foreground text-sm truncate">
-                          {selectedEntity.type === 'member' ? `${currentFile.name} ➔ ${selectedEntity.memberId}()` : currentFile.name}
-                        </h4>
-                        <span className="block mt-0.5 font-mono text-[10px] text-muted-foreground truncate">{currentFile.path}</span>
-                      </div>
-                    </div>
-                    <div className="gap-3 grid grid-cols-2 pt-3 border-border border-t">
-                      <div className="bg-background p-2 border border-border rounded">
-                        <span className="block font-mono text-[10px] text-muted-foreground uppercase">Volume of Code</span>
-                        <span className="font-mono font-bold text-foreground text-xs">{currentFile.size} LOC</span>
-                      </div>
-                      <div className="bg-background p-2 border border-border rounded">
-                        <span className="block font-mono text-[10px] text-muted-foreground uppercase">Complexity V(g)</span>
-                        <span className="font-mono font-bold text-foreground text-xs">Level {currentFile.complexity}</span>
-                      </div>
-                    </div>
-                    <div className="bg-slate-950 mt-3 p-2.5 border border-slate-800 rounded font-mono text-slate-300 text-xs">
-                      <div className="mb-1 font-bold text-[10px] text-amber-400 uppercase">Functional Documentation:</div>
-                      {selectedEntity.type === 'member' ? (
-                        currentFile.methods?.find(m => m.id === selectedEntity.memberId)?.description ||
-                        currentFile.configProperties?.find(p => p.key === selectedEntity.memberId)?.value ||
-                        "No dedicated structural descriptions mapped for this member item node."
-                      ) : (
-                        `File container encapsulating target polyglot implementation layers at specified location pathing.`
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Impact Direction Controls */}
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <label className="font-mono font-bold text-[11px] text-muted-foreground uppercase">Impact Propagation</label>
-                      <span className="bg-amber-500/10 px-2 py-0.5 border border-amber-500/30 rounded font-mono text-[10px] text-amber-500">Transitive BFS</span>
-                    </div>
-                    <div className="gap-2 grid grid-cols-2">
-                      <Button onClick={() => setImpactDirection('aval')} className={`flex items-center justify-center gap-1.5 py-2 px-3 font-mono text-xs font-bold rounded border transition-all h-9 ${impactDirection === 'aval' ? 'bg-orange-500 border-orange-400 text-white shadow-md' : 'bg-muted border-border text-foreground'}`}><GitFork size={13} className="rotate-180" />Downstream</Button>
-                      <Button onClick={() => setImpactDirection('amont')} className={`flex items-center justify-center gap-1.5 py-2 px-3 font-mono text-xs font-bold rounded border transition-all h-9 ${impactDirection === 'amont' ? 'bg-orange-500 border-orange-400 text-white shadow-md' : 'bg-muted border-border text-foreground'}`}><GitFork size={13} />Upstream</Button>
-                    </div>
-                  </div>
-
-                  {/* Fluorescent Impact Plan */}
-                  <div className="space-y-3 bg-orange-500/5 p-4 border border-orange-500/25 rounded-lg">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-1.5"><ShieldAlert size={14} className="text-orange-500" /><h5 className="font-mono font-bold text-orange-500 text-xs">Fluorescent Impact Plan</h5></div>
-                      <Button onClick={() => navigator.clipboard.writeText(generatedMarkdownRecipe)} className="flex items-center gap-1 bg-muted hover:bg-muted/80 px-2 py-1 border border-border rounded h-6 font-mono text-[10px] text-foreground">
-                        <Copy size={10} />Copy Recipes
-                      </Button>
-                    </div>
-                    <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                      {initialCodebase.files.map(f => impactedSet.has(f.id) ? (
-                        <div key={f.id} className="flex justify-between items-center bg-background px-2 py-1.5 border border-orange-500/20 rounded font-mono text-[11px]"><span className="font-semibold text-foreground truncate">{f.name}</span><span className="bg-muted px-1.5 py-0.5 rounded text-[9px] text-muted-foreground">{f.language}</span></div>
-                      ) : null)}
-                    </div>
-                  </div>
-                </div>
-              );
-            })()
-          ) : (
-            <div className="py-12 text-muted-foreground text-center">
-              <ShieldAlert size={36} className="opacity-40 mx-auto mb-2 text-muted-foreground" />
-              <h4 className="font-mono font-bold text-sm">No Active Entity Inspected</h4>
-              <p className="mx-auto mt-1 max-w-[240px] text-muted-foreground text-xs">Click any file component link row or surgical grid handle item to initialize graph mapping parameters.</p>
-            </div>
-          )
+          <InspectorTabPanel
+            selectedEntity={selectedEntity}
+            initialCodebase={initialCodebase}
+            impactDirection={impactDirection}
+            setImpactDirection={setImpactDirection}
+            impactedSet={impactedSet}
+            generatedMarkdownRecipe={generatedMarkdownRecipe}
+            handleCopy={handleCopy}
+          />
         )}
         {rightPanelTab === 'plantuml' && (
-          <div className="relative group h-full">
-            <Button onClick={() => navigator.clipboard.writeText(generatedPlantUML)} className="absolute top-3 right-5 flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-white px-2 py-1 border border-slate-600 rounded h-6 font-mono text-[10px] opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-10" data-tooltip="Copy PlantUML code to clipboard">
-              <Copy size={10} /> Copy
-            </Button>
-            <pre className="bg-black/90 h-full p-3 rounded-lg overflow-x-auto text-[10px] text-white whitespace-pre-wrap">{generatedPlantUML}</pre>
-          </div>
+          <PlantUmlTabPanel
+            generatedPlantUML={generatedPlantUML}
+            handleCopy={handleCopy}
+          />
         )}
         {rightPanelTab === 'json_schema' && (
-          <div className="relative group h-full">
-            <Button onClick={() => navigator.clipboard.writeText(JSON.stringify(JSON_SCHEMA_SPEC, null, 2))} className="absolute top-3 right-5 flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-white px-2 py-1 border border-slate-600 rounded h-6 font-mono text-[10px] opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-10" data-tooltip="Copy JSON Schema to clipboard">
-              <Copy size={10} /> Copy
-            </Button>
-            <JsonViewer data={JSON_SCHEMA_SPEC} className="h-full" />
-          </div>
+          <JsonTabPanel handleCopy={handleCopy} />
         )}
       </div>
     </div>
@@ -227,14 +163,15 @@ export function ExplorerFeature(props: Omit<AppLayoutProps, 'layoutConfig' | 'pa
   return (
     <AppLayout
       {...props}
+      isGraphMaximized={isGraphMaximized}
       layoutConfig={{ showTop: true, showLeft: true, showCenter: true, showRight: true, showBottom: true, showRightSidebar: true }}
+      notification={notification}
       panels={{
         left: <CodebaseExplorerPanel searchFilteredFiles={searchFilteredFiles} expandedFolders={expandedFolders} visibleFiles={visibleFiles} toggleFolder={toggleFolder} toggleFolderCheckbox={toggleFolderCheckbox} toggleFileCheckbox={toggleFileCheckbox} setSelectedEntity={setSelectedEntity} />,
         center: (
           <div className="absolute inset-0 outline-none w-full h-full overflow-hidden">
             <div ref={containerRef} className="z-0 absolute inset-0 w-full h-full" style={showGrid ? { backgroundImage: props.isDarkMode ? 'radial-gradient(#334155 1.2px, transparent 1.2px)' : 'radial-gradient(#cbd5e1 1.2px, transparent 1.2px)', backgroundSize: `${16 * graphState.zoom}px ${16 * graphState.zoom}px`, backgroundPosition: `${graphState.pan.x}px ${graphState.pan.y}px` } : undefined} />
 
-            {/* HTML Overlay Syncing with Cytoscape Coordinates */}
             <div className="z-10 absolute inset-0 origin-top-left pointer-events-none select-none" style={{ transform: `translate(${graphState.pan.x}px, ${graphState.pan.y}px) scale(${graphState.zoom})` }}>
               {Object.entries(FOLDER_POSITIONS).map(([folderKey, initialPos]) => {
                 const bounds = graphState.nodePositions[`folder__${folderKey}`];
@@ -275,7 +212,7 @@ export function ExplorerFeature(props: Omit<AppLayoutProps, 'layoutConfig' | 'pa
         right: rightContent,
         top: <div className="p-3 font-mono text-muted-foreground text-xs">/Users/workspace/path</div>,
         bottom: <div className="px-4 py-2 font-medium text-muted-foreground text-xs">AST Compilation Log: Matrix Active</div>,
-        rightSidebar: <EntityPropertiesSidebar selectedEntity={selectedEntity} />
+        rightSidebar: <EntityPropertiesPanel selectedEntity={selectedEntity} />
       }}
       headers={{
         leftPanelTitle: "AST Explorer",

@@ -5,7 +5,7 @@ interface Props {
   selectedEntity: { type: 'node' | 'member' | 'edge'; nodeId: string; memberId?: string; edgeId?: string; } | null;
 }
 
-export function EntityPropertiesSidebar({ selectedEntity }: Props) {
+export function EntityPropertiesPanel({ selectedEntity }: Props) {
   return (
     <div className="space-y-3 p-4 text-xs">
       {selectedEntity ? (
