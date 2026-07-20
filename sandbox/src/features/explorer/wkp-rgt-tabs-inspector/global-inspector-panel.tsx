@@ -10,7 +10,6 @@ interface GlobalInspectorPanelProps {
   impactDirection: 'aval' | 'amont';
   setImpactDirection: (dir: 'aval' | 'amont') => void;
   impactedSet: Set<string>;
-  generatedMarkdownRecipe: string;
   handleCopy: (text: string, message: string) => void;
   generatedPlantUML: string;
 }
@@ -21,7 +20,6 @@ export function GlobalInspectorPanel({
   impactDirection,
   setImpactDirection,
   impactedSet,
-  generatedMarkdownRecipe,
   handleCopy,
   generatedPlantUML
 }: GlobalInspectorPanelProps) {
@@ -60,7 +58,6 @@ export function GlobalInspectorPanel({
             impactDirection={impactDirection}
             setImpactDirection={setImpactDirection}
             impactedSet={impactedSet}
-            generatedMarkdownRecipe={generatedMarkdownRecipe}
             handleCopy={handleCopy}
           />
         )}

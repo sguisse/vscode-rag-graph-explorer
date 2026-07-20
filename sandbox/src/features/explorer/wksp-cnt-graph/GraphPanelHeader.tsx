@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
 //-----------------------------------------------------------------------------------------------------------------------
-export const GraphContainerHeaderLeft = ({ showGrid, setShowGrid }: any) => (
+export const GraphPanelHeaderLeft = ({ showGrid, setShowGrid }: any) => (
   <div className="flex items-center gap-2">
     <span>Topological Network</span>
     <Button variant="ghost" size="icon" className={`h-5 w-5 rounded transition-colors ${showGrid ? 'text-primary bg-primary/10' : 'text-muted-foreground'}`} onClick={() => setShowGrid(!showGrid)}>
@@ -15,7 +15,7 @@ export const GraphContainerHeaderLeft = ({ showGrid, setShowGrid }: any) => (
 );
 
 //-----------------------------------------------------------------------------------------------------------------------
-export const GraphContainerHeaderCenter = ({ maxNodesLimit, setMaxNodesLimit, callersDepth, setCallersDepth, calleesDepth, setCalleesDepth, displayLevel, setDisplayLevel, currentLayout, setCurrentLayout }: any) => (
+export const GraphPanelHeaderCenter = ({ maxNodesLimit, setMaxNodesLimit, callersDepth, setCallersDepth, calleesDepth, setCalleesDepth, displayLevel, setDisplayLevel, currentLayout, setCurrentLayout }: any) => (
   <div className="flex items-center gap-3">
     <div className="flex items-center gap-1.5 bg-background px-2 py-0.5 border border-border rounded-sm">
       <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">Limit:</span>
@@ -48,7 +48,7 @@ export const GraphContainerHeaderCenter = ({ maxNodesLimit, setMaxNodesLimit, ca
 );
 
 //-----------------------------------------------------------------------------------------------------------------------
-export const GraphContainerHeaderRight = ({ cyRef, isGraphMaximized, setIsGraphMaximized }: any) => (
+export const GraphPanelHeaderRight = ({ cyRef, isGraphMaximized, setIsGraphMaximized }: any) => (
   <div className="flex items-center gap-1">
     <Button variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => cyRef.current?.zoom((cyRef.current?.zoom() || 1) * 1.2)}><Plus size={12}/></Button>
     <Button variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => cyRef.current?.zoom((cyRef.current?.zoom() || 1) / 1.2)}><Minus size={12}/></Button>
