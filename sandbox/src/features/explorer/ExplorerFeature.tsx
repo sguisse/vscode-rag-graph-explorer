@@ -12,6 +12,8 @@ import { useCopyToClipboard } from '@/hooks/use-clipboard';
 
 import { GlobalInspectorPanel } from './wkp-rgt-tabs-inspector/global-inspector-panel';
 import { GraphPanel } from './wksp-cnt-graph/GraphPanel';
+import { ContextPathsPanel } from './wkp-top-paths/context-paths-panel';
+import { WkpBottomPanel } from './wkp-btm-infos/wkp-bottom-panel';
 
 export function ExplorerFeature(props: Omit<AppLayoutProps, 'layoutConfig' | 'panels'>) {
   // States
@@ -140,8 +142,8 @@ export function ExplorerFeature(props: Omit<AppLayoutProps, 'layoutConfig' | 'pa
             generatedPlantUML={generatedPlantUML}
           />
         ),
-        top: <div className="p-3 font-mono text-muted-foreground text-xs">/Users/workspace/path</div>,
-        bottom: <div className="px-4 py-2 font-medium text-muted-foreground text-xs">AST Compilation Log: Matrix Active</div>,
+        top: <ContextPathsPanel />,
+        bottom: <WkpBottomPanel />,
         rightSidebar: <EntityPropertiesPanel selectedEntity={selectedEntity} />
       }}
       headers={{
