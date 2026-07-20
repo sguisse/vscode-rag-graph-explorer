@@ -1,27 +1,11 @@
 import React, { useState } from 'react';
-import {
-  Search, Upload, Download, Moon, Sun, RotateCcw, Eye,
-  LayoutDashboard, FolderTree, Scale, Terminal, History, Settings, HelpCircle, FileJson, Menu, ChevronRight, ChevronLeft
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Sidebar, SidebarContent, SidebarGroup, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarMenuBadge, SidebarFooter } from '@/components/ui/sidebar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { LeftCenterRightPanel } from '@/components/app/left-center-right-panel';
 import { ResizableContainer } from '@/components/app/container/resizable-container';
 import { Tooltip } from '@/components/app/tooltip';
 import { useResizable } from '@/components/app/container/hooks/use-resizable';
-
-const SIDEBAR_MENU_ITEMS = [
-  { id: 'panel-welcome', icon: LayoutDashboard, label: 'Home' },
-  { id: 'panel-explorer', icon: FolderTree, label: 'AST Explorer', badge: 'New' },
-  { id: 'panel-rules', icon: Scale, label: 'Cypher Rules' },
-  { id: 'panel-prompt', icon: FileJson, label: 'GraphRAG Prompt' },
-  { id: 'panel-terminal', icon: Terminal, label: 'CLI Terminal' },
-  { id: 'panel-history', icon: History, label: 'History' },
-  { id: 'panel-configuration', icon: Settings, label: 'Configuration', bottom: true },
-  { id: 'panel-help', icon: HelpCircle, label: 'Help & Shortcuts', bottom: true }
-];
+import { Header } from './header';
+import { SidebarLeft } from './sidebar-left';
+import { Footer } from './footer';
 
 export interface AppLayoutConfig {
   showTop?: boolean;
@@ -70,9 +54,12 @@ export interface AppLayoutProps {
 }
 
 export function AppLayout({
-  activeView, setActiveView,
-  isDarkMode, setIsDarkMode,
-  isLocked, setIsLocked,
+  activeView,
+  setActiveView,
+  isDarkMode,
+  setIsDarkMode,
+  isLocked,
+  setIsLocked,
   layoutConfig = {},
   panels = {},
   headers = {},
@@ -106,22 +93,10 @@ export function AppLayout({
 
   const isCurrentlyResizing = isDraggingSidebarLeft || isDraggingSidebarRight || isDraggingLeftPane || isDraggingRightPane || isDraggingTopPane || isDraggingBottomPane;
 
-  // Calculate how many middle row panels are active to trigger full-width "flex: 1" behavior
   const activeMiddlePanelsCount =
     (isCtnWorkspaceLeftVisible ? 1 : 0) +
     (isCtnWorkspaceCenterVisible ? 1 : 0) +
     (isCtnWorkspaceRightVisible ? 1 : 0);
-
-  const renderSidebarMenuItem = (item: any) => (
-    <SidebarMenuItem key={item.id}>
-      <SidebarMenuButton id={`btn-menu-${item.id}`} isActive={activeView === item.id} onClick={() => setActiveView(item.id)} title={sidebarLeftMode === 'minimal' ? item.label : undefined}>
-        <item.icon size={16} className="mr-2.5 shrink-0" />
-        {sidebarLeftMode === 'normal' && (
-          <><span className="truncate">{item.label}</span>{item.badge && <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>}</>
-        )}
-      </SidebarMenuButton>
-    </SidebarMenuItem>
-  );
 
   return (
     <div id="ctn-root" className={`flex flex-col h-screen w-screen overflow-hidden font-sans text-sm select-none transition-colors duration-200 bg-background text-foreground ${isDarkMode ? 'dark' : ''}`}>
@@ -132,47 +107,33 @@ export function AppLayout({
         </div>
       )}
 
-      {/* TOP HEADER */}
-      <LeftCenterRightPanel
-        id="ctn-header"
-        className="z-20 bg-card px-3 border-border border-b h-[40px] shrink-0"
-        left={
-          <>
-            <Button variant="ghost" size="icon" onClick={() => setSidebarLeftMode(m => m === 'collapsed' ? 'normal' : 'collapsed')} className="w-8 h-8 text-muted-foreground hover:text-foreground" data-tooltip="Toggle primary navigation drawer"><Menu size={16} /></Button>
-            <div className="flex items-center gap-2 ml-1 text-primary cursor-help"><span className="font-bold text-foreground text-xs tracking-tight">Archi-Polyglot Workspace</span></div>
-          </>
-        }
-        center={
-          <div className="relative flex items-center w-full max-w-md">
-            <Search className="left-2 absolute text-muted-foreground" size={14} />
-            <Input type="text" placeholder="Search for an AST entity (e.g., UserController)..." value={searchTerm} onChange={(e) => onSearchChange && onSearchChange(e.target.value)} className="bg-muted pl-8 h-8 text-xs" disabled={isLocked} data-tooltip="Enter FQN token to globally query code index structures" />
-          </div>
-        }
-        right={
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={() => setImportOpen(true)} className="hover:bg-muted p-1.5 rounded w-8 h-8 text-muted-foreground hover:text-foreground transition-colors" data-tooltip="Import local AST JSON/YAML schema payload extracts"><Upload size={16} /></Button>
-            <Button variant="ghost" size="icon" onClick={() => setExportOpen(true)} className="hover:bg-muted p-1.5 rounded w-8 h-8 text-muted-foreground hover:text-foreground transition-colors" data-tooltip="Export current topological session structure"><Download size={16} /></Button>
-            <div className="mx-1 bg-border w-px h-4"></div>
-            <Button variant="ghost" size="icon" onClick={() => setIsDarkMode(!isDarkMode)} className="hover:bg-muted p-1.5 rounded w-8 h-8 text-muted-foreground hover:text-foreground transition-colors" data-tooltip={isDarkMode ? "Switch to crisp light mode theme" : "Switch to immersive dark mode theme"}>
-              {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
-            </Button>
-            {onResetFilters && <Button variant="ghost" size="icon" onClick={onResetFilters} className="hover:bg-muted p-1.5 rounded w-8 h-8 text-muted-foreground hover:text-foreground transition-colors" data-tooltip="Reset all workspace visual states, filters, and matrices"><RotateCcw size={16} /></Button>}
-            <div className="mx-1 bg-border w-px h-4"></div>
-            <Button variant="ghost" size="icon" onClick={() => setIsCtnWorkspaceVisible(!isCtnWorkspaceVisible)} className={`p-1.5 rounded transition-colors ml-1 w-8 h-8 ${isCtnWorkspaceVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground hover:bg-muted'}`} data-tooltip="Toggle core workspace frame canvas wrapper"><Eye size={16} /></Button>
-
-            {layoutConfig.showTop && <Button variant="ghost" size="icon" onClick={() => setIsCtnWorkspaceTopVisible(!isCtnWorkspaceTopVisible)} className={`p-1.5 rounded transition-colors ml-1 w-8 h-8 ${isCtnWorkspaceTopVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted'}`} data-tooltip="Toggle workspace mapping path summary rows"><Eye size={16} /></Button>}
-            {layoutConfig.showLeft && <Button variant="ghost" size="icon" onClick={() => setIsCtnWorkspaceLeftVisible(!isCtnWorkspaceLeftVisible)} className={`p-1.5 rounded transition-colors ml-1 w-8 h-8 ${isCtnWorkspaceLeftVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted'}`} data-tooltip="Toggle multi-layer filter explorer stream"><Eye size={16} /></Button>}
-            {layoutConfig.showCenter && <Button variant="ghost" size="icon" onClick={() => setIsCtnWorkspaceCenterVisible(!isCtnWorkspaceCenterVisible)} className={`p-1.5 rounded transition-colors ml-1 w-8 h-8 ${isCtnWorkspaceCenterVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted'}`} data-tooltip="Toggle center interactive stage"><Eye size={16} /></Button>}
-            {layoutConfig.showRight && <Button variant="ghost" size="icon" onClick={() => setIsCtnWorkspaceRightVisible(!isCtnWorkspaceRightVisible)} className={`p-1.5 rounded transition-colors ml-1 w-8 h-8 ${isCtnWorkspaceRightVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted'}`} data-tooltip="Toggle right sub-workspace tab inspect matrices"><Eye size={16} /></Button>}
-            {layoutConfig.showBottom && <Button variant="ghost" size="icon" onClick={() => setIsCtnWorkspaceBottomVisible(!isCtnWorkspaceBottomVisible)} className={`p-1.5 rounded transition-colors ml-1 w-8 h-8 ${isCtnWorkspaceBottomVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted'}`} data-tooltip="Toggle bottom system real-time runtime status log bars"><Eye size={16} /></Button>}
-            {layoutConfig.showRightSidebar && (
-              <>
-                <div className="mx-1 bg-border w-px h-4"></div>
-                <Button variant="ghost" size="icon" onClick={() => setIsSidebarRightVisible(!isSidebarRightVisible)} className={`p-1.5 rounded transition-colors ml-1 w-8 h-8 ${isSidebarRightVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted'}`} data-tooltip="Toggle far-right global identity properties side-drawer"><Eye size={16} /></Button>
-              </>
-            )}
-          </div>
-        }
+      {/* EXTERNALIZED HEADER WITH PRESERVED ORIGINAL CONTENT & BEHAVIOR */}
+      <Header
+        sidebarLeftMode={sidebarLeftMode}
+        setSidebarLeftMode={setSidebarLeftMode}
+        searchTerm={searchTerm}
+        onSearchChange={onSearchChange}
+        isLocked={isLocked}
+        setImportOpen={setImportOpen}
+        setExportOpen={setExportOpen}
+        isDarkMode={isDarkMode}
+        setIsDarkMode={setIsDarkMode}
+        onResetFilters={onResetFilters}
+        isCtnWorkspaceVisible={isCtnWorkspaceVisible}
+        setIsCtnWorkspaceVisible={setIsCtnWorkspaceVisible}
+        isCtnWorkspaceTopVisible={isCtnWorkspaceTopVisible}
+        setIsCtnWorkspaceTopVisible={setIsCtnWorkspaceTopVisible}
+        isCtnWorkspaceLeftVisible={isCtnWorkspaceLeftVisible}
+        setIsCtnWorkspaceLeftVisible={setIsCtnWorkspaceLeftVisible}
+        isCtnWorkspaceCenterVisible={isCtnWorkspaceCenterVisible}
+        setIsCtnWorkspaceCenterVisible={setIsCtnWorkspaceCenterVisible}
+        isCtnWorkspaceRightVisible={isCtnWorkspaceRightVisible}
+        setIsCtnWorkspaceRightVisible={setIsCtnWorkspaceRightVisible}
+        isCtnWorkspaceBottomVisible={isCtnWorkspaceBottomVisible}
+        setIsCtnWorkspaceBottomVisible={setIsCtnWorkspaceBottomVisible}
+        isSidebarRightVisible={isSidebarRightVisible}
+        setIsSidebarRightVisible={setIsSidebarRightVisible}
+        layoutConfig={layoutConfig}
       />
 
       <Dialog open={importOpen} onOpenChange={setImportOpen}>
@@ -182,26 +143,19 @@ export function AppLayout({
         </DialogContent>
       </Dialog>
 
-      <div id="ctn-main" className="relative flex flex-1 overflow-hidden">
+      {/* pb-[40px] leaves clean clearance for the main full-width fixed footer component */}
+      <div id="ctn-main" className="relative flex flex-1 overflow-hidden pb-[40px]">
 
-        {/* SIDEBAR LEFT */}
-        {sidebarLeftMode !== 'collapsed' && (
-          <Sidebar
-            id="ctn-sidebar-left"
-            style={{ width: sidebarLeftMode === 'minimal' ? '56px' : `${sidebarLeftWidth}px`, '--sidebar-width': `${sidebarLeftWidth}px`, transition: isDraggingSidebarLeft ? 'none' : undefined } as React.CSSProperties}
-          >
-            <SidebarContent>
-                <SidebarGroup><SidebarMenu>{SIDEBAR_MENU_ITEMS.filter(item => !item.bottom).map(renderSidebarMenuItem)}</SidebarMenu></SidebarGroup>
-                <SidebarGroup className="mt-auto pt-2 border-sidebar-border border-t"><SidebarMenu>{SIDEBAR_MENU_ITEMS.filter(item => item.bottom).map(renderSidebarMenuItem)}</SidebarMenu></SidebarGroup>
-            </SidebarContent>
-            <SidebarFooter className="p-0">
-                <Button variant="ghost" size="sm" onClick={() => setSidebarLeftMode(m => m === 'normal' ? 'minimal' : 'normal')} className={`w-full text-muted-foreground hover:text-foreground ${sidebarLeftMode === 'normal' ? 'justify-end' : 'justify-center'}`} data-tooltip="Toggle sidebar drawer size">
-                  {sidebarLeftMode === 'normal' ? <ChevronLeft size={16}/> : <ChevronRight size={16}/>}
-                </Button>
-            </SidebarFooter>
-            {sidebarLeftMode === 'normal' && <div className="group top-0 right-0 bottom-0 z-20 absolute hover:bg-sidebar-border w-1 cursor-col-resize" onMouseDown={startSidebarLeftResize} />}
-          </Sidebar>
-        )}
+        {/* EXTERNALIZED SIDEBAR LEFT COMPONENT WITH PRESERVED BEHAVIORS */}
+        <SidebarLeft
+          sidebarLeftMode={sidebarLeftMode}
+          setSidebarLeftMode={setSidebarLeftMode}
+          activeView={activeView}
+          setActiveView={setActiveView}
+          sidebarLeftWidth={sidebarLeftWidth}
+          startSidebarLeftResize={startSidebarLeftResize}
+          isDraggingSidebarLeft={isDraggingSidebarLeft}
+        />
 
         {/* WORKSPACE CENTER COMPOSITION */}
         <div id="ctn-workspace" style={{ display: isCtnWorkspaceVisible ? 'flex' : 'none' }} className="relative flex flex-1 bg-background min-w-0">
@@ -222,7 +176,7 @@ export function AppLayout({
                   id="ctn-workspace-left"
                   visible={isCtnWorkspaceLeftVisible}
                   style={activeMiddlePanelsCount === 1 ? { flex: 1 } : { width: `${ctnWorkspaceLeftWidth}px` }}
-                  headerLeft={headers.leftPanelTitle || SIDEBAR_MENU_ITEMS.find(i => i.id === activeView)?.label}
+                  headerLeft={headers.leftPanelTitle || activeView}
                   className={activeMiddlePanelsCount === 1 ? "min-w-[200px]" : "border-r min-w-[200px]"}
                   resizeHandle={activeMiddlePanelsCount > 1 ? "right" : "none"}
                   onResizeStart={startCtnWorkspaceLeftResize}
@@ -280,6 +234,8 @@ export function AppLayout({
         )}
 
       </div>
+
+      <Footer />
 
       <Tooltip delay={1500} />
     </div>
