@@ -112,22 +112,6 @@ export function ExplorerFeature(props: Omit<AppLayoutProps, 'layoutConfig' | 'pa
 
   const applyLayout = useCallback((layout: string) => { setCurrentLayout(layout); }, []);
 
-  const generatedMarkdownRecipe = useMemo(() => {
-    let md = `### 🛡️ Plan d'Impact & Fiche de Recette Polyglotte\n\n`;
-    let startElement = 'Non défini';
-    if (selectedEntity) {
-      if (selectedEntity.type === 'member') startElement = `Méthode \`${selectedEntity.memberId}()\` de \`${selectedEntity.nodeId}\``;
-      else startElement = `Fichier \`${selectedEntity.nodeId}\``;
-    }
-    md += `**Élément Déclencheur :** ${startElement}\n`;
-    md += `**Direction de Propagation :** ${impactDirection === 'aval' ? 'Aval (Impacts descendants)' : 'Amont (Appelants ascendants)'}\n\n`;
-    md += `#### 📋 Liste des composants à re-tester\n\n`;
-    initialCodebase.files.forEach(file => {
-      if (impactedSet.has(file.id)) { md += `- [ ] **${file.name}** (\`${file.path}\`)\n`; }
-    });
-    return md;
-  }, [selectedEntity, impactDirection, impactedSet]);
-
   const rightContent = (
     <div className="flex flex-col bg-card h-full">
       <div className="flex bg-muted/40 border-border border-b shrink-0">
@@ -143,7 +127,6 @@ export function ExplorerFeature(props: Omit<AppLayoutProps, 'layoutConfig' | 'pa
             impactDirection={impactDirection}
             setImpactDirection={setImpactDirection}
             impactedSet={impactedSet}
-            generatedMarkdownRecipe={generatedMarkdownRecipe}
             handleCopy={handleCopy}
           />
         )}

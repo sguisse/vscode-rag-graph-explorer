@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { FileCode, ShieldAlert, GitFork, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -8,7 +8,6 @@ interface InspectorTabPanelProps {
   impactDirection: 'aval' | 'amont';
   setImpactDirection: (dir: 'aval' | 'amont') => void;
   impactedSet: Set<string>;
-  generatedMarkdownRecipe: string;
   handleCopy: (text: string, message: string) => void;
 }
 
@@ -18,9 +17,25 @@ export function InspectorTabPanel({
   impactDirection,
   setImpactDirection,
   impactedSet,
-  generatedMarkdownRecipe,
   handleCopy
 }: InspectorTabPanelProps) {
+
+  const generatedMarkdownRecipe = useMemo(() => {
+    let md = `### 🛡️ Plan d'Impact & Fiche de Recette Polyglotte\n\n`;
+    let startElement = 'Non défini';
+    if (selectedEntity) {
+      if (selectedEntity.type === 'member') startElement = `Méthode \`${selectedEntity.memberId}()\` de \`${selectedEntity.nodeId}\``;
+      else startElement = `Fichier \`${selectedEntity.nodeId}\``;
+    }
+    md += `**Élément Déclencheur :** ${startElement}\n`;
+    md += `**Direction de Propagation :** ${impactDirection === 'aval' ? 'Aval (Impacts descendants)' : 'Amont (Appelants ascendants)'}\n\n`;
+    md += `#### 📋 Liste des composants à re-tester\n\n`;
+    initialCodebase.files.forEach((file: any) => {
+      if (impactedSet.has(file.id)) { md += `- [ ] **${file.name}** (\`${file.path}\`)\n`; }
+    });
+    return md;
+  }, [selectedEntity, impactDirection, impactedSet, initialCodebase]);
+
   if (!selectedEntity) {
     return (
       <div className="py-12 text-muted-foreground text-center">

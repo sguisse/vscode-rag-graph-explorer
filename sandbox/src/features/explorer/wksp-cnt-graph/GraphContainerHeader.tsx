@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
+//-----------------------------------------------------------------------------------------------------------------------
 export const GraphContainerHeaderLeft = ({ showGrid, setShowGrid }: any) => (
   <div className="flex items-center gap-2">
     <span>Topological Network</span>
@@ -13,6 +14,7 @@ export const GraphContainerHeaderLeft = ({ showGrid, setShowGrid }: any) => (
   </div>
 );
 
+//-----------------------------------------------------------------------------------------------------------------------
 export const GraphContainerHeaderCenter = ({ maxNodesLimit, setMaxNodesLimit, callersDepth, setCallersDepth, calleesDepth, setCalleesDepth, displayLevel, setDisplayLevel, currentLayout, setCurrentLayout }: any) => (
   <div className="flex items-center gap-3">
     <div className="flex items-center gap-1.5 bg-background px-2 py-0.5 border border-border rounded-sm">
@@ -45,6 +47,7 @@ export const GraphContainerHeaderCenter = ({ maxNodesLimit, setMaxNodesLimit, ca
   </div>
 );
 
+//-----------------------------------------------------------------------------------------------------------------------
 export const GraphContainerHeaderRight = ({ cyRef, isGraphMaximized, setIsGraphMaximized }: any) => (
   <div className="flex items-center gap-1">
     <Button variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => cyRef.current?.zoom((cyRef.current?.zoom() || 1) * 1.2)}><Plus size={12}/></Button>
