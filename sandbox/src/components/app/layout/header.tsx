@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { LeftCenterRightPanel } from '@/components/app/left-center-right-panel';
 
 export interface HeaderProps {
+  sidebarLeftMode: 'normal' | 'minimal' | 'collapsed';
   setSidebarLeftMode: React.Dispatch<React.SetStateAction<'normal' | 'minimal' | 'collapsed'>>;
   searchTerm: string;
   onSearchChange?: (val: string) => void;
@@ -39,6 +40,7 @@ export interface HeaderProps {
 }
 
 export function Header({
+  sidebarLeftMode,
   setSidebarLeftMode,
   searchTerm,
   onSearchChange,

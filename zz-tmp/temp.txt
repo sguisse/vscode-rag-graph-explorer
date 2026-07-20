@@ -1,10 +1,10 @@
 ### 🛡️ Plan d'Impact & Fiche de Recette Polyglotte
 
 **Élément Déclencheur :** Fichier `OrderController.java`
-**Direction de Propagation :** Aval (Impacts descendants)
+**Direction de Propagation :** Amont (Appelants ascendants)
 
 #### 📋 Liste des composants à re-tester
 
+- [ ] **OrderButton.tsx** (`frontend/components/OrderButton.tsx`)
+- [ ] **orderApi.ts** (`frontend/services/orderApi.ts`)
 - [ ] **OrderController.java** (`backend/controllers/OrderController.java`)
-- [ ] **Order.java** (`backend/models/Order.java`)
-- [ ] **OrderRepository.java** (`backend/repositories/OrderRepository.java`)

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ResizableContainer } from '@/components/app/container/resizable-container';
 import { Tooltip } from '@/components/app/tooltip';
 import { useResizable } from '@/components/app/container/hooks/use-resizable';
 import { Header } from './header';
 import { SidebarLeft } from './sidebar-left';
+import { Workspace } from './workspace';
+import { SidebarRight } from './sidebar-right';
 import { Footer } from './footer';
 
 export interface AppLayoutConfig {
@@ -107,7 +108,6 @@ export function AppLayout({
         </div>
       )}
 
-      {/* EXTERNALIZED HEADER WITH PRESERVED ORIGINAL CONTENT & BEHAVIOR */}
       <Header
         sidebarLeftMode={sidebarLeftMode}
         setSidebarLeftMode={setSidebarLeftMode}
@@ -143,10 +143,8 @@ export function AppLayout({
         </DialogContent>
       </Dialog>
 
-      {/* pb-[40px] leaves clean clearance for the main full-width fixed footer component */}
       <div id="ctn-main" className="relative flex flex-1 overflow-hidden pb-[40px]">
 
-        {/* EXTERNALIZED SIDEBAR LEFT COMPONENT WITH PRESERVED BEHAVIORS */}
         <SidebarLeft
           sidebarLeftMode={sidebarLeftMode}
           setSidebarLeftMode={setSidebarLeftMode}
@@ -157,81 +155,44 @@ export function AppLayout({
           isDraggingSidebarLeft={isDraggingSidebarLeft}
         />
 
-        {/* WORKSPACE CENTER COMPOSITION */}
-        <div id="ctn-workspace" style={{ display: isCtnWorkspaceVisible ? 'flex' : 'none' }} className="relative flex flex-1 bg-background min-w-0">
-          <div className="relative flex flex-col flex-1 min-w-0">
+        {/* EXTERNALIZED WORKSPACE COMPONENT MODULE */}
+        <Workspace
+          isCtnWorkspaceVisible={isCtnWorkspaceVisible}
+          layoutConfig={layoutConfig}
+          isCtnWorkspaceTopVisible={isCtnWorkspaceTopVisible}
+          ctnWorkspaceTopHeight={ctnWorkspaceTopHeight}
+          startCtnWorkspaceTopResize={startCtnWorkspaceTopResize}
+          panels={panels}
+          headers={headers}
+          isCtnWorkspaceLeftVisible={isCtnWorkspaceLeftVisible}
+          activeMiddlePanelsCount={activeMiddlePanelsCount}
+          ctnWorkspaceLeftWidth={ctnWorkspaceLeftWidth}
+          activeView={activeView}
+          startCtnWorkspaceLeftResize={startCtnWorkspaceLeftResize}
+          isCtnWorkspaceCenterVisible={isCtnWorkspaceCenterVisible}
+          isGraphMaximized={isGraphMaximized}
+          isCurrentlyResizing={isCurrentlyResizing}
+          isDraggingSidebarLeft={isDraggingSidebarLeft}
+          isDraggingSidebarRight={isDraggingSidebarRight}
+          isDraggingLeftPane={isDraggingLeftPane}
+          isDraggingRightPane={isDraggingRightPane}
+          isCtnWorkspaceRightVisible={isCtnWorkspaceRightVisible}
+          ctnWorkspaceRightWidth={ctnWorkspaceRightWidth}
+          startCtnWorkspaceRightResize={startCtnWorkspaceRightResize}
+          isCtnWorkspaceBottomVisible={isCtnWorkspaceBottomVisible}
+          ctnWorkspaceBottomHeight={ctnWorkspaceBottomHeight}
+          startCtnWorkspaceBottomResize={startCtnWorkspaceBottomResize}
+        />
 
-            {/* TOP PANEL */}
-            {layoutConfig.showTop && (
-              <ResizableContainer id="ctn-workspace-top" visible={isCtnWorkspaceTopVisible} style={{ height: `${ctnWorkspaceTopHeight}px` }} headerLeft="Target Path Mapping Streams" resizeHandle="bottom" onResizeStart={startCtnWorkspaceTopResize} className="bg-muted border-b">
-                {panels.top}
-              </ResizableContainer>
-            )}
-
-            <div id="ctn-workspace-middle-row" className="flex flex-1 min-h-0 overflow-hidden">
-
-              {/* LEFT PANEL */}
-              {layoutConfig.showLeft && (
-                <ResizableContainer
-                  id="ctn-workspace-left"
-                  visible={isCtnWorkspaceLeftVisible}
-                  style={activeMiddlePanelsCount === 1 ? { flex: 1 } : { width: `${ctnWorkspaceLeftWidth}px` }}
-                  headerLeft={headers.leftPanelTitle || activeView}
-                  className={activeMiddlePanelsCount === 1 ? "min-w-[200px]" : "border-r min-w-[200px]"}
-                  resizeHandle={activeMiddlePanelsCount > 1 ? "right" : "none"}
-                  onResizeStart={startCtnWorkspaceLeftResize}
-                >
-                  {panels.left}
-                </ResizableContainer>
-              )}
-
-              {/* CENTER PANEL */}
-              {layoutConfig.showCenter && (
-                <ResizableContainer
-                  id="ctn-workspace-center"
-                  visible={isCtnWorkspaceCenterVisible || isGraphMaximized}
-                  style={isGraphMaximized ? { position: 'fixed', top: '40px', bottom: '40px', left: '0', right: '0', zIndex: 50 } : { flex: 1 }}
-                  headerLeft={headers.centerPanelHeader}
-                  headerCenter={headers.centerPanelHeaderCenter}
-                  headerRight={headers.centerPanelHeaderRight}
-                  className="relative bg-background"
-                >
-                  {panels.center}
-                  {isCurrentlyResizing && <div className="z-30 absolute inset-0 bg-transparent pointer-events-auto select-none" style={{ cursor: isDraggingSidebarLeft || isDraggingSidebarRight || isDraggingLeftPane || isDraggingRightPane ? 'col-resize' : 'row-resize' }} />}
-                </ResizableContainer>
-              )}
-
-              {/* RIGHT PANEL */}
-              {layoutConfig.showRight && (
-                <ResizableContainer
-                  id="ctn-workspace-right"
-                  visible={isCtnWorkspaceRightVisible}
-                  style={(!isCtnWorkspaceCenterVisible || activeMiddlePanelsCount === 1) ? { flex: 1 } : { width: `${ctnWorkspaceRightWidth}px` }}
-                  headerLeft="Metadata & Inspector Tab Matrices"
-                  className={(!isCtnWorkspaceCenterVisible || activeMiddlePanelsCount === 1) ? "min-w-[200px]" : "border-l min-w-[200px]"}
-                  resizeHandle={isCtnWorkspaceCenterVisible ? "left" : "none"}
-                  onResizeStart={isCtnWorkspaceCenterVisible ? startCtnWorkspaceRightResize : undefined}
-                >
-                  {panels.right}
-                </ResizableContainer>
-              )}
-            </div>
-
-            {/* BOTTOM PANEL */}
-            {layoutConfig.showBottom && (
-              <ResizableContainer id="ctn-workspace-bottom" visible={isCtnWorkspaceBottomVisible} style={{ height: `${ctnWorkspaceBottomHeight}px` }} className="bg-secondary border-t" resizeHandle="top" onResizeStart={startCtnWorkspaceBottomResize}>
-                {panels.bottom}
-              </ResizableContainer>
-            )}
-          </div>
-        </div>
-
-        {/* RIGHT SIDEBAR PANEL */}
-        {layoutConfig.showRightSidebar && (
-          <ResizableContainer id="ctn-sidebar-right" visible={isSidebarRightVisible} style={{ width: `${sidebarRightWidth}px` }} headerLeft={headers.rightSidebarHeader} headerRight={headers.rightSidebarHeaderRight} className="border-l shrink-0" resizeHandle="left" onResizeStart={startSidebarRightResize}>
-            {panels.rightSidebar}
-          </ResizableContainer>
-        )}
+        {/* EXTERNALIZED RIGHT SIDEBAR COMPONENT MODULE */}
+        <SidebarRight
+          layoutConfig={layoutConfig}
+          isSidebarRightVisible={isSidebarRightVisible}
+          sidebarRightWidth={sidebarRightWidth}
+          headers={headers}
+          panels={panels}
+          startSidebarRightResize={startSidebarRightResize}
+        />
 
       </div>
 
