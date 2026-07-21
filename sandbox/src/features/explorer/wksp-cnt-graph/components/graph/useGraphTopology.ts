@@ -5,7 +5,7 @@ import {
   CodebaseFile,
   Dependency,
   FOLDER_BASE_X_POSITIONS_CONFIG,
-  NODE_DIMENSIONS_CONFIG_MAP,
+  NODE_DIMENSIONS_CONFIG,
   buildMemberKeyToken
 } from '@/services/codebase';
 
@@ -38,7 +38,7 @@ export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) 
 
     Object.entries(folderPositions).forEach(([folderKey]) => {
       const folderFiles = filesByFolder[folderKey] || [];
-      const dimensions = folderKey === 'config' ? NODE_DIMENSIONS_CONFIG_MAP.config : NODE_DIMENSIONS_CONFIG_MAP.default;
+      const dimensions = folderKey === 'config' ? NODE_DIMENSIONS_CONFIG.config : NODE_DIMENSIONS_CONFIG.default;
       const baseX = FOLDER_BASE_X_POSITIONS_CONFIG[folderKey as keyof typeof FOLDER_BASE_X_POSITIONS_CONFIG] || 40;
 
       folderFiles.forEach((file, index) => {

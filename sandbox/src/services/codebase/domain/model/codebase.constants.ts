@@ -11,7 +11,7 @@ export const FOLDER_BASE_X_POSITIONS_CONFIG: Record<RegisteredFolderKey, number>
 
 export const MEMBER_KEY_SEPARATOR_TOKEN = '__member__';
 
-export const INITIAL_VISIBLE_FILES_MAP_CONFIG: Record<string, boolean> = {
+export const INITIAL_VISIBLE_FILES_CONFIG: Record<string, boolean> = {
   'OrderButton.tsx': true,
   'orderApi.ts': true,
   'OrderController.java': true,
@@ -21,7 +21,7 @@ export const INITIAL_VISIBLE_FILES_MAP_CONFIG: Record<string, boolean> = {
   'application.yml': true
 };
 
-export const NODE_DIMENSIONS_CONFIG_MAP = {
+export const NODE_DIMENSIONS_CONFIG = {
   config: { width: 320, height: 240, cssClass: 'w-80' },
   default: { width: 288, height: 280, cssClass: 'w-72' }
 } as const;

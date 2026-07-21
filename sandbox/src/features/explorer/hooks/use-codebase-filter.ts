@@ -1,15 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { CodebaseFile, filterCodebaseFiles } from '@/services/codebase';
-
-const INITIAL_VISIBLE_FILES: Record<string, boolean> = {
-  'OrderButton.tsx': true,
-  'orderApi.ts': true,
-  'OrderController.java': true,
-  'Order.java': true,
-  'OrderRepository.java': true,
-  'JpaOrderRepository.java': true,
-  'application.yml': true
-};
+import { CodebaseFile, filterCodebaseFiles, INITIAL_VISIBLE_FILES_CONFIG } from '@/services/codebase';
 
 export function useCodebaseFilter(allFiles: CodebaseFile[]) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -20,7 +10,7 @@ export function useCodebaseFilter(allFiles: CodebaseFile[]) {
     backend: true,
     config: true
   });
-  const [visibleFiles, setVisibleFiles] = useState<Record<string, boolean>>(INITIAL_VISIBLE_FILES);
+  const [visibleFiles, setVisibleFiles] = useState<Record<string, boolean>>(INITIAL_VISIBLE_FILES_CONFIG);
 
   const toggleFolder = useCallback((folderName: string) => {
     setExpandedFolders(prev => ({ ...prev, [folderName]: !prev[folderName] }));
@@ -47,7 +37,7 @@ export function useCodebaseFilter(allFiles: CodebaseFile[]) {
   }, [allFiles, searchTerm, displayLevel, visibleFiles, maxNodesLimit]);
 
   const resetFilters = useCallback(() => {
-    setVisibleFiles(INITIAL_VISIBLE_FILES);
+    setVisibleFiles(INITIAL_VISIBLE_FILES_CONFIG);
     setSearchTerm('');
     setDisplayLevel('all');
   }, []);
