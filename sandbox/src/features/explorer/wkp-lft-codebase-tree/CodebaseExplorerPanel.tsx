@@ -42,23 +42,40 @@ export function CodebaseExplorerPanel({
           const theme = FOLDER_THEME_REGISTRY_CONFIG[folder] || FOLDER_THEME_REGISTRY_CONFIG.default;
           return (
             <div key={folder} className="mb-4">
-              <div className="group flex justify-between items-center hover:bg-muted/50 px-1 py-1 rounded">
-                <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => toggleFolder(folder)}>
-                  {expandedFolders[folder] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                  <Folder size={15} className={`${theme.fill} ${theme.text}`} />
-                  <span className="font-bold">{folder}/</span>
+              <div className="group flex items-center gap-1.5 hover:bg-muted/50 px-1 py-1 rounded">
+                <input
+                  type="checkbox"
+                  checked={codebase.files.filter(f => f.path.startsWith(folder)).every(f => visibleFiles[f.id])}
+                  onChange={() => toggleFolderCheckbox(folder)}
+                  className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
+                />
+                <div className="flex flex-1 items-center gap-1.5 min-w-0 cursor-pointer" onClick={() => toggleFolder(folder)}>
+                  {expandedFolders[folder] ? <ChevronDown size={14} className="shrink-0" /> : <ChevronRight size={14} className="shrink-0" />}
+                  <Folder size={15} className={`${theme.fill} ${theme.text} shrink-0`} />
+                  <span className="font-bold truncate">{folder}/</span>
                 </div>
-                <input type="checkbox" checked={codebase.files.filter(f => f.path.startsWith(folder)).every(f => visibleFiles[f.id])} onChange={() => toggleFolderCheckbox(folder)} className="rounded w-3.5 h-3.5 text-primary cursor-pointer" />
               </div>
               {expandedFolders[folder] && (
                 <div className="space-y-1 mt-1 ml-2.5 pl-6 border-border border-l">
                   {codebase.files.filter(f => f.path.startsWith(folder)).map((file: CodebaseFile) => (
-                    <div key={file.id} className="group flex justify-between items-center hover:bg-muted px-2 py-1 rounded">
-                      <span className={`flex items-center gap-1.5 truncate cursor-pointer ${visibleFiles[file.id] ? 'text-foreground font-medium' : 'text-muted-foreground line-through'}`} onClick={() => setSelectedEntity({ type: 'node', nodeId: file.id })}>
-                        {folder === 'config' ? <Database size={13} className="text-amber-500" /> : <FileCode size={13} className={file.type === 'interface' ? 'text-indigo-400' : (folder === 'frontend' ? 'text-emerald-500' : 'text-blue-500')} />}
-                        {file.name}
+                    <div key={file.id} className="group flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded">
+                      <input
+                        type="checkbox"
+                        checked={visibleFiles[file.id]}
+                        onChange={() => toggleFileCheckbox(file.id)}
+                        className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
+                      />
+                      <span
+                        className={`flex items-center gap-1.5 truncate cursor-pointer flex-1 min-w-0 ${visibleFiles[file.id] ? 'text-foreground font-medium' : 'text-muted-foreground line-through'}`}
+                        onClick={() => setSelectedEntity({ type: 'node', nodeId: file.id })}
+                      >
+                        {folder === 'config' ? (
+                          <Database size={13} className="text-amber-500 shrink-0" />
+                        ) : (
+                          <FileCode size={13} className={file.type === 'interface' ? 'text-indigo-400 shrink-0' : (folder === 'frontend' ? 'text-emerald-500 shrink-0' : 'text-blue-500 shrink-0')} />
+                        )}
+                        <span className="truncate">{file.name}</span>
                       </span>
-                      <input type="checkbox" checked={visibleFiles[file.id]} onChange={() => toggleFileCheckbox(file.id)} className="rounded w-3.5 h-3.5 text-primary cursor-pointer" />
                     </div>
                   ))}
                 </div>
