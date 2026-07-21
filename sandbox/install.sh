@@ -11,12 +11,12 @@
 set -e
 
 # Ensure domain rules directory exists
-mkdir -p sandbox/src/services/codebase/domain/rule
+mkdir -p src/services/codebase/domain/rule
 
 # ----------------------------------------------------------------------------
 # 1. CREATE DOMAIN RULE SERVICE: markdown-recipe.rule.ts
 # ----------------------------------------------------------------------------
-cat << 'EOF' > sandbox/src/services/codebase/domain/rule/markdown-recipe.rule.ts
+cat << 'EOF' > src/services/codebase/domain/rule/markdown-recipe.rule.ts
 import { SelectedEntity, ImpactDirection, CodebaseData, CodebaseFile } from '../model/codebase.model';
 
 export function generateMarkdownRecipe(
@@ -49,7 +49,7 @@ EOF
 # ----------------------------------------------------------------------------
 # 2. UPDATE DOMAIN SERVICE: codebase.service.ts
 # ----------------------------------------------------------------------------
-cat << 'EOF' > sandbox/src/services/codebase/domain/service/codebase.service.ts
+cat << 'EOF' > src/services/codebase/domain/service/codebase.service.ts
 import { ICodebaseRepositoryPort } from '../port-out/codebase-repository.port';
 import { CodebaseData, SelectedEntity, ImpactDirection, CodebaseFile } from '../model/codebase.model';
 import { calculateTransitiveImpact } from '../rule/transitive-impact.rule';
@@ -100,7 +100,7 @@ EOF
 # ----------------------------------------------------------------------------
 # 3. UPDATE SERVICE BARREL: services/codebase/index.ts
 # ----------------------------------------------------------------------------
-cat << 'EOF' > sandbox/src/services/codebase/index.ts
+cat << 'EOF' > src/services/codebase/index.ts
 import { CodebaseService } from './domain/service/codebase.service';
 import { MockCodebaseAdapter } from './infrastructure/mockCodebaseAdapter';
 
@@ -119,7 +119,7 @@ EOF
 # ----------------------------------------------------------------------------
 # 4. REFACTOR UI PANEL: inspector-tab-panel.tsx
 # ----------------------------------------------------------------------------
-cat << 'EOF' > sandbox/src/features/explorer/wkp-rgt-tabs-inspector/inspector-tab-panel.tsx
+cat << 'EOF' > src/features/explorer/wkp-rgt-tabs-inspector/inspector-tab-panel.tsx
 import React, { useMemo } from 'react';
 import { FileCode, ShieldAlert, GitFork, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -241,6 +241,6 @@ EOF
 # ----------------------------------------------------------------------------
 # 5. BUILD VERIFICATION
 # ----------------------------------------------------------------------------
-npm run build --prefix sandbox
+npm run build
 
 echo "✅ refactor: Successfully externalized generatedMarkdownRecipe into dedicated domain rule generateMarkdownRecipe service!"
