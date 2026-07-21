@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ============================================================================
-# Codebase Explorer Checkbox Repositioning Script
-# Action: Relocates tree checkboxes in CodebaseExplorerPanel.tsx to the left
-# of folder and file tree nodes.
+# Re-apply Tri-State Folder Checkbox in Codebase Explorer Panel
+# Action: Incorporates the latest codebase manual changes and updates
+# CodebaseExplorerPanel.tsx to feature tri-state folder checkboxes on the left.
 # ============================================================================
 
 set -e
@@ -10,15 +10,42 @@ set -e
 mkdir -p src/features/explorer/wkp-lft-codebase-tree
 
 cat << 'EOF' > src/features/explorer/wkp-lft-codebase-tree/CodebaseExplorerPanel.tsx
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { ChevronDown, ChevronRight, Folder, FileCode, Database } from 'lucide-react';
 import {
   CodebaseFile,
   SelectedEntity,
   codebaseService,
-  REGISTERED_FOLDER_KEYS,
-  FOLDER_THEME_REGISTRY
+  FOLDER_KEYS_REGISTERED_CONFIG,
+  FOLDER_THEME_REGISTRY_CONFIG
 } from '@/services/codebase';
+
+interface TriStateCheckboxProps {
+  checked: boolean;
+  indeterminate: boolean;
+  onChange: () => void;
+  className?: string;
+}
+
+function TriStateCheckbox({ checked, indeterminate, onChange, className }: TriStateCheckboxProps) {
+  const checkboxRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (checkboxRef.current) {
+      checkboxRef.current.indeterminate = indeterminate;
+    }
+  }, [indeterminate]);
+
+  return (
+    <input
+      ref={checkboxRef}
+      type="checkbox"
+      checked={checked}
+      onChange={onChange}
+      className={className}
+    />
+  );
+}
 
 interface CodebaseExplorerPanelProps {
   searchFilteredFiles: CodebaseFile[];
@@ -50,18 +77,23 @@ export function CodebaseExplorerPanel({
         </h3>
       </div>
       <div className="flex-1 p-4 overflow-y-auto font-mono text-xs">
-        {REGISTERED_FOLDER_KEYS.map(folder => {
-          const theme = FOLDER_THEME_REGISTRY[folder] || FOLDER_THEME_REGISTRY.default;
+        {FOLDER_KEYS_REGISTERED_CONFIG.map(folder => {
+          const theme = FOLDER_THEME_REGISTRY_CONFIG[folder] || FOLDER_THEME_REGISTRY_CONFIG.default;
+          const folderFiles = codebase.files.filter(f => f.path.startsWith(folder));
+          const isAllChecked = folderFiles.length > 0 && folderFiles.every(f => visibleFiles[f.id]);
+          const isSomeChecked = folderFiles.some(f => visibleFiles[f.id]);
+          const isIndeterminate = isSomeChecked && !isAllChecked;
+
           return (
             <div key={folder} className="mb-4">
               <div className="group flex items-center gap-1.5 hover:bg-muted/50 px-1 py-1 rounded">
-                <input
-                  type="checkbox"
-                  checked={codebase.files.filter(f => f.path.startsWith(folder)).every(f => visibleFiles[f.id])}
+                <TriStateCheckbox
+                  checked={isAllChecked}
+                  indeterminate={isIndeterminate}
                   onChange={() => toggleFolderCheckbox(folder)}
                   className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
                 />
-                <div className="flex items-center gap-1.5 cursor-pointer flex-1 min-w-0" onClick={() => toggleFolder(folder)}>
+                <div className="flex flex-1 items-center gap-1.5 min-w-0 cursor-pointer" onClick={() => toggleFolder(folder)}>
                   {expandedFolders[folder] ? <ChevronDown size={14} className="shrink-0" /> : <ChevronRight size={14} className="shrink-0" />}
                   <Folder size={15} className={`${theme.fill} ${theme.text} shrink-0`} />
                   <span className="font-bold truncate">{folder}/</span>
@@ -69,11 +101,11 @@ export function CodebaseExplorerPanel({
               </div>
               {expandedFolders[folder] && (
                 <div className="space-y-1 mt-1 ml-2.5 pl-6 border-border border-l">
-                  {codebase.files.filter(f => f.path.startsWith(folder)).map((file: CodebaseFile) => (
+                  {folderFiles.map((file: CodebaseFile) => (
                     <div key={file.id} className="group flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded">
                       <input
                         type="checkbox"
-                        checked={visibleFiles[file.id]}
+                        checked={!!visibleFiles[file.id]}
                         onChange={() => toggleFileCheckbox(file.id)}
                         className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
                       />
@@ -103,4 +135,4 @@ EOF
 
 npm run build
 
-echo "✅ feat/ui: Moved tree checkboxes to the left side in CodebaseExplorerPanel!"
+echo "✅ feat/ui: Re-applied tri-state folder checkboxes on the left in CodebaseExplorerPanel using the latest codebase source!"

@@ -78,12 +78,12 @@ export function AppLayout({
 
   const { visibility, actions } = useLayoutState(layoutConfig);
 
-  const [sidebarLeftWidth, startSidebarLeftResize, isDraggingSidebarLeft] = useResizable(220, 160, 400, true, false, 60);
-  const [sidebarRightWidth, startSidebarRightResize, isDraggingSidebarRight] = useResizable(300, 200, 500, true, true, 80);
-  const [ctnWorkspaceLeftWidth, startCtnWorkspaceLeftResize, isDraggingLeftPane] = useResizable(260, 180, 500, true, false);
-  const [ctnWorkspaceRightWidth, startCtnWorkspaceRightResize, isDraggingRightPane] = useResizable(320, 200, 600, true, true);
-  const [ctnWorkspaceTopHeight, startCtnWorkspaceTopResize, isDraggingTopPane] = useResizable(120, 50, 250, false, false);
-  const [ctnWorkspaceBottomHeight, startCtnWorkspaceBottomResize, isDraggingBottomPane] = useResizable(30, 30, 400, false, true);
+  const [sidebarLeftWidth, startSidebarLeftResize, isDraggingSidebarLeft] = useResizable(220, 190, 400, true, false, 60);
+  const [sidebarRightWidth, startSidebarRightResize, isDraggingSidebarRight] = useResizable(300, 50, 500, true, true, 80);
+  const [ctnWorkspaceLeftWidth, startCtnWorkspaceLeftResize, isDraggingLeftPane] = useResizable(260, 50, 500, true, false);
+  const [ctnWorkspaceRightWidth, startCtnWorkspaceRightResize, isDraggingRightPane] = useResizable(320, 50, 600, true, true);
+  const [ctnWorkspaceTopHeight, startCtnWorkspaceTopResize, isDraggingTopPane] = useResizable(120, 75, 250, false, false);
+  const [ctnWorkspaceBottomHeight, startCtnWorkspaceBottomResize, isDraggingBottomPane] = useResizable(33, 33, 400, false, true);
 
   const isCurrentlyResizing = isDraggingSidebarLeft || isDraggingSidebarRight || isDraggingLeftPane || isDraggingRightPane || isDraggingTopPane || isDraggingBottomPane;
 
@@ -124,7 +124,7 @@ export function AppLayout({
         </DialogContent>
       </Dialog>
 
-      <div id="ctn-main" className="relative flex flex-1 overflow-hidden pb-[40px]">
+      <div id="ctn-main" className="relative flex flex-1 pb-[40px] overflow-hidden">
 
         <SidebarLeft
           sidebarLeftMode={sidebarLeftMode}

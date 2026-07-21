@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { ChevronDown, ChevronRight, Folder, FileCode, Database } from 'lucide-react';
 import {
   CodebaseFile,
@@ -7,6 +7,33 @@ import {
   FOLDER_KEYS_REGISTERED_CONFIG,
   FOLDER_THEME_REGISTRY_CONFIG
 } from '@/services/codebase';
+
+interface TriStateCheckboxProps {
+  checked: boolean;
+  indeterminate: boolean;
+  onChange: () => void;
+  className?: string;
+}
+
+function TriStateCheckbox({ checked, indeterminate, onChange, className }: TriStateCheckboxProps) {
+  const checkboxRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (checkboxRef.current) {
+      checkboxRef.current.indeterminate = indeterminate;
+    }
+  }, [indeterminate]);
+
+  return (
+    <input
+      ref={checkboxRef}
+      type="checkbox"
+      checked={checked}
+      onChange={onChange}
+      className={className}
+    />
+  );
+}
 
 interface CodebaseExplorerPanelProps {
   searchFilteredFiles: CodebaseFile[];
@@ -40,12 +67,17 @@ export function CodebaseExplorerPanel({
       <div className="flex-1 p-4 overflow-y-auto font-mono text-xs">
         {FOLDER_KEYS_REGISTERED_CONFIG.map(folder => {
           const theme = FOLDER_THEME_REGISTRY_CONFIG[folder] || FOLDER_THEME_REGISTRY_CONFIG.default;
+          const folderFiles = codebase.files.filter(f => f.path.startsWith(folder));
+          const isAllChecked = folderFiles.length > 0 && folderFiles.every(f => visibleFiles[f.id]);
+          const isSomeChecked = folderFiles.some(f => visibleFiles[f.id]);
+          const isIndeterminate = isSomeChecked && !isAllChecked;
+
           return (
             <div key={folder} className="mb-4">
               <div className="group flex items-center gap-1.5 hover:bg-muted/50 px-1 py-1 rounded">
-                <input
-                  type="checkbox"
-                  checked={codebase.files.filter(f => f.path.startsWith(folder)).every(f => visibleFiles[f.id])}
+                <TriStateCheckbox
+                  checked={isAllChecked}
+                  indeterminate={isIndeterminate}
                   onChange={() => toggleFolderCheckbox(folder)}
                   className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
                 />
@@ -57,11 +89,11 @@ export function CodebaseExplorerPanel({
               </div>
               {expandedFolders[folder] && (
                 <div className="space-y-1 mt-1 ml-2.5 pl-6 border-border border-l">
-                  {codebase.files.filter(f => f.path.startsWith(folder)).map((file: CodebaseFile) => (
+                  {folderFiles.map((file: CodebaseFile) => (
                     <div key={file.id} className="group flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded">
                       <input
                         type="checkbox"
-                        checked={visibleFiles[file.id]}
+                        checked={!!visibleFiles[file.id]}
                         onChange={() => toggleFileCheckbox(file.id)}
                         className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
                       />
