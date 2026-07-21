@@ -1,6 +1,13 @@
 import { useCallback } from 'react';
 import cytoscape from 'cytoscape';
-import { CodebaseData, CodebaseFile, Dependency } from '@/services/codebase';
+import {
+  CodebaseData,
+  CodebaseFile,
+  Dependency,
+  FOLDER_BASE_X_POSITIONS_CONFIG,
+  NODE_DIMENSIONS_CONFIG_MAP,
+  buildMemberKeyToken
+} from '@/services/codebase';
 
 export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) {
   const updateGraphTopology = useCallback((
@@ -23,8 +30,6 @@ export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) 
       filesByFolder[folderKey].push(file);
     });
 
-    const folderBaseX: Record<string, number> = { frontend: 40, backend: 460, config: 1270 };
-
     Object.keys(folderPositions).forEach(folderKey => {
       if ((filesByFolder[folderKey] || []).length > 0) {
         cy.add({ data: { id: `folder__${folderKey}`, label: folderPositions[folderKey].label }, classes: 'folder' });
@@ -33,14 +38,14 @@ export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) 
 
     Object.entries(folderPositions).forEach(([folderKey]) => {
       const folderFiles = filesByFolder[folderKey] || [];
-      const maxNodeWidth = folderKey === 'config' ? 320 : 288;
-      const maxNodeHeight = folderKey === 'config' ? 240 : 280;
+      const dimensions = folderKey === 'config' ? NODE_DIMENSIONS_CONFIG_MAP.config : NODE_DIMENSIONS_CONFIG_MAP.default;
+      const baseX = FOLDER_BASE_X_POSITIONS_CONFIG[folderKey as keyof typeof FOLDER_BASE_X_POSITIONS_CONFIG] || 40;
 
       folderFiles.forEach((file, index) => {
-        const absX = folderBaseX[folderKey] + 30 + (index % 2) * (maxNodeWidth + 50) + maxNodeWidth / 2;
-        const absY = 80 + Math.floor(index / 2) * (maxNodeHeight + 50) + maxNodeHeight / 2;
+        const absX = baseX + 30 + (index % 2) * (dimensions.width + 50) + dimensions.width / 2;
+        const absY = 80 + Math.floor(index / 2) * (dimensions.height + 50) + dimensions.height / 2;
         cy.add({
-          data: { id: file.id, parent: `folder__${folderKey}`, width: maxNodeWidth, height: maxNodeHeight },
+          data: { id: file.id, parent: `folder__${folderKey}`, width: dimensions.width, height: dimensions.height },
           position: { x: absX, y: absY }
         });
       });
@@ -51,8 +56,10 @@ export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) 
           searchFilteredFiles.some(f => f.id === dep.sourceNode) &&
           searchFilteredFiles.some(f => f.id === dep.targetNode)) {
 
-        const isEdgeImpacted = impactedSet.has(dep.sourceHandle === 'header' ? dep.sourceNode : `${dep.sourceNode}__member__${dep.sourceHandle}`) &&
-                               impactedSet.has(dep.targetHandle === 'header' ? dep.targetNode : `${dep.targetNode}__member__${dep.targetHandle}`);
+        const sourceKeyMember = buildMemberKeyToken(dep.sourceNode, dep.sourceHandle);
+        const targetKeyMember = buildMemberKeyToken(dep.targetNode, dep.targetHandle);
+        const isEdgeImpacted = impactedSet.has(dep.sourceHandle === 'header' ? dep.sourceNode : sourceKeyMember) &&
+                               impactedSet.has(dep.targetHandle === 'header' ? dep.targetNode : targetKeyMember);
 
         cy.add({
           data: { id: dep.id, source: dep.sourceNode, target: dep.targetNode, label: dep.label },

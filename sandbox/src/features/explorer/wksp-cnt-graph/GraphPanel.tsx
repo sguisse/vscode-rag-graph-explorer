@@ -1,7 +1,7 @@
 import React from 'react';
 import { Info } from 'lucide-react';
 import { FolderNode, UmlClassNode, ConfigNode, UmlClassNodeData } from './components/graph/GraphUmlShapes';
-import { codebaseService, SelectedEntity, CodebaseFile } from '@/services/codebase';
+import { codebaseService, SelectedEntity, CodebaseFile, isMemberKeyForFileToken, extractMemberIdFromKeyToken } from '@/services/codebase';
 
 interface GraphPanelProps {
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -62,7 +62,11 @@ export function GraphPanel({
           if (!bounds) return null;
 
           const impactedMembers: string[] = [];
-          impactedSet.forEach(item => { if (item.startsWith(`${file.id}__member__`)) impactedMembers.push(item.split('__member__')[1]); });
+          impactedSet.forEach(item => {
+            if (isMemberKeyForFileToken(item, file.id)) {
+              impactedMembers.push(extractMemberIdFromKeyToken(item));
+            }
+          });
           const isNodeImpacted = impactedSet.has(file.id);
           const isDimmed = selectedEntity !== null && impactedSet.size > 0 && !isNodeImpacted;
 

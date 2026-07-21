@@ -1,8 +1,9 @@
 import React from 'react';
-import { Search, Upload, Download, Moon, Sun, RotateCcw, Eye, Menu } from 'lucide-react';
+import { Search, Upload, Download, Moon, Sun, RotateCcw, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LeftCenterRightPanel } from '@/components/app/left-center-right-panel';
+import { HeaderToggleEyeButton } from './header-toggle-button';
 import { LayoutVisibilityState, LayoutVisibilityActions } from './hooks/use-layout-state';
 import { AppLayoutConfig } from './AppLayout';
 
@@ -80,17 +81,56 @@ export function Header({
           </Button>
           {onResetFilters && <Button variant="ghost" size="icon" onClick={onResetFilters} className="hover:bg-muted p-1.5 rounded w-8 h-8 text-muted-foreground hover:text-foreground transition-colors" data-tooltip="Reset all workspace visual states, filters, and matrices"><RotateCcw size={16} /></Button>}
           <div className="mx-1 bg-border w-px h-4"></div>
-          <Button variant="ghost" size="icon" onClick={() => actions.setIsCtnWorkspaceVisible(!visibility.isCtnWorkspaceVisible)} className={`p-1.5 rounded transition-colors ml-1 w-8 h-8 ${visibility.isCtnWorkspaceVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground hover:bg-muted'}`} data-tooltip="Toggle core workspace frame canvas wrapper"><Eye size={16} /></Button>
 
-          {layoutConfig.showTop && <Button variant="ghost" size="icon" onClick={() => actions.setIsCtnWorkspaceTopVisible(!visibility.isCtnWorkspaceTopVisible)} className={`p-1.5 rounded transition-colors ml-1 w-8 h-8 ${visibility.isCtnWorkspaceTopVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted'}`} data-tooltip="Toggle workspace mapping path summary rows"><Eye size={16} /></Button>}
-          {layoutConfig.showLeft && <Button variant="ghost" size="icon" onClick={() => actions.setIsCtnWorkspaceLeftVisible(!visibility.isCtnWorkspaceLeftVisible)} className={`p-1.5 rounded transition-colors ml-1 w-8 h-8 ${visibility.isCtnWorkspaceLeftVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted'}`} data-tooltip="Toggle multi-layer filter explorer stream"><Eye size={16} /></Button>}
-          {layoutConfig.showCenter && <Button variant="ghost" size="icon" onClick={() => actions.setIsCtnWorkspaceCenterVisible(!visibility.isCtnWorkspaceCenterVisible)} className={`p-1.5 rounded transition-colors ml-1 w-8 h-8 ${visibility.isCtnWorkspaceCenterVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted'}`} data-tooltip="Toggle center interactive stage"><Eye size={16} /></Button>}
-          {layoutConfig.showRight && <Button variant="ghost" size="icon" onClick={() => actions.setIsCtnWorkspaceRightVisible(!visibility.isCtnWorkspaceRightVisible)} className={`p-1.5 rounded transition-colors ml-1 w-8 h-8 ${visibility.isCtnWorkspaceRightVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted'}`} data-tooltip="Toggle right sub-workspace tab inspect matrices"><Eye size={16} /></Button>}
-          {layoutConfig.showBottom && <Button variant="ghost" size="icon" onClick={() => actions.setIsCtnWorkspaceBottomVisible(!visibility.isCtnWorkspaceBottomVisible)} className={`p-1.5 rounded transition-colors ml-1 w-8 h-8 ${visibility.isCtnWorkspaceBottomVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted'}`} data-tooltip="Toggle bottom system real-time runtime status log bars"><Eye size={16} /></Button>}
+          <HeaderToggleEyeButton
+            isVisible={visibility.isCtnWorkspaceVisible}
+            onToggle={() => actions.setIsCtnWorkspaceVisible(!visibility.isCtnWorkspaceVisible)}
+            tooltipText="Toggle core workspace frame canvas wrapper"
+          />
+
+          {layoutConfig.showTop && (
+            <HeaderToggleEyeButton
+              isVisible={visibility.isCtnWorkspaceTopVisible}
+              onToggle={() => actions.setIsCtnWorkspaceTopVisible(!visibility.isCtnWorkspaceTopVisible)}
+              tooltipText="Toggle workspace mapping path summary rows"
+            />
+          )}
+          {layoutConfig.showLeft && (
+            <HeaderToggleEyeButton
+              isVisible={visibility.isCtnWorkspaceLeftVisible}
+              onToggle={() => actions.setIsCtnWorkspaceLeftVisible(!visibility.isCtnWorkspaceLeftVisible)}
+              tooltipText="Toggle multi-layer filter explorer stream"
+            />
+          )}
+          {layoutConfig.showCenter && (
+            <HeaderToggleEyeButton
+              isVisible={visibility.isCtnWorkspaceCenterVisible}
+              onToggle={() => actions.setIsCtnWorkspaceCenterVisible(!visibility.isCtnWorkspaceCenterVisible)}
+              tooltipText="Toggle center interactive stage"
+            />
+          )}
+          {layoutConfig.showRight && (
+            <HeaderToggleEyeButton
+              isVisible={visibility.isCtnWorkspaceRightVisible}
+              onToggle={() => actions.setIsCtnWorkspaceRightVisible(!visibility.isCtnWorkspaceRightVisible)}
+              tooltipText="Toggle right sub-workspace tab inspect matrices"
+            />
+          )}
+          {layoutConfig.showBottom && (
+            <HeaderToggleEyeButton
+              isVisible={visibility.isCtnWorkspaceBottomVisible}
+              onToggle={() => actions.setIsCtnWorkspaceBottomVisible(!visibility.isCtnWorkspaceBottomVisible)}
+              tooltipText="Toggle bottom system real-time runtime status log bars"
+            />
+          )}
           {layoutConfig.showRightSidebar && (
             <>
               <div className="mx-1 bg-border w-px h-4"></div>
-              <Button variant="ghost" size="icon" onClick={() => actions.setIsSidebarRightVisible(!visibility.isSidebarRightVisible)} className={`p-1.5 rounded transition-colors ml-1 w-8 h-8 ${visibility.isSidebarRightVisible ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'hover:bg-muted'}`} data-tooltip="Toggle far-right global identity properties side-drawer"><Eye size={16} /></Button>
+              <HeaderToggleEyeButton
+                isVisible={visibility.isSidebarRightVisible}
+                onToggle={() => actions.setIsSidebarRightVisible(!visibility.isSidebarRightVisible)}
+                tooltipText="Toggle far-right global identity properties side-drawer"
+              />
             </>
           )}
         </div>

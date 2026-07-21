@@ -1,6 +1,12 @@
 import React from 'react';
 import { ChevronDown, ChevronRight, Folder, FileCode, Database } from 'lucide-react';
-import { CodebaseFile, SelectedEntity, codebaseService } from '@/services/codebase';
+import {
+  CodebaseFile,
+  SelectedEntity,
+  codebaseService,
+  FOLDER_KEYS_REGISTERED_CONFIG,
+  FOLDER_THEME_REGISTRY_CONFIG
+} from '@/services/codebase';
 
 interface CodebaseExplorerPanelProps {
   searchFilteredFiles: CodebaseFile[];
@@ -32,31 +38,34 @@ export function CodebaseExplorerPanel({
         </h3>
       </div>
       <div className="flex-1 p-4 overflow-y-auto font-mono text-xs">
-        {['frontend', 'backend', 'config'].map(folder => (
-          <div key={folder} className="mb-4">
-            <div className="group flex justify-between items-center hover:bg-muted/50 px-1 py-1 rounded">
-              <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => toggleFolder(folder)}>
-                {expandedFolders[folder] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                <Folder size={15} className={folder === 'frontend' ? "fill-yellow-500/20 text-yellow-500" : folder === 'backend' ? "fill-indigo-500/20 text-indigo-500" : "fill-amber-500/20 text-amber-500"} />
-                <span className="font-bold">{folder}/</span>
+        {FOLDER_KEYS_REGISTERED_CONFIG.map(folder => {
+          const theme = FOLDER_THEME_REGISTRY_CONFIG[folder] || FOLDER_THEME_REGISTRY_CONFIG.default;
+          return (
+            <div key={folder} className="mb-4">
+              <div className="group flex justify-between items-center hover:bg-muted/50 px-1 py-1 rounded">
+                <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => toggleFolder(folder)}>
+                  {expandedFolders[folder] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                  <Folder size={15} className={`${theme.fill} ${theme.text}`} />
+                  <span className="font-bold">{folder}/</span>
+                </div>
+                <input type="checkbox" checked={codebase.files.filter(f => f.path.startsWith(folder)).every(f => visibleFiles[f.id])} onChange={() => toggleFolderCheckbox(folder)} className="rounded w-3.5 h-3.5 text-primary cursor-pointer" />
               </div>
-              <input type="checkbox" checked={codebase.files.filter(f => f.path.startsWith(folder)).every(f => visibleFiles[f.id])} onChange={() => toggleFolderCheckbox(folder)} className="rounded w-3.5 h-3.5 text-primary cursor-pointer" />
+              {expandedFolders[folder] && (
+                <div className="space-y-1 mt-1 ml-2.5 pl-6 border-border border-l">
+                  {codebase.files.filter(f => f.path.startsWith(folder)).map((file: CodebaseFile) => (
+                    <div key={file.id} className="group flex justify-between items-center hover:bg-muted px-2 py-1 rounded">
+                      <span className={`flex items-center gap-1.5 truncate cursor-pointer ${visibleFiles[file.id] ? 'text-foreground font-medium' : 'text-muted-foreground line-through'}`} onClick={() => setSelectedEntity({ type: 'node', nodeId: file.id })}>
+                        {folder === 'config' ? <Database size={13} className="text-amber-500" /> : <FileCode size={13} className={file.type === 'interface' ? 'text-indigo-400' : (folder === 'frontend' ? 'text-emerald-500' : 'text-blue-500')} />}
+                        {file.name}
+                      </span>
+                      <input type="checkbox" checked={visibleFiles[file.id]} onChange={() => toggleFileCheckbox(file.id)} className="rounded w-3.5 h-3.5 text-primary cursor-pointer" />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            {expandedFolders[folder] && (
-              <div className="space-y-1 mt-1 ml-2.5 pl-6 border-border border-l">
-                {codebase.files.filter(f => f.path.startsWith(folder)).map((file: CodebaseFile) => (
-                  <div key={file.id} className="group flex justify-between items-center hover:bg-muted px-2 py-1 rounded">
-                    <span className={`flex items-center gap-1.5 truncate cursor-pointer ${visibleFiles[file.id] ? 'text-foreground font-medium' : 'text-muted-foreground line-through'}`} onClick={() => setSelectedEntity({ type: 'node', nodeId: file.id })}>
-                      {folder === 'config' ? <Database size={13} className="text-amber-500" /> : <FileCode size={13} className={file.type === 'interface' ? 'text-indigo-400' : (folder === 'frontend' ? 'text-emerald-500' : 'text-blue-500')} />}
-                      {file.name}
-                    </span>
-                    <input type="checkbox" checked={visibleFiles[file.id]} onChange={() => toggleFileCheckbox(file.id)} className="rounded w-3.5 h-3.5 text-primary cursor-pointer" />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
