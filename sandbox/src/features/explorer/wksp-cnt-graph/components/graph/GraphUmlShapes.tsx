@@ -9,7 +9,6 @@ export interface NodeStyle {
   iconColor: string;
 }
 
-// OCP Strategy Registry mapping entity types to theme styles
 export const NODE_STYLE_REGISTRY: Record<string, NodeStyle> = {
   component: {
     bg: 'bg-emerald-600 dark:bg-emerald-900/80',

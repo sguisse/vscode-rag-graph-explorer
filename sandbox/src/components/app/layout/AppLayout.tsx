@@ -7,6 +7,7 @@ import { SidebarLeft } from './sidebar-left';
 import { Workspace } from './workspace';
 import { SidebarRight } from './sidebar-right';
 import { Footer } from './footer';
+import { useLayoutState } from './hooks/use-layout-state';
 
 export interface AppLayoutConfig {
   showTop?: boolean;
@@ -75,14 +76,8 @@ export function AppLayout({
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
 
-  // Local visibility overrides based on layoutConfig defaults
-  const [isCtnWorkspaceVisible, setIsCtnWorkspaceVisible] = useState(true);
-  const [isCtnWorkspaceTopVisible, setIsCtnWorkspaceTopVisible] = useState(layoutConfig.showTop ?? false);
-  const [isCtnWorkspaceLeftVisible, setIsCtnWorkspaceLeftVisible] = useState(layoutConfig.showLeft ?? false);
-  const [isCtnWorkspaceCenterVisible, setIsCtnWorkspaceCenterVisible] = useState(layoutConfig.showCenter ?? false);
-  const [isCtnWorkspaceRightVisible, setIsCtnWorkspaceRightVisible] = useState(layoutConfig.showRight ?? false);
-  const [isCtnWorkspaceBottomVisible, setIsCtnWorkspaceBottomVisible] = useState(layoutConfig.showBottom ?? false);
-  const [isSidebarRightVisible, setIsSidebarRightVisible] = useState(layoutConfig.showRightSidebar ?? false);
+  // Consolidated layout visibility state via hook (ISP)
+  const { visibility, actions } = useLayoutState(layoutConfig);
 
   // Resizable hooks
   const [sidebarLeftWidth, startSidebarLeftResize, isDraggingSidebarLeft] = useResizable(220, 160, 400, true, false, 60);
@@ -95,9 +90,9 @@ export function AppLayout({
   const isCurrentlyResizing = isDraggingSidebarLeft || isDraggingSidebarRight || isDraggingLeftPane || isDraggingRightPane || isDraggingTopPane || isDraggingBottomPane;
 
   const activeMiddlePanelsCount =
-    (isCtnWorkspaceLeftVisible ? 1 : 0) +
-    (isCtnWorkspaceCenterVisible ? 1 : 0) +
-    (isCtnWorkspaceRightVisible ? 1 : 0);
+    (visibility.isCtnWorkspaceLeftVisible ? 1 : 0) +
+    (visibility.isCtnWorkspaceCenterVisible ? 1 : 0) +
+    (visibility.isCtnWorkspaceRightVisible ? 1 : 0);
 
   return (
     <div id="ctn-root" className={`flex flex-col h-screen w-screen overflow-hidden font-sans text-sm select-none transition-colors duration-200 bg-background text-foreground ${isDarkMode ? 'dark' : ''}`}>
@@ -119,20 +114,8 @@ export function AppLayout({
         isDarkMode={isDarkMode}
         setIsDarkMode={setIsDarkMode}
         onResetFilters={onResetFilters}
-        isCtnWorkspaceVisible={isCtnWorkspaceVisible}
-        setIsCtnWorkspaceVisible={setIsCtnWorkspaceVisible}
-        isCtnWorkspaceTopVisible={isCtnWorkspaceTopVisible}
-        setIsCtnWorkspaceTopVisible={setIsCtnWorkspaceTopVisible}
-        isCtnWorkspaceLeftVisible={isCtnWorkspaceLeftVisible}
-        setIsCtnWorkspaceLeftVisible={setIsCtnWorkspaceLeftVisible}
-        isCtnWorkspaceCenterVisible={isCtnWorkspaceCenterVisible}
-        setIsCtnWorkspaceCenterVisible={setIsCtnWorkspaceCenterVisible}
-        isCtnWorkspaceRightVisible={isCtnWorkspaceRightVisible}
-        setIsCtnWorkspaceRightVisible={setIsCtnWorkspaceRightVisible}
-        isCtnWorkspaceBottomVisible={isCtnWorkspaceBottomVisible}
-        setIsCtnWorkspaceBottomVisible={setIsCtnWorkspaceBottomVisible}
-        isSidebarRightVisible={isSidebarRightVisible}
-        setIsSidebarRightVisible={setIsSidebarRightVisible}
+        visibility={visibility}
+        actions={actions}
         layoutConfig={layoutConfig}
       />
 
@@ -155,39 +138,37 @@ export function AppLayout({
           isDraggingSidebarLeft={isDraggingSidebarLeft}
         />
 
-        {/* EXTERNALIZED WORKSPACE COMPONENT MODULE */}
         <Workspace
-          isCtnWorkspaceVisible={isCtnWorkspaceVisible}
+          isCtnWorkspaceVisible={visibility.isCtnWorkspaceVisible}
           layoutConfig={layoutConfig}
-          isCtnWorkspaceTopVisible={isCtnWorkspaceTopVisible}
+          isCtnWorkspaceTopVisible={visibility.isCtnWorkspaceTopVisible}
           ctnWorkspaceTopHeight={ctnWorkspaceTopHeight}
           startCtnWorkspaceTopResize={startCtnWorkspaceTopResize}
           panels={panels}
           headers={headers}
-          isCtnWorkspaceLeftVisible={isCtnWorkspaceLeftVisible}
+          isCtnWorkspaceLeftVisible={visibility.isCtnWorkspaceLeftVisible}
           activeMiddlePanelsCount={activeMiddlePanelsCount}
           ctnWorkspaceLeftWidth={ctnWorkspaceLeftWidth}
           activeView={activeView}
           startCtnWorkspaceLeftResize={startCtnWorkspaceLeftResize}
-          isCtnWorkspaceCenterVisible={isCtnWorkspaceCenterVisible}
+          isCtnWorkspaceCenterVisible={visibility.isCtnWorkspaceCenterVisible}
           isGraphMaximized={isGraphMaximized}
           isCurrentlyResizing={isCurrentlyResizing}
           isDraggingSidebarLeft={isDraggingSidebarLeft}
           isDraggingSidebarRight={isDraggingSidebarRight}
           isDraggingLeftPane={isDraggingLeftPane}
           isDraggingRightPane={isDraggingRightPane}
-          isCtnWorkspaceRightVisible={isCtnWorkspaceRightVisible}
+          isCtnWorkspaceRightVisible={visibility.isCtnWorkspaceRightVisible}
           ctnWorkspaceRightWidth={ctnWorkspaceRightWidth}
           startCtnWorkspaceRightResize={startCtnWorkspaceRightResize}
-          isCtnWorkspaceBottomVisible={isCtnWorkspaceBottomVisible}
+          isCtnWorkspaceBottomVisible={visibility.isCtnWorkspaceBottomVisible}
           ctnWorkspaceBottomHeight={ctnWorkspaceBottomHeight}
           startCtnWorkspaceBottomResize={startCtnWorkspaceBottomResize}
         />
 
-        {/* EXTERNALIZED RIGHT SIDEBAR COMPONENT MODULE */}
         <SidebarRight
           layoutConfig={layoutConfig}
-          isSidebarRightVisible={isSidebarRightVisible}
+          isSidebarRightVisible={visibility.isSidebarRightVisible}
           sidebarRightWidth={sidebarRightWidth}
           headers={headers}
           panels={panels}
