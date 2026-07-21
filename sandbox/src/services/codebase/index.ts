@@ -1,7 +1,6 @@
 import { CodebaseService } from './domain/service/codebase.service';
 import { MockCodebaseAdapter } from './infrastructure/mockCodebaseAdapter';
 
-// Instantiate domain service with concrete infrastructure adapter (Dependency Injection)
 export const codebaseService = new CodebaseService(new MockCodebaseAdapter());
 
 export * from './domain/model/codebase.model';

@@ -14,7 +14,7 @@ export class CodebaseService {
     return this.codebaseRepository.getFolderPositions();
   }
 
-  public getJsonSchemaSpec(): any {
+  public getJsonSchemaSpec(): unknown {
     return this.codebaseRepository.getJsonSchemaSpec();
   }
 

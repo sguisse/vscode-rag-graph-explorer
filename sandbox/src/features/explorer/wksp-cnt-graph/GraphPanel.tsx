@@ -1,7 +1,7 @@
 import React from 'react';
 import { Info } from 'lucide-react';
-import { FolderNode, UmlClassNode, ConfigNode } from './components/graph/GraphUmlShapes';
-import { FOLDER_POSITIONS } from './components/graph/GraphData';
+import { FolderNode, UmlClassNode, ConfigNode, UmlClassNodeData } from './components/graph/GraphUmlShapes';
+import { codebaseService, SelectedEntity, CodebaseFile } from '@/services/codebase';
 
 interface GraphPanelProps {
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -12,8 +12,8 @@ interface GraphPanelProps {
     pan: { x: number; y: number };
     nodePositions: Record<string, { x: number; y: number; w: number; h: number }>;
   };
-  selectedEntity: { type: 'node' | 'member' | 'edge'; nodeId: string; memberId?: string; } | null;
-  searchFilteredFiles: any[];
+  selectedEntity: SelectedEntity | null;
+  searchFilteredFiles: CodebaseFile[];
   impactedSet: Set<string>;
   handleSelectMember: (nodeId: string, memberId: string) => void;
 }
@@ -28,6 +28,8 @@ export function GraphPanel({
   impactedSet,
   handleSelectMember
 }: GraphPanelProps) {
+  const folderPositions = codebaseService.getFolderPositions();
+
   return (
     <div className="absolute inset-0 outline-none w-full h-full overflow-hidden">
       <div
@@ -44,7 +46,7 @@ export function GraphPanel({
         className="z-10 absolute inset-0 origin-top-left pointer-events-none select-none"
         style={{ transform: `translate(${graphState.pan.x}px, ${graphState.pan.y}px) scale(${graphState.zoom})` }}
       >
-        {Object.entries(FOLDER_POSITIONS).map(([folderKey, initialPos]) => {
+        {Object.entries(folderPositions).map(([folderKey, initialPos]) => {
           const bounds = graphState.nodePositions[`folder__${folderKey}`];
           if (!bounds) return null;
           const isSelected = selectedEntity?.nodeId === `folder__${folderKey}`;
@@ -55,7 +57,7 @@ export function GraphPanel({
           );
         })}
 
-        {searchFilteredFiles.map(file => {
+        {searchFilteredFiles.map((file: CodebaseFile) => {
           const bounds = graphState.nodePositions[file.id];
           if (!bounds) return null;
 
@@ -64,7 +66,7 @@ export function GraphPanel({
           const isNodeImpacted = impactedSet.has(file.id);
           const isDimmed = selectedEntity !== null && impactedSet.size > 0 && !isNodeImpacted;
 
-          const nodeData = {
+          const nodeData: UmlClassNodeData = {
             ...file,
             isDimmed,
             impactedMembers,

@@ -5,7 +5,6 @@ import { RulesFeature } from './features/rules/RulesFeature';
 import { HelpFeature } from './features/help/HelpFeature';
 import { FallbackFeature } from './features/fallback/FallbackFeature';
 
-// OCP Strategy View Registry Map for extensible view routing
 const VIEW_REGISTRY: Record<string, React.ComponentType<any>> = {
   'panel-explorer': ExplorerFeature,
   'panel-welcome': WelcomeFeature,
