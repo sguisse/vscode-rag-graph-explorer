@@ -1,5 +1,8 @@
 import React from 'react';
+import { X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { ResizableContainer } from '@/components/app/container/resizable-container';
+import { LayoutVisibilityActions } from './hooks/use-layout-state';
 
 export interface WorkspaceProps {
   isCtnWorkspaceVisible: boolean;
@@ -44,6 +47,7 @@ export interface WorkspaceProps {
   isCtnWorkspaceBottomVisible: boolean;
   ctnWorkspaceBottomHeight: number;
   startCtnWorkspaceBottomResize: (e: React.MouseEvent) => void;
+  actions: LayoutVisibilityActions;
 }
 
 export function Workspace({
@@ -72,6 +76,7 @@ export function Workspace({
   isCtnWorkspaceBottomVisible,
   ctnWorkspaceBottomHeight,
   startCtnWorkspaceBottomResize,
+  actions
 }: WorkspaceProps) {
   return (
     <div id="ctn-workspace" style={{ display: isCtnWorkspaceVisible ? 'flex' : 'none' }} className="relative flex flex-1 bg-background min-w-0">
@@ -79,7 +84,26 @@ export function Workspace({
 
         {/* TOP PANEL */}
         {layoutConfig.showTop && (
-          <ResizableContainer id="ctn-workspace-top" visible={isCtnWorkspaceTopVisible} style={{ height: `${ctnWorkspaceTopHeight}px` }} headerLeft="Target Path Mapping Streams" resizeHandle="bottom" onResizeStart={startCtnWorkspaceTopResize} className="bg-muted border-b">
+          <ResizableContainer
+            id="ctn-workspace-top"
+            visible={isCtnWorkspaceTopVisible}
+            style={{ height: `${ctnWorkspaceTopHeight}px` }}
+            headerLeft="Target Path Mapping Streams"
+            headerRight={
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={() => actions.setIsCtnWorkspaceTopVisible(false)}
+                className="p-0 rounded w-5 h-5 text-muted-foreground hover:text-foreground cursor-pointer"
+                data-tooltip="Close top panel"
+              >
+                <X size={12} />
+              </Button>
+            }
+            resizeHandle="bottom"
+            onResizeStart={startCtnWorkspaceTopResize}
+            className="bg-muted border-b"
+          >
             {panels.top}
           </ResizableContainer>
         )}
@@ -93,6 +117,17 @@ export function Workspace({
               visible={isCtnWorkspaceLeftVisible}
               style={activeMiddlePanelsCount === 1 ? { flex: 1 } : { width: `${ctnWorkspaceLeftWidth}px` }}
               headerLeft={headers.leftPanelTitle || activeView}
+              headerRight={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => actions.setIsCtnWorkspaceLeftVisible(false)}
+                  className="p-0 rounded w-5 h-5 text-muted-foreground hover:text-foreground cursor-pointer"
+                  data-tooltip="Close left panel"
+                >
+                  <X size={12} />
+                </Button>
+              }
               className={activeMiddlePanelsCount === 1 ? "min-w-[200px]" : "border-r min-w-[200px]"}
               resizeHandle={activeMiddlePanelsCount > 1 ? "right" : "none"}
               onResizeStart={startCtnWorkspaceLeftResize}
@@ -101,7 +136,7 @@ export function Workspace({
             </ResizableContainer>
           )}
 
-          {/* CENTER PANEL */}
+          {/* CENTER PANEL (EXCEPTED FROM CLOSE CROSS BUTTON) */}
           {layoutConfig.showCenter && (
             <ResizableContainer
               id="ctn-workspace-center"
@@ -124,6 +159,17 @@ export function Workspace({
               visible={isCtnWorkspaceRightVisible}
               style={(!isCtnWorkspaceCenterVisible || activeMiddlePanelsCount === 1) ? { flex: 1 } : { width: `${ctnWorkspaceRightWidth}px` }}
               headerLeft="Metadata & Inspector Tab Matrices"
+              headerRight={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => actions.setIsCtnWorkspaceRightVisible(false)}
+                  className="p-0 rounded w-5 h-5 text-muted-foreground hover:text-foreground cursor-pointer"
+                  data-tooltip="Close right inspector panel"
+                >
+                  <X size={12} />
+                </Button>
+              }
               className={(!isCtnWorkspaceCenterVisible || activeMiddlePanelsCount === 1) ? "min-w-[200px]" : "border-l min-w-[200px]"}
               resizeHandle={isCtnWorkspaceCenterVisible ? "left" : "none"}
               onResizeStart={isCtnWorkspaceCenterVisible ? startCtnWorkspaceRightResize : undefined}
@@ -135,7 +181,26 @@ export function Workspace({
 
         {/* BOTTOM PANEL */}
         {layoutConfig.showBottom && (
-          <ResizableContainer id="ctn-workspace-bottom" visible={isCtnWorkspaceBottomVisible} style={{ height: `${ctnWorkspaceBottomHeight}px` }} className="bg-secondary border-t" resizeHandle="top" onResizeStart={startCtnWorkspaceBottomResize}>
+          <ResizableContainer
+            id="ctn-workspace-bottom"
+            visible={isCtnWorkspaceBottomVisible}
+            style={{ height: `${ctnWorkspaceBottomHeight}px` }}
+            headerLeft="AST Pipeline Monitoring Feed"
+            headerRight={
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => actions.setIsCtnWorkspaceBottomVisible(false)}
+                className="p-0 rounded w-5 h-5 text-muted-foreground hover:text-foreground cursor-pointer"
+                data-tooltip="Close bottom panel"
+              >
+                <X size={12} />
+              </Button>
+            }
+            className="bg-secondary border-t"
+            resizeHandle="top"
+            onResizeStart={startCtnWorkspaceBottomResize}
+          >
             {panels.bottom}
           </ResizableContainer>
         )}

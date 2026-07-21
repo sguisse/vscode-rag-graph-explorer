@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Layers, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Layers } from 'lucide-react';
 import { AppLayout, AppLayoutProps } from '@/components/app/layout/AppLayout';
 import { codebaseService, SelectedEntity, ImpactDirection } from '@/services/codebase';
 
@@ -20,23 +19,19 @@ import { useTransitiveImpact } from './hooks/use-transitive-impact';
 import { useCodebaseFilter } from './hooks/use-codebase-filter';
 
 export function ExplorerFeature(props: Omit<AppLayoutProps, 'layoutConfig' | 'panels'>) {
-  // Service Data Hydration via Hexagonal Domain Service
   const codebaseData = codebaseService.getCodebase();
   const folderPositions = codebaseService.getFolderPositions();
 
-  // Selected Entity & Impact Direction States
   const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>({ type: 'node', nodeId: 'OrderController.java' });
   const [impactDirection, setImpactDirection] = useState<ImpactDirection>('aval');
   const [notification, setNotification] = useState<string | null>(null);
 
-  // Graph Layout Control States
   const [callersDepth, setCallersDepth] = useState(1);
   const [calleesDepth, setCalleesDepth] = useState(0);
   const [currentLayout, setCurrentLayout] = useState('preset');
   const [showGrid, setShowGrid] = useState(true);
   const [isGraphMaximized, setIsGraphMaximized] = useState(false);
 
-  // Custom Hooks
   const { copy } = useCopyToClipboard();
 
   const {
@@ -152,8 +147,7 @@ export function ExplorerFeature(props: Omit<AppLayoutProps, 'layoutConfig' | 'pa
           />
         ),
         centerPanelHeaderRight: <GraphPanelHeaderRight cyRef={cyRef} isGraphMaximized={isGraphMaximized} setIsGraphMaximized={setIsGraphMaximized} />,
-        rightSidebarHeader: <><Layers size={13} className="mr-1.5"/> <span>Entity Properties</span></>,
-        rightSidebarHeaderRight: <Button variant="ghost" size="icon" className="w-5 h-5 text-muted-foreground" onClick={() => setSelectedEntity(null)}><X size={12}/></Button>
+        rightSidebarHeader: <><Layers size={13} className="mr-1.5"/> <span>Entity Properties</span></>
       }}
       searchTerm={searchTerm}
       onSearchChange={setSearchTerm}
