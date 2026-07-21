@@ -1,20 +1,60 @@
 import React from 'react';
 import { FileCode, Settings } from 'lucide-react';
+import { CodebaseFile, CodebaseAttribute, CodebaseMethod, ConfigProperty } from '@/services/codebase';
 
-export const FolderNode = ({ data, isSelected }: any) => (
+export interface NodeStyle {
+  bg: string;
+  border: string;
+  badge: string;
+  iconColor: string;
+}
+
+// OCP Strategy Registry mapping entity types to theme styles
+export const NODE_STYLE_REGISTRY: Record<string, NodeStyle> = {
+  component: {
+    bg: 'bg-emerald-600 dark:bg-emerald-900/80',
+    border: 'border-emerald-500',
+    badge: '🎨 React Component',
+    iconColor: 'text-emerald-400'
+  },
+  interface: {
+    bg: 'bg-indigo-700 dark:bg-indigo-950/80',
+    border: 'border-indigo-500',
+    badge: '⚙️ Java Interface',
+    iconColor: 'text-indigo-400'
+  },
+  class: {
+    bg: 'bg-blue-600 dark:bg-blue-950/80',
+    border: 'border-blue-500',
+    badge: '☕ Java Class',
+    iconColor: 'text-blue-400'
+  },
+  default: {
+    bg: 'bg-blue-600 dark:bg-blue-950/80',
+    border: 'border-blue-500',
+    badge: '☕ Java Class',
+    iconColor: 'text-blue-400'
+  }
+};
+
+export interface UmlClassNodeData extends CodebaseFile {
+  isDimmed?: boolean;
+  impactedMembers?: string[];
+  selectedMember?: string;
+  onSelectMember: (nodeId: string, memberId: string) => void;
+}
+
+export interface FolderNodeProps {
+  data: { label: string };
+  isSelected?: boolean;
+}
+
+export const FolderNode: React.FC<FolderNodeProps> = ({ isSelected }) => (
   <div className={`w-full h-full rounded-lg transition-all ${isSelected ? 'ring-2 ring-primary' : ''}`} />
 );
 
-export const UmlClassNode = ({ id, data }: any) => {
-  const getHeaderStyle = () => {
-    switch (data.type) {
-      case 'component': return { bg: 'bg-emerald-600 dark:bg-emerald-900/80', border: 'border-emerald-500', badge: '🎨 React Component', iconColor: 'text-emerald-400' };
-      case 'interface': return { bg: 'bg-indigo-700 dark:bg-indigo-950/80', border: 'border-indigo-500', badge: '⚙️ Java Interface', iconColor: 'text-indigo-400' };
-      default: return { bg: 'bg-blue-600 dark:bg-blue-950/80', border: 'border-blue-500', badge: '☕ Java Class', iconColor: 'text-blue-400' };
-    }
-  };
-
-  const style = getHeaderStyle();
+export const UmlClassNode: React.FC<{ id: string; data: UmlClassNodeData }> = ({ id, data }) => {
+  const style = NODE_STYLE_REGISTRY[data.type] || NODE_STYLE_REGISTRY.default;
 
   return (
     <div className={`w-72 bg-card rounded-lg shadow-xl border-2 ${style.border} relative transition-all duration-300 ${data.isDimmed ? 'opacity-25' : 'opacity-100'}`}>
@@ -34,7 +74,7 @@ export const UmlClassNode = ({ id, data }: any) => {
           <div className="text-muted-foreground text-xs italic">no attributes available</div>
         ) : (
           <ul className="space-y-0.5 font-mono text-[11px] text-foreground/80">
-            {data.attributes.map((attr: any, idx: number) => (
+            {data.attributes.map((attr: CodebaseAttribute, idx: number) => (
               <li key={idx} className="flex items-center gap-1">
                 <span className="text-muted-foreground">{attr.visibility === 'private' ? '-' : attr.visibility === 'protected' ? '#' : '+'}</span>
                 {attr.name}
@@ -46,7 +86,7 @@ export const UmlClassNode = ({ id, data }: any) => {
       <div className="p-2.5">
         <div className="mb-1 font-bold text-[10px] text-muted-foreground uppercase">Methods / Exports</div>
         <div className="space-y-2">
-          {data.methods?.map((m: any) => {
+          {data.methods?.map((m: CodebaseMethod) => {
             const isMethodImpacted = data.impactedMembers && data.impactedMembers.includes(m.id);
             const isSelected = data.selectedMember === m.id;
             return (
@@ -65,7 +105,7 @@ export const UmlClassNode = ({ id, data }: any) => {
   );
 };
 
-export const ConfigNode = ({ id, data }: any) => (
+export const ConfigNode: React.FC<{ id: string; data: UmlClassNodeData }> = ({ id, data }) => (
   <div className={`w-80 bg-card rounded-lg shadow-xl border-2 border-amber-500 relative transition-all duration-300 ${data.isDimmed ? 'opacity-25' : 'opacity-100'}`}>
     <div className="flex justify-between items-center bg-amber-500 p-2.5 rounded-t-[5px] text-white">
       <div className="flex items-center gap-1.5">
@@ -75,7 +115,7 @@ export const ConfigNode = ({ id, data }: any) => (
       <span className="bg-black/20 px-1.5 py-0.5 rounded font-mono text-[9px] uppercase tracking-widest">Configuration</span>
     </div>
     <div className="space-y-2 bg-black/90 p-3 max-h-64 overflow-y-auto font-mono text-[10px] text-slate-300">
-      {data.configProperties?.map((prop: any) => {
+      {data.configProperties?.map((prop: ConfigProperty) => {
         const isPropImpacted = data.impactedMembers && data.impactedMembers.includes(prop.key);
         const isSelected = data.selectedMember === prop.key;
         return (

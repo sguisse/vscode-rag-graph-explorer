@@ -1,12 +1,13 @@
 import React, { useMemo } from 'react';
 import { FileCode, ShieldAlert, GitFork, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { CodebaseData, CodebaseFile, SelectedEntity, ImpactDirection, CodebaseMethod, ConfigProperty } from '@/services/codebase';
 
 interface InspectorTabPanelProps {
-  selectedEntity: { type: 'node' | 'member' | 'edge'; nodeId: string; memberId?: string; } | null;
-  initialCodebase: any;
-  impactDirection: 'aval' | 'amont';
-  setImpactDirection: (dir: 'aval' | 'amont') => void;
+  selectedEntity: SelectedEntity | null;
+  initialCodebase: CodebaseData;
+  impactDirection: ImpactDirection;
+  setImpactDirection: (dir: ImpactDirection) => void;
   impactedSet: Set<string>;
   handleCopy: (text: string, message: string) => void;
 }
@@ -30,7 +31,7 @@ export function InspectorTabPanel({
     md += `**Élément Déclencheur :** ${startElement}\n`;
     md += `**Direction de Propagation :** ${impactDirection === 'aval' ? 'Aval (Impacts descendants)' : 'Amont (Appelants ascendants)'}\n\n`;
     md += `#### 📋 Liste des composants à re-tester\n\n`;
-    initialCodebase.files.forEach((file: any) => {
+    initialCodebase.files.forEach((file: CodebaseFile) => {
       if (impactedSet.has(file.id)) { md += `- [ ] **${file.name}** (\`${file.path}\`)\n`; }
     });
     return md;
@@ -46,7 +47,7 @@ export function InspectorTabPanel({
     );
   }
 
-  const currentFile = initialCodebase.files.find((f: any) => f.id === selectedEntity.nodeId);
+  const currentFile = initialCodebase.files.find((f: CodebaseFile) => f.id === selectedEntity.nodeId);
   if (!currentFile) return null;
 
   return (
@@ -79,8 +80,8 @@ export function InspectorTabPanel({
         <div className="bg-slate-950 mt-3 p-2.5 border border-slate-800 rounded font-mono text-slate-300 text-xs">
           <div className="mb-1 font-bold text-[10px] text-amber-400 uppercase">Functional Documentation:</div>
           {selectedEntity.type === 'member' ? (
-            currentFile.methods?.find((m: any) => m.id === selectedEntity.memberId)?.description ||
-            currentFile.configProperties?.find((p: any) => p.key === selectedEntity.memberId)?.value ||
+            currentFile.methods?.find((m: CodebaseMethod) => m.id === selectedEntity.memberId)?.description ||
+            currentFile.configProperties?.find((p: ConfigProperty) => p.key === selectedEntity.memberId)?.value ||
             "No dedicated structural descriptions mapped for this member item node."
           ) : (
             `File container encapsulating target polyglot implementation layers at specified location pathing.`
@@ -109,7 +110,7 @@ export function InspectorTabPanel({
           </Button>
         </div>
         <div className="space-y-1.5 max-h-48 overflow-y-auto">
-          {initialCodebase.files.map((f: any) => impactedSet.has(f.id) ? (
+          {initialCodebase.files.map((f: CodebaseFile) => impactedSet.has(f.id) ? (
             <div key={f.id} className="flex justify-between items-center bg-background px-2 py-1.5 border border-orange-500/20 rounded font-mono text-[11px]"><span className="font-semibold text-foreground truncate">{f.name}</span><span className="bg-muted px-1.5 py-0.5 rounded text-[9px] text-muted-foreground">{f.language}</span></div>
           ) : null)}
         </div>

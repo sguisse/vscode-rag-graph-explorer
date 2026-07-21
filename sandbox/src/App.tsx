@@ -5,6 +5,14 @@ import { RulesFeature } from './features/rules/RulesFeature';
 import { HelpFeature } from './features/help/HelpFeature';
 import { FallbackFeature } from './features/fallback/FallbackFeature';
 
+// OCP Strategy View Registry Map for scalable screen navigation routing
+const VIEW_REGISTRY: Record<string, React.ComponentType<any>> = {
+  'panel-explorer': ExplorerFeature,
+  'panel-welcome': WelcomeFeature,
+  'panel-rules': RulesFeature,
+  'panel-help': HelpFeature,
+};
+
 export default function App() {
   const [activeView, setActiveView] = useState('panel-explorer');
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -25,16 +33,7 @@ export default function App() {
     setIsLocked
   };
 
-  switch (activeView) {
-    case 'panel-explorer':
-      return <ExplorerFeature {...commonProps} />;
-    case 'panel-welcome':
-      return <WelcomeFeature {...commonProps} />;
-    case 'panel-rules':
-      return <RulesFeature {...commonProps} />;
-    case 'panel-help':
-      return <HelpFeature {...commonProps} />;
-    default:
-      return <FallbackFeature {...commonProps} />;
-  }
+  const ActiveComponent = VIEW_REGISTRY[activeView] || FallbackFeature;
+
+  return <ActiveComponent {...commonProps} />;
 }

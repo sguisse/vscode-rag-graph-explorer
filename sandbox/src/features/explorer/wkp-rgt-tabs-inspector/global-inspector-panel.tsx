@@ -3,12 +3,13 @@ import { Button } from '@/components/ui/button';
 import { InspectorTabPanel } from './inspector-tab-panel';
 import { PlantUmlTabPanel } from './plantuml-tab-panel';
 import { JsonTabPanel } from './json-tab-panel';
+import { CodebaseData, SelectedEntity, ImpactDirection } from '@/services/codebase';
 
 interface GlobalInspectorPanelProps {
-  selectedEntity: { type: 'node' | 'member' | 'edge'; nodeId: string; memberId?: string; } | null;
-  initialCodebase: any;
-  impactDirection: 'aval' | 'amont';
-  setImpactDirection: (dir: 'aval' | 'amont') => void;
+  selectedEntity: SelectedEntity | null;
+  initialCodebase: CodebaseData;
+  impactDirection: ImpactDirection;
+  setImpactDirection: (dir: ImpactDirection) => void;
   impactedSet: Set<string>;
   handleCopy: (text: string, message: string) => void;
   generatedPlantUML: string;
