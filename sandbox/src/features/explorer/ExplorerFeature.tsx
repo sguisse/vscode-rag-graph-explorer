@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Layers } from 'lucide-react';
 import { AppLayout, AppLayoutProps } from '@/components/app/layout/AppLayout';
-import { codebaseService, SelectedEntity, ImpactDirection } from '@/services/codebase';
+import { codebaseService, SelectedEntity, ImpactDirection, CodebaseData } from '@/services/codebase';
 
 import { EntityPropertiesPanel } from './sdb-rgt-properties/EntityPropertiesPanel';
 import { CodebaseExplorerPanel } from './wkp-lft-codebase-tree/CodebaseExplorerPanel';
@@ -19,7 +19,7 @@ import { useTransitiveImpact } from './hooks/use-transitive-impact';
 import { useCodebaseFilter } from './hooks/use-codebase-filter';
 
 export function ExplorerFeature(props: Omit<AppLayoutProps, 'layoutConfig' | 'panels'>) {
-  const codebaseData = codebaseService.getCodebase();
+  const [codebaseData, setCodebaseData] = useState<CodebaseData>(() => codebaseService.getCodebase());
   const folderPositions = codebaseService.getFolderPositions();
 
   const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>({ type: 'node', nodeId: 'OrderController.java' });
@@ -58,6 +58,19 @@ export function ExplorerFeature(props: Omit<AppLayoutProps, 'layoutConfig' | 'pa
       setTimeout(() => setNotification(null), 3000);
     });
   }, [copy]);
+
+  const handleImportCodebase = useCallback((imported: CodebaseData) => {
+    try {
+      codebaseService.importCodebase(imported);
+      setCodebaseData({ ...imported });
+      setSelectedEntity(imported.files.length > 0 ? { type: 'node', nodeId: imported.files[0].id } : null);
+      setNotification("✅ AST Codebase imported successfully!");
+      setTimeout(() => setNotification(null), 3000);
+    } catch (err: any) {
+      setNotification(`❌ Import failed: ${err.message || 'Invalid format'}`);
+      setTimeout(() => setNotification(null), 4000);
+    }
+  }, []);
 
   const handleNodeSelect = useCallback((nodeId: string) => {
     setSelectedEntity({ type: 'node', nodeId });
@@ -100,6 +113,7 @@ export function ExplorerFeature(props: Omit<AppLayoutProps, 'layoutConfig' | 'pa
             toggleFolderCheckbox={toggleFolderCheckbox}
             toggleFileCheckbox={toggleFileCheckbox}
             setSelectedEntity={setSelectedEntity}
+            onImportCodebase={handleImportCodebase}
           />
         ),
         center: (

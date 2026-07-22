@@ -68,7 +68,21 @@ export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) 
       }
     });
 
-    cy.layout({ name: currentLayout === 'preset' ? 'grid' : currentLayout, animate: false }).run();
+    // Run layout with safe bounding box parameters to avoid "Cannot read properties of undefined (reading 'h')" crash[cite: 1, 2]
+    cy.layout({
+      name: currentLayout,
+      animate: false,
+      fit: true,
+      padding: 40,
+      boundingBox: { x1: 0, y1: 0, w: 2000, h: 2000 } // Global fallback for algorithms that require boundaries
+    }).run();
+
+    // Ensure preset manually centers correctly after run
+    if (currentLayout === 'preset') {
+      cy.fit(undefined, 40);
+      cy.center();
+    }
+
   }, [cyRef]);
 
   return { updateGraphTopology };

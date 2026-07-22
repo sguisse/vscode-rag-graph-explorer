@@ -1,20 +1,72 @@
-#!/usr/bin/env bash
-set -e
-
-# 1. Ensure target directory exists
-mkdir -p src/features/explorer/wkp-lft-codebase-tree
-
-# 2. Remove old dialog file from app directory
-rm -f src/components/app/import-ast-dialog.tsx
-
-# 3. Create import-ast-dialog.tsx in features/explorer/wkp-lft-codebase-tree
-cat << 'EOF' > src/features/explorer/wkp-lft-codebase-tree/import-ast-dialog.tsx
 import React, { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload, FileCode, CheckCircle2, AlertCircle, FolderOpen } from "lucide-react";
+import { Upload, FileCode, CheckCircle2, AlertCircle, Play, FolderOpen } from "lucide-react";
 import { CodebaseData } from "@/services/codebase";
+
+const SAMPLE_AST_DATA: CodebaseData = {
+  files: [
+    {
+      id: "AuthService.ts",
+      name: "AuthService.ts",
+      type: "module",
+      path: "frontend/services/AuthService.ts",
+      language: "TypeScript",
+      size: 110,
+      complexity: 3,
+      attributes: [{ name: "jwtToken: string", visibility: "private" }],
+      methods: [
+        { id: "login", name: "login(credentials)", description: "Authenticates user against backend identity provider." },
+        { id: "logout", name: "logout()", description: "Clears local session token and invalidates active session." }
+      ]
+    },
+    {
+      id: "AuthController.java",
+      name: "AuthController.java",
+      type: "class",
+      path: "backend/controllers/AuthController.java",
+      language: "Java",
+      size: 185,
+      complexity: 4,
+      attributes: [{ name: "userRepository: UserRepository", visibility: "private" }],
+      methods: [
+        { id: "authenticateUser", name: "authenticateUser(loginDto)", description: "Validates user credentials against database records." }
+      ]
+    },
+    {
+      id: "UserRepository.java",
+      name: "UserRepository.java",
+      type: "interface",
+      path: "backend/repositories/UserRepository.java",
+      language: "Java",
+      size: 45,
+      complexity: 1,
+      attributes: [],
+      methods: [
+        { id: "findByEmail", name: "findByEmail(email)", description: "Retrieves active user record matching target email." }
+      ]
+    },
+    {
+      id: "security.yml",
+      name: "security.yml",
+      type: "config",
+      path: "config/security.yml",
+      language: "YAML",
+      size: 30,
+      complexity: 1,
+      configProperties: [
+        { key: "jwt.secret", value: "${JWT_SECRET:super_secret_key}" },
+        { key: "jwt.expiration", value: "86400000" }
+      ]
+    }
+  ],
+  dependencies: [
+    { id: "dep-auth-service-controller", sourceNode: "AuthService.ts", sourceHandle: "login", targetNode: "AuthController.java", targetHandle: "authenticateUser", relation: "association", label: "POST /api/auth/login" },
+    { id: "dep-auth-controller-repo", sourceNode: "AuthController.java", sourceHandle: "authenticateUser", targetNode: "UserRepository.java", targetHandle: "findByEmail", relation: "dependency", label: "Queries User Record" },
+    { id: "dep-auth-controller-config", sourceNode: "AuthController.java", sourceHandle: "header", targetNode: "security.yml", targetHandle: "jwt.secret", relation: "dependency", label: "Injects Secret Key" }
+  ]
+};
 
 interface ImportAstDialogProps {
   open: boolean;
@@ -29,14 +81,18 @@ export function ImportAstDialog({ open, onOpenChange, onImport }: ImportAstDialo
   const [fileName, setFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Global event listener to prevent browser default drag & drop behaviors
+  // (which opens files in a new tab) outside of our specific dropzone.
   useEffect(() => {
     const preventGlobalDnD = (e: DragEvent) => {
       e.preventDefault();
+      // Ensure dropEffect is explicitly marked as "none" for global zones
       if (e.dataTransfer) {
         e.dataTransfer.dropEffect = "none";
       }
     };
 
+    // Attach safely to document without capturing to let React process child events first
     window.addEventListener("dragenter", preventGlobalDnD, false);
     window.addEventListener("dragover", preventGlobalDnD, false);
     window.addEventListener("drop", preventGlobalDnD, false);
@@ -89,6 +145,7 @@ export function ImportAstDialog({ open, onOpenChange, onImport }: ImportAstDialo
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
+    // Explicitly define this is a valid drop target (fixes macOS/Chrome new-tab bug)
     if (e.dataTransfer) {
       e.dataTransfer.dropEffect = "copy";
     }
@@ -116,13 +173,20 @@ export function ImportAstDialog({ open, onOpenChange, onImport }: ImportAstDialo
     if (e.target.files && e.target.files.length > 0) {
       processFile(e.target.files[0]);
     }
-    if (e.target) e.target.value = '';
+    if (e.target) e.target.value = ''; // Reset input to allow identical file select
   };
 
   const handleBrowseClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     fileInputRef.current?.click();
+  };
+
+  const handleLoadSample = () => {
+    const formatted = JSON.stringify(SAMPLE_AST_DATA, null, 2);
+    setJsonText(formatted);
+    setFileName("sample-ast-data.json");
+    setErrorMsg(null);
   };
 
   const handleConfirmImport = () => {
@@ -149,6 +213,7 @@ export function ImportAstDialog({ open, onOpenChange, onImport }: ImportAstDialo
         </DialogHeader>
 
         <div className="space-y-4 py-2">
+          {/* Hidden File Input */}
           <input
             id="input-file-ast-picker"
             type="file"
@@ -158,6 +223,7 @@ export function ImportAstDialog({ open, onOpenChange, onImport }: ImportAstDialo
             onChange={handleFileInputChange}
           />
 
+          {/* Interactive Drag & Drop Box */}
           <div
             id="dropzone-ast-json"
             onDragEnter={handleDragEnter}
@@ -175,10 +241,10 @@ export function ImportAstDialog({ open, onOpenChange, onImport }: ImportAstDialo
             <div className="pointer-events-none">
               {fileName ? (
                 <span className="flex items-center gap-1.5 font-bold text-emerald-500 text-xs font-mono">
-                  <CheckCircle2 size={14} /> Selected: {fileName}
+                  <CheckCircle2 size={14} /> ed: {fileName}
                 </span>
               ) : (
-                <span className="text-xs font-mono font-medium text-foreground">Select local extraction file payload</span>
+                <span className="text-xs font-mono font-medium text-foreground"> local extraction file payload</span>
               )}
               <p className="text-[10px] text-muted-foreground mt-1 font-mono">Drag & Drop .json AST file here</p>
             </div>
@@ -194,10 +260,21 @@ export function ImportAstDialog({ open, onOpenChange, onImport }: ImportAstDialo
             </Button>
           </div>
 
+          {/* Direct JSON Paste & Sample Payload */}
           <div className="flex justify-between items-center">
             <span className="text-xs font-mono font-semibold text-muted-foreground uppercase flex items-center gap-1">
               <FileCode size={13} /> Direct JSON Input
             </span>
+            <Button
+              id="btn-load-sample-ast"
+              type="button"
+              variant="ghost"
+              size="xs"
+              className="text-[11px] text-primary flex items-center gap-1"
+              onClick={handleLoadSample}
+            >
+              <Play size={11} /> Load Sample AST Data
+            </Button>
           </div>
 
           <Textarea
@@ -212,6 +289,7 @@ export function ImportAstDialog({ open, onOpenChange, onImport }: ImportAstDialo
             }}
           />
 
+          {/* Validation Notice */}
           {errorMsg && (
             <div id="notice-import-ast-error" className="flex items-center gap-2 p-2.5 bg-destructive/15 border border-destructive/30 rounded text-destructive text-xs font-mono">
               <AlertCircle size={15} className="shrink-0" />
@@ -242,164 +320,3 @@ export function ImportAstDialog({ open, onOpenChange, onImport }: ImportAstDialo
     </Dialog>
   );
 }
-EOF
-
-# 4. Update CodebaseExplorerPanel.tsx with relocated import dialog and new bottom panel
-cat << 'EOF' > src/features/explorer/wkp-lft-codebase-tree/CodebaseExplorerPanel.tsx
-import React, { useRef, useEffect, useState } from 'react';
-import { ChevronDown, ChevronRight, Folder, FileCode, Database, Upload } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { ImportAstDialog } from './import-ast-dialog';
-import {
-  CodebaseFile,
-  CodebaseData,
-  SelectedEntity,
-  codebaseService,
-  FOLDER_KEYS_REGISTERED_CONFIG,
-  FOLDER_THEME_REGISTRY_CONFIG
-} from '@/services/codebase';
-
-interface TriStateCheckboxProps {
-  checked: boolean;
-  indeterminate: boolean;
-  onChange: () => void;
-  className?: string;
-}
-
-function TriStateCheckbox({ checked, indeterminate, onChange, className }: TriStateCheckboxProps) {
-  const checkboxRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (checkboxRef.current) {
-      checkboxRef.current.indeterminate = indeterminate;
-    }
-  }, [indeterminate]);
-
-  return (
-    <input
-      ref={checkboxRef}
-      type="checkbox"
-      checked={checked}
-      onChange={onChange}
-      className={className}
-    />
-  );
-}
-
-interface CodebaseExplorerPanelProps {
-  searchFilteredFiles: CodebaseFile[];
-  expandedFolders: Record<string, boolean>;
-  visibleFiles: Record<string, boolean>;
-  toggleFolder: (folder: string) => void;
-  toggleFolderCheckbox: (folder: string) => void;
-  toggleFileCheckbox: (id: string) => void;
-  setSelectedEntity: (entity: SelectedEntity) => void;
-  onImportCodebase?: (importedData: CodebaseData) => void;
-}
-
-export function CodebaseExplorerPanel({
-  searchFilteredFiles,
-  expandedFolders,
-  visibleFiles,
-  toggleFolder,
-  toggleFolderCheckbox,
-  toggleFileCheckbox,
-  setSelectedEntity,
-  onImportCodebase
-}: CodebaseExplorerPanelProps) {
-  const codebase = codebaseService.getCodebase();
-  const [isImportOpen, setIsImportOpen] = useState(false);
-
-  return (
-    <div id="panel-codebase-explorer" className="flex flex-col bg-card h-full">
-      <div className="bg-muted/20 p-3 border-border border-b flex justify-between items-center">
-        <Button
-          id="btn-open-import-ast-dialog"
-          variant="outline"
-          size="xs"
-          className="flex items-center gap-1 text-[10px] w-full justify-center"
-          onClick={() => setIsImportOpen(true)}
-          data-tooltip="Open AST Codebase import dialog"
-        >
-          <Upload size={12} /> Import AST
-        </Button>
-      </div>
-
-      <ImportAstDialog
-        open={isImportOpen}
-        onOpenChange={setIsImportOpen}
-        onImport={(data) => {
-          if (onImportCodebase) onImportCodebase(data);
-        }}
-      />
-
-      <div id="tree-codebase-files" className="flex-1 p-4 overflow-y-auto font-mono text-xs">
-        {FOLDER_KEYS_REGISTERED_CONFIG.map(folder => {
-          const theme = FOLDER_THEME_REGISTRY_CONFIG[folder] || FOLDER_THEME_REGISTRY_CONFIG.default;
-          const folderFiles = codebase.files.filter(f => f.path.startsWith(folder));
-          const isAllChecked = folderFiles.length > 0 && folderFiles.every(f => visibleFiles[f.id]);
-          const isSomeChecked = folderFiles.some(f => visibleFiles[f.id]);
-          const isIndeterminate = isSomeChecked && !isAllChecked;
-
-          return (
-            <div key={folder} className="mb-4">
-              <div className="group flex items-center gap-1.5 hover:bg-muted/50 px-1 py-1 rounded">
-                <TriStateCheckbox
-                  checked={isAllChecked}
-                  indeterminate={isIndeterminate}
-                  onChange={() => toggleFolderCheckbox(folder)}
-                  className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
-                />
-                <div className="flex flex-1 items-center gap-1.5 min-w-0 cursor-pointer" onClick={() => toggleFolder(folder)}>
-                  {expandedFolders[folder] ? <ChevronDown size={14} className="shrink-0" /> : <ChevronRight size={14} className="shrink-0" />}
-                  <Folder size={15} className={`${theme.fill} ${theme.text} shrink-0`} />
-                  <span className="font-bold truncate">{folder}/</span>
-                </div>
-              </div>
-              {expandedFolders[folder] && (
-                <div className="space-y-1 mt-1 ml-2.5 pl-6 border-border border-l">
-                  {folderFiles.map((file: CodebaseFile) => (
-                    <div key={file.id} className="group flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded">
-                      <input
-                        type="checkbox"
-                        checked={!!visibleFiles[file.id]}
-                        onChange={() => toggleFileCheckbox(file.id)}
-                        className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
-                      />
-                      <span
-                        className={`flex items-center gap-1.5 truncate cursor-pointer flex-1 min-w-0 ${visibleFiles[file.id] ? 'text-foreground font-medium' : 'text-muted-foreground line-through'}`}
-                        onClick={() => setSelectedEntity({ type: 'node', nodeId: file.id })}
-                      >
-                        {folder === 'config' ? (
-                          <Database size={13} className="text-amber-500 shrink-0" />
-                        ) : (
-                          <FileCode size={13} className={file.type === 'interface' ? 'text-indigo-400 shrink-0' : (folder === 'frontend' ? 'text-emerald-500 shrink-0' : 'text-blue-500 shrink-0')} />
-                        )}
-                        <span className="truncate">{file.name}</span>
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Bottom Panel */}
-      <div id="panel-codebase-explorer-bottom" className="bg-muted/20 p-3 border-border border-t">
-        <div>
-          <h3 className="flex items-center gap-2 font-mono font-bold text-muted-foreground text-xs uppercase tracking-wider">
-            <span>Codebase Explorer</span>
-            <span id="badge-file-count" className="bg-muted px-2 py-0.5 rounded text-[10px] text-foreground">
-              {searchFilteredFiles.length}/{codebase.files.length}
-            </span>
-          </h3>
-        </div>
-      </div>
-    </div>
-  );
-}
-EOF
-
-echo "✅ refactor: Moved import-ast-dialog.tsx into wkp-lft-codebase-tree and added bottom status panel to CodebaseExplorerPanel!"

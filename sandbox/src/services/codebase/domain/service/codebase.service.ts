@@ -11,6 +11,10 @@ export class CodebaseService {
     return this.codebaseRepository.getCodebase();
   }
 
+  public importCodebase(data: CodebaseData): void {
+    this.codebaseRepository.importCodebase(data);
+  }
+
   public getFolderPositions(): Record<string, { label: string }> {
     return this.codebaseRepository.getFolderPositions();
   }

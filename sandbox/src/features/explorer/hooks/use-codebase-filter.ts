@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { CodebaseFile, filterCodebaseFiles, INITIAL_VISIBLE_FILES_CONFIG } from '@/services/codebase';
 
 export function useCodebaseFilter(allFiles: CodebaseFile[]) {
@@ -11,6 +11,18 @@ export function useCodebaseFilter(allFiles: CodebaseFile[]) {
     config: true
   });
   const [visibleFiles, setVisibleFiles] = useState<Record<string, boolean>>(INITIAL_VISIBLE_FILES_CONFIG);
+
+  useEffect(() => {
+    setVisibleFiles(prev => {
+      const updated = { ...prev };
+      allFiles.forEach(f => {
+        if (updated[f.id] === undefined) {
+          updated[f.id] = true;
+        }
+      });
+      return updated;
+    });
+  }, [allFiles]);
 
   const toggleFolder = useCallback((folderName: string) => {
     setExpandedFolders(prev => ({ ...prev, [folderName]: !prev[folderName] }));
@@ -37,10 +49,12 @@ export function useCodebaseFilter(allFiles: CodebaseFile[]) {
   }, [allFiles, searchTerm, displayLevel, visibleFiles, maxNodesLimit]);
 
   const resetFilters = useCallback(() => {
-    setVisibleFiles(INITIAL_VISIBLE_FILES_CONFIG);
+    const resetVisible: Record<string, boolean> = {};
+    allFiles.forEach(f => { resetVisible[f.id] = true; });
+    setVisibleFiles(resetVisible);
     setSearchTerm('');
     setDisplayLevel('all');
-  }, []);
+  }, [allFiles]);
 
   return {
     searchTerm,

@@ -1,7 +1,10 @@
-import React, { useRef, useEffect } from 'react';
-import { ChevronDown, ChevronRight, Folder, FileCode, Database } from 'lucide-react';
+import React, { useRef, useEffect, useState } from 'react';
+import { ChevronDown, ChevronRight, Folder, FileCode, Database, Upload } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ImportAstDialog } from './import-ast-dialog';
 import {
   CodebaseFile,
+  CodebaseData,
   SelectedEntity,
   codebaseService,
   FOLDER_KEYS_REGISTERED_CONFIG,
@@ -43,6 +46,7 @@ interface CodebaseExplorerPanelProps {
   toggleFolderCheckbox: (folder: string) => void;
   toggleFileCheckbox: (id: string) => void;
   setSelectedEntity: (entity: SelectedEntity) => void;
+  onImportCodebase?: (importedData: CodebaseData) => void;
 }
 
 export function CodebaseExplorerPanel({
@@ -52,19 +56,36 @@ export function CodebaseExplorerPanel({
   toggleFolder,
   toggleFolderCheckbox,
   toggleFileCheckbox,
-  setSelectedEntity
+  setSelectedEntity,
+  onImportCodebase
 }: CodebaseExplorerPanelProps) {
   const codebase = codebaseService.getCodebase();
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   return (
-    <div className="flex flex-col bg-card h-full">
-      <div className="bg-muted/20 p-2 border-border border-b">
-        <h3 className="flex justify-between items-center mb-2 font-mono font-bold text-muted-foreground text-xs uppercase tracking-wider" style={{marginBottom: '0rem'}}>
-          <span className="bg-muted px-2 py-0.5 rounded text-[10px] text-foreground">Codebase Explorer</span>
-          <span className="bg-muted px-2 py-0.5 rounded text-[10px] text-foreground">{searchFilteredFiles.length}/{codebase.files.length}</span>
-        </h3>
+    <div id="panel-codebase-explorer" className="flex flex-col bg-card h-full">
+      <div className="flex justify-between items-center bg-muted/20 p-1 border-border border-b">
+        <Button
+          id="btn-open-import-ast-dialog"
+          variant="ghost"
+          size="icon"
+          className="flex justify-end items-center gap-1 w-full text-[10px]"
+          onClick={() => setIsImportOpen(true)}
+          data-tooltip="Open AST Codebase import dialog"
+        >
+          <Upload size={12} />
+        </Button>
       </div>
-      <div className="flex-1 p-4 overflow-y-auto font-mono text-xs">
+
+      <ImportAstDialog
+        open={isImportOpen}
+        onOpenChange={setIsImportOpen}
+        onImport={(data) => {
+          if (onImportCodebase) onImportCodebase(data);
+        }}
+      />
+
+      <div id="tree-codebase-files" className="flex-1 p-4 overflow-y-auto font-mono text-xs">
         {FOLDER_KEYS_REGISTERED_CONFIG.map(folder => {
           const theme = FOLDER_THEME_REGISTRY_CONFIG[folder] || FOLDER_THEME_REGISTRY_CONFIG.default;
           const folderFiles = codebase.files.filter(f => f.path.startsWith(folder));
@@ -115,6 +136,18 @@ export function CodebaseExplorerPanel({
             </div>
           );
         })}
+      </div>
+
+      {/* Bottom Panel */}
+      <div id="panel-codebase-explorer-bottom" className="bg-muted/20 p-3 border-border border-t">
+        <div>
+          <h3 className="flex items-center gap-2 font-mono font-bold text-muted-foreground text-xs uppercase tracking-wider">
+            <span>Codebase Explorer</span>
+            <span id="badge-file-count" className="bg-muted px-2 py-0.5 rounded text-[10px] text-foreground">
+              {searchFilteredFiles.length}/{codebase.files.length}
+            </span>
+          </h3>
+        </div>
       </div>
     </div>
   );

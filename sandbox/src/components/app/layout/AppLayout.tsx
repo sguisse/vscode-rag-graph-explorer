@@ -117,14 +117,7 @@ export function AppLayout({
         layoutConfig={layoutConfig}
       />
 
-      <Dialog open={importOpen} onOpenChange={setImportOpen}>
-        <DialogContent className="bg-card border border-border">
-          <DialogHeader><DialogTitle className="text-foreground text-sm">Import AST Data Schema</DialogTitle></DialogHeader>
-          <div className="p-2 border border-dashed rounded text-muted-foreground text-xs text-center">Select local extraction file payload</div>
-        </DialogContent>
-      </Dialog>
-
-      <div id="ctn-main" className="relative flex flex-1 overflow-hidden pb-[40px]">
+      <div id="ctn-main" className="relative flex flex-1 pb-[40px] overflow-hidden">
 
         <SidebarLeft
           sidebarLeftMode={sidebarLeftMode}
