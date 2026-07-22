@@ -58,9 +58,9 @@ export function CodebaseExplorerPanel({
 
   return (
     <div className="flex flex-col bg-card h-full">
-      <div className="bg-muted/20 p-4 border-border border-b">
-        <h3 className="flex justify-between items-center mb-2 font-mono font-bold text-muted-foreground text-xs uppercase tracking-wider">
-          <span>Codebase Explorer</span>
+      <div className="bg-muted/20 p-2 border-border border-b">
+        <h3 className="flex justify-between items-center mb-2 font-mono font-bold text-muted-foreground text-xs uppercase tracking-wider" style={{marginBottom: '0rem'}}>
+          <span className="bg-muted px-2 py-0.5 rounded text-[10px] text-foreground">Codebase Explorer</span>
           <span className="bg-muted px-2 py-0.5 rounded text-[10px] text-foreground">{searchFilteredFiles.length}/{codebase.files.length}</span>
         </h3>
       </div>

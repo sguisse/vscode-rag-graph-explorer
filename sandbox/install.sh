@@ -240,93 +240,7 @@ export * from "./type-display-level";
 export * from "./type-rule-pattern";
 EOF
 
-# 3. Create src/components/app/ui-utils.tsx including id parameter
-cat << 'EOF' > src/components/app/ui-utils.tsx
-import React from "react";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-
-export interface SelectOption {
-  icon?: string | React.ReactNode;
-  label: string | React.ReactNode;
-  value: string;
-}
-
-export const SelectFromTypeBuilder = ({
-  id,
-  icon,
-  label,
-  desc,
-  value,
-  onChange,
-  options
-}: {
-  id?: string;
-  icon?: string | React.ReactNode;
-  label?: string;
-  desc?: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: SelectOption[];
-}) => {
-  const selectedOption = options.find((opt) => opt.value === value);
-
-  return (
-    <div id={id} className="flex flex-col gap-1 py-1">
-      {label && (
-        <span className="text-xs font-medium text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
-          {icon && <span>{icon}</span>}
-          <span>{label}</span>
-        </span>
-      )}
-      {desc && <span className="text-[11px] text-neutral-500 dark:text-neutral-400 mb-1">{desc}</span>}
-      <Select value={value} onValueChange={onChange}>
-        <SelectTrigger id={id ? `${id}-trigger` : undefined} className="bg-white dark:bg-neutral-800 text-xs h-8">
-          <SelectValue>
-            {selectedOption ? (
-              <span className="flex items-center gap-1.5 truncate">
-                {selectedOption.icon && <span>{selectedOption.icon}</span>}
-                <span>{selectedOption.label}</span>
-              </span>
-            ) : undefined}
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent side="bottom">
-          {options.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
-              {opt.icon && <>{opt.icon}&nbsp;</>}{opt.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
-};
-EOF
-
-# 4. Clean src/lib/utils.ts
-cat << 'EOF' > src/lib/utils.ts
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-
-export async function copyToClipboard(text: string): Promise<boolean> {
-  try {
-    if (navigator?.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-    return false;
-  } catch (error) {
-    console.error('Failed to copy to clipboard:', error);
-    return false;
-  }
-}
-EOF
-
-# 5. Update codebase.model.ts
+# 3. Update codebase.model.ts to re-export types index
 cat << 'EOF' > src/services/codebase/domain/model/codebase.model.ts
 import {
   AttributeVisibility,
@@ -392,13 +306,75 @@ export interface SelectedEntity {
 export type { ImpactDirection };
 EOF
 
-# 6. Update GraphPanelHeader.tsx to supply id attributes to interactive components
+# 4. Create SelectFromTypeBuilder in src/components/app/ui-utils.tsx
+cat << 'EOF' > src/components/app/ui-utils.tsx
+import React from "react";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+
+export const SelectFromTypeBuilder = ({
+  icon,
+  label,
+  desc,
+  value,
+  onChange,
+  options
+}: {
+  icon?: string;
+  label: string;
+  desc?: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { icon: string; label: string | React.ReactNode; value: string }[];
+}) => (
+  <div className="flex flex-col gap-1 py-1">
+    <span className="text-xs font-medium text-neutral-900 dark:text-neutral-100">{label}</span>
+    {desc && <span className="text-[11px] text-neutral-500 dark:text-neutral-400 mb-1">{desc}</span>}
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="bg-white dark:bg-neutral-800 text-xs h-8">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent side="bottom">
+        {options.map((opt) => (
+          <SelectItem key={opt.value} value={opt.value}>
+            {opt.icon}&nbsp;{opt.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
+);
+EOF
+
+# 5. Clean src/lib/utils.ts
+cat << 'EOF' > src/lib/utils.ts
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+export async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Failed to copy to clipboard:', error);
+    return false;
+  }
+}
+EOF
+
+# 6. Update GraphPanelHeader.tsx to use icon maps for Select controls
 cat << 'EOF' > src/features/explorer/wksp-cnt-graph/GraphPanelHeader.tsx
 import React from 'react';
 import { Grid, Database, User, Baby, Plus, Minus, Focus, Maximize, Minimize } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import {
   DISPLAY_LEVEL_LIST,
   DISPLAY_LEVEL_ICON_MAP,
@@ -415,7 +391,6 @@ export const GraphPanelHeaderLeft: React.FC<GraphPanelHeaderLeftProps> = ({ show
   <div className="flex items-center gap-2">
     <span>Topological Network</span>
     <Button
-      id="btn-toggle-grid"
       variant="ghost"
       size="icon"
       className={`h-5 w-5 rounded transition-colors ${showGrid ? 'text-primary bg-primary/10' : 'text-muted-foreground'}`}
@@ -455,7 +430,6 @@ export const GraphPanelHeaderCenter: React.FC<GraphPanelHeaderCenterProps> = ({
     <div className="flex items-center gap-1.5 bg-background px-2 py-0.5 border border-border rounded-sm">
       <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">Limit:</span>
       <Input
-        id="input-max-nodes-limit"
         type="number"
         min={1}
         max={100}
@@ -464,16 +438,12 @@ export const GraphPanelHeaderCenter: React.FC<GraphPanelHeaderCenterProps> = ({
         onChange={(e) => setMaxNodesLimit(Number(e.target.value) || 50)}
       />
     </div>
-    <Button
-      id="btn-neo4j-connect"
-      className="flex items-center gap-1.5 bg-gradient-to-r from-orange-600 to-orange-500 shadow-sm px-2.5 border border-orange-700 rounded-md h-6 font-bold text-[10px] text-white uppercase tracking-wider"
-    >
+    <Button className="flex items-center gap-1.5 bg-gradient-to-r from-orange-600 to-orange-500 shadow-sm px-2.5 border border-orange-700 rounded-md h-6 font-bold text-[10px] text-white uppercase tracking-wider">
       <Database size={11} /> Neo4j
     </Button>
     <div className="flex items-center gap-1 bg-background px-1.5 py-0.5 border border-border rounded-sm">
       <User size={12} className="text-muted-foreground" />
       <Input
-        id="input-callers-depth"
         type="number"
         min={0}
         max={20}
@@ -485,7 +455,6 @@ export const GraphPanelHeaderCenter: React.FC<GraphPanelHeaderCenterProps> = ({
     <div className="flex items-center gap-1 bg-background px-1.5 py-0.5 border border-border rounded-sm">
       <Baby size={12} className="text-muted-foreground" />
       <Input
-        id="input-callees-depth"
         type="number"
         min={0}
         max={20}
@@ -494,26 +463,40 @@ export const GraphPanelHeaderCenter: React.FC<GraphPanelHeaderCenterProps> = ({
         onChange={(e) => setCalleesDepth(Number(e.target.value) || 0)}
       />
     </div>
-    <SelectFromTypeBuilder
-      id="select-display-level"
-      value={displayLevel}
-      onChange={setDisplayLevel}
-      options={DISPLAY_LEVEL_LIST.map((key) => ({
-        value: key,
-        icon: DISPLAY_LEVEL_ICON_MAP[key].icon,
-        label: DISPLAY_LEVEL_ICON_MAP[key].label,
-      }))}
-    />
-    <SelectFromTypeBuilder
-      id="select-graph-layout"
-      value={currentLayout}
-      onChange={setCurrentLayout}
-      options={GRAPH_LAYOUT_LIST.map((key) => ({
-        value: key,
-        icon: GRAPH_LAYOUT_ICON_MAP[key].icon,
-        label: GRAPH_LAYOUT_ICON_MAP[key].label,
-      }))}
-    />
+    <div className="flex items-center bg-background shadow-sm px-1 border border-border rounded h-6">
+      <Select value={displayLevel} onValueChange={setDisplayLevel}>
+        <SelectTrigger className="bg-transparent shadow-none px-1 border-0 focus:ring-0 w-32 h-5 text-[11px] text-foreground">
+          <SelectValue placeholder="Granularity" />
+        </SelectTrigger>
+        <SelectContent side="bottom">
+          {DISPLAY_LEVEL_LIST.map((key) => {
+            const item = DISPLAY_LEVEL_ICON_MAP[key];
+            return (
+              <SelectItem key={key} value={key}>
+                {item.icon}&nbsp;{item.label}
+              </SelectItem>
+            );
+          })}
+        </SelectContent>
+      </Select>
+    </div>
+    <div className="flex items-center bg-background shadow-sm px-1 border border-border rounded h-6">
+      <Select value={currentLayout} onValueChange={setCurrentLayout}>
+        <SelectTrigger className="bg-transparent shadow-none px-1 border-0 focus:ring-0 w-40 h-5 text-[11px] text-foreground">
+          <SelectValue placeholder="Layout Architecture" />
+        </SelectTrigger>
+        <SelectContent side="bottom">
+          {GRAPH_LAYOUT_LIST.map((key) => {
+            const item = GRAPH_LAYOUT_ICON_MAP[key];
+            return (
+              <SelectItem key={key} value={key}>
+                {item.icon}&nbsp;{item.label}
+              </SelectItem>
+            );
+          })}
+        </SelectContent>
+      </Select>
+    </div>
   </div>
 );
 
@@ -530,7 +513,6 @@ export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
 }) => (
   <div className="flex items-center gap-1">
     <Button
-      id="btn-graph-zoom-in"
       variant="ghost"
       size="icon"
       className="w-5 h-5 text-muted-foreground"
@@ -539,7 +521,6 @@ export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
       <Plus size={12} />
     </Button>
     <Button
-      id="btn-graph-zoom-out"
       variant="ghost"
       size="icon"
       className="w-5 h-5 text-muted-foreground"
@@ -548,7 +529,6 @@ export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
       <Minus size={12} />
     </Button>
     <Button
-      id="btn-graph-reset-view"
       variant="ghost"
       size="icon"
       className="w-5 h-5 text-muted-foreground"
@@ -560,7 +540,6 @@ export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
       <Focus size={12} />
     </Button>
     <Button
-      id="btn-graph-toggle-maximize"
       variant="ghost"
       size="icon"
       className="w-5 h-5 text-muted-foreground"
@@ -572,7 +551,7 @@ export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
 );
 EOF
 
-# 7. Update RulesFeature.tsx with id attributes
+# 7. Update RulesFeature.tsx to consume SelectFromTypeBuilder from src/components/app/ui-utils.tsx
 cat << 'EOF' > src/features/rules/RulesFeature.tsx
 import React, { useState } from 'react';
 import { AppLayout, AppLayoutProps } from '@/components/app/layout/AppLayout';
@@ -590,7 +569,6 @@ export function RulesFeature(props: Omit<AppLayoutProps, 'layoutConfig' | 'panel
     <div className="flex flex-col gap-4 p-4 h-full">
       <div data-tooltip="Select a pre-configured AST validation rule pattern">
         <SelectFromTypeBuilder
-          id="select-rule-pattern"
           label="Pre-configured Rule"
           desc="Select a pattern to validate against AST graph"
           value={selectedRule}
@@ -606,17 +584,9 @@ export function RulesFeature(props: Omit<AppLayoutProps, 'layoutConfig' | 'panel
         <LeftCenterRightPanel
           id="panel-cypher-editor"
           left={<span className="font-medium text-muted-foreground text-xs">Cypher Editor</span>}
-          right={
-            <Button id="btn-execute-cypher" variant="ghost" size="sm" className="px-2 h-6 text-primary">
-              <Play size={12} className="mr-1"/> Execute
-            </Button>
-          }
+          right={<Button variant="ghost" size="sm" className="px-2 h-6 text-primary"><Play size={12} className="mr-1"/> Execute</Button>}
         />
-        <Textarea
-          id="textarea-cypher-query"
-          className="flex-1 bg-muted/50 border-border font-mono text-foreground text-xs resize-none"
-          defaultValue={"MATCH (c:Controller)-[r:CALLS]->(repo:Repository)\nRETURN c.name, repo.name, type(r)"}
-        />
+        <Textarea className="flex-1 bg-muted/50 border-border font-mono text-foreground text-xs resize-none" defaultValue={"MATCH (c:Controller)-[r:CALLS]->(repo:Repository)\nRETURN c.name, repo.name, type(r)"} />
       </div>
     </div>
   );
@@ -632,4 +602,6 @@ export function RulesFeature(props: Omit<AppLayoutProps, 'layoutConfig' | 'panel
 }
 EOF
 
-echo "✅ feat: Added id attributes to SelectFromTypeBuilder, Input, Button, Textarea and propagated id props through UI components!"
+echo "✅ refactor: Externalized all types into src/services/codebase/domain/model/types and moved SelectFromTypeBuilder to src/components/app/ui-utils.tsx!"
+
+npm run build
