@@ -1,6 +1,16 @@
+import {
+  AttributeVisibility,
+  FileType,
+  DependencyRelation,
+  SelectedEntityType,
+  ImpactDirection
+} from './types';
+
+export * from './types';
+
 export interface CodebaseAttribute {
   name: string;
-  visibility: 'private' | 'public' | 'protected';
+  visibility: AttributeVisibility;
 }
 
 export interface CodebaseMethod {
@@ -17,7 +27,7 @@ export interface ConfigProperty {
 export interface CodebaseFile {
   id: string;
   name: string;
-  type: 'class' | 'interface' | 'component' | 'module' | 'config';
+  type: FileType;
   path: string;
   language: string;
   size: number;
@@ -33,7 +43,7 @@ export interface Dependency {
   sourceHandle: string;
   targetNode: string;
   targetHandle: string;
-  relation: 'dependency' | 'association' | 'aggregation' | 'composition' | 'implementation' | 'extends';
+  relation: DependencyRelation;
   label: string;
 }
 
@@ -43,10 +53,10 @@ export interface CodebaseData {
 }
 
 export interface SelectedEntity {
-  type: 'node' | 'member' | 'edge';
+  type: SelectedEntityType;
   nodeId: string;
   memberId?: string;
   edgeId?: string;
 }
 
-export type ImpactDirection = 'aval' | 'amont';
+export type { ImpactDirection };

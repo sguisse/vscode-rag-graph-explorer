@@ -1,853 +1,635 @@
 #!/usr/bin/env bash
-# ============================================================================
-# Complete Layout State & Tri-State Checkbox Integration Script
-# Action:
-#   1. Reloads exact state from latest attachment source export.
-#   2. Adds panel close cross buttons (X icon) to workspace title bars
-#      (ctn-workspace-top, ctn-workspace-left, ctn-workspace-right, ctn-workspace-bottom)
-#      EXCEPT ctn-workspace-center.
-#   3. Integrates close cross button in rightSidebarHeaderRight to hide right sidebar via use-layout-state.
-#   4. Re-applies Tri-State Checkbox component on the left side of folders in CodebaseExplorerPanel.
-#   5. Verifies 100% build integrity with Vite production compiler.
-# ============================================================================
-
 set -e
 
-# Ensure layout subdirectories exist
-mkdir -p src/components/app/layout/hooks
-mkdir -p src/features/explorer/wkp-lft-codebase-tree
+# 1. Create necessary directories
+mkdir -p src/services/codebase/domain/model/types
+mkdir -p src/components/app
 
-# ----------------------------------------------------------------------------
-# 1. LAYOUT STATE HOOK (src/components/app/layout/hooks/use-layout-state.ts)
-# ----------------------------------------------------------------------------
-cat << 'EOF' > src/components/app/layout/hooks/use-layout-state.ts
-import { useState } from 'react';
-import { AppLayoutConfig } from '../AppLayout';
+# 2. Create externalized type files following pattern type-xxxx.ts
 
-export interface LayoutVisibilityState {
-  isCtnWorkspaceVisible: boolean;
-  isCtnWorkspaceTopVisible: boolean;
-  isCtnWorkspaceLeftVisible: boolean;
-  isCtnWorkspaceCenterVisible: boolean;
-  isCtnWorkspaceRightVisible: boolean;
-  isCtnWorkspaceBottomVisible: boolean;
-  isSidebarRightVisible: boolean;
+cat << 'EOF' > src/services/codebase/domain/model/types/type-data-scope.ts
+export const DATA_SCOPE_LIST: readonly string[] = ["LOCAL_ONLY", "REMOTE_SYNC"];
+
+export const DATA_SCOPE_ICON_MAP: { [K in (typeof DATA_SCOPE_LIST)[number]]: any } = {
+  LOCAL_ONLY: { icon: "🏠", label: "Local Only" },
+  REMOTE_SYNC: { icon: "🌐", label: "Remote Sync" },
+} as const;
+
+export type DataScope = (typeof DATA_SCOPE_LIST)[number];
+
+export function isDataScope(value: unknown): value is DataScope {
+  return typeof value === "string" && DATA_SCOPE_LIST.includes(value);
 }
 
-export interface LayoutVisibilityActions {
-  setIsCtnWorkspaceVisible: (visible: boolean) => void;
-  setIsCtnWorkspaceTopVisible: (visible: boolean) => void;
-  setIsCtnWorkspaceLeftVisible: (visible: boolean) => void;
-  setIsCtnWorkspaceCenterVisible: (visible: boolean) => void;
-  setIsCtnWorkspaceRightVisible: (visible: boolean) => void;
-  setIsCtnWorkspaceBottomVisible: (visible: boolean) => void;
-  setIsSidebarRightVisible: (visible: boolean) => void;
-}
-
-export function useLayoutState(layoutConfig: AppLayoutConfig = {}) {
-  const [isCtnWorkspaceVisible, setIsCtnWorkspaceVisible] = useState(true);
-  const [isCtnWorkspaceTopVisible, setIsCtnWorkspaceTopVisible] = useState(layoutConfig.showTop ?? false);
-  const [isCtnWorkspaceLeftVisible, setIsCtnWorkspaceLeftVisible] = useState(layoutConfig.showLeft ?? false);
-  const [isCtnWorkspaceCenterVisible, setIsCtnWorkspaceCenterVisible] = useState(layoutConfig.showCenter ?? false);
-  const [isCtnWorkspaceRightVisible, setIsCtnWorkspaceRightVisible] = useState(layoutConfig.showRight ?? false);
-  const [isCtnWorkspaceBottomVisible, setIsCtnWorkspaceBottomVisible] = useState(layoutConfig.showBottom ?? false);
-  const [isSidebarRightVisible, setIsSidebarRightVisible] = useState(layoutConfig.showRightSidebar ?? false);
-
-  const visibility: LayoutVisibilityState = {
-    isCtnWorkspaceVisible,
-    isCtnWorkspaceTopVisible,
-    isCtnWorkspaceLeftVisible,
-    isCtnWorkspaceCenterVisible,
-    isCtnWorkspaceRightVisible,
-    isCtnWorkspaceBottomVisible,
-    isSidebarRightVisible
-  };
-
-  const actions: LayoutVisibilityActions = {
-    setIsCtnWorkspaceVisible,
-    setIsCtnWorkspaceTopVisible,
-    setIsCtnWorkspaceLeftVisible,
-    setIsCtnWorkspaceCenterVisible,
-    setIsCtnWorkspaceRightVisible,
-    setIsCtnWorkspaceBottomVisible,
-    setIsSidebarRightVisible
-  };
-
-  return { visibility, actions };
+export function getDataScope(value: unknown): DataScope | undefined {
+  if (typeof value === "string" && DATA_SCOPE_LIST.includes(value)) {
+    return value as DataScope;
+  }
+  return undefined;
 }
 EOF
 
-# ----------------------------------------------------------------------------
-# 2. WORKSPACE COMPONENT (CLOSE BUTTONS ADDED TO ALL PANELS EXCEPT CENTER)
-# ----------------------------------------------------------------------------
-cat << 'EOF' > src/components/app/layout/workspace.tsx
-import React from 'react';
-import { X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { ResizableContainer } from '@/components/app/container/resizable-container';
-import { LayoutVisibilityActions } from './hooks/use-layout-state';
+cat << 'EOF' > src/services/codebase/domain/model/types/type-impact-direction.ts
+export const IMPACT_DIRECTION_LIST: readonly string[] = ["aval", "amont"];
 
-export interface WorkspaceProps {
-  isCtnWorkspaceVisible: boolean;
-  layoutConfig: {
-    showTop?: boolean;
-    showLeft?: boolean;
-    showCenter?: boolean;
-    showRight?: boolean;
-    showBottom?: boolean;
-  };
-  isCtnWorkspaceTopVisible: boolean;
-  ctnWorkspaceTopHeight: number;
-  startCtnWorkspaceTopResize: (e: React.MouseEvent) => void;
-  panels: {
-    top?: React.ReactNode;
-    left?: React.ReactNode;
-    center?: React.ReactNode;
-    right?: React.ReactNode;
-    bottom?: React.ReactNode;
-  };
-  headers: {
-    leftPanelTitle?: string;
-    centerPanelHeader?: React.ReactNode;
-    centerPanelHeaderCenter?: React.ReactNode;
-    centerPanelHeaderRight?: React.ReactNode;
-  };
-  isCtnWorkspaceLeftVisible: boolean;
-  activeMiddlePanelsCount: number;
-  ctnWorkspaceLeftWidth: number;
-  activeView: string;
-  startCtnWorkspaceLeftResize: (e: React.MouseEvent) => void;
-  isCtnWorkspaceCenterVisible: boolean;
-  isGraphMaximized: boolean;
-  isCurrentlyResizing: boolean;
-  isDraggingSidebarLeft: boolean;
-  isDraggingSidebarRight: boolean;
-  isDraggingLeftPane: boolean;
-  isDraggingRightPane: boolean;
-  isCtnWorkspaceRightVisible: boolean;
-  ctnWorkspaceRightWidth: number;
-  startCtnWorkspaceRightResize: (e: React.MouseEvent) => void;
-  isCtnWorkspaceBottomVisible: boolean;
-  ctnWorkspaceBottomHeight: number;
-  startCtnWorkspaceBottomResize: (e: React.MouseEvent) => void;
-  actions: LayoutVisibilityActions;
+export const IMPACT_DIRECTION_ICON_MAP: { [K in (typeof IMPACT_DIRECTION_LIST)[number]]: any } = {
+  aval: { icon: "⬇️", label: "Downstream" },
+  amont: { icon: "⬆️", label: "Upstream" },
+} as const;
+
+export type ImpactDirection = (typeof IMPACT_DIRECTION_LIST)[number];
+
+export function isImpactDirection(value: unknown): value is ImpactDirection {
+  return typeof value === "string" && IMPACT_DIRECTION_LIST.includes(value);
 }
 
-export function Workspace({
-  isCtnWorkspaceVisible,
-  layoutConfig,
-  isCtnWorkspaceTopVisible,
-  ctnWorkspaceTopHeight,
-  startCtnWorkspaceTopResize,
-  panels,
-  headers,
-  isCtnWorkspaceLeftVisible,
-  activeMiddlePanelsCount,
-  ctnWorkspaceLeftWidth,
-  activeView,
-  startCtnWorkspaceLeftResize,
-  isCtnWorkspaceCenterVisible,
-  isGraphMaximized,
-  isCurrentlyResizing,
-  isDraggingSidebarLeft,
-  isDraggingSidebarRight,
-  isDraggingLeftPane,
-  isDraggingRightPane,
-  isCtnWorkspaceRightVisible,
-  ctnWorkspaceRightWidth,
-  startCtnWorkspaceRightResize,
-  isCtnWorkspaceBottomVisible,
-  ctnWorkspaceBottomHeight,
-  startCtnWorkspaceBottomResize,
-  actions
-}: WorkspaceProps) {
-  return (
-    <div id="ctn-workspace" style={{ display: isCtnWorkspaceVisible ? 'flex' : 'none' }} className="relative flex flex-1 bg-background min-w-0">
-      <div className="relative flex flex-col flex-1 min-w-0">
-
-        {/* TOP PANEL */}
-        {layoutConfig.showTop && (
-          <ResizableContainer
-            id="ctn-workspace-top"
-            visible={isCtnWorkspaceTopVisible}
-            style={{ height: `${ctnWorkspaceTopHeight}px` }}
-            headerLeft="Target Path Mapping Streams"
-            headerRight={
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                onClick={() => actions.setIsCtnWorkspaceTopVisible(false)}
-                className="w-5 h-5 text-muted-foreground hover:text-foreground p-0 rounded cursor-pointer"
-                data-tooltip="Close top panel"
-              >
-                <X size={12} />
-              </Button>
-            }
-            resizeHandle="bottom"
-            onResizeStart={startCtnWorkspaceTopResize}
-            className="bg-muted border-b"
-          >
-            {panels.top}
-          </ResizableContainer>
-        )}
-
-        <div id="ctn-workspace-middle-row" className="flex flex-1 min-h-0 overflow-hidden">
-
-          {/* LEFT PANEL */}
-          {layoutConfig.showLeft && (
-            <ResizableContainer
-              id="ctn-workspace-left"
-              visible={isCtnWorkspaceLeftVisible}
-              style={activeMiddlePanelsCount === 1 ? { flex: 1 } : { width: `${ctnWorkspaceLeftWidth}px` }}
-              headerLeft={headers.leftPanelTitle || activeView}
-              headerRight={
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  onClick={() => actions.setIsCtnWorkspaceLeftVisible(false)}
-                  className="w-5 h-5 text-muted-foreground hover:text-foreground p-0 rounded cursor-pointer"
-                  data-tooltip="Close left panel"
-                >
-                  <X size={12} />
-                </Button>
-              }
-              className={activeMiddlePanelsCount === 1 ? "min-w-[200px]" : "border-r min-w-[200px]"}
-              resizeHandle={activeMiddlePanelsCount > 1 ? "right" : "none"}
-              onResizeStart={startCtnWorkspaceLeftResize}
-            >
-              {panels.left}
-            </ResizableContainer>
-          )}
-
-          {/* CENTER PANEL (EXCEPTED FROM CLOSE CROSS BUTTON) */}
-          {layoutConfig.showCenter && (
-            <ResizableContainer
-              id="ctn-workspace-center"
-              visible={isCtnWorkspaceCenterVisible || isGraphMaximized}
-              style={isGraphMaximized ? { position: 'fixed', top: '40px', bottom: '40px', left: '0', right: '0', zIndex: 50 } : { flex: 1 }}
-              headerLeft={headers.centerPanelHeader}
-              headerCenter={headers.centerPanelHeaderCenter}
-              headerRight={headers.centerPanelHeaderRight}
-              className="relative bg-background"
-            >
-              {panels.center}
-              {isCurrentlyResizing && <div className="z-30 absolute inset-0 bg-transparent pointer-events-auto select-none" style={{ cursor: isDraggingSidebarLeft || isDraggingSidebarRight || isDraggingLeftPane || isDraggingRightPane ? 'col-resize' : 'row-resize' }} />}
-            </ResizableContainer>
-          )}
-
-          {/* RIGHT PANEL */}
-          {layoutConfig.showRight && (
-            <ResizableContainer
-              id="ctn-workspace-right"
-              visible={isCtnWorkspaceRightVisible}
-              style={(!isCtnWorkspaceCenterVisible || activeMiddlePanelsCount === 1) ? { flex: 1 } : { width: `${ctnWorkspaceRightWidth}px` }}
-              headerLeft="Metadata & Inspector Tab Matrices"
-              headerRight={
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  onClick={() => actions.setIsCtnWorkspaceRightVisible(false)}
-                  className="w-5 h-5 text-muted-foreground hover:text-foreground p-0 rounded cursor-pointer"
-                  data-tooltip="Close right inspector panel"
-                >
-                  <X size={12} />
-                </Button>
-              }
-              className={(!isCtnWorkspaceCenterVisible || activeMiddlePanelsCount === 1) ? "min-w-[200px]" : "border-l min-w-[200px]"}
-              resizeHandle={isCtnWorkspaceCenterVisible ? "left" : "none"}
-              onResizeStart={isCtnWorkspaceCenterVisible ? startCtnWorkspaceRightResize : undefined}
-            >
-              {panels.right}
-            </ResizableContainer>
-          )}
-        </div>
-
-        {/* BOTTOM PANEL */}
-        {layoutConfig.showBottom && (
-          <ResizableContainer
-            id="ctn-workspace-bottom"
-            visible={isCtnWorkspaceBottomVisible}
-            style={{ height: `${ctnWorkspaceBottomHeight}px` }}
-            headerLeft="AST Pipeline Monitoring Feed"
-            headerRight={
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                onClick={() => actions.setIsCtnWorkspaceBottomVisible(false)}
-                className="w-5 h-5 text-muted-foreground hover:text-foreground p-0 rounded cursor-pointer"
-                data-tooltip="Close bottom panel"
-              >
-                <X size={12} />
-              </Button>
-            }
-            className="bg-secondary border-t"
-            resizeHandle="top"
-            onResizeStart={startCtnWorkspaceBottomResize}
-          >
-            {panels.bottom}
-          </ResizableContainer>
-        )}
-      </div>
-    </div>
-  );
+export function getImpactDirection(value: unknown): ImpactDirection | undefined {
+  if (typeof value === "string" && IMPACT_DIRECTION_LIST.includes(value)) {
+    return value as ImpactDirection;
+  }
+  return undefined;
 }
 EOF
 
-# ----------------------------------------------------------------------------
-# 3. SIDEBAR RIGHT (CLOSE CROSS BUTTON INTEGRATED WITH USE-LAYOUT-STATE)
-# ----------------------------------------------------------------------------
-cat << 'EOF' > src/components/app/layout/sidebar-right.tsx
-import React from 'react';
-import { X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { ResizableContainer } from '@/components/app/container/resizable-container';
-import { LayoutVisibilityActions } from './hooks/use-layout-state';
+cat << 'EOF' > src/services/codebase/domain/model/types/type-file-type.ts
+export const FILE_TYPE_LIST: readonly string[] = ["class", "interface", "component", "module", "config"];
 
-export interface SidebarRightProps {
-  layoutConfig: {
-    showRightSidebar?: boolean;
-  };
-  isSidebarRightVisible: boolean;
-  sidebarRightWidth: number;
-  headers: {
-    rightSidebarHeader?: React.ReactNode;
-    rightSidebarHeaderRight?: React.ReactNode;
-  };
-  panels: {
-    rightSidebar?: React.ReactNode;
-  };
-  startSidebarRightResize: (e: React.MouseEvent) => void;
-  actions: LayoutVisibilityActions;
+export const FILE_TYPE_ICON_MAP: { [K in (typeof FILE_TYPE_LIST)[number]]: any } = {
+  class: { icon: "☕", label: "Class" },
+  interface: { icon: "⚙️", label: "Interface" },
+  component: { icon: "🎨", label: "Component" },
+  module: { icon: "📦", label: "Module" },
+  config: { icon: "🔧", label: "Configuration" },
+} as const;
+
+export type FileType = (typeof FILE_TYPE_LIST)[number];
+
+export function isFileType(value: unknown): value is FileType {
+  return typeof value === "string" && FILE_TYPE_LIST.includes(value);
 }
 
-export function SidebarRight({
-  layoutConfig,
-  isSidebarRightVisible,
-  sidebarRightWidth,
-  headers,
-  panels,
-  startSidebarRightResize,
-  actions
-}: SidebarRightProps) {
-  if (!layoutConfig.showRightSidebar) return null;
-
-  return (
-    <ResizableContainer
-      id="ctn-sidebar-right"
-      visible={isSidebarRightVisible}
-      style={{ width: `${sidebarRightWidth}px` }}
-      headerLeft={headers.rightSidebarHeader}
-      headerRight={
-        <div className="flex items-center gap-1">
-          {headers.rightSidebarHeaderRight}
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={() => actions.setIsSidebarRightVisible(false)}
-            className="w-5 h-5 text-muted-foreground hover:text-foreground p-0 rounded cursor-pointer"
-            data-tooltip="Hide entity properties drawer"
-          >
-            <X size={12} />
-          </Button>
-        </div>
-      }
-      className="border-l shrink-0"
-      resizeHandle="left"
-      onResizeStart={startSidebarRightResize}
-    >
-      {panels.rightSidebar}
-    </ResizableContainer>
-  );
+export function getFileType(value: unknown): FileType | undefined {
+  if (typeof value === "string" && FILE_TYPE_LIST.includes(value)) {
+    return value as FileType;
+  }
+  return undefined;
 }
 EOF
 
-# ----------------------------------------------------------------------------
-# 4. AppLayout COMPONENT PASSING ACTIONS TO WORKSPACE AND SIDEBAR RIGHT
-# ----------------------------------------------------------------------------
-cat << 'EOF' > src/components/app/layout/AppLayout.tsx
-import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Tooltip } from '@/components/app/tooltip';
-import { useResizable } from '@/components/app/container/hooks/use-resizable';
-import { Header } from './header';
-import { SidebarLeft } from './sidebar-left';
-import { Workspace } from './workspace';
-import { SidebarRight } from './sidebar-right';
-import { Footer } from './footer';
-import { useLayoutState } from './hooks/use-layout-state';
+cat << 'EOF' > src/services/codebase/domain/model/types/type-dependency-relation.ts
+export const DEPENDENCY_RELATION_LIST: readonly string[] = [
+  "dependency",
+  "association",
+  "aggregation",
+  "composition",
+  "implementation",
+  "extends",
+];
 
-export interface AppLayoutConfig {
-  showTop?: boolean;
-  showLeft?: boolean;
-  showCenter?: boolean;
-  showRight?: boolean;
-  showBottom?: boolean;
-  showRightSidebar?: boolean;
+export const DEPENDENCY_RELATION_ICON_MAP: { [K in (typeof DEPENDENCY_RELATION_LIST)[number]]: any } = {
+  dependency: { icon: "➡️", label: "Dependency" },
+  association: { icon: "🔗", label: "Association" },
+  aggregation: { icon: "💎", label: "Aggregation" },
+  composition: { icon: "◆", label: "Composition" },
+  implementation: { icon: "🛠️", label: "Implementation" },
+  extends: { icon: "↗️", label: "Extends" },
+} as const;
+
+export type DependencyRelation = (typeof DEPENDENCY_RELATION_LIST)[number];
+
+export function isDependencyRelation(value: unknown): value is DependencyRelation {
+  return typeof value === "string" && DEPENDENCY_RELATION_LIST.includes(value);
 }
 
-export interface AppLayoutProps {
-  activeView: string;
-  setActiveView: (view: string) => void;
-  isDarkMode: boolean;
-  setIsDarkMode: (val: boolean) => void;
-  isLocked: boolean;
-  setIsLocked: (val: boolean) => void;
+export function getDependencyRelation(value: unknown): DependencyRelation | undefined {
+  if (typeof value === "string" && DEPENDENCY_RELATION_LIST.includes(value)) {
+    return value as DependencyRelation;
+  }
+  return undefined;
+}
+EOF
 
-  layoutConfig?: AppLayoutConfig;
+cat << 'EOF' > src/services/codebase/domain/model/types/type-selected-entity-type.ts
+export const SELECTED_ENTITY_TYPE_LIST: readonly string[] = ["node", "member", "edge"];
 
-  panels?: {
-    top?: React.ReactNode;
-    left?: React.ReactNode;
-    center?: React.ReactNode;
-    right?: React.ReactNode;
-    bottom?: React.ReactNode;
-    rightSidebar?: React.ReactNode;
-  };
+export const SELECTED_ENTITY_TYPE_ICON_MAP: { [K in (typeof SELECTED_ENTITY_TYPE_LIST)[number]]: any } = {
+  node: { icon: "📄", label: "Node" },
+  member: { icon: "🧩", label: "Member" },
+  edge: { icon: "🔀", label: "Edge" },
+} as const;
 
-  headers?: {
-    center?: React.ReactNode;
-    right?: React.ReactNode;
-    leftPanelTitle?: string;
-    centerPanelHeader?: React.ReactNode;
-    centerPanelHeaderCenter?: React.ReactNode;
-    centerPanelHeaderRight?: React.ReactNode;
-    rightSidebarHeader?: React.ReactNode;
-    rightSidebarHeaderRight?: React.ReactNode;
-  };
+export type SelectedEntityType = (typeof SELECTED_ENTITY_TYPE_LIST)[number];
 
-  onResetFilters?: () => void;
-  searchTerm?: string;
-  onSearchChange?: (val: string) => void;
-  notification?: string | null;
-  isGraphMaximized?: boolean;
+export function isSelectedEntityType(value: unknown): value is SelectedEntityType {
+  return typeof value === "string" && SELECTED_ENTITY_TYPE_LIST.includes(value);
 }
 
-export function AppLayout({
-  activeView,
-  setActiveView,
-  isDarkMode,
-  setIsDarkMode,
-  isLocked,
-  setIsLocked,
-  layoutConfig = {},
-  panels = {},
-  headers = {},
-  onResetFilters,
-  searchTerm = "",
-  onSearchChange,
-  notification,
-  isGraphMaximized = false,
-}: AppLayoutProps) {
+export function getSelectedEntityType(value: unknown): SelectedEntityType | undefined {
+  if (typeof value === "string" && SELECTED_ENTITY_TYPE_LIST.includes(value)) {
+    return value as SelectedEntityType;
+  }
+  return undefined;
+}
+EOF
 
-  const [sidebarLeftMode, setSidebarLeftMode] = useState<'normal' | 'minimal' | 'collapsed'>('normal');
-  const [importOpen, setImportOpen] = useState(false);
-  const [exportOpen, setExportOpen] = useState(false);
+cat << 'EOF' > src/services/codebase/domain/model/types/type-attribute-visibility.ts
+export const ATTRIBUTE_VISIBILITY_LIST: readonly string[] = ["private", "public", "protected"];
 
-  const { visibility, actions } = useLayoutState(layoutConfig);
+export const ATTRIBUTE_VISIBILITY_ICON_MAP: { [K in (typeof ATTRIBUTE_VISIBILITY_LIST)[number]]: any } = {
+  private: { icon: "🔒", label: "Private" },
+  public: { icon: "🌐", label: "Public" },
+  protected: { icon: "🛡️", label: "Protected" },
+} as const;
 
-  const [sidebarLeftWidth, startSidebarLeftResize, isDraggingSidebarLeft] = useResizable(220, 160, 400, true, false, 60);
-  const [sidebarRightWidth, startSidebarRightResize, isDraggingSidebarRight] = useResizable(300, 200, 500, true, true, 80);
-  const [ctnWorkspaceLeftWidth, startCtnWorkspaceLeftResize, isDraggingLeftPane] = useResizable(260, 180, 500, true, false);
-  const [ctnWorkspaceRightWidth, startCtnWorkspaceRightResize, isDraggingRightPane] = useResizable(320, 200, 600, true, true);
-  const [ctnWorkspaceTopHeight, startCtnWorkspaceTopResize, isDraggingTopPane] = useResizable(120, 50, 250, false, false);
-  const [ctnWorkspaceBottomHeight, startCtnWorkspaceBottomResize, isDraggingBottomPane] = useResizable(30, 30, 400, false, true);
+export type AttributeVisibility = (typeof ATTRIBUTE_VISIBILITY_LIST)[number];
 
-  const isCurrentlyResizing = isDraggingSidebarLeft || isDraggingSidebarRight || isDraggingLeftPane || isDraggingRightPane || isDraggingTopPane || isDraggingBottomPane;
+export function isAttributeVisibility(value: unknown): value is AttributeVisibility {
+  return typeof value === "string" && ATTRIBUTE_VISIBILITY_LIST.includes(value);
+}
 
-  const activeMiddlePanelsCount =
-    (visibility.isCtnWorkspaceLeftVisible ? 1 : 0) +
-    (visibility.isCtnWorkspaceCenterVisible ? 1 : 0) +
-    (visibility.isCtnWorkspaceRightVisible ? 1 : 0);
+export function getAttributeVisibility(value: unknown): AttributeVisibility | undefined {
+  if (typeof value === "string" && ATTRIBUTE_VISIBILITY_LIST.includes(value)) {
+    return value as AttributeVisibility;
+  }
+  return undefined;
+}
+EOF
+
+cat << 'EOF' > src/services/codebase/domain/model/types/type-graph-layout.ts
+export const GRAPH_LAYOUT_LIST: readonly string[] = ["preset", "grid", "breadthfirst", "cose"];
+
+export const GRAPH_LAYOUT_ICON_MAP: { [K in (typeof GRAPH_LAYOUT_LIST)[number]]: any } = {
+  preset: { icon: "📦", label: "Default (Packages)" },
+  grid: { icon: "▦", label: "Grid Distribution" },
+  breadthfirst: { icon: "🌲", label: "Hierarchical (BFS)" },
+  cose: { icon: "🧲", label: "Force-Directed (Cose)" },
+} as const;
+
+export type GraphLayout = (typeof GRAPH_LAYOUT_LIST)[number];
+
+export function isGraphLayout(value: unknown): value is GraphLayout {
+  return typeof value === "string" && GRAPH_LAYOUT_LIST.includes(value);
+}
+
+export function getGraphLayout(value: unknown): GraphLayout | undefined {
+  if (typeof value === "string" && GRAPH_LAYOUT_LIST.includes(value)) {
+    return value as GraphLayout;
+  }
+  return undefined;
+}
+EOF
+
+cat << 'EOF' > src/services/codebase/domain/model/types/type-display-level.ts
+export const DISPLAY_LEVEL_LIST: readonly string[] = ["all", "component", "class", "interface", "module", "config"];
+
+export const DISPLAY_LEVEL_ICON_MAP: { [K in (typeof DISPLAY_LEVEL_LIST)[number]]: any } = {
+  all: { icon: "👁️", label: "Show All" },
+  component: { icon: "🎨", label: "Component" },
+  class: { icon: "☕", label: "Class" },
+  interface: { icon: "⚙️", label: "Interface" },
+  module: { icon: "📦", label: "Module" },
+  config: { icon: "🔧", label: "Configuration" },
+} as const;
+
+export type DisplayLevel = (typeof DISPLAY_LEVEL_LIST)[number];
+
+export function isDisplayLevel(value: unknown): value is DisplayLevel {
+  return typeof value === "string" && DISPLAY_LEVEL_LIST.includes(value);
+}
+
+export function getDisplayLevel(value: unknown): DisplayLevel | undefined {
+  if (typeof value === "string" && DISPLAY_LEVEL_LIST.includes(value)) {
+    return value as DisplayLevel;
+  }
+  return undefined;
+}
+EOF
+
+cat << 'EOF' > src/services/codebase/domain/model/types/type-rule-pattern.ts
+export const RULE_PATTERN_LIST: readonly string[] = ["layer-bypass", "cyclic", "orphan"];
+
+export const RULE_PATTERN_ICON_MAP: { [K in (typeof RULE_PATTERN_LIST)[number]]: any } = {
+  "layer-bypass": { icon: "⚠️", label: "Layer bypass detection" },
+  cyclic: { icon: "🔄", label: "Cyclic dependencies detected" },
+  orphan: { icon: "👻", label: "Orphan methods" },
+} as const;
+
+export type RulePattern = (typeof RULE_PATTERN_LIST)[number];
+
+export function isRulePattern(value: unknown): value is RulePattern {
+  return typeof value === "string" && RULE_PATTERN_LIST.includes(value);
+}
+
+export function getRulePattern(value: unknown): RulePattern | undefined {
+  if (typeof value === "string" && RULE_PATTERN_LIST.includes(value)) {
+    return value as RulePattern;
+  }
+  return undefined;
+}
+EOF
+
+cat << 'EOF' > src/services/codebase/domain/model/types/index.ts
+export * from "./type-data-scope";
+export * from "./type-impact-direction";
+export * from "./type-file-type";
+export * from "./type-dependency-relation";
+export * from "./type-selected-entity-type";
+export * from "./type-attribute-visibility";
+export * from "./type-graph-layout";
+export * from "./type-display-level";
+export * from "./type-rule-pattern";
+EOF
+
+# 3. Create src/components/app/ui-utils.tsx including id parameter
+cat << 'EOF' > src/components/app/ui-utils.tsx
+import React from "react";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+
+export interface SelectOption {
+  icon?: string | React.ReactNode;
+  label: string | React.ReactNode;
+  value: string;
+}
+
+export const SelectFromTypeBuilder = ({
+  id,
+  icon,
+  label,
+  desc,
+  value,
+  onChange,
+  options
+}: {
+  id?: string;
+  icon?: string | React.ReactNode;
+  label?: string;
+  desc?: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: SelectOption[];
+}) => {
+  const selectedOption = options.find((opt) => opt.value === value);
 
   return (
-    <div id="ctn-root" className={`flex flex-col h-screen w-screen overflow-hidden font-sans text-sm select-none transition-colors duration-200 bg-background text-foreground ${isDarkMode ? 'dark' : ''}`}>
-
-      {notification && (
-        <div className="top-12 left-1/2 z-50 fixed flex items-center gap-2 bg-primary slide-in-from-top-4 shadow-2xl px-4 py-2.5 rounded-full font-mono text-primary-foreground text-xs -translate-x-1/2 animate-in transform fade-in">
-          {notification}
-        </div>
+    <div id={id} className="flex flex-col gap-1 py-1">
+      {label && (
+        <span className="text-xs font-medium text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
+          {icon && <span>{icon}</span>}
+          <span>{label}</span>
+        </span>
       )}
-
-      <Header
-        sidebarLeftMode={sidebarLeftMode}
-        setSidebarLeftMode={setSidebarLeftMode}
-        searchTerm={searchTerm}
-        onSearchChange={onSearchChange}
-        isLocked={isLocked}
-        setImportOpen={setImportOpen}
-        setExportOpen={setExportOpen}
-        isDarkMode={isDarkMode}
-        setIsDarkMode={setIsDarkMode}
-        onResetFilters={onResetFilters}
-        visibility={visibility}
-        actions={actions}
-        layoutConfig={layoutConfig}
-      />
-
-      <Dialog open={importOpen} onOpenChange={setImportOpen}>
-        <DialogContent className="bg-card border border-border">
-          <DialogHeader><DialogTitle className="text-foreground text-sm">Import AST Data Schema</DialogTitle></DialogHeader>
-          <div className="p-2 border border-dashed rounded text-muted-foreground text-xs text-center">Select local extraction file payload</div>
-        </DialogContent>
-      </Dialog>
-
-      <div id="ctn-main" className="relative flex flex-1 overflow-hidden pb-[40px]">
-
-        <SidebarLeft
-          sidebarLeftMode={sidebarLeftMode}
-          setSidebarLeftMode={setSidebarLeftMode}
-          activeView={activeView}
-          setActiveView={setActiveView}
-          sidebarLeftWidth={sidebarLeftWidth}
-          startSidebarLeftResize={startSidebarLeftResize}
-          isDraggingSidebarLeft={isDraggingSidebarLeft}
-        />
-
-        <Workspace
-          isCtnWorkspaceVisible={visibility.isCtnWorkspaceVisible}
-          layoutConfig={layoutConfig}
-          isCtnWorkspaceTopVisible={visibility.isCtnWorkspaceTopVisible}
-          ctnWorkspaceTopHeight={ctnWorkspaceTopHeight}
-          startCtnWorkspaceTopResize={startCtnWorkspaceTopResize}
-          panels={panels}
-          headers={headers}
-          isCtnWorkspaceLeftVisible={visibility.isCtnWorkspaceLeftVisible}
-          activeMiddlePanelsCount={activeMiddlePanelsCount}
-          ctnWorkspaceLeftWidth={ctnWorkspaceLeftWidth}
-          activeView={activeView}
-          startCtnWorkspaceLeftResize={startCtnWorkspaceLeftResize}
-          isCtnWorkspaceCenterVisible={visibility.isCtnWorkspaceCenterVisible}
-          isGraphMaximized={isGraphMaximized}
-          isCurrentlyResizing={isCurrentlyResizing}
-          isDraggingSidebarLeft={isDraggingSidebarLeft}
-          isDraggingSidebarRight={isDraggingSidebarRight}
-          isDraggingLeftPane={isDraggingLeftPane}
-          isDraggingRightPane={isDraggingRightPane}
-          isCtnWorkspaceRightVisible={visibility.isCtnWorkspaceRightVisible}
-          ctnWorkspaceRightWidth={ctnWorkspaceRightWidth}
-          startCtnWorkspaceRightResize={startCtnWorkspaceRightResize}
-          isCtnWorkspaceBottomVisible={visibility.isCtnWorkspaceBottomVisible}
-          ctnWorkspaceBottomHeight={ctnWorkspaceBottomHeight}
-          startCtnWorkspaceBottomResize={startCtnWorkspaceBottomResize}
-          actions={actions}
-        />
-
-        <SidebarRight
-          layoutConfig={layoutConfig}
-          isSidebarRightVisible={visibility.isSidebarRightVisible}
-          sidebarRightWidth={sidebarRightWidth}
-          headers={headers}
-          panels={panels}
-          startSidebarRightResize={startSidebarRightResize}
-          actions={actions}
-        />
-
-      </div>
-
-      <Footer />
-
-      <Tooltip delay={1500} />
+      {desc && <span className="text-[11px] text-neutral-500 dark:text-neutral-400 mb-1">{desc}</span>}
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger id={id ? `${id}-trigger` : undefined} className="bg-white dark:bg-neutral-800 text-xs h-8">
+          <SelectValue>
+            {selectedOption ? (
+              <span className="flex items-center gap-1.5 truncate">
+                {selectedOption.icon && <span>{selectedOption.icon}</span>}
+                <span>{selectedOption.label}</span>
+              </span>
+            ) : undefined}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent side="bottom">
+          {options.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.icon && <>{opt.icon}&nbsp;</>}{opt.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
+};
+EOF
+
+# 4. Clean src/lib/utils.ts
+cat << 'EOF' > src/lib/utils.ts
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+export async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Failed to copy to clipboard:', error);
+    return false;
+  }
 }
 EOF
 
-# ----------------------------------------------------------------------------
-# 5. EXPLORER FEATURE CLEANUP (CLEAR SELECTION DISMISS ACTION IN HEADER)
-# ----------------------------------------------------------------------------
-cat << 'EOF' > src/features/explorer/ExplorerFeature.tsx
-import React, { useState, useEffect, useCallback } from 'react';
-import { Layers } from 'lucide-react';
+# 5. Update codebase.model.ts
+cat << 'EOF' > src/services/codebase/domain/model/codebase.model.ts
+import {
+  AttributeVisibility,
+  FileType,
+  DependencyRelation,
+  SelectedEntityType,
+  ImpactDirection
+} from './types';
+
+export * from './types';
+
+export interface CodebaseAttribute {
+  name: string;
+  visibility: AttributeVisibility;
+}
+
+export interface CodebaseMethod {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface ConfigProperty {
+  key: string;
+  value: string;
+}
+
+export interface CodebaseFile {
+  id: string;
+  name: string;
+  type: FileType;
+  path: string;
+  language: string;
+  size: number;
+  complexity: number;
+  attributes?: CodebaseAttribute[];
+  methods?: CodebaseMethod[];
+  configProperties?: ConfigProperty[];
+}
+
+export interface Dependency {
+  id: string;
+  sourceNode: string;
+  sourceHandle: string;
+  targetNode: string;
+  targetHandle: string;
+  relation: DependencyRelation;
+  label: string;
+}
+
+export interface CodebaseData {
+  files: CodebaseFile[];
+  dependencies: Dependency[];
+}
+
+export interface SelectedEntity {
+  type: SelectedEntityType;
+  nodeId: string;
+  memberId?: string;
+  edgeId?: string;
+}
+
+export type { ImpactDirection };
+EOF
+
+# 6. Update GraphPanelHeader.tsx to supply id attributes to interactive components
+cat << 'EOF' > src/features/explorer/wksp-cnt-graph/GraphPanelHeader.tsx
+import React from 'react';
+import { Grid, Database, User, Baby, Plus, Minus, Focus, Maximize, Minimize } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
+import {
+  DISPLAY_LEVEL_LIST,
+  DISPLAY_LEVEL_ICON_MAP,
+  GRAPH_LAYOUT_LIST,
+  GRAPH_LAYOUT_ICON_MAP
+} from '@/services/codebase';
+
+export interface GraphPanelHeaderLeftProps {
+  showGrid: boolean;
+  setShowGrid: (show: boolean) => void;
+}
+
+export const GraphPanelHeaderLeft: React.FC<GraphPanelHeaderLeftProps> = ({ showGrid, setShowGrid }) => (
+  <div className="flex items-center gap-2">
+    <span>Topological Network</span>
+    <Button
+      id="btn-toggle-grid"
+      variant="ghost"
+      size="icon"
+      className={`h-5 w-5 rounded transition-colors ${showGrid ? 'text-primary bg-primary/10' : 'text-muted-foreground'}`}
+      onClick={() => setShowGrid(!showGrid)}
+    >
+      <Grid size={12} />
+    </Button>
+  </div>
+);
+
+export interface GraphPanelHeaderCenterProps {
+  maxNodesLimit: number;
+  setMaxNodesLimit: (val: number) => void;
+  callersDepth: number;
+  setCallersDepth: (val: number) => void;
+  calleesDepth: number;
+  setCalleesDepth: (val: number) => void;
+  displayLevel: string;
+  setDisplayLevel: (val: string) => void;
+  currentLayout: string;
+  setCurrentLayout: (val: string) => void;
+}
+
+export const GraphPanelHeaderCenter: React.FC<GraphPanelHeaderCenterProps> = ({
+  maxNodesLimit,
+  setMaxNodesLimit,
+  callersDepth,
+  setCallersDepth,
+  calleesDepth,
+  setCalleesDepth,
+  displayLevel,
+  setDisplayLevel,
+  currentLayout,
+  setCurrentLayout
+}) => (
+  <div className="flex items-center gap-3">
+    <div className="flex items-center gap-1.5 bg-background px-2 py-0.5 border border-border rounded-sm">
+      <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">Limit:</span>
+      <Input
+        id="input-max-nodes-limit"
+        type="number"
+        min={1}
+        max={100}
+        className="bg-transparent shadow-none px-1 border-0 focus:ring-0 w-12 h-5 font-bold text-foreground text-xs text-center"
+        value={maxNodesLimit}
+        onChange={(e) => setMaxNodesLimit(Number(e.target.value) || 50)}
+      />
+    </div>
+    <Button
+      id="btn-neo4j-connect"
+      className="flex items-center gap-1.5 bg-gradient-to-r from-orange-600 to-orange-500 shadow-sm px-2.5 border border-orange-700 rounded-md h-6 font-bold text-[10px] text-white uppercase tracking-wider"
+    >
+      <Database size={11} /> Neo4j
+    </Button>
+    <div className="flex items-center gap-1 bg-background px-1.5 py-0.5 border border-border rounded-sm">
+      <User size={12} className="text-muted-foreground" />
+      <Input
+        id="input-callers-depth"
+        type="number"
+        min={0}
+        max={20}
+        className="bg-transparent p-0 border-0 focus:ring-0 w-8 h-5 text-foreground text-xs text-center"
+        value={callersDepth}
+        onChange={(e) => setCallersDepth(Number(e.target.value) || 0)}
+      />
+    </div>
+    <div className="flex items-center gap-1 bg-background px-1.5 py-0.5 border border-border rounded-sm">
+      <Baby size={12} className="text-muted-foreground" />
+      <Input
+        id="input-callees-depth"
+        type="number"
+        min={0}
+        max={20}
+        className="bg-transparent p-0 border-0 focus:ring-0 w-8 h-5 text-foreground text-xs text-center"
+        value={calleesDepth}
+        onChange={(e) => setCalleesDepth(Number(e.target.value) || 0)}
+      />
+    </div>
+    <SelectFromTypeBuilder
+      id="select-display-level"
+      value={displayLevel}
+      onChange={setDisplayLevel}
+      options={DISPLAY_LEVEL_LIST.map((key) => ({
+        value: key,
+        icon: DISPLAY_LEVEL_ICON_MAP[key].icon,
+        label: DISPLAY_LEVEL_ICON_MAP[key].label,
+      }))}
+    />
+    <SelectFromTypeBuilder
+      id="select-graph-layout"
+      value={currentLayout}
+      onChange={setCurrentLayout}
+      options={GRAPH_LAYOUT_LIST.map((key) => ({
+        value: key,
+        icon: GRAPH_LAYOUT_ICON_MAP[key].icon,
+        label: GRAPH_LAYOUT_ICON_MAP[key].label,
+      }))}
+    />
+  </div>
+);
+
+export interface GraphPanelHeaderRightProps {
+  cyRef: React.RefObject<any>;
+  isGraphMaximized: boolean;
+  setIsGraphMaximized: (maximized: boolean) => void;
+}
+
+export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
+  cyRef,
+  isGraphMaximized,
+  setIsGraphMaximized
+}) => (
+  <div className="flex items-center gap-1">
+    <Button
+      id="btn-graph-zoom-in"
+      variant="ghost"
+      size="icon"
+      className="w-5 h-5 text-muted-foreground"
+      onClick={() => cyRef.current?.zoom((cyRef.current?.zoom() || 1) * 1.2)}
+    >
+      <Plus size={12} />
+    </Button>
+    <Button
+      id="btn-graph-zoom-out"
+      variant="ghost"
+      size="icon"
+      className="w-5 h-5 text-muted-foreground"
+      onClick={() => cyRef.current?.zoom((cyRef.current?.zoom() || 1) / 1.2)}
+    >
+      <Minus size={12} />
+    </Button>
+    <Button
+      id="btn-graph-reset-view"
+      variant="ghost"
+      size="icon"
+      className="w-5 h-5 text-muted-foreground"
+      onClick={() => {
+        cyRef.current?.fit();
+        cyRef.current?.center();
+      }}
+    >
+      <Focus size={12} />
+    </Button>
+    <Button
+      id="btn-graph-toggle-maximize"
+      variant="ghost"
+      size="icon"
+      className="w-5 h-5 text-muted-foreground"
+      onClick={() => setIsGraphMaximized(!isGraphMaximized)}
+    >
+      {isGraphMaximized ? <Minimize size={12} /> : <Maximize size={12} />}
+    </Button>
+  </div>
+);
+EOF
+
+# 7. Update RulesFeature.tsx with id attributes
+cat << 'EOF' > src/features/rules/RulesFeature.tsx
+import React, { useState } from 'react';
 import { AppLayout, AppLayoutProps } from '@/components/app/layout/AppLayout';
-import { codebaseService, SelectedEntity, ImpactDirection } from '@/services/codebase';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { LeftCenterRightPanel } from '@/components/app/left-center-right-panel';
+import { Play } from 'lucide-react';
+import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
+import { RULE_PATTERN_LIST, RULE_PATTERN_ICON_MAP } from '@/services/codebase';
 
-import { EntityPropertiesPanel } from './sdb-rgt-properties/EntityPropertiesPanel';
-import { CodebaseExplorerPanel } from './wkp-lft-codebase-tree/CodebaseExplorerPanel';
-import { GraphPanelHeaderLeft, GraphPanelHeaderCenter, GraphPanelHeaderRight } from './wksp-cnt-graph/GraphPanelHeader';
-import { useGraph } from './wksp-cnt-graph/components/graph/use-graph';
-import { usePlantUml } from './wksp-cnt-graph/components/graph/use-plantuml';
-import { useCopyToClipboard } from '@/hooks/use-clipboard';
+export function RulesFeature(props: Omit<AppLayoutProps, 'layoutConfig' | 'panels'>) {
+  const [selectedRule, setSelectedRule] = useState<string>('layer-bypass');
 
-import { GlobalInspectorPanel } from './wkp-rgt-tabs-inspector/global-inspector-panel';
-import { GraphPanel } from './wksp-cnt-graph/GraphPanel';
-import { ContextPathsPanel } from './wkp-top-paths/context-paths-panel';
-import { WkpBottomPanel } from './wkp-btm-infos/wkp-bottom-panel';
-
-import { useTransitiveImpact } from './hooks/use-transitive-impact';
-import { useCodebaseFilter } from './hooks/use-codebase-filter';
-
-export function ExplorerFeature(props: Omit<AppLayoutProps, 'layoutConfig' | 'panels'>) {
-  const codebaseData = codebaseService.getCodebase();
-  const folderPositions = codebaseService.getFolderPositions();
-
-  const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>({ type: 'node', nodeId: 'OrderController.java' });
-  const [impactDirection, setImpactDirection] = useState<ImpactDirection>('aval');
-  const [notification, setNotification] = useState<string | null>(null);
-
-  const [callersDepth, setCallersDepth] = useState(1);
-  const [calleesDepth, setCalleesDepth] = useState(0);
-  const [currentLayout, setCurrentLayout] = useState('preset');
-  const [showGrid, setShowGrid] = useState(true);
-  const [isGraphMaximized, setIsGraphMaximized] = useState(false);
-
-  const { copy } = useCopyToClipboard();
-
-  const {
-    searchTerm,
-    setSearchTerm,
-    displayLevel,
-    setDisplayLevel,
-    maxNodesLimit,
-    setMaxNodesLimit,
-    expandedFolders,
-    visibleFiles,
-    toggleFolder,
-    toggleFolderCheckbox,
-    toggleFileCheckbox,
-    searchFilteredFiles,
-    resetFilters
-  } = useCodebaseFilter(codebaseData.files);
-
-  const { impactedSet } = useTransitiveImpact(selectedEntity, impactDirection, codebaseData.dependencies);
-
-  const handleCopy = useCallback((text: string, message: string) => {
-    copy(text, () => {
-      setNotification(message);
-      setTimeout(() => setNotification(null), 3000);
-    });
-  }, [copy]);
-
-  const handleNodeSelect = useCallback((nodeId: string) => {
-    setSelectedEntity({ type: 'node', nodeId });
-  }, []);
-
-  const handleSelectMember = useCallback((nodeId: string, memberId: string) => {
-    setSelectedEntity({ type: 'member', nodeId, memberId });
-  }, []);
-
-  const { containerRef, cyRef, graphState, updateGraphTopology } = useGraph(props.isDarkMode, handleNodeSelect);
-
-  const generatedPlantUML = usePlantUml(searchFilteredFiles, visibleFiles, codebaseData.dependencies);
-
-  useEffect(() => {
-    updateGraphTopology(searchFilteredFiles, visibleFiles, codebaseData, impactedSet, currentLayout, folderPositions);
-  }, [searchFilteredFiles, visibleFiles, codebaseData, impactedSet, currentLayout, folderPositions, updateGraphTopology]);
-
-  const applyLayout = useCallback((layout: string) => {
-    setCurrentLayout(layout);
-  }, []);
-
-  const handleReset = useCallback(() => {
-    resetFilters();
-    setSelectedEntity(null);
-  }, [resetFilters]);
+  const leftContent = (
+    <div className="flex flex-col gap-4 p-4 h-full">
+      <div data-tooltip="Select a pre-configured AST validation rule pattern">
+        <SelectFromTypeBuilder
+          id="select-rule-pattern"
+          label="Pre-configured Rule"
+          desc="Select a pattern to validate against AST graph"
+          value={selectedRule}
+          onChange={setSelectedRule}
+          options={RULE_PATTERN_LIST.map((key) => ({
+            value: key,
+            icon: RULE_PATTERN_ICON_MAP[key].icon,
+            label: RULE_PATTERN_ICON_MAP[key].label,
+          }))}
+        />
+      </div>
+      <div className="flex flex-col flex-1 space-y-1.5">
+        <LeftCenterRightPanel
+          id="panel-cypher-editor"
+          left={<span className="font-medium text-muted-foreground text-xs">Cypher Editor</span>}
+          right={
+            <Button id="btn-execute-cypher" variant="ghost" size="sm" className="px-2 h-6 text-primary">
+              <Play size={12} className="mr-1"/> Execute
+            </Button>
+          }
+        />
+        <Textarea
+          id="textarea-cypher-query"
+          className="flex-1 bg-muted/50 border-border font-mono text-foreground text-xs resize-none"
+          defaultValue={"MATCH (c:Controller)-[r:CALLS]->(repo:Repository)\nRETURN c.name, repo.name, type(r)"}
+        />
+      </div>
+    </div>
+  );
 
   return (
     <AppLayout
       {...props}
-      isGraphMaximized={isGraphMaximized}
-      layoutConfig={{ showTop: true, showLeft: true, showCenter: true, showRight: true, showBottom: true, showRightSidebar: true }}
-      notification={notification}
-      panels={{
-        left: (
-          <CodebaseExplorerPanel
-            searchFilteredFiles={searchFilteredFiles}
-            expandedFolders={expandedFolders}
-            visibleFiles={visibleFiles}
-            toggleFolder={toggleFolder}
-            toggleFolderCheckbox={toggleFolderCheckbox}
-            toggleFileCheckbox={toggleFileCheckbox}
-            setSelectedEntity={setSelectedEntity}
-          />
-        ),
-        center: (
-          <GraphPanel
-            containerRef={containerRef}
-            showGrid={showGrid}
-            isDarkMode={props.isDarkMode}
-            graphState={graphState}
-            selectedEntity={selectedEntity}
-            searchFilteredFiles={searchFilteredFiles}
-            impactedSet={impactedSet}
-            handleSelectMember={handleSelectMember}
-          />
-        ),
-        right: (
-          <GlobalInspectorPanel
-            selectedEntity={selectedEntity}
-            initialCodebase={codebaseData}
-            impactDirection={impactDirection}
-            setImpactDirection={setImpactDirection}
-            impactedSet={impactedSet}
-            handleCopy={handleCopy}
-            generatedPlantUML={generatedPlantUML}
-          />
-        ),
-        top: <ContextPathsPanel />,
-        bottom: <WkpBottomPanel />,
-        rightSidebar: <EntityPropertiesPanel selectedEntity={selectedEntity} />
-      }}
-      headers={{
-        leftPanelTitle: "AST Explorer",
-        centerPanelHeader: <GraphPanelHeaderLeft showGrid={showGrid} setShowGrid={setShowGrid} />,
-        centerPanelHeaderCenter: (
-          <GraphPanelHeaderCenter
-            maxNodesLimit={maxNodesLimit}
-            setMaxNodesLimit={setMaxNodesLimit}
-            callersDepth={callersDepth}
-            setCallersDepth={setCallersDepth}
-            calleesDepth={calleesDepth}
-            setCalleesDepth={setCalleesDepth}
-            displayLevel={displayLevel}
-            setDisplayLevel={setDisplayLevel}
-            currentLayout={currentLayout}
-            setCurrentLayout={applyLayout}
-          />
-        ),
-        centerPanelHeaderRight: <GraphPanelHeaderRight cyRef={cyRef} isGraphMaximized={isGraphMaximized} setIsGraphMaximized={setIsGraphMaximized} />,
-        rightSidebarHeader: <><Layers size={13} className="mr-1.5"/> <span>Entity Properties</span></>
-      }}
-      searchTerm={searchTerm}
-      onSearchChange={setSearchTerm}
-      onResetFilters={handleReset}
+      layoutConfig={{ showLeft: true }}
+      panels={{ left: leftContent }}
+      headers={{ leftPanelTitle: "Cypher Rules" }}
     />
   );
 }
 EOF
 
-# ----------------------------------------------------------------------------
-# 6. CODEBASE EXPLORER PANEL WITH TRI-STATE CHECKBOX ON THE LEFT
-# ----------------------------------------------------------------------------
-cat << 'EOF' > src/features/explorer/wkp-lft-codebase-tree/CodebaseExplorerPanel.tsx
-import React, { useRef, useEffect } from 'react';
-import { ChevronDown, ChevronRight, Folder, FileCode, Database } from 'lucide-react';
-import {
-  CodebaseFile,
-  SelectedEntity,
-  codebaseService,
-  FOLDER_KEYS_REGISTERED_CONFIG,
-  FOLDER_THEME_REGISTRY_CONFIG
-} from '@/services/codebase';
-
-interface TriStateCheckboxProps {
-  checked: boolean;
-  indeterminate: boolean;
-  onChange: () => void;
-  className?: string;
-}
-
-function TriStateCheckbox({ checked, indeterminate, onChange, className }: TriStateCheckboxProps) {
-  const checkboxRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (checkboxRef.current) {
-      checkboxRef.current.indeterminate = indeterminate;
-    }
-  }, [indeterminate]);
-
-  return (
-    <input
-      ref={checkboxRef}
-      type="checkbox"
-      checked={checked}
-      onChange={onChange}
-      className={className}
-    />
-  );
-}
-
-interface CodebaseExplorerPanelProps {
-  searchFilteredFiles: CodebaseFile[];
-  expandedFolders: Record<string, boolean>;
-  visibleFiles: Record<string, boolean>;
-  toggleFolder: (folder: string) => void;
-  toggleFolderCheckbox: (folder: string) => void;
-  toggleFileCheckbox: (id: string) => void;
-  setSelectedEntity: (entity: SelectedEntity) => void;
-}
-
-export function CodebaseExplorerPanel({
-  searchFilteredFiles,
-  expandedFolders,
-  visibleFiles,
-  toggleFolder,
-  toggleFolderCheckbox,
-  toggleFileCheckbox,
-  setSelectedEntity
-}: CodebaseExplorerPanelProps) {
-  const codebase = codebaseService.getCodebase();
-
-  return (
-    <div className="flex flex-col bg-card h-full">
-      <div className="bg-muted/20 p-4 border-border border-b">
-        <h3 className="flex justify-between items-center mb-2 font-mono font-bold text-muted-foreground text-xs uppercase tracking-wider">
-          <span>Codebase Explorer</span>
-          <span className="bg-muted px-2 py-0.5 rounded text-[10px] text-foreground">{searchFilteredFiles.length}/{codebase.files.length}</span>
-        </h3>
-      </div>
-      <div className="flex-1 p-4 overflow-y-auto font-mono text-xs">
-        {FOLDER_KEYS_REGISTERED_CONFIG.map(folder => {
-          const theme = FOLDER_THEME_REGISTRY_CONFIG[folder] || FOLDER_THEME_REGISTRY_CONFIG.default;
-          const folderFiles = codebase.files.filter(f => f.path.startsWith(folder));
-          const isAllChecked = folderFiles.length > 0 && folderFiles.every(f => visibleFiles[f.id]);
-          const isSomeChecked = folderFiles.some(f => visibleFiles[f.id]);
-          const isIndeterminate = isSomeChecked && !isAllChecked;
-
-          return (
-            <div key={folder} className="mb-4">
-              <div className="group flex items-center gap-1.5 hover:bg-muted/50 px-1 py-1 rounded">
-                <TriStateCheckbox
-                  checked={isAllChecked}
-                  indeterminate={isIndeterminate}
-                  onChange={() => toggleFolderCheckbox(folder)}
-                  className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
-                />
-                <div className="flex flex-1 items-center gap-1.5 min-w-0 cursor-pointer" onClick={() => toggleFolder(folder)}>
-                  {expandedFolders[folder] ? <ChevronDown size={14} className="shrink-0" /> : <ChevronRight size={14} className="shrink-0" />}
-                  <Folder size={15} className={`${theme.fill} ${theme.text} shrink-0`} />
-                  <span className="font-bold truncate">{folder}/</span>
-                </div>
-              </div>
-              {expandedFolders[folder] && (
-                <div className="space-y-1 mt-1 ml-2.5 pl-6 border-border border-l">
-                  {folderFiles.map((file: CodebaseFile) => (
-                    <div key={file.id} className="group flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded">
-                      <input
-                        type="checkbox"
-                        checked={!!visibleFiles[file.id]}
-                        onChange={() => toggleFileCheckbox(file.id)}
-                        className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
-                      />
-                      <span
-                        className={`flex items-center gap-1.5 truncate cursor-pointer flex-1 min-w-0 ${visibleFiles[file.id] ? 'text-foreground font-medium' : 'text-muted-foreground line-through'}`}
-                        onClick={() => setSelectedEntity({ type: 'node', nodeId: file.id })}
-                      >
-                        {folder === 'config' ? (
-                          <Database size={13} className="text-amber-500 shrink-0" />
-                        ) : (
-                          <FileCode size={13} className={file.type === 'interface' ? 'text-indigo-400 shrink-0' : (folder === 'frontend' ? 'text-emerald-500 shrink-0' : 'text-blue-500 shrink-0')} />
-                        )}
-                        <span className="truncate">{file.name}</span>
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-EOF
-
-# ----------------------------------------------------------------------------
-# 7. VERIFY PRODUCTION VITE BUILD
-# ----------------------------------------------------------------------------
-npm run build
-
-echo "=========================================================================="
-echo "✅ feat/ui: Reloaded latest source & applied panel close cross buttons to"
-echo "   all workspace panels (except center) and rightSidebar linked to use-layout-state!"
-echo "=========================================================================="
+echo "✅ feat: Added id attributes to SelectFromTypeBuilder, Input, Button, Textarea and propagated id props through UI components!"

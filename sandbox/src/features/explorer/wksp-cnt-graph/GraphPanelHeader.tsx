@@ -2,7 +2,13 @@ import React from 'react';
 import { Grid, Database, User, Baby, Plus, Minus, Focus, Maximize, Minimize } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
+import {
+  DISPLAY_LEVEL_LIST,
+  DISPLAY_LEVEL_ICON_MAP,
+  GRAPH_LAYOUT_LIST,
+  GRAPH_LAYOUT_ICON_MAP
+} from '@/services/codebase';
 
 export interface GraphPanelHeaderLeftProps {
   showGrid: boolean;
@@ -13,6 +19,7 @@ export const GraphPanelHeaderLeft: React.FC<GraphPanelHeaderLeftProps> = ({ show
   <div className="flex items-center gap-2">
     <span>Topological Network</span>
     <Button
+      id="btn-toggle-grid"
       variant="ghost"
       size="icon"
       className={`h-5 w-5 rounded transition-colors ${showGrid ? 'text-primary bg-primary/10' : 'text-muted-foreground'}`}
@@ -52,6 +59,7 @@ export const GraphPanelHeaderCenter: React.FC<GraphPanelHeaderCenterProps> = ({
     <div className="flex items-center gap-1.5 bg-background px-2 py-0.5 border border-border rounded-sm">
       <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">Limit:</span>
       <Input
+        id="input-max-nodes-limit"
         type="number"
         min={1}
         max={100}
@@ -60,12 +68,16 @@ export const GraphPanelHeaderCenter: React.FC<GraphPanelHeaderCenterProps> = ({
         onChange={(e) => setMaxNodesLimit(Number(e.target.value) || 50)}
       />
     </div>
-    <Button className="flex items-center gap-1.5 bg-gradient-to-r from-orange-600 to-orange-500 shadow-sm px-2.5 border border-orange-700 rounded-md h-6 font-bold text-[10px] text-white uppercase tracking-wider">
+    <Button
+      id="btn-neo4j-connect"
+      className="flex items-center gap-1.5 bg-gradient-to-r from-orange-600 to-orange-500 shadow-sm px-2.5 border border-orange-700 rounded-md h-6 font-bold text-[10px] text-white uppercase tracking-wider"
+    >
       <Database size={11} /> Neo4j
     </Button>
     <div className="flex items-center gap-1 bg-background px-1.5 py-0.5 border border-border rounded-sm">
       <User size={12} className="text-muted-foreground" />
       <Input
+        id="input-callers-depth"
         type="number"
         min={0}
         max={20}
@@ -77,6 +89,7 @@ export const GraphPanelHeaderCenter: React.FC<GraphPanelHeaderCenterProps> = ({
     <div className="flex items-center gap-1 bg-background px-1.5 py-0.5 border border-border rounded-sm">
       <Baby size={12} className="text-muted-foreground" />
       <Input
+        id="input-callees-depth"
         type="number"
         min={0}
         max={20}
@@ -85,34 +98,26 @@ export const GraphPanelHeaderCenter: React.FC<GraphPanelHeaderCenterProps> = ({
         onChange={(e) => setCalleesDepth(Number(e.target.value) || 0)}
       />
     </div>
-    <div className="flex items-center bg-background shadow-sm px-1 border border-border rounded h-6">
-      <Select value={displayLevel} onValueChange={setDisplayLevel}>
-        <SelectTrigger className="bg-transparent shadow-none px-1 border-0 focus:ring-0 w-24 h-5 text-[11px] text-foreground">
-          <SelectValue placeholder="Granularity" />
-        </SelectTrigger>
-        <SelectContent side="bottom">
-          <SelectItem value="all">Show All</SelectItem>
-          <SelectItem value="component">Component</SelectItem>
-          <SelectItem value="class">Class</SelectItem>
-          <SelectItem value="interface">Interface</SelectItem>
-          <SelectItem value="module">Module</SelectItem>
-          <SelectItem value="config">Configuration</SelectItem>
-        </SelectContent>
-      </Select>
-    </div>
-    <div className="flex items-center bg-background shadow-sm px-1 border border-border rounded h-6">
-      <Select value={currentLayout} onValueChange={setCurrentLayout}>
-        <SelectTrigger className="bg-transparent shadow-none px-1 border-0 focus:ring-0 w-28 h-5 text-[11px] text-foreground">
-          <SelectValue placeholder="Layout Architecture" />
-        </SelectTrigger>
-        <SelectContent side="bottom">
-          <SelectItem value="preset">Default (Packages)</SelectItem>
-          <SelectItem value="grid">Grid Distribution</SelectItem>
-          <SelectItem value="breadthfirst">Hierarchical (BFS)</SelectItem>
-          <SelectItem value="cose">Force-Directed (Cose)</SelectItem>
-        </SelectContent>
-      </Select>
-    </div>
+    <SelectFromTypeBuilder
+      id="select-display-level"
+      value={displayLevel}
+      onChange={setDisplayLevel}
+      options={DISPLAY_LEVEL_LIST.map((key) => ({
+        value: key,
+        icon: DISPLAY_LEVEL_ICON_MAP[key].icon,
+        label: DISPLAY_LEVEL_ICON_MAP[key].label,
+      }))}
+    />
+    <SelectFromTypeBuilder
+      id="select-graph-layout"
+      value={currentLayout}
+      onChange={setCurrentLayout}
+      options={GRAPH_LAYOUT_LIST.map((key) => ({
+        value: key,
+        icon: GRAPH_LAYOUT_ICON_MAP[key].icon,
+        label: GRAPH_LAYOUT_ICON_MAP[key].label,
+      }))}
+    />
   </div>
 );
 
@@ -129,6 +134,7 @@ export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
 }) => (
   <div className="flex items-center gap-1">
     <Button
+      id="btn-graph-zoom-in"
       variant="ghost"
       size="icon"
       className="w-5 h-5 text-muted-foreground"
@@ -137,6 +143,7 @@ export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
       <Plus size={12} />
     </Button>
     <Button
+      id="btn-graph-zoom-out"
       variant="ghost"
       size="icon"
       className="w-5 h-5 text-muted-foreground"
@@ -145,6 +152,7 @@ export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
       <Minus size={12} />
     </Button>
     <Button
+      id="btn-graph-reset-view"
       variant="ghost"
       size="icon"
       className="w-5 h-5 text-muted-foreground"
@@ -156,6 +164,7 @@ export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
       <Focus size={12} />
     </Button>
     <Button
+      id="btn-graph-toggle-maximize"
       variant="ghost"
       size="icon"
       className="w-5 h-5 text-muted-foreground"
