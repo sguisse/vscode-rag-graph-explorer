@@ -1,7 +1,8 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { ChevronDown, ChevronRight, Folder, FileCode, Database, Upload } from 'lucide-react';
+import { ChevronDown, ChevronRight, Folder, FileCode, Database, Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ImportAstDialog } from './import-ast-dialog';
+import { ToolbarSeparator } from '@/components/app/toolbar-separator';
 import {
   CodebaseFile,
   CodebaseData,
@@ -62,18 +63,41 @@ export function CodebaseExplorerPanel({
   const codebase = codebaseService.getCodebase();
   const [isImportOpen, setIsImportOpen] = useState(false);
 
+  const handleExportCodebase = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(codebase, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", "codebase-ast.json");
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
   return (
     <div id="panel-codebase-explorer" className="flex flex-col bg-card h-full">
-      <div className="flex justify-between items-center bg-muted/20 p-1 border-border border-b">
+      <div className="flex justify-end items-center bg-muted/20 p-1 border-border border-b">
+        <ToolbarSeparator />
+
         <Button
           id="btn-open-import-ast-dialog"
+          className="hover:bg-muted p-1.5 rounded w-8 h-8 text-muted-foreground hover:text-foreground transition-colors"
           variant="ghost"
           size="icon"
-          className="flex justify-end items-center gap-1 w-full text-[10px]"
           onClick={() => setIsImportOpen(true)}
           data-tooltip="Open AST Codebase import dialog"
         >
           <Upload size={12} />
+        </Button>
+
+        <Button
+          id="btn-export-ast-json"
+          className="hover:bg-muted p-1.5 rounded w-8 h-8 text-muted-foreground hover:text-foreground transition-colors"
+          variant="ghost"
+          size="icon"
+          onClick={handleExportCodebase}
+          data-tooltip="Export current session structure as AST Codebase to JSON file"
+        >
+          <Download size={12} />
         </Button>
       </div>
 

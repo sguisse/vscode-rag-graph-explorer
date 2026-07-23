@@ -145,7 +145,7 @@ export function ExplorerFeature(props: Omit<AppLayoutProps, 'layoutConfig' | 'pa
       }}
       headers={{
         leftPanelTitle: "AST Explorer",
-        centerPanelHeader: <GraphPanelHeaderLeft showGrid={showGrid} setShowGrid={setShowGrid} />,
+        centerPanelHeader: <GraphPanelHeaderLeft  />,
         centerPanelHeaderCenter: (
           <GraphPanelHeaderCenter
             maxNodesLimit={maxNodesLimit}
@@ -160,7 +160,9 @@ export function ExplorerFeature(props: Omit<AppLayoutProps, 'layoutConfig' | 'pa
             setCurrentLayout={applyLayout}
           />
         ),
-        centerPanelHeaderRight: <GraphPanelHeaderRight cyRef={cyRef} isGraphMaximized={isGraphMaximized} setIsGraphMaximized={setIsGraphMaximized} />,
+        centerPanelHeaderRight: <GraphPanelHeaderRight cyRef={cyRef}
+                                                       isGraphMaximized={isGraphMaximized} setIsGraphMaximized={setIsGraphMaximized}
+                                                       showGrid={showGrid} setShowGrid={setShowGrid} />,
         rightSidebarHeader: <><Layers size={13} className="mr-1.5"/> <span>Entity Properties</span></>
       }}
       searchTerm={searchTerm}

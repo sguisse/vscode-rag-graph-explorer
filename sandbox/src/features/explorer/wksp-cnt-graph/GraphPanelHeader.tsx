@@ -3,6 +3,9 @@ import { Grid, Database, User, Baby, Plus, Minus, Focus, Maximize, Minimize } fr
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
+import { ToggleButton } from '@/components/app/toggle-button';
+import { ToolbarSeparator } from '@/components/app/toolbar-separator';
+
 import {
   DISPLAY_LEVEL_LIST,
   DISPLAY_LEVEL_ICON_MAP,
@@ -11,22 +14,12 @@ import {
 } from '@/services/codebase';
 
 export interface GraphPanelHeaderLeftProps {
-  showGrid: boolean;
-  setShowGrid: (show: boolean) => void;
+
 }
 
-export const GraphPanelHeaderLeft: React.FC<GraphPanelHeaderLeftProps> = ({ showGrid, setShowGrid }) => (
+export const GraphPanelHeaderLeft: React.FC<GraphPanelHeaderLeftProps> = () => (
   <div className="flex items-center gap-2">
     <span>Topological Network</span>
-    <Button
-      id="btn-toggle-grid"
-      variant="ghost"
-      size="icon"
-      className={`h-5 w-5 rounded transition-colors ${showGrid ? 'text-primary bg-primary/10' : 'text-muted-foreground'}`}
-      onClick={() => setShowGrid(!showGrid)}
-    >
-      <Grid size={12} />
-    </Button>
   </div>
 );
 
@@ -125,14 +118,29 @@ export interface GraphPanelHeaderRightProps {
   cyRef: React.RefObject<any>;
   isGraphMaximized: boolean;
   setIsGraphMaximized: (maximized: boolean) => void;
+  showGrid: boolean;
+  setShowGrid: (show: boolean) => void;
 }
 
 export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
   cyRef,
   isGraphMaximized,
-  setIsGraphMaximized
+  setIsGraphMaximized,
+  showGrid,
+  setShowGrid,
 }) => (
   <div className="flex items-center gap-1">
+
+    <ToggleButton
+        id="btn-toggle-grid"
+        isSelected={showGrid}
+        onToggle={() => setShowGrid(!showGrid)}
+        tooltipText="Toggle Grid"
+        icon={<Grid size={12} />}
+    />
+
+    <ToolbarSeparator />
+
     <Button
       id="btn-graph-zoom-in"
       variant="ghost"
