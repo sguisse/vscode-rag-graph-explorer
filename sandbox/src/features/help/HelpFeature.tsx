@@ -18,7 +18,7 @@ export function HelpFeature(props: Omit<AppLayoutProps, 'layoutConfig' | 'panels
   return (
     <AppLayout
       {...props}
-      layoutConfig={{ showLeft: true }}
+      layoutConfig={{ showCtnWkpLeft: true }}
       panels={{ left: leftContent }}
       headers={{ leftPanelTitle: "Help & Shortcuts" }}
     />

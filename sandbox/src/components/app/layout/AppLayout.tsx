@@ -10,11 +10,11 @@ import { Footer } from './footer';
 import { useLayoutState } from './hooks/use-layout-state';
 
 export interface AppLayoutConfig {
-  showTop?: boolean;
-  showLeft?: boolean;
-  showCenter?: boolean;
-  showRight?: boolean;
-  showBottom?: boolean;
+  showCtnWkpTop?: boolean;
+  showCtnWkpLeft?: boolean;
+  showCtnWkpCenter?: boolean;
+  showCtnWkpRight?: boolean;
+  showCtnWkpBottom?: boolean;
   showRightSidebar?: boolean;
 }
 
@@ -131,11 +131,11 @@ export function AppLayout({
 
         <Workspace
           isCtnWorkspaceVisible={visibility.isCtnWorkspaceVisible}
-          layoutConfig={layoutConfig}
+          workspaceLayoutConfig={layoutConfig}
           isCtnWorkspaceTopVisible={visibility.isCtnWorkspaceTopVisible}
           ctnWorkspaceTopHeight={ctnWorkspaceTopHeight}
           startCtnWorkspaceTopResize={startCtnWorkspaceTopResize}
-          panels={panels}
+          workspaceContainers={panels}
           headers={headers}
           isCtnWorkspaceLeftVisible={visibility.isCtnWorkspaceLeftVisible}
           activeMiddlePanelsCount={activeMiddlePanelsCount}
@@ -143,7 +143,7 @@ export function AppLayout({
           activeView={activeView}
           startCtnWorkspaceLeftResize={startCtnWorkspaceLeftResize}
           isCtnWorkspaceCenterVisible={visibility.isCtnWorkspaceCenterVisible}
-          isGraphMaximized={isGraphMaximized}
+          isCtnWorkspaceCenterMaximized={isGraphMaximized}
           isCurrentlyResizing={isCurrentlyResizing}
           isDraggingSidebarLeft={isDraggingSidebarLeft}
           isDraggingSidebarRight={isDraggingSidebarRight}

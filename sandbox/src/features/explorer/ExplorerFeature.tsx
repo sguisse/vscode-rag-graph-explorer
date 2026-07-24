@@ -101,7 +101,7 @@ export function ExplorerFeature(props: Omit<AppLayoutProps, 'layoutConfig' | 'pa
     <AppLayout
       {...props}
       isGraphMaximized={isGraphMaximized}
-      layoutConfig={{ showTop: true, showLeft: true, showCenter: true, showRight: true, showBottom: true, showRightSidebar: true }}
+      layoutConfig={{ showCtnWkpTop: true, showCtnWkpLeft: true, showCtnWkpCenter: true, showCtnWkpRight: true, showCtnWkpBottom: true, showRightSidebar: true }}
       notification={notification}
       panels={{
         left: (

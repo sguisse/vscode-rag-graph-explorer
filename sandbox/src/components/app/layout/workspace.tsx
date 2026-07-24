@@ -6,17 +6,17 @@ import { LayoutVisibilityActions } from './hooks/use-layout-state';
 
 export interface WorkspaceProps {
   isCtnWorkspaceVisible: boolean;
-  layoutConfig: {
-    showTop?: boolean;
-    showLeft?: boolean;
-    showCenter?: boolean;
-    showRight?: boolean;
-    showBottom?: boolean;
+  workspaceLayoutConfig: {
+    showCtnWkpTop?: boolean;
+    showCtnWkpLeft?: boolean;
+    showCtnWkpCenter?: boolean;
+    showCtnWkpRight?: boolean;
+    showCtnWkpBottom?: boolean;
   };
   isCtnWorkspaceTopVisible: boolean;
   ctnWorkspaceTopHeight: number;
   startCtnWorkspaceTopResize: (e: React.MouseEvent) => void;
-  panels: {
+  workspaceContainers: {
     top?: React.ReactNode;
     left?: React.ReactNode;
     center?: React.ReactNode;
@@ -35,7 +35,7 @@ export interface WorkspaceProps {
   activeView: string;
   startCtnWorkspaceLeftResize: (e: React.MouseEvent) => void;
   isCtnWorkspaceCenterVisible: boolean;
-  isGraphMaximized: boolean;
+  isCtnWorkspaceCenterMaximized: boolean;
   isCurrentlyResizing: boolean;
   isDraggingSidebarLeft: boolean;
   isDraggingSidebarRight: boolean;
@@ -52,11 +52,11 @@ export interface WorkspaceProps {
 
 export function Workspace({
   isCtnWorkspaceVisible,
-  layoutConfig,
+  workspaceLayoutConfig: wkpLayoutConfig,
   isCtnWorkspaceTopVisible,
   ctnWorkspaceTopHeight,
   startCtnWorkspaceTopResize,
-  panels,
+  workspaceContainers: wkpContainers,
   headers,
   isCtnWorkspaceLeftVisible,
   activeMiddlePanelsCount,
@@ -64,7 +64,7 @@ export function Workspace({
   activeView,
   startCtnWorkspaceLeftResize,
   isCtnWorkspaceCenterVisible,
-  isGraphMaximized,
+  isCtnWorkspaceCenterMaximized,
   isCurrentlyResizing,
   isDraggingSidebarLeft,
   isDraggingSidebarRight,
@@ -83,7 +83,7 @@ export function Workspace({
       <div className="relative flex flex-col flex-1 min-w-0">
 
         {/* TOP PANEL */}
-        {layoutConfig.showTop && (
+        {wkpLayoutConfig.showCtnWkpTop && (
           <ResizableContainer
             id="ctn-workspace-top"
             visible={isCtnWorkspaceTopVisible}
@@ -104,14 +104,14 @@ export function Workspace({
             onResizeStart={startCtnWorkspaceTopResize}
             className="bg-muted border-b"
           >
-            {panels.top}
+            {wkpContainers.top}
           </ResizableContainer>
         )}
 
         <div id="ctn-workspace-middle-row" className="flex flex-1 min-h-0 overflow-hidden">
 
           {/* LEFT PANEL */}
-          {layoutConfig.showLeft && (
+          {wkpLayoutConfig.showCtnWkpLeft && (
             <ResizableContainer
               id="ctn-workspace-left"
               visible={isCtnWorkspaceLeftVisible}
@@ -132,28 +132,28 @@ export function Workspace({
               resizeHandle={activeMiddlePanelsCount > 1 ? "right" : "none"}
               onResizeStart={startCtnWorkspaceLeftResize}
             >
-              {panels.left}
+              {wkpContainers.left}
             </ResizableContainer>
           )}
 
           {/* CENTER PANEL (EXCEPTED FROM CLOSE CROSS BUTTON) */}
-          {layoutConfig.showCenter && (
+          {wkpLayoutConfig.showCtnWkpCenter && (
             <ResizableContainer
               id="ctn-workspace-center"
-              visible={isCtnWorkspaceCenterVisible || isGraphMaximized}
-              style={isGraphMaximized ? { position: 'fixed', top: '40px', bottom: '40px', left: '0', right: '0', zIndex: 50 } : { flex: 1 }}
+              visible={isCtnWorkspaceCenterVisible || isCtnWorkspaceCenterMaximized}
+              style={isCtnWorkspaceCenterMaximized ? { position: 'fixed', top: '40px', bottom: '40px', left: '0', right: '0', zIndex: 50 } : { flex: 1 }}
               headerLeft={headers.centerPanelHeader}
               headerCenter={headers.centerPanelHeaderCenter}
               headerRight={headers.centerPanelHeaderRight}
               className="relative bg-background"
             >
-              {panels.center}
+              {wkpContainers.center}
               {isCurrentlyResizing && <div className="z-30 absolute inset-0 bg-transparent pointer-events-auto select-none" style={{ cursor: isDraggingSidebarLeft || isDraggingSidebarRight || isDraggingLeftPane || isDraggingRightPane ? 'col-resize' : 'row-resize' }} />}
             </ResizableContainer>
           )}
 
           {/* RIGHT PANEL */}
-          {layoutConfig.showRight && (
+          {wkpLayoutConfig.showCtnWkpRight && (
             <ResizableContainer
               id="ctn-workspace-right"
               visible={isCtnWorkspaceRightVisible}
@@ -174,13 +174,13 @@ export function Workspace({
               resizeHandle={isCtnWorkspaceCenterVisible ? "left" : "none"}
               onResizeStart={isCtnWorkspaceCenterVisible ? startCtnWorkspaceRightResize : undefined}
             >
-              {panels.right}
+              {wkpContainers.right}
             </ResizableContainer>
           )}
         </div>
 
         {/* BOTTOM PANEL */}
-        {layoutConfig.showBottom && (
+        {wkpLayoutConfig.showCtnWkpBottom && (
           <ResizableContainer
             id="ctn-workspace-bottom"
             visible={isCtnWorkspaceBottomVisible}
@@ -201,7 +201,7 @@ export function Workspace({
             resizeHandle="top"
             onResizeStart={startCtnWorkspaceBottomResize}
           >
-            {panels.bottom}
+            {wkpContainers.bottom}
           </ResizableContainer>
         )}
       </div>

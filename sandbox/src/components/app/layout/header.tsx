@@ -94,7 +94,7 @@ export function Header({
             icon={<InspectionPanel size={16} />}
           />
 
-          {layoutConfig.showTop && (
+          {layoutConfig.showCtnWkpTop && (
             <ToggleButton
               id="btn-toggle-wkp-top-visibility"
               isSelected={visibility.isCtnWorkspaceTopVisible}
@@ -103,7 +103,7 @@ export function Header({
               tooltipText="Toggle workspace mapping path summary rows"
             />
           )}
-          {layoutConfig.showLeft && (
+          {layoutConfig.showCtnWkpLeft && (
             <ToggleButton
                 id="btn-toggle-wkp-left-visibility"
               isSelected={visibility.isCtnWorkspaceLeftVisible}
@@ -112,7 +112,7 @@ export function Header({
               tooltipText="Toggle multi-layer filter explorer stream"
             />
           )}
-          {layoutConfig.showCenter && (
+          {layoutConfig.showCtnWkpCenter && (
             <ToggleButton
               id="btn-toggle-wkp-center-visibility"
               isSelected={visibility.isCtnWorkspaceCenterVisible}
@@ -121,7 +121,7 @@ export function Header({
               icon={<SquareMenu size={16} />}
             />
           )}
-          {layoutConfig.showRight && (
+          {layoutConfig.showCtnWkpRight && (
             <ToggleButton
               id="btn-toggle-wkp-right-visibility"
               isSelected={visibility.isCtnWorkspaceRightVisible}
@@ -130,7 +130,7 @@ export function Header({
               tooltipText="Toggle right sub-workspace tab inspect matrices"
             />
           )}
-          {layoutConfig.showBottom && (
+          {layoutConfig.showCtnWkpBottom && (
             <ToggleButton
               id="btn-toggle-wkp-bottom-visibility"
               isSelected={visibility.isCtnWorkspaceBottomVisible}

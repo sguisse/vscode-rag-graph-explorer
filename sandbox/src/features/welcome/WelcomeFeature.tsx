@@ -37,7 +37,7 @@ export function WelcomeFeature(props: Omit<AppLayoutProps, 'layoutConfig' | 'pan
   return (
     <AppLayout
       {...props}
-      layoutConfig={{ showLeft: true }}
+      layoutConfig={{ showCtnWkpLeft: true }}
       panels={{ left: leftContent }}
       headers={{ leftPanelTitle: "Home" }}
     />

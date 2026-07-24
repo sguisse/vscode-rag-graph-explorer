@@ -48,7 +48,7 @@ export function RulesFeature(props: Omit<AppLayoutProps, 'layoutConfig' | 'panel
   return (
     <AppLayout
       {...props}
-      layoutConfig={{ showLeft: true }}
+      layoutConfig={{ showCtnWkpLeft: true }}
       panels={{ left: leftContent }}
       headers={{ leftPanelTitle: "Cypher Rules" }}
     />
