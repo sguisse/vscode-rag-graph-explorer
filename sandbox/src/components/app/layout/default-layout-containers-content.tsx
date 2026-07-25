@@ -76,16 +76,16 @@ export function WorkspaceContentSwitcher() {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-3 bg-muted/40 p-3 rounded-lg border border-border shadow-xs">
+    <div className="flex flex-wrap items-center gap-3 bg-muted/40 shadow-xs p-3 border border-border rounded-lg">
       <div className="flex items-center gap-2">
-        <label className="text-xs font-bold text-foreground font-mono flex items-center gap-1">
+        <label className="flex items-center gap-1 font-mono font-bold text-foreground text-xs">
           <SlidersHorizontal size={13} className="text-primary" /> Target Region:
         </label>
         <select
           id="select-workspace-region"
           value={selectedRegion}
           onChange={(e) => handleRegionChange(e.target.value as WorkspaceRegionKey)}
-          className="bg-background text-foreground border border-input rounded px-2 py-1 text-xs font-mono outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+          className="bg-background px-2 py-1 border border-input rounded outline-none focus:ring-1 focus:ring-primary font-mono text-foreground text-xs cursor-pointer"
         >
           {REGION_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -96,14 +96,14 @@ export function WorkspaceContentSwitcher() {
       </div>
 
       <div className="flex items-center gap-2">
-        <label className="text-xs font-bold text-foreground font-mono flex items-center gap-1">
+        <label className="flex items-center gap-1 font-mono font-bold text-foreground text-xs">
           <Layers size={13} className="text-primary" /> Content Version:
         </label>
         <select
           id="select-workspace-content-version"
           value={currentVersion}
           onChange={(e) => handleVersionChange(e.target.value as '1' | '2')}
-          className="bg-background text-foreground border border-input rounded px-2 py-1 text-xs font-mono outline-none focus:ring-1 focus:ring-primary cursor-pointer font-bold text-primary"
+          className="bg-background px-2 py-1 border border-input rounded outline-none focus:ring-1 focus:ring-primary font-mono font-bold text-foreground text-primary text-xs cursor-pointer"
         >
           <option value="1">Content 1</option>
           <option value="2">Content 2</option>
@@ -119,11 +119,11 @@ export function WorkspaceContentSwitcher() {
 
 export function DefaultWorkspaceTopContentV1() {
   return (
-    <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-background overflow-hidden">
+    <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
       <ContainerPanelHeader title="Workspace Top (Content 1)" path="workspace.top" />
-      <div className="p-2 font-mono text-xs text-muted-foreground flex justify-between items-center bg-muted/20 flex-1 min-h-0 overflow-auto">
+      <div className="flex flex-1 justify-between items-center bg-muted/20 p-2 min-h-0 overflow-auto font-mono text-muted-foreground text-xs">
         <span className="flex items-center gap-1.5"><Monitor size={13} className="text-primary" /> Workspace Top Content #1 (Default Header)</span>
-        <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-bold">V1 Active</span>
+        <span className="bg-primary/10 px-1.5 py-0.5 rounded font-bold text-[10px] text-primary">V1 Active</span>
       </div>
     </div>
   );
@@ -131,13 +131,13 @@ export function DefaultWorkspaceTopContentV1() {
 
 export function DefaultWorkspaceTopContentV2() {
   return (
-    <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-background overflow-hidden">
+    <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
       <ContainerPanelHeader title="Workspace Top (Content 2)" path="workspace.top" />
-      <div className="p-2 font-mono text-xs text-muted-foreground flex items-center gap-4 bg-primary/10 flex-1 min-h-0 overflow-auto border-b border-primary/20">
-        <span className="font-bold text-primary flex items-center gap-1.5"><Cpu size={13} /> Workspace Top Content #2 (System Metrics Toolbar)</span>
-        <span className="bg-background px-2 py-0.5 rounded border border-border text-[10px]">CPU: 14%</span>
-        <span className="bg-background px-2 py-0.5 rounded border border-border text-[10px]">RAM: 1.4 GB</span>
-        <span className="text-[10px] bg-emerald-500/10 text-emerald-500 px-1.5 py-0.5 rounded font-bold ml-auto">V2 Active</span>
+      <div className="flex flex-1 items-center gap-4 bg-primary/10 p-2 border-primary/20 border-b min-h-0 overflow-auto font-mono text-muted-foreground text-xs">
+        <span className="flex items-center gap-1.5 font-bold text-primary"><Cpu size={13} /> Workspace Top Content #2 (System Metrics Toolbar)</span>
+        <span className="bg-background px-2 py-0.5 border border-border rounded text-[10px]">CPU: 14%</span>
+        <span className="bg-background px-2 py-0.5 border border-border rounded text-[10px]">RAM: 1.4 GB</span>
+        <span className="bg-emerald-500/10 ml-auto px-1.5 py-0.5 rounded font-bold text-[10px] text-emerald-500">V2 Active</span>
       </div>
     </div>
   );
@@ -149,10 +149,10 @@ export function DefaultWorkspaceTopContentV2() {
 
 export function DefaultWorkspaceLeftContentV1() {
   return (
-    <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-background overflow-hidden">
+    <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
       <ContainerPanelHeader title="Workspace Left (Content 1)" path="workspace.left" />
-      <div className="p-3 font-mono text-xs text-muted-foreground bg-muted/10 flex-1 min-h-0 overflow-auto space-y-2">
-        <p className="font-bold text-foreground flex items-center gap-1.5"><FolderTree size={14} className="text-primary" /> Left Panel V1: File Hierarchy</p>
+      <div className="flex-1 space-y-2 bg-muted/10 p-3 min-h-0 overflow-auto font-mono text-muted-foreground text-xs">
+        <p className="flex items-center gap-1.5 font-bold text-foreground"><FolderTree size={14} className="text-primary" /> Left Panel V1: File Hierarchy</p>
         <ul className="space-y-1 text-[11px] list-disc list-inside">
           <li>src/components/app/layout</li>
           <li>src/store/useLayoutStore.ts</li>
@@ -165,14 +165,14 @@ export function DefaultWorkspaceLeftContentV1() {
 
 export function DefaultWorkspaceLeftContentV2() {
   return (
-    <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-background overflow-hidden">
+    <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
       <ContainerPanelHeader title="Workspace Left (Content 2)" path="workspace.left" />
-      <div className="p-3 font-mono text-xs text-muted-foreground bg-indigo-500/5 flex-1 min-h-0 overflow-auto space-y-2 border-r border-indigo-500/20">
-        <p className="font-bold text-indigo-500 flex items-center gap-1.5"><Tag size={14} /> Left Panel V2: Filter Presets</p>
+      <div className="flex-1 space-y-2 bg-indigo-500/5 p-3 border-indigo-500/20 border-r min-h-0 overflow-auto font-mono text-muted-foreground text-xs">
+        <p className="flex items-center gap-1.5 font-bold text-indigo-500"><Tag size={14} /> Left Panel V2: Filter Presets</p>
         <div className="flex flex-wrap gap-1 mt-2">
-          <span className="bg-indigo-500/10 text-indigo-500 px-2 py-0.5 rounded text-[10px]">#ast</span>
-          <span className="bg-indigo-500/10 text-indigo-500 px-2 py-0.5 rounded text-[10px]">#zustand</span>
-          <span className="bg-indigo-500/10 text-indigo-500 px-2 py-0.5 rounded text-[10px]">#layout</span>
+          <span className="bg-indigo-500/10 px-2 py-0.5 rounded text-[10px] text-indigo-500">#ast</span>
+          <span className="bg-indigo-500/10 px-2 py-0.5 rounded text-[10px] text-indigo-500">#zustand</span>
+          <span className="bg-indigo-500/10 px-2 py-0.5 rounded text-[10px] text-indigo-500">#layout</span>
         </div>
       </div>
     </div>
@@ -187,31 +187,31 @@ export function DefaultWorkspaceCenterContentV1() {
   const { toggleContainerVisible, resetContainers } = useLayoutStore();
 
   return (
-    <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-background overflow-hidden">
+    <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
       <ContainerPanelHeader title="Workspace Center (Content 1)" path="workspace.center" />
-      <div className="flex-1 flex flex-col items-center justify-start p-6 overflow-y-auto font-mono text-xs min-h-0 space-y-4">
-        <Card className="max-w-2xl w-full bg-card border-border shadow-md">
-          <CardHeader className="border-b border-border bg-muted/30 p-4">
-            <CardTitle className="text-sm font-bold flex items-center gap-2 text-foreground">
+      <div className="flex flex-col flex-1 justify-start items-center space-y-4 p-6 min-h-0 overflow-y-auto font-mono text-xs">
+        <Card className="bg-card shadow-md border-border w-full max-w-2xl">
+          <CardHeader className="bg-muted/30 p-4 border-border border-b">
+            <CardTitle className="flex items-center gap-2 font-bold text-foreground text-sm">
               <Layout className="text-primary" size={18} /> Layout Management & Zustand State Store Showcase (V1)
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-4 space-y-4">
+          <CardContent className="space-y-4 p-4">
             <div className="space-y-2">
-              <h4 className="font-bold text-foreground text-xs uppercase flex items-center gap-1.5">
+              <h4 className="flex items-center gap-1.5 font-bold text-foreground text-xs uppercase">
                 <Sparkles size={14} className="text-primary" /> Workspace & Sidebar Content Version Switcher
               </h4>
-              <p className="text-muted-foreground text-[11px]">
+              <p className="text-[11px] text-muted-foreground">
                 Select a target region and switch between <strong>Content 1</strong> and <strong>Content 2</strong> dynamically via `useLayoutStore`:
               </p>
               <WorkspaceContentSwitcher />
             </div>
 
-            <div className="space-y-2 pt-2 border-t border-border">
-              <h4 className="font-bold text-foreground text-xs uppercase flex items-center gap-1.5">
+            <div className="space-y-2 pt-2 border-border border-t">
+              <h4 className="flex items-center gap-1.5 font-bold text-foreground text-xs uppercase">
                 <SlidersHorizontal size={14} className="text-primary" /> Interactive Container Visibility Controls
               </h4>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="gap-2 grid grid-cols-3">
                 <Button variant="outline" size="sm" className="text-[11px]" onClick={() => toggleContainerVisible('sidebarLeft')}>
                   <Eye size={12} className="mr-1" /> Toggle Left Sidebar
                 </Button>
@@ -238,8 +238,8 @@ export function DefaultWorkspaceCenterContentV1() {
               </div>
             </div>
 
-            <div className="flex justify-end pt-2 border-t border-border">
-              <Button size="sm" variant="secondary" className="text-xs font-mono" onClick={resetContainers}>
+            <div className="flex justify-end pt-2 border-border border-t">
+              <Button size="sm" variant="secondary" className="font-mono text-xs" onClick={resetContainers}>
                 Reset All Layout Containers
               </Button>
             </div>
@@ -254,29 +254,29 @@ export function DefaultWorkspaceCenterContentV2() {
   const { resetContainers } = useLayoutStore();
 
   return (
-    <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-background overflow-hidden">
+    <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
       <ContainerPanelHeader title="Workspace Center (Content 2)" path="workspace.center" />
-      <div className="flex-1 flex flex-col items-center justify-start p-6 overflow-y-auto font-mono text-xs min-h-0 space-y-4">
-        <Card className="max-w-2xl w-full bg-card border-primary/30 shadow-md">
-          <CardHeader className="border-b border-primary/20 bg-primary/5 p-4">
-            <CardTitle className="text-sm font-bold flex items-center gap-2 text-primary">
+      <div className="flex flex-col flex-1 justify-start items-center space-y-4 p-6 min-h-0 overflow-y-auto font-mono text-xs">
+        <Card className="bg-card shadow-md border-primary/30 w-full max-w-2xl">
+          <CardHeader className="bg-primary/5 p-4 border-primary/20 border-b">
+            <CardTitle className="flex items-center gap-2 font-bold text-primary text-sm">
               <Box className="text-primary animate-pulse" size={18} /> Center Main Panel - Content Variant #2
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-4 space-y-4">
+          <CardContent className="space-y-4 p-4">
             <p className="text-muted-foreground text-xs leading-relaxed">
               This is <strong>Center Content Variant #2</strong>, loaded reactively using Zustand store mutation.
             </p>
 
             <div className="space-y-2">
-              <h4 className="font-bold text-foreground text-xs uppercase flex items-center gap-1.5">
+              <h4 className="flex items-center gap-1.5 font-bold text-foreground text-xs uppercase">
                 <SlidersHorizontal size={14} className="text-primary" /> Switch Target Region & Version
               </h4>
               <WorkspaceContentSwitcher />
             </div>
 
-            <div className="flex justify-end pt-2 border-t border-border">
-              <Button size="sm" variant="outline" className="text-xs font-mono" onClick={resetContainers}>
+            <div className="flex justify-end pt-2 border-border border-t">
+              <Button size="sm" variant="outline" className="font-mono text-xs" onClick={resetContainers}>
                 Reset Default Layout Content
               </Button>
             </div>
@@ -293,10 +293,10 @@ export function DefaultWorkspaceCenterContentV2() {
 
 export function DefaultWorkspaceRightContentV1() {
   return (
-    <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-background overflow-hidden">
+    <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
       <ContainerPanelHeader title="Workspace Right (Content 1)" path="workspace.right" />
-      <div className="p-3 font-mono text-xs text-muted-foreground bg-muted/10 flex-1 min-h-0 overflow-auto space-y-1">
-        <p className="font-bold text-foreground flex items-center gap-1.5"><FileText size={14} className="text-primary" /> Right Panel V1: Specs Overview</p>
+      <div className="flex-1 space-y-1 bg-muted/10 p-3 min-h-0 overflow-auto font-mono text-muted-foreground text-xs">
+        <p className="flex items-center gap-1.5 font-bold text-foreground"><FileText size={14} className="text-primary" /> Right Panel V1: Specs Overview</p>
         <p className="text-[11px]">Properties inspector & AST metadata summary.</p>
       </div>
     </div>
@@ -305,10 +305,10 @@ export function DefaultWorkspaceRightContentV1() {
 
 export function DefaultWorkspaceRightContentV2() {
   return (
-    <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-background overflow-hidden">
+    <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
       <ContainerPanelHeader title="Workspace Right (Content 2)" path="workspace.right" />
-      <div className="p-3 font-mono text-xs text-muted-foreground bg-amber-500/5 flex-1 min-h-0 overflow-auto border-l border-amber-500/20 space-y-1">
-        <p className="font-bold text-amber-500 flex items-center gap-1.5"><Activity size={14} /> Right Panel V2: Live Diagnostics</p>
+      <div className="flex-1 space-y-1 bg-amber-500/5 p-3 border-amber-500/20 border-l min-h-0 overflow-auto font-mono text-muted-foreground text-xs">
+        <p className="flex items-center gap-1.5 font-bold text-amber-500"><Activity size={14} /> Right Panel V2: Live Diagnostics</p>
         <p className="text-[11px]">Real-time node telemetry & topology statistics.</p>
       </div>
     </div>
@@ -321,9 +321,9 @@ export function DefaultWorkspaceRightContentV2() {
 
 export function DefaultWorkspaceBottomContentV1() {
   return (
-    <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-background overflow-hidden">
+    <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
       <ContainerPanelHeader title="Workspace Bottom (Content 1)" path="workspace.bottom" />
-      <div className="p-2 font-mono text-xs text-muted-foreground flex justify-between items-center bg-muted/20 flex-1 min-h-0 overflow-auto">
+      <div className="flex flex-1 justify-between items-center bg-muted/20 p-2 min-h-0 overflow-auto font-mono text-muted-foreground text-xs">
         <span className="flex items-center gap-1.5"><Terminal size={13} /> Bottom Panel V1: Output Console Stream</span>
         <span className="text-[10px] text-muted-foreground">Status: Ready</span>
       </div>
@@ -333,11 +333,11 @@ export function DefaultWorkspaceBottomContentV1() {
 
 export function DefaultWorkspaceBottomContentV2() {
   return (
-    <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-background overflow-hidden">
+    <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
       <ContainerPanelHeader title="Workspace Bottom (Content 2)" path="workspace.bottom" />
-      <div className="p-2 font-mono text-xs text-emerald-400 bg-slate-950 flex-1 min-h-0 overflow-auto">
+      <div className="flex-1 bg-slate-950 p-2 min-h-0 overflow-auto font-mono text-emerald-400 text-xs">
         <div>$ vscode-graph-explorer --watch</div>
-        <div className="text-slate-400 text-[10px]">✔ Zustand layout store initialized successfully.</div>
+        <div className="text-[10px] text-slate-400">✔ Zustand layout store initialized successfully.</div>
       </div>
     </div>
   );
@@ -349,16 +349,16 @@ export function DefaultWorkspaceBottomContentV2() {
 
 export function DefaultSidebarRightContentV1() {
   const sidebarTitle = (
-    <div className="flex items-center gap-1.5 font-bold uppercase text-[11px]">
+    <div className="flex items-center gap-1.5 font-bold text-[11px] uppercase">
       <Sliders size={13} className="text-primary shrink-0" />
       <span className="truncate">Right Sidebar Inspector (Content 1)</span>
     </div>
   );
 
   return (
-    <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-card text-card-foreground font-mono text-xs overflow-hidden">
+    <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden font-mono text-card-foreground text-xs">
       <ContainerPanelHeader title={sidebarTitle} path="sidebarRight" />
-      <div className="flex-1 p-3 space-y-2 text-muted-foreground overflow-y-auto min-h-0">
+      <div className="flex-1 space-y-2 p-3 min-h-0 overflow-y-auto text-muted-foreground">
         <p className="flex items-center gap-1 text-[11px]">
           <Info size={12} className="text-primary shrink-0" /> Dynamic layout container right sidebar active (Content Variant #1).
         </p>
@@ -369,20 +369,20 @@ export function DefaultSidebarRightContentV1() {
 
 export function DefaultSidebarRightContentV2() {
   const sidebarTitle = (
-    <div className="flex items-center gap-1.5 font-bold uppercase text-[11px] text-amber-500">
+    <div className="flex items-center gap-1.5 font-bold text-[11px] text-amber-500 uppercase">
       <Activity size={13} className="shrink-0" />
       <span className="truncate">Right Sidebar Inspector (Content 2)</span>
     </div>
   );
 
   return (
-    <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-card text-card-foreground font-mono text-xs overflow-hidden">
+    <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden font-mono text-card-foreground text-xs">
       <ContainerPanelHeader title={sidebarTitle} path="sidebarRight" />
-      <div className="flex-1 p-3 space-y-2 text-muted-foreground bg-amber-500/5 overflow-y-auto min-h-0 border-l border-amber-500/20">
-        <p className="flex items-center gap-1 text-[11px] text-amber-500 font-bold">
+      <div className="flex-1 space-y-2 bg-amber-500/5 p-3 border-amber-500/20 border-l min-h-0 overflow-y-auto text-muted-foreground">
+        <p className="flex items-center gap-1 font-bold text-[11px] text-amber-500">
           <Activity size={12} className="shrink-0" /> Real-time Node Telemetry & Secondary Inspector (Content Variant #2).
         </p>
-        <div className="bg-background/80 p-2 rounded border border-border text-[10px] space-y-1 text-foreground">
+        <div className="space-y-1 bg-background/80 p-2 border border-border rounded text-[10px] text-foreground">
           <div>Telemetry Stream: Online</div>
           <div>Heap Memory: 38MB / 128MB</div>
           <div>Cytoscape Workers: 2 Active</div>
@@ -393,7 +393,7 @@ export function DefaultSidebarRightContentV2() {
 }
 
 /* Default container map exported for initial application render */
-export const defaultWorkspaceContainersContent = {
+export const defaultLayoutContainersContent = {
   top: <DefaultWorkspaceTopContentV1 />,
   left: <DefaultWorkspaceLeftContentV1 />,
   center: <DefaultWorkspaceCenterContentV1 />,

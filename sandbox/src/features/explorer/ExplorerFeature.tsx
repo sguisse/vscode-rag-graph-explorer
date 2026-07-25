@@ -1,17 +1,12 @@
-import React from 'react';
-import { AppLayout } from '@/components/app/layout/AppLayout';
-import { useAppContextStore } from '@/store/useAppContextStore';
+import React, { useEffect } from 'react';
+import { useLayoutStore } from '@/store/useLayoutStore';
 
 export function ExplorerFeature() {
-  const { activeFeature, setActiveFeature, isDarkMode, setIsDarkMode, notification } = useAppContextStore();
+  const resetContainers = useLayoutStore((s) => s.resetContainers);
 
-  return (
-    <AppLayout
-      activeFeature={activeFeature}
-      setActiveFeature={setActiveFeature}
-      isDarkMode={isDarkMode}
-      setIsDarkMode={setIsDarkMode}
-      notification={notification}
-    />
-  );
+  useEffect(() => {
+    resetContainers();
+  }, [resetContainers]);
+
+  return null;
 }

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
-  LayoutDashboard,
   FolderTree,
   Scale,
   Terminal,
@@ -12,6 +11,7 @@ import {
   FileJson,
   LayoutGrid,
   Home,
+  Layout,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -42,14 +42,15 @@ interface AppSidebarLeftProps {
 }
 
 export const SIDEBAR_MENU_ITEMS: NavItem[] = [
-  { id: 'panel-welcome', icon: Home, label: 'Home' },
-  { id: 'panel-explorer', icon: FolderTree, label: 'AST Explorer', badge: 'New' },
-  { id: 'panel-rules', icon: Scale, label: 'Cypher Rules' },
-  { id: 'panel-prompt', icon: FileJson, label: 'GraphRAG Prompt' },
-  { id: 'panel-terminal', icon: Terminal, label: 'CLI Terminal' },
-  { id: 'panel-history', icon: History, label: 'History' },
-  { id: 'panel-configuration', icon: Settings, label: 'Configuration', bottom: true },
-  { id: 'panel-help', icon: HelpCircle, label: 'Help & Shortcuts', bottom: true },
+  { id: 'feature-welcome', icon: Home, label: 'Home' },
+  { id: 'feature-explorer', icon: FolderTree, label: 'AST Explorer', badge: 'New' },
+  { id: 'layout-demo', icon: Layout, label: 'Layout Demo' },
+  { id: 'feature-rules', icon: Scale, label: 'Cypher Rules' },
+  { id: 'feature-prompt', icon: FileJson, label: 'GraphRAG Prompt' },
+  { id: 'feature-terminal', icon: Terminal, label: 'CLI Terminal' },
+  { id: 'feature-history', icon: History, label: 'History' },
+  { id: 'feature-configuration', icon: Settings, label: 'Configuration', bottom: true },
+  { id: 'feature-help', icon: HelpCircle, label: 'Help & Shortcuts', bottom: true },
 ];
 
 export function renderSidebarMenuItem(
@@ -58,7 +59,7 @@ export function renderSidebarMenuItem(
   setActiveFeature: (feature: string) => void,
   sidebarLeftMode: 'normal' | 'minimal' = 'normal'
 ) {
-  const isActive = activeFeature === item.id;
+  const isActive = activeFeature === item.id || (item.id === 'feature-welcome' && activeFeature === 'welcome');
   const isMinimal = sidebarLeftMode === 'minimal';
 
   return (
@@ -67,7 +68,7 @@ export function renderSidebarMenuItem(
         id={`btn-menu-${item.id}`}
         isActive={isActive}
         onClick={() => setActiveFeature(item.id)}
-        className="relative overflow-hidden"
+        className="relative overflow-hidden cursor-pointer"
         data-tooltip={isMinimal ? item.label : undefined}
       >
         <item.icon size={16} className={sidebarLeftMode === 'normal' ? 'mr-2.5 shrink-0' : 'shrink-0'} />
@@ -111,7 +112,7 @@ export function AppSidebarLeft({
       } as React.CSSProperties}
       className="flex flex-col justify-between border-r-0 w-full h-full min-h-0 overflow-x-hidden transition-all duration-200"
     >
-      <div className="flex justify-between items-center p-3 border-sidebar-border border-b overflow-hidden shrink-0">
+      <div className="flex justify-between items-center p-2 border-sidebar-border border-b overflow-hidden shrink-0">
         <h3
           className={`text-xs font-mono font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 ${
             sidebarLeftMode === 'minimal' ? 'justify-center w-full' : ''
@@ -145,7 +146,7 @@ export function AppSidebarLeft({
           variant="ghost"
           size="sm"
           onClick={() => setSidebarLeftMode((m) => (m === 'normal' ? 'minimal' : 'normal'))}
-          className={`w-full text-muted-foreground hover:text-foreground mt-0 rounded-none h-9 ${
+          className={`w-full text-muted-foreground hover:text-foreground mt-0 rounded-none h-9 cursor-pointer ${
             sidebarLeftMode === 'normal' ? 'justify-end px-3' : 'justify-center px-0'
           }`}
           data-tooltip="Toggle sidebar drawer size"
