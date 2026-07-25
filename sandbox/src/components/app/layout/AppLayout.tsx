@@ -10,6 +10,7 @@ import { AppSidebarRight } from './AppSidebarRight';
 import { AppFooter } from './AppFooter';
 import { WorkspaceLayout, mergeContainer } from './WorkspaceLayout';
 import { ContainerPanelHeader } from './ContainerPanelHeader';
+import { Tooltip } from '../tooltip';
 
 export type { AppLayoutProps, MaximizeContainer } from './types';
 
@@ -79,6 +80,7 @@ export function AppLayout({
   if (mainMaximizedTarget) {
     return (
       <div className="flex flex-col w-screen h-screen overflow-hidden bg-background text-foreground antialiased font-sans">
+        <Tooltip delay={300} />
         {headerConfig?.visible !== false && (
           <div id="app-header-container" className="shrink-0 border-b border-border bg-card">
             {headerConfig?.container || (
@@ -121,6 +123,7 @@ export function AppLayout({
 
   return (
     <div className="flex flex-col w-screen h-screen overflow-hidden bg-background text-foreground antialiased font-sans">
+      <Tooltip delay={300} />
       {headerConfig?.visible !== false && (
         <div id="app-header-container" className="shrink-0 border-b border-border bg-card">
           {headerConfig?.container || (

@@ -34,14 +34,14 @@ export function ContainerPanelHeader({
 
   const computedLeft = headerLeft || (
     typeof title === 'string' ? (
-      <span className="font-semibold uppercase tracking-wider truncate">{title}</span>
+      <span className="font-semibold truncate uppercase tracking-wider">{title}</span>
     ) : (
       title
     )
   );
 
   const computedRight = (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1 text-amber-100">
       {headerRight}
       {isMaximizable && path && (
         <Button

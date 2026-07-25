@@ -1,437 +1,155 @@
 #!/usr/bin/env bash
 set -e
 
-echo "🚀 Fixing maximization visibility checks and isHiddable propagation in AppLayout and WorkspaceLayout..."
+echo "🚀 Fixing data-tooltip initialization and component rendering..."
 
-mkdir -p src/store
+mkdir -p src/components/app
 mkdir -p src/components/app/layout
 
-# 1. Update useLayoutStore.ts: automatically clear isMaximized when visibility is set to false
-cat << 'EOF' > src/store/useLayoutStore.ts
-import React from 'react';
-import { create } from 'zustand';
-import { AppLayoutContainers, LayoutContainer } from '../components/app/layout/types';
+# 1. Update Tooltip component with optimized mouse event handling & responsive default delay (300ms)
+cat << 'EOF' > src/components/app/tooltip.tsx
+"use client"
 
-export interface LayoutStoreState {
-  containers: AppLayoutContainers;
+import React, { useState, useEffect, useRef } from 'react';
+import { cn } from "@/lib/utils";
 
-  setLayoutContainers: (containers: AppLayoutContainers) => void;
-  setContainerVisible: (keyPath: string, visible: boolean) => void;
-  toggleContainerVisible: (keyPath: string) => void;
-  setContainerContent: (keyPath: string, content: React.ReactNode) => void;
-  setContainerMaximized: (keyPath: string, isMaximized: boolean) => void;
-  toggleContainerMaximized: (keyPath: string) => void;
-  resetContainers: () => void;
+interface TooltipProps {
+  delay?: number;
 }
 
-export const defaultLayoutContainers: AppLayoutContainers = {
-  header: { visible: true, isResizable: false, isHiddable: false, maximizeContainer: { isMaximizable: false, isMaximized: false, maximizeScope: 'Main' } },
-  sidebarLeft: { visible: true, isResizable: true, isHiddable: true, maximizeContainer: { isMaximizable: false, isMaximized: false, maximizeScope: 'Main' } },
-  workspace: {
-    top: { visible: true, isResizable: true, isHiddable: true, maximizeContainer: { isMaximizable: false, isMaximized: false, maximizeScope: 'Main' } },
-    left: { visible: true, isResizable: true, isHiddable: true, maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' } },
-    center: { visible: true, isResizable: false, isHiddable: false, maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' } },
-    right: { visible: true, isResizable: true, isHiddable: true, maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' } },
-    bottom: { visible: true, isResizable: true, isHiddable: true, maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' } },
-  },
-  sidebarRight: { visible: false, isResizable: true, isHiddable: true, maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' } },
-  footer: { visible: true, isResizable: false, isHiddable: false, maximizeContainer: { isMaximizable: false, isMaximized: false, maximizeScope: 'Main' } },
-};
+export function Tooltip({ delay = 300 }: TooltipProps) {
+  const [content, setContent] = useState('');
+  const [visible, setVisible] = useState(false);
 
-function setByPath(obj: any, path: string, updater: (c: LayoutContainer) => LayoutContainer): any {
-  const parts = path.split('.');
-  const cloned = { ...obj };
+  const [coords, setCoords] = useState<{
+    tooltipLeft: number;
+    tooltipTop: number;
+    arrowTop: number;
+    side: 'left' | 'right';
+  }>({
+    tooltipLeft: 0,
+    tooltipTop: 0,
+    arrowTop: 0,
+    side: 'right',
+  });
 
-  let current = cloned;
-  for (let i = 0; i < parts.length - 1; i++) {
-    const key = parts[i];
-    current[key] = { ...current[key] };
-    current = current[key];
-  }
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const activeTargetRef = useRef<Element | null>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const latestMouseRef = useRef({ x: 0, y: 0 });
 
-  const lastKey = parts[parts.length - 1];
-  current[lastKey] = updater(current[lastKey] || {});
-  return cloned;
-}
+  useEffect(() => {
+    const updatePosition = (clientX: number, clientY: number) => {
+      if (!tooltipRef.current) return;
 
-export const useLayoutStore = create<LayoutStoreState>((set) => ({
-  containers: defaultLayoutContainers,
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
 
-  setLayoutContainers: (containers) => set({ containers }),
+      const tooltipWidth = tooltipRef.current.offsetWidth || 200;
+      const tooltipHeight = tooltipRef.current.offsetHeight || 40;
+      const arrowSizeOffset = 12;
 
-  setContainerVisible: (path, visible) =>
-    set((state) => ({
-      containers: setByPath(state.containers, path, (c) => ({
-        ...c,
-        visible,
-        maximizeContainer: {
-          ...c.maximizeContainer,
-          // Reset maximization state when hiding
-          isMaximized: visible ? c.maximizeContainer?.isMaximized : false,
-        },
-      })),
-    })),
+      let side: 'left' | 'right' = 'right';
+      let tooltipLeft = clientX + arrowSizeOffset;
 
-  toggleContainerVisible: (path) =>
-    set((state) => ({
-      containers: setByPath(state.containers, path, (c) => {
-        const nextVisible = !c.visible;
-        return {
-          ...c,
-          visible: nextVisible,
-          maximizeContainer: {
-            ...c.maximizeContainer,
-            isMaximized: nextVisible ? c.maximizeContainer?.isMaximized : false,
-          },
-        };
-      }),
-    })),
+      if (tooltipLeft + tooltipWidth > viewportWidth) {
+        side = 'left';
+        tooltipLeft = clientX - tooltipWidth - arrowSizeOffset;
+      }
+      if (tooltipLeft < 4) tooltipLeft = 4;
 
-  setContainerContent: (path, container) =>
-    set((state) => ({
-      containers: setByPath(state.containers, path, (c) => ({ ...c, container })),
-    })),
+      let tooltipTop = clientY - tooltipHeight / 2;
+      tooltipTop = Math.max(6, Math.min(tooltipTop, viewportHeight - tooltipHeight - 6));
 
-  setContainerMaximized: (path, isMaximized) =>
-    set((state) => ({
-      containers: setByPath(state.containers, path, (c) => ({
-        ...c,
-        maximizeContainer: {
-          ...c.maximizeContainer,
-          isMaximized,
-        },
-      })),
-    })),
+      const arrowRelativeY = clientY - tooltipTop;
+      const safetyPadding = 8;
+      const arrowTop = Math.max(safetyPadding, Math.min(arrowRelativeY, tooltipHeight - safetyPadding));
 
-  toggleContainerMaximized: (path) =>
-    set((state) => ({
-      containers: setByPath(state.containers, path, (c) => {
-        if (c.maximizeContainer?.isMaximizable === false) {
-          return c;
-        }
-        return {
-          ...c,
-          maximizeContainer: {
-            ...c.maximizeContainer,
-            isMaximized: !c.maximizeContainer?.isMaximized,
-          },
-        };
-      }),
-    })),
-
-  resetContainers: () => set({ containers: defaultLayoutContainers }),
-}));
-EOF
-
-# 2. Update ContainerPanelHeader.tsx: ensure strict boolean check for isHiddable
-cat << 'EOF' > src/components/app/layout/ContainerPanelHeader.tsx
-import React from 'react';
-import { Maximize2, Minimize2, EyeOff } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { LeftCenterRightPanel } from '../left-center-right-panel';
-import { useLayoutStore } from '@/store/useLayoutStore';
-
-export interface ContainerPanelHeaderProps {
-  id?: string;
-  title?: React.ReactNode;
-  path?: string;
-  isMaximized?: boolean;
-  isMaximizable?: boolean;
-  isHiddable?: boolean;
-  headerLeft?: React.ReactNode;
-  headerCenter?: React.ReactNode;
-  headerRight?: React.ReactNode;
-  className?: string;
-}
-
-export function ContainerPanelHeader({
-  id,
-  title,
-  path,
-  isMaximized,
-  isMaximizable = true,
-  isHiddable = true,
-  headerLeft,
-  headerCenter,
-  headerRight,
-  className,
-}: ContainerPanelHeaderProps) {
-  const toggleContainerMaximized = useLayoutStore((s) => s.toggleContainerMaximized);
-  const setContainerVisible = useLayoutStore((s) => s.setContainerVisible);
-
-  const computedLeft = headerLeft || (
-    typeof title === 'string' ? (
-      <span className="font-semibold uppercase tracking-wider truncate">{title}</span>
-    ) : (
-      title
-    )
-  );
-
-  const computedRight = (
-    <div className="flex items-center gap-1">
-      {headerRight}
-      {isMaximizable && path && (
-        <Button
-          id={`btn-maximize-${path.replace(/\./g, '-')}`}
-          variant="ghost"
-          size="icon-xs"
-          onClick={() => toggleContainerMaximized(path)}
-          className="w-5 h-5 text-muted-foreground hover:text-foreground shrink-0"
-          data-tooltip={isMaximized ? "Restore Panel Size" : "Maximize Panel"}
-        >
-          {isMaximized ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
-        </Button>
-      )}
-      {isHiddable && path && (
-        <Button
-          id={`btn-hide-${path.replace(/\./g, '-')}`}
-          variant="ghost"
-          size="icon-xs"
-          onClick={() => setContainerVisible(path, false)}
-          className="w-5 h-5 text-muted-foreground hover:text-foreground shrink-0"
-          data-tooltip="Hide Panel"
-        >
-          <EyeOff size={12} />
-        </Button>
-      )}
-    </div>
-  );
-
-  return (
-    <LeftCenterRightPanel
-      id={id || (path ? `header-${path.replace(/\./g, '-')}` : 'container-panel-header')}
-      className={`px-3 h-7 bg-muted/30 border-b border-border text-[10px] font-mono text-muted-foreground select-none shrink-0 ${className || ''}`}
-      left={computedLeft}
-      center={headerCenter}
-      right={computedRight}
-    />
-  );
-}
-EOF
-
-# 3. Update WorkspaceLayout.tsx: ensure visible !== false check for workspace scope maximization
-cat << 'EOF' > src/components/app/layout/WorkspaceLayout.tsx
-import React from 'react';
-import { useLayoutStore } from '@/store/useLayoutStore';
-import { ResizableContainer } from '../container/resizable-container';
-import { useResizable } from '../container/hooks/use-resizable';
-import { WorkspaceContainers, LayoutContainer } from './types';
-import { ContainerPanelHeader } from './ContainerPanelHeader';
-
-interface WorkspaceLayoutProps {
-  containers?: WorkspaceContainers;
-}
-
-export const mergeContainer = (storeC?: LayoutContainer, propC?: LayoutContainer): LayoutContainer => {
-  const isMaximized = storeC?.maximizeContainer?.isMaximized ?? propC?.maximizeContainer?.isMaximized ?? false;
-  const isMaximizable = propC?.maximizeContainer?.isMaximizable ?? storeC?.maximizeContainer?.isMaximizable ?? true;
-  const maximizeScope = propC?.maximizeContainer?.maximizeScope ?? storeC?.maximizeContainer?.maximizeScope ?? 'Main';
-  const visible = storeC?.visible ?? propC?.visible ?? true;
-  const isResizable = storeC?.isResizable ?? propC?.isResizable ?? true;
-  const isHiddable = storeC?.isHiddable ?? propC?.isHiddable ?? true;
-  const container = storeC?.container ?? propC?.container;
-
-  return {
-    visible,
-    isResizable,
-    isHiddable,
-    container,
-    maximizeContainer: {
-      isMaximized,
-      isMaximizable,
-      maximizeScope,
-    },
-  };
-};
-
-export function WorkspaceLayout({ containers: propContainers }: WorkspaceLayoutProps) {
-  const storeWorkspace = useLayoutStore((s) => s.containers.workspace);
-
-  const topConfig = mergeContainer(storeWorkspace?.top, propContainers?.top);
-  const leftConfig = mergeContainer(storeWorkspace?.left, propContainers?.left);
-  const centerConfig = mergeContainer(storeWorkspace?.center, propContainers?.center);
-  const rightConfig = mergeContainer(storeWorkspace?.right, propContainers?.right);
-  const bottomConfig = mergeContainer(storeWorkspace?.bottom, propContainers?.bottom);
-
-  const mergedContainers = {
-    top: topConfig,
-    left: leftConfig,
-    center: centerConfig,
-    right: rightConfig,
-    bottom: bottomConfig,
-  };
-
-  const [topHeight, startTopResize] = useResizable(50, 30, 200, false, false);
-  const [leftWidth, startLeftResize] = useResizable(280, 150, 600, true, false);
-  const [rightWidth, startRightResize] = useResizable(300, 150, 600, true, true);
-  const [bottomHeight, startBottomResize] = useResizable(100, 40, 400, false, true);
-
-  const workspaceKeys = ['top', 'left', 'center', 'right', 'bottom'] as const;
-
-  const isWorkspaceScopeMaximized = (c?: LayoutContainer) =>
-    Boolean(
-      c?.visible !== false &&
-      c?.maximizeContainer?.isMaximizable !== false &&
-      c?.maximizeContainer?.isMaximized &&
-      c?.maximizeContainer?.maximizeScope === 'Workspace'
-    );
-
-  const maximizedKey = workspaceKeys.find((key) => isWorkspaceScopeMaximized(mergedContainers[key]));
-
-  if (maximizedKey) {
-    const targetConfig = mergedContainers[maximizedKey];
-    const titleMap: Record<typeof workspaceKeys[number], string> = {
-      top: 'Workspace Top Section',
-      left: 'Workspace Left Panel',
-      center: 'Workspace Center Panel',
-      right: 'Workspace Right Panel',
-      bottom: 'Workspace Bottom Panel',
+      setCoords({ tooltipLeft, tooltipTop, arrowTop, side });
     };
 
-    return (
-      <div className="flex-1 w-full h-full p-1 bg-background flex flex-col min-w-0 min-h-0 overflow-hidden">
-        <ContainerPanelHeader
-          title={`${titleMap[maximizedKey]} (Maximized - Workspace Scope)`}
-          path={`workspace.${maximizedKey}`}
-          isMaximized={targetConfig?.maximizeContainer?.isMaximized}
-          isMaximizable={targetConfig?.maximizeContainer?.isMaximizable}
-          isHiddable={targetConfig?.isHiddable}
-        />
-        <div className="flex-1 w-full h-full min-w-0 min-h-0 overflow-auto">
-          {targetConfig?.container || (
-            <div className="p-4 font-mono text-xs text-muted-foreground flex items-center justify-center h-full">
-              Maximized {titleMap[maximizedKey]} Content
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
+    const handleMouseMove = (e: MouseEvent) => {
+      latestMouseRef.current = { x: e.clientX, y: e.clientY };
+      const target = (e.target as Element).closest('[data-tooltip]');
+
+      if (target) {
+        const text = target.getAttribute('data-tooltip') || '';
+
+        if (!text) {
+          if (timeoutRef.current) clearTimeout(timeoutRef.current);
+          setVisible(false);
+          activeTargetRef.current = null;
+          return;
+        }
+
+        if (activeTargetRef.current !== target) {
+          activeTargetRef.current = target;
+          if (timeoutRef.current) clearTimeout(timeoutRef.current);
+          setVisible(false);
+
+          timeoutRef.current = setTimeout(() => {
+            if (activeTargetRef.current === target) {
+              setContent(text);
+              setVisible(true);
+              updatePosition(latestMouseRef.current.x, latestMouseRef.current.y);
+            }
+          }, delay);
+        } else if (visible) {
+          if (text !== content) setContent(text);
+          updatePosition(e.clientX, e.clientY);
+        }
+      } else {
+        if (activeTargetRef.current) {
+          activeTargetRef.current = null;
+          if (timeoutRef.current) clearTimeout(timeoutRef.current);
+          setVisible(false);
+        }
+      }
+    };
+
+    document.body.addEventListener('mousemove', handleMouseMove);
+    return () => {
+      document.body.removeEventListener('mousemove', handleMouseMove);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [delay, visible, content]);
+
+  if (!content) return null;
 
   return (
-    <div className="flex flex-col flex-1 w-full h-full min-w-0 min-h-0 overflow-hidden bg-background">
-      {topConfig?.visible !== false && (
-        <ResizableContainer
-          id="workspace-top"
-          visible
-          resizeHandle={topConfig?.isResizable !== false ? 'bottom' : 'none'}
-          onResizeStart={startTopResize}
-          style={{ height: `${topHeight}px` }}
-          className="border-b border-border"
-        >
-          <ContainerPanelHeader
-            title="Workspace Top"
-            path="workspace.top"
-            isMaximized={topConfig?.maximizeContainer?.isMaximized}
-            isMaximizable={topConfig?.maximizeContainer?.isMaximizable}
-            isHiddable={topConfig?.isHiddable}
-          />
-          <div className="flex-1 min-w-0 h-full overflow-auto">
-            {topConfig?.container || (
-              <div className="p-2 text-xs font-mono text-muted-foreground">Workspace Top Panel</div>
-            )}
-          </div>
-        </ResizableContainer>
+    <div
+      ref={tooltipRef}
+      className={cn(
+        "inline-flex z-50 fixed items-center shadow-xl px-2.5 py-1 rounded-md max-w-xs text-[11px] break-words leading-normal pointer-events-none select-none transition-opacity duration-150",
+        "bg-slate-900/95 text-slate-100 border border-slate-800/80 backdrop-blur-sm font-sans font-medium",
+        "dark:bg-slate-950/95 dark:border-slate-800",
+        visible ? "opacity-100 scale-100" : "opacity-0 scale-95"
       )}
+      style={{
+        left: `${coords.tooltipLeft}px`,
+        top: `${coords.tooltipTop}px`,
+      }}
+    >
+      <span className="block z-10 relative">{content}</span>
 
-      <div className="flex flex-1 w-full min-h-0 overflow-hidden">
-        {leftConfig?.visible !== false && (
-          <ResizableContainer
-            id="workspace-left"
-            visible
-            resizeHandle={leftConfig?.isResizable !== false ? 'right' : 'none'}
-            onResizeStart={startLeftResize}
-            style={{ width: `${leftWidth}px` }}
-            className="border-r border-border"
-          >
-            <ContainerPanelHeader
-              title="Workspace Left"
-              path="workspace.left"
-              isMaximized={leftConfig?.maximizeContainer?.isMaximized}
-              isMaximizable={leftConfig?.maximizeContainer?.isMaximizable}
-              isHiddable={leftConfig?.isHiddable}
-            />
-            <div className="flex-1 min-w-0 h-full overflow-auto">
-              {leftConfig?.container || (
-                <div className="p-2 text-xs font-mono text-muted-foreground">Workspace Left Panel</div>
-              )}
-            </div>
-          </ResizableContainer>
+      <div
+        className={cn(
+          "z-0 absolute bg-slate-900 dark:bg-slate-950 border border-transparent size-2",
+          coords.side === 'right'
+            ? "-left-1 border-l-slate-800/80 border-b-slate-800/80 dark:border-l-slate-800 dark:border-b-slate-800"
+            : "-right-1 border-r-slate-800/80 border-t-slate-800/80 dark:border-r-slate-800 dark:border-t-slate-800"
         )}
-
-        {centerConfig?.visible !== false && (
-          <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden border-border">
-            <ContainerPanelHeader
-              title="Workspace Center"
-              path="workspace.center"
-              isMaximized={centerConfig?.maximizeContainer?.isMaximized}
-              isMaximizable={centerConfig?.maximizeContainer?.isMaximizable}
-              isHiddable={centerConfig?.isHiddable}
-            />
-            <div className="flex-1 min-w-0 h-full overflow-auto">
-              {centerConfig?.container || (
-                <div className="flex-1 flex items-center justify-center p-4 text-sm font-mono text-muted-foreground">
-                  Workspace Center (Main Content Area)
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {rightConfig?.visible !== false && (
-          <ResizableContainer
-            id="workspace-right"
-            visible
-            resizeHandle={rightConfig?.isResizable !== false ? 'left' : 'none'}
-            onResizeStart={startRightResize}
-            style={{ width: `${rightWidth}px` }}
-            className="border-l border-border"
-          >
-            <ContainerPanelHeader
-              title="Workspace Right"
-              path="workspace.right"
-              isMaximized={rightConfig?.maximizeContainer?.isMaximized}
-              isMaximizable={rightConfig?.maximizeContainer?.isMaximizable}
-              isHiddable={rightConfig?.isHiddable}
-            />
-            <div className="flex-1 min-w-0 h-full overflow-auto">
-              {rightConfig?.container || (
-                <div className="p-2 text-xs font-mono text-muted-foreground">Workspace Right Panel</div>
-              )}
-            </div>
-          </ResizableContainer>
-        )}
-      </div>
-
-      {bottomConfig?.visible !== false && (
-        <ResizableContainer
-          id="workspace-bottom"
-          visible
-          resizeHandle={bottomConfig?.isResizable !== false ? 'top' : 'none'}
-          onResizeStart={startBottomResize}
-          style={{ height: `${bottomHeight}px` }}
-          className="border-t border-border"
-        >
-          <ContainerPanelHeader
-            title="Workspace Bottom"
-            path="workspace.bottom"
-            isMaximized={bottomConfig?.maximizeContainer?.isMaximized}
-            isMaximizable={bottomConfig?.maximizeContainer?.isMaximizable}
-            isHiddable={bottomConfig?.isHiddable}
-          />
-          <div className="flex-1 min-w-0 h-full overflow-auto">
-            {bottomConfig?.container || (
-              <div className="p-2 text-xs font-mono text-muted-foreground">Workspace Bottom Panel</div>
-            )}
-          </div>
-        </ResizableContainer>
-      )}
+        style={{
+          top: `${coords.arrowTop}px`,
+          transform: 'translateY(-50%) rotate(45deg)',
+        }}
+      />
     </div>
   );
 }
 EOF
 
-# 4. Update AppLayout.tsx: pass isHiddable when rendering mainMaximizedTarget
+# 2. Update AppLayout.tsx to mount <Tooltip delay={300} /> globally
 cat << 'EOF' > src/components/app/layout/AppLayout.tsx
 import React, { useEffect, useState } from 'react';
 import { AppLayoutProps, LayoutContainer } from './types';
@@ -445,6 +163,7 @@ import { AppSidebarRight } from './AppSidebarRight';
 import { AppFooter } from './AppFooter';
 import { WorkspaceLayout, mergeContainer } from './WorkspaceLayout';
 import { ContainerPanelHeader } from './ContainerPanelHeader';
+import { Tooltip } from '../tooltip';
 
 export type { AppLayoutProps, MaximizeContainer } from './types';
 
@@ -514,6 +233,7 @@ export function AppLayout({
   if (mainMaximizedTarget) {
     return (
       <div className="flex flex-col w-screen h-screen overflow-hidden bg-background text-foreground antialiased font-sans">
+        <Tooltip delay={300} />
         {headerConfig?.visible !== false && (
           <div id="app-header-container" className="shrink-0 border-b border-border bg-card">
             {headerConfig?.container || (
@@ -556,6 +276,7 @@ export function AppLayout({
 
   return (
     <div className="flex flex-col w-screen h-screen overflow-hidden bg-background text-foreground antialiased font-sans">
+      <Tooltip delay={300} />
       {headerConfig?.visible !== false && (
         <div id="app-header-container" className="shrink-0 border-b border-border bg-card">
           {headerConfig?.container || (
@@ -622,5 +343,5 @@ export function AppLayout({
 }
 EOF
 
-echo "✅ fix: Corrected isHiddable propagation in AppLayout maximized mode and ensured hiding unmaximizes containers safely!"
+echo "✅ fix: Initialized Tooltip globally in AppLayout.tsx with 300ms delay for all data-tooltip elements!"
 echo "💡 To test and compile: cd sandbox && npm run compile"
