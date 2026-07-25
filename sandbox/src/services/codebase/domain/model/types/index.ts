@@ -7,3 +7,4 @@ export * from "./type-attribute-visibility";
 export * from "./type-graph-layout";
 export * from "./type-display-level";
 export * from "./type-rule-pattern";
+export * from "./type-maximize-scope";

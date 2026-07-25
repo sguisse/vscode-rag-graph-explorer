@@ -8,10 +8,19 @@ import { AppHeader } from './AppHeader';
 import { AppSidebarLeft } from './AppSidebarLeft';
 import { AppSidebarRight } from './AppSidebarRight';
 import { AppFooter } from './AppFooter';
-import { WorkspaceLayout, mergeContainer } from './WorkspaceLayout';
-import { ContainerPanelHeader } from './ContainerPanelHeader';
+import { WorkspaceLayout } from './WorkspaceLayout';
+import { WorkspacePanelHeader } from './WorkspacePanelHeader';
 
 export type { AppLayoutProps, MaximizeContainer } from './types';
+
+const mergeContainer = (storeC?: LayoutContainer, propC?: LayoutContainer): LayoutContainer => ({
+  ...storeC,
+  ...propC,
+  maximizeContainer: {
+    ...storeC?.maximizeContainer,
+    ...propC?.maximizeContainer,
+  },
+});
 
 export function AppLayout({
   layoutContainers,
@@ -59,12 +68,7 @@ export function AppLayout({
   const effectiveSidebarLeftWidth = sidebarLeftMode === 'minimal' ? 56 : sidebarLeftWidth;
 
   const isMainScopeMaximized = (c?: LayoutContainer) =>
-    Boolean(
-      c?.visible !== false &&
-      c?.maximizeContainer?.isMaximizable !== false &&
-      c?.maximizeContainer?.isMaximized &&
-      (c?.maximizeContainer?.maximizeScope || 'Main') === 'Main'
-    );
+    Boolean(c?.maximizeContainer?.isMaximized && (c?.maximizeContainer?.maximizeScope || 'Main') === 'Main');
 
   const mainMaximizedTarget =
     isMainScopeMaximized(sidebarLeftConfig) ? { title: 'Sidebar Left', path: 'sidebarLeft', config: sidebarLeftConfig } :
@@ -94,12 +98,10 @@ export function AppLayout({
         )}
 
         <div className="flex-1 w-full min-h-0 overflow-hidden flex flex-col p-1 bg-background">
-          <ContainerPanelHeader
+          <WorkspacePanelHeader
             title={`${mainMaximizedTarget.title} (Maximized - Main Scope)`}
             path={mainMaximizedTarget.path}
             isMaximized={mainMaximizedTarget.config.maximizeContainer?.isMaximized}
-            isMaximizable={mainMaximizedTarget.config.maximizeContainer?.isMaximizable}
-            isHiddable={mainMaximizedTarget.config.isHiddable}
           />
           <div className="flex-1 w-full h-full min-w-0 min-h-0 overflow-auto">
             {mainMaximizedTarget.config.container || (

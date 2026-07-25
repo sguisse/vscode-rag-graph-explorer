@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "compile": "tsc --noEmit"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -19,8 +20,8 @@
     "cytoscape": "^3.34.0",
     "lucide-react": "^1.23.0",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
-
+    "react-dom": "^19.2.7",
+    "zustand": "^5.0.3"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.11",

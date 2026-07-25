@@ -18,7 +18,7 @@ function createButton(id: string, isSelected: boolean, onToggle: () => void, too
       variant="ghost"
       size="icon"
       onClick={onToggle}
-      className={`p-1.5 rounded transition-colors ml-1 w-8 h-8 ${
+      className={`p-1 rounded transition-colors w-8 h-8 ${
         isSelected ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground hover:bg-muted'
       }`}
       data-tooltip={tooltipText}

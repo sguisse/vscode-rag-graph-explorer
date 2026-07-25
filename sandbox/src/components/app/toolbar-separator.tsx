@@ -4,12 +4,21 @@ export type ToolbarSeparatorOrientation = 'VERTICAL' | 'HORIZONTAL';
 
 export interface ToolbarSeparatorProps {
   orientation?: ToolbarSeparatorOrientation;
+  className?: string;
 }
 
-export function ToolbarSeparator({ orientation = 'VERTICAL' }: ToolbarSeparatorProps) {
+export function ToolbarSeparator({ orientation = 'VERTICAL', className = '' }: ToolbarSeparatorProps) {
   if (orientation === 'VERTICAL') {
-    return <div className="mx-1 bg-border w-px h-5"></div>;
-  } else {
-    return <div className="my-1 bg-border h-px w-full"></div>;
+    return (
+      <div className={`flex items-center justify-center h-full w-3 select-none ${className}`}>
+        <div className="bg-border w-[1px] h-4" />
+      </div>
+    );
   }
+
+  return (
+    <div className={`flex items-center justify-center w-5 py-1.5 shrink-0 select-none ${className}`}>
+      <div className="bg-border w-2 h-[1px] shrink-0" />
+    </div>
+  );
 }

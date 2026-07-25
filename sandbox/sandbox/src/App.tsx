@@ -41,10 +41,9 @@ export default function App() {
           </p>
 
           <ul className="list-disc list-inside space-y-1 text-muted-foreground text-[11px] bg-muted/20 p-3 rounded border border-border">
-            <li><strong>Single Responsibility (SRP):</strong> ResizableContainer manages container bounds; headers and state live in dedicated modules.</li>
-            <li><strong>Open/Closed (OCP):</strong> Layout container tree structured via TypeScript interfaces (`WorkspaceContainers`, `AppLayoutContainers`).</li>
-            <li><strong>Composition over Inheritance:</strong> `LayoutContainer` uses composite `maximizeContainer?: MaximizeContainer`.</li>
-            <li><strong>Multi-Scope Maximization:</strong> Supports both `Workspace` and `Main` scopes.</li>
+            <li><strong>Single Responsibility (SRP):</strong> ResizableContainer manages only container resizing & bounds; headers and controls live in dedicated files.</li>
+            <li><strong>Open/Closed (OCP):</strong> Layout container tree structured via TypeScript interfaces (WorkspaceContainers, AppLayoutContainers).</li>
+            <li><strong>Composition over Inheritance:</strong> LayoutContainer uses composite `maximizeContainer?: MaximizeContainer`.</li>
           </ul>
 
           <div className="space-y-2 pt-2 border-t border-border">
@@ -104,8 +103,11 @@ export default function App() {
       setIsDarkMode={setIsDarkMode}
       notification={notification}
       layoutContainers={{
+        header: { ...containers.header },
+        sidebarLeft: { ...containers.sidebarLeft, isResizable: true },
         workspace: {
           top: {
+            ...containers.workspace?.top,
             container: containers.workspace?.top?.container || (
               <div className="p-2 font-mono text-xs text-muted-foreground flex justify-between items-center bg-muted/20 h-full">
                 <span>Workspace Top Section</span>
@@ -114,19 +116,28 @@ export default function App() {
             ),
           },
           left: {
+            ...containers.workspace?.left,
+            maximizeContainer: {
+              ...containers.workspace?.left?.maximizeContainer,
+              maximizeScope: 'Workspace',
+            },
             container: containers.workspace?.left?.container || (
               <div className="p-3 font-mono text-xs text-muted-foreground bg-muted/10 h-full">Workspace Left Panel</div>
             ),
           },
           center: {
+            ...containers.workspace?.center,
+            visible: true,
             container: containers.workspace?.center?.container || layoutControlCenter,
           },
           right: {
+            ...containers.workspace?.right,
             container: containers.workspace?.right?.container || (
               <div className="p-3 font-mono text-xs text-muted-foreground bg-muted/10 h-full">Workspace Right Panel</div>
             ),
           },
           bottom: {
+            ...containers.workspace?.bottom,
             container: containers.workspace?.bottom?.container || (
               <div className="p-2 font-mono text-xs text-muted-foreground flex justify-between items-center bg-muted/20 h-full">
                 <span>Workspace Bottom Log Output</span>
@@ -135,6 +146,8 @@ export default function App() {
             ),
           },
         },
+        sidebarRight: { ...containers.sidebarRight, isResizable: true },
+        footer: { ...containers.footer },
       }}
     />
   );
