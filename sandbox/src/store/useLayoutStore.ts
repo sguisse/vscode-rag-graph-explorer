@@ -1,6 +1,7 @@
 import React from 'react';
 import { create } from 'zustand';
 import { AppLayoutContainers, LayoutContainer } from '../components/app/layout/types';
+import { defaultWorkspaceContainersContent } from '../components/app/layout/default-workspace-containers-content';
 
 export interface LayoutStoreState {
   containers: AppLayoutContainers;
@@ -18,13 +19,13 @@ export const defaultLayoutContainers: AppLayoutContainers = {
   header: { visible: true, isResizable: false, isHiddable: false, maximizeContainer: { isMaximizable: false, isMaximized: false, maximizeScope: 'Main' } },
   sidebarLeft: { visible: true, isResizable: true, isHiddable: true, maximizeContainer: { isMaximizable: false, isMaximized: false, maximizeScope: 'Main' } },
   workspace: {
-    top: { visible: true, isResizable: true, isHiddable: true, maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' } },
-    left: { visible: true, isResizable: true, isHiddable: true, maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' } },
-    center: { visible: true, isResizable: false, isHiddable: false, maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' } },
-    right: { visible: true, isResizable: true, isHiddable: true, maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' } },
-    bottom: { visible: true, isResizable: true, isHiddable: true, maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' } },
+    top: { visible: true, isResizable: true, isHiddable: true, container: defaultWorkspaceContainersContent.top, maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' } },
+    left: { visible: true, isResizable: true, isHiddable: true, container: defaultWorkspaceContainersContent.left, maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' } },
+    center: { visible: true, isResizable: false, isHiddable: false, container: defaultWorkspaceContainersContent.center, maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' } },
+    right: { visible: true, isResizable: true, isHiddable: true, container: defaultWorkspaceContainersContent.right, maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' } },
+    bottom: { visible: true, isResizable: true, isHiddable: true, container: defaultWorkspaceContainersContent.bottom, maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' } },
   },
-  sidebarRight: { visible: false, isResizable: true, isHiddable: true, maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' } },
+  sidebarRight: { visible: false, isResizable: true, isHiddable: true, container: defaultWorkspaceContainersContent.sidebarRight, maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' } },
   footer: { visible: true, isResizable: false, isHiddable: false, maximizeContainer: { isMaximizable: false, isMaximized: false, maximizeScope: 'Main' } },
 };
 
@@ -56,7 +57,6 @@ export const useLayoutStore = create<LayoutStoreState>((set) => ({
         visible,
         maximizeContainer: {
           ...c.maximizeContainer,
-          // Reset maximization state when hiding
           isMaximized: visible ? c.maximizeContainer?.isMaximized : false,
         },
       })),

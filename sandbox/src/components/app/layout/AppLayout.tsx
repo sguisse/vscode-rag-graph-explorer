@@ -9,7 +9,6 @@ import { AppSidebarLeft } from './AppSidebarLeft';
 import { AppSidebarRight } from './AppSidebarRight';
 import { AppFooter } from './AppFooter';
 import { WorkspaceLayout, mergeContainer } from './WorkspaceLayout';
-import { ContainerPanelHeader } from './ContainerPanelHeader';
 import { Tooltip } from '../tooltip';
 
 export type { AppLayoutProps, MaximizeContainer } from './types';
@@ -96,19 +95,8 @@ export function AppLayout({
         )}
 
         <div className="flex-1 w-full min-h-0 overflow-hidden flex flex-col p-1 bg-background">
-          <ContainerPanelHeader
-            title={`${mainMaximizedTarget.title} (Maximized - Main Scope)`}
-            path={mainMaximizedTarget.path}
-            isMaximized={mainMaximizedTarget.config.maximizeContainer?.isMaximized}
-            isMaximizable={mainMaximizedTarget.config.maximizeContainer?.isMaximizable}
-            isHiddable={mainMaximizedTarget.config.isHiddable}
-          />
           <div className="flex-1 w-full h-full min-w-0 min-h-0 overflow-auto">
-            {mainMaximizedTarget.config.container || (
-              <div className="p-4 font-mono text-xs text-muted-foreground flex items-center justify-center h-full">
-                Maximized {mainMaximizedTarget.title} Content
-              </div>
-            )}
+            {mainMaximizedTarget.config.container}
           </div>
         </div>
 

@@ -3,7 +3,6 @@ import { useLayoutStore } from '@/store/useLayoutStore';
 import { ResizableContainer } from '../container/resizable-container';
 import { useResizable } from '../container/hooks/use-resizable';
 import { WorkspaceContainers, LayoutContainer } from './types';
-import { ContainerPanelHeader } from './ContainerPanelHeader';
 
 interface WorkspaceLayoutProps {
   containers?: WorkspaceContainers;
@@ -48,7 +47,7 @@ export function WorkspaceLayout({ containers: propContainers }: WorkspaceLayoutP
     bottom: bottomConfig,
   };
 
-  const [topHeight, startTopResize] = useResizable(50, 30, 200, false, false);
+  const [topHeight, startTopResize] = useResizable(80, 40, 300, false, false);
   const [leftWidth, startLeftResize] = useResizable(280, 150, 600, true, false);
   const [rightWidth, startRightResize] = useResizable(300, 150, 600, true, true);
   const [bottomHeight, startBottomResize] = useResizable(100, 40, 400, false, true);
@@ -67,29 +66,11 @@ export function WorkspaceLayout({ containers: propContainers }: WorkspaceLayoutP
 
   if (maximizedKey) {
     const targetConfig = mergedContainers[maximizedKey];
-    const titleMap: Record<typeof workspaceKeys[number], string> = {
-      top: 'Workspace Top Section',
-      left: 'Workspace Left Panel',
-      center: 'Workspace Center Panel',
-      right: 'Workspace Right Panel',
-      bottom: 'Workspace Bottom Panel',
-    };
 
     return (
       <div className="flex-1 w-full h-full p-1 bg-background flex flex-col min-w-0 min-h-0 overflow-hidden">
-        <ContainerPanelHeader
-          title={`${titleMap[maximizedKey]} (Maximized - Workspace Scope)`}
-          path={`workspace.${maximizedKey}`}
-          isMaximized={targetConfig?.maximizeContainer?.isMaximized}
-          isMaximizable={targetConfig?.maximizeContainer?.isMaximizable}
-          isHiddable={targetConfig?.isHiddable}
-        />
         <div className="flex-1 w-full h-full min-w-0 min-h-0 overflow-auto">
-          {targetConfig?.container || (
-            <div className="p-4 font-mono text-xs text-muted-foreground flex items-center justify-center h-full">
-              Maximized {titleMap[maximizedKey]} Content
-            </div>
-          )}
+          {targetConfig?.container}
         </div>
       </div>
     );
@@ -106,18 +87,7 @@ export function WorkspaceLayout({ containers: propContainers }: WorkspaceLayoutP
           style={{ height: `${topHeight}px` }}
           className="border-b border-border"
         >
-          <ContainerPanelHeader
-            title="Workspace Top"
-            path="workspace.top"
-            isMaximized={topConfig?.maximizeContainer?.isMaximized}
-            isMaximizable={topConfig?.maximizeContainer?.isMaximizable}
-            isHiddable={topConfig?.isHiddable}
-          />
-          <div className="flex-1 min-w-0 h-full overflow-auto">
-            {topConfig?.container || (
-              <div className="p-2 text-xs font-mono text-muted-foreground">Workspace Top Panel</div>
-            )}
-          </div>
+          {topConfig?.container}
         </ResizableContainer>
       )}
 
@@ -131,37 +101,13 @@ export function WorkspaceLayout({ containers: propContainers }: WorkspaceLayoutP
             style={{ width: `${leftWidth}px` }}
             className="border-r border-border"
           >
-            <ContainerPanelHeader
-              title="Workspace Left"
-              path="workspace.left"
-              isMaximized={leftConfig?.maximizeContainer?.isMaximized}
-              isMaximizable={leftConfig?.maximizeContainer?.isMaximizable}
-              isHiddable={leftConfig?.isHiddable}
-            />
-            <div className="flex-1 min-w-0 h-full overflow-auto">
-              {leftConfig?.container || (
-                <div className="p-2 text-xs font-mono text-muted-foreground">Workspace Left Panel</div>
-              )}
-            </div>
+            {leftConfig?.container}
           </ResizableContainer>
         )}
 
         {centerConfig?.visible !== false && (
           <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden border-border">
-            <ContainerPanelHeader
-              title="Workspace Center"
-              path="workspace.center"
-              isMaximized={centerConfig?.maximizeContainer?.isMaximized}
-              isMaximizable={centerConfig?.maximizeContainer?.isMaximizable}
-              isHiddable={centerConfig?.isHiddable}
-            />
-            <div className="flex-1 min-w-0 h-full overflow-auto">
-              {centerConfig?.container || (
-                <div className="flex-1 flex items-center justify-center p-4 text-sm font-mono text-muted-foreground">
-                  Workspace Center (Main Content Area)
-                </div>
-              )}
-            </div>
+            {centerConfig?.container}
           </div>
         )}
 
@@ -174,18 +120,7 @@ export function WorkspaceLayout({ containers: propContainers }: WorkspaceLayoutP
             style={{ width: `${rightWidth}px` }}
             className="border-l border-border"
           >
-            <ContainerPanelHeader
-              title="Workspace Right"
-              path="workspace.right"
-              isMaximized={rightConfig?.maximizeContainer?.isMaximized}
-              isMaximizable={rightConfig?.maximizeContainer?.isMaximizable}
-              isHiddable={rightConfig?.isHiddable}
-            />
-            <div className="flex-1 min-w-0 h-full overflow-auto">
-              {rightConfig?.container || (
-                <div className="p-2 text-xs font-mono text-muted-foreground">Workspace Right Panel</div>
-              )}
-            </div>
+            {rightConfig?.container}
           </ResizableContainer>
         )}
       </div>
@@ -199,18 +134,7 @@ export function WorkspaceLayout({ containers: propContainers }: WorkspaceLayoutP
           style={{ height: `${bottomHeight}px` }}
           className="border-t border-border"
         >
-          <ContainerPanelHeader
-            title="Workspace Bottom"
-            path="workspace.bottom"
-            isMaximized={bottomConfig?.maximizeContainer?.isMaximized}
-            isMaximizable={bottomConfig?.maximizeContainer?.isMaximizable}
-            isHiddable={bottomConfig?.isHiddable}
-          />
-          <div className="flex-1 min-w-0 h-full overflow-auto">
-            {bottomConfig?.container || (
-              <div className="p-2 text-xs font-mono text-muted-foreground">Workspace Bottom Panel</div>
-            )}
-          </div>
+          {bottomConfig?.container}
         </ResizableContainer>
       )}
     </div>
