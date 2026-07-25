@@ -1,222 +1,297 @@
 #!/usr/bin/env bash
 set -e
 
-echo "🚀 Restoring AppSidebarLeft.tsx design with full component structure and wiring features..."
+echo "🚀 Refactoring ExplorerFeature.tsx to define layout containers explicitly like WelcomeFeature.tsx..."
 
-mkdir -p src/components/app/layout
-mkdir -p src/store
-mkdir -p src/features/welcome
+mkdir -p src/features/explorer
 
-# 1. Update AppSidebarLeft.tsx using the requested UI design & menu structure
-cat << 'EOF' > src/components/app/layout/AppSidebarLeft.tsx
-import React, { useState } from 'react';
+cat << 'EOF' > src/features/explorer/ExplorerFeature.tsx
+import React, { useState, useEffect, useCallback } from 'react';
+import { useLayoutStore } from '@/store/useLayoutStore';
+import { useAppContextStore } from '@/store/useAppContextStore';
+import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
+
+import { ContextPathsPanel } from './wkp-top-paths/context-paths-panel';
+import { CodebaseExplorerPanel } from './wkp-lft-codebase-tree/CodebaseExplorerPanel';
+import { GraphPanel } from './wksp-cnt-graph/GraphPanel';
 import {
-  ChevronLeft,
-  ChevronRight,
-  FolderTree,
-  Scale,
-  Terminal,
-  History,
-  Settings,
-  HelpCircle,
-  FileJson,
-  LayoutGrid,
-  Home,
-  Layout,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+  GraphPanelHeaderLeft,
+  GraphPanelHeaderCenter,
+  GraphPanelHeaderRight,
+} from './wksp-cnt-graph/GraphPanelHeader';
+import { GlobalInspectorPanel } from './wkp-rgt-tabs-inspector/global-inspector-panel';
+import { WkpBottomPanel } from './wkp-btm-infos/wkp-bottom-panel';
+import { EntityPropertiesPanel } from './sdb-rgt-properties/EntityPropertiesPanel';
+
+import { useCodebaseFilter } from './hooks/use-codebase-filter';
+import { useTransitiveImpact } from './hooks/use-transitive-impact';
+import { useGraph } from './wksp-cnt-graph/components/graph/use-graph';
+import { usePlantUml } from './wksp-cnt-graph/components/graph/use-plantuml';
+
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarMenuBadge,
-  SidebarFooter,
-} from '@/components/ui/sidebar';
+  codebaseService,
+  CodebaseData,
+  SelectedEntity,
+  ImpactDirection,
+} from '@/services/codebase';
 
-export interface NavItem {
-  id: string;
-  label: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
-  badge?: string;
-  bottom?: boolean;
-}
+export function ExplorerFeature() {
+  const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
+  const toggleContainerMaximized = useLayoutStore((s) => s.toggleContainerMaximized);
+  const setNotification = useAppContextStore((s) => s.setNotification);
+  const isDarkMode = useAppContextStore((s) => s.isDarkMode);
 
-interface AppSidebarLeftProps {
-  activeFeature: string;
-  setActiveFeature: (feature: string) => void;
-  sidebarLeftMode?: 'normal' | 'minimal';
-  setSidebarLeftMode?: React.Dispatch<React.SetStateAction<'normal' | 'minimal'>>;
-  sidebarLeftWidth?: number;
-}
+  // Feature domain state
+  const [codebase, setCodebase] = useState<CodebaseData>(() => codebaseService.getCodebase());
+  const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(null);
+  const [impactDirection, setImpactDirection] = useState<ImpactDirection>('aval');
 
-export const SIDEBAR_MENU_ITEMS: NavItem[] = [
-  { id: 'panel-welcome', icon: Home, label: 'Home' },
-  { id: 'panel-explorer', icon: FolderTree, label: 'AST Explorer', badge: 'New' },
-  { id: 'layout-demo', icon: Layout, label: 'Layout Demo' },
-  { id: 'panel-rules', icon: Scale, label: 'Cypher Rules' },
-  { id: 'panel-prompt', icon: FileJson, label: 'GraphRAG Prompt' },
-  { id: 'panel-terminal', icon: Terminal, label: 'CLI Terminal' },
-  { id: 'panel-history', icon: History, label: 'History' },
-  { id: 'panel-configuration', icon: Settings, label: 'Configuration', bottom: true },
-  { id: 'panel-help', icon: HelpCircle, label: 'Help & Shortcuts', bottom: true },
-];
+  const [showGrid, setShowGrid] = useState(true);
+  const [callersDepth, setCallersDepth] = useState(1);
+  const [calleesDepth, setCalleesDepth] = useState(1);
+  const [currentLayout, setCurrentLayout] = useState('preset');
 
-export function renderSidebarMenuItem(
-  item: NavItem,
-  activeFeature: string,
-  setActiveFeature: (feature: string) => void,
-  sidebarLeftMode: 'normal' | 'minimal' = 'normal'
-) {
-  const isActive = activeFeature === item.id || (item.id === 'panel-welcome' && activeFeature === 'welcome');
-  const isMinimal = sidebarLeftMode === 'minimal';
+  // Domain rules hooks
+  const filter = useCodebaseFilter(codebase.files);
+  const { impactedSet } = useTransitiveImpact(selectedEntity, impactDirection, codebase.dependencies);
 
-  return (
-    <SidebarMenuItem key={item.id}>
-      <SidebarMenuButton
-        id={`btn-menu-${item.id}`}
-        isActive={isActive}
-        onClick={() => setActiveFeature(item.id)}
-        className="relative overflow-hidden cursor-pointer"
-        data-tooltip={isMinimal ? item.label : undefined}
-      >
-        <item.icon size={16} className={sidebarLeftMode === 'normal' ? 'mr-2.5 shrink-0' : 'shrink-0'} />
-        {sidebarLeftMode === 'normal' ? (
-          <>
-            <span className="truncate">{item.label}</span>
-            {item.badge && <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>}
-          </>
-        ) : (
-          item.badge && (
-            <span className="top-0 right-0 absolute bg-primary shadow-2xs px-1 py-0.5 rounded-full font-mono font-bold text-[8px] text-primary-foreground leading-none scale-85 origin-top-right select-none">
-              {item.badge}
-            </span>
-          )
-        )}
-      </SidebarMenuButton>
-    </SidebarMenuItem>
+  const handleNodeSelect = useCallback((nodeId: string) => {
+    setSelectedEntity({ type: 'node', nodeId });
+  }, []);
+
+  const handleSelectMember = useCallback((nodeId: string, memberId: string) => {
+    setSelectedEntity({ type: 'member', nodeId, memberId });
+  }, []);
+
+  const { containerRef, cyRef, graphState, updateGraphTopology } = useGraph(isDarkMode, handleNodeSelect);
+
+  const generatedPlantUML = usePlantUml(
+    filter.searchFilteredFiles,
+    filter.visibleFiles,
+    codebase.dependencies
   );
-}
 
-export function AppSidebarLeft({
-  activeFeature,
-  setActiveFeature,
-  sidebarLeftMode: modeProp,
-  setSidebarLeftMode: setModeProp,
-  sidebarLeftWidth = 220,
-}: AppSidebarLeftProps) {
-  const [internalMode, setInternalMode] = useState<'normal' | 'minimal'>('normal');
+  useEffect(() => {
+    updateGraphTopology(
+      filter.searchFilteredFiles,
+      filter.visibleFiles,
+      codebase,
+      impactedSet,
+      currentLayout,
+      codebaseService.getFolderPositions()
+    );
+  }, [
+    filter.searchFilteredFiles,
+    filter.visibleFiles,
+    codebase,
+    impactedSet,
+    currentLayout,
+    updateGraphTopology,
+  ]);
 
-  const sidebarLeftMode = modeProp ?? internalMode;
-  const setSidebarLeftMode = setModeProp ?? setInternalMode;
-
-  const effectiveWidth = sidebarLeftMode === 'minimal' ? '56px' : '100%';
-
-  return (
-    <Sidebar
-      id="ctn-sidebar-left"
-      style={{
-        width: effectiveWidth,
-        '--sidebar-width': sidebarLeftMode === 'minimal' ? '56px' : `${sidebarLeftWidth}px`,
-      } as React.CSSProperties}
-      className="flex flex-col justify-between border-r-0 w-full h-full min-h-0 overflow-x-hidden transition-all duration-200"
-    >
-      <div className="flex justify-between items-center p-3 border-sidebar-border border-b overflow-hidden shrink-0">
-        <h3
-          className={`text-xs font-mono font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 ${
-            sidebarLeftMode === 'minimal' ? 'justify-center w-full' : ''
-          }`}
-        >
-          <LayoutGrid size={14} className="text-primary shrink-0" />
-          {sidebarLeftMode === 'normal' && <span className="truncate">Features</span>}
-        </h3>
-      </div>
-
-      <SidebarContent className="flex-1 min-h-0 overflow-x-hidden overflow-y-auto">
-        <SidebarGroup>
-          <SidebarMenu>
-            {SIDEBAR_MENU_ITEMS.filter((item) => !item.bottom).map((item) =>
-              renderSidebarMenuItem(item, activeFeature, setActiveFeature, sidebarLeftMode)
-            )}
-          </SidebarMenu>
-        </SidebarGroup>
-        <SidebarGroup className="mt-auto pt-2 border-sidebar-border border-t">
-          <SidebarMenu>
-            {SIDEBAR_MENU_ITEMS.filter((item) => item.bottom).map((item) =>
-              renderSidebarMenuItem(item, activeFeature, setActiveFeature, sidebarLeftMode)
-            )}
-          </SidebarMenu>
-        </SidebarGroup>
-      </SidebarContent>
-
-      <SidebarFooter className="p-0 border-sidebar-border border-t overflow-hidden shrink-0">
-        <Button
-          id="btn-toggle-sidebar-left-mode"
-          variant="ghost"
-          size="sm"
-          onClick={() => setSidebarLeftMode((m) => (m === 'normal' ? 'minimal' : 'normal'))}
-          className={`w-full text-muted-foreground hover:text-foreground mt-0 rounded-none h-9 cursor-pointer ${
-            sidebarLeftMode === 'normal' ? 'justify-end px-3' : 'justify-center px-0'
-          }`}
-          data-tooltip="Toggle sidebar drawer size"
-        >
-          {sidebarLeftMode === 'normal' ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
-        </Button>
-      </SidebarFooter>
-    </Sidebar>
+  const handleCopy = useCallback(
+    (text: string, message: string) => {
+      if (navigator?.clipboard?.writeText) {
+        navigator.clipboard.writeText(text);
+      }
+      setNotification(message);
+    },
+    [setNotification]
   );
+
+  const handleImportCodebase = useCallback(
+    (importedData: CodebaseData) => {
+      codebaseService.importCodebase(importedData);
+      setCodebase({ ...importedData });
+      setNotification('AST Codebase imported successfully!');
+    },
+    [setNotification]
+  );
+
+  // Apply layout container configuration for Explorer Feature
+  useEffect(() => {
+    setLayoutContainers({
+      header: { visible: true, isResizable: false, isHiddable: false },
+      sidebarLeft: { visible: true, isResizable: true, isHiddable: true },
+      workspace: {
+        top: {
+          visible: true,
+          isResizable: true,
+          isHiddable: true,
+          container: (
+            <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-background overflow-hidden">
+              <ContainerPanelHeader title="Context Paths" path="workspace.top" />
+              <div className="flex-1 min-h-0 overflow-auto">
+                <ContextPathsPanel />
+              </div>
+            </div>
+          ),
+          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
+        },
+        left: {
+          visible: true,
+          isResizable: true,
+          isHiddable: true,
+          container: (
+            <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-card overflow-hidden">
+              <ContainerPanelHeader title="Codebase Explorer" path="workspace.left" />
+              <div className="flex-1 min-h-0 overflow-auto">
+                <CodebaseExplorerPanel
+                  searchFilteredFiles={filter.searchFilteredFiles}
+                  expandedFolders={filter.expandedFolders}
+                  visibleFiles={filter.visibleFiles}
+                  toggleFolder={filter.toggleFolder}
+                  toggleFolderCheckbox={filter.toggleFolderCheckbox}
+                  toggleFileCheckbox={filter.toggleFileCheckbox}
+                  setSelectedEntity={setSelectedEntity}
+                  onImportCodebase={handleImportCodebase}
+                />
+              </div>
+            </div>
+          ),
+          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
+        },
+        center: {
+          visible: true,
+          isResizable: false,
+          isHiddable: false,
+          container: (
+            <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-background relative overflow-hidden">
+              <ContainerPanelHeader
+                path="workspace.center"
+                isHiddable={false}
+                headerLeft={<GraphPanelHeaderLeft />}
+                headerCenter={
+                  <GraphPanelHeaderCenter
+                    maxNodesLimit={filter.maxNodesLimit}
+                    setMaxNodesLimit={filter.setMaxNodesLimit}
+                    callersDepth={callersDepth}
+                    setCallersDepth={setCallersDepth}
+                    calleesDepth={calleesDepth}
+                    setCalleesDepth={setCalleesDepth}
+                    displayLevel={filter.displayLevel}
+                    setDisplayLevel={filter.setDisplayLevel}
+                    currentLayout={currentLayout}
+                    setCurrentLayout={setCurrentLayout}
+                  />
+                }
+                headerRight={
+                  <GraphPanelHeaderRight
+                    cyRef={cyRef}
+                    isGraphMaximized={false}
+                    setIsGraphMaximized={() => toggleContainerMaximized('workspace.center')}
+                    showGrid={showGrid}
+                    setShowGrid={setShowGrid}
+                  />
+                }
+              />
+              <div className="flex-1 min-h-0 relative w-full h-full">
+                <GraphPanel
+                  containerRef={containerRef}
+                  showGrid={showGrid}
+                  isDarkMode={isDarkMode}
+                  graphState={graphState}
+                  selectedEntity={selectedEntity}
+                  searchFilteredFiles={filter.searchFilteredFiles}
+                  impactedSet={impactedSet}
+                  handleSelectMember={handleSelectMember}
+                />
+              </div>
+            </div>
+          ),
+          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
+        },
+        right: {
+          visible: true,
+          isResizable: true,
+          isHiddable: true,
+          container: (
+            <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-card overflow-hidden">
+              <ContainerPanelHeader title="Global Inspector" path="workspace.right" />
+              <div className="flex-1 min-h-0 overflow-auto">
+                <GlobalInspectorPanel
+                  selectedEntity={selectedEntity}
+                  initialCodebase={codebase}
+                  impactDirection={impactDirection}
+                  setImpactDirection={setImpactDirection}
+                  impactedSet={impactedSet}
+                  handleCopy={handleCopy}
+                  generatedPlantUML={generatedPlantUML}
+                />
+              </div>
+            </div>
+          ),
+          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
+        },
+        bottom: {
+          visible: true,
+          isResizable: true,
+          isHiddable: true,
+          container: (
+            <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-background overflow-hidden">
+              <ContainerPanelHeader title="Output & Logs" path="workspace.bottom" />
+              <div className="flex-1 min-h-0 overflow-auto">
+                <WkpBottomPanel />
+              </div>
+            </div>
+          ),
+          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
+        },
+      },
+      sidebarRight: {
+        visible: true,
+        isResizable: true,
+        isHiddable: true,
+        container: (
+          <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-card overflow-hidden">
+            <ContainerPanelHeader title="Entity Properties" path="sidebarRight" />
+            <div className="flex-1 min-h-0 overflow-auto">
+              <EntityPropertiesPanel selectedEntity={selectedEntity} />
+            </div>
+          </div>
+        ),
+        maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
+      },
+      footer: { visible: true, isResizable: false, isHiddable: false },
+    });
+  }, [
+    setLayoutContainers,
+    toggleContainerMaximized,
+    filter.searchFilteredFiles,
+    filter.expandedFolders,
+    filter.visibleFiles,
+    filter.maxNodesLimit,
+    filter.displayLevel,
+    filter.toggleFolder,
+    filter.toggleFolderCheckbox,
+    filter.toggleFileCheckbox,
+    filter.setMaxNodesLimit,
+    filter.setDisplayLevel,
+    callersDepth,
+    calleesDepth,
+    currentLayout,
+    showGrid,
+    selectedEntity,
+    codebase,
+    impactDirection,
+    impactedSet,
+    generatedPlantUML,
+    handleCopy,
+    handleImportCodebase,
+    handleSelectMember,
+    containerRef,
+    cyRef,
+    isDarkMode,
+    graphState,
+  ]);
+
+  return null;
 }
+
+export default ExplorerFeature;
 EOF
 
-# 2. Update useAppContextStore.ts default activeFeature to 'panel-welcome'
-cat << 'EOF' > src/store/useAppContextStore.ts
-import { create } from 'zustand';
-
-export interface AppContextState {
-  activeFeature: string;
-  themeMode: 'dark' | 'light';
-  isDarkMode: boolean;
-  notification: string | null;
-
-  setActiveFeature: (feature: string) => void;
-  setThemeMode: (mode: 'dark' | 'light') => void;
-  setIsDarkMode: (isDarkMode: boolean) => void;
-  toggleThemeMode: () => void;
-  setNotification: (notification: string | null) => void;
-}
-
-export const useAppContextStore = create<AppContextState>((set) => ({
-  activeFeature: 'panel-welcome',
-  themeMode: 'dark',
-  isDarkMode: true,
-  notification: null,
-
-  setActiveFeature: (activeFeature) => set({ activeFeature }),
-  setThemeMode: (themeMode) =>
-    set({
-      themeMode,
-      isDarkMode: themeMode === 'dark',
-    }),
-  setIsDarkMode: (isDarkMode) =>
-    set({
-      isDarkMode,
-      themeMode: isDarkMode ? 'dark' : 'light',
-    }),
-  toggleThemeMode: () =>
-    set((state) => {
-      const nextIsDark = !state.isDarkMode;
-      return {
-        isDarkMode: nextIsDark,
-        themeMode: nextIsDark ? 'dark' : 'light',
-      };
-    }),
-  setNotification: (notification) => set({ notification }),
-}));
-EOF
-
-# 3. Update App.tsx to map menu item IDs to their corresponding features
+# Ensure App.tsx handles all feature menu item ID variants
 cat << 'EOF' > src/App.tsx
 import React from 'react';
 import { useAppContextStore } from '@/store/useAppContextStore';
@@ -235,11 +310,11 @@ export default function App() {
   return (
     <>
       {/* Active Feature updates LayoutStore containers dynamically when menu items are clicked */}
-      {(activeFeature === 'panel-welcome' || activeFeature === 'welcome') && <WelcomeFeature />}
-      {activeFeature === 'layout-demo' && <LayoutDemoFeature />}
-      {activeFeature === 'panel-explorer' && <ExplorerFeature />}
-      {activeFeature === 'panel-rules' && <RulesFeature />}
-      {activeFeature === 'panel-help' && <HelpFeature />}
+      {(activeFeature === 'panel-welcome' || activeFeature === 'feature-welcome' || activeFeature === 'welcome') && <WelcomeFeature />}
+      {(activeFeature === 'panel-explorer' || activeFeature === 'feature-explorer' || activeFeature === 'explorer') && <ExplorerFeature />}
+      {(activeFeature === 'layout-demo' || activeFeature === 'feature-layout') && <LayoutDemoFeature />}
+      {(activeFeature === 'panel-rules' || activeFeature === 'feature-rules' || activeFeature === 'rules') && <RulesFeature />}
+      {(activeFeature === 'panel-help' || activeFeature === 'feature-help' || activeFeature === 'help') && <HelpFeature />}
 
       <AppLayout
         activeFeature={activeFeature}
@@ -254,4 +329,4 @@ export default function App() {
 }
 EOF
 
-echo "✅ AppSidebarLeft.tsx restored to custom layout components and mapped to active features in App.tsx!"
+echo "✅ ExplorerFeature refactored to define layout containers with subfolder panels!"

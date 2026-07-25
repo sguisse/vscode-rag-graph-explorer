@@ -15,11 +15,11 @@ export default function App() {
   return (
     <>
       {/* Active Feature updates LayoutStore containers dynamically when menu items are clicked */}
-      {(activeFeature === 'feature-welcome') && <WelcomeFeature />}
-      {activeFeature === 'layout-demo' && <LayoutDemoFeature />}
-      {activeFeature === 'feature-explorer' && <ExplorerFeature />}
-      {activeFeature === 'feature-rules' && <RulesFeature />}
-      {activeFeature === 'feature-help' && <HelpFeature />}
+      {(activeFeature === 'panel-welcome' || activeFeature === 'feature-welcome' || activeFeature === 'welcome') && <WelcomeFeature />}
+      {(activeFeature === 'panel-explorer' || activeFeature === 'feature-explorer' || activeFeature === 'explorer') && <ExplorerFeature />}
+      {(activeFeature === 'layout-demo' || activeFeature === 'feature-layout') && <LayoutDemoFeature />}
+      {(activeFeature === 'panel-rules' || activeFeature === 'feature-rules' || activeFeature === 'rules') && <RulesFeature />}
+      {(activeFeature === 'panel-help' || activeFeature === 'feature-help' || activeFeature === 'help') && <HelpFeature />}
 
       <AppLayout
         activeFeature={activeFeature}
