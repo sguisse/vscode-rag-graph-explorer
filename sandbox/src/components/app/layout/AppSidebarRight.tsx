@@ -3,7 +3,7 @@ import {
   useWorkspaceContentVersionStore,
   DefaultSidebarRightContentV1,
   DefaultSidebarRightContentV2,
-} from './default-workspace-containers-content';
+} from './default-layout-containers-content';
 
 export function AppSidebarRight() {
   const version = useWorkspaceContentVersionStore((s) => s.versions.sidebarRight) || '1';

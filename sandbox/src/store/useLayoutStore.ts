@@ -1,7 +1,7 @@
 import React from 'react';
 import { create } from 'zustand';
 import { AppLayoutContainers, LayoutContainer } from '../components/app/layout/types';
-import { defaultWorkspaceContainersContent } from '../components/app/layout/default-workspace-containers-content';
+import { defaultWorkspaceContainersContent } from '../components/app/layout/default-layout-containers-content';
 
 export interface LayoutStoreState {
   containers: AppLayoutContainers;
