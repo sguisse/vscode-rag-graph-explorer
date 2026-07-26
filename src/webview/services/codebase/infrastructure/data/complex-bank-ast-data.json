@@ -1,0 +1,380 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ComplexBankFundTransferAST",
+  "files": [
+    {
+      "id": "TransferForm.tsx",
+      "name": "TransferForm.tsx",
+      "type": "component",
+      "path": "frontend/components/transfer/TransferForm.tsx",
+      "language": "TypeScript (React)",
+      "size": 340,
+      "complexity": 8,
+      "attributes": [
+        {
+          "name": "sourceAccountId: string",
+          "visibility": "private"
+        },
+        {
+          "name": "destinationAccountId: string",
+          "visibility": "private"
+        },
+        {
+          "name": "amount: number",
+          "visibility": "private"
+        },
+        {
+          "name": "isSubmitting: boolean",
+          "visibility": "private"
+        }
+      ],
+      "methods": [
+        {
+          "id": "validateLimits",
+          "name": "validateLimits()",
+          "description": "Checks local UI state to ensure transfer amount does not exceed daily soft limits."
+        },
+        {
+          "id": "onSubmit",
+          "name": "onSubmit(event)",
+          "description": "Handles form submission, prevents default routing, and dispatches the API call."
+        }
+      ]
+    },
+    {
+      "id": "transferApi.ts",
+      "name": "transferApi.ts",
+      "type": "module",
+      "path": "frontend/api/transferApi.ts",
+      "language": "TypeScript",
+      "size": 150,
+      "complexity": 3,
+      "attributes": [
+        {
+          "name": "API_GATEWAY_URL: string",
+          "visibility": "private"
+        }
+      ],
+      "methods": [
+        {
+          "id": "initiateFundTransfer",
+          "name": "initiateFundTransfer(payload)",
+          "description": "Serializes transfer payload, signs the request with JWT, and POSTs to the API gateway."
+        }
+      ]
+    },
+    {
+      "id": "FundTransferController.java",
+      "name": "FundTransferController.java",
+      "type": "class",
+      "path": "backend/controllers/FundTransferController.java",
+      "language": "Java",
+      "size": 220,
+      "complexity": 5,
+      "attributes": [
+        {
+          "name": "fundTransferService: FundTransferService",
+          "visibility": "private"
+        }
+      ],
+      "methods": [
+        {
+          "id": "postTransfer",
+          "name": "postTransfer(TransferRequest)",
+          "description": "REST endpoint catching POST /api/v1/transfers. Validates DTOs and delegates to service layer."
+        }
+      ]
+    },
+    {
+      "id": "FundTransferService.java",
+      "name": "FundTransferService.java",
+      "type": "interface",
+      "path": "backend/services/FundTransferService.java",
+      "language": "Java",
+      "size": 45,
+      "complexity": 1,
+      "attributes": [],
+      "methods": [
+        {
+          "id": "executeTransfer",
+          "name": "executeTransfer(source, target, amount)",
+          "description": "Core interface defining the contract for orchestrating a financial transaction between accounts."
+        }
+      ]
+    },
+    {
+      "id": "FundTransferServiceImpl.java",
+      "name": "FundTransferServiceImpl.java",
+      "type": "class",
+      "path": "backend/services/impl/FundTransferServiceImpl.java",
+      "language": "Java",
+      "size": 580,
+      "complexity": 15,
+      "attributes": [
+        {
+          "name": "accountService: AccountService",
+          "visibility": "private"
+        },
+        {
+          "name": "complianceService: ComplianceService",
+          "visibility": "private"
+        },
+        {
+          "name": "transactionRepository: TransactionRepository",
+          "visibility": "private"
+        },
+        {
+          "name": "notificationService: NotificationService",
+          "visibility": "private"
+        }
+      ],
+      "methods": [
+        {
+          "id": "executeTransfer",
+          "name": "executeTransfer(source, target, amount)",
+          "description": "Orchestrates AML checks, verifies sufficient funds, applies atomic debits/credits, persists audit logs, and dispatches async notifications."
+        },
+        {
+          "id": "rollbackTransfer",
+          "name": "rollbackTransfer(transactionId)",
+          "description": "Saga pattern compensation mechanism. Reverts a partially failed multi-step ledger operation."
+        }
+      ]
+    },
+    {
+      "id": "AccountService.java",
+      "name": "AccountService.java",
+      "type": "class",
+      "path": "backend/services/AccountService.java",
+      "language": "Java",
+      "size": 410,
+      "complexity": 10,
+      "attributes": [
+        {
+          "name": "accountRepository: AccountRepository",
+          "visibility": "private"
+        }
+      ],
+      "methods": [
+        {
+          "id": "checkBalance",
+          "name": "checkBalance(accountId)",
+          "description": "Queries the ledger to guarantee available balances, taking pending holds into account."
+        },
+        {
+          "id": "debitAccount",
+          "name": "debitAccount(accountId, amount)",
+          "description": "Atomically subtracts funds using optimistic locking (@Version)."
+        },
+        {
+          "id": "creditAccount",
+          "name": "creditAccount(accountId, amount)",
+          "description": "Atomically adds funds using optimistic locking (@Version)."
+        }
+      ]
+    },
+    {
+      "id": "ComplianceService.java",
+      "name": "ComplianceService.java",
+      "type": "class",
+      "path": "backend/services/ComplianceService.java",
+      "language": "Java",
+      "size": 305,
+      "complexity": 7,
+      "attributes": [
+        {
+          "name": "amlRuleEngine: AmlRuleEngine",
+          "visibility": "private"
+        }
+      ],
+      "methods": [
+        {
+          "id": "performAmlCheck",
+          "name": "performAmlCheck(source, target, amount)",
+          "description": "Synchronously hits the Anti-Money Laundering service to ensure neither party is on international sanctions lists."
+        }
+      ]
+    },
+    {
+      "id": "NotificationService.java",
+      "name": "NotificationService.java",
+      "type": "class",
+      "path": "backend/services/NotificationService.java",
+      "language": "Java",
+      "size": 180,
+      "complexity": 4,
+      "attributes": [
+        {
+          "name": "kafkaTemplate: KafkaTemplate",
+          "visibility": "private"
+        }
+      ],
+      "methods": [
+        {
+          "id": "sendTransferReceipt",
+          "name": "sendTransferReceipt(transaction)",
+          "description": "Pushes a transactional event to a Kafka topic for downstream SMTP/SMS workers to pick up."
+        }
+      ]
+    },
+    {
+      "id": "TransactionRepository.java",
+      "name": "TransactionRepository.java",
+      "type": "interface",
+      "path": "backend/repositories/TransactionRepository.java",
+      "language": "Java",
+      "size": 60,
+      "complexity": 1,
+      "attributes": [],
+      "methods": [
+        {
+          "id": "save",
+          "name": "save(transactionEntity)",
+          "description": "Spring Data JPA standard save operation for ledger persistence."
+        }
+      ]
+    },
+    {
+      "id": "application-prod.yml",
+      "name": "application-prod.yml",
+      "type": "config",
+      "path": "config/application-prod.yml",
+      "language": "YAML",
+      "size": 120,
+      "complexity": 1,
+      "configProperties": [
+        {
+          "key": "spring.datasource.url",
+          "value": "jdbc:postgresql://db.core-banking.internal:5432/ledger_db"
+        },
+        {
+          "key": "spring.kafka.bootstrap-servers",
+          "value": "kafka.messaging.internal:9092"
+        },
+        {
+          "key": "banking.compliance.aml-api-url",
+          "value": "https://api.aml-screening.global/v2/check"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "id": "dep-ui-to-api",
+      "sourceNode": "TransferForm.tsx",
+      "sourceHandle": "onSubmit",
+      "targetNode": "transferApi.ts",
+      "targetHandle": "initiateFundTransfer",
+      "relation": "dependency",
+      "label": "Imports & Calls"
+    },
+    {
+      "id": "dep-api-to-controller",
+      "sourceNode": "transferApi.ts",
+      "sourceHandle": "initiateFundTransfer",
+      "targetNode": "FundTransferController.java",
+      "targetHandle": "postTransfer",
+      "relation": "association",
+      "label": "HTTP POST /api/v1/transfers"
+    },
+    {
+      "id": "dep-controller-to-service-interface",
+      "sourceNode": "FundTransferController.java",
+      "sourceHandle": "postTransfer",
+      "targetNode": "FundTransferService.java",
+      "targetHandle": "executeTransfer",
+      "relation": "aggregation",
+      "label": "Delegates"
+    },
+    {
+      "id": "dep-service-impl-implements",
+      "sourceNode": "FundTransferServiceImpl.java",
+      "sourceHandle": "header",
+      "targetNode": "FundTransferService.java",
+      "targetHandle": "header",
+      "relation": "implementation",
+      "label": "Implements"
+    },
+    {
+      "id": "dep-service-impl-to-aml",
+      "sourceNode": "FundTransferServiceImpl.java",
+      "sourceHandle": "executeTransfer",
+      "targetNode": "ComplianceService.java",
+      "targetHandle": "performAmlCheck",
+      "relation": "dependency",
+      "label": "Step 1: KYC/AML"
+    },
+    {
+      "id": "dep-service-impl-to-acc-check",
+      "sourceNode": "FundTransferServiceImpl.java",
+      "sourceHandle": "executeTransfer",
+      "targetNode": "AccountService.java",
+      "targetHandle": "checkBalance",
+      "relation": "dependency",
+      "label": "Step 2: Balance Guard"
+    },
+    {
+      "id": "dep-service-impl-to-acc-debit",
+      "sourceNode": "FundTransferServiceImpl.java",
+      "sourceHandle": "executeTransfer",
+      "targetNode": "AccountService.java",
+      "targetHandle": "debitAccount",
+      "relation": "dependency",
+      "label": "Step 3: Debit Source"
+    },
+    {
+      "id": "dep-service-impl-to-acc-credit",
+      "sourceNode": "FundTransferServiceImpl.java",
+      "sourceHandle": "executeTransfer",
+      "targetNode": "AccountService.java",
+      "targetHandle": "creditAccount",
+      "relation": "dependency",
+      "label": "Step 4: Credit Target"
+    },
+    {
+      "id": "dep-service-impl-to-repo",
+      "sourceNode": "FundTransferServiceImpl.java",
+      "sourceHandle": "executeTransfer",
+      "targetNode": "TransactionRepository.java",
+      "targetHandle": "save",
+      "relation": "association",
+      "label": "Step 5: Audit Persistence"
+    },
+    {
+      "id": "dep-service-impl-to-notif",
+      "sourceNode": "FundTransferServiceImpl.java",
+      "sourceHandle": "executeTransfer",
+      "targetNode": "NotificationService.java",
+      "targetHandle": "sendTransferReceipt",
+      "relation": "dependency",
+      "label": "Step 6: Async Email/SMS"
+    },
+    {
+      "id": "dep-repo-to-config",
+      "sourceNode": "TransactionRepository.java",
+      "sourceHandle": "header",
+      "targetNode": "application-prod.yml",
+      "targetHandle": "spring.datasource.url",
+      "relation": "dependency",
+      "label": "Reads PG Datasource"
+    },
+    {
+      "id": "dep-notif-to-config",
+      "sourceNode": "NotificationService.java",
+      "sourceHandle": "header",
+      "targetNode": "application-prod.yml",
+      "targetHandle": "spring.kafka.bootstrap-servers",
+      "relation": "dependency",
+      "label": "Reads Kafka Brokers"
+    },
+    {
+      "id": "dep-aml-to-config",
+      "sourceNode": "ComplianceService.java",
+      "sourceHandle": "header",
+      "targetNode": "application-prod.yml",
+      "targetHandle": "banking.compliance.aml-api-url",
+      "relation": "dependency",
+      "label": "Reads External API Target"
+    }
+  ]
+}

@@ -7,7 +7,7 @@ import * as fs from 'fs';
 import * as childProcess from 'child_process';
 import { VsCodeSettings } from './core/VsCodeSettings';
 
-let APP_NORMALIZED_NAME = "graphRagExplorer"
+let APP_NORMALIZED_NAME = "graphRagExplorer";
 
 let activeChildProcess: any = null;
 let logOutputChannel: vscode.OutputChannel;
@@ -19,12 +19,10 @@ function shouldSkipScriptSyncEntry(fileName: string): boolean {
 
 export function activate(context: vscode.ExtensionContext) {
     const packageData = context.extension.packageJSON;
-    // Initialize dedicated Output Channel with APP_NORMALIZED_NAME
     logOutputChannel = vscode.window.createOutputChannel(packageData.name);
     context.subscriptions.push(logOutputChannel);
     logOutputChannel.appendLine(`[INFO] ${packageData.name} output channel initialized.`);
 
-    // Set your global main key prefix here
     VsCodeSettings.init(APP_NORMALIZED_NAME);
 
     let disposable = vscode.commands.registerCommand(`${APP_NORMALIZED_NAME}.openTool`, () => {
@@ -206,8 +204,8 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
     if (!workspaceFolders || workspaceFolders.length === 0) return;
 
     const workspaceRoot = workspaceFolders[0].uri.fsPath;
-    const backendScriptsPath : string = VsCodeSettings.get(`${APP_NORMALIZED_NAME}.beScriptsPath`);
-    const targetDir4Scripts = path.join(workspaceRoot, backendScriptsPath, "scripts");
+    const backendScriptsPath : string = VsCodeSettings.get(`beScriptsPath`);
+    const targetDir4Scripts = path.join(workspaceRoot, backendScriptsPath || ".graph-rag-explorer-v2", "scripts");
 
     syncCoreScripts(context, workspaceRoot);
     panel.webview.postMessage({ command: "updateStatus", payload: "building" });
@@ -223,7 +221,6 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
 
         const timestamp = new Date().toLocaleTimeString();
 
-        // Relay background execution logs to the VS Code Output Channel
         logOutputChannel.appendLine(`[${timestamp}] [${level.toUpperCase()}] ${cleanLine}`);
 
         panel.webview.postMessage({
@@ -239,6 +236,9 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
     const pythonBinary = isWindows ? 'python' : 'python3';
 
     const payloadConfig = VsCodeSettings.toJson();
+    if (!payloadConfig[APP_NORMALIZED_NAME]) {
+        payloadConfig[APP_NORMALIZED_NAME] = {};
+    }
     payloadConfig[APP_NORMALIZED_NAME]["workspaceRoot"] = workspaceRoot;
 
     if (activeChildProcess) {
@@ -263,7 +263,7 @@ function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPa
         if (code === 0) {
             logOutputChannel.appendLine('[INFO] Python background process completed successfully.');
             panel.webview.postMessage({ command: "updateStatus", payload: "ready" });
-            const finalUiPayloadPath = path.join(workspaceRoot, backendScriptsPath, "target", "ui_outputs", "graph-ui-payload.json");
+            const finalUiPayloadPath = path.join(workspaceRoot, backendScriptsPath || ".graph-rag-explorer-v2", "target", "ui_outputs", "graph-ui-payload.json");
             if (fs.existsSync(finalUiPayloadPath)) {
                 try {
                     const rawPayload = JSON.parse(fs.readFileSync(finalUiPayloadPath, "utf-8"));
@@ -300,12 +300,15 @@ function sendConfig(panel: vscode.WebviewPanel, context: vscode.ExtensionContext
 
 function getWebviewContent(webview: vscode.Webview, extensionPath: string): string {
     const scriptUri = webview.asWebviewUri(vscode.Uri.file(path.join(extensionPath, 'dist', 'webview.js')));
+    const styleUri = webview.asWebviewUri(vscode.Uri.file(path.join(extensionPath, 'dist', 'webview.css')));
     return `<!DOCTYPE html>
     <html lang="en" class="h-full">
     <head>
-        <meta charset="UTF-8"><title>Graph RAG Explorer</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Graph RAG Explorer</title>
+        <link href="${styleUri}" rel="stylesheet">
         <link href="https://cdn.jsdelivr.net/npm/@vscode/codicons/dist/codicon.css" rel="stylesheet">
-        <script src="https://cdn.tailwindcss.com"></script>
     </head>
     <body class="h-full overflow-hidden select-none" style="padding: 0px !important;">
         <div id="root" class="h-full flex flex-col"></div>

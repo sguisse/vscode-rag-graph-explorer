@@ -9,7 +9,9 @@
     ],
     "sourceMap": true,
     "rootDir": "src",
-    "strict": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "allowJs": true,
     "jsx": "react-jsx",
     "outDir": "dist",
     "moduleResolution": "NodeNext",
@@ -18,11 +20,20 @@
       "vscode"
     ],
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "ignoreDeprecations": "6.0",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/webview/*"]
+    }
   },
+  "include": [
+    "src/**/*"
+  ],
   "exclude": [
     "node_modules",
     ".vscode-test",
-    "sandbox/"
+    "sandbox",
+    "zz-tmp"
   ]
 }

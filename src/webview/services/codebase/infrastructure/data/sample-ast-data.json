@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "files": [
+    {
+      "id": "AuthService.ts",
+      "name": "AuthService.ts",
+      "type": "module",
+      "path": "frontend/services/AuthService.ts",
+      "language": "TypeScript",
+      "size": 110,
+      "complexity": 3,
+      "attributes": [
+        {
+          "name": "jwtToken: string",
+          "visibility": "private"
+        }
+      ],
+      "methods": [
+        {
+          "id": "login",
+          "name": "login(credentials)",
+          "description": "Authenticates user against backend identity provider."
+        },
+        {
+          "id": "logout",
+          "name": "logout()",
+          "description": "Clears local session token and invalidates active session."
+        }
+      ]
+    },
+    {
+      "id": "AuthController.java",
+      "name": "AuthController.java",
+      "type": "class",
+      "path": "backend/controllers/AuthController.java",
+      "language": "Java",
+      "size": 185,
+      "complexity": 4,
+      "attributes": [
+        {
+          "name": "userRepository: UserRepository",
+          "visibility": "private"
+        }
+      ],
+      "methods": [
+        {
+          "id": "authenticateUser",
+          "name": "authenticateUser(loginDto)",
+          "description": "Validates user credentials against database records."
+        }
+      ]
+    },
+    {
+      "id": "UserRepository.java",
+      "name": "UserRepository.java",
+      "type": "interface",
+      "path": "backend/repositories/UserRepository.java",
+      "language": "Java",
+      "size": 45,
+      "complexity": 1,
+      "attributes": [],
+      "methods": [
+        {
+          "id": "findByEmail",
+          "name": "findByEmail(email)",
+          "description": "Retrieves active user record matching target email."
+        }
+      ]
+    },
+    {
+      "id": "security.yml",
+      "name": "security.yml",
+      "type": "config",
+      "path": "config/security.yml",
+      "language": "YAML",
+      "size": 30,
+      "complexity": 1,
+      "configProperties": [
+        {
+          "key": "jwt.secret",
+          "value": "${JWT_SECRET:super_secret_key}"
+        },
+        {
+          "key": "jwt.expiration",
+          "value": "86400000"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "id": "dep-auth-service-controller",
+      "sourceNode": "AuthService.ts",
+      "sourceHandle": "login",
+      "targetNode": "AuthController.java",
+      "targetHandle": "authenticateUser",
+      "relation": "association",
+      "label": "POST /api/auth/login"
+    },
+    {
+      "id": "dep-auth-controller-repo",
+      "sourceNode": "AuthController.java",
+      "sourceHandle": "authenticateUser",
+      "targetNode": "UserRepository.java",
+      "targetHandle": "findByEmail",
+      "relation": "dependency",
+      "label": "Queries User Record"
+    },
+    {
+      "id": "dep-auth-controller-config",
+      "sourceNode": "AuthController.java",
+      "sourceHandle": "header",
+      "targetNode": "security.yml",
+      "targetHandle": "jwt.secret",
+      "relation": "dependency",
+      "label": "Injects Secret Key"
+    }
+  ]
+}

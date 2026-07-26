@@ -204,30 +204,49 @@
     }
   },
   "scripts": {
-    "compile": "webpack",
-    "watch": "webpack --watch",
-    "package": "webpack --mode production",
-    "vscode:prepublish": "npm run package"
+    "compile": "npm run compile:extension && npm run compile:webview",
+    "watch": "vite build --watch",
+    "package": "npm run compile",
+    "vscode:prepublish": "npm run package",
+    "compile:extension": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
+    "compile:webview": "vite build"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@tailwindcss/vite": "^4.3.3",
     "@types/mocha": "^10.0.10",
     "@types/node": "^18.19.0",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "@types/vscode": "^1.80.0",
-    "@types/cytoscape": "^3.25.7",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@types/vscode": "^1.125.0",
+    "@vitejs/plugin-react": "^6.0.4",
     "css-loader": "^6.8.1",
+    "esbuild": "^0.28.1",
+    "oxlint": "^1.73.0",
+    "postcss": "^8.5.23",
+    "postcss-loader": "^8.2.1",
+    "shadcn": "^4.13.0",
     "style-loader": "^3.3.3",
-    "ts-loader": "^9.4.3",
+    "tailwind-merge": "^3.6.0",
+    "tailwindcss": "^4.3.3",
+    "ts-loader": "^9.6.2",
+    "tw-animate-css": "^1.4.0",
     "typescript": "^5.1.3",
-    "webpack": "^5.88.0",
-    "webpack-cli": "^5.1.4"
+    "vite": "^8.1.5"
   },
   "dependencies": {
-    "@primer/octicons-react": "^19.28.1",
+    "@base-ui/react": "^1.6.0",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@fontsource-variable/source-serif-4": "^5.3.0",
+    "@primer/octicons-react": "^19.31.0",
     "@vscode/vsce": "^3.9.2",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "cytoscape": "^3.30.0"
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cytoscape": "^3.34.0",
+    "lucide-react": "^1.27.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "zustand": "^5.0.14"
   }
 }

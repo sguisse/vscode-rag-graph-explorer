@@ -1,324 +1,450 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -e
 
-# Ensure directory structure exists
-mkdir -p src
+# 1. Ensure target store and features directories exist
+mkdir -p src/webview/store
+mkdir -p src/webview/features/explorer
 
-# Replace full content of extension.ts to integrate the named VS Code Output Channel
-cat << 'EOF' > src/extension.ts
-//@ts-check
-'use strict';
+# 2. Update useLayoutStore.ts to preserve user-toggled container visibility and maximize states across re-renders
+cat << 'EOF' > src/webview/store/useLayoutStore.ts
+import React from 'react';
+import { create } from 'zustand';
+import { AppLayoutContainers, LayoutContainer } from '../components/app/layout/types';
+import { defaultLayoutContainersContent } from '../features/layout-demo/default-layout-containers-content';
 
-import * as vscode from 'vscode';
-import * as path from 'path';
-import * as fs from 'fs';
-import * as childProcess from 'child_process';
-import { VsCodeSettings } from './core/VsCodeSettings';
+export interface LayoutStoreState {
+  containers: AppLayoutContainers;
 
-let activeChildProcess: any = null;
-let logOutputChannel: vscode.OutputChannel;
-const SCRIPT_SYNC_IGNORED_NAMES = new Set(["__pycache__", ".python_packages", ".bootstrap.lock"]);
-
-function shouldSkipScriptSyncEntry(fileName: string): boolean {
-    return SCRIPT_SYNC_IGNORED_NAMES.has(fileName) || fileName.endsWith(".pyc") || fileName.endsWith(".pyo");
+  setLayoutContainers: (containers: AppLayoutContainers, preserveVisibility?: boolean) => void;
+  setContainerVisible: (keyPath: string, visible: boolean) => void;
+  toggleContainerVisible: (keyPath: string) => void;
+  setContainerContent: (keyPath: string, content: React.ReactNode) => void;
+  setContainerMaximized: (keyPath: string, isMaximized: boolean) => void;
+  toggleContainerMaximized: (keyPath: string) => void;
+  resetContainers: () => void;
 }
 
-export function activate(context: vscode.ExtensionContext) {
-    // Initialize dedicated Output Channel named "graph-rag-explorer"
-    logOutputChannel = vscode.window.createOutputChannel('graph-rag-explorer');
-    context.subscriptions.push(logOutputChannel);
-    logOutputChannel.appendLine('[INFO] graph-rag-explorer output channel initialized.');
+export const defaultLayoutContainers: AppLayoutContainers = {
+  header: { visible: true, isResizable: false, isHiddable: false, maximizeContainer: { isMaximizable: false, isMaximized: false, maximizeScope: 'Main' } },
+  sidebarLeft: { visible: true, isResizable: true, isHiddable: true, maximizeContainer: { isMaximizable: false, isMaximized: false, maximizeScope: 'Main' } },
+  workspace: {
+    top: { visible: true, isResizable: true, isHiddable: true, container: defaultLayoutContainersContent.top, maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' } },
+    left: { visible: true, isResizable: true, isHiddable: true, container: defaultLayoutContainersContent.left, maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' } },
+    center: { visible: true, isResizable: false, isHiddable: false, container: defaultLayoutContainersContent.center, maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' } },
+    right: { visible: true, isResizable: true, isHiddable: true, container: defaultLayoutContainersContent.right, maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' } },
+    bottom: { visible: true, isResizable: true, isHiddable: true, container: defaultLayoutContainersContent.bottom, maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' } },
+  },
+  sidebarRight: { visible: false, isResizable: true, isHiddable: true, container: defaultLayoutContainersContent.sidebarRight, maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' } },
+  footer: { visible: true, isResizable: false, isHiddable: false, maximizeContainer: { isMaximizable: false, isMaximized: false, maximizeScope: 'Main' } },
+};
 
-    // Set your global main key prefix here
-    VsCodeSettings.init('graphRagExplorer');
+function preserveRuntimeState(nextC?: LayoutContainer, prevC?: LayoutContainer): LayoutContainer | undefined {
+  if (!nextC) return prevC;
+  if (!prevC) return nextC;
+  return {
+    ...nextC,
+    visible: prevC.visible !== undefined ? prevC.visible : nextC.visible,
+    maximizeContainer: nextC.maximizeContainer ? {
+      ...nextC.maximizeContainer,
+      isMaximized: prevC.maximizeContainer?.isMaximized !== undefined
+        ? prevC.maximizeContainer.isMaximized
+        : nextC.maximizeContainer?.isMaximized
+    } : prevC.maximizeContainer
+  };
+}
 
-    let disposable = vscode.commands.registerCommand('graphRagExplorer.openTool', () => {
-        logOutputChannel.appendLine('[INFO] Command graphRagExplorer.openTool invoked.');
-        const panel = vscode.window.createWebviewPanel(
-            'graphRagExplorer', 'Graph RAG Explorer', vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true,
-                localResourceRoots: [vscode.Uri.file(path.join(context.extensionPath, 'dist'))]
-            }
-        );
+function setByPath(obj: any, path: string, updater: (c: LayoutContainer) => LayoutContainer): any {
+  const parts = path.split('.');
+  const cloned = { ...obj };
 
-        if (VsCodeSettings.get('pinFilesExporter') !== false) {
-            vscode.commands.executeCommand('workbench.action.pinEditor');
+  let current = cloned;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const key = parts[i];
+    current[key] = { ...current[key] };
+    current = current[key];
+  }
+
+  const lastKey = parts[parts.length - 1];
+  current[lastKey] = updater(current[lastKey] || {});
+  return cloned;
+}
+
+export const useLayoutStore = create<LayoutStoreState>((set) => ({
+  containers: defaultLayoutContainers,
+
+  setLayoutContainers: (newContainers, preserveVisibility = true) =>
+    set((state) => {
+      if (!preserveVisibility) {
+        return { containers: newContainers };
+      }
+      return {
+        containers: {
+          header: preserveRuntimeState(newContainers.header, state.containers.header),
+          sidebarLeft: preserveRuntimeState(newContainers.sidebarLeft, state.containers.sidebarLeft),
+          workspace: {
+            top: preserveRuntimeState(newContainers.workspace?.top, state.containers.workspace?.top),
+            left: preserveRuntimeState(newContainers.workspace?.left, state.containers.workspace?.left),
+            center: preserveRuntimeState(newContainers.workspace?.center, state.containers.workspace?.center),
+            right: preserveRuntimeState(newContainers.workspace?.right, state.containers.workspace?.right),
+            bottom: preserveRuntimeState(newContainers.workspace?.bottom, state.containers.workspace?.bottom),
+          },
+          sidebarRight: preserveRuntimeState(newContainers.sidebarRight, state.containers.sidebarRight),
+          footer: preserveRuntimeState(newContainers.footer, state.containers.footer),
         }
+      };
+    }),
 
-        panel.webview.html = getWebviewContent(panel.webview, context.extensionPath);
+  setContainerVisible: (path, visible) =>
+    set((state) => ({
+      containers: setByPath(state.containers, path, (c) => ({
+        ...c,
+        visible,
+        maximizeContainer: {
+          ...c.maximizeContainer,
+          isMaximized: visible ? c.maximizeContainer?.isMaximized : false,
+        },
+      })),
+    })),
 
-        const saveListener = vscode.workspace.onDidSaveTextDocument((document) => {
-            if (document.uri.scheme !== 'file') return;
-            const relativePath = vscode.workspace.asRelativePath(document.uri);
-            logOutputChannel.appendLine(`[INFO] File saved: ${relativePath}. Triggering delta scan.`);
-            runPythonScan(context, panel, "delta", relativePath);
-        });
-        context.subscriptions.push(saveListener);
+  toggleContainerVisible: (path) =>
+    set((state) => ({
+      containers: setByPath(state.containers, path, (c) => {
+        const nextVisible = !c.visible;
+        return {
+          ...c,
+          visible: nextVisible,
+          maximizeContainer: {
+            ...c.maximizeContainer,
+            isMaximized: nextVisible ? c.maximizeContainer?.isMaximized : false,
+          },
+        };
+      }),
+    })),
 
-        panel.onDidDispose(() => {
-            logOutputChannel.appendLine('[INFO] Webview panel disposed.');
-            saveListener.dispose();
-            if (activeChildProcess) {
-                try {
-                    logOutputChannel.appendLine('[WARN] Killing active background analysis process due to panel disposal.');
-                    activeChildProcess.kill('SIGKILL');
-                } catch(e){}
-                activeChildProcess = null;
-            }
-        });
+  setContainerContent: (path, container) =>
+    set((state) => ({
+      containers: setByPath(state.containers, path, (c) => ({ ...c, container })),
+    })),
 
-        panel.webview.onDidReceiveMessage(async message => {
-            if (message.command === 'ready') {
-                logOutputChannel.appendLine('[INFO] Webview ready. Sending configuration and launching deep scan.');
-                sendConfig(panel, context);
-                runPythonScan(context, panel, "deep");
-            } else if (message.command === 'forceRefreshScan') {
-                const mode = message.mode || "deep";
-                let targetFile = "";
-                logOutputChannel.appendLine(`[INFO] Force refresh scan requested. Mode: ${mode}`);
-                if (mode === "delta") {
-                    const activeEditor = vscode.window.activeTextEditor;
-                    if (activeEditor && activeEditor.document.uri.scheme === 'file') {
-                        targetFile = vscode.workspace.asRelativePath(activeEditor.document.uri);
-                    } else {
-                        vscode.window.showWarningMessage("Delta Reload parsing rules require an active text file window context.");
-                        logOutputChannel.appendLine('[WARN] Delta Reload aborted: No active text file window context found.');
-                        panel.webview.postMessage({ command: "updateStatus", payload: "ready" });
-                        return;
-                    }
-                }
-                runPythonScan(context, panel, mode, targetFile);
-            } else if (message.command === 'killAnalysis') {
-                logOutputChannel.appendLine('[INFO] Manual analysis termination requested by user.');
-                if (activeChildProcess) {
-                    try { activeChildProcess.kill('SIGKILL'); } catch (err) {}
-                    activeChildProcess = null;
-                }
-                panel.webview.postMessage({ command: "updateStatus", payload: "ready" });
-            } else if (message.command === 'openExternal') {
-                if (message.url) {
-                    try {
-                        logOutputChannel.appendLine(`[INFO] Opening external URL: ${message.url}`);
-                        vscode.env.openExternal(vscode.Uri.parse(message.url));
-                    } catch (err) {
-                        logOutputChannel.appendLine(`[ERROR] Failed to open external URL: ${message.url}`);
-                        vscode.window.showErrorMessage(`Failed to open external link: ${message.url}`);
-                    }
-                }
-            } else if (message.command === 'revealFile') {
-                if (message.path) {
-                    const workspaceFolders = vscode.workspace.workspaceFolders;
-                    const workspaceRoot = workspaceFolders && workspaceFolders.length > 0 ? workspaceFolders[0].uri.fsPath : '';
-                    const fullPath = path.isAbsolute(message.path) ? message.path : path.join(workspaceRoot, message.path);
-                    if (fs.existsSync(fullPath)) {
-                        try {
-                            logOutputChannel.appendLine(`[INFO] Revealing file: ${message.path}`);
-                            const doc = await vscode.workspace.openTextDocument(fullPath);
-                            await vscode.window.showTextDocument(doc, {
-                                viewColumn: message.openEditor ? vscode.ViewColumn.One : undefined,
-                                preserveFocus: !message.openEditor
-                            });
-                        } catch (err) {}
-                    }
-                }
-            }
-        });
-    });
-    context.subscriptions.push(disposable);
-}
+  setContainerMaximized: (path, isMaximized) =>
+    set((state) => ({
+      containers: setByPath(state.containers, path, (c) => ({
+        ...c,
+        maximizeContainer: {
+          ...c.maximizeContainer,
+          isMaximized,
+        },
+      })),
+    })),
 
-function copyFolderRecursiveSync(source: string, target: string) {
-    if (!fs.existsSync(target)) {
-        fs.mkdirSync(target, { recursive: true });
-    }
-    if (fs.existsSync(source)) {
-        const files = fs.readdirSync(source);
-        for (const file of files) {
-            if (shouldSkipScriptSyncEntry(file)) continue;
-            const curSource = path.join(source, file);
-            const curTarget = path.join(target, file);
-            if (fs.statSync(curSource).isDirectory()) {
-                copyFolderRecursiveSync(curSource, curTarget);
-            } else {
-                fs.copyFileSync(curSource, curTarget);
-            }
+  toggleContainerMaximized: (path) =>
+    set((state) => ({
+      containers: setByPath(state.containers, path, (c) => {
+        if (c.maximizeContainer?.isMaximizable === false) {
+          return c;
         }
-    }
-}
+        return {
+          ...c,
+          maximizeContainer: {
+            ...c.maximizeContainer,
+            isMaximized: !c.maximizeContainer?.isMaximized,
+          },
+        };
+      }),
+    })),
 
-function hasOutdatedFiles(source: string, target: string): boolean {
-    if (!fs.existsSync(source)) return false;
-    if (!fs.existsSync(target)) return true;
-
-    const files = fs.readdirSync(source);
-    for (const file of files) {
-        if (shouldSkipScriptSyncEntry(file)) continue;
-        const curSource = path.join(source, file);
-        const curTarget = path.join(target, file);
-        const sourceStat = fs.statSync(curSource);
-
-        if (sourceStat.isDirectory()) {
-            if (hasOutdatedFiles(curSource, curTarget)) return true;
-            continue;
-        }
-
-        if (!fs.existsSync(curTarget)) return true;
-        const targetStat = fs.statSync(curTarget);
-        if (!targetStat.isFile() || targetStat.size !== sourceStat.size) return true;
-        if (!fs.readFileSync(curSource).equals(fs.readFileSync(curTarget))) return true;
-    }
-    return false;
-}
-
-function syncCoreScripts(context: vscode.ExtensionContext, workspaceRoot: string): boolean {
-    const targetDir = path.join(workspaceRoot, ".graph-rag-explorer", "scripts");
-    const versionFilePath = path.join(targetDir, "version.json");
-    const currentVersion = context.extension.packageJSON.version;
-    const sourceDir = path.join(context.extensionPath, "scripts");
-    let needsSync = VsCodeSettings.get("forceScriptSync") === true || !fs.existsSync(targetDir) || !fs.existsSync(versionFilePath);
-
-    if (!needsSync && fs.existsSync(versionFilePath)) {
-        try {
-            if (JSON.parse(fs.readFileSync(versionFilePath, "utf-8")).version !== currentVersion) needsSync = true;
-        } catch (e) { needsSync = true; }
-    }
-    if (!needsSync) {
-        needsSync = hasOutdatedFiles(sourceDir, targetDir);
-    }
-    if (needsSync) {
-        try {
-            logOutputChannel.appendLine('[INFO] Core scripts are outdated or missing. Syncing scripts directory...');
-            copyFolderRecursiveSync(sourceDir, targetDir);
-            fs.writeFileSync(versionFilePath, JSON.stringify({ version: currentVersion }), "utf-8");
-        } catch (err) {
-            logOutputChannel.appendLine(`[ERROR] Script sync failed: ${err}`);
-            return false;
-        }
-    }
-    return true;
-}
-
-function runPythonScan(context: vscode.ExtensionContext, panel: vscode.WebviewPanel, mode: string, targetFile: string = "") {
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders || workspaceFolders.length === 0) return;
-
-    const workspaceRoot = workspaceFolders[0].uri.fsPath;
-    const backendScriptsPath : string = VsCodeSettings.get('graphRagExplorer.beScriptsPath');
-    const targetDir4Scripts = path.join(workspaceRoot, backendScriptsPath, "scripts");
-
-    syncCoreScripts(context, workspaceRoot);
-    panel.webview.postMessage({ command: "updateStatus", payload: "building" });
-
-    const parseLogLine = (line: string, fallbackLevel: 'debug' | 'info' | 'warn' | 'error') => {
-        const cleanLine = line.trim();
-        if (!cleanLine) return;
-        let level = fallbackLevel;
-        if (cleanLine.includes("🪲") || cleanLine.includes("[DEBUG]")) level = "debug";
-        else if (cleanLine.includes("⚠️") || cleanLine.includes("[WARN]")) level = "warn";
-        else if (cleanLine.includes("❌") || cleanLine.includes("[ERROR]")) level = "error";
-        else if (cleanLine.includes("ℹ️") || cleanLine.includes("[INFO]") || cleanLine.includes("✅")) level = "info";
-
-        const timestamp = new Date().toLocaleTimeString();
-
-        // Relay background execution logs to the VS Code Output Channel
-        logOutputChannel.appendLine(`[${timestamp}] [${level.toUpperCase()}] ${cleanLine}`);
-
-        panel.webview.postMessage({
-            command: "logTrace",
-            payload: { level: level, message: cleanLine, timestamp: timestamp }
-        });
-    };
-
-    const runnerScript = path.join(targetDir4Scripts, "main.py");
-    let args = [runnerScript];
-
-    const isWindows = process.platform === 'win32';
-    const pythonBinary = isWindows ? 'python' : 'python3';
-
-    const payloadConfig = VsCodeSettings.toJson();
-    payloadConfig["graphRagExplorer"]["workspaceRoot"] = workspaceRoot;
-
-    if (activeChildProcess) {
-        try {
-            logOutputChannel.appendLine('[WARN] Terminating previous background execution context before launching new process.');
-            activeChildProcess.kill('SIGKILL');
-        } catch(e){}
-    }
-
-    logOutputChannel.appendLine(`[INFO] Spawning Python background process: ${pythonBinary} with script ${runnerScript}`);
-    const child = childProcess.spawn(pythonBinary, args, { cwd: workspaceRoot });
-    activeChildProcess = child;
-
-    child.stdin.write(JSON.stringify(payloadConfig));
-    child.stdin.end();
-
-    child.stdout.on("data", (data: any) => data.toString().split("\n").forEach((l: string) => parseLogLine(l, "info")));
-    child.stderr.on("data", (data: any) => data.toString().split("\n").forEach((l: string) => parseLogLine(l, "error")));
-
-    child.on("close", (code: number) => {
-        if (activeChildProcess === child) activeChildProcess = null;
-        if (code === 0) {
-            logOutputChannel.appendLine('[INFO] Python background process completed successfully.');
-            panel.webview.postMessage({ command: "updateStatus", payload: "ready" });
-            const finalUiPayloadPath = path.join(workspaceRoot, backendScriptsPath, "target", "ui_outputs", "graph-ui-payload.json");
-            if (fs.existsSync(finalUiPayloadPath)) {
-                try {
-                    const rawPayload = JSON.parse(fs.readFileSync(finalUiPayloadPath, "utf-8"));
-                    panel.webview.postMessage({ command: "updateGraphData", payload: rawPayload.graph });
-                } catch (err) {
-                    logOutputChannel.appendLine(`[ERROR] Failed to parse UI payload JSON structure: ${err}`);
-                }
-            }
-        } else {
-            logOutputChannel.appendLine(`[ERROR] Python background process exited with non-zero exit code: ${code}`);
-            panel.webview.postMessage({ command: "updateStatus", payload: "error" });
-        }
-    });
-}
-
-function sendConfig(panel: vscode.WebviewPanel, context: vscode.ExtensionContext) {
-    const host = VsCodeSettings.get('neo4j.host') || 'localhost';
-    const portHttp = VsCodeSettings.get('neo4j.port.http') || 7474;
-    const neo4jUrl = `http://${host}:${portHttp}/browser/preview/`;
-
-    panel.webview.postMessage({
-        command: 'setConfig',
-        config: {
-            entitiesTypesList: VsCodeSettings.get('entitiesTypesList'),
-            regexFilterEnabled: VsCodeSettings.get('regexFilterEnabled'),
-            treeFilterEnabled: VsCodeSettings.get('treeFilterEnabled'),
-            geminiApiKey: VsCodeSettings.get('geminiApiKey'),
-            tooltipDelay: VsCodeSettings.get('tooltipDelay') ?? 2000,
-            extensionVersion: context.extension.packageJSON.version,
-            neo4jUrl: neo4jUrl
-        }
-    });
-}
-
-function getWebviewContent(webview: vscode.Webview, extensionPath: string): string {
-    const scriptUri = webview.asWebviewUri(vscode.Uri.file(path.join(extensionPath, 'dist', 'webview.js')));
-    return `<!DOCTYPE html>
-    <html lang="en" class="h-full">
-    <head>
-        <meta charset="UTF-8"><title>Graph RAG Explorer</title>
-        <link href="https://cdn.jsdelivr.net/npm/@vscode/codicons/dist/codicon.css" rel="stylesheet">
-        <script src="https://cdn.tailwindcss.com"></script>
-    </head>
-    <body class="h-full overflow-hidden select-none" style="padding: 0px !important;">
-        <div id="root" class="h-full flex flex-col"></div>
-        <script src="${scriptUri}"></script>
-    </body></html>`;
-}
-
-export function deactivate() {
-    if (activeChildProcess) {
-        try { activeChildProcess.kill('SIGKILL'); } catch(e){}
-    }
-}
+  resetContainers: () => set({ containers: defaultLayoutContainers }),
+}));
 EOF
 
-# Build project to ensure updates are verified and compiled correctly
-npm run compile
+# 3. Update ExplorerFeature.tsx to pass handleNodeSelect to GraphPanel
+cat << 'EOF' > src/webview/features/explorer/ExplorerFeature.tsx
+import React, { useState, useEffect, useCallback } from 'react';
+import { useLayoutStore } from '@/store/useLayoutStore';
+import { useAppContextStore } from '@/store/useAppContextStore';
+import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
 
-echo "✅ feat: Integrated real-time log stream routing into a native VS Code Output Channel named 'graph-rag-explorer'!"
+import { ContextPathsPanel } from './wkp-top-paths/context-paths-panel';
+import { CodebaseExplorerPanel } from './wkp-lft-codebase-tree/CodebaseExplorerPanel';
+import { GraphPanel } from './wksp-cnt-graph/GraphPanel';
+import {
+  GraphPanelHeaderLeft,
+  GraphPanelHeaderCenter,
+  GraphPanelHeaderRight,
+} from './wksp-cnt-graph/GraphPanelHeader';
+import { GlobalInspectorPanel } from './wkp-rgt-tabs-inspector/global-inspector-panel';
+import { WkpBottomPanel } from './wkp-btm-infos/wkp-bottom-panel';
+import { EntityPropertiesPanel } from './sdb-rgt-properties/EntityPropertiesPanel';
+
+import { useCodebaseFilter } from './hooks/use-codebase-filter';
+import { useTransitiveImpact } from './hooks/use-transitive-impact';
+import { useGraph } from './wksp-cnt-graph/components/graph/use-graph';
+import { usePlantUml } from './wksp-cnt-graph/components/graph/use-plantuml';
+
+import {
+  codebaseService,
+  CodebaseData,
+  SelectedEntity,
+  ImpactDirection,
+} from '@/services/codebase';
+
+export function ExplorerFeature() {
+  const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
+  const toggleContainerMaximized = useLayoutStore((s) => s.toggleContainerMaximized);
+  const setNotification = useAppContextStore((s) => s.setNotification);
+  const isDarkMode = useAppContextStore((s) => s.isDarkMode);
+
+  const [codebase, setCodebase] = useState<CodebaseData>(() => codebaseService.getCodebase());
+  const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(null);
+  const [impactDirection, setImpactDirection] = useState<ImpactDirection>('aval');
+
+  const [showGrid, setShowGrid] = useState(true);
+  const [callersDepth, setCallersDepth] = useState(1);
+  const [calleesDepth, setCalleesDepth] = useState(1);
+  const [currentLayout, setCurrentLayout] = useState('preset');
+
+  const filter = useCodebaseFilter(codebase.files);
+  const { impactedSet } = useTransitiveImpact(selectedEntity, impactDirection, codebase.dependencies);
+
+  const handleNodeSelect = useCallback((nodeId: string) => {
+    setSelectedEntity({ type: 'node', nodeId });
+  }, []);
+
+  const handleSelectMember = useCallback((nodeId: string, memberId: string) => {
+    setSelectedEntity({ type: 'member', nodeId, memberId });
+  }, []);
+
+  const { containerRef, cyRef, graphState, updateGraphTopology, isReady } = useGraph(isDarkMode, handleNodeSelect);
+
+  const generatedPlantUML = usePlantUml(
+    filter.searchFilteredFiles,
+    filter.visibleFiles,
+    codebase.dependencies
+  );
+
+  useEffect(() => {
+    if (!isReady) return;
+    updateGraphTopology(
+      filter.searchFilteredFiles,
+      filter.visibleFiles,
+      codebase,
+      impactedSet,
+      currentLayout,
+      codebaseService.getFolderPositions()
+    );
+  }, [
+    isReady,
+    filter.searchFilteredFiles,
+    filter.visibleFiles,
+    codebase,
+    impactedSet,
+    currentLayout,
+    updateGraphTopology,
+  ]);
+
+  const handleCopy = useCallback(
+    (text: string, message: string) => {
+      if (navigator?.clipboard?.writeText) {
+        navigator.clipboard.writeText(text);
+      }
+      setNotification(message);
+    },
+    [setNotification]
+  );
+
+  const handleImportCodebase = useCallback(
+    (importedData: CodebaseData) => {
+      codebaseService.importCodebase(importedData);
+      setCodebase({ ...importedData });
+      setNotification('AST Codebase imported successfully!');
+    },
+    [setNotification]
+  );
+
+  useEffect(() => {
+    setLayoutContainers({
+      header: { visible: true, isResizable: false, isHiddable: false },
+      sidebarLeft: { visible: true, isResizable: true, isHiddable: true },
+      workspace: {
+        top: {
+          visible: true,
+          isResizable: true,
+          isHiddable: true,
+          container: (
+            <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-background overflow-hidden">
+              <ContainerPanelHeader title="Context Paths" path="workspace.top" />
+              <div className="flex-1 min-h-0 overflow-auto">
+                <ContextPathsPanel />
+              </div>
+            </div>
+          ),
+          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
+        },
+        left: {
+          visible: true,
+          isResizable: true,
+          isHiddable: true,
+          container: (
+            <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-card overflow-hidden">
+              <ContainerPanelHeader title="Codebase Explorer" path="workspace.left" />
+              <div className="flex-1 min-h-0 overflow-auto">
+                <CodebaseExplorerPanel
+                  searchFilteredFiles={filter.searchFilteredFiles}
+                  expandedFolders={filter.expandedFolders}
+                  visibleFiles={filter.visibleFiles}
+                  toggleFolder={filter.toggleFolder}
+                  toggleFolderCheckbox={filter.toggleFolderCheckbox}
+                  toggleFileCheckbox={filter.toggleFileCheckbox}
+                  setSelectedEntity={setSelectedEntity}
+                  onImportCodebase={handleImportCodebase}
+                />
+              </div>
+            </div>
+          ),
+          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
+        },
+        center: {
+          visible: true,
+          isResizable: false,
+          isHiddable: false,
+          container: (
+            <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-background relative overflow-hidden">
+              <ContainerPanelHeader
+                path="workspace.center"
+                isHiddable={false}
+                headerLeft={<GraphPanelHeaderLeft />}
+                headerCenter={
+                  <GraphPanelHeaderCenter
+                    maxNodesLimit={filter.maxNodesLimit}
+                    setMaxNodesLimit={filter.setMaxNodesLimit}
+                    callersDepth={callersDepth}
+                    setCallersDepth={setCallersDepth}
+                    calleesDepth={calleesDepth}
+                    setCalleesDepth={setCalleesDepth}
+                    displayLevel={filter.displayLevel}
+                    setDisplayLevel={filter.setDisplayLevel}
+                    currentLayout={currentLayout}
+                    setCurrentLayout={setCurrentLayout}
+                  />
+                }
+                headerRight={
+                  <GraphPanelHeaderRight
+                    cyRef={cyRef}
+                    isGraphMaximized={false}
+                    setIsGraphMaximized={() => toggleContainerMaximized('workspace.center')}
+                    showGrid={showGrid}
+                    setShowGrid={setShowGrid}
+                  />
+                }
+              />
+              <div className="flex-1 min-h-0 relative w-full h-full">
+                <GraphPanel
+                  containerRef={containerRef}
+                  showGrid={showGrid}
+                  isDarkMode={isDarkMode}
+                  graphState={graphState}
+                  selectedEntity={selectedEntity}
+                  searchFilteredFiles={filter.searchFilteredFiles}
+                  impactedSet={impactedSet}
+                  handleSelectMember={handleSelectMember}
+                  handleNodeSelect={handleNodeSelect}
+                />
+              </div>
+            </div>
+          ),
+          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
+        },
+        right: {
+          visible: true,
+          isResizable: true,
+          isHiddable: true,
+          container: (
+            <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-card overflow-hidden">
+              <ContainerPanelHeader title="Global Inspector" path="workspace.right" />
+              <div className="flex-1 min-h-0 overflow-auto">
+                <GlobalInspectorPanel
+                  selectedEntity={selectedEntity}
+                  initialCodebase={codebase}
+                  impactDirection={impactDirection}
+                  setImpactDirection={setImpactDirection}
+                  impactedSet={impactedSet}
+                  handleCopy={handleCopy}
+                  generatedPlantUML={generatedPlantUML}
+                />
+              </div>
+            </div>
+          ),
+          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
+        },
+        bottom: {
+          visible: true,
+          isResizable: true,
+          isHiddable: true,
+          container: (
+            <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-background overflow-hidden">
+              <ContainerPanelHeader title="Output & Logs" path="workspace.bottom" />
+              <div className="flex-1 min-h-0 overflow-auto">
+                <WkpBottomPanel />
+              </div>
+            </div>
+          ),
+          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
+        },
+      },
+      sidebarRight: {
+        visible: true,
+        isResizable: true,
+        isHiddable: true,
+        container: (
+          <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-card overflow-hidden">
+            <ContainerPanelHeader title="Entity Properties" path="sidebarRight" />
+            <div className="flex-1 min-h-0 overflow-auto">
+              <EntityPropertiesPanel selectedEntity={selectedEntity} />
+            </div>
+          </div>
+        ),
+        maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
+      },
+      footer: { visible: true, isResizable: false, isHiddable: false },
+    });
+  }, [
+    setLayoutContainers,
+    toggleContainerMaximized,
+    filter.searchFilteredFiles,
+    filter.expandedFolders,
+    filter.visibleFiles,
+    filter.maxNodesLimit,
+    filter.displayLevel,
+    filter.toggleFolder,
+    filter.toggleFolderCheckbox,
+    filter.toggleFileCheckbox,
+    filter.setMaxNodesLimit,
+    filter.setDisplayLevel,
+    callersDepth,
+    calleesDepth,
+    currentLayout,
+    showGrid,
+    selectedEntity,
+    codebase,
+    impactDirection,
+    impactedSet,
+    generatedPlantUML,
+    handleCopy,
+    handleImportCodebase,
+    handleSelectMember,
+    handleNodeSelect,
+    containerRef,
+    cyRef,
+    isDarkMode,
+    graphState,
+  ]);
+
+  return null;
+}
+
+export default ExplorerFeature;
+EOF
+
+# 4. Rebuild project bundle
+echo "✅ fix: Resolved layout toggle flash by preserving user-selected panel visibility in Zustand store across feature re-renders!"
+npm run compile
