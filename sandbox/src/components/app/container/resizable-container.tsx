@@ -28,8 +28,9 @@ export function ResizableContainer({
     none: "hidden"
   };
 
+  // Only pass custom React prop parentContainerId to React Components, NOT standard HTML elements (div, etc.)
   const childrenWithParentId = React.Children.map(children, (child) => {
-    if (React.isValidElement(child)) {
+    if (React.isValidElement(child) && typeof child.type !== 'string') {
       return React.cloneElement(child, {
         parentContainerId: id,
       } as React.Attributes & { parentContainerId?: string });

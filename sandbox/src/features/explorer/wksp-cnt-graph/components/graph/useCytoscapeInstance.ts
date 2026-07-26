@@ -59,7 +59,7 @@ export function useCytoscapeInstance(isDarkMode: boolean, onNodeSelect: (nodeId:
     cy.on('drag pan zoom render', syncGraph);
 
     requestAnimationFrame(() => {
-      if (cyRef.current && !cyRef.current.isDestroyed()) {
+      if (cyRef.current && !cyRef.current.destroyed()) {
         cyRef.current.resize();
       }
     });
