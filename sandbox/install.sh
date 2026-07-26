@@ -1,10 +1,216 @@
 #!/usr/bin/env bash
 set -e
 
-echo "🚀 Refactoring ExplorerFeature.tsx to define layout containers explicitly like WelcomeFeature.tsx..."
+echo "🚀 Fixing Cytoscape DOM mounting lifecycle in ExplorerFeature..."
 
-mkdir -p src/features/explorer
+mkdir -p src/features/explorer/wksp-cnt-graph/components/graph
 
+# 1. Update useCytoscapeInstance.ts to use Callback Ref
+cat << 'EOF' > src/features/explorer/wksp-cnt-graph/components/graph/useCytoscapeInstance.ts
+import { useEffect, useRef, useState, useCallback } from 'react';
+import cytoscape from 'cytoscape';
+
+export interface GraphState {
+  zoom: number;
+  pan: { x: number; y: number };
+  nodePositions: Record<string, { x: number; y: number; w: number; h: number }>;
+}
+
+export function useCytoscapeInstance(isDarkMode: boolean, onNodeSelect: (nodeId: string) => void) {
+  const [containerNode, setContainerNode] = useState<HTMLDivElement | null>(null);
+  const cyRef = useRef<cytoscape.Core | null>(null);
+  const [graphState, setGraphState] = useState<GraphState>({
+    zoom: 1,
+    pan: { x: 0, y: 0 },
+    nodePositions: {}
+  });
+
+  const containerRef = useCallback((node: HTMLDivElement | null) => {
+    if (node !== null) {
+      setContainerNode(node);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!containerNode) return;
+
+    const cy = cytoscape({
+      container: containerNode,
+      style: [
+        { selector: 'node[width][height]', style: { 'shape': 'rectangle', 'opacity': 0.0, 'width': 'data(width)', 'height': 'data(height)' } },
+        { selector: 'node.folder', style: { 'shape': 'rectangle', 'opacity': 1.0, 'label': 'data(label)', 'text-valign': 'top', 'text-halign': 'center', 'text-margin-y': -12, 'font-size': '12px', 'font-family': 'monospace', 'font-weight': 'bold', 'color': isDarkMode ? '#94a3b8' : '#475569', 'background-opacity': 0.02, 'background-color': isDarkMode ? '#475569' : '#94a3b8', 'border-width': '2px', 'border-color': isDarkMode ? '#334155' : '#cbd5e1', 'border-style': 'dashed', 'padding': '40' } },
+        { selector: 'edge', style: { 'width': 2, 'line-color': isDarkMode ? '#475569' : '#cbd5e1', 'target-arrow-color': isDarkMode ? '#475569' : '#cbd5e1', 'target-arrow-shape': 'triangle', 'curve-style': 'bezier', 'label': 'data(label)', 'font-size': '9px', 'font-family': 'monospace', 'color': isDarkMode ? '#94a3b8' : '#475569', 'text-background-opacity': 1, 'text-background-color': isDarkMode ? '#18181b' : '#ffffff', 'text-background-padding': '3px', 'text-background-shape': 'roundrectangle' } },
+        { selector: 'edge.impacted', style: { 'line-color': '#f97316', 'target-arrow-color': '#f97316', 'width': 4 } }
+      ],
+      userZoomingEnabled: true,
+      userPanningEnabled: true,
+      boxSelectionEnabled: false
+    });
+
+    cyRef.current = cy;
+
+    cy.on('tap', 'node', (evt) => {
+      if (!evt.target.hasClass('folder')) {
+        onNodeSelect(evt.target.id());
+      }
+    });
+
+    const syncGraph = () => {
+      const positions: Record<string, { x: number; y: number; w: number; h: number }> = {};
+      cy.nodes().forEach(node => {
+        if (node.hasClass('folder')) return;
+        const bb = node.boundingBox({ includeLabels: false, includeEdges: false });
+        positions[node.id()] = { x: bb.x1, y: bb.y1, w: bb.w, h: bb.h };
+      });
+      setGraphState({ zoom: cy.zoom(), pan: cy.pan(), nodePositions: positions });
+    };
+
+    cy.on('drag pan zoom render', syncGraph);
+
+    requestAnimationFrame(() => {
+      if (cyRef.current && !cyRef.current.isDestroyed()) {
+        cyRef.current.resize();
+      }
+    });
+
+    return () => cy.destroy();
+  }, [containerNode, isDarkMode, onNodeSelect]);
+
+  return { containerRef, cyRef, graphState, isReady: !!containerNode };
+}
+EOF
+
+# 2. Update use-graph.ts
+cat << 'EOF' > src/features/explorer/wksp-cnt-graph/components/graph/use-graph.ts
+import { useCytoscapeInstance } from './useCytoscapeInstance';
+import { useGraphTopology } from './useGraphTopology';
+
+export function useGraph(isDarkMode: boolean, onNodeSelect: (nodeId: string) => void) {
+  const { containerRef, cyRef, graphState, isReady } = useCytoscapeInstance(isDarkMode, onNodeSelect);
+  const { updateGraphTopology } = useGraphTopology(cyRef);
+
+  return { containerRef, cyRef, graphState, updateGraphTopology, isReady };
+}
+EOF
+
+# 3. Update GraphPanel.tsx
+cat << 'EOF' > src/features/explorer/wksp-cnt-graph/GraphPanel.tsx
+import React from 'react';
+import { Info } from 'lucide-react';
+import { FolderNode, UmlClassNode, ConfigNode, UmlClassNodeData } from './components/graph/GraphUmlShapes';
+import { codebaseService, SelectedEntity, CodebaseFile, isMemberKeyForFileToken, extractMemberIdFromKeyToken } from '@/services/codebase';
+
+interface GraphPanelProps {
+  containerRef: (node: HTMLDivElement | null) => void;
+  showGrid: boolean;
+  isDarkMode: boolean;
+  graphState: {
+    zoom: number;
+    pan: { x: number; y: number };
+    nodePositions: Record<string, { x: number; y: number; w: number; h: number }>;
+  };
+  selectedEntity: SelectedEntity | null;
+  searchFilteredFiles: CodebaseFile[];
+  impactedSet: Set<string>;
+  handleSelectMember: (nodeId: string, memberId: string) => void;
+}
+
+export function GraphPanel({
+  containerRef,
+  showGrid,
+  isDarkMode,
+  graphState,
+  selectedEntity,
+  searchFilteredFiles,
+  impactedSet,
+  handleSelectMember
+}: GraphPanelProps) {
+  const folderPositions = codebaseService.getFolderPositions();
+
+  return (
+    <div className="absolute inset-0 outline-none w-full h-full overflow-hidden">
+      <div
+        ref={containerRef}
+        className="z-0 absolute inset-0 w-full h-full"
+        style={showGrid ? {
+          backgroundImage: isDarkMode ? 'radial-gradient(#334155 1.2px, transparent 1.2px)' : 'radial-gradient(#cbd5e1 1.2px, transparent 1.2px)',
+          backgroundSize: `${16 * graphState.zoom}px ${16 * graphState.zoom}px`,
+          backgroundPosition: `${graphState.pan.x}px ${graphState.pan.y}px`
+        } : undefined}
+      />
+
+      <div
+        className="z-10 absolute inset-0 origin-top-left pointer-events-none select-none"
+        style={{ transform: `translate(${graphState.pan.x}px, ${graphState.pan.y}px) scale(${graphState.zoom})` }}
+      >
+        {Object.entries(folderPositions).map(([folderKey, initialPos]) => {
+          const bounds = graphState.nodePositions[`folder__${folderKey}`];
+          if (!bounds) return null;
+          const isSelected = selectedEntity?.nodeId === `folder__${folderKey}`;
+          return (
+            <div key={`folder-box-${folderKey}`} className="z-10 absolute transition-all duration-75 ease-out" style={{ left: bounds.x, top: bounds.y, width: bounds.w, height: bounds.h }}>
+              <FolderNode data={{ label: initialPos.label }} isSelected={isSelected} />
+            </div>
+          );
+        })}
+
+        {searchFilteredFiles.map((file: CodebaseFile) => {
+          const bounds = graphState.nodePositions[file.id];
+          if (!bounds) return null;
+
+          const impactedMembers: string[] = [];
+          impactedSet.forEach(item => {
+            if (isMemberKeyForFileToken(item, file.id)) {
+              impactedMembers.push(extractMemberIdFromKeyToken(item));
+            }
+          });
+          const isNodeImpacted = impactedSet.has(file.id);
+          const isDimmed = selectedEntity !== null && impactedSet.size > 0 && !isNodeImpacted;
+
+          const nodeData: UmlClassNodeData = {
+            ...file,
+            isDimmed,
+            impactedMembers,
+            selectedMember: selectedEntity?.nodeId === file.id ? selectedEntity?.memberId : undefined,
+            onSelectMember: handleSelectMember
+          };
+
+          return (
+            <div key={file.id} className="z-20 absolute transition-all duration-75 ease-out pointer-events-none" style={{ left: bounds.x, top: bounds.y, width: bounds.w, height: bounds.h }}>
+              {file.type === 'config' ? <ConfigNode id={file.id} data={nodeData} /> : <UmlClassNode id={file.id} data={nodeData} />}
+            </div>
+          );
+        })}
+      </div>
+
+      <div id="cytoscape-engine-info" className="top-4 left-4 z-20 absolute bg-card/90 shadow-md backdrop-blur p-3 border border-border rounded-lg max-w-sm font-mono text-xs pointer-events-auto">
+        <div className="flex justify-between items-center gap-2 mb-1">
+          <div className="flex items-center gap-2">
+            <Info size={14} className="text-primary" />
+            <span className="font-bold">Surgical Analysis (Cytoscape Engine)</span>
+          </div>
+          <button
+            onClick={() => {
+              const infoDiv = document.getElementById('cytoscape-engine-info');
+              if (infoDiv) infoDiv.style.display = 'none';
+            }}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Close info"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <p className="text-[10px] text-muted-foreground">Drag-and-drop on headers and wheel zoom use Cytoscape's responsive architecture.</p>
+      </div>
+    </div>
+  );
+}
+EOF
+
+# 4. Update ExplorerFeature.tsx
 cat << 'EOF' > src/features/explorer/ExplorerFeature.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLayoutStore } from '@/store/useLayoutStore';
@@ -41,7 +247,6 @@ export function ExplorerFeature() {
   const setNotification = useAppContextStore((s) => s.setNotification);
   const isDarkMode = useAppContextStore((s) => s.isDarkMode);
 
-  // Feature domain state
   const [codebase, setCodebase] = useState<CodebaseData>(() => codebaseService.getCodebase());
   const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(null);
   const [impactDirection, setImpactDirection] = useState<ImpactDirection>('aval');
@@ -51,7 +256,6 @@ export function ExplorerFeature() {
   const [calleesDepth, setCalleesDepth] = useState(1);
   const [currentLayout, setCurrentLayout] = useState('preset');
 
-  // Domain rules hooks
   const filter = useCodebaseFilter(codebase.files);
   const { impactedSet } = useTransitiveImpact(selectedEntity, impactDirection, codebase.dependencies);
 
@@ -63,7 +267,7 @@ export function ExplorerFeature() {
     setSelectedEntity({ type: 'member', nodeId, memberId });
   }, []);
 
-  const { containerRef, cyRef, graphState, updateGraphTopology } = useGraph(isDarkMode, handleNodeSelect);
+  const { containerRef, cyRef, graphState, updateGraphTopology, isReady } = useGraph(isDarkMode, handleNodeSelect);
 
   const generatedPlantUML = usePlantUml(
     filter.searchFilteredFiles,
@@ -72,6 +276,7 @@ export function ExplorerFeature() {
   );
 
   useEffect(() => {
+    if (!isReady) return;
     updateGraphTopology(
       filter.searchFilteredFiles,
       filter.visibleFiles,
@@ -81,6 +286,7 @@ export function ExplorerFeature() {
       codebaseService.getFolderPositions()
     );
   }, [
+    isReady,
     filter.searchFilteredFiles,
     filter.visibleFiles,
     codebase,
@@ -108,7 +314,6 @@ export function ExplorerFeature() {
     [setNotification]
   );
 
-  // Apply layout container configuration for Explorer Feature
   useEffect(() => {
     setLayoutContainers({
       header: { visible: true, isResizable: false, isHiddable: false },
@@ -291,42 +496,4 @@ export function ExplorerFeature() {
 export default ExplorerFeature;
 EOF
 
-# Ensure App.tsx handles all feature menu item ID variants
-cat << 'EOF' > src/App.tsx
-import React from 'react';
-import { useAppContextStore } from '@/store/useAppContextStore';
-import { useLayoutStore } from '@/store/useLayoutStore';
-import { AppLayout } from '@/components/app/layout/AppLayout';
-import { WelcomeFeature } from '@/features/welcome/WelcomeFeature';
-import { LayoutDemoFeature } from '@/features/layout-demo/LayoutDemoFeature';
-import { ExplorerFeature } from '@/features/explorer/ExplorerFeature';
-import { RulesFeature } from '@/features/rules/RulesFeature';
-import { HelpFeature } from '@/features/help/HelpFeature';
-
-export default function App() {
-  const { activeFeature, setActiveFeature, isDarkMode, setIsDarkMode, notification } = useAppContextStore();
-  const { containers } = useLayoutStore();
-
-  return (
-    <>
-      {/* Active Feature updates LayoutStore containers dynamically when menu items are clicked */}
-      {(activeFeature === 'panel-welcome' || activeFeature === 'feature-welcome' || activeFeature === 'welcome') && <WelcomeFeature />}
-      {(activeFeature === 'panel-explorer' || activeFeature === 'feature-explorer' || activeFeature === 'explorer') && <ExplorerFeature />}
-      {(activeFeature === 'layout-demo' || activeFeature === 'feature-layout') && <LayoutDemoFeature />}
-      {(activeFeature === 'panel-rules' || activeFeature === 'feature-rules' || activeFeature === 'rules') && <RulesFeature />}
-      {(activeFeature === 'panel-help' || activeFeature === 'feature-help' || activeFeature === 'help') && <HelpFeature />}
-
-      <AppLayout
-        activeFeature={activeFeature}
-        setActiveFeature={setActiveFeature}
-        isDarkMode={isDarkMode}
-        setIsDarkMode={setIsDarkMode}
-        notification={notification}
-        layoutContainers={containers}
-      />
-    </>
-  );
-}
-EOF
-
-echo "✅ ExplorerFeature refactored to define layout containers with subfolder panels!"
+echo "✅ Cytoscape DOM callback ref updated. The Graph now renders smoothly in AST Explorer!"

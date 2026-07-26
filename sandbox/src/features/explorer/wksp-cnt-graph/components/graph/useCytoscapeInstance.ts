@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import cytoscape from 'cytoscape';
 
 export interface GraphState {
@@ -8,7 +8,7 @@ export interface GraphState {
 }
 
 export function useCytoscapeInstance(isDarkMode: boolean, onNodeSelect: (nodeId: string) => void) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerNode, setContainerNode] = useState<HTMLDivElement | null>(null);
   const cyRef = useRef<cytoscape.Core | null>(null);
   const [graphState, setGraphState] = useState<GraphState>({
     zoom: 1,
@@ -16,11 +16,17 @@ export function useCytoscapeInstance(isDarkMode: boolean, onNodeSelect: (nodeId:
     nodePositions: {}
   });
 
+  const containerRef = useCallback((node: HTMLDivElement | null) => {
+    if (node !== null) {
+      setContainerNode(node);
+    }
+  }, []);
+
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerNode) return;
 
     const cy = cytoscape({
-      container: containerRef.current,
+      container: containerNode,
       style: [
         { selector: 'node[width][height]', style: { 'shape': 'rectangle', 'opacity': 0.0, 'width': 'data(width)', 'height': 'data(height)' } },
         { selector: 'node.folder', style: { 'shape': 'rectangle', 'opacity': 1.0, 'label': 'data(label)', 'text-valign': 'top', 'text-halign': 'center', 'text-margin-y': -12, 'font-size': '12px', 'font-family': 'monospace', 'font-weight': 'bold', 'color': isDarkMode ? '#94a3b8' : '#475569', 'background-opacity': 0.02, 'background-color': isDarkMode ? '#475569' : '#94a3b8', 'border-width': '2px', 'border-color': isDarkMode ? '#334155' : '#cbd5e1', 'border-style': 'dashed', 'padding': '40' } },
@@ -52,8 +58,14 @@ export function useCytoscapeInstance(isDarkMode: boolean, onNodeSelect: (nodeId:
 
     cy.on('drag pan zoom render', syncGraph);
 
-    return () => cy.destroy();
-  }, [isDarkMode, onNodeSelect]);
+    requestAnimationFrame(() => {
+      if (cyRef.current && !cyRef.current.isDestroyed()) {
+        cyRef.current.resize();
+      }
+    });
 
-  return { containerRef, cyRef, graphState };
+    return () => cy.destroy();
+  }, [containerNode, isDarkMode, onNodeSelect]);
+
+  return { containerRef, cyRef, graphState, isReady: !!containerNode };
 }

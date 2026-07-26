@@ -13,6 +13,7 @@
   --foreground: oklch(0.32 0 0);
   --card: oklch(1.00 0 0);
   --card-foreground: oklch(0.32 0 0);
+  --card-spacing: 2px;
   --popover: oklch(1.00 0 0);
   --popover-foreground: oklch(0.32 0 0);
   --primary: oklch(0.62 0.19 259.76);
@@ -71,6 +72,7 @@
   --foreground: oklch(0.92 0 0);
   --card: oklch(0.27 0 0);
   --card-foreground: oklch(0.92 0 0);
+  --card-spacing: 5px;
   --popover: oklch(0.27 0 0);
   --popover-foreground: oklch(0.92 0 0);
   --primary: oklch(0.62 0.19 259.76);
@@ -154,6 +156,9 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+   --card-spacing: var(--card-spacing);
+
 }
 
 @layer base {

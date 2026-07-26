@@ -33,7 +33,6 @@ export function ExplorerFeature() {
   const setNotification = useAppContextStore((s) => s.setNotification);
   const isDarkMode = useAppContextStore((s) => s.isDarkMode);
 
-  // Feature domain state
   const [codebase, setCodebase] = useState<CodebaseData>(() => codebaseService.getCodebase());
   const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(null);
   const [impactDirection, setImpactDirection] = useState<ImpactDirection>('aval');
@@ -43,7 +42,6 @@ export function ExplorerFeature() {
   const [calleesDepth, setCalleesDepth] = useState(1);
   const [currentLayout, setCurrentLayout] = useState('preset');
 
-  // Domain rules hooks
   const filter = useCodebaseFilter(codebase.files);
   const { impactedSet } = useTransitiveImpact(selectedEntity, impactDirection, codebase.dependencies);
 
@@ -55,7 +53,7 @@ export function ExplorerFeature() {
     setSelectedEntity({ type: 'member', nodeId, memberId });
   }, []);
 
-  const { containerRef, cyRef, graphState, updateGraphTopology } = useGraph(isDarkMode, handleNodeSelect);
+  const { containerRef, cyRef, graphState, updateGraphTopology, isReady } = useGraph(isDarkMode, handleNodeSelect);
 
   const generatedPlantUML = usePlantUml(
     filter.searchFilteredFiles,
@@ -64,6 +62,7 @@ export function ExplorerFeature() {
   );
 
   useEffect(() => {
+    if (!isReady) return;
     updateGraphTopology(
       filter.searchFilteredFiles,
       filter.visibleFiles,
@@ -73,6 +72,7 @@ export function ExplorerFeature() {
       codebaseService.getFolderPositions()
     );
   }, [
+    isReady,
     filter.searchFilteredFiles,
     filter.visibleFiles,
     codebase,
@@ -100,7 +100,6 @@ export function ExplorerFeature() {
     [setNotification]
   );
 
-  // Apply layout container configuration for Explorer Feature
   useEffect(() => {
     setLayoutContainers({
       header: { visible: true, isResizable: false, isHiddable: false },

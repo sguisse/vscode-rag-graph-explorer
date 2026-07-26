@@ -4,7 +4,7 @@ import { FolderNode, UmlClassNode, ConfigNode, UmlClassNodeData } from './compon
 import { codebaseService, SelectedEntity, CodebaseFile, isMemberKeyForFileToken, extractMemberIdFromKeyToken } from '@/services/codebase';
 
 interface GraphPanelProps {
-  containerRef: React.RefObject<HTMLDivElement | null>;
+  containerRef: (node: HTMLDivElement | null) => void;
   showGrid: boolean;
   isDarkMode: boolean;
   graphState: {
