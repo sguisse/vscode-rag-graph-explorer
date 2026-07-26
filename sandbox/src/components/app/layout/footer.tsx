@@ -5,17 +5,17 @@ export function Footer() {
   return (
     <LeftCenterRightPanel
       id="ctn-footer"
-      className="fixed bottom-0 left-0 right-0 h-[40px] z-40 bg-card border-t border-border px-4 font-mono text-xs select-none w-full flex items-center text-muted-foreground"
+      className="flex items-center bg-card px-3 w-full h-8 font-mono text-muted-foreground text-xs select-none"
       left={
         <div className="flex items-center gap-2">
-          <span className="text-emerald-500 font-bold">● Active Sandbox Mode</span>
+          <span className="font-bold text-emerald-500">● Active Sandbox Mode</span>
         </div>
       }
       center={
         <span>AST Compilation Log: Matrix Active</span>
       }
       right={
-        <div className="text-[10px] bg-muted px-2 py-0.5 rounded border border-border">
+        <div className="bg-muted px-2 py-0.5 border border-border rounded text-[10px]">
           Status: 200 OK
         </div>
       }

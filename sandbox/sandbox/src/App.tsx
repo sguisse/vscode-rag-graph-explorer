@@ -16,7 +16,7 @@ export default function App() {
     <>
       {/* Feature components apply their layout configuration to LayoutStore when active */}
       {(activeFeature === 'feature-welcome') && <WelcomeFeature />}
-      {(activeFeature === 'feature-explorer') && <ExplorerFeature />}
+      {(activeFeature === 'feature-graph-explorer') && <ExplorerFeature />}
       {activeFeature === 'layout-demo' && <LayoutDemoFeature />}
       {(activeFeature === 'feature-rules') && <RulesFeature />}
       {(activeFeature === 'feature-help') && <HelpFeature />}

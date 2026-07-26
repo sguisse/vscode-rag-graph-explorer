@@ -1,19 +1,19 @@
 import React, { useEffect } from 'react';
 import { useLayoutStore } from '@/store/useLayoutStore';
-import { WelcomePanel } from './welcomePanel';
+import { HomePanel } from './HomePanel';
 
-export function WelcomeFeature() {
+export function HomeFeature() {
   const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
 
   useEffect(() => {
-    // Configures layout specifically for the Welcome Feature
+    // Configures layout specifically for the Home Feature
     setLayoutContainers({
       header: { visible: true, isResizable: false, isHiddable: false },
       sidebarLeft: { visible: true, isResizable: true, isHiddable: true },
       workspace: {
         top: { visible: false },
         left: { visible: false },
-        center: { visible: true, container: <WelcomePanel />, isHiddable: false, maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' } },
+        center: { visible: true, container: <HomePanel />, isHiddable: false, maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' } },
         right: { visible: false },
         bottom: { visible: false },
       },
@@ -25,4 +25,4 @@ export function WelcomeFeature() {
   return null;
 }
 
-export default WelcomeFeature;
+export default HomeFeature;

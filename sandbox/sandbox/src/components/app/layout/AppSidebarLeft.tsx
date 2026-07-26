@@ -42,15 +42,15 @@ interface AppSidebarLeftProps {
 }
 
 export const SIDEBAR_MENU_ITEMS: NavItem[] = [
-  { id: 'panel-welcome', icon: Home, label: 'Home' },
-  { id: 'panel-explorer', icon: FolderTree, label: 'AST Explorer', badge: 'New' },
+  { id: 'feat-welcome', icon: Home, label: 'Home' },
+  { id: 'feat-graph-explorer', icon: FolderTree, label: 'Graph Explorer', badge: 'News' },
   { id: 'layout-demo', icon: Layout, label: 'Layout Demo' },
-  { id: 'panel-rules', icon: Scale, label: 'Cypher Rules' },
-  { id: 'panel-prompt', icon: FileJson, label: 'GraphRAG Prompt' },
-  { id: 'panel-terminal', icon: Terminal, label: 'CLI Terminal' },
-  { id: 'panel-history', icon: History, label: 'History' },
-  { id: 'panel-configuration', icon: Settings, label: 'Configuration', bottom: true },
-  { id: 'panel-help', icon: HelpCircle, label: 'Help & Shortcuts', bottom: true },
+  { id: 'feat-rules', icon: Scale, label: 'Cypher Rules' },
+  { id: 'feat-prompt', icon: FileJson, label: 'GraphRAG Prompt' },
+  { id: 'feat-terminal', icon: Terminal, label: 'CLI Terminal' },
+  { id: 'feat-history', icon: History, label: 'History' },
+  { id: 'feat-configuration', icon: Settings, label: 'Configuration', bottom: true },
+  { id: 'feat-help', icon: HelpCircle, label: 'Help & Shortcuts', bottom: true },
 ];
 
 export function renderSidebarMenuItem(
@@ -59,7 +59,7 @@ export function renderSidebarMenuItem(
   setActiveFeature: (feature: string) => void,
   sidebarLeftMode: 'normal' | 'minimal' = 'normal'
 ) {
-  const isActive = activeFeature === item.id || (item.id === 'panel-welcome' && activeFeature === 'welcome');
+  const isActive = activeFeature === item.id || (item.id === 'feat-welcome' && activeFeature === 'welcome');
   const isMinimal = sidebarLeftMode === 'minimal';
 
   return (

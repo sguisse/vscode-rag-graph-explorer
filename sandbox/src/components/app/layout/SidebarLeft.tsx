@@ -4,6 +4,7 @@ import {
   ChevronRight,
   FolderTree,
   Scale,
+  PackageCheck,
   Terminal,
   History,
   Settings,
@@ -12,6 +13,8 @@ import {
   LayoutGrid,
   Home,
   Layout,
+  VectorSquare,
+  FolderDown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -33,7 +36,7 @@ export interface NavItem {
   bottom?: boolean;
 }
 
-interface AppSidebarLeftProps {
+interface SidebarLeftProps {
   activeFeature: string;
   setActiveFeature: (feature: string) => void;
   sidebarLeftMode?: 'normal' | 'minimal';
@@ -42,15 +45,15 @@ interface AppSidebarLeftProps {
 }
 
 export const SIDEBAR_MENU_ITEMS: NavItem[] = [
-  { id: 'feature-welcome', icon: Home, label: 'Home' },
-  { id: 'feature-explorer', icon: FolderTree, label: 'AST Explorer', badge: 'New' },
-  { id: 'layout-demo', icon: Layout, label: 'Layout Demo' },
+  { id: 'feature-home', icon: Home, label: 'Home' },
+  { id: 'feature-install', icon: PackageCheck, label: 'Install' },
+  { id: 'feature-graph-explorer', icon: VectorSquare, label: 'Graph RAG Explorer', badge: 'New' },
+  { id: 'feature-codebase-exporter', icon: FolderDown, label: 'Codebase Exporter', badge: 'Updated' },
   { id: 'feature-rules', icon: Scale, label: 'Cypher Rules' },
-  { id: 'feature-prompt', icon: FileJson, label: 'GraphRAG Prompt' },
-  { id: 'feature-terminal', icon: Terminal, label: 'CLI Terminal' },
-  { id: 'feature-history', icon: History, label: 'History' },
+
   { id: 'feature-configuration', icon: Settings, label: 'Configuration', bottom: true },
   { id: 'feature-help', icon: HelpCircle, label: 'Help & Shortcuts', bottom: true },
+  { id: 'feature-layout-demo', icon: Layout, label: 'Layout Demo', bottom: true },
 ];
 
 export function renderSidebarMenuItem(
@@ -59,7 +62,7 @@ export function renderSidebarMenuItem(
   setActiveFeature: (feature: string) => void,
   sidebarLeftMode: 'normal' | 'minimal' = 'normal'
 ) {
-  const isActive = activeFeature === item.id || (item.id === 'feature-welcome' && activeFeature === 'welcome');
+  const isActive = activeFeature === item.id || (item.id === 'feature-home' && activeFeature === 'home');
   const isMinimal = sidebarLeftMode === 'minimal';
 
   return (
@@ -89,13 +92,13 @@ export function renderSidebarMenuItem(
   );
 }
 
-export function AppSidebarLeft({
+export function SidebarLeft({
   activeFeature,
   setActiveFeature,
   sidebarLeftMode: modeProp,
   setSidebarLeftMode: setModeProp,
   sidebarLeftWidth = 220,
-}: AppSidebarLeftProps) {
+}: SidebarLeftProps) {
   const [internalMode, setInternalMode] = useState<'normal' | 'minimal'>('normal');
 
   const sidebarLeftMode = modeProp ?? internalMode;

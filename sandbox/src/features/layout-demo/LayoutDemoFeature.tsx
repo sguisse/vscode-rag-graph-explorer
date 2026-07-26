@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useLayoutStore } from '@/store/useLayoutStore';
-import { defaultLayoutContainersContent } from '@/components/app/layout/default-layout-containers-content';
+import { defaultLayoutContainersContent } from '@/features/layout-demo/default-layout-containers-content';
 
 export function LayoutDemoFeature() {
   const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);

@@ -27,7 +27,7 @@ import {
   ImpactDirection,
 } from '@/services/codebase';
 
-export function ExplorerFeature() {
+export function GraphExplorerFeature() {
   const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
   const toggleContainerMaximized = useLayoutStore((s) => s.toggleContainerMaximized);
   const setNotification = useAppContextStore((s) => s.setNotification);
@@ -108,7 +108,7 @@ export function ExplorerFeature() {
           isResizable: true,
           isHiddable: true,
           container: (
-            <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-background overflow-hidden">
+            <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
               <ContainerPanelHeader title="Context Paths" path="workspace.top" />
               <div className="flex-1 min-h-0 overflow-auto">
                 <ContextPathsPanel />
@@ -122,7 +122,7 @@ export function ExplorerFeature() {
           isResizable: true,
           isHiddable: true,
           container: (
-            <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-card overflow-hidden">
+            <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden">
               <ContainerPanelHeader title="Codebase Explorer" path="workspace.left" />
               <div className="flex-1 min-h-0 overflow-auto">
                 <CodebaseExplorerPanel
@@ -145,7 +145,7 @@ export function ExplorerFeature() {
           isResizable: false,
           isHiddable: false,
           container: (
-            <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-background relative overflow-hidden">
+            <div className="relative flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
               <ContainerPanelHeader
                 path="workspace.center"
                 headerLeft={<GraphPanelHeaderLeft />}
@@ -173,7 +173,7 @@ export function ExplorerFeature() {
                   />
                 }
               />
-              <div className="flex-1 min-h-0 relative w-full h-full">
+              <div className="relative flex-1 w-full h-full min-h-0">
                 <GraphPanel
                   containerRef={containerRef}
                   showGrid={showGrid}
@@ -194,7 +194,7 @@ export function ExplorerFeature() {
           isResizable: true,
           isHiddable: true,
           container: (
-            <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-card overflow-hidden">
+            <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden">
               <ContainerPanelHeader title="Global Inspector" path="workspace.right" />
               <div className="flex-1 min-h-0 overflow-auto">
                 <GlobalInspectorPanel
@@ -216,7 +216,7 @@ export function ExplorerFeature() {
           isResizable: true,
           isHiddable: true,
           container: (
-            <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-background overflow-hidden">
+            <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
               <ContainerPanelHeader title="Output & Logs" path="workspace.bottom" />
               <div className="flex-1 min-h-0 overflow-auto">
                 <WkpBottomPanel />
@@ -231,7 +231,7 @@ export function ExplorerFeature() {
         isResizable: true,
         isHiddable: true,
         container: (
-          <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-card overflow-hidden">
+          <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden">
             <ContainerPanelHeader title="Entity Properties" path="sidebarRight" />
             <div className="flex-1 min-h-0 overflow-auto">
               <EntityPropertiesPanel selectedEntity={selectedEntity} />
@@ -276,4 +276,4 @@ export function ExplorerFeature() {
   return null;
 }
 
-export default ExplorerFeature;
+export default GraphExplorerFeature;

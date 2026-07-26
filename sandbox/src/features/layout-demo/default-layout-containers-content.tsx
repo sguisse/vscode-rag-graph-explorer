@@ -4,7 +4,7 @@ import { useLayoutStore } from '@/store/useLayoutStore';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Layout, Eye, Box, SlidersHorizontal, Layers, Sparkles, Monitor, Cpu, Terminal, FolderTree, Tag, Activity, FileText, Sliders, Info } from 'lucide-react';
-import { ContainerPanelHeader } from './ContainerPanelHeader';
+import { ContainerPanelHeader } from '../../components/app/layout/ContainerPanelHeader';
 
 export type WorkspaceRegionKey = 'top' | 'left' | 'center' | 'right' | 'bottom' | 'sidebarRight';
 

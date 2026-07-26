@@ -24,13 +24,13 @@ Database
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { useLayoutStore } from '@/store/useLayoutStore';
 
-export function WelcomePanel() {
+export function HomePanel() {
 const { setActiveFeature, isDarkMode, toggleThemeMode } = useAppContextStore();
 const { setContainerVisible } = useLayoutStore();
 
 const primaryFeatures = [
 {
-id: 'feature-explorer',
+id: 'feature-graph-explorer',
 title: 'Semantic Context Graph',
 badge: 'Step 1 : Map',
 badgeColor: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
@@ -66,7 +66,7 @@ details: ['Cyclic Dependency Alerts', 'Architectural Boundary checks', 'First-Ti
 buttonText: 'View Impact Engine',
 },
 {
-id: 'panel-prompt',
+id: 'feat-prompt',
 title: 'XML Prompt Builder',
 badge: 'Step 3 : Export',
 badgeColor: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
@@ -81,19 +81,19 @@ buttonText: 'Build RAG Context',
 
 const secondaryUtilities = [
 {
-id: 'panel-terminal',
+id: 'feat-terminal',
 title: 'Token Metrics',
 icon: LineChart,
 desc: 'Track your estimated API cost savings and context ratio over time.',
 },
 {
-id: 'panel-history',
+id: 'feat-history',
 title: 'Prompt History',
 icon: History,
 desc: 'Retrieve your previous context snapshots and generated recipes.',
 },
 {
-id: 'panel-configuration',
+id: 'feat-configuration',
 title: 'Ignore Rules',
 icon: ShieldAlert,
 desc: 'Configure global .ctxignore files to never send sensitive data to LLMs.',
@@ -141,7 +141,7 @@ return (
           <Button
             size="default"
             className="gap-2 shadow-sm font-semibold cursor-pointer"
-            onClick={() => setActiveFeature('feature-explorer')}
+            onClick={() => setActiveFeature('feature-graph-explorer')}
           >
             <FolderTree size={16} />
             Start Context Selection
@@ -328,4 +328,4 @@ return (
 );
 }
 
-export default WelcomePanel;
+export default HomePanel;

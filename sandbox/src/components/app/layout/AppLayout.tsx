@@ -4,10 +4,10 @@ import { useLayoutStore } from '@/store/useLayoutStore';
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { ResizableContainer } from '../container/resizable-container';
 import { useResizable } from '../container/hooks/use-resizable';
-import { AppHeader } from './AppHeader';
-import { AppSidebarLeft } from './AppSidebarLeft';
-import { AppSidebarRight } from './AppSidebarRight';
-import { AppFooter } from './AppFooter';
+import { Header } from './Header';
+import { SidebarLeft } from './SidebarLeft';
+import { SidebarRight } from './SidebarRight';
+import { Footer } from './Footer';
 import { WorkspaceLayout, mergeContainer } from './WorkspaceLayout';
 import { Tooltip } from '../tooltip';
 
@@ -78,12 +78,12 @@ export function AppLayout({
 
   if (mainMaximizedTarget) {
     return (
-      <div className="flex flex-col w-screen h-screen overflow-hidden bg-background text-foreground antialiased font-sans">
+      <div className="flex flex-col bg-background w-screen h-screen overflow-hidden font-sans text-foreground antialiased">
         <Tooltip delay={300} />
         {headerConfig?.visible !== false && (
-          <div id="app-header-container" className="shrink-0 border-b border-border bg-card">
+          <div id="app-header-container" className="bg-card border-border border-b shrink-0">
             {headerConfig?.container || (
-              <AppHeader
+              <Header
                 activeFeature={activeFeature}
                 setActiveFeature={setActiveFeature}
                 isDarkMode={isDarkMode}
@@ -94,15 +94,15 @@ export function AppLayout({
           </div>
         )}
 
-        <div className="flex-1 w-full min-h-0 overflow-hidden flex flex-col p-1 bg-background">
-          <div className="flex-1 w-full h-full min-w-0 min-h-0 overflow-auto">
+        <div className="flex flex-col flex-1 bg-background p-1 w-full min-h-0 overflow-hidden">
+          <div className="flex-1 w-full min-w-0 h-full min-h-0 overflow-auto">
             {mainMaximizedTarget.config.container}
           </div>
         </div>
 
         {footerConfig?.visible !== false && (
-          <div id="app-footer-container" className="shrink-0 border-t border-border bg-card">
-            {footerConfig?.container || <AppFooter />}
+          <div id="app-footer-container" className="bg-card border-border border-t shrink-0">
+            {footerConfig?.container || <Footer />}
           </div>
         )}
       </div>
@@ -110,12 +110,12 @@ export function AppLayout({
   }
 
   return (
-    <div className="flex flex-col w-screen h-screen overflow-hidden bg-background text-foreground antialiased font-sans">
+    <div className="flex flex-col bg-background w-screen h-screen overflow-hidden font-sans text-foreground antialiased">
       <Tooltip delay={300} />
       {headerConfig?.visible !== false && (
-        <div id="app-header-container" className="shrink-0 border-b border-border bg-card">
+        <div id="app-header-container" className="bg-card border-border border-b shrink-0">
           {headerConfig?.container || (
-            <AppHeader
+            <Header
               activeFeature={activeFeature}
               setActiveFeature={setActiveFeature}
               isDarkMode={isDarkMode}
@@ -138,10 +138,10 @@ export function AppLayout({
             }
             onResizeStart={startSidebarLeftResize}
             style={{ width: `${effectiveSidebarLeftWidth}px` }}
-            className="border-r border-border transition-[width] duration-200"
+            className="border-border border-r transition-[width] duration-200"
           >
             {sidebarLeftConfig?.container || (
-              <AppSidebarLeft
+              <SidebarLeft
                 activeFeature={activeFeature}
                 setActiveFeature={setActiveFeature}
                 sidebarLeftMode={sidebarLeftMode}
@@ -161,16 +161,16 @@ export function AppLayout({
             resizeHandle={sidebarRightConfig?.isResizable !== false ? 'left' : 'none'}
             onResizeStart={startSidebarRightResize}
             style={{ width: `${sidebarRightWidth}px` }}
-            className="border-l border-border"
+            className="border-border border-l"
           >
-            {sidebarRightConfig?.container || <AppSidebarRight />}
+            {sidebarRightConfig?.container || <SidebarRight />}
           </ResizableContainer>
         )}
       </div>
 
       {footerConfig?.visible !== false && (
-        <div id="app-footer-container" className="shrink-0 border-t border-border bg-card">
-          {footerConfig?.container || <AppFooter />}
+        <div id="app-footer-container" className="bg-card border-border border-t shrink-0">
+          {footerConfig?.container || <Footer />}
         </div>
       )}
     </div>
