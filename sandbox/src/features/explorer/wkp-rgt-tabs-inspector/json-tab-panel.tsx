@@ -1,5 +1,5 @@
 import React from 'react';
-import { JsonViewer } from '@/components/app/viewer/json-viewer';
+import { JsonView } from '@/components/app/viewer/JsonView';
 import { CopyFloatingButton } from '@/components/app/viewer/CopyFloatingButton';
 import { codebaseService } from '@/services/codebase';
 
@@ -15,7 +15,7 @@ export function JsonTabPanel({ handleCopy }: JsonTabPanelProps) {
   return (
     <div className="group relative h-full">
       <CopyFloatingButton onCopy={doCopy} tooltipText="Copy JSON Schema to clipboard" />
-      <JsonViewer
+      <JsonView
         data={jsonSchemaSpec}
         onDoubleClick={doCopy}
         className="h-full cursor-pointer select-auto"

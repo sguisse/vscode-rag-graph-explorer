@@ -16,6 +16,24 @@ export class MockCodebaseAdapter implements ICodebaseRepositoryPort {
     this.currentCodebase = data;
   }
 
+  public loadGraphDataFromFile(file: File): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const json = JSON.parse(event.target?.result as string);
+          resolve(json);
+        } catch (err) {
+          reject(new Error('Invalid graph data format file.'));
+        }
+      };
+      reader.onerror = () => {
+        reject(new Error('Failed to read file.'));
+      };
+      reader.readAsText(file);
+    });
+  }
+
   public getFolderPositions(): Record<string, { label: string }> {
     return FOLDER_POSITIONS;
   }

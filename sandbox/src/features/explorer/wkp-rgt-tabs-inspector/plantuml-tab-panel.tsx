@@ -1,5 +1,5 @@
 import React from 'react';
-import { PlantUmlViewer } from '@/components/app/viewer/plantuml-viewer';
+import { PlantUmlViewer } from '@/components/app/viewer/PlantUmlView';
 import { CopyFloatingButton } from '@/components/app/viewer/CopyFloatingButton';
 
 interface PlantUmlTabPanelProps {

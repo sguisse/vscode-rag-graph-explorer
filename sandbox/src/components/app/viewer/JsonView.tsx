@@ -86,13 +86,13 @@ function renderValue(value: any, keyName: string | null, isLast: boolean, depth:
   return null;
 }
 
-interface JsonViewerProps {
+interface JsonViewProps {
   data: any;
   className?: string;
   onDoubleClick?: React.MouseEventHandler<HTMLPreElement>;
 }
 
-export function JsonViewer({ data, className, onDoubleClick, ...props}: JsonViewerProps) {
+export function JsonView({ data, className, onDoubleClick, ...props}: JsonViewProps) {
   return (
     <pre className={`${TYPE_COLORS.viewBg} p-3 rounded-lg overflow-x-auto text-[10px] text-slate-300 whitespace-pre-wrap font-mono leading-relaxed ${className || ''}`}
       onDoubleClick={onDoubleClick}

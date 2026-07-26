@@ -9,13 +9,13 @@ const TYPE_COLORS: Record<string, string> = {
   stereotype: 'text-[#979bda]',
 };
 
-interface PlantUmlViewerProps extends React.HTMLAttributes<HTMLPreElement> {
+interface PlantUmlViewProps extends React.HTMLAttributes<HTMLPreElement> {
   data: string;
   className?: string;
   onDoubleClick?: React.MouseEventHandler<HTMLPreElement>;
 }
 
-export function PlantUmlViewer({ data, className, onDoubleClick, ...props }: PlantUmlViewerProps) {
+export function PlantUmlViewer({ data, className, onDoubleClick, ...props }: PlantUmlViewProps) {
   const html = useMemo(() => {
     if (!data) return "";
 
