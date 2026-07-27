@@ -16,7 +16,7 @@ export default function App() {
     <>
       {/* Active Feature updates LayoutStore containers dynamically when menu items are clicked */}
       {(activeFeature === 'feature-home') && <HomeFeature />}
-      {( activeFeature === 'feature-graph-explorer') && <ExplorerFeature />}
+      {( activeFeature === 'feature-graph-rag-explorer') && <ExplorerFeature />}
       {( activeFeature === 'feature-layout-demo') && <LayoutDemoFeature />}
       {( activeFeature === 'feature-rules') && <RulesFeature />}
       {(activeFeature === 'feature-help') && <HelpFeature />}

@@ -3,6 +3,7 @@ import { useLayoutStore } from '@/store/useLayoutStore';
 import { ResizableContainer } from '../container/resizable-container';
 import { useResizable } from '../container/hooks/use-resizable';
 import { WorkspaceContainers, LayoutContainer } from './types';
+import { DefaultContainersSize } from '@/constants/layout-constants';
 
 interface WorkspaceLayoutProps {
   containers?: WorkspaceContainers;
@@ -47,10 +48,10 @@ export function WorkspaceLayout({ containers: propContainers }: WorkspaceLayoutP
     bottom: bottomConfig,
   };
 
-  const [topHeight, startTopResize] = useResizable(80, 40, 300, false, false);
-  const [leftWidth, startLeftResize] = useResizable(280, 150, 600, true, false);
-  const [rightWidth, startRightResize] = useResizable(300, 150, 600, true, true);
-  const [bottomHeight, startBottomResize] = useResizable(100, 40, 400, false, true);
+  const [topHeight, startTopResize] = useResizable(DefaultContainersSize.workspaceTopHeight, 40, 300, false, false);
+  const [leftWidth, startLeftResize] = useResizable(DefaultContainersSize.workspaceLeftWidth, 150, 600, true, false);
+  const [rightWidth, startRightResize] = useResizable(DefaultContainersSize.workspaceRightWidth, 150, 600, true, true);
+  const [bottomHeight, startBottomResize] = useResizable(DefaultContainersSize.workspaceBottomHeight, 40, 400, false, true);
 
   const workspaceKeys = ['top', 'left', 'center', 'right', 'bottom'] as const;
 
@@ -68,8 +69,8 @@ export function WorkspaceLayout({ containers: propContainers }: WorkspaceLayoutP
     const targetConfig = mergedContainers[maximizedKey];
 
     return (
-      <div className="flex-1 w-full h-full p-1 bg-background flex flex-col min-w-0 min-h-0 overflow-hidden">
-        <div className="flex-1 w-full h-full min-w-0 min-h-0 overflow-auto">
+      <div className="flex flex-col flex-1 bg-background p-1 w-full min-w-0 h-full min-h-0 overflow-hidden">
+        <div className="flex-1 w-full min-w-0 h-full min-h-0 overflow-auto">
           {targetConfig?.container}
         </div>
       </div>
@@ -77,7 +78,7 @@ export function WorkspaceLayout({ containers: propContainers }: WorkspaceLayoutP
   }
 
   return (
-    <div className="flex flex-col flex-1 w-full h-full min-w-0 min-h-0 overflow-hidden bg-background">
+    <div className="flex flex-col flex-1 bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
       {topConfig?.visible !== false && (
         <ResizableContainer
           id="workspace-top"
@@ -85,7 +86,7 @@ export function WorkspaceLayout({ containers: propContainers }: WorkspaceLayoutP
           resizeHandle={topConfig?.isResizable !== false ? 'bottom' : 'none'}
           onResizeStart={startTopResize}
           style={{ height: `${topHeight}px` }}
-          className="border-b border-border"
+          className="border-border border-b"
         >
           {topConfig?.container}
         </ResizableContainer>
@@ -99,14 +100,14 @@ export function WorkspaceLayout({ containers: propContainers }: WorkspaceLayoutP
             resizeHandle={leftConfig?.isResizable !== false ? 'right' : 'none'}
             onResizeStart={startLeftResize}
             style={{ width: `${leftWidth}px` }}
-            className="border-r border-border"
+            className="border-border border-r"
           >
             {leftConfig?.container}
           </ResizableContainer>
         )}
 
         {centerConfig?.visible !== false && (
-          <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden border-border">
+          <div className="flex flex-col flex-1 border-border min-w-0 h-full overflow-hidden">
             {centerConfig?.container}
           </div>
         )}
@@ -118,7 +119,7 @@ export function WorkspaceLayout({ containers: propContainers }: WorkspaceLayoutP
             resizeHandle={rightConfig?.isResizable !== false ? 'left' : 'none'}
             onResizeStart={startRightResize}
             style={{ width: `${rightWidth}px` }}
-            className="border-l border-border"
+            className="border-border border-l"
           >
             {rightConfig?.container}
           </ResizableContainer>
@@ -132,7 +133,7 @@ export function WorkspaceLayout({ containers: propContainers }: WorkspaceLayoutP
           resizeHandle={bottomConfig?.isResizable !== false ? 'top' : 'none'}
           onResizeStart={startBottomResize}
           style={{ height: `${bottomHeight}px` }}
-          className="border-t border-border"
+          className="border-border border-t"
         >
           {bottomConfig?.container}
         </ResizableContainer>

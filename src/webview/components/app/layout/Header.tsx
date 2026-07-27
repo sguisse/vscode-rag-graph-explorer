@@ -16,6 +16,8 @@ import {
 import { LeftCenterRightPanel } from '@/components/app/left-center-right-panel';
 import { ToggleButton } from '@/components/app/toggle-button';
 import { useLayoutStore } from '@/store/useLayoutStore';
+import favicon from '@/assets/favicon.png';
+import { DefaultContainersSize } from '@/constants/layout-constants';
 
 interface HeaderProps {
   activeFeature: string;
@@ -36,6 +38,13 @@ export function Header({
 
   const leftContent = (
     <div id="toggle-sidebar-left" className="flex items-center gap-2">
+      <span className="w-5 h-5">
+        <img src={favicon} alt="App Logo" className="w-full h-full object-contain" />
+      </span>
+      <span className="font-bold text-foreground text-sm tracking-tight">
+        Token Razor
+      </span>
+      <span style={{ paddingLeft: `${DefaultContainersSize.sidebarLeftWidth - 130}px` }}>
       <ToggleButton
         id="toggle-sidebar-left-02"
         isSelected={!!containers.sidebarLeft?.visible}
@@ -43,9 +52,6 @@ export function Header({
         tooltipText="Toggle Sidebar Left"
         icon={<Layers size={14} />}
       />
-
-      <span className="font-bold text-foreground text-sm tracking-tight">
-        VSCode Graph Explorer
       </span>
       <span className="bg-primary/15 px-2 py-0.5 rounded font-semibold text-[10px] text-primary">
         {activeFeature}

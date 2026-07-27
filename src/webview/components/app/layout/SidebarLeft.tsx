@@ -47,8 +47,8 @@ interface SidebarLeftProps {
 export const SIDEBAR_MENU_ITEMS: NavItem[] = [
   { id: 'feature-home', icon: Home, label: 'Home' },
   { id: 'feature-install', icon: PackageCheck, label: 'Install' },
-  { id: 'feature-graph-explorer', icon: VectorSquare, label: 'Graph RAG Explorer', badge: 'New' },
-  { id: 'feature-codebase-exporter', icon: FolderDown, label: 'Codebase Exporter', badge: 'Updated' },
+  { id: 'feature-graph-rag-explorer', icon: VectorSquare, label: 'Graph RAG Explorer', badge: 'New' },
+  { id: 'feature-codebase-exporter', icon: FolderDown, label: 'Codebase Exporter', badge: 'Upd' },
   { id: 'feature-rules', icon: Scale, label: 'Cypher Rules' },
 
   { id: 'feature-configuration', icon: Settings, label: 'Configuration', bottom: true },
@@ -115,17 +115,6 @@ export function SidebarLeft({
       } as React.CSSProperties}
       className="flex flex-col justify-between border-r-0 w-full h-full min-h-0 overflow-x-hidden transition-all duration-200"
     >
-      <div className="flex justify-between items-center p-2 border-sidebar-border border-b overflow-hidden shrink-0">
-        <h3
-          className={`text-xs font-mono font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 ${
-            sidebarLeftMode === 'minimal' ? 'justify-center w-full' : ''
-          }`}
-        >
-          <LayoutGrid size={14} className="text-primary shrink-0" />
-          {sidebarLeftMode === 'normal' && <span className="truncate">Features</span>}
-        </h3>
-      </div>
-
       <SidebarContent className="flex-1 min-h-0 overflow-x-hidden overflow-y-auto">
         <SidebarGroup>
           <SidebarMenu>

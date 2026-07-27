@@ -10,6 +10,7 @@ import { SidebarRight } from './SidebarRight';
 import { Footer } from './Footer';
 import { WorkspaceLayout, mergeContainer } from './WorkspaceLayout';
 import { Tooltip } from '../tooltip';
+import { DefaultContainersSize } from '@/constants/layout-constants';
 
 export type { AppLayoutProps, MaximizeContainer, AppLayoutContainers, AppLayoutConfig };
 
@@ -53,10 +54,10 @@ export function AppLayout({
   }, [isDarkMode]);
 
   const [sidebarLeftMode, setSidebarLeftMode] = useState<'normal' | 'minimal'>('normal');
-  const [sidebarLeftWidth, startSidebarLeftResize] = useResizable(220, 160, 450, true, false);
-  const [sidebarRightWidth, startSidebarRightResize] = useResizable(260, 180, 500, true, true);
+  const [sidebarLeftWidth, startSidebarLeftResize] = useResizable(DefaultContainersSize.sidebarLeftWidth, 160, 450, true, false);
+  const [sidebarRightWidth, startSidebarRightResize] = useResizable(DefaultContainersSize.sidebarRightWidth, 180, 500, true, true);
 
-  const effectiveSidebarLeftWidth = sidebarLeftMode === 'minimal' ? 56 : sidebarLeftWidth;
+  const effectiveSidebarLeftWidth = sidebarLeftMode === 'minimal' ? DefaultContainersSize.sidebarLeftMinimizedWidth : sidebarLeftWidth;
 
   const isMainScopeMaximized = (c?: LayoutContainer) =>
     Boolean(
