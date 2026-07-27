@@ -6,7 +6,7 @@ import { defaultLayoutContainersContent } from '../features/layout-demo/default-
 export interface LayoutStoreState {
   containers: AppLayoutContainers;
 
-  setLayoutContainers: (containers: AppLayoutContainers, preserveVisibility?: boolean) => void;
+  setLayoutContainers: (containers: AppLayoutContainers) => void;
   setContainerVisible: (keyPath: string, visible: boolean) => void;
   toggleContainerVisible: (keyPath: string) => void;
   setContainerContent: (keyPath: string, content: React.ReactNode) => void;
@@ -29,21 +29,6 @@ export const defaultLayoutContainers: AppLayoutContainers = {
   footer: { visible: true, isResizable: false, isHiddable: false, maximizeContainer: { isMaximizable: false, isMaximized: false, maximizeScope: 'Main' } },
 };
 
-function preserveRuntimeState(nextC?: LayoutContainer, prevC?: LayoutContainer): LayoutContainer | undefined {
-  if (!nextC) return prevC;
-  if (!prevC) return nextC;
-  return {
-    ...nextC,
-    visible: prevC.visible !== undefined ? prevC.visible : nextC.visible,
-    maximizeContainer: nextC.maximizeContainer ? {
-      ...nextC.maximizeContainer,
-      isMaximized: prevC.maximizeContainer?.isMaximized !== undefined
-        ? prevC.maximizeContainer.isMaximized
-        : nextC.maximizeContainer?.isMaximized
-    } : prevC.maximizeContainer
-  };
-}
-
 function setByPath(obj: any, path: string, updater: (c: LayoutContainer) => LayoutContainer): any {
   const parts = path.split('.');
   const cloned = { ...obj };
@@ -63,27 +48,7 @@ function setByPath(obj: any, path: string, updater: (c: LayoutContainer) => Layo
 export const useLayoutStore = create<LayoutStoreState>((set) => ({
   containers: defaultLayoutContainers,
 
-  setLayoutContainers: (newContainers, preserveVisibility = true) =>
-    set((state) => {
-      if (!preserveVisibility) {
-        return { containers: newContainers };
-      }
-      return {
-        containers: {
-          header: preserveRuntimeState(newContainers.header, state.containers.header),
-          sidebarLeft: preserveRuntimeState(newContainers.sidebarLeft, state.containers.sidebarLeft),
-          workspace: {
-            top: preserveRuntimeState(newContainers.workspace?.top, state.containers.workspace?.top),
-            left: preserveRuntimeState(newContainers.workspace?.left, state.containers.workspace?.left),
-            center: preserveRuntimeState(newContainers.workspace?.center, state.containers.workspace?.center),
-            right: preserveRuntimeState(newContainers.workspace?.right, state.containers.workspace?.right),
-            bottom: preserveRuntimeState(newContainers.workspace?.bottom, state.containers.workspace?.bottom),
-          },
-          sidebarRight: preserveRuntimeState(newContainers.sidebarRight, state.containers.sidebarRight),
-          footer: preserveRuntimeState(newContainers.footer, state.containers.footer),
-        }
-      };
-    }),
+  setLayoutContainers: (containers) => set({ containers }),
 
   setContainerVisible: (path, visible) =>
     set((state) => ({

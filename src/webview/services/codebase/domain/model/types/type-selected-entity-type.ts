@@ -6,7 +6,7 @@ export const SELECTED_ENTITY_TYPE_ICON_MAP: { [K in (typeof SELECTED_ENTITY_TYPE
   edge: { icon: "🔀", label: "Edge" },
 } as const;
 
-export type SelectedEntityType = "node" | "member" | "edge";
+export type SelectedEntityType = (typeof SELECTED_ENTITY_TYPE_LIST)[number];
 
 export function isSelectedEntityType(value: unknown): value is SelectedEntityType {
   return typeof value === "string" && SELECTED_ENTITY_TYPE_LIST.includes(value);

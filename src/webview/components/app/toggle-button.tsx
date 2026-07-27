@@ -10,20 +10,16 @@ export interface ToggleButtonProps {
   icon?: string | React.ComponentType<{ size?: number }> | React.ReactNode;
 }
 
+// Private helper function to create the common button structure
 function createButton(id: string, isSelected: boolean, onToggle: () => void, tooltipText: string, icon: React.ReactNode) {
   return (
     <Button
       id={id}
       variant="ghost"
       size="icon"
-      onClick={(e) => {
-        e.stopPropagation();
-        onToggle();
-      }}
-      className={`p-1 rounded transition-all w-8 h-8 cursor-pointer ${
-        isSelected
-          ? 'text-primary bg-primary/20 border border-primary/40 font-bold shadow-xs hover:bg-primary/30'
-          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+      onClick={onToggle}
+      className={`p-1 rounded transition-colors w-8 h-8 ${
+        isSelected ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground hover:bg-muted'
       }`}
       data-tooltip={tooltipText}
     >
@@ -33,19 +29,24 @@ function createButton(id: string, isSelected: boolean, onToggle: () => void, too
 }
 
 export function ToggleButton({ id, isSelected, onToggle, tooltipText, icon }: ToggleButtonProps) {
+  // If icon is a string, render it as a simple text inside the button
   if (typeof icon === 'string') {
     return createButton(id, isSelected, onToggle, tooltipText, icon);
   }
 
+  // If icon is a React element (JSX), render it directly
   if (React.isValidElement(icon)) {
     return createButton(id, isSelected, onToggle, tooltipText, icon);
   }
 
+  // If icon is a React component, render it with default size
   const IconComponent = icon || Eye;
 
+  // Check if IconComponent is actually a valid component type
   if (typeof IconComponent === 'function') {
     return createButton(id, isSelected, onToggle, tooltipText, <IconComponent size={16} />);
   }
 
-  return createButton(id, isSelected, onToggle, tooltipText, <Eye size={16} />);
+  // Fallback to default Eye icon
+  return createButton(id, isSelected, onToggle, tooltipText, <span> <Eye size={16} /> </span>);
 }

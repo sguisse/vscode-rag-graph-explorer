@@ -14,7 +14,7 @@ export interface AppContextState {
 }
 
 export const useAppContextStore = create<AppContextState>((set) => ({
-  activeFeature: 'feat-welcome',
+  activeFeature: 'feature-home',
   themeMode: 'dark',
   isDarkMode: true,
   notification: null,

@@ -1,10 +1,9 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Fingerprint, Tag, Code2, Layers, Info, Hash } from 'lucide-react';
-import { SelectedEntity } from '@/services/codebase';
 
 interface Props {
-  selectedEntity: SelectedEntity | null;
+  selectedEntity: { type: 'node' | 'member' | 'edge'; nodeId: string; memberId?: string; edgeId?: string; } | null;
 }
 
 export function EntityPropertiesPanel({ selectedEntity }: Props) {

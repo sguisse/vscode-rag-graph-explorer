@@ -31,13 +31,14 @@ export interface AppLayoutContainers {
   footer?: LayoutContainer;
 }
 
+// Export alias for AppLayoutConfig
+export type AppLayoutConfig = AppLayoutContainers;
+
 export interface AppLayoutProps {
-  layoutContainers?: AppLayoutContainers;
-
-  activeFeature: string;
-  setActiveFeature: (feature: string) => void;
-  isDarkMode: boolean;
-  setIsDarkMode: (isDarkMode: boolean) => void;
-
+  activeFeature?: string;
+  setActiveFeature?: (feature: string) => void;
+  isDarkMode?: boolean;
+  setIsDarkMode?: (isDarkMode: boolean) => void;
   notification?: string | null;
+  layoutContainers?: AppLayoutContainers;
 }

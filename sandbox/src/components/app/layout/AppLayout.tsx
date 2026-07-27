@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AppLayoutProps, LayoutContainer } from './types';
+import { AppLayoutProps, LayoutContainer, AppLayoutContainers, AppLayoutConfig, MaximizeContainer } from './types';
 import { useLayoutStore } from '@/store/useLayoutStore';
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { ResizableContainer } from '../container/resizable-container';
@@ -11,7 +11,7 @@ import { Footer } from './Footer';
 import { WorkspaceLayout, mergeContainer } from './WorkspaceLayout';
 import { Tooltip } from '../tooltip';
 
-export type { AppLayoutProps, MaximizeContainer } from './types';
+export type { AppLayoutProps, MaximizeContainer, AppLayoutContainers, AppLayoutConfig };
 
 export function AppLayout({
   layoutContainers,

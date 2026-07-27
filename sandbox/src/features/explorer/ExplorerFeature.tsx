@@ -29,6 +29,7 @@ import {
 
 export function ExplorerFeature() {
   const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
+  const setContainerContent = useLayoutStore((s) => s.setContainerContent);
   const toggleContainerMaximized = useLayoutStore((s) => s.toggleContainerMaximized);
   const setNotification = useAppContextStore((s) => s.setNotification);
   const isDarkMode = useAppContextStore((s) => s.isDarkMode);
@@ -100,6 +101,7 @@ export function ExplorerFeature() {
     [setNotification]
   );
 
+  // 1. Initial Layout Container configuration (Runs ONLY ONCE on feature mount)
   useEffect(() => {
     setLayoutContainers({
       header: { visible: true, isResizable: false, isHiddable: false },
@@ -109,123 +111,30 @@ export function ExplorerFeature() {
           visible: true,
           isResizable: true,
           isHiddable: true,
-          container: (
-            <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-background overflow-hidden">
-              <ContainerPanelHeader title="Context Paths" path="workspace.top" />
-              <div className="flex-1 min-h-0 overflow-auto">
-                <ContextPathsPanel />
-              </div>
-            </div>
-          ),
           maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
         },
         left: {
           visible: true,
           isResizable: true,
           isHiddable: true,
-          container: (
-            <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-card overflow-hidden">
-              <ContainerPanelHeader title="Codebase Explorer" path="workspace.left" />
-              <div className="flex-1 min-h-0 overflow-auto">
-                <CodebaseExplorerPanel
-                  searchFilteredFiles={filter.searchFilteredFiles}
-                  expandedFolders={filter.expandedFolders}
-                  visibleFiles={filter.visibleFiles}
-                  toggleFolder={filter.toggleFolder}
-                  toggleFolderCheckbox={filter.toggleFolderCheckbox}
-                  toggleFileCheckbox={filter.toggleFileCheckbox}
-                  setSelectedEntity={setSelectedEntity}
-                  onImportCodebase={handleImportCodebase}
-                />
-              </div>
-            </div>
-          ),
           maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
         },
         center: {
           visible: true,
           isResizable: false,
           isHiddable: false,
-          container: (
-            <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-background relative overflow-hidden">
-              <ContainerPanelHeader
-                path="workspace.center"
-                isHiddable={false}
-                headerLeft={<GraphPanelHeaderLeft />}
-                headerCenter={
-                  <GraphPanelHeaderCenter
-                    maxNodesLimit={filter.maxNodesLimit}
-                    setMaxNodesLimit={filter.setMaxNodesLimit}
-                    callersDepth={callersDepth}
-                    setCallersDepth={setCallersDepth}
-                    calleesDepth={calleesDepth}
-                    setCalleesDepth={setCalleesDepth}
-                    displayLevel={filter.displayLevel}
-                    setDisplayLevel={filter.setDisplayLevel}
-                    currentLayout={currentLayout}
-                    setCurrentLayout={setCurrentLayout}
-                  />
-                }
-                headerRight={
-                  <GraphPanelHeaderRight
-                    cyRef={cyRef}
-                    isGraphMaximized={false}
-                    setIsGraphMaximized={() => toggleContainerMaximized('workspace.center')}
-                    showGrid={showGrid}
-                    setShowGrid={setShowGrid}
-                  />
-                }
-              />
-              <div className="flex-1 min-h-0 relative w-full h-full">
-                <GraphPanel
-                  containerRef={containerRef}
-                  showGrid={showGrid}
-                  isDarkMode={isDarkMode}
-                  graphState={graphState}
-                  selectedEntity={selectedEntity}
-                  searchFilteredFiles={filter.searchFilteredFiles}
-                  impactedSet={impactedSet}
-                  handleSelectMember={handleSelectMember}
-                />
-              </div>
-            </div>
-          ),
           maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
         },
         right: {
           visible: true,
           isResizable: true,
           isHiddable: true,
-          container: (
-            <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-card overflow-hidden">
-              <ContainerPanelHeader title="Global Inspector" path="workspace.right" />
-              <div className="flex-1 min-h-0 overflow-auto">
-                <GlobalInspectorPanel
-                  selectedEntity={selectedEntity}
-                  initialCodebase={codebase}
-                  impactDirection={impactDirection}
-                  setImpactDirection={setImpactDirection}
-                  impactedSet={impactedSet}
-                  handleCopy={handleCopy}
-                  generatedPlantUML={generatedPlantUML}
-                />
-              </div>
-            </div>
-          ),
           maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
         },
         bottom: {
           visible: true,
           isResizable: true,
           isHiddable: true,
-          container: (
-            <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-background overflow-hidden">
-              <ContainerPanelHeader title="Output & Logs" path="workspace.bottom" />
-              <div className="flex-1 min-h-0 overflow-auto">
-                <WkpBottomPanel />
-              </div>
-            </div>
-          ),
           maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
         },
       },
@@ -233,20 +142,128 @@ export function ExplorerFeature() {
         visible: true,
         isResizable: true,
         isHiddable: true,
-        container: (
-          <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-card overflow-hidden">
-            <ContainerPanelHeader title="Entity Properties" path="sidebarRight" />
-            <div className="flex-1 min-h-0 overflow-auto">
-              <EntityPropertiesPanel selectedEntity={selectedEntity} />
-            </div>
-          </div>
-        ),
         maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
       },
       footer: { visible: true, isResizable: false, isHiddable: false },
     });
+  }, [setLayoutContainers]);
+
+  // 2. Dynamically update container JSX content when domain state changes (Preserves user visibility/maximized states!)
+  useEffect(() => {
+    setContainerContent(
+      'workspace.top',
+      <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-background overflow-hidden">
+        <ContainerPanelHeader title="Context Paths" path="workspace.top" />
+        <div className="flex-1 min-h-0 overflow-auto">
+          <ContextPathsPanel />
+        </div>
+      </div>
+    );
+
+    setContainerContent(
+      'workspace.left',
+      <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-card overflow-hidden">
+        <ContainerPanelHeader title="Codebase Explorer" path="workspace.left" />
+        <div className="flex-1 min-h-0 overflow-auto">
+          <CodebaseExplorerPanel
+            searchFilteredFiles={filter.searchFilteredFiles}
+            expandedFolders={filter.expandedFolders}
+            visibleFiles={filter.visibleFiles}
+            toggleFolder={filter.toggleFolder}
+            toggleFolderCheckbox={filter.toggleFolderCheckbox}
+            toggleFileCheckbox={filter.toggleFileCheckbox}
+            setSelectedEntity={setSelectedEntity}
+            onImportCodebase={handleImportCodebase}
+          />
+        </div>
+      </div>
+    );
+
+    setContainerContent(
+      'workspace.center',
+      <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-background relative overflow-hidden">
+        <ContainerPanelHeader
+          path="workspace.center"
+          isHiddable={false}
+          headerLeft={<GraphPanelHeaderLeft />}
+          headerCenter={
+            <GraphPanelHeaderCenter
+              maxNodesLimit={filter.maxNodesLimit}
+              setMaxNodesLimit={filter.setMaxNodesLimit}
+              callersDepth={callersDepth}
+              setCallersDepth={setCallersDepth}
+              calleesDepth={calleesDepth}
+              setCalleesDepth={setCalleesDepth}
+              displayLevel={filter.displayLevel}
+              setDisplayLevel={filter.setDisplayLevel}
+              currentLayout={currentLayout}
+              setCurrentLayout={setCurrentLayout}
+            />
+          }
+          headerRight={
+            <GraphPanelHeaderRight
+              cyRef={cyRef}
+              isGraphMaximized={false}
+              setIsGraphMaximized={() => toggleContainerMaximized('workspace.center')}
+              showGrid={showGrid}
+              setShowGrid={setShowGrid}
+            />
+          }
+        />
+        <div className="flex-1 min-h-0 relative w-full h-full">
+          <GraphPanel
+            containerRef={containerRef}
+            showGrid={showGrid}
+            isDarkMode={isDarkMode}
+            graphState={graphState}
+            selectedEntity={selectedEntity}
+            searchFilteredFiles={filter.searchFilteredFiles}
+            impactedSet={impactedSet}
+            handleSelectMember={handleSelectMember}
+          />
+        </div>
+      </div>
+    );
+
+    setContainerContent(
+      'workspace.right',
+      <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-card overflow-hidden">
+        <ContainerPanelHeader title="Global Inspector" path="workspace.right" />
+        <div className="flex-1 min-h-0 overflow-auto">
+          <GlobalInspectorPanel
+            selectedEntity={selectedEntity}
+            initialCodebase={codebase}
+            impactDirection={impactDirection}
+            setImpactDirection={setImpactDirection}
+            impactedSet={impactedSet}
+            handleCopy={handleCopy}
+            generatedPlantUML={generatedPlantUML}
+          />
+        </div>
+      </div>
+    );
+
+    setContainerContent(
+      'workspace.bottom',
+      <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-background overflow-hidden">
+        <ContainerPanelHeader title="Output & Logs" path="workspace.bottom" />
+        <div className="flex-1 min-h-0 overflow-auto">
+          <WkpBottomPanel />
+        </div>
+      </div>
+    );
+
+    setContainerContent(
+      'sidebarRight',
+      <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-card overflow-hidden">
+        <ContainerPanelHeader title="Entity Properties" path="sidebarRight" />
+        <div className="flex-1 min-h-0 overflow-auto">
+          <EntityPropertiesPanel selectedEntity={selectedEntity} />
+        </div>
+      </div>
+    );
   }, [
-    setLayoutContainers,
+    setContainerContent,
     toggleContainerMaximized,
     filter.searchFilteredFiles,
     filter.expandedFolders,

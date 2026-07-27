@@ -1,9 +1,20 @@
 @import "tailwindcss";
+
+/* Scan all source files across webview and main extension source folders */
+@source "../../src/**/*.{ts,tsx,js,jsx,html}";
+@source "../**/*.{ts,tsx,js,jsx,html}";
+
 @import "tw-animate-css";
 
 @import "@fontsource-variable/inter";
 @import "@fontsource-variable/source-serif-4";
 @import "@fontsource-variable/jetbrains-mono";
+
+
+/* Ensure Tailwind CSS v4 scans all component and feature sources outside webview directory */
+@source "../../src/**/*.{ts,tsx,js,jsx,html}";
+@source "../**/*.{ts,tsx,js,jsx,html}";
+
 
 @custom-variant dark (&:is(.dark *));
 
@@ -26,6 +37,11 @@
   --border: oklch(0.93 0.01 261.82);
   --input: oklch(0.93 0.01 261.82);
   --ring: oklch(0.62 0.19 259.76);
+  --chart-1: oklch(0.62 0.19 259.76);
+  --chart-2: oklch(0.55 0.22 262.96);
+  --chart-3: oklch(0.49 0.22 264.43);
+  --chart-4: oklch(0.42 0.18 265.55);
+  --chart-5: oklch(0.38 0.14 265.59);
   --sidebar: oklch(0.98 0 0);
   --sidebar-foreground: oklch(0.14 0 0);
   --sidebar-primary: oklch(0.20 0 0);
@@ -35,14 +51,30 @@
   --sidebar-border: oklch(0.92 0 0);
   --sidebar-ring: oklch(0.71 0 0);
 
+  /* Success - High Contrast Forest Mint */
   --success: oklch(0.95 0.04 145);
   --success-foreground: oklch(56.929% 0.19252 142.534);
+
+  /* Error/Destructive - Vivid Deep Crimson */
   --destructive: oklch(72.511% 0.13565 30.077);
   --destructive-foreground: oklch(44.463% 0.15275 20.104 / 0.769);
+
+  /* Warning - Deep Amber/Bronze (No longer invisible on white) */
   --warning: oklch(0.96 0.05 75);
   --warning-foreground: oklch(0.42 0.14 75);
+
+  /* Info - Deep Cobalt Sky */
   --info: oklch(0.94 0.04 240);
   --info-foreground: oklch(0.38 0.15 240);
+
+  --shadow-2xs: 0 1px 3px 0px oklch(0.00 0 0 / 0.05);
+  --shadow-xs: 0 1px 3px 0px oklch(0.00 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0px oklch(0.00 0 0 / 0.10), 0 1px 2px -1px oklch(0.00 0 0 / 0.10);
+  --shadow: 0 1px 3px 0px oklch(0.00 0 0 / 0.10), 0 1px 2px -1px oklch(0.00 0 0 / 0.10);
+  --shadow-md: 0 1px 3px 0px oklch(0.00 0 0 / 0.10), 0 2px 4px -1px oklch(0.00 0 0 / 0.10);
+  --shadow-lg: 0 1px 3px 0px oklch(0.00 0 0 / 0.10), 0 4px 6px -1px oklch(0.00 0 0 / 0.10);
+  --shadow-xl: 0 1px 3px 0px oklch(0.00 0 0 / 0.10), 0 8px 10px -1px oklch(0.00 0 0 / 0.10);
+  --shadow-2xl: 0 1px 3px 0px oklch(0.00 0 0 / 0.25);
 }
 
 .dark {
@@ -64,6 +96,11 @@
   --border: oklch(0.37 0 0);
   --input: oklch(0.37 0 0);
   --ring: oklch(0.62 0.19 259.76);
+  --chart-1: oklch(0.71 0.14 254.69);
+  --chart-2: oklch(0.62 0.19 259.76);
+  --chart-3: oklch(0.55 0.22 262.96);
+  --chart-4: oklch(0.49 0.22 264.43);
+  --chart-5: oklch(0.42 0.18 265.55);
   --sidebar: oklch(0.21 0.01 285.93);
   --sidebar-foreground: oklch(0.99 0 0);
   --sidebar-primary: oklch(0.49 0.24 264.40);
@@ -73,12 +110,19 @@
   --sidebar-border: oklch(1.00 0 0 / 10%);
   --sidebar-ring: oklch(0.55 0.02 285.93);
 
+  /* Success - Vibrant Neon Mint */
   --success: oklch(0.25 0.06 145);
   --success-foreground: oklch(0.86 0.14 145);
+
+  /* Error/Destructive - Punchy Coral Red (Fixed Missing Var) */
   --destructive: oklch(49.319% 0.1778 28.578);
   --destructive-foreground: oklch(0.65 0.21 25);
+
+  /* Warning - Vivid Gold Warning */
   --warning: oklch(0.25 0.06 75);
   --warning-foreground: oklch(0.86 0.15 75);
+
+  /* Info - Electric Ice Blue */
   --info: oklch(0.23 0.06 240);
   --info-foreground: oklch(0.82 0.14 240);
 }
@@ -123,7 +167,8 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --card-spacing: var(--card-spacing);
+   --card-spacing: var(--card-spacing);
+
 }
 
 @layer base {

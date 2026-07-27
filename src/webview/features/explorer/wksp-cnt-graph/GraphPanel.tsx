@@ -16,7 +16,6 @@ interface GraphPanelProps {
   searchFilteredFiles: CodebaseFile[];
   impactedSet: Set<string>;
   handleSelectMember: (nodeId: string, memberId: string) => void;
-  handleNodeSelect?: (nodeId: string) => void;
 }
 
 export function GraphPanel({
@@ -27,8 +26,7 @@ export function GraphPanel({
   selectedEntity,
   searchFilteredFiles,
   impactedSet,
-  handleSelectMember,
-  handleNodeSelect
+  handleSelectMember
 }: GraphPanelProps) {
   const folderPositions = codebaseService.getFolderPositions();
 
@@ -71,16 +69,13 @@ export function GraphPanel({
           });
           const isNodeImpacted = impactedSet.has(file.id);
           const isDimmed = selectedEntity !== null && impactedSet.size > 0 && !isNodeImpacted;
-          const isSelected = selectedEntity?.nodeId === file.id && (selectedEntity.type === 'node' || !selectedEntity.memberId);
 
           const nodeData: UmlClassNodeData = {
             ...file,
-            isSelected,
             isDimmed,
             impactedMembers,
             selectedMember: selectedEntity?.nodeId === file.id ? selectedEntity?.memberId : undefined,
-            onSelectMember: handleSelectMember,
-            onSelectNode: handleNodeSelect
+            onSelectMember: handleSelectMember
           };
 
           return (

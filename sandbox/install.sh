@@ -1,149 +1,253 @@
 #!/usr/bin/env bash
 set -e
 
-echo "🚀 Fixing parentContainerId DOM warning and Cytoscape destroyed() method call..."
+echo "🚀 Exporting AppLayoutConfig from types.ts and AppLayout.tsx..."
 
-# 1. Update ResizableContainer component
-cat << 'EOF' > src/components/app/container/resizable-container.tsx
-import React from "react";
-import { cn } from "@/lib/utils";
+mkdir -p src/components/app/layout/hooks
+mkdir -p src/components/app/layout
 
-export interface ResizableContainerProps extends React.HTMLAttributes<HTMLDivElement> {
-  id: string;
-  visible?: boolean;
-  resizeHandle?: 'top' | 'right' | 'bottom' | 'left' | 'none';
-  onResizeStart?: (e: React.MouseEvent) => void;
+# 1. Update types.ts with AppLayoutConfig export alias
+cat << 'EOF' > src/components/app/layout/types.ts
+import React from 'react';
+
+export interface MaximizeContainer {
+  isMaximized?: boolean;
+  isMaximizable?: boolean;
+  maximizeScope?: 'Workspace' | 'Main';
 }
 
-export function ResizableContainer({
-  id,
-  visible = true,
-  resizeHandle = 'none',
-  onResizeStart,
-  className,
-  children,
-  style,
-  ...props
-}: ResizableContainerProps) {
-  if (!visible) return null;
+export interface LayoutContainer {
+  visible?: boolean;
+  isResizable?: boolean;
+  isHiddable?: boolean;
+  container?: React.ReactNode;
+  maximizeContainer?: MaximizeContainer;
+}
 
-  const handleClasses = {
-    top: "top-0 right-0 left-0 h-1 cursor-row-resize hover:bg-primary/40",
-    right: "top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/40",
-    bottom: "bottom-0 right-0 left-0 h-1 cursor-row-resize hover:bg-primary/40",
-    left: "top-0 bottom-0 left-0 w-1 cursor-col-resize hover:bg-primary/40",
-    none: "hidden"
+export interface WorkspaceContainers {
+  top?: LayoutContainer;
+  left?: LayoutContainer;
+  center?: LayoutContainer;
+  right?: LayoutContainer;
+  bottom?: LayoutContainer;
+}
+
+export interface AppLayoutContainers {
+  header?: LayoutContainer;
+  sidebarLeft?: LayoutContainer;
+  workspace?: WorkspaceContainers;
+  sidebarRight?: LayoutContainer;
+  footer?: LayoutContainer;
+}
+
+// Export alias for AppLayoutConfig
+export type AppLayoutConfig = AppLayoutContainers;
+
+export interface AppLayoutProps {
+  activeFeature?: string;
+  setActiveFeature?: (feature: string) => void;
+  isDarkMode?: boolean;
+  setIsDarkMode?: (isDarkMode: boolean) => void;
+  notification?: string | null;
+  layoutContainers?: AppLayoutContainers;
+}
+EOF
+
+# 2. Re-export AppLayoutConfig from AppLayout.tsx
+cat << 'EOF' > src/components/app/layout/AppLayout.tsx
+import React, { useEffect, useState } from 'react';
+import { AppLayoutProps, LayoutContainer, AppLayoutContainers, AppLayoutConfig, MaximizeContainer } from './types';
+import { useLayoutStore } from '@/store/useLayoutStore';
+import { useAppContextStore } from '@/store/useAppContextStore';
+import { ResizableContainer } from '../container/resizable-container';
+import { useResizable } from '../container/hooks/use-resizable';
+import { AppHeader } from './AppHeader';
+import { AppSidebarLeft } from './AppSidebarLeft';
+import { AppSidebarRight } from './AppSidebarRight';
+import { AppFooter } from './AppFooter';
+import { WorkspaceLayout, mergeContainer } from './WorkspaceLayout';
+import { Tooltip } from '../tooltip';
+
+export type { AppLayoutProps, MaximizeContainer, AppLayoutContainers, AppLayoutConfig };
+
+export function AppLayout({
+  layoutContainers,
+  activeFeature: activeFeatureProp,
+  setActiveFeature: setActiveFeatureProp,
+  isDarkMode: isDarkModeProp,
+  setIsDarkMode: setIsDarkModeProp,
+  notification: notificationProp,
+}: AppLayoutProps) {
+  const storeContainers = useLayoutStore((s) => s.containers);
+  const storeActiveFeature = useAppContextStore((s) => s.activeFeature);
+  const setActiveFeatureStore = useAppContextStore((s) => s.setActiveFeature);
+  const storeIsDarkMode = useAppContextStore((s) => s.isDarkMode);
+  const setIsDarkModeStore = useAppContextStore((s) => s.setIsDarkMode);
+  const storeNotification = useAppContextStore((s) => s.notification);
+
+  const activeFeature = activeFeatureProp ?? storeActiveFeature;
+  const setActiveFeature = setActiveFeatureProp ?? setActiveFeatureStore;
+  const isDarkMode = isDarkModeProp ?? storeIsDarkMode;
+  const setIsDarkMode = setIsDarkModeProp ?? setIsDarkModeStore;
+  const notification = notificationProp ?? storeNotification;
+
+  const headerConfig = mergeContainer(storeContainers.header, layoutContainers?.header);
+  const sidebarLeftConfig = mergeContainer(storeContainers.sidebarLeft, layoutContainers?.sidebarLeft);
+  const workspaceConfig = {
+    top: mergeContainer(storeContainers.workspace?.top, layoutContainers?.workspace?.top),
+    left: mergeContainer(storeContainers.workspace?.left, layoutContainers?.workspace?.left),
+    center: mergeContainer(storeContainers.workspace?.center, layoutContainers?.workspace?.center),
+    right: mergeContainer(storeContainers.workspace?.right, layoutContainers?.workspace?.right),
+    bottom: mergeContainer(storeContainers.workspace?.bottom, layoutContainers?.workspace?.bottom),
   };
+  const sidebarRightConfig = mergeContainer(storeContainers.sidebarRight, layoutContainers?.sidebarRight);
+  const footerConfig = mergeContainer(storeContainers.footer, layoutContainers?.footer);
 
-  // Only pass custom React prop parentContainerId to React Components, NOT standard HTML elements (div, etc.)
-  const childrenWithParentId = React.Children.map(children, (child) => {
-    if (React.isValidElement(child) && typeof child.type !== 'string') {
-      return React.cloneElement(child, {
-        parentContainerId: id,
-      } as React.Attributes & { parentContainerId?: string });
-    }
-    return child;
-  });
+  useEffect(() => {
+    const htmlElement = document.documentElement;
+    if (isDarkMode) htmlElement.classList.add('dark');
+    else htmlElement.classList.remove('dark');
+  }, [isDarkMode]);
+
+  const [sidebarLeftMode, setSidebarLeftMode] = useState<'normal' | 'minimal'>('normal');
+  const [sidebarLeftWidth, startSidebarLeftResize] = useResizable(220, 160, 450, true, false);
+  const [sidebarRightWidth, startSidebarRightResize] = useResizable(260, 180, 500, true, true);
+
+  const effectiveSidebarLeftWidth = sidebarLeftMode === 'minimal' ? 56 : sidebarLeftWidth;
+
+  const isMainScopeMaximized = (c?: LayoutContainer) =>
+    Boolean(
+      c?.visible !== false &&
+      c?.maximizeContainer?.isMaximizable !== false &&
+      c?.maximizeContainer?.isMaximized &&
+      (c?.maximizeContainer?.maximizeScope || 'Main') === 'Main'
+    );
+
+  const mainMaximizedTarget =
+    isMainScopeMaximized(sidebarLeftConfig) ? { title: 'Sidebar Left', path: 'sidebarLeft', config: sidebarLeftConfig } :
+    isMainScopeMaximized(sidebarRightConfig) ? { title: 'Sidebar Right Inspector', path: 'sidebarRight', config: sidebarRightConfig } :
+    isMainScopeMaximized(workspaceConfig.top) ? { title: 'Workspace Top Section', path: 'workspace.top', config: workspaceConfig.top } :
+    isMainScopeMaximized(workspaceConfig.left) ? { title: 'Workspace Left Panel', path: 'workspace.left', config: workspaceConfig.left } :
+    isMainScopeMaximized(workspaceConfig.center) ? { title: 'Workspace Center Panel', path: 'workspace.center', config: workspaceConfig.center } :
+    isMainScopeMaximized(workspaceConfig.right) ? { title: 'Workspace Right Panel', path: 'workspace.right', config: workspaceConfig.right } :
+    isMainScopeMaximized(workspaceConfig.bottom) ? { title: 'Workspace Bottom Panel', path: 'workspace.bottom', config: workspaceConfig.bottom } :
+    null;
+
+  if (mainMaximizedTarget) {
+    return (
+      <div className="flex flex-col w-screen h-screen overflow-hidden bg-background text-foreground antialiased font-sans">
+        <Tooltip delay={300} />
+        {headerConfig?.visible !== false && (
+          <div id="app-header-container" className="shrink-0 border-b border-border bg-card">
+            {headerConfig?.container || (
+              <AppHeader
+                activeFeature={activeFeature}
+                setActiveFeature={setActiveFeature}
+                isDarkMode={isDarkMode}
+                setIsDarkMode={setIsDarkMode}
+                notification={notification}
+              />
+            )}
+          </div>
+        )}
+
+        <div className="flex-1 w-full min-h-0 overflow-hidden flex flex-col p-1 bg-background">
+          <div className="flex-1 w-full h-full min-w-0 min-h-0 overflow-auto">
+            {mainMaximizedTarget.config.container}
+          </div>
+        </div>
+
+        {footerConfig?.visible !== false && (
+          <div id="app-footer-container" className="shrink-0 border-t border-border bg-card">
+            {footerConfig?.container || <AppFooter />}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
-    <div
-      id={id}
-      style={style}
-      className={cn("relative flex flex-col bg-card border-border min-w-0 min-h-0 overflow-hidden shrink-0", className)}
-      {...props}
-    >
-      <div
-        id={`${id}-content`}
-        className="relative flex-1 flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-x-hidden overflow-y-auto scrollbar-hide"
-      >
-        {childrenWithParentId}
+    <div className="flex flex-col w-screen h-screen overflow-hidden bg-background text-foreground antialiased font-sans">
+      <Tooltip delay={300} />
+      {headerConfig?.visible !== false && (
+        <div id="app-header-container" className="shrink-0 border-b border-border bg-card">
+          {headerConfig?.container || (
+            <AppHeader
+              activeFeature={activeFeature}
+              setActiveFeature={setActiveFeature}
+              isDarkMode={isDarkMode}
+              setIsDarkMode={setIsDarkMode}
+              notification={notification}
+            />
+          )}
+        </div>
+      )}
+
+      <div className="flex flex-1 w-full min-h-0 overflow-hidden">
+        {sidebarLeftConfig?.visible !== false && (
+          <ResizableContainer
+            id="app-sidebar-left"
+            visible
+            resizeHandle={
+              sidebarLeftConfig?.isResizable !== false && sidebarLeftMode === 'normal'
+                ? 'right'
+                : 'none'
+            }
+            onResizeStart={startSidebarLeftResize}
+            style={{ width: `${effectiveSidebarLeftWidth}px` }}
+            className="border-r border-border transition-[width] duration-200"
+          >
+            {sidebarLeftConfig?.container || (
+              <AppSidebarLeft
+                activeFeature={activeFeature}
+                setActiveFeature={setActiveFeature}
+                sidebarLeftMode={sidebarLeftMode}
+                setSidebarLeftMode={setSidebarLeftMode}
+                sidebarLeftWidth={sidebarLeftWidth}
+              />
+            )}
+          </ResizableContainer>
+        )}
+
+        <WorkspaceLayout containers={workspaceConfig} />
+
+        {sidebarRightConfig?.visible !== false && (
+          <ResizableContainer
+            id="app-sidebar-right"
+            visible
+            resizeHandle={sidebarRightConfig?.isResizable !== false ? 'left' : 'none'}
+            onResizeStart={startSidebarRightResize}
+            style={{ width: `${sidebarRightWidth}px` }}
+            className="border-l border-border"
+          >
+            {sidebarRightConfig?.container || <AppSidebarRight />}
+          </ResizableContainer>
+        )}
       </div>
 
-      {resizeHandle !== 'none' && onResizeStart && (
-        <div
-          id={`${id}-handle`}
-          className={cn("group z-20 absolute transition-colors", handleClasses[resizeHandle])}
-          onMouseDown={onResizeStart}
-        />
+      {footerConfig?.visible !== false && (
+        <div id="app-footer-container" className="shrink-0 border-t border-border bg-card">
+          {footerConfig?.container || <AppFooter />}
+        </div>
       )}
     </div>
   );
 }
 EOF
 
-# 2. Update useCytoscapeInstance to use cy.destroyed()
-cat << 'EOF' > src/features/explorer/wksp-cnt-graph/components/graph/useCytoscapeInstance.ts
-import { useEffect, useRef, useState, useCallback } from 'react';
-import cytoscape from 'cytoscape';
+# 3. Ensure use-layout-state.ts imports correctly
+cat << 'EOF' > src/components/app/layout/hooks/use-layout-state.ts
+import { useState } from 'react';
+import { AppLayoutConfig, AppLayoutContainers } from '../types';
 
-export interface GraphState {
-  zoom: number;
-  pan: { x: number; y: number };
-  nodePositions: Record<string, { x: number; y: number; w: number; h: number }>;
-}
+export function useLayoutState(initialConfig?: AppLayoutConfig) {
+  const [config, setConfig] = useState<AppLayoutConfig | undefined>(initialConfig);
 
-export function useCytoscapeInstance(isDarkMode: boolean, onNodeSelect: (nodeId: string) => void) {
-  const [containerNode, setContainerNode] = useState<HTMLDivElement | null>(null);
-  const cyRef = useRef<cytoscape.Core | null>(null);
-  const [graphState, setGraphState] = useState<GraphState>({
-    zoom: 1,
-    pan: { x: 0, y: 0 },
-    nodePositions: {}
-  });
-
-  const containerRef = useCallback((node: HTMLDivElement | null) => {
-    if (node !== null) {
-      setContainerNode(node);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!containerNode) return;
-
-    const cy = cytoscape({
-      container: containerNode,
-      style: [
-        { selector: 'node[width][height]', style: { 'shape': 'rectangle', 'opacity': 0.0, 'width': 'data(width)', 'height': 'data(height)' } },
-        { selector: 'node.folder', style: { 'shape': 'rectangle', 'opacity': 1.0, 'label': 'data(label)', 'text-valign': 'top', 'text-halign': 'center', 'text-margin-y': -12, 'font-size': '12px', 'font-family': 'monospace', 'font-weight': 'bold', 'color': isDarkMode ? '#94a3b8' : '#475569', 'background-opacity': 0.02, 'background-color': isDarkMode ? '#475569' : '#94a3b8', 'border-width': '2px', 'border-color': isDarkMode ? '#334155' : '#cbd5e1', 'border-style': 'dashed', 'padding': '40' } },
-        { selector: 'edge', style: { 'width': 2, 'line-color': isDarkMode ? '#475569' : '#cbd5e1', 'target-arrow-color': isDarkMode ? '#475569' : '#cbd5e1', 'target-arrow-shape': 'triangle', 'curve-style': 'bezier', 'label': 'data(label)', 'font-size': '9px', 'font-family': 'monospace', 'color': isDarkMode ? '#94a3b8' : '#475569', 'text-background-opacity': 1, 'text-background-color': isDarkMode ? '#18181b' : '#ffffff', 'text-background-padding': '3px', 'text-background-shape': 'roundrectangle' } },
-        { selector: 'edge.impacted', style: { 'line-color': '#f97316', 'target-arrow-color': '#f97316', 'width': 4 } }
-      ],
-      userZoomingEnabled: true,
-      userPanningEnabled: true,
-      boxSelectionEnabled: false
-    });
-
-    cyRef.current = cy;
-
-    cy.on('tap', 'node', (evt) => {
-      if (!evt.target.hasClass('folder')) {
-        onNodeSelect(evt.target.id());
-      }
-    });
-
-    const syncGraph = () => {
-      const positions: Record<string, { x: number; y: number; w: number; h: number }> = {};
-      cy.nodes().forEach(node => {
-        if (node.hasClass('folder')) return;
-        const bb = node.boundingBox({ includeLabels: false, includeEdges: false });
-        positions[node.id()] = { x: bb.x1, y: bb.y1, w: bb.w, h: bb.h };
-      });
-      setGraphState({ zoom: cy.zoom(), pan: cy.pan(), nodePositions: positions });
-    };
-
-    cy.on('drag pan zoom render', syncGraph);
-
-    requestAnimationFrame(() => {
-      if (cyRef.current && !cyRef.current.destroyed()) {
-        cyRef.current.resize();
-      }
-    });
-
-    return () => cy.destroy();
-  }, [containerNode, isDarkMode, onNodeSelect]);
-
-  return { containerRef, cyRef, graphState, isReady: !!containerNode };
+  return {
+    config,
+    setConfig,
+  };
 }
 EOF
 
-echo "✅ Console errors fixed!"
+echo "✅ AppLayoutConfig exported cleanly and build error resolved!"

@@ -37,12 +37,10 @@ export const NODE_STYLE_REGISTRY: Record<string, NodeStyle> = {
 };
 
 export interface UmlClassNodeData extends CodebaseFile {
-  isSelected?: boolean;
   isDimmed?: boolean;
   impactedMembers?: string[];
   selectedMember?: string;
   onSelectMember: (nodeId: string, memberId: string) => void;
-  onSelectNode?: (nodeId: string) => void;
 }
 
 export interface FolderNodeProps {
@@ -51,22 +49,14 @@ export interface FolderNodeProps {
 }
 
 export const FolderNode: React.FC<FolderNodeProps> = ({ isSelected }) => (
-  <div className={`w-full h-full rounded-lg transition-all ${isSelected ? 'ring-2 ring-primary ring-offset-2' : ''}`} />
+  <div className={`w-full h-full rounded-lg transition-all ${isSelected ? 'ring-2 ring-primary' : ''}`} />
 );
 
 export const UmlClassNode: React.FC<{ id: string; data: UmlClassNodeData }> = ({ id, data }) => {
   const style = NODE_STYLE_REGISTRY[data.type] || NODE_STYLE_REGISTRY.default;
 
   return (
-    <div
-      onClick={(e) => {
-        e.stopPropagation();
-        if (data.onSelectNode) data.onSelectNode(id);
-      }}
-      className={`w-72 bg-card rounded-lg shadow-xl border-2 ${style.border} relative transition-all duration-300 pointer-events-auto cursor-pointer ${
-        data.isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-background border-primary scale-[1.02] shadow-2xl z-30' : ''
-      } ${data.isDimmed ? 'opacity-25' : 'opacity-100'}`}
-    >
+    <div className={`w-72 bg-card rounded-lg shadow-xl border-2 ${style.border} relative transition-all duration-300 ${data.isDimmed ? 'opacity-25' : 'opacity-100'}`}>
       <div className={`${style.bg} p-3 text-white relative rounded-t-[5px]`}>
         <div className="flex justify-between items-center">
           <span className="bg-black/30 opacity-85 px-2 py-0.5 rounded font-mono text-[10px] uppercase tracking-wider">{style.badge}</span>
@@ -99,14 +89,9 @@ export const UmlClassNode: React.FC<{ id: string; data: UmlClassNodeData }> = ({
             const isMethodImpacted = data.impactedMembers && data.impactedMembers.includes(m.id);
             const isSelected = data.selectedMember === m.id;
             return (
-              <div
-                key={m.id}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  data.onSelectMember(id, m.id);
-                }}
+              <div key={m.id} onClick={(e) => { e.stopPropagation(); data.onSelectMember(id, m.id); }}
                 className={`pointer-events-auto group relative flex items-center justify-between p-1.5 rounded border transition-all cursor-pointer ${
-                  isSelected ? 'border-primary bg-primary/20 ring-1 ring-primary font-bold' : isMethodImpacted ? 'border-orange-500 bg-orange-500/15 animate-pulse' : 'border-transparent hover:bg-muted'
+                  isSelected ? 'border-primary bg-primary/10' : isMethodImpacted ? 'border-orange-500 bg-orange-500/15 animate-pulse' : 'border-transparent hover:bg-muted'
                 }`}
               >
                 <span className="font-mono text-foreground/90 text-xs">+ {m.name}</span>
@@ -120,15 +105,7 @@ export const UmlClassNode: React.FC<{ id: string; data: UmlClassNodeData }> = ({
 };
 
 export const ConfigNode: React.FC<{ id: string; data: UmlClassNodeData }> = ({ id, data }) => (
-  <div
-    onClick={(e) => {
-      e.stopPropagation();
-      if (data.onSelectNode) data.onSelectNode(id);
-    }}
-    className={`w-80 bg-card rounded-lg shadow-xl border-2 border-amber-500 relative transition-all duration-300 pointer-events-auto cursor-pointer ${
-      data.isSelected ? 'ring-2 ring-amber-500 ring-offset-2 ring-offset-background scale-[1.02] shadow-2xl z-30' : ''
-    } ${data.isDimmed ? 'opacity-25' : 'opacity-100'}`}
-  >
+  <div className={`w-80 bg-card rounded-lg shadow-xl border-2 border-amber-500 relative transition-all duration-300 ${data.isDimmed ? 'opacity-25' : 'opacity-100'}`}>
     <div className="flex justify-between items-center bg-amber-500 p-2.5 rounded-t-[5px] text-white">
       <div className="flex items-center gap-1.5">
         <Settings size={16} className="text-amber-100" />
@@ -141,14 +118,9 @@ export const ConfigNode: React.FC<{ id: string; data: UmlClassNodeData }> = ({ i
         const isPropImpacted = data.impactedMembers && data.impactedMembers.includes(prop.key);
         const isSelected = data.selectedMember === prop.key;
         return (
-          <div
-            key={prop.key}
-            onClick={(e) => {
-              e.stopPropagation();
-              data.onSelectMember(id, prop.key);
-            }}
+          <div key={prop.key} onClick={(e) => { e.stopPropagation(); data.onSelectMember(id, prop.key); }}
             className={`pointer-events-auto group relative p-2 rounded border transition-all cursor-pointer ${
-              isSelected ? 'border-amber-400 bg-amber-500/20 text-white ring-1 ring-amber-400 font-bold' : isPropImpacted ? 'border-orange-500 bg-orange-950/50 text-orange-400' : 'border-slate-800 hover:bg-slate-900'
+              isSelected ? 'border-primary bg-primary/20 text-white' : isPropImpacted ? 'border-orange-500 bg-orange-950/50 text-orange-400' : 'border-slate-800 hover:bg-slate-900'
             }`}
           >
             <div className="font-semibold text-amber-400 truncate">{prop.key}:</div>

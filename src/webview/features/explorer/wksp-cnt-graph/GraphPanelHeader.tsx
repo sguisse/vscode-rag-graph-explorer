@@ -19,7 +19,7 @@ export interface GraphPanelHeaderLeftProps {
 
 export const GraphPanelHeaderLeft: React.FC<GraphPanelHeaderLeftProps> = () => (
   <div className="flex items-center gap-2">
-    <span>Topological Network</span>
+    <span className="font-bold text-foreground truncate uppercase tracking-wider">Topological Network</span>
   </div>
 );
 
@@ -160,7 +160,7 @@ export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
       <Minus size={12} />
     </Button>
     <Button
-      id="btn-graph-reset-view"
+      id="btn-graph-fit-view"
       variant="ghost"
       size="icon"
       className="w-5 h-5 text-muted-foreground"
@@ -171,14 +171,6 @@ export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
     >
       <Focus size={12} />
     </Button>
-    <Button
-      id="btn-graph-toggle-maximize"
-      variant="ghost"
-      size="icon"
-      className="w-5 h-5 text-muted-foreground"
-      onClick={() => setIsGraphMaximized(!isGraphMaximized)}
-    >
-      {isGraphMaximized ? <Minimize size={12} /> : <Maximize size={12} />}
-    </Button>
+
   </div>
 );

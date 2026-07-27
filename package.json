@@ -205,10 +205,10 @@
   },
   "scripts": {
     "compile": "npm run compile:extension && npm run compile:webview",
-    "watch": "vite build --watch",
+    "watch": "node esbuild.js --watch",
     "package": "npm run compile",
-    "vscode:prepublish": "npm run package",
-    "compile:extension": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
+    "vscode:prepublish": "npm run compile",
+    "compile:extension": "node esbuild.js",
     "compile:webview": "vite build"
   },
   "devDependencies": {

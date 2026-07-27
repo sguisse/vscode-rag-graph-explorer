@@ -1,5 +1,9 @@
 import React from 'react';
 
+/**
+ * Equivalent to the find/search functionality in VS Code with cmd+F in files
+ */
+
 interface FinderBaseProps {
     searchQuery: string;
     setSearchQuery: (val: string) => void;
@@ -32,15 +36,15 @@ export const FinderBase: React.FC<FinderBaseProps> = ({
     onClose
 }) => {
     return (
-        <div className="bg-[var(--vscode-editorWidget-background)] text-[var(--vscode-editorWidget-foreground)] border border-[var(--vscode-widget-border,#454545)] rounded shadow-lg p-1.5 flex items-center gap-2 select-none animate-fadeIn">
+        <div className="flex items-center gap-2 bg-[var(--vscode-editorWidget-background)] shadow-lg p-1.5 border border-[var(--vscode-widget-border,#454545)] rounded text-[var(--vscode-editorWidget-foreground)] animate-fadeIn select-none">
             {/* Zone de saisie */}
-            <div className="relative flex items-center bg-[var(--vscode-input-background)] border border-[var(--vscode-input-border,#454545)] focus-within:border-blue-500 rounded px-1.5 h-6 w-64">
+            <div className="relative flex items-center bg-[var(--vscode-input-background)] px-1.5 border border-[var(--vscode-input-border,#454545)] focus-within:border-blue-500 rounded w-64 h-6">
                 <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Find"
-                    className="bg-transparent text-[var(--vscode-input-foreground)] text-xs outline-none w-44 h-full pr-1 font-sans"
+                    className="bg-transparent pr-1 outline-none w-44 h-full font-sans text-[var(--vscode-input-foreground)] text-xs"
                     spellCheck={false}
                 />
 
@@ -71,28 +75,28 @@ export const FinderBase: React.FC<FinderBaseProps> = ({
             </div>
 
             {/* Compteur d'occurrences */}
-            <div className="text-[11px] font-sans px-1 text-[var(--vscode-descriptionForeground)] min-w-[55px] text-center font-medium">
+            <div className="px-1 min-w-[55px] font-sans font-medium text-[11px] text-[var(--vscode-descriptionForeground)] text-center">
                 {totalMatches > 0 ? `${currentMatchIndex + 1} of ${totalMatches}` : 'No results'}
             </div>
 
             {/* Boutons de navigation */}
-            <div className="flex items-center border-l border-[var(--vscode-panel-border)] pl-1 gap-0.5 text-[var(--vscode-foreground)]">
+            <div className="flex items-center gap-0.5 pl-1 border-[var(--vscode-panel-border)] border-l text-[var(--vscode-foreground)]">
                 <button
                     onClick={onPrev}
                     disabled={totalMatches === 0}
                     title="Previous Match"
-                    className="w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--vscode-toolbar-hoverBackground)] disabled:opacity-30 cursor-pointer codicon codicon-arrow-up text-xs"
+                    className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] disabled:opacity-30 rounded w-5 h-5 text-xs cursor-pointer codicon codicon-arrow-up"
                 />
                 <button
                     onClick={onNext}
                     disabled={totalMatches === 0}
                     title="Next Match"
-                    className="w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--vscode-toolbar-hoverBackground)] disabled:opacity-30 cursor-pointer codicon codicon-arrow-down text-xs"
+                    className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] disabled:opacity-30 rounded w-5 h-5 text-xs cursor-pointer codicon codicon-arrow-down"
                 />
                 <button
                     onClick={onClose}
                     title="Close Widget (Escape)"
-                    className="w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--vscode-toolbar-hoverBackground)] cursor-pointer codicon codicon-close text-xs"
+                    className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] rounded w-5 h-5 text-xs cursor-pointer codicon codicon-close"
                 />
             </div>
         </div>

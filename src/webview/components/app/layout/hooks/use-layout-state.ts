@@ -1,25 +1,11 @@
-import { AppLayoutContainers } from '../types';
+import { useState } from 'react';
+import { AppLayoutConfig, AppLayoutContainers } from '../types';
 
-export function useLayoutState(containers: AppLayoutContainers) {
-  const showHeader = containers?.header?.visible ?? true;
-  const showLeftSidebar = containers?.sidebarLeft?.visible ?? true;
-  const showCtnWkpTop = containers?.workspace?.top?.visible ?? false;
-  const showCtnWkpLeft = containers?.workspace?.left?.visible ?? false;
-  const showCtnWkpCenter = containers?.workspace?.center?.visible ?? true;
-  const showCtnWkpRight = containers?.workspace?.right?.visible ?? false;
-  const showCtnWkpBottom = containers?.workspace?.bottom?.visible ?? false;
-  const showRightSidebar = containers?.sidebarRight?.visible ?? false;
-  const showFooter = containers?.footer?.visible ?? true;
+export function useLayoutState(initialConfig?: AppLayoutConfig) {
+  const [config, setConfig] = useState<AppLayoutConfig | undefined>(initialConfig);
 
   return {
-    showHeader,
-    showLeftSidebar,
-    showCtnWkpTop,
-    showCtnWkpLeft,
-    showCtnWkpCenter,
-    showCtnWkpRight,
-    showCtnWkpBottom,
-    showRightSidebar,
-    showFooter,
+    config,
+    setConfig,
   };
 }
