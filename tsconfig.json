@@ -1,9 +1,10 @@
 {
   "compilerOptions": {
-    "module": "CommonJS",
+    "module": "ESNext",
     "target": "ES2022",
     "outDir": "dist",
     "lib": ["ES2022", "DOM"],
+    "types": ["node"],
     "sourceMap": true,
     "inlineSources": true,
     "rootDir": ".",
@@ -18,10 +19,13 @@
     "strict": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "moduleResolution": "node"
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "vite.config.ts",
+    "esbuild.js"
   ],
   "exclude": [
     "node_modules",
