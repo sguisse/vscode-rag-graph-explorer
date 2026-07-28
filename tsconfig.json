@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "module": "ESNext",
+    "module": "CommonJS",
     "target": "ES2022",
     "outDir": "dist",
     "lib": ["ES2022", "DOM"],
@@ -19,8 +19,7 @@
     "strict": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true
+    "moduleResolution": "node"
   },
   "include": [
     "src/**/*",

@@ -1,5 +1,21 @@
 const esbuild = require('esbuild');
 
+const watchLoggerPlugin = {
+  name: 'watch-logger',
+  setup(build) {
+    build.onStart(() => {
+      console.log('⚡ [esbuild] Rebuilding extension host...');
+    });
+    build.onEnd((result) => {
+      if (result.errors.length > 0) {
+        console.error('❌ [esbuild] Build failed:', result.errors);
+      } else {
+        console.log('✅ [esbuild] Extension host compiled successfully.');
+      }
+    });
+  },
+};
+
 async function main() {
   const isWatch = process.argv.includes('--watch');
 
@@ -11,8 +27,9 @@ async function main() {
     target: 'node18',
     outfile: 'dist/extension.js',
     external: ['vscode'],
-    sourcemap: 'inline',
+    sourcemap: true,
     sourcesContent: true,
+    plugins: [watchLoggerPlugin],
   };
 
   if (isWatch) {
@@ -21,7 +38,6 @@ async function main() {
     console.log('⚡ Watching extension host...');
   } else {
     await esbuild.build(extensionConfig);
-    console.log('✅ Extension host compiled successfully.');
   }
 }
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { ToolbarSeparator } from '@/components/app/toolbar-separator';
-
+import { headerLeftWidth } from '@/constants/layout-constants';
 import {
   Layers,
   Moon,
@@ -37,30 +37,33 @@ export function Header({
   const containers = useLayoutStore((s) => s.containers);
 
   const leftContent = (
-    <div id="toggle-sidebar-left" className="flex items-center gap-2">
-      <span className="w-5 h-5">
+    <div id="app-logo-title" className="flex items-center gap-2">
+      <span id="app-logo" className="w-5 h-5">
         <img src={favicon} alt="App Logo" className="w-full h-full object-contain" />
       </span>
-      <span className="font-bold text-foreground text-sm tracking-tight">
+      <span id="app-title" className="font-bold text-foreground text-sm tracking-tight">
         Token Razor
       </span>
-      <span style={{ paddingLeft: `${DefaultContainersSize.sidebarLeftWidth - 130}px` }}>
+
+    </div>
+  );
+
+  const centerContent = (
+    <div className="flex items-center gap-2">
+    <span style={{ paddingLeft: `${DefaultContainersSize.sidebarLeftWidth - headerLeftWidth}px` }}>
       <ToggleButton
-        id="toggle-sidebar-left-02"
+        id="toggle-sidebar-left"
         isSelected={!!containers.sidebarLeft?.visible}
         onToggle={() => toggleContainerVisible('sidebarLeft')}
         tooltipText="Toggle Sidebar Left"
         icon={<Layers size={14} />}
       />
       </span>
-      <span className="bg-primary/15 px-2 py-0.5 rounded font-semibold text-[10px] text-primary">
+      <span id="active-feature" className="bg-primary/15 px-2 py-0.5 rounded font-semibold text-[10px] text-primary">
         {activeFeature}
       </span>
-    </div>
-  );
 
-  const centerContent = (
-    <></>
+    </div>
   );
 
   const rightContent = (
@@ -137,6 +140,7 @@ export function Header({
     <LeftCenterRightPanel
       id="app-header-panel"
       className="bg-secondary/80 px-2 border-border border-b h-10 font-mono text-foreground text-xs select-none"
+      style={{ height: `${DefaultContainersSize.headerHeight}px` }}
       left={leftContent}
       center={centerContent}
       right={rightContent}

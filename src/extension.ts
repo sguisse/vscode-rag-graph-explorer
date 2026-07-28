@@ -11,7 +11,10 @@ export function activate(context: vscode.ExtensionContext) {
       {
         enableScripts: true,
         retainContextWhenHidden: true,
-        localResourceRoots: [vscode.Uri.file(path.join(context.extensionPath, 'dist'))]
+        localResourceRoots: [vscode.Uri.file(path.join(context.extensionPath, 'dist'))],
+        portMapping: [
+          { webviewPort: 5173, hostPort: 5173 }
+        ]
       }
     );
 
@@ -22,6 +25,36 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 function getWebviewContent(context: vscode.ExtensionContext, webview: vscode.Webview): string {
+  const isDev = context.extensionMode === vscode.ExtensionMode.Development;
+
+  if (isDev) {
+    const devServerUrl = 'http://127.0.0.1:5173';
+
+    // Explicitly allow data: and devServerUrl for images in the CSP
+    const cspMeta = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} ${devServerUrl} https: data: blob:; script-src 'unsafe-inline' 'unsafe-eval' ${devServerUrl}; style-src 'unsafe-inline' ${devServerUrl}; connect-src ${devServerUrl} ws://127.0.0.1:5173; font-src ${webview.cspSource} ${devServerUrl} https: data:;">`;
+
+    return `<!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      ${cspMeta}
+      <script type="module">
+        import RefreshRuntime from '${devServerUrl}/@react-refresh'
+        RefreshRuntime.injectIntoGlobalHook(window)
+        window.$RefreshReg$ = () => {}
+        window.$RefreshSig$ = () => (type) => type
+        window.__vite_plugin_react_preamble_installed__ = true
+      </script>
+      <script type="module" src="${devServerUrl}/@vite/client"></script>
+    </head>
+    <body style="margin: 0; padding: 0; width: 100%; height: 100vh; overflow: hidden; background-color: transparent;">
+      <div id="root"></div>
+      <script type="module" src="${devServerUrl}/index.tsx"></script>
+    </body>
+    </html>`;
+  }
+
+  // --- Production build logic ---
   const distDir = path.join(context.extensionPath, 'dist', 'webview');
   let htmlPath = path.join(distDir, 'index.html');
   let assetBaseDir = distDir;
@@ -36,11 +69,11 @@ function getWebviewContent(context: vscode.ExtensionContext, webview: vscode.Web
 
   if (fs.existsSync(htmlPath)) {
     let html = fs.readFileSync(htmlPath, 'utf8');
-
     const nonce = getNonce();
-    const cspMeta = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} https: data:; script-src 'nonce-${nonce}' ${webview.cspSource} 'unsafe-eval'; style-src ${webview.cspSource} 'unsafe-inline' https:; font-src ${webview.cspSource} https: data:;">`;
 
-    // Inject compiled CSS directly into head to bypass webview file protocol styling issues
+    // Ensure data: is allowed in production for Base64 inlined images
+    const cspMeta = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} https: data: blob:; script-src 'nonce-${nonce}' ${webview.cspSource} 'unsafe-eval'; style-src ${webview.cspSource} 'unsafe-inline' https:; font-src ${webview.cspSource} https: data:;">`;
+
     let inlineCss = '';
     const assetsDir = path.join(assetBaseDir, 'assets');
     if (fs.existsSync(assetsDir)) {
@@ -49,7 +82,6 @@ function getWebviewContent(context: vscode.ExtensionContext, webview: vscode.Web
         const fullCssPath = path.join(assetsDir, cssFile);
         let rawCss = fs.readFileSync(fullCssPath, 'utf8');
 
-        // Rewrite relative font/asset URLs in CSS to vscode-webview URIs
         rawCss = rawCss.replace(/url\((["']?)([^"')]+)\1\)/g, (m, quote, urlPath) => {
           if (urlPath.startsWith('data:') || urlPath.startsWith('http://') || urlPath.startsWith('https://')) {
             return m;
@@ -70,10 +102,8 @@ function getWebviewContent(context: vscode.ExtensionContext, webview: vscode.Web
       html = cspMeta + inlineCss + html;
     }
 
-    // Attach nonce to script tags
     html = html.replace(/<script /g, `<script nonce="${nonce}" `);
 
-    // Convert src and href attributes to Webview URIs
     html = html.replace(/(src|href)="([^"]+)"/g, (match, attr, srcPath) => {
       if (srcPath.startsWith('http://') || srcPath.startsWith('https://') || srcPath.startsWith('data:')) {
         return match;
