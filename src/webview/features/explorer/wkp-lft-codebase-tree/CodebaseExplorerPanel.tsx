@@ -166,7 +166,7 @@ export function CodebaseExplorerPanel({
       <div id="panel-codebase-explorer-bottom" className="bg-muted/20 p-3 border-border border-t">
         <div>
           <h3 className="flex items-center gap-2 font-mono font-bold text-muted-foreground text-xs uppercase tracking-wider">
-            <span>Codebase Explorer à titi</span>
+            <span>Codebase Explorer</span>
             <span id="badge-file-count" className="bg-muted px-2 py-0.5 rounded text-[10px] text-foreground">
               {searchFilteredFiles.length}/{codebase.files.length}
             </span>

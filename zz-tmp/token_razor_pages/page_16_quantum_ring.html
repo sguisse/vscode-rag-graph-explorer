@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Token Razor - Quantum Ring</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #020617;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Cinzel', serif;
+      overflow: hidden;
+    }
+    .ring {
+      position: absolute;
+      width: 450px; height: 450px;
+      border: 2px solid transparent;
+      border-top-color: #38bdf8;
+      border-bottom-color: #818cf8;
+      border-radius: 50%;
+      animation: spin 6s linear infinite;
+    }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    h1 {
+      position: relative;
+      z-index: 10;
+      font-size: 4rem;
+      color: #f8fafc;
+      letter-spacing: 6px;
+      text-shadow: 0 0 20px rgba(56, 189, 248, 0.6);
+    }
+  </style>
+</head>
+<body>
+  <div class="ring"></div>
+  <h1>TOKEN RAZOR</h1>
+</body>
+</html>

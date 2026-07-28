@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Token Razor - Military HUD</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #080d08;
+      color: #33ff00;
+      font-family: 'Share Tech Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .hud {
+      position: relative;
+      border: 1px dashed #33ff00;
+      padding: 4rem;
+      text-align: center;
+      box-shadow: inset 0 0 20px rgba(51, 255, 0, 0.15);
+    }
+    .hud::before {
+      content: "[ TARGET LOCKED ]";
+      position: absolute;
+      top: -12px; left: 20px;
+      background: #080d08;
+      padding: 0 10px;
+      font-size: 0.8rem;
+    }
+    h1 {
+      font-size: 4.5rem;
+      letter-spacing: 8px;
+      text-shadow: 0 0 8px #33ff00;
+    }
+    .coords {
+      margin-top: 20px;
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="hud">
+    <h1>TOKEN RAZOR</h1>
+    <div class="coords">LAT: 37.7749 // LON: -122.4194 // FREQ: 144.100MHZ</div>
+  </div>
+</body>
+</html>

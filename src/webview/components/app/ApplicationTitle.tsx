@@ -1,10 +1,3 @@
-#!/usr/bin/env bash
-set -e
-
-# Ensure target directory exists
-
-# Generate updated ApplicationTitle.tsx React Component with labelLeft and labelRight props
-cat << 'EOF' > src/webview/components/app/ApplicationTitle.tsx
 import React from 'react';
 
 export interface ApplicationTitleProps {
@@ -68,7 +61,7 @@ export const ApplicationTitle: React.FC<ApplicationTitleProps> = ({
           padding: 0;
           font-size: 1.25rem;
           text-transform: uppercase;
-          letter-spacing: 7px;
+          letter-spacing: 3px;
           height: 35px;
           line-height: 35px;
           display: flex;
@@ -92,12 +85,12 @@ export const ApplicationTitle: React.FC<ApplicationTitleProps> = ({
         }
 
         .token-razor-left {
-          font-weight: 400;
+          font-weight: 100;
           margin-right: 0.35em;
         }
 
         .token-razor-right {
-          font-weight: 900;
+          font-weight: 800;
         }
 
         .token-razor-stroke-overlay {
@@ -110,7 +103,7 @@ export const ApplicationTitle: React.FC<ApplicationTitleProps> = ({
           color: transparent;
           font-size: 1.25rem;
           text-transform: uppercase;
-          letter-spacing: 7px;
+          letter-spacing: 3px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -161,6 +154,3 @@ export const ApplicationTitle: React.FC<ApplicationTitleProps> = ({
 };
 
 export default ApplicationTitle;
-EOF
-
-echo "✨ feat: Updated ApplicationTitle.tsx with labelLeft (fontWeight: 400) and labelRight (fontWeight: 900) parameters!"

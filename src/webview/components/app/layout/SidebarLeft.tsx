@@ -27,6 +27,7 @@ import {
   SidebarMenuBadge,
   SidebarFooter,
 } from '@/components/ui/sidebar';
+import { DefaultContainersSize } from '@/constants/layout-constants';
 
 export interface NavItem {
   id: string;
@@ -74,10 +75,10 @@ export function renderSidebarMenuItem(
         className="relative overflow-hidden cursor-pointer"
         data-tooltip={isMinimal ? item.label : undefined}
       >
-        <item.icon size={16} className={sidebarLeftMode === 'normal' ? 'mr-2.5 shrink-0' : 'shrink-0'} />
+        <item.icon size={18} className={sidebarLeftMode === 'normal' ? 'mr-2.5 shrink-0' : 'shrink-0'} />
         {sidebarLeftMode === 'normal' ? (
           <>
-            <span className="truncate">{item.label}</span>
+            <span className="text-[12px] truncate">{item.label}</span>
             {item.badge && <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>}
           </>
         ) : (
@@ -97,21 +98,21 @@ export function SidebarLeft({
   setActiveFeature,
   sidebarLeftMode: modeProp,
   setSidebarLeftMode: setModeProp,
-  sidebarLeftWidth = 220,
+  sidebarLeftWidth = DefaultContainersSize.sidebarLeftWidth,
 }: SidebarLeftProps) {
   const [internalMode, setInternalMode] = useState<'normal' | 'minimal'>('normal');
 
   const sidebarLeftMode = modeProp ?? internalMode;
   const setSidebarLeftMode = setModeProp ?? setInternalMode;
 
-  const effectiveWidth = sidebarLeftMode === 'minimal' ? '56px' : '100%';
+  const effectiveWidth = sidebarLeftMode === 'minimal' ? `${DefaultContainersSize.sidebarLeftMinimizedWidth}px` : '100%';
 
   return (
     <Sidebar
       id="ctn-sidebar-left"
       style={{
         width: effectiveWidth,
-        '--sidebar-width': sidebarLeftMode === 'minimal' ? '56px' : `${sidebarLeftWidth}px`,
+        '--sidebar-width': sidebarLeftMode === 'minimal' ? `${DefaultContainersSize.sidebarLeftMinimizedWidth}px` : `${sidebarLeftWidth}px`,
       } as React.CSSProperties}
       className="flex flex-col justify-between border-r-0 w-full h-full min-h-0 overflow-x-hidden transition-all duration-200"
     >

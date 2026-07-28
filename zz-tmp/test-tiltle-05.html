@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Token Razor - Glassmorphism</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #090a0f;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      overflow: hidden;
+    }
+    .orb-1 {
+      position: absolute;
+      width: 350px;
+      height: 350px;
+      background: #6366f1;
+      border-radius: 50%;
+      filter: blur(90px);
+      top: 25%;
+      left: 30%;
+    }
+    .orb-2 {
+      position: absolute;
+      width: 300px;
+      height: 300px;
+      background: #a855f7;
+      border-radius: 50%;
+      filter: blur(90px);
+      bottom: 25%;
+      right: 30%;
+    }
+    .glass-card {
+      position: relative;
+      z-index: 10;
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 24px;
+      padding: 4rem 6rem;
+      text-align: center;
+      box-shadow: 0 30px 60px rgba(0,0,0,0.4);
+    }
+    h1 {
+      font-size: 4.5rem;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -1px;
+      background: linear-gradient(135deg, #ffffff 0%, #c084fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .badge {
+      display: inline-block;
+      padding: 0.4rem 1.2rem;
+      background: rgba(168, 85, 247, 0.15);
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      border-radius: 20px;
+      color: #c084fc;
+      font-size: 0.85rem;
+      margin-bottom: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="orb-1"></div>
+  <div class="orb-2"></div>
+  <div class="glass-card">
+    <div class="badge">Next-Gen DeFi Protocol</div>
+    <h1>Token Razor</h1>
+  </div>
+</body>
+</html>

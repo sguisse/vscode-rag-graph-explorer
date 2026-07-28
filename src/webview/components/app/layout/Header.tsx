@@ -18,6 +18,7 @@ import { ToggleButton } from '@/components/app/toggle-button';
 import { useLayoutStore } from '@/store/useLayoutStore';
 import favicon from '@/assets/favicon.png';
 import { DefaultContainersSize } from '@/constants/layout-constants';
+import { ApplicationTitle } from '../ApplicationTitle';
 
 interface HeaderProps {
   activeFeature: string;
@@ -42,14 +43,14 @@ export function Header({
         <img src={favicon} alt="App Logo" className="w-full h-full object-contain" />
       </span>
       <span id="app-title" className="font-bold text-foreground text-sm tracking-tight">
-        Token Razor
+        <ApplicationTitle label='Token Razor'/>
       </span>
 
     </div>
   );
 
   const centerContent = (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-1 justify-left items-center gap-2">
     <span style={{ paddingLeft: `${DefaultContainersSize.sidebarLeftWidth - headerLeftWidth}px` }}>
       <ToggleButton
         id="toggle-sidebar-left"

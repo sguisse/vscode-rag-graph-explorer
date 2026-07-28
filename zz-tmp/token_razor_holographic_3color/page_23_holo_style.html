@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Token Razor - 3-Color Holo Style 23</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@800&family=Orbitron:wght@900&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #05070a;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Syne', sans-serif;
+      overflow: hidden;
+    }
+    .holo-container {
+      padding: 3rem 5rem;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(15px);
+      text-align: center;
+      position: relative;
+    }
+    h1 {
+      font-size: 5.5rem;
+      text-transform: uppercase;
+      letter-spacing: -1px;
+      color: transparent;
+      -webkit-text-stroke: 2px #ffd700;
+      animation: strokeGradientAnim 5s infinite alternate ease-in-out;
+    }
+    @keyframes strokeGradientAnim {
+      0% { -webkit-text-stroke-color: #ffd700; filter: drop-shadow(0 0 25px rgba(255,215,0,0.6)); }
+      50% { -webkit-text-stroke-color: #e2e8f0; filter: drop-shadow(0 0 25px rgba(226,232,240,0.6)); }
+      100% { -webkit-text-stroke-color: #22c55e; filter: drop-shadow(0 0 25px rgba(34,197,94,0.6)); }
+    }
+    .sub {
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      background: linear-gradient(90deg, #ffd700, #e2e8f0, #22c55e);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+  </style>
+</head>
+<body>
+  <div class="holo-container">
+    <h1>TOKEN RAZOR</h1>
+    <div class="sub">Dynamic 3-Color Holo Theme 23</div>
+  </div>
+</body>
+</html>

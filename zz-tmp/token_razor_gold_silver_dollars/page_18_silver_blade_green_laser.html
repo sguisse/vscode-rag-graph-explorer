@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Token Razor - Green Laser</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@900&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #050505;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Montserrat', sans-serif;
+    }
+    .wrapper {
+      position: relative;
+    }
+    h1 {
+      font-size: 6rem;
+      text-transform: uppercase;
+      color: #cbd5e1;
+      letter-spacing: 2px;
+    }
+    .laser {
+      position: absolute;
+      top: 50%;
+      left: -10%;
+      width: 120%;
+      height: 4px;
+      background: #22c55e;
+      box-shadow: 0 0 15px #22c55e;
+      transform: rotate(-2deg);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <h1>TOKEN RAZOR</h1>
+    <div class="laser"></div>
+  </div>
+</body>
+</html>
