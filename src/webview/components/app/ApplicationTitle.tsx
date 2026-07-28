@@ -71,11 +71,11 @@ export const ApplicationTitle: React.FC<ApplicationTitleProps> = ({
           background: linear-gradient(
             120deg,
             #ffd700 0%,
-            #a3e635 20%,
+            #a3e635 10%,
             #e2e8f0 40%,
             #10b981 60%,
             #fef08a 80%,
-            #34d399 100%
+            #b8bdc3 100%
           );
           background-size: 400% 400%;
           -webkit-background-clip: text;
