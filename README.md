@@ -36,6 +36,6 @@ This extension is distributed under the open-source MIT License.
 
 ## 🐛 To run the extension in development mode, you can use the following commands:
 
-L'architecture standard HMR Vite (avec serveur de dev et CORS ouvert) est en place !
-👉 LANCEZ : `npm run watch`, puis appuyez sur F5.
-La modification d'un .tsx sera désormais répercutée via WebSockets sans aucun rechargement complet.
+The standard HMR Vite architecture (with dev server and open CORS) is in place!
+👉 RUN: `npm run watch`, then press F5.
+Changing a .tsx will now be reflected through WebSockets without any full reload.
