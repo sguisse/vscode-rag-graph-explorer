@@ -8,6 +8,10 @@ import { ExplorerFeature } from '@/features/explorer/ExplorerFeature';
 import { RulesFeature } from '@/features/rules/RulesFeature';
 import { HelpFeature } from '@/features/help/HelpFeature';
 
+declare const acquireVsCodeApi: () => any;
+const vscode = acquireVsCodeApi();
+(window as any).vscodeApi = vscode;
+
 export default function App() {
   const { activeFeature, setActiveFeature, isDarkMode, setIsDarkMode, notification } = useAppContextStore();
   const { containers } = useLayoutStore();

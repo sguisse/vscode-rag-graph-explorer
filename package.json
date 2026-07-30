@@ -1,8 +1,8 @@
 {
-  "name": "graph-rag-explorer",
+  "name": "token-razor",
   "license": "MIT",
-  "displayName": "Graph RAG Explorer",
-  "description": "Expert Node Navigator and Architecture Explorer via RAG and Gemini",
+  "displayName": "Token Razor",
+  "description": "Tool used to build LLM Context from source code and documentation, and to explore the relationships between entities in a graph to limit the token usage.",
   "version": "1.5.0",
   "publisher": "sguisse",
   "engines": {
@@ -16,28 +16,65 @@
   "contributes": {
     "commands": [
       {
-        "command": "graphRagExplorer.openTool",
-        "title": "Graph RAG Explorer --> 🕸️ Open UI"
+        "command": "tokenRazor.openTool",
+        "title": "Token Razor --> 🪒 Open UI"
       }
     ],
     "menus": {
       "editor/title": [
         {
-          "command": "graphRagExplorer.openTool",
+          "command": "tokenRazor.openTool",
           "group": "navigation"
         }
       ],
       "explorer/context": [
         {
-          "command": "graphRagExplorer.openTool",
+          "command": "tokenRazor.openTool",
           "group": "navigation@0"
         }
       ]
     },
     "configuration": {
-      "title": "🕸️Graph RAG Explorer",
+      "title": "🪒 Token Razor",
       "properties": {
-        "graphRagExplorer.entitiesTypesList": {
+        "tokenRazor.pinApplication": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically pin the Application UI tab when opened."
+        },
+        "tokenRazor.tooltipDelay": {
+          "type": "number",
+          "default": 2000,
+          "description": "Delay in milliseconds before showing the custom tooltips on hover."
+        },
+        "tokenRazor.geminiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API Key for Gemini Assistant analysis."
+        },
+        "tokenRazor.backendScriptsPath": {
+          "type": "string",
+          "default": ".tokenRazor",
+          "description": "Local User Path where the back-end scripts and treatment results will be stored (relative to the workspace root)."
+        },
+        "tokenRazor.logFileEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable background file logging redirection (${tokenRazor.backendScriptsPath}/logs/)"
+        },
+        "tokenRazor.logFileMaxSize": {
+          "type": "number",
+          "default": 5,
+          "description": "Maximum size per log file before rotation triggers (in Megabytes)."
+        },
+        "tokenRazor.logFileMaxCountRetention": {
+          "type": "number",
+          "default": 5,
+          "description": "Maximum number of historical log file nodes to keep before cycling."
+        },
+
+
+        "tokenRazor.graphRagExplorer.entitiesTypesList": {
           "type": "array",
           "description": "List of predefined entity types for the graph exploration.",
           "items": {
@@ -50,152 +87,132 @@
             "document"
           ]
         },
-        "graphRagExplorer.regexFilterEnabled": {
+        "tokenRazor.graphRagExplorer.regexFilterEnabled": {
           "type": "boolean",
           "default": false,
           "description": "Enable Regex matching in the filter bar by default."
         },
-        "graphRagExplorer.treeFilterEnabled": {
+        "tokenRazor.graphRagExplorer.treeFilterEnabled": {
           "type": "boolean",
           "default": true,
           "description": "Apply search filters on the Tree View by default."
         },
-        "graphRagExplorer.geminiApiKey": {
-          "type": "string",
-          "default": "",
-          "description": "API Key for Gemini Assistant analysis."
-        },
-        "graphRagExplorer.tooltipDelay": {
-          "type": "number",
-          "default": 2000,
-          "description": "Delay in milliseconds before showing the custom tooltips on hover."
-        },
-        "graphRagExplorer.pinFilesExporter": {
-          "type": "boolean",
-          "default": true,
-          "description": "Automatically pin the Graph RAG Explorer UI tab when opened."
-        },
-        "graphRagExplorer.graphLegendEnabled": {
+        "tokenRazor.graphRagExplorer.graphLegendEnabled": {
           "type": "boolean",
           "default": true,
           "description": "Display the visual topological legend by default upon launch."
         },
-        "graphRagExplorer.callersDepth": {
+        "tokenRazor.graphRagExplorer.callersDepth": {
           "type": "number",
           "default": 1,
           "description": "Default callers upstream lookup relationship parsing depth."
         },
-        "graphRagExplorer.calleesDepth": {
+        "tokenRazor.graphRagExplorer.calleesDepth": {
           "type": "number",
           "default": 1,
           "description": "Default callees downstream lookup relationship parsing depth."
         },
-        "graphRagExplorer.beScriptsPath": {
+        "tokenRazor.graphRagExplorer.backendScriptsPath": {
           "type": "string",
-          "default": ".graph-rag-explorer-v2",
+          "default": "${tokenRazor.backendScriptsPath}/graph-rag-explorer-v2",
           "description": "Local User Path where the back-end scripts and treatment results will be stored (relative to the workspace root)."
         },
-        "graphRagExplorer.excludePathsRegex": {
+        "tokenRazor.graphRagExplorer.includePathsRegex": {
           "type": "string",
-          "default": "(^|.*/)(node_modules|\\.git|\\.github|dist|.*-tmp|.*-out|\\.idea|\\.vscode|\\.history|exported-files|\\.[^/]+)(/.*|$)",
-          "description": "Regex to exclude paths containing specific directories (! /target is not included because we need classes)."
+          "default": "",
+          "description": "Regex to include only paths containing specific directories."
         },
-        "graphRagExplorer.includeExtensionsRegex": {
+        "tokenRazor.graphRagExplorer.includeExtensionsRegex": {
           "type": "string",
           "default": ".*\\.(java|ts|tsx|js|html|css|json|xml|yaml|yml|py|md|properties)$",
           "description": "Regex to include paths containing specific file extensions."
         },
-        "graphRagExplorer.forceScriptSync": {
+        "tokenRazor.graphRagExplorer.excludePathsRegex": {
+          "type": "string",
+          "default": "(^|.*/)(node_modules|\\.git|\\.github|dist|.*-tmp|.*-out|\\.idea|\\.vscode|\\.history|exported-files|\\.[^/]+)(/.*|$)",
+          "description": "Regex to exclude paths containing specific directories (! /target is not included because we need classes)."
+        },
+        "tokenRazor.graphRagExplorer.excludeExtensionsRegex": {
+          "type": "string",
+          "default": "",
+          "description": "Regex to exclude paths containing specific file extensions."
+        },
+        "tokenRazor.graphRagExplorer.forceScriptSync": {
           "type": "boolean",
           "default": false,
           "description": "Force synchronized recreation of local project core scripts."
         },
-        "graphRagExplorer.logFileEnabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable background file logging redirection (.graph-rag-explorer/logs/)"
-        },
-        "graphRagExplorer.logFileMaxSize": {
-          "type": "number",
-          "default": 5,
-          "description": "Maximum size per log file before rotation triggers (in Megabytes)."
-        },
-        "graphRagExplorer.logFileMaxCountRetention": {
-          "type": "number",
-          "default": 5,
-          "description": "Maximum number of historical log file nodes to keep before cycling."
-        },
-        "graphRagExplorer.neo4j.version": {
+        "tokenRazor.graphRagExplorer.neo4j.version": {
           "type": "string",
           "default": "5.26.0",
           "description": "The specific community release version of the local sandboxed database engine server."
         },
-        "graphRagExplorer.neo4j.host": {
+        "tokenRazor.graphRagExplorer.neo4j.host": {
           "type": "string",
           "default": "localhost",
           "description": "Neo4j host."
         },
-        "graphRagExplorer.neo4j.port.bolt": {
+        "tokenRazor.graphRagExplorer.neo4j.port.bolt": {
           "type": "number",
           "default": 7687,
           "description": "Neo4j connection endpoint port used to access db API."
         },
-        "graphRagExplorer.neo4j.port.http": {
+        "tokenRazor.graphRagExplorer.neo4j.port.http": {
           "type": "number",
           "default": 7474,
           "description": "Neo4j website client http port"
         },
-        "graphRagExplorer.neo4j.uri": {
+        "tokenRazor.graphRagExplorer.neo4j.uri": {
           "type": "string",
-          "default": "bolt://${graphRagExplorer.neo4j.host}:${graphRagExplorer.neo4j.port.bolt}",
+          "default": "bolt://${tokenRazor.graphRagExplorer.neo4j.host}:${tokenRazor.graphRagExplorer.neo4j.port.bolt}",
           "description": "Neo4j connection endpoint mapping into the embedded jQAssistant server database."
         },
-        "graphRagExplorer.neo4j.url": {
+        "tokenRazor.graphRagExplorer.neo4j.url": {
           "type": "string",
-          "default": "http://${graphRagExplorer.neo4j.host}:${graphRagExplorer.neo4j.port.http}/browser/preview/",
+          "default": "http://${tokenRazor.graphRagExplorer.neo4j.host}:${tokenRazor.graphRagExplorer.neo4j.port.http}/browser/preview/",
           "description": "Neo4j website client URL."
         },
-        "graphRagExplorer.neo4j.username": {
+        "tokenRazor.graphRagExplorer.neo4j.username": {
           "type": "string",
           "default": "neo4j",
           "description": "Database account access identifier username. Should not change with the default Neo4j community installation."
         },
-        "graphRagExplorer.neo4j.password": {
+        "tokenRazor.graphRagExplorer.neo4j.password": {
           "type": "string",
           "default": "password",
           "description": "Database secure transaction authorization secret credentials. Should not change with the default Neo4j community installation."
         },
-        "graphRagExplorer.jqassistant.version": {
+        "tokenRazor.graphRagExplorer.jqassistant.version": {
           "type": "string",
           "default": "2.9.1",
           "description": "The target production-ready release version of the portable jQAssistant CLI tool."
         },
-        "graphRagExplorer.jqassistant.downloadUrl": {
+        "tokenRazor.graphRagExplorer.jqassistant.downloadUrl": {
           "type": "string",
-          "default": "https://github.com/jQAssistant/jqassistant/releases/download/${graphRagExplorer.jqassistant.version}/jqassistant-commandline-neo4jv5-${graphRagExplorer.jqassistant.version}-distribution.zip",
+          "default": "https://github.com/jQAssistant/jqassistant/releases/download/${tokenRazor.graphRagExplorer.jqassistant.version}/jqassistant-commandline-neo4jv5-${tokenRazor.graphRagExplorer.jqassistant.version}-distribution.zip",
           "description": "The absolute parameterized GitHub Releases download link for fetching portable jQAssistant distribution packages."
         },
-        "graphRagExplorer.jqassistant.mcp.host": {
+        "tokenRazor.graphRagExplorer.jqassistant.mcp.host": {
           "type": "string",
           "default": "127.0.0.1",
           "description": "The host address for the jqassistant MCP server."
         },
-        "graphRagExplorer.jqassistant.mcp.port": {
+        "tokenRazor.graphRagExplorer.jqassistant.mcp.port": {
           "type": "number",
           "default": 8800,
           "description": "The port for the jqassistant MCP server."
         },
-        "graphRagExplorer.jqassistant.xmlReportPath": {
+        "tokenRazor.graphRagExplorer.jqassistant.xmlReportPath": {
           "type": "string",
           "default": "./target/site/jacoco/jacoco.xml",
           "description": "Workspace matching path targeting local JaCoCo XML metric reports."
         },
-        "graphRagExplorer.dependencyCruiser.configFile": {
+        "tokenRazor.graphRagExplorer.dependencyCruiser.configFile": {
           "type": "string",
           "default": ".dependency-cruiser.json",
           "description": "Configuration rules path definition for Dependency Cruiser checks."
         },
-        "graphRagExplorer.graphify.arguments": {
+        "tokenRazor.graphRagExplorer.graphify.arguments": {
           "type": "string",
           "default": "--deep-scan",
           "description": "Optional runtime execution flags passed onto the background python graphify engine."

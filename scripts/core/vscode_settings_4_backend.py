@@ -9,7 +9,7 @@ class VsCodeSettingsBeManager:
     """
     # Class-level constant for string interpolation matching
     _INTERPOLATION_REGEX = re.compile(r"\${([^}]+)}")
-    baseScope = "graphRagExplorer."
+    baseScope = "tokenRazor.graphRagExplorer."
 
     def __init__(self):
         self._registry: Dict[str, Any] = {}

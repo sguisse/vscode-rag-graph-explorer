@@ -64,7 +64,7 @@ def load_vscode_settings():
 
     # Quick validation of essential settings
     info(f"Workspace Root: {vsCodeSettings.get('workspaceRoot')}", component="Main")
-    info(f"Backend Scripts Path: {vsCodeSettings.get('graphRagExplorer.beScriptsPath')}", component="Main")
+    info(f"Backend Scripts Path: {vsCodeSettings.get('tokenRazor.graphRagExplorer.backendScriptsPath')}", component="Main")
     info(f"Neo4J user: {vsCodeSettings.get('neo4j.username')}", component="Main")
     info(f"logFileEnabled: {vsCodeSettings.get('logFileEnabled')}", component="Main")
     info(f"logFileMaxSize: {vsCodeSettings.get('logFileMaxSize')}", component="Main")

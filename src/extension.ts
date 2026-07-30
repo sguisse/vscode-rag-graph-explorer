@@ -2,11 +2,21 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 
+import * as childProcess from 'child_process';
+import { VsCodeSettings } from './core/VsCodeSettings';
+
+let APP_NORMALIZED_NAME = "tokenRazor";
 export function activate(context: vscode.ExtensionContext) {
-  const disposable = vscode.commands.registerCommand('graphRagExplorer.openTool', () => {
+    const packageData = context.extension.packageJSON;
+    const logOutputChannel = vscode.window.createOutputChannel(packageData.name);
+    context.subscriptions.push(logOutputChannel);
+    logOutputChannel.appendLine(`[INFO] ${packageData.name} output channel initialized.`);
+
+    VsCodeSettings.init(APP_NORMALIZED_NAME);
+    const disposable = vscode.commands.registerCommand('tokenRazor.openTool', () => {
     const panel = vscode.window.createWebviewPanel(
-      'graphRagExplorer',
-      '🕸️ Graph RAG Explorer',
+      'tokenRazor',
+      '🪒 Token Razor',
       vscode.ViewColumn.One,
       {
         enableScripts: true,
@@ -17,6 +27,10 @@ export function activate(context: vscode.ExtensionContext) {
         ]
       }
     );
+
+    if (VsCodeSettings.get('pinApplication') !== false) {
+        vscode.commands.executeCommand('workbench.action.pinEditor');
+    }
 
     panel.webview.html = getWebviewContent(context, panel.webview);
   });
@@ -120,7 +134,7 @@ function getWebviewContent(context: vscode.ExtensionContext, webview: vscode.Web
   return `<!DOCTYPE html>
   <html>
     <body style="color: white; font-family: sans-serif; padding: 20px;">
-      <h2>🕸️ Graph RAG Explorer</h2>
+      <h2>🪒 Token Razor</h2>
       <p>Webview bundle not found at ${htmlPath}. Please run <code>npm run compile</code>.</p>
     </body>
   </html>`;
@@ -135,4 +149,8 @@ function getNonce() {
   return text;
 }
 
-export function deactivate() {}
+export function deactivate() {
+    if (activeChildProcess) {
+        try { activeChildProcess.kill('SIGKILL'); } catch(e){}
+    }
+}
