@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { FOLDER_KEYS_REGISTERED_CONFIG, CodebaseFile, Dependency } from '@/services/codebase';
+import { FOLDER_KEYS_REGISTERED_CONFIG, CodebaseFile, Dependency } from '@/backend/services/codebase';
 
 export function usePlantUml(searchFilteredFiles: CodebaseFile[], visibleFiles: Record<string, boolean>, dependencies: Dependency[]) {
   return useMemo(() => {

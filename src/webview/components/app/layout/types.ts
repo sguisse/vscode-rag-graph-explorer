@@ -1,5 +1,5 @@
 import React from 'react';
-import { MaximizeScope } from '@/services/codebase/domain/model/types/type-maximize-scope';
+import { MaximizeScope } from '@/backend/services/codebase/domain/model/types/type-maximize-scope';
 
 export interface MaximizeContainer {
   isMaximizable?: boolean;

@@ -7,7 +7,7 @@ import {
   FOLDER_BASE_X_POSITIONS_CONFIG,
   NODE_DIMENSIONS_CONFIG,
   buildMemberKeyToken
-} from '@/services/codebase';
+} from '@/backend/services/codebase';
 
 export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) {
   const updateGraphTopology = useCallback((

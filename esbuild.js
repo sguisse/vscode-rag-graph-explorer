@@ -28,14 +28,13 @@ async function main() {
     outfile: 'dist/extension.js',
     external: ['vscode'],
     sourcemap: true,
-    sourcesContent: true,
     plugins: [watchLoggerPlugin],
   };
 
   if (isWatch) {
     const ctx = await esbuild.context(extensionConfig);
     await ctx.watch();
-    console.log('⚡ Watching extension host...');
+    console.log('[esbuild] ⚡ Watching extension host...');
   } else {
     await esbuild.build(extensionConfig);
   }

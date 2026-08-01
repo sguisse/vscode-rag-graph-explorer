@@ -1,7 +1,7 @@
 import React from 'react';
 import { JsonView } from '@/components/app/viewer/JsonView';
 import { CopyFloatingButton } from '@/components/app/viewer/CopyFloatingButton';
-import { codebaseService } from '@/services/codebase';
+import { codebaseService } from '@/backend/services/codebase';
 
 interface JsonTabPanelProps {
   handleCopy: (text: string, message: string) => void;

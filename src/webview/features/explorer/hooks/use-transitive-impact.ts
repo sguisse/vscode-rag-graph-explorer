@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { SelectedEntity, ImpactDirection, Dependency, calculateTransitiveImpact } from '@/services/codebase';
+import { SelectedEntity, ImpactDirection, Dependency, calculateTransitiveImpact } from '@/backend/services/codebase';
 
 export function useTransitiveImpact(
   selectedEntity: SelectedEntity | null,

@@ -33,7 +33,7 @@ export function activate(context: vscode.ExtensionContext) {
             packageData.name, packageData.displayName, vscode.ViewColumn.One,
             {
                 enableScripts: true,
-                retainContextWhenHidden: true,
+                            retainContextWhenHidden: true,
                 localResourceRoots: [vscode.Uri.file(path.join(context.extensionPath, 'dist'))]
             }
         );
@@ -303,7 +303,7 @@ function getWebviewContent(webview: vscode.Webview, extensionPath: string): stri
     return `<!DOCTYPE html>
     <html lang="en" class="h-full">
     <head>
-        <meta charset="UTF-8"><title>Graph RAG Explorer</title>
+                <meta charset="UTF-8"><title>Graph RAG Explorer</title>
         <link href="https://cdn.jsdelivr.net/npm/@vscode/codicons/dist/codicon.css" rel="stylesheet">
         <script src="https://cdn.tailwindcss.com"></script>
     </head>

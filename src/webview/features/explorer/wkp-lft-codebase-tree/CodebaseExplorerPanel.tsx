@@ -10,7 +10,7 @@ import {
   codebaseService,
   FOLDER_KEYS_REGISTERED_CONFIG,
   FOLDER_THEME_REGISTRY_CONFIG
-} from '@/services/codebase';
+} from '@/backend/services/codebase';
 
 interface TriStateCheckboxProps {
   checked: boolean;

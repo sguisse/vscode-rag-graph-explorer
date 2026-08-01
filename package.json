@@ -1,7 +1,7 @@
 {
   "name": "token-razor",
   "license": "MIT",
-  "displayName": "Token Razor",
+  "displayName": "\ud83e\ude92 Token Razor",
   "description": "Tool used to build LLM Context from source code and documentation, and to explore the relationships between entities in a graph to limit the token usage.",
   "version": "1.5.0",
   "publisher": "sguisse",
@@ -17,7 +17,7 @@
     "commands": [
       {
         "command": "tokenRazor.openTool",
-        "title": "Token Razor --> 🪒 Open UI"
+        "title": "Token Razor --> \ud83e\ude92 Open UI"
       }
     ],
     "menus": {
@@ -35,7 +35,7 @@
       ]
     },
     "configuration": {
-      "title": "🪒 Token Razor",
+      "title": "\ud83e\ude92 Token Razor",
       "properties": {
         "tokenRazor.pinApplication": {
           "type": "boolean",
@@ -72,8 +72,6 @@
           "default": 5,
           "description": "Maximum number of historical log file nodes to keep before cycling."
         },
-
-
         "tokenRazor.graphRagExplorer.entitiesTypesList": {
           "type": "array",
           "description": "List of predefined entity types for the graph exploration.",
@@ -230,7 +228,8 @@
     "compile:extension": "node esbuild.js",
     "compile:webview": "vite build",
     "dev": "concurrently \"npm:watch-extension\" \"npm:dev-webview\"",
-    "dev-webview": "vite"
+    "dev-webview": "vite",
+    "watch:webview": "vite"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",

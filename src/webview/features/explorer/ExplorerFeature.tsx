@@ -25,7 +25,7 @@ import {
   CodebaseData,
   SelectedEntity,
   ImpactDirection,
-} from '@/services/codebase';
+} from '@/backend/services/codebase';
 
 export function ExplorerFeature() {
   const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);

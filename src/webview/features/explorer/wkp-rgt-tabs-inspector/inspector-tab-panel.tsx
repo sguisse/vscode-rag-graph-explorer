@@ -9,7 +9,7 @@ import {
   CodebaseMethod,
   ConfigProperty,
   generateMarkdownRecipe
-} from '@/services/codebase';
+} from '@/backend/services/codebase';
 
 interface InspectorTabPanelProps {
   selectedEntity: SelectedEntity | null;

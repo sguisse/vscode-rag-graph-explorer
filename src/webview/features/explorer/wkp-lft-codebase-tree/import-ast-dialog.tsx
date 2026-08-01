@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Upload, FileCode, CheckCircle2, AlertCircle, FolderOpen } from "lucide-react";
-import { CodebaseData } from "@/services/codebase";
+import { CodebaseData } from "@/backend/services/codebase";
 
 interface ImportAstDialogProps {
   open: boolean;
@@ -129,7 +129,7 @@ export function ImportAstDialog({ open, onOpenChange, onImport }: ImportAstDialo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent id="dialog-import-ast" className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle id="title-import-ast" className="flex items-center gap-2 text-sm font-bold font-mono">
+          <DialogTitle id="title-import-ast" className="flex items-center gap-2 font-mono font-bold text-sm">
             <Upload size={16} className="text-primary" /> Import AST Data Schema
           </DialogTitle>
           <DialogDescription id="desc-import-ast" className="text-xs">
@@ -163,13 +163,13 @@ export function ImportAstDialog({ open, onOpenChange, onImport }: ImportAstDialo
             <Upload size={28} className={isDragging ? "text-primary animate-bounce mb-1" : "text-muted-foreground mb-1"} />
             <div className="pointer-events-none">
               {fileName ? (
-                <span className="flex items-center gap-1.5 font-bold text-emerald-500 text-xs font-mono">
+                <span className="flex items-center gap-1.5 font-mono font-bold text-emerald-500 text-xs">
                   <CheckCircle2 size={14} /> Selected: {fileName}
                 </span>
               ) : (
-                <span className="text-xs font-mono font-medium text-foreground">Select local extraction file payload</span>
+                <span className="font-mono font-medium text-foreground text-xs">Select local extraction file payload</span>
               )}
-              <p className="text-[10px] text-muted-foreground mt-1 font-mono">Drag & Drop .json AST file here</p>
+              <p className="mt-1 font-mono text-[10px] text-muted-foreground">Drag & Drop .json AST file here</p>
             </div>
 
             <Button
@@ -177,14 +177,14 @@ export function ImportAstDialog({ open, onOpenChange, onImport }: ImportAstDialo
               type="button"
               variant="default"
               size="sm"
-              className="mt-4 text-xs flex items-center gap-1.5 shadow-md"
+              className="flex items-center gap-1.5 shadow-md mt-4 text-xs"
             >
               <FolderOpen size={14} /> Browse Local Files
             </Button>
           </div>
 
           <div className="flex justify-between items-center">
-            <span className="text-xs font-mono font-semibold text-muted-foreground uppercase flex items-center gap-1">
+            <span className="flex items-center gap-1 font-mono font-semibold text-muted-foreground text-xs uppercase">
               <FileCode size={13} /> Direct JSON Input
             </span>
           </div>
@@ -192,7 +192,7 @@ export function ImportAstDialog({ open, onOpenChange, onImport }: ImportAstDialo
           <Textarea
             id="textarea-ast-json-paste"
             placeholder='{\n  "files": [...],\n  "dependencies": [...]\n}'
-            className="h-28 font-mono text-xs bg-muted/40 resize-none"
+            className="bg-muted/40 h-28 font-mono text-xs resize-none"
             value={jsonText}
             onChange={(e) => {
               setJsonText(e.target.value);
@@ -202,7 +202,7 @@ export function ImportAstDialog({ open, onOpenChange, onImport }: ImportAstDialo
           />
 
           {errorMsg && (
-            <div id="notice-import-ast-error" className="flex items-center gap-2 p-2.5 bg-destructive/15 border border-destructive/30 rounded text-destructive text-xs font-mono">
+            <div id="notice-import-ast-error" className="flex items-center gap-2 bg-destructive/15 p-2.5 border border-destructive/30 rounded font-mono text-destructive text-xs">
               <AlertCircle size={15} className="shrink-0" />
               <span>{errorMsg}</span>
             </div>

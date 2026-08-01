@@ -1,7 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+    <script type="module">
+      import RefreshRuntime from 'http://127.0.0.1:5173/@react-refresh';
+      RefreshRuntime.injectIntoGlobalHook(window);
+      window.$RefreshReg$ = () => {};
+      window.$RefreshSig$ = () => (type) => type;
+      window.__vite_plugin_react_preamble_installed__ = true;
+    </script>
+          <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Token Razor - Vaporwave</title>
   <link href="https://fonts.googleapis.com/css2?family=Megrim&family=VT323&display=swap" rel="stylesheet">
