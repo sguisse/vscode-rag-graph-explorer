@@ -1,11 +1,8 @@
 import { ILoggerService } from "../services/ILoggerService";
-import { LoggerService } from "../services/impl/LoggerService";
+import { LoggerService, getGlobalLogger } from "../services/impl/LoggerService";
 
 let loggerInstance: ILoggerService | null = null;
 
-/**
- * Initializes and manages the central LoggerService instance.
- */
 export function initLogger(channelName: string): ILoggerService {
     if (!loggerInstance) {
         loggerInstance = new LoggerService(channelName);
@@ -13,42 +10,51 @@ export function initLogger(channelName: string): ILoggerService {
     return loggerInstance;
 }
 
-/**
- * Retrieves the active LoggerService instance.
- */
 export function getLogger(): ILoggerService | null {
-    return loggerInstance;
+    return loggerInstance || getGlobalLogger();
 }
 
-/**
- * Direct log helper functions supporting SLF4J ({}), % formatting, and Error objects.
- */
 export function logInfo(message: string, ...args: any[]): void {
-    if (loggerInstance) {
-        loggerInstance.info(message, ...args);
+    const logger = getLogger();
+    if (logger) {
+        logger.info(message, ...args);
+    } else {
+        console.log(`[INFO ${new Date().toLocaleTimeString()}] ${message}`);
     }
 }
 
 export function logWarn(message: string, ...args: any[]): void {
-    if (loggerInstance) {
-        loggerInstance.warn(message, ...args);
+    const logger = getLogger();
+    if (logger) {
+        logger.warn(message, ...args);
+    } else {
+        console.warn(`[WARN ${new Date().toLocaleTimeString()}] ${message}`);
     }
 }
 
 export function logError(message: string, ...args: any[]): void {
-    if (loggerInstance) {
-        loggerInstance.error(message, ...args);
+    const logger = getLogger();
+    if (logger) {
+        logger.error(message, ...args);
+    } else {
+        console.error(`[ERROR ${new Date().toLocaleTimeString()}] ${message}`);
     }
 }
 
 export function logDebug(message: string, ...args: any[]): void {
-    if (loggerInstance) {
-        loggerInstance.debug(message, ...args);
+    const logger = getLogger();
+    if (logger) {
+        logger.debug(message, ...args);
+    } else {
+        console.debug(`[DEBUG ${new Date().toLocaleTimeString()}] ${message}`);
     }
 }
 
 export function logAppend(message: string): void {
-    if (loggerInstance) {
-        loggerInstance.appendLine(message);
+    const logger = getLogger();
+    if (logger) {
+        logger.appendLine(message);
+    } else {
+        console.log(message);
     }
 }

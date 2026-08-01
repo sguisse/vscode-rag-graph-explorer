@@ -6,4 +6,5 @@ export interface ILoggerService extends vscode.Disposable {
     error(message: string, ...args: any[]): void;
     debug(message: string, ...args: any[]): void;
     appendLine(message: string): void;
+    show?(preserveFocus?: boolean): void;
 }

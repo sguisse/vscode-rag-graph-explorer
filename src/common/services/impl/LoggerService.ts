@@ -4,16 +4,33 @@ import * as util from 'util';
 
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 
+let activeLoggerInstance: ILoggerService | null = null;
+
+export function setGlobalLogger(logger: ILoggerService): void {
+    activeLoggerInstance = logger;
+}
+
+export function getGlobalLogger(): ILoggerService | null {
+    return activeLoggerInstance;
+}
+
 export class LoggerService implements ILoggerService {
     private outputChannel: vscode.OutputChannel;
+    private channelName: string;
 
-    constructor(context: vscode.ExtensionContext, channelName: string) {
-        this.outputChannel = vscode.window.createOutputChannel(channelName);
-        context.subscriptions.push(this.outputChannel);
-        this.info(`${channelName} output channel initialized.`);
+    constructor(context: vscode.ExtensionContext | undefined, channelName?: string) {
+        this.channelName = channelName;
+        this.outputChannel = vscode.window.createOutputChannel(this.channelName);
+
+        if (context && context.subscriptions) {
+            context.subscriptions.push(this.outputChannel);
+        }
+
+        setGlobalLogger(this);
+        this.info(`${this.channelName} output channel initialized.`);
     }
 
-    private formatMessage(level: LogLevel, message: string, args: any[]): string {
+    public formatMessage(level: LogLevel, message: string, args: any[]): string {
         const timestamp = new Date().toLocaleTimeString();
         let formattedText = message;
 
@@ -36,24 +53,41 @@ export class LoggerService implements ILoggerService {
         return `[${timestamp}] [${level.toUpperCase()}] ${formattedText}`;
     }
 
+    public formattedMessage(level: LogLevel, message: string, args: any[]): string {
+        return this.formatMessage(level, message, args);
+    }
+
     public info(message: string, ...args: any[]): void {
-        this.outputChannel.appendLine(this.formatMessage('info', message, args));
+        const formatted = this.formatMessage('info', message, args);
+        console.log(formatted);
+        this.outputChannel.appendLine(formatted);
     }
 
     public warn(message: string, ...args: any[]): void {
-        this.outputChannel.appendLine(this.formatMessage('warn', message, args));
+        const formatted = this.formatMessage('warn', message, args);
+        console.warn(formatted);
+        this.outputChannel.appendLine(formatted);
     }
 
     public error(message: string, ...args: any[]): void {
-        this.outputChannel.appendLine(this.formatMessage('error', message, args));
+        const formatted = this.formatMessage('error', message, args);
+        console.error(formatted);
+        this.outputChannel.appendLine(formatted);
     }
 
     public debug(message: string, ...args: any[]): void {
-        this.outputChannel.appendLine(this.formatMessage('debug', message, args));
+        const formatted = this.formatMessage('debug', message, args);
+        console.debug(formatted);
+        this.outputChannel.appendLine(formatted);
     }
 
     public appendLine(message: string): void {
+        console.log(message);
         this.outputChannel.appendLine(message);
+    }
+
+    public show(preserveFocus?: boolean): void {
+        this.outputChannel.show(preserveFocus);
     }
 
     public dispose(): void {
