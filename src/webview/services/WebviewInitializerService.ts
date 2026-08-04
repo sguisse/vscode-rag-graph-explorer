@@ -1,15 +1,10 @@
-// src/webview/services/WebviewInitializerService.ts
-import { useServiceStore } from '@/webview/store/useServiceStore';
+import { useBackendServiceStore } from '@/store/useBackendServiceStore';
 
 import * as vscode from 'vscode';
-import * as path from 'path';
-import * as fs from 'fs';
-import { VsCodeSettings } from '@/common/VsCodeSettings';
-import { logError, logInfo, logWarn } from '@/common/utils/utils-log';
-import { initialCodebase } from '../../../sandbox/src/features/explorer/wksp-cnt-graph/components/graph/GraphData';
-import { LoggerService } from '@/common/services/impl/LoggerService';
-import { log } from 'console';
-
+import { CodebaseAdapter } from '@/backend/services/codebase/infrastructure/codebase-service.adapter-mock';
+import { VsCodeSettings } from '@/backend/services/vscode/domain/model/VsCodeSettings';
+import { logInfo } from '@/backend/services/vscode/utils/utils-log';
+import { LoggerAdapter } from '@/backend/services/vscode/infrastructure/logger-service.adpter';
 
 function getAppName(context: vscode.ExtensionContext): string {
     const packageData = context.extension.packageJSON;
@@ -22,16 +17,12 @@ export function initializeVsCodeSettings(context: vscode.ExtensionContext): void
 
 export function initializeDefaultServices(context: vscode.ExtensionContext): void {
     const appName = getAppName(context);
-    const register = useServiceStore.getState().registerService;
-    register('logger', new LoggerService(context, appName));
+    const register = useBackendServiceStore.getState().registerService;
+    register('codebaseService', new CodebaseAdapter());
+    register('logger', new LoggerAdapter(appName));
     logInfo(`[WebviewInitializerService] Default services initialized for ${appName}.`);
-    // todo register('api', new WebviewApiService());
 }
 
-
-/**
- * Sends host configuration parameters to the webview.
- */
 export function sendConfig(panel: vscode.WebviewPanel, context: vscode.ExtensionContext): void {
     const host = VsCodeSettings.get<string>('neo4j.host', 'localhost');
     const portHttp = VsCodeSettings.get<number>('neo4j.port.http', 7474);

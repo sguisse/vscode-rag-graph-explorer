@@ -3,6 +3,12 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { resolve } from 'path';
 
+const webviewInput = {
+  main: resolve(__dirname, 'src/webview/index.html')
+};
+
+const externalDeps = ['vscode', 'util', 'node:util'];
+
 export default defineConfig(({ command }) => ({
   plugins: [
     tailwindcss(),
@@ -10,8 +16,12 @@ export default defineConfig(({ command }) => ({
   ],
   resolve: {
     alias: {
+      'vscode': resolve(__dirname, 'src/webview/mocks/vscode.ts'),
+      'util': resolve(__dirname, 'src/webview/mocks/util.ts'),
+      'node:util': resolve(__dirname, 'src/webview/mocks/util.ts'),
       '@/backend': resolve(__dirname, 'src/backend'),
       '@/common': resolve(__dirname, 'src/common'),
+      '@/webview': resolve(__dirname, 'src/webview'),
       '@': resolve(__dirname, 'src/webview')
     }
   },
@@ -19,12 +29,20 @@ export default defineConfig(({ command }) => ({
   build: {
     outDir: 'dist/webview',
     emptyOutDir: true,
-    // Inline images up to 10MB as Base64 Data URIs for standalone production webviews
     assetsInlineLimit: 10485760,
+    chunkSizeWarningLimit: 1200,
     rollupOptions: {
-      input: {
-        main: resolve(__dirname, 'src/webview/index.html')
-      },
+      external: externalDeps,
+      input: webviewInput,
+      output: {
+        entryFileNames: `assets/[name].js`,
+        chunkFileNames: `assets/[name].js`,
+        assetFileNames: `assets/[name].[ext]`
+      }
+    },
+    rolldownOptions: {
+      external: externalDeps,
+      input: webviewInput,
       output: {
         entryFileNames: `assets/[name].js`,
         chunkFileNames: `assets/[name].js`,
@@ -37,8 +55,6 @@ export default defineConfig(({ command }) => ({
     port: 5173,
     strictPort: true,
     cors: true,
-    // CRITICAL FOR VS CODE WEBVIEWS: Force Vite dev server to prefix all asset imports
-    // with http://127.0.0.1:5173 so the webview doesn't try to fetch them from vscode-webview:// (403 Forbidden)
     origin: 'http://127.0.0.1:5173',
     hmr: {
       host: '127.0.0.1',

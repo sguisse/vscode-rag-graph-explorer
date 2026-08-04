@@ -21,13 +21,14 @@ import { useGraph } from './wksp-cnt-graph/components/graph/use-graph';
 import { usePlantUml } from './wksp-cnt-graph/components/graph/use-plantuml';
 
 import {
-  codebaseService,
   CodebaseData,
   SelectedEntity,
   ImpactDirection,
 } from '@/backend/services/codebase';
+import { useBackendService } from '@/hooks/use-backend-service';
 
 export function ExplorerFeature() {
+  const codebaseService = useBackendService('codebaseService');
   const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
   const setContainerContent = useLayoutStore((s) => s.setContainerContent);
   const toggleContainerMaximized = useLayoutStore((s) => s.toggleContainerMaximized);
@@ -80,6 +81,7 @@ export function ExplorerFeature() {
     impactedSet,
     currentLayout,
     updateGraphTopology,
+    codebaseService,
   ]);
 
   const handleCopy = useCallback(
@@ -98,10 +100,9 @@ export function ExplorerFeature() {
       setCodebase({ ...importedData });
       setNotification('AST Codebase imported successfully!');
     },
-    [setNotification]
+    [setNotification, codebaseService]
   );
 
-  // 1. Initial Layout Container configuration (Runs ONLY ONCE on feature mount)
   useEffect(() => {
     setLayoutContainers({
       header: { visible: true, isResizable: false, isHiddable: false },
@@ -148,7 +149,6 @@ export function ExplorerFeature() {
     });
   }, [setLayoutContainers]);
 
-  // 2. Dynamically update container JSX content when domain state changes (Preserves user visibility/maximized states!)
   useEffect(() => {
     setContainerContent(
       'workspace.top',

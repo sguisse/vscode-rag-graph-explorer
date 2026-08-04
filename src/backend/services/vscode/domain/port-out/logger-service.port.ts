@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-export interface ILoggerService extends vscode.Disposable {
+export interface ILoggerServicePort extends vscode.Disposable {
     info(message: string, ...args: any[]): void;
     warn(message: string, ...args: any[]): void;
     error(message: string, ...args: any[]): void;

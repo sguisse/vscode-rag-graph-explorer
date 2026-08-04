@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { logError, logInfo, logWarn } from '@/common/utils/utils-log';
+import { logError, logInfo, logWarn } from '@/backend/services/vscode/utils/utils-log';
 import { sendConfig } from './WebviewInitializerService';
 
 /**
@@ -13,6 +13,10 @@ export async function handleWebviewMessage(
     context: vscode.ExtensionContext,
 ): Promise<void> {
     switch (message.command) {
+        case 'log':
+            handleLogMessage(message);
+            break;
+
         case 'ready':
             handleReady(panel, context);
             break;
@@ -39,10 +43,29 @@ export async function handleWebviewMessage(
 // Command Handlers
 // ============================================================================
 
+function handleLogMessage(message: any): void {
+    const { level, message: logMsg } = message.payload || {};
+    const formatted = `[Webview] ${logMsg || ''}`;
+
+    switch (level) {
+        case 'WARN':
+            logWarn(formatted);
+            break;
+        case 'ERROR':
+            logError(formatted);
+            break;
+        case 'DEBUG':
+            logInfo(`${formatted}`);
+            break;
+        default:
+            logInfo(formatted);
+            break;
+    }
+}
+
 function handleReady(panel: vscode.WebviewPanel, context: vscode.ExtensionContext): void {
-    logInfo('Webview ready. Sending configuration and launching deep scan.');
+    console.info('Webview ready. Sending configuration and launching deep scan.');
     sendConfig(panel, context);
-    // TODO pythonScanService.runPythonScan(context, panel, "deep");
 }
 
 function handleForceRefreshScan(
@@ -65,13 +88,10 @@ function handleForceRefreshScan(
             return;
         }
     }
-
-    // pythonScanService.runPythonScan(context, panel, mode, targetFile);
 }
 
 function handleKillAnalysis(panel: vscode.WebviewPanel): void {
     logInfo('Manual analysis termination requested by user.');
-   //pythonScanService.killActiveProcess();
     panel.webview.postMessage({ command: "updateStatus", payload: "ready" });
 }
 

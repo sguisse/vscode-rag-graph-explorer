@@ -2,20 +2,26 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 
-import { VsCodeSettings } from './common/VsCodeSettings';
+import { VsCodeSettings } from './backend/services/vscode/domain/model/VsCodeSettings';
 import { initializeDefaultServices, initializeVsCodeSettings } from './webview/services/WebviewInitializerService';
-import { logInfo } from './common/utils/utils-log';
-import { handleWebviewMessage } from './webview/services/WebviewMessagingService';
+import { logInfo, logError } from './backend/services/vscode/utils/utils-log';
 
 const EXTENTION_BASE_CONFIG_NAME = 'tokenRazor';
 
 export function activate(context: vscode.ExtensionContext) {
-    initializeVsCodeSettings(context);
-    initializeDefaultServices(context);
+    try {
+        initializeDefaultServices(context);
+        initializeVsCodeSettings(context);
+        logInfo('Extension tokenRazor activating...');
 
-    const disposable = vscode.commands.registerCommand(`${EXTENTION_BASE_CONFIG_NAME}.openTool`, () => openToolCommand(context));
+        const disposable = vscode.commands.registerCommand(`${EXTENTION_BASE_CONFIG_NAME}.openTool`, () => openToolCommand(context));
+        context.subscriptions.push(disposable);
 
-    context.subscriptions.push(disposable);
+        logInfo('Extension tokenRazor activation complete.');
+    } catch (err) {
+        console.error('[tokenRazor] Error during extension activation:', err);
+        logError(`Activation error: ${err}`);
+    }
 }
 
 function openToolCommand(context: vscode.ExtensionContext): void {
@@ -56,8 +62,10 @@ function openToolCommand(context: vscode.ExtensionContext): void {
     });
 
     panel.webview.onDidReceiveMessage(async (message) => {
-        await handleWebviewMessage(message, panel, context);
+        logInfo('[Webview] :', message);
     });
+
+    panel.webview.postMessage({ command: "ready" });
 }
 
 function getWebviewContent(context: vscode.ExtensionContext, webview: vscode.Webview): string {

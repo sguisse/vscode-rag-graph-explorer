@@ -1,13 +1,14 @@
 import React from 'react';
 import { JsonView } from '@/components/app/viewer/JsonView';
 import { CopyFloatingButton } from '@/components/app/viewer/CopyFloatingButton';
-import { codebaseService } from '@/backend/services/codebase';
+import { useBackendService } from '@/hooks/use-backend-service';
 
 interface JsonTabPanelProps {
   handleCopy: (text: string, message: string) => void;
 }
 
 export function JsonTabPanel({ handleCopy }: JsonTabPanelProps) {
+  const codebaseService = useBackendService('codebaseService');
   const jsonSchemaSpec = codebaseService.getJsonSchemaSpec();
 
   const doCopy = () => handleCopy(JSON.stringify(jsonSchemaSpec, null, 2), "JSON Schema copied to clipboard!");

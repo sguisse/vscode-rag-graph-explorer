@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { useLayoutStore } from '@/store/useLayoutStore';
 import { AppLayout } from '@/components/app/layout/AppLayout';
@@ -18,11 +18,10 @@ export default function App() {
 
   return (
     <>
-      {/* Active Feature updates LayoutStore containers dynamically when menu items are clicked */}
       {(activeFeature === 'feature-home') && <HomeFeature />}
-      {( activeFeature === 'feature-graph-rag-explorer') && <ExplorerFeature />}
-      {( activeFeature === 'feature-layout-demo') && <LayoutDemoFeature />}
-      {( activeFeature === 'feature-rules') && <RulesFeature />}
+      {(activeFeature === 'feature-graph-rag-explorer') && <ExplorerFeature />}
+      {(activeFeature === 'feature-layout-demo') && <LayoutDemoFeature />}
+      {(activeFeature === 'feature-rules') && <RulesFeature />}
       {(activeFeature === 'feature-help') && <HelpFeature />}
 
       <AppLayout
