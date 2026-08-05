@@ -1,26 +1,27 @@
 import * as vscode from 'vscode';
-import { RpcProtocol } from '../../shared/rpc';
-import { OrchestratorService } from './services/orchestrator.service';
+import { RpcProtocol } from '../../shared/rpc/rpc-protocol';
+import { LoggerService } from './services/logger.service';
+import { registerServices } from './config/registry/service-registrator';
+import { registerRpcMethods } from './config/rpc/rpc-method-registrator';
 
 const EXTENSION_BASE_CONFIG_NAME = 'tokenRazor';
 
 export function activate(context: vscode.ExtensionContext) {
-    const orchestrator = new OrchestratorService(context.extensionUri);
-    context.subscriptions.push(orchestrator);
+    registerServices(context);
 
     const openTool = () => {
         const packageData = context.extension.packageJSON;
         const panel = vscode.window.createWebviewPanel(
             EXTENSION_BASE_CONFIG_NAME,
-            packageData.displayName || 'Token Razor',
+            packageData.displayName,
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
                 retainContextWhenHidden: true,
-                localResourceRoots: [
-                    vscode.Uri.joinPath(context.extensionUri, 'dist-webview'),
-                    vscode.Uri.joinPath(context.extensionUri, 'assets')
-                ],
+                // FIX: Grant webview access to the entire extension workspace
+                // so Vite dev server can load /node_modules/ fonts and /assets/ images
+                localResourceRoots: [context.extensionUri],
+                // Essential for Vite dev server proxying inside webview
                 portMapping: [{ webviewPort: 5173, extensionHostPort: 5173 }]
             }
         );
@@ -31,16 +32,15 @@ export function activate(context: vscode.ExtensionContext) {
         };
 
         const rpc = new RpcProtocol((msg) => panel.webview.postMessage(msg));
-        rpc.register('runPythonAnalysis', orchestrator.runPythonAnalysis.bind(orchestrator));
-        rpc.register('logMessage', orchestrator.logMessage.bind(orchestrator));
+        registerRpcMethods(rpc);
 
         panel.webview.onDidReceiveMessage((msg) => rpc.receive(msg), undefined, context.subscriptions);
 
         const isDev = context.extensionMode === vscode.ExtensionMode.Development;
 
         if (isDev) {
-            const devServerUrl = 'http://127.0.0.1:5173';
-            const cspMeta = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; connect-src ws://127.0.0.1:5173 http://127.0.0.1:5173 https: http: vscode-webview: vscode-resource:; img-src http://127.0.0.1:5173 ${panel.webview.cspSource} vscode-webview: vscode-resource: https: http: data: blob:; script-src 'unsafe-inline' 'unsafe-eval' http://127.0.0.1:5173 vscode-webview: vscode-resource:; style-src 'unsafe-inline' http://127.0.0.1:5173 vscode-webview: vscode-resource: https: http:; font-src http://127.0.0.1:5173 vscode-webview: vscode-resource: https: http: data:;">`;
+            const devServerUrl = 'http://localhost:5173';
+            const cspMeta = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; connect-src ws://localhost:5173 http://localhost:5173 https: http: vscode-webview: vscode-resource:; img-src http://localhost:5173 ${panel.webview.cspSource} vscode-webview: vscode-resource: https: http: data: blob:; script-src 'unsafe-inline' 'unsafe-eval' http://localhost:5173 vscode-webview: vscode-resource:; style-src 'unsafe-inline' http://localhost:5173 vscode-webview: vscode-resource: https: http:; font-src http://localhost:5173 ${panel.webview.cspSource} vscode-webview: vscode-resource: https: http: data:;">`;
 
             panel.webview.html = `<!DOCTYPE html>
 <html lang="en">

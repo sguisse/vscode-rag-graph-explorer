@@ -7,7 +7,7 @@ import { LayoutDemoFeature } from '@/features/layout-demo/LayoutDemoFeature';
 import { ExplorerFeature } from '@/features/explorer/ExplorerFeature';
 import { RulesFeature } from '@/features/rules/RulesFeature';
 import { HelpFeature } from '@/features/help/HelpFeature';
-
+import { loggerService } from '@/services/backend/api-logger.service';
 
 export default function App() {
 
@@ -20,6 +20,13 @@ export default function App() {
   const setIsDarkMode = contextStore.setIsDarkMode;
   const notification = contextStore.notification;
   const containers = layoutStore.containers || [];
+
+  // Trigger remote API log on mount
+  useEffect(() => {
+    loggerService.logMessage('info', 'App.tsx loaded', { timestamp: new Date().toISOString() }).catch((error) => {
+      console.error('Failed to log message:', error);
+    });
+  }, []);
 
   return (
     <>
