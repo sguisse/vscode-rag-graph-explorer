@@ -1,12 +1,10 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Fingerprint, Tag, Code2, Layers, Info, Hash } from 'lucide-react';
-import { SelectedEntity } from '@/services/codebase/domain/model/codebase.model';
-
+import { SelectedEntity } from '@/shared/services/codebase/domain/model/codebase.model';
 interface Props {
   selectedEntity: SelectedEntity | null;
 }
-
 export function EntityPropertiesPanel({ selectedEntity }: Props) {
   if (!selectedEntity) {
     return (

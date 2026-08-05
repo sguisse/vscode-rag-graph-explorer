@@ -1,266 +1,108 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -e
 
-# Create required directory hierarchy
-mkdir -p src/webview/lib
-mkdir -p src/backend/services/vscode/utils
+echo "🔧 Résolution des erreurs de compilation TypeScript dans la Webview..."
 
-# -----------------------------------------------------------------------------
-# 1. Safe Webview Logger Service with Global API Caching
-# -----------------------------------------------------------------------------
-cat << 'EOF' > src/webview/lib/utils-frontend-log.ts
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
-
-export interface WebviewLogPayload {
-  type: 'log';
-  level: LogLevel;
-  message: string;
-  data?: unknown;
-}
-
-interface VsCodeApi {
-  postMessage(message: unknown): void;
-  setState?(state: unknown): void;
-  getState?(): unknown;
-}
-
-declare global {
-  function acquireVsCodeApi(): VsCodeApi;
-  interface Window {
-    __vscodeApiInstance__?: VsCodeApi;
-  }
-}
-
-/**
- * Safely acquires and memoizes the VS Code Webview API instance globally.
- * Prevents "An instance of the VS Code API has already been acquired" errors.
- */
-export function getVsCodeApi(): VsCodeApi | null {
-  if (typeof window !== 'undefined' && window.__vscodeApiInstance__) {
-    return window.__vscodeApiInstance__;
-  }
-
-  if (typeof acquireVsCodeApi === 'function') {
-    try {
-      const api = acquireVsCodeApi();
-      if (typeof window !== 'undefined') {
-        window.__vscodeApiInstance__ = api;
-      }
-      return api;
-    } catch {
-      // In case it was already acquired elsewhere prior to this call
-      if (typeof window !== 'undefined' && window.__vscodeApiInstance__) {
-        return window.__vscodeApiInstance__;
-      }
+# 1. Configuration de webview/tsconfig.json (Ciblage strict de src/ et exclusion de vite.config.ts)
+cat << 'EOF' > webview/tsconfig.json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
     }
-  }
-
-  return null;
-}
-
-export class WebviewLoggerService {
-  private static instance: WebviewLoggerService;
-
-  private constructor() {}
-
-  public static getInstance(): WebviewLoggerService {
-    if (!WebviewLoggerService.instance) {
-      WebviewLoggerService.instance = new WebviewLoggerService();
-    }
-    return WebviewLoggerService.instance;
-  }
-
-  public log(level: LogLevel, message: string, data?: unknown): void {
-    const timestamp = new Date().toISOString();
-    const prefix = `[Webview][${level.toUpperCase()}][${timestamp}]`;
-
-    switch (level) {
-      case 'debug':
-        console.debug(prefix, message, data ?? '');
-        break;
-      case 'info':
-        console.info(prefix, message, data ?? '');
-        break;
-      case 'warn':
-        console.warn(prefix, message, data ?? '');
-        break;
-      case 'error':
-        console.error(prefix, message, data ?? '');
-        break;
-    }
-
-    this.sendToExtension(level, message, data);
-  }
-
-  private sendToExtension(level: LogLevel, message: string, data?: unknown): void {
-    const api = getVsCodeApi();
-    if (api) {
-      const payload: WebviewLogPayload = {
-        type: 'log',
-        level,
-        message,
-        data,
-      };
-      api.postMessage(payload);
-    }
-  }
-
-  public debug(message: string, data?: unknown): void {
-    this.log('debug', message, data);
-  }
-
-  public info(message: string, data?: unknown): void {
-    this.log('info', message, data);
-  }
-
-  public warn(message: string, data?: unknown): void {
-    this.log('warn', message, data);
-  }
-
-  public error(message: string, data?: unknown): void {
-    this.log('error', message, data);
-  }
-}
-
-export const webviewLogger = WebviewLoggerService.getInstance();
-
-// Webview helper function exports
-export function logDebug(message: string, data?: unknown): void {
-  webviewLogger.debug(message, data);
-}
-
-export function logInfo(message: string, data?: unknown): void {
-  webviewLogger.info(message, data);
-}
-
-export function logWarn(message: string, data?: unknown): void {
-  webviewLogger.warn(message, data);
-}
-
-export function logError(message: string, data?: unknown): void {
-  webviewLogger.error(message, data);
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "vite.config.ts",
+    "../dist-webview"
+  ]
 }
 EOF
 
-# -----------------------------------------------------------------------------
-# 2. Backend Logger Adapter
-# -----------------------------------------------------------------------------
-cat << 'EOF' > src/backend/services/vscode/utils/utils-backend-log.ts
-import * as vscode from 'vscode';
-
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
-
-export interface WebviewLogPayload {
-  type: 'log';
-  level: LogLevel;
-  message: string;
-  data?: unknown;
-}
-
-export function formatMessage(message: string, data?: unknown): string {
-  if (data === undefined) {
-    return message;
-  }
-  if (data instanceof Error) {
-    return `${message}\n  Error: ${data.message}\n  Stack: ${data.stack ?? 'N/A'}`;
-  }
-  if (typeof data === 'object') {
-    try {
-      return `${message}\n  Data: ${JSON.stringify(data, null, 2)}`;
-    } catch {
-      return `${message}\n  Data: [Unserializable Object]`;
-    }
-  }
-  return `${message}\n  Data: ${String(data)}`;
-}
-
-export class BackendLoggerAdapter {
-  private static instance: BackendLoggerAdapter;
-  private outputChannel: vscode.OutputChannel;
-  private isDebugEnabled: boolean = true;
-
-  private constructor(channelName: string = 'RAG Graph Explorer') {
-    this.outputChannel = vscode.window.createOutputChannel(channelName);
-  }
-
-  public static getInstance(channelName?: string): BackendLoggerAdapter {
-    if (!BackendLoggerAdapter.instance) {
-      BackendLoggerAdapter.instance = new BackendLoggerAdapter(channelName);
-    }
-    return BackendLoggerAdapter.instance;
-  }
-
-  public showChannel(): void {
-    this.outputChannel.show(true);
-  }
-
-  public log(level: LogLevel, message: string, data?: unknown): void {
-    const timestamp = new Date().toISOString();
-    const formattedLevel = level.toUpperCase().padEnd(5);
-    const formattedBody = formatMessage(message, data);
-    const line = `[${timestamp}] [${formattedLevel}] ${formattedBody}`;
-
-    this.outputChannel.appendLine(line);
-  }
-
-  public debug(message: string, data?: unknown): void {
-    if (this.isDebugEnabled) {
-      this.log('debug', message, data);
-    }
-  }
-
-  public info(message: string, data?: unknown): void {
-    this.log('info', message, data);
-  }
-
-  public warn(message: string, data?: unknown): void {
-    this.log('warn', message, data);
-  }
-
-  public error(message: string, data?: unknown): void {
-    this.log('error', message, data);
-  }
-
-  public handleWebviewMessage(message: unknown): boolean {
-    if (
-      typeof message === 'object' &&
-      message !== null &&
-      (message as WebviewLogPayload).type === 'log'
-    ) {
-      const payload = message as WebviewLogPayload;
-      const validLevels: LogLevel[] = ['debug', 'info', 'warn', 'error'];
-      const level = validLevels.includes(payload.level) ? payload.level : 'info';
-      this.log(level, `[Webview] ${payload.message}`, payload.data);
-      return true;
-    }
-    return false;
-  }
-
-  public dispose(): void {
-    this.outputChannel.dispose();
-  }
-}
-
-export const backendLogger = BackendLoggerAdapter.getInstance();
-
-export function logDebug(message: string, data?: unknown): void {
-  backendLogger.debug(message, data);
-}
-
-export function logInfo(message: string, data?: unknown): void {
-  backendLogger.info(message, data);
-}
-
-export function logWarn(message: string, data?: unknown): void {
-  backendLogger.warn(message, data);
-}
-
-export function logError(message: string, data?: unknown): void {
-  backendLogger.error(message, data);
+# 2. Configuration séparée pour Vite (tsconfig.node.json)
+cat << 'EOF' > webview/tsconfig.node.json
+{
+  "compilerOptions": {
+    "composite": true,
+    "skipLibCheck": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true
+  },
+  "include": [
+    "vite.config.ts"
+  ]
 }
 EOF
 
-# Compile check
-npm run compile
+# 3. Mise à jour du script de build dans webview/package.json
+cat << 'EOF' > webview/package.json
+{
+  "name": "webview-ui",
+  "private": true,
+  "version": "1.5.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@base-ui/react": "^1.6.0",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@fontsource-variable/source-serif-4": "^5.3.0",
+    "@primer/octicons-react": "^19.31.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cytoscape": "^3.34.0",
+    "lucide-react": "^1.27.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "zustand": "^5.0.14"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.1.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.4",
+    "postcss": "^8.5.23",
+    "tailwind-merge": "^3.6.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.1.3",
+    "vite": "^8.1.5"
+  }
+}
+EOF
 
-echo "✅ fix(webview): Memoized acquireVsCodeApi globally to resolve duplicate acquisition errors in WebviewLoggerService!"
+# 4. Nettoyage et réinstallation des dépendances webview
+echo "📥 Installation des dépendances webview..."
+cd webview
+npm install
+
+echo "🛠️ Compilation de la webview..."
+npm run build
+cd ..
+
+echo "✅ fix(webview): tsconfig isolé créé avec succès, compilation de la Webview validée sans erreur !"

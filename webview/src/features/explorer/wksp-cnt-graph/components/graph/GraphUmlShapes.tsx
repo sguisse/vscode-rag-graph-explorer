@@ -1,6 +1,6 @@
 import React from 'react';
 import { FileCode, Settings } from 'lucide-react';
-import { CodebaseFile, CodebaseAttribute, CodebaseMethod, ConfigProperty } from '@/shared/';
+import { CodebaseFile, CodebaseAttribute, CodebaseMethod, ConfigProperty } from '@/shared/services/codebase';
 
 export interface NodeStyle {
   bg: string;

@@ -1,0 +1,16 @@
+import { IGraphRagInstallerServicePort } from '../domain/port-out/installer-service.port';
+
+export class GraphRagInstallerAdapter implements IGraphRagInstallerServicePort {
+    public async installScriptsInUserWorkspace() : Promise<void> {
+        // Copy all scripts into the user's workspace and set up any necessary configurations
+
+    }
+
+    public async checkInstallationStatus() : Promise<void> {
+        // Implement the check installation status logic here
+    }
+
+    public async uninstallScripts() : Promise<void> {
+        // Implement the uninstallation logic here
+    }
+}
