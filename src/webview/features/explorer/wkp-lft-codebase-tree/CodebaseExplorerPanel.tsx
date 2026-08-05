@@ -10,7 +10,7 @@ import {
   FOLDER_KEYS_REGISTERED_CONFIG,
   FOLDER_THEME_REGISTRY_CONFIG
 } from '@/backend/services/codebase';
-import { useBackendService } from '@/hooks/use-backend-service';
+import { serviceRegistry } from '@/backend/config/registry/ServiceRegistry';
 
 interface TriStateCheckboxProps {
   checked: boolean;
@@ -60,7 +60,7 @@ export function CodebaseExplorerPanel({
   setSelectedEntity,
   onImportCodebase
 }: CodebaseExplorerPanelProps) {
-  const codebaseService = useBackendService('codebaseService');
+  const codebaseService = serviceRegistry.get('codebaseService');
   const codebase = codebaseService.getCodebase();
   const [isImportOpen, setIsImportOpen] = useState(false);
 

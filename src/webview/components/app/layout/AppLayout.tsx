@@ -11,7 +11,7 @@ import { Footer } from './Footer';
 import { WorkspaceLayout, mergeContainer } from './WorkspaceLayout';
 import { Tooltip } from '../tooltip';
 import { DefaultContainersSize } from '@/constants/layout-constants';
-import { logInfo } from '@/backend/services/vscode/utils/utils-log';
+import { logInfo } from '@/webview/lib/utils-frontend-log';
 
 export type { AppLayoutProps, MaximizeContainer, AppLayoutContainers, AppLayoutConfig };
 
@@ -52,7 +52,7 @@ export function AppLayout({
     const htmlElement = document.documentElement;
     if (isDarkMode) htmlElement.classList.add('dark');
     else htmlElement.classList.remove('dark');
-    logInfo(`AppLayout: isDarkMode=${isDarkMode}`);
+    logInfo('AppLayout: isDarkMode=%', [isDarkMode]);
   }, [isDarkMode]);
 
   const [sidebarLeftMode, setSidebarLeftMode] = useState<'normal' | 'minimal'>('normal');

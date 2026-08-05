@@ -25,10 +25,11 @@ import {
   SelectedEntity,
   ImpactDirection,
 } from '@/backend/services/codebase';
-import { useBackendService } from '@/hooks/use-backend-service';
+import { serviceRegistry } from '@/backend/config/registry/ServiceRegistry';
 
 export function ExplorerFeature() {
-  const codebaseService = useBackendService('codebaseService');
+  console.debug(`[ExplorerFeature] Rendering ExplorerFeature component.${serviceRegistry.count()}`);
+  const codebaseService = serviceRegistry.get('codebaseService');
   const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
   const setContainerContent = useLayoutStore((s) => s.setContainerContent);
   const toggleContainerMaximized = useLayoutStore((s) => s.toggleContainerMaximized);

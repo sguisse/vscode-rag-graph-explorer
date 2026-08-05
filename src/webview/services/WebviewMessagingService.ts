@@ -1,12 +1,11 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { logError, logInfo, logWarn } from '@/backend/services/vscode/utils/utils-log';
-import { sendConfig } from './WebviewInitializerService';
 
-/**
- * Handles incoming IPC messages from the webview.
- */
+import { sendConfig } from './WebviewInitializerService';
+import { logDebug, logError, logInfo, logWarn } from '@/lib/utils-frontend-log';
+import { showLogChannel } from '@/backend/services/vscode/utils/utils-backend-log';
+
 export async function handleWebviewMessage(
     message: any,
     panel: vscode.WebviewPanel,
@@ -15,6 +14,10 @@ export async function handleWebviewMessage(
     switch (message.command) {
         case 'log':
             handleLogMessage(message);
+            break;
+
+        case 'showLogChannel':
+            showLogChannel();
             break;
 
         case 'ready':
@@ -39,23 +42,22 @@ export async function handleWebviewMessage(
     }
 }
 
-// ============================================================================
-// Command Handlers
-// ============================================================================
-
 function handleLogMessage(message: any): void {
     const { level, message: logMsg } = message.payload || {};
     const formatted = `[Webview] ${logMsg || ''}`;
 
     switch (level) {
+        case 'DEBUG':
+            logDebug(formatted);
+            break;
+        case 'INFO':
+            logInfo(formatted);
+            break;
         case 'WARN':
             logWarn(formatted);
             break;
         case 'ERROR':
             logError(formatted);
-            break;
-        case 'DEBUG':
-            logInfo(`${formatted}`);
             break;
         default:
             logInfo(formatted);
@@ -64,6 +66,7 @@ function handleLogMessage(message: any): void {
 }
 
 function handleReady(panel: vscode.WebviewPanel, context: vscode.ExtensionContext): void {
+    logInfo('Webview ready. Sending configuration and launching deep scan.');
     console.info('Webview ready. Sending configuration and launching deep scan.');
     sendConfig(panel, context);
 }
@@ -96,9 +99,7 @@ function handleKillAnalysis(panel: vscode.WebviewPanel): void {
 }
 
 async function handleOpenExternal(message: any): Promise<void> {
-    if (!message.url) {
-        return;
-    }
+    if (!message.url) return;
 
     try {
         logInfo(`Opening external URL: ${message.url}`);
@@ -110,9 +111,7 @@ async function handleOpenExternal(message: any): Promise<void> {
 }
 
 async function handleRevealFile(message: any): Promise<void> {
-    if (!message.path) {
-        return;
-    }
+    if (!message.path) return;
 
     const workspaceFolders = vscode.workspace.workspaceFolders;
     const workspaceRoot = workspaceFolders && workspaceFolders.length > 0

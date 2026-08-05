@@ -2,7 +2,7 @@ import { ICodebaseServicePort } from '../domain/port-out/codebase-service.port';
 import { CodebaseData } from '../domain/model/codebase.model';
 import { initialCodebase, FOLDER_POSITIONS, JSON_SCHEMA_SPEC } from './data/codebase.data';
 
-export class CodebaseAdapter implements ICodebaseServicePort {
+export class CodebaseMockAdapter implements ICodebaseServicePort {
   private currentCodebase: CodebaseData = initialCodebase;
 
   public getCodebase(): CodebaseData {

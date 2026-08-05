@@ -1,5 +1,5 @@
 
-export interface InstallerPort {
+export interface IGraphRagInstallerServicePort {
     installScriptsInUserWorkspace();
     checkInstallationStatus();
 

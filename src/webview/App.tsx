@@ -7,10 +7,26 @@ import { LayoutDemoFeature } from '@/features/layout-demo/LayoutDemoFeature';
 import { ExplorerFeature } from '@/features/explorer/ExplorerFeature';
 import { RulesFeature } from '@/features/rules/RulesFeature';
 import { HelpFeature } from '@/features/help/HelpFeature';
+import { logInfo } from '@/lib/utils-frontend-log';
+import { initializeDefaultServices } from './services/WebviewInitializerService';
 
-declare const acquireVsCodeApi: () => any;
-const vscode = acquireVsCodeApi();
-(window as any).vscodeApi = vscode;
+// Safely initialize the VS Code API
+if (!window.vscodeApi) {
+  if (typeof acquireVsCodeApi === 'function') {
+    window.vscodeApi = acquireVsCodeApi();
+  } else {
+    // Fallback mock for Vite browser development
+    window.vscodeApi = {
+      postMessage: (msg: unknown) => console.log('[Mock VSCode PostMessage]:', msg),
+      getState: () => ({}),
+      setState: (state: unknown) => console.log('[Mock VSCode SetState]:', state),
+    };
+  }
+}
+
+initializeDefaultServices();
+
+logInfo('[Webview] VS Code API initialized.');
 
 export default function App() {
   const { activeFeature, setActiveFeature, isDarkMode, setIsDarkMode, notification } = useAppContextStore();

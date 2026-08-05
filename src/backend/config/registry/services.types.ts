@@ -1,8 +1,8 @@
 import { ICodebaseServicePort } from "@/backend/services/codebase/domain/port-out/codebase-service.port";
-import type { ILoggerServicePort } from "@/backend/services/vscode/domain/port-out/logger-service.port";
+import { IGraphRagInstallerServicePort } from "@/backend/services/graph-rag-explorer/domain/port-out/installer-service.port";
 
-// Global contract for application backend services
+// Global contract for application backend services stored in the backend service store and initialized in WebviewInitializerService.ts
 export interface BackendServices {
-    logger: ILoggerServicePort;
     codebaseService : ICodebaseServicePort;
+    installerService: IGraphRagInstallerServicePort;
 }

@@ -1,8 +1,9 @@
-import { InstallerPort } from '../domain/port-out/InstallerPort';
+import { IGraphRagInstallerServicePort } from '../domain/port-out/installer-service.port';
 
-export class InstallerAdapter implements InstallerPort {
+export class GraphRagInstallerAdapter implements IGraphRagInstallerServicePort {
     public async installScriptsInUserWorkspace() {
-        // Implement the installation logic here
+        // Copy all scripts into the user's workspace and set up any necessary configurations
+
     }
 
     public async checkInstallationStatus() {

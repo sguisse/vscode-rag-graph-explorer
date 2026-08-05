@@ -1,0 +1,21 @@
+export const LOG_LEVEL_LIST: readonly string[] = ['DEBUG', 'INFO', 'WARN', 'ERROR'];
+
+export const LOG_LEVEL_ICON_MAP: { [K in (typeof LOG_LEVEL_LIST)[number]]: any } = {
+  DEBUG: { icon: "🐛", label: "Debug" },
+  INFO: { icon: "💡", label: "Info" },
+  WARN: { icon: "⚠️", label: "Warn" },
+  ERROR: { icon: "❌", label: "Error" },
+} as const;
+
+export type LogLevel = (typeof LOG_LEVEL_LIST)[number];
+
+export function isLogLevel(value: unknown): value is LogLevel {
+  return typeof value === "string" && LOG_LEVEL_LIST.includes(value);
+}
+
+export function getLogLevel(value: unknown): LogLevel | undefined {
+  if (typeof value === "string" && LOG_LEVEL_LIST.includes(value)) {
+    return value as LogLevel;
+  }
+  return undefined;
+}

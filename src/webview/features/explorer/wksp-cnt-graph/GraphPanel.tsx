@@ -2,7 +2,7 @@ import React from 'react';
 import { Info } from 'lucide-react';
 import { FolderNode, UmlClassNode, ConfigNode, UmlClassNodeData } from './components/graph/GraphUmlShapes';
 import { SelectedEntity, CodebaseFile, isMemberKeyForFileToken, extractMemberIdFromKeyToken } from '@/backend/services/codebase';
-import { useBackendService } from '@/hooks/use-backend-service';
+import { serviceRegistry } from '@/backend/config/registry/ServiceRegistry';
 
 interface GraphPanelProps {
   containerRef: (node: HTMLDivElement | null) => void;
@@ -29,7 +29,7 @@ export function GraphPanel({
   impactedSet,
   handleSelectMember
 }: GraphPanelProps) {
-  const codebaseService = useBackendService('codebaseService');
+  const codebaseService = serviceRegistry.get('codebaseService');
   const folderPositions = codebaseService.getFolderPositions();
 
   return (

@@ -3,70 +3,75 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 import { VsCodeSettings } from './backend/services/vscode/domain/model/VsCodeSettings';
-import { initializeDefaultServices, initializeVsCodeSettings } from './webview/services/WebviewInitializerService';
-import { logInfo, logError } from './backend/services/vscode/utils/utils-log';
+import { logInfo, logError, initializeBackendLogger } from './backend/services/vscode/utils/utils-backend-log';
+import { getAppName, initializeDefaultServices, initializeVsCodeSettings } from '@/services/WebviewInitializerService';
+import { handleWebviewMessage } from '@/services/WebviewMessagingService';
 
 const EXTENTION_BASE_CONFIG_NAME = 'tokenRazor';
 
 export function activate(context: vscode.ExtensionContext) {
-    try {
-        initializeDefaultServices(context);
-        initializeVsCodeSettings(context);
-        logInfo('Extension tokenRazor activating...');
+  try {
+    const appName = getAppName(context);
+    initializeBackendLogger();
+    initializeDefaultServices();
+    initializeVsCodeSettings(context);
+    logInfo(`Extension ${EXTENTION_BASE_CONFIG_NAME} activating...`);
 
-        const disposable = vscode.commands.registerCommand(`${EXTENTION_BASE_CONFIG_NAME}.openTool`, () => openToolCommand(context));
-        context.subscriptions.push(disposable);
+    const disposable = vscode.commands.registerCommand(
+      `${EXTENTION_BASE_CONFIG_NAME}.openTool`,
+      () => openToolCommand(context)
+    );
+    context.subscriptions.push(disposable);
 
-        logInfo('Extension tokenRazor activation complete.');
-    } catch (err) {
-        console.error('[tokenRazor] Error during extension activation:', err);
-        logError(`Activation error: ${err}`);
-    }
+    logInfo(`Extension ${EXTENTION_BASE_CONFIG_NAME} activation complete.`);
+  } catch (err) {
+    logError(`Activation error: ${err}`, err);
+  }
 }
 
 function openToolCommand(context: vscode.ExtensionContext): void {
-    const packageData = context.extension.packageJSON;
-    const panel = vscode.window.createWebviewPanel(
-      EXTENTION_BASE_CONFIG_NAME,
-      packageData.displayName,
-      vscode.ViewColumn.One,
-      {
-        enableScripts: true,
-        retainContextWhenHidden: true,
-        localResourceRoots: [
-          vscode.Uri.file(path.join(context.extensionPath, 'dist')),
-          vscode.Uri.file(path.join(context.extensionPath, 'src', 'webview'))
-        ],
-        portMapping: [
-          { webviewPort: 5173, hostPort: 5173 }
-        ]
-      }
-    );
-
-    if (VsCodeSettings.get('pinApplication') !== false) {
-        vscode.commands.executeCommand('workbench.action.pinEditor');
+  const packageData = context.extension.packageJSON;
+  const panel = vscode.window.createWebviewPanel(
+    EXTENTION_BASE_CONFIG_NAME,
+    packageData.displayName,
+    vscode.ViewColumn.One,
+    {
+      enableScripts: true,
+      retainContextWhenHidden: true,
+      localResourceRoots: [
+        vscode.Uri.file(path.join(context.extensionPath, 'dist')),
+        vscode.Uri.file(path.join(context.extensionPath, 'src', 'webview'))
+      ],
+      portMapping: [{ webviewPort: 5173, hostPort: 5173 }]
     }
+  );
 
-    panel.webview.html = getWebviewContent(context, panel.webview);
+  if (VsCodeSettings.get('pinApplication') !== false) {
+    vscode.commands.executeCommand('workbench.action.pinEditor');
+  }
 
-    const saveListener = vscode.workspace.onDidSaveTextDocument((document) => {
-        if (document.uri.scheme !== 'file') return;
-        const relativePath = vscode.workspace.asRelativePath(document.uri);
-        logInfo(`File saved: ${relativePath}. Triggering delta scan.`);
-    });
-    context.subscriptions.push(saveListener);
+  panel.webview.html = getWebviewContent(context, panel.webview);
 
-    panel.onDidDispose(() => {
-        logInfo('Webview panel disposed.');
-        saveListener.dispose();
-    });
+  const saveListener = vscode.workspace.onDidSaveTextDocument((document) => {
+    if (document.uri.scheme !== 'file') return;
+    const relativePath = vscode.workspace.asRelativePath(document.uri);
+    logInfo(`File saved: ${relativePath}. Triggering delta scan.`);
+  });
+  context.subscriptions.push(saveListener);
 
-    panel.webview.onDidReceiveMessage(async (message) => {
-        logInfo('[Webview] :', message);
-    });
+  panel.onDidDispose(() => {
+    logInfo('Webview panel disposed.');
+    saveListener.dispose();
+  });
 
-    panel.webview.postMessage({ command: "ready" });
+  // Centralized webview message routing
+  panel.webview.onDidReceiveMessage((event) => {
+    handleWebviewMessage(event, panel, context);
+  });
+
+  panel.webview.postMessage({ command: 'ready' });
 }
+
 
 function getWebviewContent(context: vscode.ExtensionContext, webview: vscode.Webview): string {
   const isDev = context.extensionMode === vscode.ExtensionMode.Development;
