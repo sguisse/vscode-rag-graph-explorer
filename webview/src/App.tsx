@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { useLayoutStore } from '@/store/useLayoutStore';
 import { AppLayout } from '@/components/app/layout/AppLayout';
@@ -8,7 +8,9 @@ import { ExplorerFeature } from '@/features/explorer/ExplorerFeature';
 import { RulesFeature } from '@/features/rules/RulesFeature';
 import { HelpFeature } from '@/features/help/HelpFeature';
 
+
 export default function App() {
+
   const contextStore = typeof useAppContextStore === 'function' ? useAppContextStore() : ({} as any);
   const layoutStore = typeof useLayoutStore === 'function' ? useLayoutStore() : ({} as any);
 

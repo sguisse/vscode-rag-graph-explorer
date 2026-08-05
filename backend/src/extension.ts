@@ -25,7 +25,6 @@ export function activate(context: vscode.ExtensionContext) {
             }
         );
 
-        // Option A: Custom SVG or PNG files in your extension folder
         panel.iconPath = {
             light: vscode.Uri.joinPath(context.extensionUri, 'assets', 'favicon.png'),
             dark: vscode.Uri.joinPath(context.extensionUri, 'assets', 'favicon.png')

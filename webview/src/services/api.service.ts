@@ -1,12 +1,30 @@
-import { RpcProtocol } from '../../../shared/rpc';
-import { IExtensionServices } from '../../../shared/services.interface';
+import { RpcProtocol } from '@/shared/rpc';
+import { IExtensionServices } from '@/shared/services.interface';
+
+function getVsCodeApi() {
+    if (!(window as any)._vscodeApi) {
+        if (typeof acquireVsCodeApi === 'function') {
+            (window as any)._vscodeApi = acquireVsCodeApi();
+        } else if ((window as any).vscodeApi) {
+            (window as any)._vscodeApi = (window as any).vscodeApi;
+        }
+    }
+    return (window as any)._vscodeApi;
+}
 
 class ApiService implements IExtensionServices {
     private rpc: RpcProtocol;
 
     constructor() {
-        const vscodeApi = (window as any).acquireVsCodeApi ? (window as any).acquireVsCodeApi() : (window as any).vscodeApi;
-        this.rpc = new RpcProtocol((msg) => vscodeApi?.postMessage(msg));
+        const vscodeApi = getVsCodeApi();
+        this.rpc = new RpcProtocol((msg) => {
+            if (vscodeApi) {
+                vscodeApi.postMessage(msg);
+            } else {
+                console.warn('[ApiService] VS Code API unavailable for message:', msg);
+            }
+        });
+
         window.addEventListener('message', (event) => {
             this.rpc.receive(event.data);
         });

@@ -110,7 +110,13 @@ export function AppLayout({
       </div>
     );
   }
-
+/*
+  useEffect(() => {
+    apiService.logMessage('info', 'App.tsx loaded', { timestamp: new Date().toISOString() }).catch((error) => {
+      console.error('Failed to log message:', error);
+    });
+  }, []);
+*/
   return (
     <div className="flex flex-col bg-background w-screen h-screen overflow-hidden font-sans text-foreground antialiased">
       <Tooltip delay={300} />
