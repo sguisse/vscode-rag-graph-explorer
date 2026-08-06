@@ -1,10 +1,11 @@
 import React from 'react';
 import { Info } from 'lucide-react';
 import { FolderNode, UmlClassNode, ConfigNode, UmlClassNodeData } from './components/graph/GraphUmlShapes';
-import { SelectedEntity, CodebaseFile, isMemberKeyForFileToken, extractMemberIdFromKeyToken } from '@/shared/services/graph-rag-explorer';
-import { CodebaseMockAdapter } from '@/shared/services/graph-rag-explorer/infrastructure/codebase-service.adapter-mock';
+import { SelectedEntity, CodebaseFile } from '@/shared/services/graph-rag-explorer';
+import { isMemberKeyForFileToken, extractMemberIdFromKeyToken } from '@/services/view/graph-view.service';
 
 interface GraphPanelProps {
+  folderPositions: Record<string, { label: string }>;
   containerRef: (node: HTMLDivElement | null) => void;
   showGrid: boolean;
   isDarkMode: boolean;
@@ -20,6 +21,7 @@ interface GraphPanelProps {
 }
 
 export function GraphPanel({
+  folderPositions,
   containerRef,
   showGrid,
   isDarkMode,
@@ -29,9 +31,6 @@ export function GraphPanel({
   impactedSet,
   handleSelectMember
 }: GraphPanelProps) {
-  const codebaseService = new CodebaseMockAdapter();
-  const folderPositions = codebaseService.getFolderPositions();
-
   return (
     <div className="absolute inset-0 outline-none w-full h-full overflow-hidden">
       <div

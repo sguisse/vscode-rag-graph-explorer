@@ -8,8 +8,7 @@ import {
   CodebaseData,
   SelectedEntity,
   FOLDER_KEYS_REGISTERED_CONFIG,
-  FOLDER_THEME_REGISTRY_CONFIG,
-  CodebaseMockAdapter
+  FOLDER_THEME_REGISTRY_CONFIG
 } from '@/shared/services/graph-rag-explorer';
 
 interface TriStateCheckboxProps {
@@ -40,6 +39,7 @@ function TriStateCheckbox({ checked, indeterminate, onChange, className }: TriSt
 }
 
 interface CodebaseExplorerPanelProps {
+  codebase: CodebaseData;
   searchFilteredFiles: CodebaseFile[];
   expandedFolders: Record<string, boolean>;
   visibleFiles: Record<string, boolean>;
@@ -51,6 +51,7 @@ interface CodebaseExplorerPanelProps {
 }
 
 export function CodebaseExplorerPanel({
+  codebase,
   searchFilteredFiles,
   expandedFolders,
   visibleFiles,
@@ -60,8 +61,6 @@ export function CodebaseExplorerPanel({
   setSelectedEntity,
   onImportCodebase
 }: CodebaseExplorerPanelProps) {
-  const codebaseService = new CodebaseMockAdapter();
-  const codebase = codebaseService.getCodebase();
   const [isImportOpen, setIsImportOpen] = useState(false);
 
   const handleExportCodebase = () => {
@@ -113,9 +112,9 @@ export function CodebaseExplorerPanel({
       <div id="tree-codebase-files" className="flex-1 p-4 overflow-y-auto font-mono text-xs">
         {FOLDER_KEYS_REGISTERED_CONFIG.map(folder => {
           const theme = FOLDER_THEME_REGISTRY_CONFIG[folder] || FOLDER_THEME_REGISTRY_CONFIG.default;
-          const folderFiles = codebase.files.filter(f => f.path.startsWith(folder));
-          const isAllChecked = folderFiles.length > 0 && folderFiles.every(f => visibleFiles[f.id]);
-          const isSomeChecked = folderFiles.some(f => visibleFiles[f.id]);
+          const folderFiles = codebase.files.filter((f: CodebaseFile) => f.path.startsWith(folder));
+          const isAllChecked = folderFiles.length > 0 && folderFiles.every((f: CodebaseFile) => visibleFiles[f.id]);
+          const isSomeChecked = folderFiles.some((f: CodebaseFile) => visibleFiles[f.id]);
           const isIndeterminate = isSomeChecked && !isAllChecked;
 
           return (

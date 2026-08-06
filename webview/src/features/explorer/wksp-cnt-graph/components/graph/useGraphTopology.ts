@@ -6,8 +6,8 @@ import {
   Dependency,
   FOLDER_BASE_X_POSITIONS_CONFIG,
   NODE_DIMENSIONS_CONFIG,
-  buildMemberKeyToken
 } from '@/shared/services/graph-rag-explorer';
+import { buildMemberKeyToken } from '@/services/view/graph-view.service';
 
 export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) {
   const lastTopologyKeyRef = useRef<string>('');

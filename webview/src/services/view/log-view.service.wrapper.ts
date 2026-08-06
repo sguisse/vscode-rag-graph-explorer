@@ -1,8 +1,8 @@
 import { LogLevel } from "@/shared/services/vscode/domain/model/types";
-import { vscodeApiService } from "../backend/vscode-api.service";
+import { vsCodeApiService } from "../api/vs-code-api.service.gen";
 
 function sendLog(level: LogLevel, message: string, details?: any): void {
-    vscodeApiService.logMessage(level, message, details).catch((error) => {
+    vsCodeApiService.logMessage(level, message, details).catch((error: unknown) => {
         console.error(`Failed to send log message: ${error}`);
     });
 }

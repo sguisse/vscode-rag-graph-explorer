@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { CodebaseMockAdapter } from '@/shared/services/graph-rag-explorer/infrastructure/codebase-service.adapter-mock';
+import React, { useState, useEffect, useCallback } from 'react';
+import { codebaseApiService } from '@/services/api/codebase-api.service.gen';
 import { useLayoutStore } from '@/store/useLayoutStore';
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
@@ -28,16 +28,14 @@ import {
 } from '@/shared/services/graph-rag-explorer';
 
 export function ExplorerFeature() {
-  // Mémorisation de l'adaptateur pour garantir une référence stable entre les rendus
-  const codebaseService = useMemo(() => new CodebaseMockAdapter(), []);
-
   const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
   const setContainerContent = useLayoutStore((s) => s.setContainerContent);
   const toggleContainerMaximized = useLayoutStore((s) => s.toggleContainerMaximized);
   const setNotification = useAppContextStore((s) => s.setNotification);
   const isDarkMode = useAppContextStore((s) => s.isDarkMode);
 
-  const [codebase, setCodebase] = useState<CodebaseData>(() => codebaseService.getCodebase());
+  const [codebase, setCodebase] = useState<CodebaseData>({ files: [], dependencies: [] });
+  const [folderPositions, setFolderPositions] = useState<Record<string, { label: string }>>({});
   const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(null);
   const [impactDirection, setImpactDirection] = useState<ImpactDirection>('aval');
 
@@ -45,6 +43,11 @@ export function ExplorerFeature() {
   const [callersDepth, setCallersDepth] = useState(1);
   const [calleesDepth, setCalleesDepth] = useState(1);
   const [currentLayout, setCurrentLayout] = useState('preset');
+
+  useEffect(() => {
+    codebaseApiService.getCodebase().then(setCodebase).catch(console.error);
+    codebaseApiService.getFolderPositions().then(setFolderPositions).catch(console.error);
+  }, []);
 
   const filter = useCodebaseFilter(codebase.files);
   const { impactedSet } = useTransitiveImpact(selectedEntity, impactDirection, codebase.dependencies);
@@ -66,14 +69,14 @@ export function ExplorerFeature() {
   );
 
   useEffect(() => {
-    if (!isReady) return;
+    if (!isReady || Object.keys(folderPositions).length === 0) return;
     updateGraphTopology(
       filter.searchFilteredFiles,
       filter.visibleFiles,
       codebase,
       impactedSet,
       currentLayout,
-      codebaseService.getFolderPositions()
+      folderPositions
     );
   }, [
     isReady,
@@ -82,8 +85,8 @@ export function ExplorerFeature() {
     codebase,
     impactedSet,
     currentLayout,
+    folderPositions,
     updateGraphTopology,
-    codebaseService,
   ]);
 
   const handleCopy = useCallback(
@@ -97,12 +100,12 @@ export function ExplorerFeature() {
   );
 
   const handleImportCodebase = useCallback(
-    (importedData: CodebaseData) => {
-      codebaseService.importCodebase(importedData);
+    async (importedData: CodebaseData) => {
+      await codebaseApiService.importCodebase(importedData);
       setCodebase({ ...importedData });
       setNotification('AST Codebase imported successfully!');
     },
-    [setNotification, codebaseService]
+    [setNotification]
   );
 
   useEffect(() => {
@@ -168,6 +171,7 @@ export function ExplorerFeature() {
         <ContainerPanelHeader title="Codebase Explorer" path="workspace.left" />
         <div className="flex-1 min-h-0 overflow-auto">
           <CodebaseExplorerPanel
+            codebase={codebase}
             searchFilteredFiles={filter.searchFilteredFiles}
             expandedFolders={filter.expandedFolders}
             visibleFiles={filter.visibleFiles}
@@ -214,6 +218,7 @@ export function ExplorerFeature() {
         />
         <div className="relative flex-1 w-full h-full min-h-0">
           <GraphPanel
+            folderPositions={folderPositions}
             containerRef={containerRef}
             showGrid={showGrid}
             isDarkMode={isDarkMode}
@@ -283,6 +288,7 @@ export function ExplorerFeature() {
     showGrid,
     selectedEntity,
     codebase,
+    folderPositions,
     impactDirection,
     impactedSet,
     generatedPlantUML,

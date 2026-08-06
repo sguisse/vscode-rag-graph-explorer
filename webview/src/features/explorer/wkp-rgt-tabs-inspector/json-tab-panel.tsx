@@ -1,16 +1,18 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { JsonView } from '@/components/app/viewer/JsonView';
 import { CopyFloatingButton } from '@/components/app/viewer/CopyFloatingButton';
-import { CodebaseMockAdapter } from '@/shared/services/graph-rag-explorer/infrastructure/codebase-service.adapter-mock';
-
+import { codebaseApiService } from '@/services/api/codebase-api.service.gen';
 
 interface JsonTabPanelProps {
   handleCopy: (text: string, message: string) => void;
 }
 
 export function JsonTabPanel({ handleCopy }: JsonTabPanelProps) {
-  const codebaseService = new CodebaseMockAdapter();
-  const jsonSchemaSpec = codebaseService.getJsonSchemaSpec();
+  const [jsonSchemaSpec, setJsonSchemaSpec] = useState<unknown>(null);
+
+  useEffect(() => {
+    codebaseApiService.getJsonSchemaSpec().then(setJsonSchemaSpec).catch(console.error);
+  }, []);
 
   const doCopy = () => handleCopy(JSON.stringify(jsonSchemaSpec, null, 2), "JSON Schema copied to clipboard!");
 

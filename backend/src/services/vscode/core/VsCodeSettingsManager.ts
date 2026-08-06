@@ -1,39 +1,58 @@
 import * as vscode from 'vscode';
+import { VsCodeSettings } from '../../../../../shared/services/vscode/domain/model/VsCodeSettings.gen';
 
 export class VsCodeSettingsManager {
     private static referenceRegex = /\${([^}]+)}/g;
     private static baseScope: string = '';
 
-    /**
-     * Initializes the static settings utility with your extension's main prefix.
-     */
     public static init(baseScope: string): void {
         this.baseScope = baseScope && !baseScope.endsWith('.') ? `${baseScope}.` : baseScope;
     }
 
     /**
-     * Checks if a specific configuration key exists within the scope.
+     * Recursively transforms dot-notated flat keys into a nested object graph.
      */
-    public static containsKey(relativeKey: string): boolean {
-        const absoluteKey = (this.baseScope && !relativeKey.startsWith(this.baseScope))
-            ? `${this.baseScope}${relativeKey}`
-            : relativeKey;
+    public static unflatten(flatObj: Record<string, any>): Record<string, any> {
+        const result: Record<string, any> = {};
 
-        // Returns true if the key has a defined workspace configuration value
-        return vscode.workspace.getConfiguration().has(absoluteKey);
+        for (const key of Object.keys(flatObj)) {
+            const value = flatObj[key];
+            const parts = key.split('.');
+            let current = result;
+
+            for (let i = 0; i < parts.length; i++) {
+                const part = parts[i];
+                if (i === parts.length - 1) {
+                    current[part] = value;
+                } else {
+                    if (!current[part] || typeof current[part] !== 'object' || Array.isArray(current[part])) {
+                        current[part] = {};
+                    }
+                    current = current[part];
+                }
+            }
+        }
+
+        return result;
     }
 
     /**
-     * Retrieves the fully-resolved configuration map.
-     * Direct alias to toJson() for clean object mapping.
+     * Retrieves settings loaded from VS Code workspace configuration, resolves placeholders,
+     * unflattens dot keys, and injects them into a new VsCodeSettings instance.
+     */
+    public static getSettings(): VsCodeSettings {
+        const flatMap = this.getResolvedFlatMap();
+        const nestedMap = this.unflatten(flatMap);
+        return VsCodeSettings.fromMap(nestedMap);
+    }
+
+    /**
+     * Returns the transposed configuration object as a plain nested dictionary.
      */
     public static getMap(): Record<string, any> {
-        return this.toJson();
+        return this.unflatten(this.getResolvedFlatMap());
     }
 
-    /**
-     * Retrieves a configuration value by its relative key and resolves internal references.
-     */
     public static get<T>(relativeKey: string, defaultValue?: T): T {
         const absoluteKey = (this.baseScope && !relativeKey.startsWith(this.baseScope))
             ? `${this.baseScope}${relativeKey}`
@@ -42,30 +61,20 @@ export class VsCodeSettingsManager {
         return this.resolveValue(absoluteKey, new Set<string>(), defaultValue);
     }
 
-    /**
-     * Exports all configuration keys under the initialized scope into a clean,
-     * fully resolved JSON object ready to be passed to your Python backend.
-     */
-    public static toJson(): Record<string, any> {
+    private static getResolvedFlatMap(): Record<string, any> {
         const scopeClean = this.baseScope.endsWith('.') ? this.baseScope.slice(0, -1) : this.baseScope;
         const config = vscode.workspace.getConfiguration(scopeClean);
-
         const configMap: Record<string, any> = {};
 
-        // Extract plain values from the VS Code WorkspaceConfiguration proxy object
         for (const key of Object.keys(config)) {
             if (typeof config[key] !== 'function') {
                 configMap[key] = this.resolveAllPlaceholders(config[key]);
             }
         }
 
-        // Nest inside the root scope key so absolute dictionary paths are preserved in Python
-        return scopeClean ? { [scopeClean]: configMap } : configMap;
+        return configMap;
     }
 
-    /**
-     * Deep recursive walker to evaluate and resolve strings anywhere inside arrays or objects.
-     */
     private static resolveAllPlaceholders(value: any): any {
         if (typeof value === 'string') {
             return this.interpolate(value, new Set<string>());
@@ -85,7 +94,7 @@ export class VsCodeSettingsManager {
 
     private static resolveValue<T>(absoluteKey: string, visited: Set<string>, defaultValue?: T): T {
         if (visited.has(absoluteKey)) {
-            console.warn(`[VsCodeSettings] Circular reference detected for: "${absoluteKey}".`);
+            console.warn(`[VsCodeSettingsManager] Circular reference detected for: "${absoluteKey}".`);
             return defaultValue as T;
         }
 

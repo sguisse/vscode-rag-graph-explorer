@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { RpcProtocol } from '../../shared/rpc/rpc-protocol';
 import { logInfo } from './utils/utils-log';
-import { registerServices } from './config/registry/service-registrator';
-import { registerRpcMethods } from './config/rpc/rpc-method-registrator';
+import { registerServices } from './config/registry/service-registrator.gen';
+import { registerRpcMethods } from './config/rpc/rpc-method-registrator.gen';
 import { VsCodeSettingsManager } from './services/vscode/core/VsCodeSettingsManager';
 
 const EXTENSION_BASE_CONFIG_NAME = 'tokenRazor';
@@ -28,7 +28,8 @@ export function activate(context: vscode.ExtensionContext) {
             }
         );
 
-        if (VsCodeSettingsManager.get('pinFilesExporter') !== false) {
+        if (VsCodeSettingsManager.get('pinApplication') !== false) {
+            logInfo(`pinApplication = ${VsCodeSettingsManager.get('pinApplication')}`);
             vscode.commands.executeCommand('workbench.action.pinEditor');
         }
 

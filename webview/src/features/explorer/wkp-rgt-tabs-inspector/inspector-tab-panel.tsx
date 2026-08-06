@@ -8,8 +8,8 @@ import {
   ImpactDirection,
   CodebaseMethod,
   ConfigProperty,
-  generateMarkdownRecipe
 } from '@/shared/services/graph-rag-explorer';
+import { generateMarkdownRecipe } from '@/services/view/prompt-view.service';
 
 interface InspectorTabPanelProps {
   selectedEntity: SelectedEntity | null;

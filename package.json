@@ -226,7 +226,8 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run build",
-    "build:backend": "tsc -p backend/tsconfig.json",
+    "generate:code": "node dev-tools/generate-all.js",
+    "build:backend": "npm run generate:code && tsc -p backend/tsconfig.json",
     "build:webview": "cd webview && npm run build",
     "build": "npm run build:backend && npm run build:webview",
     "watch:backend": "tsc -watch -p backend/tsconfig.json",

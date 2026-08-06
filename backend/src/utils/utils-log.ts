@@ -1,6 +1,6 @@
 import { LogLevel } from '../../../shared/services/vscode/domain/model/types';
 import { serviceRegistry } from '../core/ServiceRegistry';
-import { ServiceEnum } from '../../../shared/config/service-enum';
+import { ServiceEnum } from '../../../shared/config/service-enum.gen';
 import { IVsCodeServicePort } from '../../../shared/services/vscode/domain/port-out/vscode-service.port';
 
 let vscodeService: IVsCodeServicePort = undefined as unknown as IVsCodeServicePort; // Initialize as undefined, will be resolved lazily

@@ -1,4 +1,4 @@
-import { CodebaseData } from '../../domain/model/codebase.model';
+import { CodebaseData } from "../../../../../shared/services/graph-rag-explorer";
 
 export const JSON_SCHEMA_SPEC = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",

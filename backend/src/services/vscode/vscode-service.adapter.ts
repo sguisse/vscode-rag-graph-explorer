@@ -4,7 +4,7 @@ import { getAppName } from '../../utils/utils-vscode';
 import { LogLevel } from '../../../../shared/services/vscode/domain/model/types';
 import { logMessage as logMessageDelegate} from './delegate/logger.delegate';
 import { getExtentionSettings as getExtentionSettingsDelegate} from './delegate/export-extention-settings.delegate';
-import { VsCodeSettings } from '../../../../shared/services/vscode/domain/model/VsCodeSettings';
+import { VsCodeSettings } from '../../../../shared/services/vscode/domain/model/VsCodeSettings.gen';
 
 export class VsCodeServiceAdapter implements IVsCodeServicePort, vscode.Disposable {
     private context: vscode.ExtensionContext;

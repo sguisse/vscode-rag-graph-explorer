@@ -7,7 +7,11 @@ import { LayoutDemoFeature } from '@/features/layout-demo/LayoutDemoFeature';
 import { ExplorerFeature } from '@/features/explorer/ExplorerFeature';
 import { RulesFeature } from '@/features/rules/RulesFeature';
 import { HelpFeature } from '@/features/help/HelpFeature';
-import { logInfo } from './services/utils/utils-log';
+import { logInfo } from './services/view/log-view.service.wrapper';
+import { vsCodeApiService } from "./services/api/vs-code-api.service.gen";
+import { VsCodeSettings } from '@/shared/services/vscode/domain/model/VsCodeSettings.gen';
+
+export let vscodeSettings: VsCodeSettings = new VsCodeSettings();
 
 export default function App() {
 
@@ -24,6 +28,9 @@ export default function App() {
   // Trigger remote API log on mount
   useEffect(() => {
     logInfo(`SGU App component mounted. Active feature: ${activeFeature}`);
+    vsCodeApiService.getExtentionSettings().then((settings: VsCodeSettings) => {
+        vscodeSettings = settings;
+    });
   }, []);
 
   return (
