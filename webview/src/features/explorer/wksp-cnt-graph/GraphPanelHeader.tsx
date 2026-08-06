@@ -11,7 +11,7 @@ import {
   DISPLAY_LEVEL_ICON_MAP,
   GRAPH_LAYOUT_LIST,
   GRAPH_LAYOUT_ICON_MAP
-} from '@/shared/services/codebase';
+} from '@/shared/services/graph-rag-explorer';
 
 export interface GraphPanelHeaderLeftProps {
 

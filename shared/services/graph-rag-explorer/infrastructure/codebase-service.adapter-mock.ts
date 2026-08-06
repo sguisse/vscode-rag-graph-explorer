@@ -1,8 +1,9 @@
 import { ICodebaseServicePort } from '../domain/port-out/codebase-service.port';
-import { CodebaseData } from '../domain/model/codebase.model';
+import { CodebaseData, CodebaseFile, Dependency, ImpactDirection, SelectedEntity } from '../domain/model/codebase.model';
 import { initialCodebase, FOLDER_POSITIONS, JSON_SCHEMA_SPEC } from './data/codebase.data';
 
 export class CodebaseMockAdapter implements ICodebaseServicePort {
+
   private currentCodebase: CodebaseData = initialCodebase;
 
   public getCodebase(): CodebaseData {
@@ -40,5 +41,15 @@ export class CodebaseMockAdapter implements ICodebaseServicePort {
 
   public getJsonSchemaSpec(): unknown {
     return JSON_SCHEMA_SPEC;
+  }
+
+  public filterCodebaseFiles(files: CodebaseFile[], searchTerm: string, displayLevel: string, visibleFiles: Record<string, boolean>, maxNodesLimit: number): CodebaseFile[] {
+      throw new Error('Method not implemented.');
+  }
+  public generateMarkdownRecipe(selectedEntity: SelectedEntity | null, impactDirection: ImpactDirection, impactedSet: Set<string>, codebase: CodebaseData): string {
+      throw new Error('Method not implemented.');
+  }
+  public calculateTransitiveImpact(selectedEntity: SelectedEntity | null, impactDirection: ImpactDirection, dependencies: Dependency[]): Set<string> {
+      throw new Error('Method not implemented.');
   }
 }

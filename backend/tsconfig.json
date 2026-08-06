@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "module": "CommonJS",
+    "module": "nodenext",
     "target": "ES2022",
-    "moduleResolution": "node",
+    "moduleResolution": "nodenext",
     "outDir": "../dist-backend",
     "lib": ["ES2022"],
     "sourceMap": true,
@@ -11,6 +11,7 @@
     "rootDir": "..",
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "types": ["node"]
   },
   "include": [
     "./src/**/*",

@@ -1,4 +1,4 @@
-import { IGraphRagInstallerServicePort } from '../domain/port-out/installer-service.port';
+import { IGraphRagInstallerServicePort } from '../../../../shared/services/graph-rag-explorer/domain/port-out/installer-service.port';
 
 export class GraphRagInstallerAdapter implements IGraphRagInstallerServicePort {
     public async installScriptsInUserWorkspace() : Promise<void> {

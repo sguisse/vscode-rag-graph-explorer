@@ -1,1 +1,1 @@
-export * from './VsCodeSettings';
+export * from './types';

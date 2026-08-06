@@ -7,6 +7,7 @@ import { RpcProtocol } from '../../../../shared/rpc/rpc-protocol';
  * Resolves services from the ServiceRegistry and registers all RPC protocol handlers.
  */
 export function registerRpcMethods(rpc: RpcProtocol): void {
-    const loggerService = serviceRegistry.get(ServiceEnum.LOGGER);
-    rpc.register(RpcMethodEnum.LOG_MESSAGE, loggerService.logMessage.bind(loggerService));
+    const vscodeService = serviceRegistry.get(ServiceEnum.VS_CODE);
+    rpc.register(RpcMethodEnum.VSCODE_LOG_MESSAGE, vscodeService.logMessage.bind(vscodeService));
+    rpc.register(RpcMethodEnum.VSCODE_GET_EXTENTION_SETTINGS, vscodeService.getExtentionSettings.bind(vscodeService));
 }

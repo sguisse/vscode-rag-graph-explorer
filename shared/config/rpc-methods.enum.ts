@@ -1,3 +1,4 @@
 export enum RpcMethodEnum {
-    LOG_MESSAGE = 'logMessage',
+    VSCODE_LOG_MESSAGE = 'logMessage',
+    VSCODE_GET_EXTENTION_SETTINGS = "getExtentionSettings",
 }

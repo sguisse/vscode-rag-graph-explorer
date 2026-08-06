@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Upload, FileCode, CheckCircle2, AlertCircle, FolderOpen } from "lucide-react";
-import { CodebaseData } from "@/shared/services/codebase";
+import { CodebaseData } from "@/shared/services/graph-rag-explorer";
 
 interface ImportAstDialogProps {
   open: boolean;

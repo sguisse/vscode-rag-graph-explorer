@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { CodebaseFile, filterCodebaseFiles, INITIAL_VISIBLE_FILES_CONFIG } from '@/shared/services/codebase';
+import { CodebaseFile, filterCodebaseFiles, INITIAL_VISIBLE_FILES_CONFIG } from '@/shared/services/graph-rag-explorer';
 
 export function useCodebaseFilter(allFiles: CodebaseFile[]) {
   const [searchTerm, setSearchTerm] = useState('');

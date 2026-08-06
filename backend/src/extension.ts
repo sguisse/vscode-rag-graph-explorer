@@ -1,12 +1,14 @@
 import * as vscode from 'vscode';
 import { RpcProtocol } from '../../shared/rpc/rpc-protocol';
-import { LoggerService } from './services/logger.service';
+import { logInfo } from './utils/utils-log';
 import { registerServices } from './config/registry/service-registrator';
 import { registerRpcMethods } from './config/rpc/rpc-method-registrator';
+import { VsCodeSettingsManager } from './services/vscode/core/VsCodeSettingsManager';
 
 const EXTENSION_BASE_CONFIG_NAME = 'tokenRazor';
 
 export function activate(context: vscode.ExtensionContext) {
+    VsCodeSettingsManager.init(EXTENSION_BASE_CONFIG_NAME);
     registerServices(context);
 
     const openTool = () => {
@@ -26,6 +28,10 @@ export function activate(context: vscode.ExtensionContext) {
             }
         );
 
+        if (VsCodeSettingsManager.get('pinFilesExporter') !== false) {
+            vscode.commands.executeCommand('workbench.action.pinEditor');
+        }
+
         panel.iconPath = {
             light: vscode.Uri.joinPath(context.extensionUri, 'assets', 'favicon.png'),
             dark: vscode.Uri.joinPath(context.extensionUri, 'assets', 'favicon.png')
@@ -36,13 +42,25 @@ export function activate(context: vscode.ExtensionContext) {
 
         panel.webview.onDidReceiveMessage((msg) => rpc.receive(msg), undefined, context.subscriptions);
 
-        const isDev = context.extensionMode === vscode.ExtensionMode.Development;
+        panel.webview.html = getWebviewContent(panel, context);
+    };
 
-        if (isDev) {
-            const devServerUrl = 'http://localhost:5173';
-            const cspMeta = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; connect-src ws://localhost:5173 http://localhost:5173 https: http: vscode-webview: vscode-resource:; img-src http://localhost:5173 ${panel.webview.cspSource} vscode-webview: vscode-resource: https: http: data: blob:; script-src 'unsafe-inline' 'unsafe-eval' http://localhost:5173 vscode-webview: vscode-resource:; style-src 'unsafe-inline' http://localhost:5173 vscode-webview: vscode-resource: https: http:; font-src http://localhost:5173 ${panel.webview.cspSource} vscode-webview: vscode-resource: https: http: data:;">`;
+    const disposable = vscode.commands.registerCommand(`${EXTENSION_BASE_CONFIG_NAME}.openTool`, openTool)
+    context.subscriptions.push(disposable);
 
-            panel.webview.html = `<!DOCTYPE html>
+    logInfo('Extension activated successfully.');
+}
+
+function getWebviewContent(panel: vscode.WebviewPanel, context: vscode.ExtensionContext) : string {
+    const isDev = context.extensionMode === vscode.ExtensionMode.Development;
+
+    if (isDev) {
+        logInfo('Extension launch in Development mode !!');
+
+        const devServerUrl = 'http://localhost:5173';
+        const cspMeta = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; connect-src ws://localhost:5173 http://localhost:5173 https: http: vscode-webview: vscode-resource:; img-src http://localhost:5173 ${panel.webview.cspSource} vscode-webview: vscode-resource: https: http: data: blob:; script-src 'unsafe-inline' 'unsafe-eval' http://localhost:5173 vscode-webview: vscode-resource:; style-src 'unsafe-inline' http://localhost:5173 vscode-webview: vscode-resource: https: http:; font-src http://localhost:5173 ${panel.webview.cspSource} vscode-webview: vscode-resource: https: http: data:;">`;
+
+        return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -61,14 +79,16 @@ export function activate(context: vscode.ExtensionContext) {
   <script type="module" src="${devServerUrl}/src/index.tsx"></script>
 </body>
 </html>`;
-        } else {
-            const scriptUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'dist-webview', 'assets', 'index.js'));
-            const styleUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'dist-webview', 'assets', 'index.css'));
-            const nonce = getNonce();
+    } else {
+        logInfo('Extension launch in Production mode !!');
 
-            const cspMeta = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${panel.webview.cspSource} https: http: data: blob:; script-src 'nonce-${nonce}' ${panel.webview.cspSource} 'unsafe-inline'; style-src 'unsafe-inline' ${panel.webview.cspSource}; font-src ${panel.webview.cspSource} https: http: data:; connect-src ${panel.webview.cspSource} https: http:;">`;
+        const scriptUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'dist-webview', 'assets', 'index.js'));
+        const styleUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'dist-webview', 'assets', 'index.css'));
+        const nonce = getNonce();
 
-            panel.webview.html = `<!DOCTYPE html>
+        const cspMeta = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${panel.webview.cspSource} https: http: data: blob:; script-src 'nonce-${nonce}' ${panel.webview.cspSource} 'unsafe-inline'; style-src 'unsafe-inline' ${panel.webview.cspSource}; font-src ${panel.webview.cspSource} https: http: data:; connect-src ${panel.webview.cspSource} https: http:;">`;
+
+        return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -80,12 +100,7 @@ export function activate(context: vscode.ExtensionContext) {
   <script nonce="${nonce}" type="module" src="${scriptUri}"></script>
 </body>
 </html>`;
-        }
-    };
-
-    context.subscriptions.push(
-        vscode.commands.registerCommand(`${EXTENSION_BASE_CONFIG_NAME}.openTool`, openTool)
-    );
+    }
 }
 
 function getNonce() {

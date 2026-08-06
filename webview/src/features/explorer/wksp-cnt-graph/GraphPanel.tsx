@@ -1,8 +1,8 @@
 import React from 'react';
 import { Info } from 'lucide-react';
 import { FolderNode, UmlClassNode, ConfigNode, UmlClassNodeData } from './components/graph/GraphUmlShapes';
-import { SelectedEntity, CodebaseFile, isMemberKeyForFileToken, extractMemberIdFromKeyToken } from '@/shared/services/codebase';
-import { CodebaseMockAdapter } from '@/shared/services/codebase/infrastructure/codebase-service.adapter-mock';
+import { SelectedEntity, CodebaseFile, isMemberKeyForFileToken, extractMemberIdFromKeyToken } from '@/shared/services/graph-rag-explorer';
+import { CodebaseMockAdapter } from '@/shared/services/graph-rag-explorer/infrastructure/codebase-service.adapter-mock';
 
 interface GraphPanelProps {
   containerRef: (node: HTMLDivElement | null) => void;

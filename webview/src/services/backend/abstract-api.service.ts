@@ -1,6 +1,6 @@
 import { getVsCodeApi } from '@/lib/utils-vscode';
 import { RpcProtocol } from '@/shared/rpc/rpc-protocol';
-import { IBackendService } from '@/shared/services/backend-service.interface';
+import { IBackendService } from '@/shared/core/backend-service.port';
 
 export abstract class AbstractApiService implements IBackendService {
     protected rpc: RpcProtocol;

@@ -1,3 +1,3 @@
 export enum ServiceEnum {
-    LOGGER = 'loggerService',
+    VS_CODE = 'VsCodeService',
 }

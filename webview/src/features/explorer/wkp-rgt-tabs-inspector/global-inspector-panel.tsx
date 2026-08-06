@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { InspectorTabPanel } from './inspector-tab-panel';
 import { PlantUmlTabPanel } from './plantuml-tab-panel';
 import { JsonTabPanel } from './json-tab-panel';
-import { CodebaseData, SelectedEntity, ImpactDirection } from '@/shared/services/codebase';
+import { CodebaseData, SelectedEntity, ImpactDirection } from '@/shared/services/graph-rag-explorer';
 
 interface GlobalInspectorPanelProps {
   selectedEntity: SelectedEntity | null;

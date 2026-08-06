@@ -1,6 +1,6 @@
 import React from 'react';
 import { FileCode, Settings } from 'lucide-react';
-import { CodebaseFile, CodebaseAttribute, CodebaseMethod, ConfigProperty } from '@/shared/services/codebase';
+import { CodebaseFile, CodebaseAttribute, CodebaseMethod, ConfigProperty } from '@/shared/services/graph-rag-explorer';
 
 export interface NodeStyle {
   bg: string;

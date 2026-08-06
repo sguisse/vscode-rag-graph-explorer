@@ -9,7 +9,7 @@ import {
   CodebaseMethod,
   ConfigProperty,
   generateMarkdownRecipe
-} from '@/shared/services/codebase';
+} from '@/shared/services/graph-rag-explorer';
 
 interface InspectorTabPanelProps {
   selectedEntity: SelectedEntity | null;

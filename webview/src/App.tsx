@@ -7,7 +7,7 @@ import { LayoutDemoFeature } from '@/features/layout-demo/LayoutDemoFeature';
 import { ExplorerFeature } from '@/features/explorer/ExplorerFeature';
 import { RulesFeature } from '@/features/rules/RulesFeature';
 import { HelpFeature } from '@/features/help/HelpFeature';
-import { loggerService } from '@/services/backend/api-logger.service';
+import { logInfo } from './services/utils/utils-log';
 
 export default function App() {
 
@@ -23,9 +23,7 @@ export default function App() {
 
   // Trigger remote API log on mount
   useEffect(() => {
-    loggerService.logMessage('info', 'App.tsx loaded', { timestamp: new Date().toISOString() }).catch((error) => {
-      console.error('Failed to log message:', error);
-    });
+    logInfo(`SGU App component mounted. Active feature: ${activeFeature}`);
   }, []);
 
   return (

@@ -1,5 +1,5 @@
 import React from 'react';
-import { MaximizeScope } from '@/shared/services/codebase/domain/model/types';
+import { MaximizeScope } from '@/shared/services/graph-rag-explorer/domain/model/types';
 
 export interface MaximizeContainer {
   isMaximizable?: boolean;

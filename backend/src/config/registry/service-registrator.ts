@@ -1,25 +1,22 @@
 import * as vscode from 'vscode';
 import { serviceRegistry } from '../../core/ServiceRegistry';
 
-import { LoggerService } from '../../services/logger.service';
+import { VsCodeServiceAdapter } from '../../services/vscode/vscode-service.adapter';
 import { ServiceEnum } from '../../../../shared/config/service-enum';
-import { ILoggerService } from '../../../../shared/services/logger-service.interface';
+import { IVsCodeServicePort } from '../../../../shared/services/vscode/domain/port-out/vscode-service.port';
 
 
 export interface BackendServicesMap {
-    [ServiceEnum.LOGGER]: ILoggerService;
+    [ServiceEnum.VS_CODE]: IVsCodeServicePort;
 }
 
 /**
  * Instantiates and registers all backend application services into the ServiceRegistry container.
  */
 export function registerServices(context: vscode.ExtensionContext): void {
-    const loggerService = new LoggerService(context);
-
-    serviceRegistry
-        .register(ServiceEnum.LOGGER, loggerService);
-        //.register(SERVICE_KEYS.GRAPH_RAG_INSTALLER, graphRagInstallerService);
+    const vscodeService = new VsCodeServiceAdapter(context);
+    serviceRegistry.register(ServiceEnum.VS_CODE, vscodeService);
 
     // Track disposables in VS Code extension context
-    context.subscriptions.push(loggerService);
+    context.subscriptions.push(vscodeService);
 }

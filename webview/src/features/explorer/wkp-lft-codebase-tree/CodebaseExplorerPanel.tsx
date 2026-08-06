@@ -10,7 +10,7 @@ import {
   FOLDER_KEYS_REGISTERED_CONFIG,
   FOLDER_THEME_REGISTRY_CONFIG,
   CodebaseMockAdapter
-} from '@/shared/services/codebase';
+} from '@/shared/services/graph-rag-explorer';
 
 interface TriStateCheckboxProps {
   checked: boolean;

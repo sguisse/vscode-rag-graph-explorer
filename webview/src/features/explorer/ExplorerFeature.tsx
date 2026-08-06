@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { CodebaseMockAdapter } from '@/shared/services/codebase/infrastructure/codebase-service.adapter-mock';
+import { CodebaseMockAdapter } from '@/shared/services/graph-rag-explorer/infrastructure/codebase-service.adapter-mock';
 import { useLayoutStore } from '@/store/useLayoutStore';
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
@@ -25,7 +25,7 @@ import {
   CodebaseData,
   SelectedEntity,
   ImpactDirection,
-} from '@/shared/services/codebase';
+} from '@/shared/services/graph-rag-explorer';
 
 export function ExplorerFeature() {
   // Mémorisation de l'adaptateur pour garantir une référence stable entre les rendus

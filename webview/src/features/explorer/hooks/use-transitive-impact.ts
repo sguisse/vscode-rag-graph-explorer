@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { SelectedEntity, ImpactDirection, Dependency, calculateTransitiveImpact } from '@/shared/services/codebase';
+import { SelectedEntity, ImpactDirection, Dependency, calculateTransitiveImpact } from '@/shared/services/graph-rag-explorer';
 
 export function useTransitiveImpact(
   selectedEntity: SelectedEntity | null,

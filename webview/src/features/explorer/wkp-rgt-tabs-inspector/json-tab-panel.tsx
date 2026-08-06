@@ -1,7 +1,7 @@
 import React from 'react';
 import { JsonView } from '@/components/app/viewer/JsonView';
 import { CopyFloatingButton } from '@/components/app/viewer/CopyFloatingButton';
-import { CodebaseMockAdapter } from '@/shared/services/codebase/infrastructure/codebase-service.adapter-mock';
+import { CodebaseMockAdapter } from '@/shared/services/graph-rag-explorer/infrastructure/codebase-service.adapter-mock';
 
 
 interface JsonTabPanelProps {
