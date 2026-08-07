@@ -8,7 +8,12 @@ let vscodeService: IVsCodeServicePort = undefined as unknown as IVsCodeServicePo
 function sendLog(level: LogLevel, message: string, details?: any): void {
     // Resolve service lazily when a log function is invoked
     if (!vscodeService) {
-        vscodeService = serviceRegistry.get(ServiceEnum.VS_CODE);
+        if (serviceRegistry.has(ServiceEnum.VS_CODE)) {
+            vscodeService = serviceRegistry.get(ServiceEnum.VS_CODE);
+        } else {
+            console.log(`[${level}] ${message}`, details !== undefined ? details : "");
+            return;
+        }
     }
 
     vscodeService.logMessage(level, message, details).catch((error) => {

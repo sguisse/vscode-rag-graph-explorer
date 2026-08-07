@@ -19,12 +19,18 @@ let activeChildProcess: any = null;
 
 export class CodebaseMockAdapter extends AbstractServiceAdapter implements ICodebaseServicePort, vscode.Disposable {
   private currentCodebase: CodebaseData = initialCodebase;
-  private graphRagInstallerService: IGraphRagInstallerServicePort ;
+  private _graphRagInstallerService?: IGraphRagInstallerServicePort;
 
-constructor() {
-    super();
-    this.graphRagInstallerService = serviceRegistry.get(ServiceEnum.GRAPH_RAG_INSTALLER);
-}
+  private get graphRagInstallerService(): IGraphRagInstallerServicePort {
+      if (!this._graphRagInstallerService) {
+          this._graphRagInstallerService = serviceRegistry.get(ServiceEnum.GRAPH_RAG_INSTALLER);
+      }
+      return this._graphRagInstallerService;
+  }
+
+  constructor() {
+      super();
+  }
 
   public async getCodebase(): Promise<CodebaseData> {
     return this.currentCodebase;
