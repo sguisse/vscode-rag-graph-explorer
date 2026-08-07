@@ -1,22 +1,23 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
+import * as fs from 'fs';
 import { RpcProtocol } from '../../shared/rpc/rpc-protocol';
-import { logInfo } from './utils/utils-log';
+import { logError, logInfo, logWarn } from './utils/utils-log';
 import { registerServices } from './config/service-registrator.gen';
 import { registerRpcMethods } from './config/rpc-method-registrator.gen';
 import { vsCodeSettingsManager } from './managers/VsCodeSettings.manager';
 import { AbstractServiceAdapter } from './core/AbstractServiceAdapter';
-import { getAppDisplayNameFromPackageJson, getAppNormalizedNameFromPackageJson } from './utils/utils-vscode';
+import { getAppDisplayNameFromPackageJson, getAppNormalizedNameFromPackageJson, getWorkspaceRoot } from './utils/utils-vscode';
 import { workspaceInstallationManager } from './managers/WorkspaceInstallation.manager';
 import { pythonScriptExecutionManager } from './managers/PythonScriptExecution.manager';
 
 export let EXTENSION_BASE_CONFIG_NAME = 'to-define';
-// To manage only one instance of the tool opened
 let currentPanel: vscode.WebviewPanel | undefined = undefined;
+let activeChildProcess: any = null;
 
 export function activate(context: vscode.ExtensionContext) {
     EXTENSION_BASE_CONFIG_NAME = getAppNormalizedNameFromPackageJson(context);
     vsCodeSettingsManager.init(EXTENSION_BASE_CONFIG_NAME);
-    // Associates the context with all services
     AbstractServiceAdapter.setContext(context);
     registerServices(context);
 
@@ -28,10 +29,8 @@ export function activate(context: vscode.ExtensionContext) {
             return;
         }
 
-        // Clean re-initialization sequence whenever webview is launched
         pythonScriptExecutionManager.killAll();
         vsCodeSettingsManager.init(EXTENSION_BASE_CONFIG_NAME);
-
         workspaceInstallationManager.syncScripts(context);
 
         const panel: vscode.WebviewPanel = createWebviewPanel(context);
@@ -43,6 +42,8 @@ export function activate(context: vscode.ExtensionContext) {
         manageDisposedWebviewPanel(panel, saveListener);
 
         panel.webview.html = getWebviewContent(panel, context);
+
+        runPythonScan("deep");
     };
 
     const disposable = vscode.commands.registerCommand(`${EXTENSION_BASE_CONFIG_NAME}.openTool`, openTool);
@@ -59,10 +60,7 @@ function createWebviewPanel(context: vscode.ExtensionContext): vscode.WebviewPan
         {
             enableScripts: true,
             retainContextWhenHidden: true,
-            // FIX: Grant webview access to the entire extension workspace
-            // so Vite dev server can load /node_modules/ fonts and /assets/ images
             localResourceRoots: [context.extensionUri],
-            // Essential for Vite dev server proxying inside webview
             portMapping: [{ webviewPort: 5173, extensionHostPort: 5173 }]
         }
     );
@@ -82,7 +80,6 @@ function managePanelRendering(panel: vscode.WebviewPanel, context: vscode.Extens
 }
 
 function manageBackendServices(panel: vscode.WebviewPanel, context: vscode.ExtensionContext) {
-    // Associates the new active panel with all services
     AbstractServiceAdapter.setWebviewPanel(panel);
 
     const rpc = new RpcProtocol((msg) => panel.webview.postMessage(msg));
@@ -106,7 +103,6 @@ function manageSaveFileInVsCodeEditor(panel: vscode.WebviewPanel, context: vscod
         if (document.uri.scheme !== 'file') return;
         const relativePath = vscode.workspace.asRelativePath(document.uri);
         logInfo(`File saved: ${relativePath}. Triggering delta scan.`);
-        //runPythonScan(context, panel, "delta", relativePath);
     });
     context.subscriptions.push(saveListener);
 
@@ -134,7 +130,7 @@ function getWebviewContent(panel: vscode.WebviewPanel, context: vscode.Extension
     window.$RefreshSig$ = () => (type) => type;
     window.__vite_plugin_react_preamble_installed__ = true;
   </script>
-  <script type="module" src="${devServerUrl}/@vite/client"></script>
+  <script type="module" src="${devServerUrl}/src/index.tsx"></script>
 </head>
 <body style="margin: 0; padding: 0; width: 100%; height: 100vh; overflow: hidden; background-color: transparent;">
   <div id="root"></div>
@@ -175,3 +171,80 @@ function getNonce() {
 }
 
 export function deactivate() {}
+
+function runPythonScan(mode: string, targetFile: string = "") {
+    logInfo('runPythonScan Start ...');
+    const workspaceRoot = getWorkspaceRoot();
+    const backendScriptsPath: string = vsCodeSettingsManager.getSettings().backendWorkspacePath;
+    const targetDir4Scripts = path.join(workspaceRoot, backendScriptsPath, "scripts");
+    const runnerScript = path.join(targetDir4Scripts, "main.py");
+
+    if (!fs.existsSync(runnerScript)) {
+        logError(`[PythonScan] Target script not found at path: ${runnerScript}`);
+        return;
+    }
+
+    const parseLogLine = (line: string, fallbackLevel: 'debug' | 'info' | 'warn' | 'error') => {
+        const cleanLine = line.trim();
+        if (!cleanLine) return;
+        let level = fallbackLevel;
+        if (cleanLine.includes("🪲") || cleanLine.includes("[DEBUG]")) level = "debug";
+        else if (cleanLine.includes("⚠️") || cleanLine.includes("[WARN]")) level = "warn";
+        else if (cleanLine.includes("❌") || cleanLine.includes("[ERROR]")) level = "error";
+        else if (cleanLine.includes("ℹ️") || cleanLine.includes("[INFO]") || cleanLine.includes("✅")) level = "info";
+
+        if (level === "error") logError(`[Python] ${cleanLine}`);
+        else if (level === "warn") logWarn(`[Python] ${cleanLine}`);
+        else logInfo(`[Python] ${cleanLine}`);
+    };
+
+    const payloadConfig = vsCodeSettingsManager.toJson();
+    if (!payloadConfig[EXTENSION_BASE_CONFIG_NAME]) {
+        payloadConfig[EXTENSION_BASE_CONFIG_NAME] = {};
+    }
+    payloadConfig[EXTENSION_BASE_CONFIG_NAME]["workspaceRoot"] = workspaceRoot;
+
+    if (activeChildProcess?.pid) {
+        pythonScriptExecutionManager.killPid(activeChildProcess.pid);
+    }
+
+    let stderrBuffer = '';
+
+    const child = pythonScriptExecutionManager.executeScript(
+        runnerScript,
+        [],
+        { cwd: workspaceRoot }
+    );
+    activeChildProcess = child;
+
+    child.stdin?.write(JSON.stringify(payloadConfig));
+    child.stdin?.end();
+
+    child.stdout?.on("data", (data: any) => data.toString().split("\n").forEach((l: string) => parseLogLine(l, "info")));
+    child.stderr?.on("data", (data: any) => {
+        const str = data.toString();
+        stderrBuffer += str;
+        str.split("\n").forEach((l: string) => parseLogLine(l, "error"));
+    });
+
+    child.on("close", (code: number | null, signal: string | null) => {
+        if (activeChildProcess === child) activeChildProcess = null;
+        if (code === 0) {
+            logInfo('[PythonScan] Python background process completed successfully.');
+            const finalUiPayloadPath = path.join(workspaceRoot, backendScriptsPath, "target", "ui_outputs", "graph-ui-payload.json");
+            if (fs.existsSync(finalUiPayloadPath)) {
+                try {
+                    const rawPayload = JSON.parse(fs.readFileSync(finalUiPayloadPath, "utf-8"));
+                } catch (err) {
+                    logError(`[PythonScan] Failed to parse UI payload JSON structure: ${err}`, err);
+                }
+            }
+        } else if (signal) {
+            logWarn(`[PythonScan] Process terminated by signal ${signal}.`);
+        } else {
+            logError(`[PythonScan] Process exited with non-zero exit code: ${code}. Target script: ${runnerScript}. Stderr context: ${stderrBuffer.trim()}`);
+        }
+    });
+
+    logInfo('runPythonScan Finished !!!');
+}
