@@ -11,7 +11,7 @@ def run_initialization_pipeline() -> str:
     """Executes Phase 2: Sequential Initialization Block (Discovery + Sandbox Database Ignition)."""
     info("Entering Phase 2: Initialization Block...", component="InitializationRunner")
 
-    workspace_root = vsCodeSettings.get("workspaceRoot")
+    workspace_root = vsCodeSettings.workspaceRoot
 
     # 1. Run codebase discovery mapper metrics
     #discovery = DiscoveryEngine(workspace_root, vsCodeSettings)

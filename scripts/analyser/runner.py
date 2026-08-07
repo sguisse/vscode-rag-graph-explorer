@@ -23,8 +23,8 @@ def run_analysis_pipeline():
     context = EnvironmentContext()
 
     neo4j_client = Neo4jClient(
-        uri=context.get_vscode_setting("neo4j", "uri"),
-        auth=(context.get_vscode_setting("neo4j", "username"), context.get_vscode_setting("neo4j", "password"))
+        uri=vsCodeSettings.graphRagExplorer.neo4j.uri,
+        auth=(vsCodeSettings.graphRagExplorer.neo4j.username, vsCodeSettings.graphRagExplorer.neo4j.password)
     )
     info(f"Neo4j connection established: {neo4j_client._connected}", component="AnalyserRunner")
 
@@ -55,7 +55,7 @@ def run_analysis_pipeline():
     # Execute fallback query session verification to report Java entities metrics before disconnect
     try:
         # Call the newly integrated Neo4j global statistics extractor
-        build_statistics(neo4j_client, vsCodeSettings.get("workspaceRoot"))
+        build_statistics(neo4j_client, vsCodeSettings.workspaceRoot)
     except Exception as err:
         error(f"Failed executing database node summary verification query: {err}", component="AnalyserRunner")
 

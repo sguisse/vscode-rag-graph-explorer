@@ -14,7 +14,7 @@ class SystemCoreChecker(BaseCheckModule):
         self.steps_count += 1
         gi_path = f"{self.context.workspace_root}/.gitignore"
         has_rule = False
-        beScriptsPath = vsCodeSettings.get("beScriptsPath")
+        beScriptsPath = vsCodeSettings.backendWorkspacePath
         if os.path.exists(gi_path):
             with open(gi_path, "r", encoding="utf-8") as f:
                 if beScriptsPath in f.read():

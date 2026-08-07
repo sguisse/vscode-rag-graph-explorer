@@ -6,6 +6,7 @@ from install.base import BaseCheckModule
 from install.registry import InstallerRegistry
 from install.modules.java.jqassistant.context import JQAssistantContext
 from install.modules.system.neo4j.check import SystemNeo4jChecker
+from core.vscode_settings_4_backend import vsCodeSettings
 
 @InstallerRegistry.register_checker
 class JavaJQAssistantChecker(BaseCheckModule):
@@ -37,7 +38,7 @@ class JavaJQAssistantChecker(BaseCheckModule):
 
     def check_jqassistant_executable_availability(self):
         self.steps_count += 1
-        version = self.context.get_vscode_setting("jqassistant", "version")
+        version = vsCodeSettings.graphRagExplorer.jqassistant.version
         base_cmd = "jqassistant.cmd" if os.name == 'nt' else "jqassistant.sh"
 
         global_bin = shutil.which(base_cmd) or shutil.which("jqassistant")

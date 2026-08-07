@@ -8,7 +8,7 @@ export class VsCodeSettings {
 
     geminiApiKey = "";
 
-    backendWorkspacePath = ".tokenRazor";
+    backendWorkspacePath = ".token-razor";
 
     forceScriptSync = false;
 

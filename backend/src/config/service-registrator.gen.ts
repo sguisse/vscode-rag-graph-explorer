@@ -22,13 +22,13 @@ export interface BackendServicesMap {
  * Instantiates and registers all backend application services into the ServiceRegistry container.
  */
 export function registerServices(context: vscode.ExtensionContext): void {
-    const graphRagInstallerService = new GraphRagInstallerAdapter();
-    serviceRegistry.register(ServiceEnum.GRAPH_RAG_INSTALLER, graphRagInstallerService);
-    context.subscriptions.push(graphRagInstallerService);
-
     const codebaseService = new CodebaseMockAdapter();
     serviceRegistry.register(ServiceEnum.CODEBASE, codebaseService);
     context.subscriptions.push(codebaseService);
+
+    const graphRagInstallerService = new GraphRagInstallerAdapter();
+    serviceRegistry.register(ServiceEnum.GRAPH_RAG_INSTALLER, graphRagInstallerService);
+    context.subscriptions.push(graphRagInstallerService);
 
     const vsCodeService = new VsCodeServiceAdapter();
     serviceRegistry.register(ServiceEnum.VS_CODE, vsCodeService);

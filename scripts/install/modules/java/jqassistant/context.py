@@ -8,7 +8,7 @@ from core.context import EnvironmentContext
 class JQAssistantContext:
     def __init__(self, ctx: EnvironmentContext):
         # We pass the global EnvironmentContext to derive specific paths
-        self.version = ctx.get_vscode_setting("jqassistant", "version")
+        self.version = vsCodeSettings.graphRagExplorer.jqassistant.version
         self.raw_outputs_dir = f"{ctx.raw_outputs_dir}/java"
         self.tools_dir = f"{ctx.tools_dir}/java/jqassistant"
         self.config_dir = f"{self.tools_dir}/config"
@@ -20,12 +20,12 @@ class JQAssistantContext:
 
         self.rules_dir = f"{self.config_dir}/rules"
         self.custom_config_path = f"{self.config_dir}/.jqassistant.yml"
-        self.exclude_paths_regex = ctx.get_vscode_setting("excludePathsRegex")
-        self.download_url = ctx.get_vscode_setting("jqassistant", "downloadUrl")
+        self.exclude_paths_regex = vsCodeSettings.graphRagExplorer.excludePathsRegex
+        self.download_url = vsCodeSettings.graphRagExplorer.jqassistant.downloadUrl
 
         self.mcp_server_key = "jqassistant-graph-rag"
-        self.mcp_host = ctx.get_vscode_setting("jqassistant", "mcp.host")
-        self.mcp_port = ctx.get_vscode_setting("jqassistant", "mcp.port")
+        self.mcp_host = vsCodeSettings.graphRagExplorer.jqassistant.mcp.host
+        self.mcp_port = vsCodeSettings.graphRagExplorer.jqassistant.mcp.port
 
 
 

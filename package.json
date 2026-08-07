@@ -58,7 +58,7 @@
         },
         "tokenRazor.backendWorkspacePath": {
           "type": "string",
-          "default": ".tokenRazor",
+          "default": ".token-razor",
           "description": "Local User Path where the back-end scripts and treatment results will be stored (relative to the workspace root)."
         },
         "tokenRazor.forceScriptSync": {

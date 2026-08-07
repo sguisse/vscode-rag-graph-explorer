@@ -74,7 +74,7 @@ class SystemNeo4jInstaller(BaseInstallModule):
 
         # 2. Boot database process
         if installStatus.get("neo4j_db_running", {}).get("status") != "✅":
-            self.boot_neo4j_process(self.neo4j_cmd)
+            self.boot_neo4j_process(self.neo4j_ctx.neo4j_cmd)
 
         # 3. Initialize Remote Metadata Token Verification Schema
         self.initialize_remote_database_token(self.neo4j_ctx.cypher_shell_cmd)

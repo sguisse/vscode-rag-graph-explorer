@@ -17,7 +17,7 @@ class SystemCoreInstaller(BaseInstallModule):
         if os.path.exists(gi_path):
             with open(gi_path, "r", encoding="utf-8") as f:
                 content = f.read()
-        beScriptsPath = vsCodeSettings.get("beScriptsPath")
+        beScriptsPath = vsCodeSettings.backendWorkspacePath
         if beScriptsPath not in content:
             with open(gi_path, "a", encoding="utf-8") as f:
                 f.write(f"\n# [Graph RAG Explorer]\n{beScriptsPath}/\n")

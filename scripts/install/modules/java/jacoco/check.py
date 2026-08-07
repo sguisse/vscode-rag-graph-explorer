@@ -1,5 +1,6 @@
 from install.base import BaseCheckModule
 from install.registry import InstallerRegistry
+from core.vscode_settings_4_backend import vsCodeSettings
 
 @InstallerRegistry.register_checker
 class JavaJacocoChecker(BaseCheckModule):
@@ -8,7 +9,7 @@ class JavaJacocoChecker(BaseCheckModule):
 
     def check_xml_report_path_wiring(self):
         self.steps_count += 1
-        target_report = self.context.get_vscode_setting("jqassistant", "xmlReportPath", "./target/site/jacoco/jacoco.xml")
+        target_report = vsCodeSettings.graphRagExplorer.jqassistant.xmlReportPath
         self.status["jacoco_wired"] = {"status": "✅", "path": target_report}
 
     def execute_all_checks(self) -> dict:

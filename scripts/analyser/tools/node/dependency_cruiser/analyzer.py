@@ -12,7 +12,7 @@ class NodeDependencyCruiserAnalyzer(BaseAnalyser):
     def name(self) -> str: return "node_dependency_cruiser_analyzer"
 
     def run_analysis(self, neo4j_client: Neo4jClient) -> None:
-        custom_rule_file = vsCodeSettings.get("dependencyCruiser.configFile")
+        custom_rule_file = vsCodeSettings.graphRagExplorer.dependencyCruiser.configFile
         #js_files = [f for f in manifest_data.get("files", []) if f.endswith((".ts", ".tsx", ".js", ".jsx", ".mjs"))]
 
         info(f"[Dependency Cruiser Analyzer] Running analysis pipelines matching context parameters: {custom_rule_file}", component=self.name)

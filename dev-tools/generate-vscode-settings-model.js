@@ -1,14 +1,14 @@
 const fs = require('fs');
 const path = require('path');
 
-// Resolve workspace root directory relative to scripts/dev-tools/
 const rootDir = path.resolve(__dirname, '../');
 const packageJsonPath = path.join(rootDir, 'package.json');
-const outputPath = path.join(rootDir, 'shared/services/vscode/domain/model/VsCodeSettings.gen.ts');
+const tsOutputPath = path.join(rootDir, 'shared/services/vscode/domain/model/VsCodeSettings.gen.ts');
+const pyOutputPath = path.join(rootDir, 'scripts/core/VsCodeSettings_gen.py');
 
 const SCOPE_PREFIX = 'tokenRazor.';
 
-function generateVsCodeSettingsModel() {
+function generateModels() {
     if (!fs.existsSync(packageJsonPath)) {
         console.error(`❌ package.json not found at: ${packageJsonPath}`);
         process.exit(1);
@@ -19,7 +19,6 @@ function generateVsCodeSettingsModel() {
 
     const nestedObj = {};
 
-    // 1. Unflatten dot-separated keys into a nested structure
     for (const [fullKey, spec] of Object.entries(properties)) {
         const relativeKey = fullKey.startsWith(SCOPE_PREFIX)
             ? fullKey.slice(SCOPE_PREFIX.length)
@@ -41,7 +40,7 @@ function generateVsCodeSettingsModel() {
         }
     }
 
-    // 2. Format nested object literals (key: value,)
+    // --- TypeScript Model Generation ---
     function formatObjectLiteral(obj, indentLevel = 2) {
         const indent = '    '.repeat(indentLevel);
         const entries = Object.entries(obj);
@@ -57,7 +56,6 @@ function generateVsCodeSettingsModel() {
         return lines.join(',\n');
     }
 
-    // 3. Format top-level class properties (key = value;)
     function formatClassBody(obj) {
         const indent = '    ';
         const lines = [];
@@ -73,8 +71,7 @@ function generateVsCodeSettingsModel() {
     }
 
     const classBody = formatClassBody(nestedObj);
-
-    const fileContent = `// AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY.
+    const tsContent = `// AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY.
 // Rebuild using: npm run generate:settings
 
 export class VsCodeSettings {
@@ -90,9 +87,91 @@ ${classBody}
 }
 `;
 
-    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-    fs.writeFileSync(outputPath, fileContent, 'utf-8');
-    console.log(`✅ Successfully rebuilt VsCodeSettings model at:\n   ${outputPath}`);
+    fs.mkdirSync(path.dirname(tsOutputPath), { recursive: true });
+    fs.writeFileSync(tsOutputPath, tsContent, 'utf-8');
+    console.log(`✅ Successfully rebuilt TypeScript VsCodeSettings model at:\n   ${tsOutputPath}`);
+
+    // --- Python Dataclass Model Generation ---
+    function getPythonType(val) {
+        if (typeof val === 'boolean') return 'bool';
+        if (typeof val === 'number') return Number.isInteger(val) ? 'int' : 'float';
+        if (Array.isArray(val)) return 'list';
+        if (typeof val === 'string') return 'str';
+        return 'Any';
+    }
+
+    function formatPythonValue(val) {
+        if (typeof val === 'boolean') return val ? 'True' : 'False';
+        if (val === null) return 'None';
+        if (Array.isArray(val) || typeof val === 'object') return `field(default_factory=lambda: ${JSON.stringify(val)})`;
+        return JSON.stringify(val);
+    }
+
+    let pyClasses = [];
+
+    function generatePyClass(className, obj) {
+        let lines = [];
+        lines.push('@dataclass');
+        lines.push(`class ${className}:`);
+        let hasProps = false;
+        let dictAssignments = [];
+
+        if (className === 'VsCodeSettings') {
+            lines.push('    workspaceRoot: str = ""');
+            dictAssignments.push('        if "workspaceRoot" in data:\n            obj.workspaceRoot = data["workspaceRoot"]');
+            hasProps = true;
+        }
+
+        for (const [key, val] of Object.entries(obj)) {
+            if (val !== null && typeof val === 'object' && !Array.isArray(val)) {
+                const nestedClassName = key.charAt(0).toUpperCase() + key.slice(1) + 'Settings';
+                generatePyClass(nestedClassName, val);
+                lines.push(`    ${key}: "${nestedClassName}" = field(default_factory=${nestedClassName})`);
+                dictAssignments.push(`        if "${key}" in data:\n            obj.${key} = ${nestedClassName}.from_dict(data["${key}"])`);
+                hasProps = true;
+            } else {
+                lines.push(`    ${key}: ${getPythonType(val)} = ${formatPythonValue(val)}`);
+                dictAssignments.push(`        if "${key}" in data:\n            obj.${key} = data["${key}"]`);
+                hasProps = true;
+            }
+        }
+        if (!hasProps) lines.push('    pass');
+
+        lines.push('');
+        lines.push('    @classmethod');
+        lines.push(`    def from_dict(cls, data: dict) -> "${className}":`);
+        lines.push('        obj = cls()');
+        lines.push('        if not isinstance(data, dict): return obj');
+        if (dictAssignments.length > 0) {
+            lines.push(dictAssignments.join('\n'));
+        }
+        lines.push('        return obj');
+        lines.push('');
+
+        if (className === 'VsCodeSettings') {
+            lines.push('    def inject_vscode_settings(self, data: dict) -> None:');
+            lines.push('        root_key = next(iter(data.keys()), "tokenRazor") if data else "tokenRazor"');
+            lines.push('        root_data = data.get(root_key, {})');
+            lines.push('        if not isinstance(root_data, dict): root_data = data');
+            lines.push('        parsed = self.from_dict(root_data)');
+            lines.push('        self.__dict__.update(parsed.__dict__)');
+            lines.push('');
+        }
+
+        pyClasses.push(lines.join('\n'));
+    }
+
+    generatePyClass('VsCodeSettings', nestedObj);
+
+    fs.mkdirSync(path.dirname(pyOutputPath), { recursive: true });
+    const pyContent = `# AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY.
+from dataclasses import dataclass, field
+from typing import List, Dict, Any
+
+` + pyClasses.join('\n');
+
+    fs.writeFileSync(pyOutputPath, pyContent, 'utf-8');
+    console.log(`✅ Successfully rebuilt Python VsCodeSettings model at:\n   ${pyOutputPath}`);
 }
 
-generateVsCodeSettingsModel();
+generateModels();

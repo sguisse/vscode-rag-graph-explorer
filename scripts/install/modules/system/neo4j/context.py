@@ -1,5 +1,6 @@
 import os
 from core.context import EnvironmentContext
+from core.vscode_settings_4_backend import vsCodeSettings
 
 class Neo4jContext:
     def __init__(self, ctx: EnvironmentContext):
@@ -8,15 +9,15 @@ class Neo4jContext:
         self.remote_database_token_value = "true"
 
         # Configuration Settings
-        self.version = ctx.get_vscode_setting("neo4j", "version", "5.26.0")
-        self.gds_version = ctx.get_vscode_setting("neo4j", "gds_version", "2026.05.0")
-        self.user = ctx.get_vscode_setting("neo4j", "user", "neo4j")
-        self.password = ctx.get_vscode_setting("neo4j", "password", "password")
-        self.host = ctx.get_vscode_setting("neo4j", "host", "localhost")
-        self.bolt_port = ctx.get_vscode_setting("neo4j", "port.bolt", "7687")
-        self.http_port = ctx.get_vscode_setting("neo4j", "port.http", "7474")
-        self.bolt_uri = ctx.get_vscode_setting("neo4j", "uri", f"bolt://{self.host}:{self.bolt_port}")
-        self.http_url = ctx.get_vscode_setting("neo4j", "url", f"http://{self.host}:{self.http_port}")
+        self.version = vsCodeSettings.graphRagExplorer.neo4j.version
+        self.gds_version = "2026.05.0"
+        self.user = vsCodeSettings.graphRagExplorer.neo4j.username
+        self.password = vsCodeSettings.graphRagExplorer.neo4j.password
+        self.host = vsCodeSettings.graphRagExplorer.neo4j.host
+        self.bolt_port = vsCodeSettings.graphRagExplorer.neo4j.port.bolt
+        self.http_port = vsCodeSettings.graphRagExplorer.neo4j.port.http
+        self.bolt_uri = vsCodeSettings.graphRagExplorer.neo4j.uri
+        self.http_url = vsCodeSettings.graphRagExplorer.neo4j.url
 
 
         # Core Sandbox Paths

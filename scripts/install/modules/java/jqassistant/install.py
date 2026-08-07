@@ -13,6 +13,7 @@ from core.utils import info, success, error, warn
 from core.sources_discovery import discover_workspace_sources
 from install.modules.java.jqassistant.check import JavaJQAssistantChecker
 from install.modules.java.jqassistant.context import JQAssistantContext
+from core.vscode_settings_4_backend import vsCodeSettings
 
 @InstallerRegistry.register_installer
 class JavaJQAssistantInstaller(BaseInstallModule):
@@ -129,9 +130,9 @@ class JavaJQAssistantInstaller(BaseInstallModule):
         jqa_src_yaml += "\n"
         jqa_src_yaml += "\n".join([f"        - '{path}'" for path in discovered["java_classes"]])
 
-        neo4j_uri = self.context.get_vscode_setting("neo4j", "uri")
-        neo4j_user = self.context.get_vscode_setting("neo4j", "username")
-        neo4j_pass = self.context.get_vscode_setting("neo4j", "password")
+        neo4j_uri = vsCodeSettings.graphRagExplorer.neo4j.uri
+        neo4j_user = vsCodeSettings.graphRagExplorer.neo4j.username
+        neo4j_pass = vsCodeSettings.graphRagExplorer.neo4j.password
         project_name = os.path.basename(self.context.workspace_root)
 
         content = re.sub(r'[ \t]*\{\{JQA_SRC_DIRS_YAML_LIST\}\}', '{{JQA_SRC_DIRS_YAML_LIST}}', content)

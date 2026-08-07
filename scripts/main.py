@@ -46,10 +46,10 @@ def main():
 
 def initialize_logger():
     configure_logger(
-        workspace_root=vsCodeSettings.get("workspaceRoot"),
-        enabled=vsCodeSettings.get("logFileEnabled"),
-        max_size=vsCodeSettings.get("logFileMaxSize"),
-        retention=vsCodeSettings.get("logFileMaxCountRetention")
+        workspace_root=vsCodeSettings.workspaceRoot,
+        enabled=vsCodeSettings.logFileEnabled,
+        max_size=vsCodeSettings.logFileMaxSize,
+        retention=vsCodeSettings.logFileMaxCountRetention
     )
 
 def load_vscode_settings():
@@ -59,16 +59,16 @@ def load_vscode_settings():
         except Exception: vsCodePublishedSettings = {}
 
     # log configuration in info
-    info(f"Received configuration: {json.dumps(vsCodePublishedSettings, indent="&nbsp;&nbsp;")}", component="Main")
+    info(f"Received configuration: {json.dumps(vsCodePublishedSettings, indent="  ")}", component="Main")
     vsCodeSettings.inject_vscode_settings(vsCodePublishedSettings)
 
     # Quick validation of essential settings
-    info(f"Workspace Root: {vsCodeSettings.get('workspaceRoot')}", component="Main")
-    info(f"Backend Scripts Path: {vsCodeSettings.get('tokenRazor.graphRagExplorer.backendScriptsPath')}", component="Main")
-    info(f"Neo4J user: {vsCodeSettings.get('neo4j.username')}", component="Main")
-    info(f"logFileEnabled: {vsCodeSettings.get('logFileEnabled')}", component="Main")
-    info(f"logFileMaxSize: {vsCodeSettings.get('logFileMaxSize')}", component="Main")
-    info(f"logFileMaxCountRetention: {vsCodeSettings.get('logFileMaxCountRetention')}", component="Main")
+    info(f"Workspace Root: {vsCodeSettings.workspaceRoot}", component="Main")
+    info(f"Backend Scripts Path: {vsCodeSettings.backendWorkspacePath}", component="Main")
+    info(f"Neo4J user: {vsCodeSettings.graphRagExplorer.neo4j.username}", component="Main")
+    info(f"logFileEnabled: {vsCodeSettings.logFileEnabled}", component="Main")
+    info(f"logFileMaxSize: {vsCodeSettings.logFileMaxSize}", component="Main")
+    info(f"logFileMaxCountRetention: {vsCodeSettings.logFileMaxCountRetention}", component="Main")
 
 
 if __name__ == "__main__":
