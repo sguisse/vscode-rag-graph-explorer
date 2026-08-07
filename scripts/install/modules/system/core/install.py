@@ -2,7 +2,7 @@ import os
 from install.base import BaseInstallModule
 from install.registry import InstallerRegistry
 
-from core.vscode_settings_4_backend import vsCodeSettings
+from core.VsCodeSettings_gen import vsCodeSettings
 
 CORE_MODULE_NAME = "01_system_core"
 

@@ -1,7 +1,7 @@
 from install.base import BaseInstallModule
 from install.registry import InstallerRegistry
 from core.utils import info
-from core.vscode_settings_4_backend import vsCodeSettings
+from core.VsCodeSettings_gen import vsCodeSettings
 
 @InstallerRegistry.register_installer
 class PythonGraphifyInstaller(BaseInstallModule):

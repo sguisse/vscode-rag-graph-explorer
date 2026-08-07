@@ -5,7 +5,7 @@ from install.base import EnvironmentContext
 from install.modules.system.neo4j.check import SystemNeo4jChecker
 from install.modules.system.neo4j.install import SystemNeo4jInstaller
 
-from core.vscode_settings_4_backend import vsCodeSettings
+from core.VsCodeSettings_gen import vsCodeSettings
 
 def run_initialization_pipeline() -> str:
     """Executes Phase 2: Sequential Initialization Block (Discovery + Sandbox Database Ignition)."""

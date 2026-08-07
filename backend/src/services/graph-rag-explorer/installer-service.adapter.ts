@@ -23,5 +23,6 @@ export class GraphRagInstallerAdapter extends AbstractServiceAdapter implements 
 
 
     public dispose() {
+
     }
 }

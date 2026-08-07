@@ -1,6 +1,6 @@
 from install.base import BaseCheckModule
 from install.registry import InstallerRegistry
-from core.vscode_settings_4_backend import vsCodeSettings
+from core.VsCodeSettings_gen import vsCodeSettings
 
 @InstallerRegistry.register_checker
 class JavaJacocoChecker(BaseCheckModule):

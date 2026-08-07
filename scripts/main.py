@@ -5,7 +5,7 @@ import json
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
-from core.vscode_settings_4_backend import vsCodeSettings
+from core.VsCodeSettings_gen import vsCodeSettings
 
 from dataclasses import dataclass
 from core.utils import info, success, error, configure_logger, cleanup_orphan_pids

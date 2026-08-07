@@ -168,10 +168,11 @@ ${classBody}
 from dataclasses import dataclass, field
 from typing import List, Dict, Any
 
-` + pyClasses.join('\n');
+` + pyClasses.join('\n')
+  + '\n\nvsCodeSettings = VsCodeSettings()';
 
     fs.writeFileSync(pyOutputPath, pyContent, 'utf-8');
-    console.log(`✅ Successfully rebuilt Python VsCodeSettings model at:\n   ${pyOutputPath}`);
+    console.log(`🐍 Successfully rebuilt Python VsCodeSettings model at:\n   ${pyOutputPath}`);
 }
 
 generateModels();

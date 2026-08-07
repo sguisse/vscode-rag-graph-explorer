@@ -1,6 +1,6 @@
 import os
 from core.context import EnvironmentContext
-from core.vscode_settings_4_backend import vsCodeSettings
+from core.VsCodeSettings_gen import vsCodeSettings
 
 class Neo4jContext:
     def __init__(self, ctx: EnvironmentContext):

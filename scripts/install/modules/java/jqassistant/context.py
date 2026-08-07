@@ -1,6 +1,6 @@
 import os
 from typing import Any
-from core.vscode_settings_4_backend import vsCodeSettings
+from core.VsCodeSettings_gen import vsCodeSettings
 from core.utils import info
 from core.context import EnvironmentContext
 

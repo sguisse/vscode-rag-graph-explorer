@@ -4,7 +4,7 @@ from analyser.registry import AnalyserRegistry
 from analyser.tools.neo4j.neo4j_client import Neo4jClient
 from core.utils import info
 
-from core.vscode_settings_4_backend import vsCodeSettings
+from core.VsCodeSettings_gen import vsCodeSettings
 
 @AnalyserRegistry.register_analyser
 class NodeDependencyCruiserAnalyzer(BaseAnalyser):

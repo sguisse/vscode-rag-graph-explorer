@@ -6,7 +6,7 @@ import signal
 from datetime import datetime
 from typing import List, Dict, Any
 
-from core.vscode_settings_4_backend import vsCodeSettings
+from core.VsCodeSettings_gen import vsCodeSettings
 
 for stream in (sys.stdout, sys.stderr):
     if hasattr(stream, "reconfigure"):

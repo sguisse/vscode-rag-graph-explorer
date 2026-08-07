@@ -3,7 +3,7 @@ from install.base import BaseCheckModule
 from install.registry import InstallerRegistry
 from install.modules.system.core.install import CORE_MODULE_NAME
 
-from core.vscode_settings_4_backend import vsCodeSettings
+from core.VsCodeSettings_gen import vsCodeSettings
 
 @InstallerRegistry.register_checker
 class SystemCoreChecker(BaseCheckModule):

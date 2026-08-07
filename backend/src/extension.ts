@@ -11,7 +11,7 @@ import { getAppDisplayNameFromPackageJson, getAppNormalizedNameFromPackageJson, 
 import { workspaceInstallationManager } from './managers/WorkspaceInstallation.manager';
 import { pythonScriptExecutionManager } from './managers/PythonScriptExecution.manager';
 
-export let EXTENSION_BASE_CONFIG_NAME = 'to-define';
+export let EXTENSION_BASE_CONFIG_NAME = 'extentionName';
 let currentPanel: vscode.WebviewPanel | undefined = undefined;
 let activeChildProcess: any = null;
 

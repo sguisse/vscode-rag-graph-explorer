@@ -206,3 +206,6 @@ class VsCodeSettings:
         if not isinstance(root_data, dict): root_data = data
         parsed = self.from_dict(root_data)
         self.__dict__.update(parsed.__dict__)
+
+
+vsCodeSettings = VsCodeSettings()

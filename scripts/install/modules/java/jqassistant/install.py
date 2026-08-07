@@ -13,7 +13,7 @@ from core.utils import info, success, error, warn
 from core.sources_discovery import discover_workspace_sources
 from install.modules.java.jqassistant.check import JavaJQAssistantChecker
 from install.modules.java.jqassistant.context import JQAssistantContext
-from core.vscode_settings_4_backend import vsCodeSettings
+from core.VsCodeSettings_gen import vsCodeSettings
 
 @InstallerRegistry.register_installer
 class JavaJQAssistantInstaller(BaseInstallModule):

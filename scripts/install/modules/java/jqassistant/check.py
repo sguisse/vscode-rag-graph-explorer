@@ -6,7 +6,7 @@ from install.base import BaseCheckModule
 from install.registry import InstallerRegistry
 from install.modules.java.jqassistant.context import JQAssistantContext
 from install.modules.system.neo4j.check import SystemNeo4jChecker
-from core.vscode_settings_4_backend import vsCodeSettings
+from core.VsCodeSettings_gen import vsCodeSettings
 
 @InstallerRegistry.register_checker
 class JavaJQAssistantChecker(BaseCheckModule):

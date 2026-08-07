@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from analyser.tools.neo4j.neo4j_client import Neo4jClient
 from analyser.registry import AnalyserRegistry
 
-from core.vscode_settings_4_backend import vsCodeSettings
+from core.VsCodeSettings_gen import vsCodeSettings
 from core.context import EnvironmentContext
 from analyser.base import BaseAnalyser
 
