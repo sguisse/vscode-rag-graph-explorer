@@ -11,11 +11,13 @@ import { getAppDisplayNameFromPackageJson, getAppNormalizedNameFromPackageJson, 
 import { workspaceInstallationManager } from './managers/WorkspaceInstallation.manager';
 import { pythonScriptExecutionManager } from './managers/PythonScriptExecution.manager';
 
-export let EXTENSION_BASE_CONFIG_NAME = 'extentionName';
-let currentPanel: vscode.WebviewPanel | undefined = undefined;
+export let EXTENSION_BASE_CONFIG_NAME: string;
+export let currentPanel: vscode.WebviewPanel | undefined = undefined;
+export let currentContext: vscode.ExtensionContext | undefined = undefined;
 let activeChildProcess: any = null;
 
 export function activate(context: vscode.ExtensionContext) {
+    currentContext = context;
     EXTENSION_BASE_CONFIG_NAME = getAppNormalizedNameFromPackageJson(context);
     vsCodeSettingsManager.init(EXTENSION_BASE_CONFIG_NAME);
     AbstractServiceAdapter.setContext(context);

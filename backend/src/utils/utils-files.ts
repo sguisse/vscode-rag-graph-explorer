@@ -1,3 +1,4 @@
+import * as crypto from 'crypto';
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -49,4 +50,31 @@ export function hasOutdatedFiles(source: string, target: string): boolean {
         if (!fs.readFileSync(curSource).equals(fs.readFileSync(curTarget))) return true;
     }
     return false;
+}
+
+
+export function computeRecursivelyMD5(dirPath: string): string {
+    if (!fs.existsSync(dirPath)) {
+        return "";
+    }
+    const hash = crypto.createHash("md5");
+    const stats = fs.statSync(dirPath);
+    if (!stats.isDirectory()) {
+        hash.update(fs.readFileSync(dirPath));
+        return hash.digest("hex");
+    }
+
+    const entries = fs.readdirSync(dirPath).sort();
+    for (const entry of entries) {
+        if (shouldSkipScriptSyncEntry(entry)) continue;
+        const fullPath = path.join(dirPath, entry);
+        const entryStats = fs.statSync(fullPath);
+        if (entryStats.isDirectory()) {
+            hash.update(entry + ":" + computeRecursivelyMD5(fullPath));
+        } else {
+            const fileHash = crypto.createHash("md5").update(fs.readFileSync(fullPath)).digest("hex");
+            hash.update(entry + ":" + fileHash);
+        }
+    }
+    return hash.digest("hex");
 }

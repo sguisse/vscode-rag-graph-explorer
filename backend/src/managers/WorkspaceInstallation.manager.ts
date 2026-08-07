@@ -8,7 +8,8 @@ import { logError, logInfo } from '../utils/utils-log';
 import { ServiceEnum } from '../../../shared/config/service-enum.gen';
 import { serviceRegistry } from '../core/ServiceRegistry';
 import { IGraphRagInstallerServicePort } from '../../../shared/services/graph-rag-explorer/domain/port-out/installer-service.port';
-import { copyFolderRecursiveSync } from '../utils/utils-files';
+import { copyFolderRecursiveSync, computeRecursivelyMD5 } from '../utils/utils-files';
+import { currentContext } from '../extension';
 
 const VERSION_FILENAME = 'version.txt';
 
@@ -24,6 +25,19 @@ export class WorkspaceInstallationManager {
       this.versionFilePath = path.join (getWorkspaceExtentionPath(), VERSION_FILENAME);
     }
 
+    private getScriptSourceDir(): string {
+        if (!currentContext) {
+          throw new Error ("currentContext not yet initialized !!")
+        }
+      const scriptSourceDir = path.join(currentContext.extensionPath, "scripts");
+      return scriptSourceDir;
+    }
+
+    private getScriptTargetDir(): string {
+      const scriptTargetDir = path.join(getWorkspaceExtentionPath(), "scripts");
+      return scriptTargetDir;
+    }
+
     private isCurrentVersionMatchWorkspaceVersion (context: vscode.ExtensionContext): boolean {
         const currentVersion = getAppVersionFromPackageJson(context);
         const workspaceVersion = this.readWorkspaceExtentionVersion();
@@ -33,6 +47,18 @@ export class WorkspaceInstallationManager {
 
         return result;
     }
+
+    private isCurrentScriptsMatchWorkspaceScripts (context: vscode.ExtensionContext): boolean {
+        const currentScriptsMD5 = computeRecursivelyMD5(this.getScriptSourceDir());
+        const workspaceScriptsMD5 = computeRecursivelyMD5(this.getScriptTargetDir());
+
+        const result = currentScriptsMD5 === workspaceScriptsMD5;
+        logInfo(`currentScriptsMD5 '${currentScriptsMD5} is equal to workspaceScriptsMD5 '${workspaceScriptsMD5}' ?? ${result}`)
+
+        return result;
+    }
+
+
 
     public readWorkspaceExtentionVersion(): string {
         try {
@@ -66,7 +92,7 @@ export class WorkspaceInstallationManager {
         if (vsCodeSettingsManager.getSettings().forceScriptSync === true)
             return true;
 
-        const result = !this.isCurrentVersionMatchWorkspaceVersion (context)
+        const result = !this.isCurrentScriptsMatchWorkspaceScripts (context)
         logInfo(`isScriptSyncNeeded end with result = ${result}...`);
         return result;
     }
@@ -89,12 +115,9 @@ export class WorkspaceInstallationManager {
 
 
     public copyScripts(context: vscode.ExtensionContext): void {
-        const sourceDir = path.join(context.extensionPath, "scripts");
-        const targetDir = path.join(getWorkspaceExtentionPath(), "scripts");
-
       try {
-            logInfo('[GraphRagInstallerAdapter] Syncing scripts directory...', {sourceDir: sourceDir, targetDir:targetDir});
-            copyFolderRecursiveSync(sourceDir, targetDir);
+            logInfo('[GraphRagInstallerAdapter] Syncing scripts directory...', {sourceDir: this.getScriptSourceDir(), targetDir: this.getScriptTargetDir()});
+            copyFolderRecursiveSync(this.getScriptSourceDir(), this.getScriptTargetDir());
             this.saveWorkspaceExtentionVersion(context);
         } catch (err) {
             logError(`[GraphRagInstallerAdapter] Script sync failed: ${err}`, err);
