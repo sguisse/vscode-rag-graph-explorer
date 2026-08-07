@@ -16,18 +16,18 @@ function sendLog(level: LogLevel, message: string, details?: any): void {
     });
 }
 
-export function logDebug(message: string, data?: unknown[] | Error): void {
-  sendLog('DEBUG', message, data);
+export function logDebug(message: string, details?: any): void {
+  sendLog('DEBUG', message, details);
 }
 
-export function logInfo(message: string, data?: unknown[] | Error): void {
-  sendLog('INFO', message, data);
+export function logInfo(message: string, details?: any): void {
+  sendLog('INFO', message, details);
 }
 
-export function logWarn(message: string, data?: unknown[] | Error): void {
-  sendLog('WARN', message, data);
+export function logWarn(message: string, details?: any): void {
+  sendLog('WARN', message, details);
 }
 
-export function logError(message: string, data?: unknown[] | Error): void {
-  sendLog('ERROR', message, data);
+export function logError(message: string, details?: any): void {
+  sendLog('ERROR', message, details);
 }

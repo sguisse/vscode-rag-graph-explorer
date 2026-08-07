@@ -1,5 +1,5 @@
 import { ServiceEnum } from "../../../shared/config/service-enum.gen";
-import { BackendServicesMap } from "../config/registry/service-registrator.gen";
+import { BackendServicesMap } from "../config/service-registrator.gen";
 
 export class ServiceRegistry {
     private static instance: ServiceRegistry;

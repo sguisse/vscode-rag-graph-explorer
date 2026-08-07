@@ -3,7 +3,7 @@ const path = require('path');
 
 const rootDir = path.resolve(__dirname, '../');
 const sharedServicesDir = path.join(rootDir, 'shared/services');
-const rpcDir = path.join(rootDir, 'backend/src/config/rpc');
+const rpcDir = path.join(rootDir, 'backend/src/config');
 const outputPath = path.join(rpcDir, 'rpc-method-registrator.gen.ts');
 
 function findPortFiles(dir, fileList = []) {
@@ -79,10 +79,10 @@ function generateRpcMethodRegistrator() {
     const fileContent = `// AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY.
 // Rebuild using: npm run generate:rpc-registrator
 
-import { serviceRegistry } from '../../core/ServiceRegistry';
-import { ServiceEnum } from '../../../../shared/config/service-enum.gen';
-import { RpcMethodEnum } from '../../../../shared/config/rpc-methods.enum.gen';
-import { RpcProtocol } from '../../../../shared/rpc/rpc-protocol';
+import { serviceRegistry } from '../core/ServiceRegistry';
+import { ServiceEnum } from '../../../shared/config/service-enum.gen';
+import { RpcMethodEnum } from '../../../shared/config/rpc-methods.enum.gen';
+import { RpcProtocol } from '../../../shared/rpc/rpc-protocol';
 
 /**
  * Resolves services from the ServiceRegistry and registers all RPC protocol handlers.

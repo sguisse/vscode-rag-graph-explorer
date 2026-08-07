@@ -1,19 +1,20 @@
 import * as vscode from 'vscode';
 import { IVsCodeServicePort } from '../../../../shared/services/vscode/domain/port-out/vscode-service.port';
-import { getAppName } from '../../utils/utils-vscode';
+import { getAppNameFromPackageJson } from '../../utils/utils-vscode';
 import { LogLevel } from '../../../../shared/services/vscode/domain/model/types';
 import { logMessage as logMessageDelegate} from './delegate/logger.delegate';
-import { getExtentionSettings as getExtentionSettingsDelegate} from './delegate/export-extention-settings.delegate';
+import { getExtentionSettings as getExtentionSettingsDelegate} from './delegate/get-extention-settings.delegate';
 import { VsCodeSettings } from '../../../../shared/services/vscode/domain/model/VsCodeSettings.gen';
+import { AbstractServiceAdapter } from '../../core/AbstractServiceAdapter';
 
-export class VsCodeServiceAdapter implements IVsCodeServicePort, vscode.Disposable {
-    private context: vscode.ExtensionContext;
+export class VsCodeServiceAdapter extends AbstractServiceAdapter implements IVsCodeServicePort, vscode.Disposable {
     private logChannel: vscode.LogOutputChannel;
 
-    constructor(context: vscode.ExtensionContext) {
-        this.context = context;
-        const appName = getAppName(this.context);
+    constructor() {
+        super();
+        const appName = getAppNameFromPackageJson(AbstractServiceAdapter.context);
         this.logChannel = vscode.window.createOutputChannel(`${appName}`, { log: true });
+        this.logChannel.show();
     }
 
     public async logMessage(level: LogLevel, message: string, details?: any): Promise<void> {
@@ -21,7 +22,7 @@ export class VsCodeServiceAdapter implements IVsCodeServicePort, vscode.Disposab
     }
 
     public async getExtentionSettings(): Promise<VsCodeSettings> {
-        return getExtentionSettingsDelegate(this.context);
+        return getExtentionSettingsDelegate(AbstractServiceAdapter.context);
     }
 
     public dispose() {

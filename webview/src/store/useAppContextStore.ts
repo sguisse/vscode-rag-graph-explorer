@@ -5,12 +5,14 @@ export interface AppContextState {
   themeMode: 'dark' | 'light';
   isDarkMode: boolean;
   notification: string | null;
+  status: 'ready' | 'pending' | 'warn' | 'error';
 
   setActiveFeature: (feature: string) => void;
   setThemeMode: (mode: 'dark' | 'light') => void;
   setIsDarkMode: (isDarkMode: boolean) => void;
   toggleThemeMode: () => void;
   setNotification: (notification: string | null) => void;
+  setStatus: (status: 'ready' | 'pending' | 'warn' | 'error') => void;
 }
 
 export const useAppContextStore = create<AppContextState>((set) => ({
@@ -18,6 +20,7 @@ export const useAppContextStore = create<AppContextState>((set) => ({
   themeMode: 'light',
   isDarkMode: false,
   notification: null,
+  status: 'pending',
 
   setActiveFeature: (activeFeature) => set({ activeFeature }),
   setThemeMode: (themeMode) =>
@@ -39,4 +42,6 @@ export const useAppContextStore = create<AppContextState>((set) => ({
       };
     }),
   setNotification: (notification) => set({ notification }),
+  setStatus: (status) => set({ status })
+
 }));

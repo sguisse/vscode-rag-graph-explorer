@@ -56,15 +56,20 @@
           "default": "",
           "description": "API Key for Gemini Assistant analysis."
         },
-        "tokenRazor.backendScriptsPath": {
+        "tokenRazor.backendWorkspacePath": {
           "type": "string",
           "default": ".tokenRazor",
           "description": "Local User Path where the back-end scripts and treatment results will be stored (relative to the workspace root)."
         },
+        "tokenRazor.forceScriptSync": {
+          "type": "boolean",
+          "default": false,
+          "description": "Force synchronized recreation of local workspace core scripts."
+        },
         "tokenRazor.logFileEnabled": {
           "type": "boolean",
           "default": true,
-          "description": "Enable background file logging redirection (${tokenRazor.backendScriptsPath}/logs/)"
+          "description": "Enable background file logging redirection (${tokenRazor.backendWorkspacePath}/logs/)"
         },
         "tokenRazor.logFileMaxSize": {
           "type": "number",
@@ -116,9 +121,9 @@
           "default": 1,
           "description": "Default callees downstream lookup relationship parsing depth."
         },
-        "tokenRazor.graphRagExplorer.backendScriptsPath": {
+        "tokenRazor.graphRagExplorer.backendWorkspacePath": {
           "type": "string",
-          "default": "${tokenRazor.backendScriptsPath}/graph-rag-explorer-v2",
+          "default": "${tokenRazor.backendWorkspacePath}/graph-rag-explorer-v2",
           "description": "Local User Path where the back-end scripts and treatment results will be stored (relative to the workspace root)."
         },
         "tokenRazor.graphRagExplorer.includePathsRegex": {
@@ -140,11 +145,6 @@
           "type": "string",
           "default": "",
           "description": "Regex to exclude paths containing specific file extensions."
-        },
-        "tokenRazor.graphRagExplorer.forceScriptSync": {
-          "type": "boolean",
-          "default": false,
-          "description": "Force synchronized recreation of local project core scripts."
         },
         "tokenRazor.graphRagExplorer.neo4j.version": {
           "type": "string",

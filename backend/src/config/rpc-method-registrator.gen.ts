@@ -1,10 +1,10 @@
 // AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY.
 // Rebuild using: npm run generate:rpc-registrator
 
-import { serviceRegistry } from '../../core/ServiceRegistry';
-import { ServiceEnum } from '../../../../shared/config/service-enum.gen';
-import { RpcMethodEnum } from '../../../../shared/config/rpc-methods.enum.gen';
-import { RpcProtocol } from '../../../../shared/rpc/rpc-protocol';
+import { serviceRegistry } from '../core/ServiceRegistry';
+import { ServiceEnum } from '../../../shared/config/service-enum.gen';
+import { RpcMethodEnum } from '../../../shared/config/rpc-methods.enum.gen';
+import { RpcProtocol } from '../../../shared/rpc/rpc-protocol';
 
 /**
  * Resolves services from the ServiceRegistry and registers all RPC protocol handlers.
@@ -17,9 +17,8 @@ export function registerRpcMethods(rpc: RpcProtocol): void {
     rpc.register(RpcMethodEnum.CODEBASE_GET_JSON_SCHEMA_SPEC, codebaseService.getJsonSchemaSpec.bind(codebaseService));
 
     const graphRagInstallerService = serviceRegistry.get(ServiceEnum.GRAPH_RAG_INSTALLER);
-    rpc.register(RpcMethodEnum.INSTALLER_INSTALL_SCRIPTS_IN_USER_WORKSPACE, graphRagInstallerService.installScriptsInUserWorkspace.bind(graphRagInstallerService));
     rpc.register(RpcMethodEnum.INSTALLER_CHECK_INSTALLATION_STATUS, graphRagInstallerService.checkInstallationStatus.bind(graphRagInstallerService));
-    rpc.register(RpcMethodEnum.INSTALLER_UNINSTALL_SCRIPTS, graphRagInstallerService.uninstallScripts.bind(graphRagInstallerService));
+    rpc.register(RpcMethodEnum.INSTALLER_UNINSTALL_ALL, graphRagInstallerService.uninstallAll.bind(graphRagInstallerService));
 
     const vsCodeService = serviceRegistry.get(ServiceEnum.VS_CODE);
     rpc.register(RpcMethodEnum.VSCODE_LOG_MESSAGE, vsCodeService.logMessage.bind(vsCodeService));

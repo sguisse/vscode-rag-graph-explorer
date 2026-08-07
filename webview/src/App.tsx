@@ -10,6 +10,7 @@ import { HelpFeature } from '@/features/help/HelpFeature';
 import { logInfo } from './services/view/log-view.service.wrapper';
 import { vsCodeApiService } from "./services/api/vs-code-api.service.gen";
 import { VsCodeSettings } from '@/shared/services/vscode/domain/model/VsCodeSettings.gen';
+import { vsCodeHandleMessage } from './services/listener/vscode-message.handler';
 
 export let vscodeSettings: VsCodeSettings = new VsCodeSettings();
 
@@ -20,6 +21,7 @@ export default function App() {
 
   const activeFeature = contextStore.activeFeature || 'feature-home';
   const setActiveFeature = contextStore.setActiveFeature;
+  const setStatus = useAppContextStore((state) => state.setStatus);
   const isDarkMode = contextStore.isDarkMode;
   const setIsDarkMode = contextStore.setIsDarkMode;
   const notification = contextStore.notification;
@@ -32,6 +34,21 @@ export default function App() {
         vscodeSettings = settings;
     });
   }, []);
+
+  useEffect(() => {
+        // Register listener for 'setStatus'
+        const unsubscribeStatus = vsCodeHandleMessage.on('updateStatus', (message) => {
+            console.info(`Status received from extension: ${message.payload}`);
+            if (message.payload) {
+                setStatus(message.payload);
+            }
+        });
+
+        // Cleanup event listeners on unmount
+        return () => {
+            unsubscribeStatus();
+        };
+    }, []);
 
   return (
     <>

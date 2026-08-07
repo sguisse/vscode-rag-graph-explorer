@@ -1,58 +1,119 @@
 import * as vscode from 'vscode';
 import { RpcProtocol } from '../../shared/rpc/rpc-protocol';
 import { logInfo } from './utils/utils-log';
-import { registerServices } from './config/registry/service-registrator.gen';
-import { registerRpcMethods } from './config/rpc/rpc-method-registrator.gen';
-import { VsCodeSettingsManager } from './services/vscode/core/VsCodeSettingsManager';
+import { registerServices } from './config/service-registrator.gen';
+import { registerRpcMethods } from './config/rpc-method-registrator.gen';
+import { vsCodeSettingsManager } from './managers/VsCodeSettings.manager';
+import { AbstractServiceAdapter } from './core/AbstractServiceAdapter';
+import { getAppDisplayNameFromPackageJson, getAppNormalizedNameFromPackageJson } from './utils/utils-vscode';
+import { workspaceInstallationManager } from './managers/WorkspaceInstallation.manager';
+import { pythonScriptExecutionManager } from './managers/PythonScriptExecution.manager';
 
-const EXTENSION_BASE_CONFIG_NAME = 'tokenRazor';
+export let EXTENSION_BASE_CONFIG_NAME = 'to-define';
+// To manage only one instance of the tool opened
+let currentPanel: vscode.WebviewPanel | undefined = undefined;
 
 export function activate(context: vscode.ExtensionContext) {
-    VsCodeSettingsManager.init(EXTENSION_BASE_CONFIG_NAME);
+    EXTENSION_BASE_CONFIG_NAME = getAppNormalizedNameFromPackageJson(context);
+    vsCodeSettingsManager.init(EXTENSION_BASE_CONFIG_NAME);
+    // Associates the context with all services
+    AbstractServiceAdapter.setContext(context);
     registerServices(context);
 
-    const openTool = () => {
-        const packageData = context.extension.packageJSON;
-        const panel = vscode.window.createWebviewPanel(
-            EXTENSION_BASE_CONFIG_NAME,
-            packageData.displayName,
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true,
-                // FIX: Grant webview access to the entire extension workspace
-                // so Vite dev server can load /node_modules/ fonts and /assets/ images
-                localResourceRoots: [context.extensionUri],
-                // Essential for Vite dev server proxying inside webview
-                portMapping: [{ webviewPort: 5173, extensionHostPort: 5173 }]
-            }
-        );
+    workspaceInstallationManager.syncScripts(context);
 
-        if (VsCodeSettingsManager.get('pinApplication') !== false) {
-            logInfo(`pinApplication = ${VsCodeSettingsManager.get('pinApplication')}`);
-            vscode.commands.executeCommand('workbench.action.pinEditor');
+    const openTool = () => {
+        if (currentPanel) {
+            currentPanel.reveal(vscode.ViewColumn.One);
+            return;
         }
 
-        panel.iconPath = {
-            light: vscode.Uri.joinPath(context.extensionUri, 'assets', 'favicon.png'),
-            dark: vscode.Uri.joinPath(context.extensionUri, 'assets', 'favicon.png')
-        };
+        // Clean re-initialization sequence whenever webview is launched
+        pythonScriptExecutionManager.killAll();
+        vsCodeSettingsManager.init(EXTENSION_BASE_CONFIG_NAME);
 
-        const rpc = new RpcProtocol((msg) => panel.webview.postMessage(msg));
-        registerRpcMethods(rpc);
+        workspaceInstallationManager.syncScripts(context);
 
-        panel.webview.onDidReceiveMessage((msg) => rpc.receive(msg), undefined, context.subscriptions);
+        const panel: vscode.WebviewPanel = createWebviewPanel(context);
+        currentPanel = panel;
+
+        managePanelRendering(panel, context);
+        manageBackendServices(panel, context);
+        const saveListener = manageSaveFileInVsCodeEditor(panel, context);
+        manageDisposedWebviewPanel(panel, saveListener);
 
         panel.webview.html = getWebviewContent(panel, context);
     };
 
-    const disposable = vscode.commands.registerCommand(`${EXTENSION_BASE_CONFIG_NAME}.openTool`, openTool)
+    const disposable = vscode.commands.registerCommand(`${EXTENSION_BASE_CONFIG_NAME}.openTool`, openTool);
     context.subscriptions.push(disposable);
 
     logInfo('Extension activated successfully.');
 }
 
-function getWebviewContent(panel: vscode.WebviewPanel, context: vscode.ExtensionContext) : string {
+function createWebviewPanel(context: vscode.ExtensionContext): vscode.WebviewPanel {
+    const panel: vscode.WebviewPanel = vscode.window.createWebviewPanel(
+        EXTENSION_BASE_CONFIG_NAME,
+        getAppDisplayNameFromPackageJson(context),
+        vscode.ViewColumn.One,
+        {
+            enableScripts: true,
+            retainContextWhenHidden: true,
+            // FIX: Grant webview access to the entire extension workspace
+            // so Vite dev server can load /node_modules/ fonts and /assets/ images
+            localResourceRoots: [context.extensionUri],
+            // Essential for Vite dev server proxying inside webview
+            portMapping: [{ webviewPort: 5173, extensionHostPort: 5173 }]
+        }
+    );
+    return panel;
+}
+
+function managePanelRendering(panel: vscode.WebviewPanel, context: vscode.ExtensionContext) {
+    if (vsCodeSettingsManager.getSettings().pinApplication !== false) {
+        logInfo(`pinApplication = ${vsCodeSettingsManager.getSettings().pinApplication}`);
+        vscode.commands.executeCommand('workbench.action.pinEditor');
+    }
+
+    panel.iconPath = {
+        light: vscode.Uri.joinPath(context.extensionUri, 'assets', 'favicon.png'),
+        dark: vscode.Uri.joinPath(context.extensionUri, 'assets', 'favicon.png')
+    };
+}
+
+function manageBackendServices(panel: vscode.WebviewPanel, context: vscode.ExtensionContext) {
+    // Associates the new active panel with all services
+    AbstractServiceAdapter.setWebviewPanel(panel);
+
+    const rpc = new RpcProtocol((msg) => panel.webview.postMessage(msg));
+    registerRpcMethods(rpc);
+
+    panel.webview.onDidReceiveMessage((msg) => rpc.receive(msg), undefined, context.subscriptions);
+}
+
+function manageDisposedWebviewPanel(panel: vscode.WebviewPanel, saveListener: vscode.Disposable) {
+    panel.onDidDispose(() => {
+        logInfo('Webview panel disposed.');
+        saveListener.dispose();
+        pythonScriptExecutionManager.killAll();
+        AbstractServiceAdapter.setWebviewPanel(undefined);
+        currentPanel = undefined;
+    });
+}
+
+function manageSaveFileInVsCodeEditor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext): vscode.Disposable {
+    const saveListener = vscode.workspace.onDidSaveTextDocument((document) => {
+        if (document.uri.scheme !== 'file') return;
+        const relativePath = vscode.workspace.asRelativePath(document.uri);
+        logInfo(`File saved: ${relativePath}. Triggering delta scan.`);
+        //runPythonScan(context, panel, "delta", relativePath);
+    });
+    context.subscriptions.push(saveListener);
+
+    return saveListener;
+}
+
+function getWebviewContent(panel: vscode.WebviewPanel, context: vscode.ExtensionContext): string {
     const isDev = context.extensionMode === vscode.ExtensionMode.Development;
 
     if (isDev) {

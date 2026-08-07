@@ -1,6 +1,17 @@
 import * as vscode from 'vscode';
 import { LogLevel } from '../../../../../shared/services/vscode/domain/model/types';
 
+/*
+const parseLogLine = (line: string, fallbackLevel: 'debug' | 'info' | 'warn' | 'error') => {
+        const cleanLine = line.trim();
+        if (!cleanLine) return;
+        let level = fallbackLevel;
+        if (cleanLine.includes("🪲") || cleanLine.includes("[DEBUG]")) level = "debug";
+        else if (cleanLine.includes("⚠️") || cleanLine.includes("[WARN]")) level = "warn";
+        else if (cleanLine.includes("❌") || cleanLine.includes("[ERROR]")) level = "error";
+        else if (cleanLine.includes("ℹ️") || cleanLine.includes("[INFO]") || cleanLine.includes("✅")) level = "info";
+*/
+
 function formatLogHeader(level: LogLevel): string {
     const timestamp = new Date().toISOString().replace('T', ' ').replace('Z', '');
     const logHeader = `[${timestamp}] [${level.toUpperCase()}]`;

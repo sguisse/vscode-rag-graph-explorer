@@ -10,16 +10,12 @@ class GraphRagInstallerApiService extends AbstractApiService implements IGraphRa
         super();
     }
 
-    public async installScriptsInUserWorkspace(): Promise<void> {
-        return await this.rpc.call(RpcMethodEnum.INSTALLER_INSTALL_SCRIPTS_IN_USER_WORKSPACE);
-    }
-
     public async checkInstallationStatus(): Promise<void> {
         return await this.rpc.call(RpcMethodEnum.INSTALLER_CHECK_INSTALLATION_STATUS);
     }
 
-    public async uninstallScripts(): Promise<void> {
-        return await this.rpc.call(RpcMethodEnum.INSTALLER_UNINSTALL_SCRIPTS);
+    public async uninstallAll(): Promise<void> {
+        return await this.rpc.call(RpcMethodEnum.INSTALLER_UNINSTALL_ALL);
     }
 }
 

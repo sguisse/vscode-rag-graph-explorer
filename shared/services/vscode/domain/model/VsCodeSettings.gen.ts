@@ -8,7 +8,9 @@ export class VsCodeSettings {
 
     geminiApiKey = "";
 
-    backendScriptsPath = ".tokenRazor";
+    backendWorkspacePath = ".tokenRazor";
+
+    forceScriptSync = false;
 
     logFileEnabled = true;
 
@@ -23,12 +25,11 @@ export class VsCodeSettings {
         graphLegendEnabled: true,
         callersDepth: 1,
         calleesDepth: 1,
-        backendScriptsPath: "${tokenRazor.backendScriptsPath}/graph-rag-explorer-v2",
+        backendWorkspacePath: "${tokenRazor.backendWorkspacePath}/graph-rag-explorer-v2",
         includePathsRegex: "",
         includeExtensionsRegex: ".*\\.(java|ts|tsx|js|html|css|json|xml|yaml|yml|py|md|properties)$",
         excludePathsRegex: "(^|.*/)(node_modules|\\.git|\\.github|dist|.*-tmp|.*-out|\\.idea|\\.vscode|\\.history|exported-files|\\.[^/]+)(/.*|$)",
         excludeExtensionsRegex: "",
-        forceScriptSync: false,
         neo4j: {
             version: "5.26.0",
             host: "localhost",

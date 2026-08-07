@@ -4,7 +4,7 @@ const path = require('path');
 const rootDir = path.resolve(__dirname, '../');
 const backendServicesDir = path.join(rootDir, 'backend/src/services');
 const sharedServicesDir = path.join(rootDir, 'shared/services');
-const registryDir = path.join(rootDir, 'backend/src/config/registry');
+const registryDir = path.join(rootDir, 'backend/src/config');
 const outputPath = path.join(registryDir, 'service-registrator.gen.ts');
 
 function findFiles(dir, filter, fileList = []) {
@@ -103,8 +103,8 @@ function generateServiceRegistrator() {
 // Rebuild using: npm run generate:service-registrator
 
 import * as vscode from 'vscode';
-import { serviceRegistry } from '../../core/ServiceRegistry';
-import { ServiceEnum } from '../../../../shared/config/service-enum.gen';
+import { serviceRegistry } from '../core/ServiceRegistry';
+import { ServiceEnum } from '../../../shared/config/service-enum.gen';
 
 ${adapterImports.join('\n')}
 ${portImports.join('\n')}
