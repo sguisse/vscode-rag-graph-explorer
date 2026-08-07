@@ -3,17 +3,16 @@ import sys
 import os
 import json
 
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+script_dir = os.path.abspath(os.path.dirname(__file__))
+sys.path.insert(0, os.path.abspath(os.path.join(script_dir, "..")))
+sys.path.insert(0, script_dir)
 
 from core.VsCodeSettings_gen import vsCodeSettings
-
-from dataclasses import dataclass
 from core.utils import info, success, error, configure_logger, cleanup_orphan_pids
-from core.neo4j_extractor import UIExtractor
+from core.neo4j_extractor import UIExtractor, run_ui_extractor_pipeline
 from install.runner import run_installation_pipeline
 from initialization.runner import run_initialization_pipeline
 from analyser.runner import run_analysis_pipeline
-from core.neo4j_extractor import run_ui_extractor_pipeline
 
 
 def main():
@@ -59,7 +58,7 @@ def load_vscode_settings():
         except Exception: vsCodePublishedSettings = {}
 
     # log configuration in info
-    info(f"Received configuration: {json.dumps(vsCodePublishedSettings, indent="  ")}", component="Main")
+    info(f"Received configuration: {json.dumps(vsCodePublishedSettings, indent='  ')}", component="Main")
     vsCodeSettings.inject_vscode_settings(vsCodePublishedSettings)
 
     # Quick validation of essential settings

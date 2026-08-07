@@ -177,7 +177,7 @@ function runPythonScan(mode: string, targetFile: string = "") {
     const workspaceRoot = getWorkspaceRoot();
     const backendScriptsPath: string = vsCodeSettingsManager.getSettings().backendWorkspacePath;
     const targetDir4Scripts = path.join(workspaceRoot, backendScriptsPath, "scripts");
-    const runnerScript = path.join(targetDir4Scripts, "main.py");
+    const runnerScript = path.join(targetDir4Scripts, "graph_rag_explorer", "main.py");
 
     if (!fs.existsSync(runnerScript)) {
         logError(`[PythonScan] Target script not found at path: ${runnerScript}`);

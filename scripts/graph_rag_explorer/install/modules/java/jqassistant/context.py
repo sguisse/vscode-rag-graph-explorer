@@ -13,7 +13,7 @@ class JQAssistantContext:
         self.tools_dir = f"{ctx.tools_dir}/java/jqassistant"
         self.config_dir = f"{self.tools_dir}/config"
 
-        self.templates_dir = f"{ctx.beScriptsPath}/scripts/install/modules/java/jqassistant/config/templates"
+        self.templates_dir = f"{ctx.beScriptsPath}/scripts/graph_rag_explorer/install/modules/java/jqassistant/config/templates"
         self.jqassistant_template_path = os.path.join(self.templates_dir, ".jqassistant-template.yml")
         self.analysis_rules_template = os.path.join(self.templates_dir, "analysis-rules-template.xml")
         self.mcp_server_template_path = os.path.join(self.templates_dir, "mcp-server-template.json")

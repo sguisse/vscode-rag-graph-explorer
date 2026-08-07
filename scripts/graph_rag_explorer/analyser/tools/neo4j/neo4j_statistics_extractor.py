@@ -1,6 +1,8 @@
 import os
 import json
 from core.utils import info, success, error, debug
+from core.context import EnvironmentContext
+from install.modules.system.neo4j.context import Neo4jContext
 
 def build_statistics(neo4j_client, workspace_root: str):
     """
@@ -9,7 +11,10 @@ def build_statistics(neo4j_client, workspace_root: str):
     """
     info("Extracting Neo4j advanced architectural matrix statistics...", component="StatisticsExtractor")
 
-    stats_target_dir = os.path.join(workspace_root, ".graph-rag-explorer", "target", "raw_outputs", "neo4j")
+    env_context = EnvironmentContext()
+    neo4j_ctx = Neo4jContext(env_context)
+    stats_target_dir = neo4j_ctx.raw_outputs_dir
+    info(f"Neo4j stats_target_dir '{stats_target_dir}", component="StatisticsExtractor")
     os.makedirs(stats_target_dir, exist_ok=True)
     stats_file = os.path.join(stats_target_dir, "statistics.json")
 
@@ -200,7 +205,6 @@ def build_statistics(neo4j_client, workspace_root: str):
                         if not loops:
                             try:
                                 run_res = session.run(query_tmpl).single()
-                                # LOG DE L'OBJET RETOURNE
                                 dict_res = run_res.data() if run_res else None
                                 debug(f"Returned object for '{scope_tmpl}': {run_res} | Data dict: {dict_res}", component="StatisticsExtractor")
 
@@ -225,7 +229,6 @@ def build_statistics(neo4j_client, workspace_root: str):
                                 current_query = query_tmpl.format(**item)
                                 try:
                                     run_res = session.run(current_query).single()
-                                    # LOG DE L'OBJET RETOURNE
                                     dict_res = run_res.data() if run_res else None
                                     debug(f"Returned object for '{current_scope}': {run_res} | Data dict: {dict_res}", component="StatisticsExtractor")
 

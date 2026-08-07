@@ -27,6 +27,9 @@ class Neo4jContext:
         self.bin_dir = os.path.join(self.target_folder, "bin")
         self.conf_dir = os.path.join(self.target_folder, "conf")
 
+        # Target results from cipher check
+        self.raw_outputs_dir = f"{ctx.raw_outputs_dir}/neo4j"
+
         # Executable Commands
         self.admin_cmd = os.path.join(self.bin_dir, "neo4j-admin.bat" if ctx.is_windows else "neo4j-admin")
         self.neo4j_cmd = os.path.join(self.bin_dir, "neo4j.bat" if ctx.is_windows else "neo4j")

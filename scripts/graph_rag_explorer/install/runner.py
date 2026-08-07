@@ -2,7 +2,10 @@ import os
 import sys
 from typing import Dict, Any, Optional
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+current_dir = os.path.abspath(os.path.dirname(__file__))
+sys.path.insert(0, os.path.abspath(os.path.join(current_dir, "..")))
+sys.path.insert(0, os.path.abspath(os.path.join(current_dir, "..", "..")))
+
 from core.utils import info, success, warn
 from install.base import EnvironmentContext, BaseCheckModule, BaseInstallModule
 from install.registry import InstallerRegistry
