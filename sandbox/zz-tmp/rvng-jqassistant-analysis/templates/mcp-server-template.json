@@ -1,0 +1,6 @@
+{
+    "jqassistant-graph-rag": {
+        "type": "http",
+        "url": "http://{{JQA_MCP_HOST}}:{{JQA_MCP_PORT}}/mcp"
+    }
+}

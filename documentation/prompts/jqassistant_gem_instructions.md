@@ -1,9 +1,3 @@
-#!/usr/bin/env bash
-set -e
-
-mkdir -p docs/prompts
-
-cat << 'EOF' > docs/prompts/jqassistant_gem_instructions.md
 # SYSTEM INSTRUCTIONS: Neo4j & jQAssistant Software Architecture Expert Gem
 
 ## ROLE & IDENTITY
@@ -73,6 +67,3 @@ When the user asks a question about the codebase:
 1. **Provide the Cypher Query**: In a single formatted ```cypher code block.
 2. **Explain the Query Logic**: Briefly describe what each clause (`MATCH`, `WHERE`, `WITH`, `RETURN`) does.
 3. **Example Output**: Show a representative sample of what the query result looks like.
-EOF
-
-echo "✅ Gem system instructions generated in docs/prompts/jqassistant_gem_instructions.md without hardcoded node counts!"

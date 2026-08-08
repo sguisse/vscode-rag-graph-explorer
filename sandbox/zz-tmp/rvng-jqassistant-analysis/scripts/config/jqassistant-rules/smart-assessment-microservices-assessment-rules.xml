@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jqa:jqassistant-rules xmlns:jqa="http://www.buschmais.com/jqassistant/core/analysis/rules/schema/v1.0">
+
+    <!-- lightweight copy of module-analysis-rules.xml for conventional filename support -->
+
+    <concept id="smart-assessment-microservices-assessment:MarkSpringController">
+        <description>Labels every class annotated with @RestController or @Controller with :Controller</description>
+        <cypher><![CDATA[
+            MATCH (c:Class)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(t:Type)
+            WHERE t.fqn IN [
+                'org.springframework.web.bind.annotation.RestController',
+                'org.springframework.stereotype.Controller'
+            ]
+            SET c:Controller
+            RETURN count(c) AS MarkedControllers
+        ]]>        </cypher>
+    </concept>
+
+    <concept id="smart-assessment-microservices-assessment:MarkSpringService">
+        <description>Labels every class annotated with @Service with :Service</description>
+        <cypher><![CDATA[
+            MATCH (c:Class)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(t:Type)
+            WHERE t.fqn = 'org.springframework.stereotype.Service'
+            SET c:Service
+            RETURN count(c) AS MarkedServices
+        ]]>        </cypher>
+    </concept>
+
+    <concept id="smart-assessment-microservices-assessment:MarkSpringRepository">
+        <description>Labels every class annotated with @Repository with :Repository</description>
+        <cypher><![CDATA[
+            MATCH (c:Class)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(t:Type)
+            WHERE t.fqn = 'org.springframework.stereotype.Repository'
+            SET c:Repository
+            RETURN count(c) AS MarkedRepositories
+        ]]>        </cypher>
+    </concept>
+
+    <concept id="smart-assessment-microservices-assessment:MarkApiLayer">
+        <description>Labels classes in packages ending in .api as :ApiLayer</description>
+        <cypher><![CDATA[
+            MATCH (p:Package)-[:CONTAINS]->(c:Class)
+            WHERE p.fqn ENDS WITH '.api'
+            SET c:ApiLayer
+            RETURN count(c) AS MarkedApiClasses
+        ]]>        </cypher>
+    </concept>
+
+    <concept id="smart-assessment-microservices-assessment:MarkDomainLayer">
+        <description>Labels classes in packages ending in .domain as :DomainLayer</description>
+        <cypher><![CDATA[
+            MATCH (p:Package)-[:CONTAINS]->(c:Class)
+            WHERE p.fqn ENDS WITH '.domain'
+            SET c:DomainLayer
+            RETURN count(c) AS MarkedDomainClasses
+        ]]>        </cypher>
+    </concept>
+
+    <concept id="smart-assessment-microservices-assessment:MarkInfrastructureLayer">
+        <description>Labels classes in packages ending in .infrastructure as :InfrastructureLayer</description>
+        <cypher><![CDATA[
+            MATCH (p:Package)-[:CONTAINS]->(c:Class)
+            WHERE p.fqn ENDS WITH '.infrastructure'
+            SET c:InfrastructureLayer
+            RETURN count(c) AS MarkedInfraClasses
+        ]]>        </cypher>
+    </concept>
+
+    <constraint id="smart-assessment-microservices-assessment:ControllerMustNotDependOnRepository" severity="major">
+        <requiresConcept refId="smart-assessment-microservices-assessment:MarkSpringController"/>
+        <requiresConcept refId="smart-assessment-microservices-assessment:MarkSpringRepository"/>
+        <description>Controllers must not directly depend on Repositories.</description>
+        <cypher><![CDATA[
+            MATCH (ctrl:Controller)-[:DEPENDS_ON]->(repo:Repository)
+            RETURN ctrl.fqn AS Controller, repo.fqn AS Repository
+        ]]>        </cypher>
+    </constraint>
+
+    <constraint id="smart-assessment-microservices-assessment:DomainMustNotDependOnInfrastructure" severity="major">
+        <requiresConcept refId="smart-assessment-microservices-assessment:MarkDomainLayer"/>
+        <requiresConcept refId="smart-assessment-microservices-assessment:MarkInfrastructureLayer"/>
+        <description>Domain classes must not depend on Infrastructure classes.</description>
+        <cypher><![CDATA[
+            MATCH (d:DomainLayer)-[:DEPENDS_ON]->(i:InfrastructureLayer)
+            RETURN d.fqn AS DomainClass, i.fqn AS InfrastructureClass
+        ]]>        </cypher>
+    </constraint>
+
+    <constraint id="smart-assessment-microservices-assessment:ApiLayerMustNotDependOnInfrastructure" severity="major">
+        <requiresConcept refId="smart-assessment-microservices-assessment:MarkApiLayer"/>
+        <requiresConcept refId="smart-assessment-microservices-assessment:MarkInfrastructureLayer"/>
+        <description>API layer classes must not directly depend on Infrastructure classes.</description>
+        <cypher><![CDATA[
+            MATCH (a:ApiLayer)-[:DEPENDS_ON]->(i:InfrastructureLayer)
+            RETURN a.fqn AS ApiClass, i.fqn AS InfrastructureClass
+        ]]>        </cypher>
+    </constraint>
+
+    <constraint id="smart-assessment-microservices-assessment:NoCyclicPackageDependencies" severity="blocker">
+        <description>No cyclic package dependencies between top-level application packages.</description>
+        <cypher><![CDATA[
+            MATCH (p1:Package)-[:DEPENDS_ON]->(p2:Package)-[:DEPENDS_ON]->(p1)
+            WHERE p1.fqn STARTS WITH 'com.dkt.smartassessment'
+              AND p2.fqn STARTS WITH 'com.dkt.smartassessment'
+              AND p1 <> p2
+            RETURN p1.fqn AS Package1, p2.fqn AS Package2
+        ]]>        </cypher>
+    </constraint>
+
+    <group id="smart-assessment-microservices-assessment:Default">
+        <includeConcept refId="smart-assessment-microservices-assessment:MarkSpringController"/>
+        <includeConcept refId="smart-assessment-microservices-assessment:MarkSpringService"/>
+        <includeConcept refId="smart-assessment-microservices-assessment:MarkSpringRepository"/>
+        <includeConcept refId="smart-assessment-microservices-assessment:MarkApiLayer"/>
+        <includeConcept refId="smart-assessment-microservices-assessment:MarkDomainLayer"/>
+        <includeConcept refId="smart-assessment-microservices-assessment:MarkInfrastructureLayer"/>
+        <includeConstraint refId="smart-assessment-microservices-assessment:ControllerMustNotDependOnRepository"/>
+        <includeConstraint refId="smart-assessment-microservices-assessment:DomainMustNotDependOnInfrastructure"/>
+        <includeConstraint refId="smart-assessment-microservices-assessment:ApiLayerMustNotDependOnInfrastructure"/>
+        <includeConstraint refId="smart-assessment-microservices-assessment:NoCyclicPackageDependencies"/>
+    </group>
+
+</jqa:jqassistant-rules>
