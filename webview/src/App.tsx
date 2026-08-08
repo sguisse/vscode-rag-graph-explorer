@@ -7,10 +7,10 @@ import { LayoutDemoFeature } from '@/features/layout-demo/LayoutDemoFeature';
 import { ExplorerFeature } from '@/features/explorer/ExplorerFeature';
 import { RulesFeature } from '@/features/rules/RulesFeature';
 import { HelpFeature } from '@/features/help/HelpFeature';
-import { logInfo } from './services/view/log-view.service.wrapper';
-import { vsCodeApiService } from "./services/api/vs-code-api.service.gen";
+import { logInfo } from '@/services/view/log-view.service.wrapper';
+import { vsCodeApiService } from "@/services/api/vs-code-api.service.gen";
 import { VsCodeSettings } from '@/shared/services/vscode/domain/model/VsCodeSettings.gen';
-import { vsCodeHandleMessage } from './services/listener/vscode-message.handler';
+import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
 
 export let vscodeSettings: VsCodeSettings = new VsCodeSettings();
 

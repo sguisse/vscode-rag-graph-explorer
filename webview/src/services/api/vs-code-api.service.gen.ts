@@ -19,6 +19,10 @@ class VsCodeApiService extends AbstractApiService implements IVsCodeServicePort 
     public async getExtentionSettings(): Promise<VsCodeSettings> {
         return await this.rpc.call(RpcMethodEnum.VSCODE_GET_EXTENTION_SETTINGS);
     }
+
+    public async openUrl(url: string, inExternalBrowser: boolean): Promise<void> {
+        return await this.rpc.call(RpcMethodEnum.VSCODE_OPEN_URL, url, inExternalBrowser);
+    }
 }
 
 export const vsCodeApiService = new VsCodeApiService();

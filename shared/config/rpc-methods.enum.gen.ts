@@ -8,5 +8,6 @@ export enum RpcMethodEnum {
     INSTALLER_CHECK_INSTALLATION_STATUS = 'checkInstallationStatus',
     INSTALLER_UNINSTALL_ALL = 'uninstallAll',
     VSCODE_LOG_MESSAGE = 'logMessage',
-    VSCODE_GET_EXTENTION_SETTINGS = 'getExtentionSettings'
+    VSCODE_GET_EXTENTION_SETTINGS = 'getExtentionSettings',
+    VSCODE_OPEN_URL = 'openUrl'
 }

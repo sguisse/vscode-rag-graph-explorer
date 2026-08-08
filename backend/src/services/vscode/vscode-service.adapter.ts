@@ -25,6 +25,14 @@ export class VsCodeServiceAdapter extends AbstractServiceAdapter implements IVsC
         return getExtentionSettingsDelegate(getCurrentExtensionContext());
     }
 
+    public async openUrl(url: string, inExternalBrowser: boolean): Promise<void> {
+        if (inExternalBrowser) {
+            await vscode.env.openExternal(vscode.Uri.parse(url));
+        } else {
+            await vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(url));
+        }
+    }
+
     public dispose() {
         this.logChannel.dispose();
     }

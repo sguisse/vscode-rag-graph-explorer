@@ -5,4 +5,5 @@ import { VsCodeSettings } from '../model/VsCodeSettings.gen';
 export interface IVsCodeServicePort extends IBackendService {
     logMessage(level: LogLevel, message: string, details?: any): Promise<void>;
     getExtentionSettings (): Promise<VsCodeSettings>;
+    openUrl(url: string, inExternalBrowser: boolean): Promise<void>;
 }

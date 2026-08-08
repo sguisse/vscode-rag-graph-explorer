@@ -22,4 +22,5 @@ export function registerRpcMethods(rpc: RpcProtocol): void {
     const vsCodeService = serviceRegistry.get(ServiceEnum.VS_CODE);
     rpc.register(RpcMethodEnum.VSCODE_LOG_MESSAGE, vsCodeService.logMessage.bind(vsCodeService));
     rpc.register(RpcMethodEnum.VSCODE_GET_EXTENTION_SETTINGS, vsCodeService.getExtentionSettings.bind(vsCodeService));
+    rpc.register(RpcMethodEnum.VSCODE_OPEN_URL, vsCodeService.openUrl.bind(vsCodeService));
 }
