@@ -16,7 +16,7 @@
   "include": [
     "./src/**/*",
     "../shared/**/*"
-  ],
+, "../webview/src/services/view/constants/graph.constants.ts"  ],
   "exclude": [
     "node_modules"
   ]

@@ -6,50 +6,48 @@ import { logError, logInfo, logWarn } from './utils/utils-log';
 import { registerServices } from './config/service-registrator.gen';
 import { registerRpcMethods } from './config/rpc-method-registrator.gen';
 import { vsCodeSettingsManager } from './managers/VsCodeSettings.manager';
-import { AbstractServiceAdapter } from './core/AbstractServiceAdapter';
 import { getAppDisplayNameFromPackageJson, getAppNormalizedNameFromPackageJson, getWorkspaceRoot } from './utils/utils-vscode';
 import { workspaceInstallationManager } from './managers/WorkspaceInstallation.manager';
 import { pythonScriptExecutionManager } from './managers/PythonScriptExecution.manager';
 
 export let EXTENSION_BASE_CONFIG_NAME: string;
-export let currentPanel: vscode.WebviewPanel | undefined = undefined;
-export let currentContext: vscode.ExtensionContext | undefined = undefined;
+export let currentWebviewPanel: vscode.WebviewPanel | undefined = undefined;
+export let currentExtensionContext: vscode.ExtensionContext | undefined = undefined;
 let activeChildProcess: any = null;
 
-export function activate(context: vscode.ExtensionContext) {
-    currentContext = context;
-    EXTENSION_BASE_CONFIG_NAME = getAppNormalizedNameFromPackageJson(context);
+export function activate(extentionContext: vscode.ExtensionContext) {
+    currentExtensionContext = extentionContext;
+    EXTENSION_BASE_CONFIG_NAME = getAppNormalizedNameFromPackageJson(extentionContext);
     vsCodeSettingsManager.init(EXTENSION_BASE_CONFIG_NAME);
-    AbstractServiceAdapter.setContext(context);
-    registerServices(context);
+    registerServices(extentionContext);
 
-    workspaceInstallationManager.syncScripts(context);
+    workspaceInstallationManager.syncScripts(extentionContext);
 
     const openTool = () => {
-        if (currentPanel) {
-            currentPanel.reveal(vscode.ViewColumn.One);
+        if (currentWebviewPanel) {
+            currentWebviewPanel.reveal(vscode.ViewColumn.One);
             return;
         }
 
         pythonScriptExecutionManager.killAll();
         vsCodeSettingsManager.init(EXTENSION_BASE_CONFIG_NAME);
-        workspaceInstallationManager.syncScripts(context);
+        workspaceInstallationManager.syncScripts(extentionContext);
 
-        const panel: vscode.WebviewPanel = createWebviewPanel(context);
-        currentPanel = panel;
+        const webviewPanel: vscode.WebviewPanel = createWebviewPanel(extentionContext);
+        currentWebviewPanel = webviewPanel;
 
-        managePanelRendering(panel, context);
-        manageBackendServices(panel, context);
-        const saveListener = manageSaveFileInVsCodeEditor(panel, context);
-        manageDisposedWebviewPanel(panel, saveListener);
+        managePanelRendering(webviewPanel, extentionContext);
+        manageBackendServices(webviewPanel, extentionContext);
+        const saveListener = manageSaveFileInVsCodeEditor(webviewPanel, extentionContext);
+        manageDisposedWebviewPanel(webviewPanel, saveListener);
 
-        panel.webview.html = getWebviewContent(panel, context);
+        webviewPanel.webview.html = getWebviewContent(webviewPanel, extentionContext);
 
         runPythonScan("deep");
     };
 
     const disposable = vscode.commands.registerCommand(`${EXTENSION_BASE_CONFIG_NAME}.openTool`, openTool);
-    context.subscriptions.push(disposable);
+    extentionContext.subscriptions.push(disposable);
 
     logInfo('Extension activated successfully.');
 }
@@ -82,8 +80,6 @@ function managePanelRendering(panel: vscode.WebviewPanel, context: vscode.Extens
 }
 
 function manageBackendServices(panel: vscode.WebviewPanel, context: vscode.ExtensionContext) {
-    AbstractServiceAdapter.setWebviewPanel(panel);
-
     const rpc = new RpcProtocol((msg) => panel.webview.postMessage(msg));
     registerRpcMethods(rpc);
 
@@ -95,8 +91,8 @@ function manageDisposedWebviewPanel(panel: vscode.WebviewPanel, saveListener: vs
         logInfo('Webview panel disposed.');
         saveListener.dispose();
         pythonScriptExecutionManager.killAll();
-        AbstractServiceAdapter.setWebviewPanel(undefined);
-        currentPanel = undefined;
+        //currentExtensionContext = undefined;
+        currentWebviewPanel = undefined;
     });
 }
 

@@ -4,10 +4,9 @@ import {
   CodebaseData,
   CodebaseFile,
   Dependency,
-  FOLDER_BASE_X_POSITIONS_CONFIG,
-  NODE_DIMENSIONS_CONFIG,
 } from '@/shared/services/graph-rag-explorer';
 import { buildMemberKeyToken } from '@/services/view/graph-view.service';
+import { NODE_DIMENSIONS_CONFIG, FOLDER_BASE_X_POSITIONS_CONFIG } from '@/features/explorer/constants/graph.constants';
 
 export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) {
   const lastTopologyKeyRef = useRef<string>('');
@@ -23,7 +22,7 @@ export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) 
     if (!cyRef.current) return;
     const cy = cyRef.current;
 
-    // Clé unique de topologie pour éviter de ré-exécuter cy.layout().run() si les données n'ont pas changé
+    // Unique topology key to avoid re-executing cy.layout().run() if the data has not changed
     const topologyKey = JSON.stringify({
       files: searchFilteredFiles.map(f => f.id),
       visible: visibleFiles,

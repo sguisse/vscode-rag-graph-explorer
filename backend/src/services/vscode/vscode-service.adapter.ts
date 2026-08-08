@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { IVsCodeServicePort } from '../../../../shared/services/vscode/domain/port-out/vscode-service.port';
-import { getAppNameFromPackageJson } from '../../utils/utils-vscode';
+import { getAppNameFromPackageJson, getCurrentExtensionContext } from '../../utils/utils-vscode';
 import { LogLevel } from '../../../../shared/services/vscode/domain/model/types';
 import { logMessage as logMessageDelegate} from './delegate/logger.delegate';
 import { getExtentionSettings as getExtentionSettingsDelegate} from './delegate/get-extention-settings.delegate';
@@ -12,7 +12,7 @@ export class VsCodeServiceAdapter extends AbstractServiceAdapter implements IVsC
 
     constructor() {
         super();
-        const appName = getAppNameFromPackageJson(AbstractServiceAdapter.context);
+        const appName = getAppNameFromPackageJson(getCurrentExtensionContext());
         this.logChannel = vscode.window.createOutputChannel(`${appName}`, { log: true });
         this.logChannel.show();
     }
@@ -22,7 +22,7 @@ export class VsCodeServiceAdapter extends AbstractServiceAdapter implements IVsC
     }
 
     public async getExtentionSettings(): Promise<VsCodeSettings> {
-        return getExtentionSettingsDelegate(AbstractServiceAdapter.context);
+        return getExtentionSettingsDelegate(getCurrentExtensionContext());
     }
 
     public dispose() {

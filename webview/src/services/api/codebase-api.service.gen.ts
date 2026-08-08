@@ -22,10 +22,6 @@ class CodebaseApiService extends AbstractApiService implements ICodebaseServiceP
     public async getFolderPositions(): Promise<Record<string, { label: string }>> {
         return await this.rpc.call(RpcMethodEnum.CODEBASE_GET_FOLDER_POSITIONS);
     }
-
-    public async getJsonSchemaSpec(): Promise<unknown> {
-        return await this.rpc.call(RpcMethodEnum.CODEBASE_GET_JSON_SCHEMA_SPEC);
-    }
 }
 
 export const codebaseApiService = new CodebaseApiService();

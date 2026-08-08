@@ -2,6 +2,24 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { vsCodeSettingsManager } from '../managers/VsCodeSettings.manager';
+import { currentExtensionContext, currentWebviewPanel } from '../extension';
+
+export function getCurrentExtensionContext(): vscode.ExtensionContext  {
+    if (!currentExtensionContext) {
+        throw new Error ("currentExtensionContext not yet initialized !!")
+    }
+
+    return currentExtensionContext;
+}
+
+
+export function getCurrentWebviewPanel(): vscode.WebviewPanel  {
+    if (!currentWebviewPanel) {
+        throw new Error ("currentWebviewPanel not yet initialized !!")
+    }
+
+    return currentWebviewPanel;
+}
 
 export function getWorkspaceRoot(): string {
   const workspaceFolders = vscode.workspace.workspaceFolders;

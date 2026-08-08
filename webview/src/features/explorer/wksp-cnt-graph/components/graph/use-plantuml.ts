@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { FOLDER_KEYS_REGISTERED_CONFIG, CodebaseFile, Dependency } from '@/shared/services/graph-rag-explorer';
+import { CodebaseFile, Dependency } from '@/shared/services/graph-rag-explorer';
+import { FOLDER_KEYS_REGISTERED_CONFIG } from '@/features/explorer/constants/graph.constants';
 
 export function usePlantUml(searchFilteredFiles: CodebaseFile[], visibleFiles: Record<string, boolean>, dependencies: Dependency[]) {
   return useMemo(() => {

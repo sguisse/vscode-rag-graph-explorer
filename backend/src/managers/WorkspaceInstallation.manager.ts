@@ -3,13 +3,12 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { vsCodeSettingsManager } from './VsCodeSettings.manager';
-import { getAppVersionFromPackageJson, getWorkspaceExtentionPath } from'../utils/utils-vscode';
+import { getAppVersionFromPackageJson, getCurrentExtensionContext, getWorkspaceExtentionPath } from'../utils/utils-vscode';
 import { logError, logInfo } from '../utils/utils-log';
 import { ServiceEnum } from '../../../shared/config/service-enum.gen';
 import { serviceRegistry } from '../core/ServiceRegistry';
 import { IGraphRagInstallerServicePort } from '../../../shared/services/graph-rag-explorer/domain/port-out/installer-service.port';
 import { copyFolderRecursiveSync, computeRecursivelyMD5 } from '../utils/utils-files';
-import { currentContext } from '../extension';
 
 const VERSION_FILENAME = 'version.txt';
 
@@ -26,10 +25,7 @@ export class WorkspaceInstallationManager {
     }
 
     private getScriptSourceDir(): string {
-        if (!currentContext) {
-          throw new Error ("currentContext not yet initialized !!")
-        }
-      const scriptSourceDir = path.join(currentContext.extensionPath, "scripts");
+      const scriptSourceDir = path.join(getCurrentExtensionContext().extensionPath, "scripts");
       return scriptSourceDir;
     }
 

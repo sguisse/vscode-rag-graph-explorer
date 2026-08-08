@@ -6,7 +6,7 @@ import * as childProcess from 'child_process';
 
 import { CodebaseData, ICodebaseServicePort } from '../../../../shared/services/graph-rag-explorer';
 import { AbstractServiceAdapter } from '../../core/AbstractServiceAdapter';
-import { initialCodebase, FOLDER_POSITIONS, JSON_SCHEMA_SPEC } from './data/codebase.data';
+import { initialCodebase, FOLDER_POSITIONS } from './data/codebase.data';
 import { serviceRegistry } from '../../core/ServiceRegistry';
 import { ServiceEnum } from '../../../../shared/config/service-enum.gen';
 import { IGraphRagInstallerServicePort } from '../../../../shared/services/graph-rag-explorer/domain/port-out/installer-service.port';
@@ -46,14 +46,6 @@ export class CodebaseMockAdapter extends AbstractServiceAdapter implements ICode
   public async getFolderPositions(): Promise<Record<string, { label: string }>> {
     return FOLDER_POSITIONS;
   }
-
-  public async getJsonSchemaSpec(): Promise<unknown> {
-    return JSON_SCHEMA_SPEC;
-  }
-
-
-
-
 
 
   public dispose() {

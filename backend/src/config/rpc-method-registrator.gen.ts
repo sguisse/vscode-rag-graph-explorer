@@ -14,7 +14,6 @@ export function registerRpcMethods(rpc: RpcProtocol): void {
     rpc.register(RpcMethodEnum.CODEBASE_GET_CODEBASE, codebaseService.getCodebase.bind(codebaseService));
     rpc.register(RpcMethodEnum.CODEBASE_IMPORT_CODEBASE, codebaseService.importCodebase.bind(codebaseService));
     rpc.register(RpcMethodEnum.CODEBASE_GET_FOLDER_POSITIONS, codebaseService.getFolderPositions.bind(codebaseService));
-    rpc.register(RpcMethodEnum.CODEBASE_GET_JSON_SCHEMA_SPEC, codebaseService.getJsonSchemaSpec.bind(codebaseService));
 
     const graphRagInstallerService = serviceRegistry.get(ServiceEnum.GRAPH_RAG_INSTALLER);
     rpc.register(RpcMethodEnum.INSTALLER_CHECK_INSTALLATION_STATUS, graphRagInstallerService.checkInstallationStatus.bind(graphRagInstallerService));

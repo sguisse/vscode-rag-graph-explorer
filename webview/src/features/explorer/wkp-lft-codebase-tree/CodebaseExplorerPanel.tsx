@@ -6,10 +6,9 @@ import { ToolbarSeparator } from '@/components/app/toolbar-separator';
 import {
   CodebaseFile,
   CodebaseData,
-  SelectedEntity,
-  FOLDER_KEYS_REGISTERED_CONFIG,
-  FOLDER_THEME_REGISTRY_CONFIG
+  SelectedEntity
 } from '@/shared/services/graph-rag-explorer';
+import { FOLDER_KEYS_REGISTERED_CONFIG, FOLDER_THEME_REGISTRY_CONFIG } from '../constants/graph.constants';
 
 interface TriStateCheckboxProps {
   checked: boolean;

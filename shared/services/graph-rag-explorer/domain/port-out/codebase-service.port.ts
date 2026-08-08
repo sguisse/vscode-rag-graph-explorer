@@ -5,6 +5,4 @@ export interface ICodebaseServicePort extends IBackendService {
   getCodebase(): Promise<CodebaseData>;
   importCodebase(data: CodebaseData): Promise<void>;
   getFolderPositions(): Promise<Record<string, { label: string }>>;
-  getJsonSchemaSpec(): Promise<unknown>;
-
 }

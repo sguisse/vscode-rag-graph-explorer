@@ -4,5 +4,6 @@
 export enum ServiceEnum {
     CODEBASE = 'CodebaseService',
     GRAPH_RAG_INSTALLER = 'GraphRagInstallerService',
+    NEO4J = 'Neo4jService',
     VS_CODE = 'VsCodeService'
 }

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { JsonView } from '@/components/app/viewer/JsonView';
 import { CopyFloatingButton } from '@/components/app/viewer/CopyFloatingButton';
-import { codebaseApiService } from '@/services/api/codebase-api.service.gen';
+import { CodebaseSchema } from '@/shared/services/graph-rag-explorer/domain/model/neo4j/codebase.schema';
 
 interface JsonTabPanelProps {
   handleCopy: (text: string, message: string) => void;
@@ -11,7 +11,7 @@ export function JsonTabPanel({ handleCopy }: JsonTabPanelProps) {
   const [jsonSchemaSpec, setJsonSchemaSpec] = useState<unknown>(null);
 
   useEffect(() => {
-    codebaseApiService.getJsonSchemaSpec().then(setJsonSchemaSpec).catch(console.error);
+    setJsonSchemaSpec(CodebaseSchema.getSchema());
   }, []);
 
   const doCopy = () => handleCopy(JSON.stringify(jsonSchemaSpec, null, 2), "JSON Schema copied to clipboard!");
