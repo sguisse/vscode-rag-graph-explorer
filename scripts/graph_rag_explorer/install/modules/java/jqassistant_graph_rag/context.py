@@ -11,10 +11,14 @@ class JQAssistantGraphRagContext:
         self.version = vsCodeSettings.graphRagExplorer.jqassistant.version
         self.raw_outputs_dir = f"{ctx.raw_outputs_dir}/java"
         self.tools_dir = f"{ctx.tools_dir}/java/jqassistant-graph-rag"
-        self.config_dir = f"{self.tools_dir}/config"
+        self.tools_git_clone = f"{self.tools_dir}/git-clone"
+        self.tools_models_dir = f"{self.tools_git_clone}/models"
 
-        self.templates_dir = f"{ctx.beScriptsPath}/scripts/graph_rag_explorer/install/modules/java/jqassistant_graph_rag/config/templates"
-        self.mcp_server_template_path = os.path.join(self.templates_dir, "mcp-server-template.json")
+
+        self.install_dir = f"{ctx.beScriptsPath}/scripts/graph_rag_explorer/install/modules/java/jqassistant_graph_rag"
+        self.templates_dir = f"{self.install_dir}/config/templates"
+        self.mcp_server_template_path = f"{self.templates_dir}/mcp-server-template.json"
+        self.git_clone_dir = f"{self.install_dir}/git-clone"
 
         self.llm_download_url = vsCodeSettings.graphRagExplorer.jqassistant.graphRagLLM.downloadUrl
         self.llm_model_name = vsCodeSettings.graphRagExplorer.jqassistant.graphRagLLM.model

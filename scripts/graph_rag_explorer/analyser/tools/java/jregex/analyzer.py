@@ -28,7 +28,7 @@ class JavaRegexAnalyzer(BaseAnalyser):
 
     @property
     def name(self) -> str:
-        return "02-java_regex_analyzer"
+        return "03-java_regex_analyzer"
 
     def run_analysis(self, neo4j_client: Neo4jClient) -> None:
         java_src_paths = self.jqa.get_java_src_paths_from_jqa_config()

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from analyser.base import BaseAnalyser
 from analyser.registry import AnalyserRegistry
 from analyser.tools.neo4j.neo4j_client import Neo4jClient
-from core.utils import info, error, debug, execute_tracked_command, warn
+from core.utils import info, error, debug, execute_tracked_command, success, warn
 from core.sources_discovery import discover_workspace_sources
 from core.context import EnvironmentContext
 from install.modules.java.jqassistant.context import JQAssistantContext
@@ -148,7 +148,14 @@ class JQAssistantAnalyzer(BaseAnalyser):
         scan_return_code = self._execute_scan(executable_target, discovered_sources, custom_env)
 
         if scan_return_code == 0:
-            self._execute_analyze(executable_target, custom_env)
+            success ("jQAssistant 'scan' completed successfully.", component=self.name)
+            info("Proceeding to jQAssistant 'analyze' phase...", component=self.name)
+
+            analyze_return_code = self._execute_analyze(executable_target, custom_env)
+            if analyze_return_code != 0:
+                error(f"jQAssistant 'analyze' failed with code {analyze_return_code}. . Skipping 'analyze' phase.", component=self.name)
+            else:
+                success ("jQAssistant 'analyze' completed successfully.", component=self.name)
         else:
             error(f"jQAssistant 'scan' failed with code {scan_return_code}. Skipping 'analyze' phase.", component=self.name)
 

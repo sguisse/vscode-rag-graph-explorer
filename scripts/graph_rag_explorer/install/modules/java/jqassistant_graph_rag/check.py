@@ -14,13 +14,24 @@ class JQAssistantGraphRagChecker(BaseCheckModule):
         super().__init__(context)
         self.jqa_gr = JQAssistantGraphRagContext(context)
 
-
     @property
     def name(self) -> str: return "java_jqassistant_graph_rag"
 
+    def check_jqassistant_graph_rag_tool_availability(self):
+        self.steps_count += 1
+        tool_path = self.jqa_gr.tools_git_clone
+        if os.path.exists(tool_path) and os.path.isdir(tool_path) and os.listdir(tool_path):
+            self.status["jqassistant_graph_rag_tool"] = {"status": "✅"}
+        else:
+            self.status["jqassistant_graph_rag_tool"] = {
+                "status": "❌",
+                "message": f"The jqassistant-graph-rag tool directory is missing or empty in target tools directory: '{tool_path}'."
+            }
+            self.ko_count += 1
+
     def check_jqassistant_graph_rag_llm_model_availability(self):
         self.steps_count += 1
-        model_path = os.path.join(self.context.tools_dir, "java", "jqassistant-graph-rag", "config", "models", self.jqa_gr.llm_model_name)
+        model_path = os.path.join(self.jqa_gr.tools_models_dir, self.jqa_gr.llm_model_name)
         if os.path.exists(model_path):
             # check folder model is not empty
             if os.path.isdir(model_path) and os.listdir(model_path):
@@ -34,10 +45,9 @@ class JQAssistantGraphRagChecker(BaseCheckModule):
         else:
             self.status["jqassistant_graph_rag_llm_model"] = {
                 "status": "❌",
-                "message": "The GraphRag LLM model is missing in config directory."
+                "message": f"The GraphRag LLM model is missing in config directory: '{model_path}'."
             }
             self.ko_count += 1
-
 
     def check_workspace_mcp_config(self):
         self.steps_count += 1
@@ -62,12 +72,11 @@ class JQAssistantGraphRagChecker(BaseCheckModule):
             }
             self.ko_count += 1
 
-
-
     def execute_all_checks(self) -> dict:
         self.steps_count = 0
         self.ko_count = 0
         self.status = {}
+        self.check_jqassistant_graph_rag_tool_availability()
         self.check_jqassistant_graph_rag_llm_model_availability()
         self.check_workspace_mcp_config()
         return self.generate_summary()

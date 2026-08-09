@@ -3,6 +3,7 @@ import sys
 import ssl
 import json
 import re
+import shutil
 import urllib.request
 import urllib.error
 from typing import Optional
@@ -15,6 +16,7 @@ from graph_rag_explorer.install.modules.java.jqassistant_graph_rag.check import 
 from graph_rag_explorer.install.modules.java.jqassistant_graph_rag.tools.graph_rag_llm_model_dwn import download_graph_rag_llm_model
 from graph_rag_explorer.install.modules.java.jqassistant_graph_rag.context import JQAssistantGraphRagContext
 from core.VsCodeSettings_gen import vsCodeSettings
+from graph_rag_explorer.install.utils.py_venv_install import venv_install
 
 
 @InstallerRegistry.register_installer
@@ -28,9 +30,26 @@ class JQAssistantGraphRagInstaller(BaseInstallModule):
     @property
     def name(self) -> str: return "java_jqassistant_graph_rag"
 
+    def install_jqassistant_graph_rag_tool(self):
+        source_path = Path(self.jqa_gr.git_clone_dir)
+        target_path = Path(self.jqa_gr.tools_git_clone)
+
+        if not os.path.exists(source_path):
+            error(f"Source tool directory missing at {source_path}", component=self.name)
+            return
+
+        info(f"Installing jqassistant-graph-rag tool from {source_path} to {target_path}...", component=self.name)
+        os.makedirs(target_path, exist_ok=True)
+        shutil.copytree(source_path, target_path, dirs_exist_ok=True)
+
+        info(f"Installing jqassistant-graph-rag tool dedicated python environment...", component=self.name)
+        venv_install(target_path)
+
+        success(f"jqassistant_graph_rag tool installed successfully into {target_path}", component=self.name)
+
 
     def fetch_and_install_jqassistant_graph_rag_llm_model(self):
-        targetPath = f"{self.context.tools_dir}/java/jqassistant-graph-rag/config/models/{self.jqa_gr.llm_model_name}"
+        targetPath = f"{self.jqa_gr.tools_models_dir}/{self.jqa_gr.llm_model_name}"
         if not os.path.exists(targetPath):
             os.makedirs(targetPath, exist_ok=True)
 
@@ -38,9 +57,7 @@ class JQAssistantGraphRagInstaller(BaseInstallModule):
         info(f"Downloading GraphRag LLM model from {download_url} to {targetPath} …", component=self.name)
 
         download_graph_rag_llm_model(download_url=download_url, downloadTargetPath=Path(targetPath))
-        success(f"GraphRag LLM model installed successfully into {targetPath}/{self.jqa_gr.llm_model_name}", component=self.name)
-
-
+        success(f"GraphRag LLM model installed successfully into {targetPath}", component=self.name)
 
     def inject_mcp_server_config(self):
         mcp_dir = os.path.join(self.context.workspace_root, ".vscode")
@@ -82,13 +99,14 @@ class JQAssistantGraphRagInstaller(BaseInstallModule):
             json.dump(mcp_data, f, indent=4)
         success(f"MCP server config injected successfully into {mcp_path}", component=self.name)
 
-
-
     def execute_all_installations(self, installStatus: Optional[dict] = None) -> None:
         """Selectively runs configurations. """
         checker = JQAssistantGraphRagChecker(self.context)
         if installStatus is None:
             installStatus = checker.execute_all_checks()
+
+        if installStatus.get("jqassistant_graph_rag_tool", {}).get("status") != "✅":
+            self.install_jqassistant_graph_rag_tool()
 
         if installStatus.get("jqassistant_graph_rag_llm_model", {}).get("status") != "✅":
             self.fetch_and_install_jqassistant_graph_rag_llm_model()
