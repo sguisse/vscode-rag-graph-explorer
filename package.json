@@ -196,12 +196,37 @@
           "default": "https://github.com/jQAssistant/jqassistant/releases/download/${tokenRazor.graphRagExplorer.jqassistant.version}/jqassistant-commandline-neo4jv5-${tokenRazor.graphRagExplorer.jqassistant.version}-distribution.zip",
           "description": "The absolute parameterized GitHub Releases download link for fetching portable jQAssistant distribution packages."
         },
-        "tokenRazor.graphRagExplorer.jqassistant.mcp.host": {
+        "tokenRazor.graphRagExplorer.jqassistant.graphRagLLM.downloadUrl": {
+          "type": "string",
+          "default": "https://huggingface.co/sentence-transformers",
+          "description": "The base URL of the GraphRag LLM model used to generate graph-based semantic embeddings on codebase."
+        },
+        "tokenRazor.graphRagExplorer.jqassistant.graphRagLLM.model": {
+          "type": "string",
+          "default": "all-MiniLM-L6-v2",
+          "description": "The LLM model used to generate graph-based semantic embeddings on codebase."
+        },
+        "tokenRazor.graphRagExplorer.jqassistant.graphRagLLM.method.minCyclomatic": {
+          "type": "number",
+          "default": 6,
+          "description": "The minimum cyclomatic complexity required for the GraphRag LLM model to analyze a method."
+        },
+        "tokenRazor.graphRagExplorer.jqassistant.graphRagLLM.maxAnalyzerCall": {
+          "type": "number",
+          "default": 5,
+          "description": "The maximum number of analyzer calls allowed by element type (method, type, sourceFile, directory, package, project) for the GraphRag LLM model. 0 = unlimited. (used mainly at dev step to avoid too many calls to the LLM model)"
+        },
+        "tokenRazor.graphRagExplorer.jqassistant.graphRagLLM.maxSummarizerCall": {
+          "type": "number",
+          "default": 5,
+          "description": "The maximum number of summarizer calls allowed by element type (method, type, sourceFile, directory, package, project) for the GraphRag LLM model. 0 = unlimited. (used mainly at dev step to avoid too many calls to the LLM model)"
+        },
+        "tokenRazor.graphRagExplorer.jqassistant.graphRagLLM.mcp.host": {
           "type": "string",
           "default": "127.0.0.1",
           "description": "The host address for the jqassistant MCP server."
         },
-        "tokenRazor.graphRagExplorer.jqassistant.mcp.port": {
+        "tokenRazor.graphRagExplorer.jqassistant.graphRagLLM.mcp.port": {
           "type": "number",
           "default": 8800,
           "description": "The port for the jqassistant MCP server."

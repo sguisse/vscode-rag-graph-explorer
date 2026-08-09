@@ -48,6 +48,18 @@ class Neo4jSettings:
         return obj
 
 @dataclass
+class MethodSettings:
+    minCyclomatic: int = 6
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "MethodSettings":
+        obj = cls()
+        if not isinstance(data, dict): return obj
+        if "minCyclomatic" in data:
+            obj.minCyclomatic = data["minCyclomatic"]
+        return obj
+
+@dataclass
 class McpSettings:
     host: str = "127.0.0.1"
     port: int = 8800
@@ -63,10 +75,37 @@ class McpSettings:
         return obj
 
 @dataclass
+class GraphRagLLMSettings:
+    downloadUrl: str = "https://huggingface.co/sentence-transformers"
+    model: str = "all-MiniLM-L6-v2"
+    method: "MethodSettings" = field(default_factory=MethodSettings)
+    maxAnalyzerCall: int = 5
+    maxSummarizerCall: int = 5
+    mcp: "McpSettings" = field(default_factory=McpSettings)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "GraphRagLLMSettings":
+        obj = cls()
+        if not isinstance(data, dict): return obj
+        if "downloadUrl" in data:
+            obj.downloadUrl = data["downloadUrl"]
+        if "model" in data:
+            obj.model = data["model"]
+        if "method" in data:
+            obj.method = MethodSettings.from_dict(data["method"])
+        if "maxAnalyzerCall" in data:
+            obj.maxAnalyzerCall = data["maxAnalyzerCall"]
+        if "maxSummarizerCall" in data:
+            obj.maxSummarizerCall = data["maxSummarizerCall"]
+        if "mcp" in data:
+            obj.mcp = McpSettings.from_dict(data["mcp"])
+        return obj
+
+@dataclass
 class JqassistantSettings:
     version: str = "2.9.1"
     downloadUrl: str = "https://github.com/jQAssistant/jqassistant/releases/download/${tokenRazor.graphRagExplorer.jqassistant.version}/jqassistant-commandline-neo4jv5-${tokenRazor.graphRagExplorer.jqassistant.version}-distribution.zip"
-    mcp: "McpSettings" = field(default_factory=McpSettings)
+    graphRagLLM: "GraphRagLLMSettings" = field(default_factory=GraphRagLLMSettings)
     xmlReportPath: str = "./target/site/jacoco/jacoco.xml"
 
     @classmethod
@@ -77,8 +116,8 @@ class JqassistantSettings:
             obj.version = data["version"]
         if "downloadUrl" in data:
             obj.downloadUrl = data["downloadUrl"]
-        if "mcp" in data:
-            obj.mcp = McpSettings.from_dict(data["mcp"])
+        if "graphRagLLM" in data:
+            obj.graphRagLLM = GraphRagLLMSettings.from_dict(data["graphRagLLM"])
         if "xmlReportPath" in data:
             obj.xmlReportPath = data["xmlReportPath"]
         return obj

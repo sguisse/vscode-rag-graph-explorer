@@ -23,11 +23,6 @@ class JQAssistantContext:
         self.exclude_paths_regex = vsCodeSettings.graphRagExplorer.excludePathsRegex
         self.download_url = vsCodeSettings.graphRagExplorer.jqassistant.downloadUrl
 
-        self.mcp_server_key = "jqassistant-graph-rag"
-        self.mcp_host = vsCodeSettings.graphRagExplorer.jqassistant.mcp.host
-        self.mcp_port = vsCodeSettings.graphRagExplorer.jqassistant.mcp.port
-
-
 
     def get_java_src_paths_from_jqa_config(self) -> list:
         """

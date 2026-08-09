@@ -11,7 +11,7 @@ from install.base import BaseInstallModule
 from install.registry import InstallerRegistry
 from core.utils import info, success, error, warn
 from core.sources_discovery import discover_workspace_sources
-from install.modules.java.jqassistant.check import JavaJQAssistantChecker
+from install.modules.java.jqassistant.check import JQAssistantChecker
 from install.modules.java.jqassistant.context import JQAssistantContext
 from core.VsCodeSettings_gen import vsCodeSettings
 
@@ -75,45 +75,6 @@ class JavaJQAssistantInstaller(BaseInstallModule):
                 except OSError: pass
             raise e
 
-    def inject_mcp_server_config(self):
-        mcp_dir = os.path.join(self.context.workspace_root, ".vscode")
-        os.makedirs(mcp_dir, exist_ok=True)
-        mcp_path = os.path.join(mcp_dir, "mcp.json")
-
-        if not os.path.exists(self.jqa.mcp_server_template_path):
-            error("MCP Server template missing from installer resources.", component=self.name)
-            return
-
-        with open(self.jqa.mcp_server_template_path, "r", encoding="utf-8") as f:
-            template_content = f.read()
-
-        template_content = template_content.replace("{{JQA_MCP_HOST}}", str(self.jqa.mcp_host)).replace("{{JQA_MCP_PORT}}", str(self.jqa.mcp_port))
-
-        try:
-            template_data = json.loads(template_content)
-        except json.JSONDecodeError as e:
-            error(f"Malformed MCP template JSON: {e}", component=self.name)
-            return
-
-        mcp_data = {}
-        if os.path.exists(mcp_path):
-            try:
-                with open(mcp_path, "r", encoding="utf-8") as f:
-                    mcp_data = json.load(f)
-            except json.JSONDecodeError:
-                warn("Existing .vscode/mcp.json is malformed. Overwriting.", component=self.name)
-
-        if "servers" not in mcp_data:
-            mcp_data["servers"] = {}
-
-        if self.jqa.mcp_server_key in template_data:
-            mcp_data["servers"][self.jqa.mcp_server_key] = template_data[self.jqa.mcp_server_key]
-        elif "servers" in template_data and self.jqa.mcp_server_key in template_data["servers"]:
-            mcp_data["servers"][self.jqa.mcp_server_key] = template_data["servers"][self.jqa.mcp_server_key]
-
-        with open(mcp_path, "w", encoding="utf-8") as f:
-            json.dump(mcp_data, f, indent=4)
-        success(f"MCP server config injected successfully into {mcp_path}", component=self.name)
 
     def install_config_and_rules(self):
         os.makedirs(self.jqa.config_dir, exist_ok=True)
@@ -160,7 +121,7 @@ class JavaJQAssistantInstaller(BaseInstallModule):
 
     def execute_all_installations(self, installStatus: Optional[dict] = None) -> None:
         """Selectively runs configurations. Critical: Raises a hard blocking exception if the remote token is invalid."""
-        checker = JavaJQAssistantChecker(self.context)
+        checker = JQAssistantChecker(self.context)
         if installStatus is None:
             installStatus = checker.execute_all_checks()
 
@@ -169,9 +130,6 @@ class JavaJQAssistantInstaller(BaseInstallModule):
 
         if installStatus.get("jqassistant_binary", {}).get("status") != "✅":
             self.fetch_and_extract_jqassistant()
-
-        if installStatus.get("mcp_server_config", {}).get("status") != "✅":
-            self.inject_mcp_server_config()
 
         if (installStatus.get("jqassistant_custom_config", {}).get("status") != "✅" or
             installStatus.get("jqassistant_custom_rules", {}).get("status") != "✅"):

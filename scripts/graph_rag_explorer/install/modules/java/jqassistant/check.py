@@ -9,7 +9,7 @@ from install.modules.system.neo4j.check import SystemNeo4jChecker
 from core.VsCodeSettings_gen import vsCodeSettings
 
 @InstallerRegistry.register_checker
-class JavaJQAssistantChecker(BaseCheckModule):
+class JQAssistantChecker(BaseCheckModule):
     def __init__(self, context):
         super().__init__(context)
         self.jqa = JQAssistantContext(context)
@@ -88,28 +88,6 @@ class JavaJQAssistantChecker(BaseCheckModule):
             }
             self.ko_count += 1
 
-    def check_workspace_mcp_config(self):
-        self.steps_count += 1
-        mcp_path = os.path.join(self.context.workspace_root, ".vscode", "mcp.json")
-        has_server = False
-
-        if os.path.exists(mcp_path):
-            try:
-                import json
-                with open(mcp_path, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    if "servers" in data and "jqassistant-graph-rag" in data["servers"]:
-                        has_server = True
-            except Exception: pass
-
-        if has_server:
-            self.status["mcp_server_config"] = {"status": "✅"}
-        else:
-            self.status["mcp_server_config"] = {
-                "status": "❌",
-                "message": "MCP server 'jqassistant-graph-rag' is missing from .vscode/mcp.json."
-            }
-            self.ko_count += 1
 
     def check_remote_database_token_compliance(self):
         """Queries the active Neo4j container database safely without throwing unhandled lifecycle registration breaks."""
@@ -128,6 +106,7 @@ class JavaJQAssistantChecker(BaseCheckModule):
             self.status["remote_database_token"] = {"status": "❌", "message": f"Targeted database instance currently unreachable. Context: {e}"}
             self.ko_count += 1
 
+
     def execute_all_checks(self) -> dict:
         self.steps_count = 0
         self.ko_count = 0
@@ -137,6 +116,5 @@ class JavaJQAssistantChecker(BaseCheckModule):
         self.check_workspace_raw_outputs_dir()
         self.check_sandboxed_config()
         self.check_sandboxed_rules()
-        self.check_workspace_mcp_config()
         self.check_remote_database_token_compliance()
         return self.generate_summary()

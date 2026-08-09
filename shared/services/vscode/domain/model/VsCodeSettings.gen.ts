@@ -45,9 +45,18 @@ export class VsCodeSettings {
         jqassistant: {
             version: "2.9.1",
             downloadUrl: "https://github.com/jQAssistant/jqassistant/releases/download/${tokenRazor.graphRagExplorer.jqassistant.version}/jqassistant-commandline-neo4jv5-${tokenRazor.graphRagExplorer.jqassistant.version}-distribution.zip",
-            mcp: {
-                host: "127.0.0.1",
-                port: 8800
+            graphRagLLM: {
+                downloadUrl: "https://huggingface.co/sentence-transformers",
+                model: "all-MiniLM-L6-v2",
+                method: {
+                    minCyclomatic: 6
+                },
+                maxAnalyzerCall: 5,
+                maxSummarizerCall: 5,
+                mcp: {
+                    host: "127.0.0.1",
+                    port: 8800
+                }
             },
             xmlReportPath: "./target/site/jacoco/jacoco.xml"
         },

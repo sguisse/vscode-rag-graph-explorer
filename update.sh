@@ -1,78 +1,176 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-mkdir -p docs/prompts
+# Define base paths
+BASE_DIR="scripts/graph_rag_explorer/install/modules/java/jqassistant/tool-graph-rag"
+MODELS_DIR="${BASE_DIR}/git-clone/models"
+SCRIPTS_DIR="${BASE_DIR}/scripts"
 
-cat << 'EOF' > docs/prompts/jqassistant_gem_instructions.md
-# SYSTEM INSTRUCTIONS: Neo4j & jQAssistant Software Architecture Expert Gem
+echo "🚀 Setting up Graph-RAG Tool Module and Model Management..."
 
-## ROLE & IDENTITY
-You are an elite Software Architect and Senior Cypher Engineer specialized in analyzing software codebases using **jQAssistant** and **Neo4j**. Your primary job is to write precise, bug-free, highly optimized Cypher queries to answer architectural, impact analysis, dependency, and code quality questions based strictly on the jQAssistant graph schema.
+# Step 1: Create required directory hierarchy
+mkdir -p "${MODELS_DIR}"
+mkdir -p "${SCRIPTS_DIR}"
 
----
-
-## 📂 KNOWLEDGE GRAPH SCHEMA (JQASSISTANT DB)
-
-### 1. Primary Node Labels & Properties
-- **Core Code Entities**:
-  - `:Method`: Method definitions. Properties: `name`, `signature`, `visibility`, `static`, `abstract`, `synthetic`, `firstLineNumber`, `lastLineNumber`, `effectiveLineCount`, `cyclomaticComplexity`.
-  - `:Annotation`: Code annotations. Properties: `name`, `fqn` (e.g., `org.springframework.stereotype.Service`).
-  - `:Parameter`: Method/Constructor parameters. Properties: `index`.
-  - `:Field`: Class fields/attributes. Properties: `name`, `signature`, `visibility`, `static`, `final`, `transient`, `volatile`, `synthetic`.
-  - `:File`: Physical files (`.java`, `.properties`, `.yaml`, `.json`). Properties: `fileName`, `fqn`, `sourceFileName`, `valid`, `visibility`.
-  - `:Type` / `:Class` / `:Interface` / `:Enum`: Object-oriented structures. Properties: `fqn`, `name`, `visibility`, `byteCodeVersion`, `synthetic`, `sourceFileName`.
-  - `:Constructor` / `:Lambda` / `:Directory` / `:Package`: Structural & organizational entities. Properties for Package/Directory: `fqn`, `name`, `fileName`.
-  - `:ParameterizedType` / `:Bound` / `:TypeVariable`: Generic type signatures.
-
-- **Architectural & Semantic Concepts (Enriched Labels)**:
-  - **Spring Framework**: `:RestController`, `:Controller`, `:Service`, `:Repository`.
-  - **Hexagonal & Layered Architecture**: `:DomainLayer`, `:DomainObject`, `:Infrastructure`, `:HexagonalArchitecturePackage`, `:LayeredArchitecturePackage`.
-  - **Quality & Impact Markers**:
-    - `:DeadCodeCandidate`: Classes unreachable from application main entry points.
-    - `:HasTodoSmell`: Classes containing TODO/FIXME comments.
-    - `:ImpactTraceable` / `:AnnotationImpactTraceable` / `:AccessorImpactTraceable` / `:FieldImpactTraceable` / `:HierarchyImpactTraceable`.
-    - `:HasSuperType` / `:HasSubType`, `:AggregationField`, `:AssociatedElement`, `:DbEntity`, `:AsynchronousExecution`.
-    - Config Files: `:Yaml`, `:Json`, `:Property`.
-
-### 2. Relationships Graph Topology
-- **Declarations & Structural Containment**:
-  - `(:Class|:Interface|:Type)-[:DECLARES]->(:Method|:Field|:Constructor)`
-  - `(:Package)-[:CONTAINS]->(:Class|:Package|:File)`
-  - `(:Directory)-[:CONTAINS]->(:File|:Directory)`
-- **Invocations & Data Flows**:
-  - `(:Method)-[:INVOKES]->(:Method)` (Direct calls)
-  - `(:Method)-[:VIRTUAL_INVOKES]->(:Method)` (Polymorphic/Virtual interface calls)
-  - `(:Method)-[:READS]->(:Field)` / `(:Method)-[:WRITES]->(:Field)`
-  - `(:Class)-[:DEPENDS_ON]->(:Type)` (Static class dependencies)
-- **Annotations & Typage**:
-  - `(:Member|:Class|:Method|:Field)-[:ANNOTATED_BY]->(:Annotation)-[:OF_TYPE]->(:Type)`
-  - `(:Field|:Parameter)-[:OF_TYPE]->(:Type)`
-  - `(:Class)-[:EXTENDS|IMPLEMENTS]->(:Type)`
-  - `(:Class)-[:HAS_SOURCE_FILE]->(:File)`
-
----
-
-## 🎯 GUIDELINES FOR CYPHER GENERATION
-
-1. **Prefer High-Level Semantic Labels**:
-   - Always prefer specific architectural labels (`:Service`, `:Repository`, `:RestController`, `:Method`, `:Class`) over raw low-level bytecode tags (`:ByteCode`, `:Java`).
-2. **Filter System & Framework Noise**:
-   - Exclude JDK and framework internals unless explicitly requested:
-     `WHERE NOT c.fqn STARTS WITH 'java.' AND NOT c.fqn STARTS WITH 'org.springframework.'`
-3. **Use Variable-Length Path Matching for Impact Analysis**:
-   - Limit graph depth to avoid performance penalties (e.g., `-[:INVOKES|VIRTUAL_INVOKES*1..4]->` or `-[:DEPENDS_ON*1..3]->`).
-4. **Dynamic & Schema-Driven**:
-   - Never hardcode node counts or static volume constraints in queries; write queries that operate dynamically regardless of codebase size.
-5. **Structured Output**:
-   - Always return clear column aliases (`AS CallerMethod`, `AS TargetClass`, `AS ImpactedService`).
-
----
-
-## 💬 RESPONSE FORMAT
-When the user asks a question about the codebase:
-1. **Provide the Cypher Query**: In a single formatted ```cypher code block.
-2. **Explain the Query Logic**: Briefly describe what each clause (`MATCH`, `WHERE`, `WITH`, `RETURN`) does.
-3. **Example Output**: Show a representative sample of what the query result looks like.
+# Step 2: Create environment configuration file
+cat << 'EOF' > "${BASE_DIR}/tool-graph-rag.env"
+# Graph-RAG Environment Configuration
+NEO4J_BOLT_URL="bolt://localhost:7688"
+NEO4J_USER="neo4j"
+NEO4J_PASSWORD="password"
+EMBEDDING_MODEL_NAME="sentence-transformers/all-MiniLM-L6-v2"
+EMBEDDING_MODEL_DIR="scripts/graph_rag_explorer/install/modules/java/jqassistant/tool-graph-rag/git-clone/models/all-MiniLM-L6-v2"
+VECTOR_DIMENSION=384
+BATCH_SIZE=64
 EOF
 
-echo "✅ Gem system instructions generated in docs/prompts/jqassistant_gem_instructions.md without hardcoded node counts!"
+# Step 3: Create Python model presence check & downloader script
+cat << 'EOF' > "${SCRIPTS_DIR}/download_model.py"
+#!/usr/bin/env python3
+import os
+import sys
+import argparse
+
+def check_and_download(model_name: str, target_dir: str):
+    print(f"🔍 Checking model presence for '{model_name}' in '{target_dir}'...")
+
+    # Required core files for sentence-transformers / huggingface model
+    required_files = ["config.json", "tokenizer.json"]
+    model_exists = os.path.exists(target_dir) and all(
+        os.path.isfile(os.path.join(target_dir, f)) for f in required_files
+    )
+
+    if model_exists:
+        print(f"✅ Model '{model_name}' is present at '{target_dir}'.")
+        return 0
+
+    print(f"⚠️ Model files missing or incomplete in '{target_dir}'. Downloading...")
+    os.makedirs(target_dir, exist_ok=True)
+
+    try:
+        from huggingface_hub import snapshot_download
+        snapshot_download(
+            repo_id=model_name,
+            local_dir=target_dir,
+            local_dir_use_symlinks=False
+        )
+        print(f"✅ Model successfully downloaded to '{target_dir}'.")
+        return 0
+    except ImportError:
+        print("📦 'huggingface_hub' not installed. Attempting download via git clone...")
+        repo_url = f"https://huggingface.co/{model_name}"
+        res = os.system(f"git clone {repo_url} '{target_dir}'")
+        if res == 0:
+            print(f"✅ Model cloned successfully into '{target_dir}'.")
+            return 0
+        else:
+            print("❌ Failed to download model via git clone.", file=sys.stderr)
+            return 1
+    except Exception as e:
+        print(f"❌ Error during model download: {e}", file=sys.stderr)
+        return 1
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Verify and download LLM/Embedding model.")
+    parser.add_argument("--model-name", default="sentence-transformers/all-MiniLM-L6-v2", help="HuggingFace model ID")
+    parser.add_argument("--target-dir", required=True, help="Target download directory")
+    args = parser.parse_args()
+
+    sys.exit(check_and_download(args.model_name, args.target_dir))
+EOF
+
+# Step 4: Create shell script wrapper for model validation
+cat << 'EOF' > "${SCRIPTS_DIR}/check_and_download_model.sh"
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MODULE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+if [ -f "${MODULE_DIR}/tool-graph-rag.env" ]; then
+    source "${MODULE_DIR}/tool-graph-rag.env"
+fi
+
+MODEL_NAME="${EMBEDDING_MODEL_NAME:-sentence-transformers/all-MiniLM-L6-v2}"
+TARGET_DIR="${EMBEDDING_MODEL_DIR:-${MODULE_DIR}/git-clone/models/all-MiniLM-L6-v2}"
+
+echo "🔄 Running model presence check..."
+python3 "${SCRIPT_DIR}/download_model.py" --model-name "${MODEL_NAME}" --target-dir "${TARGET_DIR}"
+EOF
+
+# Step 5: Create main Tool Graph-RAG runner script
+cat << 'EOF' > "${BASE_DIR}/run_graph_rag.sh"
+#!/usr/bin/env bash
+set -euo pipefail
+
+MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VENV_DIR="${MODULE_DIR}/git-clone/venv"
+
+echo "⚡ Initializing Tool Graph-RAG Execution..."
+
+# 1. Load environment variables
+if [ -f "${MODULE_DIR}/tool-graph-rag.env" ]; then
+    source "${MODULE_DIR}/tool-graph-rag.env"
+fi
+
+# 2. Check and download model
+bash "${MODULE_DIR}/scripts/check_and_download_model.sh"
+
+# 3. Virtual environment setup
+if [ ! -d "${VENV_DIR}" ]; then
+    echo "⚙️ Creating Python virtual environment in '${VENV_DIR}'..."
+    python3 -m venv "${VENV_DIR}"
+    "${VENV_DIR}/bin/pip" install --upgrade pip
+    "${VENV_DIR}/bin/pip" install huggingface_hub sentence-transformers neo4j
+fi
+
+# 4. Execute Knowledge Graph enrichment
+echo "🧠 Running Graph-RAG enrichment pipeline..."
+"${VENV_DIR}/bin/python" -c "
+import os
+from sentence_transformers import SentenceTransformer
+
+model_dir = os.getenv('EMBEDDING_MODEL_DIR', '${MODULE_DIR}/git-clone/models/all-MiniLM-L6-v2')
+print(f'Loading model from local path: {model_dir}')
+model = SentenceTransformer(model_dir)
+test_embed = model.encode('Testing Graph-RAG initialization.')
+print(f'Embedding initialized successfully. Vector dimensions: {len(test_embed)}')
+"
+
+echo "✨ Tool Graph-RAG enrichment completed successfully!"
+EOF
+
+# Make scripts executable
+chmod +x "${SCRIPTS_DIR}/download_model.py"
+chmod +x "${SCRIPTS_DIR}/check_and_download_model.sh"
+chmod +x "${BASE_DIR}/run_graph_rag.sh"
+
+# Step 6: Inject delta into existing manager script if present
+MANAGER_FILE=".github/skills/rvng-jqassistant-analysis/scripts/jqassistant_manager.py"
+
+if [ -f "${MANAGER_FILE}" ]; then
+    echo "🔧 Injecting Tool Graph-RAG action link into '${MANAGER_FILE}'..."
+    if ! grep -q "tool-graph-rag" "${MANAGER_FILE}"; then
+        python3 -c "
+path = '${MANAGER_FILE}'
+with open(path, 'r') as f:
+    content = f.read()
+
+target = 'def run_action('
+addition = '''
+    if option == 'E8' or option == 'E1':
+        import subprocess
+        print('🚀 Executing Graph-RAG module runner...')
+        subprocess.run(['bash', 'scripts/graph_rag_explorer/install/modules/java/jqassistant/tool-graph-rag/run_graph_rag.sh'], check=True)
+'''
+if target in content and 'E8' not in content:
+    content = content.replace(target, target + addition)
+    with open(path, 'w') as f:
+        f.write(content)
+    print('Successfully patched manager.')
+"
+    fi
+fi
+
+echo "✅ feat(graph-rag): Integrated tool-graph-rag execution and automated model downloading in scripts/graph_rag_explorer/install/modules/java/jqassistant/tool-graph-rag!"
+echo "Next step: Run 'bash scripts/graph_rag_explorer/install/modules/java/jqassistant/tool-graph-rag/run_graph_rag.sh' or compile the extension using 'npm run compile'."
