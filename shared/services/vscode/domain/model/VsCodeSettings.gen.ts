@@ -49,7 +49,7 @@ export class VsCodeSettings {
                 downloadUrl: "https://huggingface.co/sentence-transformers",
                 model: "all-MiniLM-L6-v2",
                 method: {
-                    minCyclomatic: 6
+                    minCyclomatic: 30
                 },
                 maxAnalyzerCall: 5,
                 maxSummarizerCall: 5,

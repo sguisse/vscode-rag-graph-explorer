@@ -208,7 +208,7 @@
         },
         "tokenRazor.graphRagExplorer.jqassistant.graphRagLLM.method.minCyclomatic": {
           "type": "number",
-          "default": 6,
+          "default": 30,
           "description": "The minimum cyclomatic complexity required for the GraphRag LLM model to analyze a method."
         },
         "tokenRazor.graphRagExplorer.jqassistant.graphRagLLM.maxAnalyzerCall": {

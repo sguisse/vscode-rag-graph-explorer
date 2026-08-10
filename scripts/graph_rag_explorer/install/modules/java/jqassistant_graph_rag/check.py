@@ -2,6 +2,7 @@ from typing import cast
 import shutil
 import os
 import subprocess
+import socket
 from install.base import BaseCheckModule
 from install.registry import InstallerRegistry
 from install.modules.java.jqassistant_graph_rag.context import JQAssistantGraphRagContext
@@ -33,7 +34,6 @@ class JQAssistantGraphRagChecker(BaseCheckModule):
         self.steps_count += 1
         model_path = os.path.join(self.jqa_gr.tools_models_dir, self.jqa_gr.llm_model_name)
         if os.path.exists(model_path):
-            # check folder model is not empty
             if os.path.isdir(model_path) and os.listdir(model_path):
                 self.status["jqassistant_graph_rag_llm_model"] = {"status": "✅"}
             else:
@@ -72,6 +72,27 @@ class JQAssistantGraphRagChecker(BaseCheckModule):
             }
             self.ko_count += 1
 
+    def check_mcp_server_up(self):
+        self.steps_count += 1
+        host = self.jqa_gr.mcp_host
+        port = self.jqa_gr.mcp_port
+        is_open = False
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(1.0)
+                is_open = (s.connect_ex((host, port)) == 0)
+        except Exception:
+            is_open = False
+
+        if is_open:
+            self.status["mcp_server_up"] = {"status": "✅"}
+        else:
+            self.status["mcp_server_up"] = {
+                "status": "❌",
+                "message": f"MCP server is not responding on {host}:{port}."
+            }
+            self.ko_count += 1
+
     def execute_all_checks(self) -> dict:
         self.steps_count = 0
         self.ko_count = 0
@@ -79,4 +100,5 @@ class JQAssistantGraphRagChecker(BaseCheckModule):
         self.check_jqassistant_graph_rag_tool_availability()
         self.check_jqassistant_graph_rag_llm_model_availability()
         self.check_workspace_mcp_config()
+        self.check_mcp_server_up()
         return self.generate_summary()

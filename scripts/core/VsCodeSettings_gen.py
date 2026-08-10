@@ -49,7 +49,7 @@ class Neo4jSettings:
 
 @dataclass
 class MethodSettings:
-    minCyclomatic: int = 6
+    minCyclomatic: int = 30
 
     @classmethod
     def from_dict(cls, data: dict) -> "MethodSettings":
