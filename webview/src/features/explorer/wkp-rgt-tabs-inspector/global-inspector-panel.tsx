@@ -3,13 +3,15 @@ import { Button } from '@/components/ui/button';
 import { InspectorTabPanel } from './inspector-tab-panel';
 import { PlantUmlTabPanel } from './plantuml-tab-panel';
 import { JsonTabPanel } from './json-tab-panel';
-import { CodebaseData, SelectedEntity, ImpactDirection } from '@/shared/services/graph-rag-explorer';
+import { CodebaseData, SelectedEntity } from '@/shared/services/graph-rag-explorer';
 
 interface GlobalInspectorPanelProps {
   selectedEntity: SelectedEntity | null;
   initialCodebase: CodebaseData;
-  impactDirection: ImpactDirection;
-  setImpactDirection: (dir: ImpactDirection) => void;
+  enableDownstream: boolean;
+  setEnableDownstream: React.Dispatch<React.SetStateAction<boolean>>;
+  enableUpstream: boolean;
+  setEnableUpstream: React.Dispatch<React.SetStateAction<boolean>>;
   impactedSet: Set<string>;
   handleCopy: (text: string, message: string) => void;
   generatedPlantUML: string;
@@ -18,8 +20,10 @@ interface GlobalInspectorPanelProps {
 export function GlobalInspectorPanel({
   selectedEntity,
   initialCodebase,
-  impactDirection,
-  setImpactDirection,
+  enableDownstream,
+  setEnableDownstream,
+  enableUpstream,
+  setEnableUpstream,
   impactedSet,
   handleCopy,
   generatedPlantUML
@@ -56,8 +60,10 @@ export function GlobalInspectorPanel({
           <InspectorTabPanel
             selectedEntity={selectedEntity}
             initialCodebase={initialCodebase}
-            impactDirection={impactDirection}
-            setImpactDirection={setImpactDirection}
+            enableDownstream={enableDownstream}
+            setEnableDownstream={setEnableDownstream}
+            enableUpstream={enableUpstream}
+            setEnableUpstream={setEnableUpstream}
             impactedSet={impactedSet}
             handleCopy={handleCopy}
           />

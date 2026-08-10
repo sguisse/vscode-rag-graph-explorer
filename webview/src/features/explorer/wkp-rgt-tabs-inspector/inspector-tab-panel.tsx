@@ -5,7 +5,6 @@ import {
   CodebaseData,
   CodebaseFile,
   SelectedEntity,
-  ImpactDirection,
   CodebaseMethod,
   ConfigProperty,
 } from '@/shared/services/graph-rag-explorer';
@@ -14,8 +13,10 @@ import { generateMarkdownRecipe } from '@/services/view/prompt-view.service';
 interface InspectorTabPanelProps {
   selectedEntity: SelectedEntity | null;
   initialCodebase: CodebaseData;
-  impactDirection: ImpactDirection;
-  setImpactDirection: (dir: ImpactDirection) => void;
+  enableDownstream: boolean;
+  setEnableDownstream: React.Dispatch<React.SetStateAction<boolean>>;
+  enableUpstream: boolean;
+  setEnableUpstream: React.Dispatch<React.SetStateAction<boolean>>;
   impactedSet: Set<string>;
   handleCopy: (text: string, message: string) => void;
 }
@@ -23,15 +24,17 @@ interface InspectorTabPanelProps {
 export function InspectorTabPanel({
   selectedEntity,
   initialCodebase,
-  impactDirection,
-  setImpactDirection,
+  enableDownstream,
+  setEnableDownstream,
+  enableUpstream,
+  setEnableUpstream,
   impactedSet,
   handleCopy
 }: InspectorTabPanelProps) {
 
   const generatedMarkdownRecipe = useMemo(() => {
-    return generateMarkdownRecipe(selectedEntity, impactDirection, impactedSet, initialCodebase);
-  }, [selectedEntity, impactDirection, impactedSet, initialCodebase]);
+    return generateMarkdownRecipe(selectedEntity, enableDownstream, enableUpstream, impactedSet, initialCodebase);
+  }, [selectedEntity, enableDownstream, enableUpstream, impactedSet, initialCodebase]);
 
   if (!selectedEntity) {
     return (
@@ -92,8 +95,28 @@ export function InspectorTabPanel({
           <span className="bg-amber-500/10 px-2 py-0.5 border border-amber-500/30 rounded font-mono text-[10px] text-amber-500">Transitive BFS</span>
         </div>
         <div className="gap-2 grid grid-cols-2">
-          <Button onClick={() => setImpactDirection('callee')} className={`flex items-center justify-center gap-1.5 py-2 px-3 font-mono text-xs font-bold rounded border transition-all h-9 ${impactDirection === 'callee' ? 'bg-orange-500 border-orange-400 text-white shadow-md' : 'bg-muted border-border text-foreground'}`}><GitFork size={13} className="rotate-180" />Downstream</Button>
-          <Button onClick={() => setImpactDirection('caller')} className={`flex items-center justify-center gap-1.5 py-2 px-3 font-mono text-xs font-bold rounded border transition-all h-9 ${impactDirection === 'caller' ? 'bg-orange-500 border-orange-400 text-white shadow-md' : 'bg-muted border-border text-foreground'}`}><GitFork size={13} />Upstream</Button>
+          <Button
+            onClick={() => setEnableDownstream(prev => !prev)}
+            className={`flex items-center justify-center gap-1.5 py-2 px-3 font-mono text-xs font-bold rounded border transition-all h-9 cursor-pointer ${
+              enableDownstream
+                ? 'bg-orange-500 border-orange-400 text-white shadow-md'
+                : 'bg-muted border-border text-foreground hover:bg-muted/80'
+            }`}
+          >
+            <GitFork size={13} className="rotate-180" />
+            Downstream
+          </Button>
+          <Button
+            onClick={() => setEnableUpstream(prev => !prev)}
+            className={`flex items-center justify-center gap-1.5 py-2 px-3 font-mono text-xs font-bold rounded border transition-all h-9 cursor-pointer ${
+              enableUpstream
+                ? 'bg-orange-500 border-orange-400 text-white shadow-md'
+                : 'bg-muted border-border text-foreground hover:bg-muted/80'
+            }`}
+          >
+            <GitFork size={13} />
+            Upstream
+          </Button>
         </div>
       </div>
 

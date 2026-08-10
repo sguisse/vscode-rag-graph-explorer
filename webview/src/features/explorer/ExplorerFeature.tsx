@@ -25,7 +25,6 @@ import { initialCodebase, FOLDER_POSITIONS } from './wksp-cnt-graph/components/g
 import {
   CodebaseData,
   SelectedEntity,
-  ImpactDirection,
 } from '@/shared/services/graph-rag-explorer';
 
 export function ExplorerFeature() {
@@ -38,7 +37,9 @@ export function ExplorerFeature() {
   const [codebase, setCodebase] = useState<CodebaseData>(initialCodebase);
   const [folderPositions, setFolderPositions] = useState<Record<string, { label: string }>>(FOLDER_POSITIONS);
   const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(null);
-  const [impactDirection, setImpactDirection] = useState<ImpactDirection>('callee');
+
+  const [enableDownstream, setEnableDownstream] = useState<boolean>(true);
+  const [enableUpstream, setEnableUpstream] = useState<boolean>(false);
 
   const [showGrid, setShowGrid] = useState(true);
   const [callersDepth, setCallersDepth] = useState(1);
@@ -52,10 +53,11 @@ export function ExplorerFeature() {
   const filter = useCodebaseFilter(codebase.files);
   const { impactedSet } = useTransitiveImpact(
     selectedEntity,
-    impactDirection,
     codebase.dependencies,
     callersDepth,
-    calleesDepth
+    calleesDepth,
+    enableDownstream,
+    enableUpstream
   );
 
   const handleNodeSelect = useCallback((nodeId: string) => {
@@ -262,8 +264,10 @@ export function ExplorerFeature() {
           <GlobalInspectorPanel
             selectedEntity={selectedEntity}
             initialCodebase={codebase}
-            impactDirection={impactDirection}
-            setImpactDirection={setImpactDirection}
+            enableDownstream={enableDownstream}
+            setEnableDownstream={setEnableDownstream}
+            enableUpstream={enableUpstream}
+            setEnableUpstream={setEnableUpstream}
             impactedSet={impactedSet}
             handleCopy={handleCopy}
             generatedPlantUML={generatedPlantUML}
@@ -314,7 +318,8 @@ export function ExplorerFeature() {
     selectedEntity,
     codebase,
     folderPositions,
-    impactDirection,
+    enableDownstream,
+    enableUpstream,
     impactedSet,
     generatedPlantUML,
     handleCopy,

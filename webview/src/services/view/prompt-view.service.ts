@@ -1,8 +1,9 @@
-import { SelectedEntity, ImpactDirection, CodebaseData, CodebaseFile } from "@/shared/services/graph-rag-explorer";
+import { SelectedEntity, CodebaseData, CodebaseFile } from "@/shared/services/graph-rag-explorer";
 
 export function generateMarkdownRecipe(
     selectedEntity: SelectedEntity | null,
-    impactDirection: ImpactDirection,
+    enableDownstream: boolean,
+    enableUpstream: boolean,
     impactedSet: Set<string>,
     codebase: CodebaseData
   ): string {
@@ -16,7 +17,10 @@ export function generateMarkdownRecipe(
       }
     }
     md += `**Trigger Element :** ${startElement}\n`;
-    md += `**Direction of Propagation :** ${impactDirection === 'callee' ? 'Downstream (Descendants callees)' : 'Upstream (Ascending callers)'}\n\n`;
+    const dirs: string[] = [];
+    if (enableDownstream) dirs.push('Downstream (Descendants callees)');
+    if (enableUpstream) dirs.push('Upstream (Ascending callers)');
+    md += `**Direction of Propagation :** ${dirs.length > 0 ? dirs.join(' & ') : 'None'}\n\n`;
     md += `#### 📋 List of components to retest\n\n`;
     codebase.files.forEach((file: CodebaseFile) => {
       if (impactedSet.has(file.id)) {
