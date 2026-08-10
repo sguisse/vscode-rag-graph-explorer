@@ -43,11 +43,50 @@ export function activate(extentionContext: vscode.ExtensionContext) {
 
         webviewPanel.webview.html = getWebviewContent(webviewPanel, extentionContext);
 
+        // Set custom context to TRUE when the panel is created
+        vscode.commands.executeCommand('setContext', 'tokenRazor.isToolOpened', true);
+
         runPythonScan("deep");
     };
 
-    const disposable = vscode.commands.registerCommand(`${EXTENSION_BASE_CONFIG_NAME}.openTool`, openTool);
-    extentionContext.subscriptions.push(disposable);
+    const addFromExplorer = (uri?: vscode.Uri, uris?: vscode.Uri[]) => {
+        let paths: string[] = [];
+        if (uris && uris.length > 0) {
+            paths = uris.map((u) => u.fsPath);
+        } else if (uri) {
+            paths = [uri.fsPath];
+        } else if (vscode.window.activeTextEditor) {
+            paths = [vscode.window.activeTextEditor.document.uri.fsPath];
+        }
+
+        const selectedPath = paths.join('\n');
+        logInfo(`Add from explorer command triggered for path(s):\n${selectedPath}`);
+
+        if (!currentWebviewPanel) {
+            openTool();
+        } else {
+            currentWebviewPanel.reveal(vscode.ViewColumn.One);
+        }
+
+        if (currentWebviewPanel && selectedPath) {
+            currentWebviewPanel.webview.postMessage({
+                command: 'selectedPath',
+                payload: selectedPath
+            });
+        }
+    };
+
+    const disposableOpen = vscode.commands.registerCommand(`${EXTENSION_BASE_CONFIG_NAME}.openTool`, openTool);
+    extentionContext.subscriptions.push(disposableOpen);
+
+    const primaryCmd = `${EXTENSION_BASE_CONFIG_NAME}.graphRagExplorer.addFromExplorer`;
+    const disposableAdd = vscode.commands.registerCommand(primaryCmd, addFromExplorer);
+    extentionContext.subscriptions.push(disposableAdd);
+
+    if (primaryCmd !== 'tokenRazor.graphRagExplorer.addFromExplorer') {
+        const disposableAddFallback = vscode.commands.registerCommand('tokenRazor.graphRagExplorer.addFromExplorer', addFromExplorer);
+        extentionContext.subscriptions.push(disposableAddFallback);
+    }
 
     logInfo('Extension activated successfully.');
 }
@@ -68,15 +107,19 @@ function createWebviewPanel(context: vscode.ExtensionContext): vscode.WebviewPan
 }
 
 function managePanelRendering(panel: vscode.WebviewPanel, context: vscode.ExtensionContext) {
-    if (vsCodeSettingsManager.getSettings().pinApplication !== false) {
-        logInfo(`pinApplication = ${vsCodeSettingsManager.getSettings().pinApplication}`);
-        vscode.commands.executeCommand('workbench.action.pinEditor');
-    }
+    pinPanelIfEnabled();
 
     panel.iconPath = {
         light: vscode.Uri.joinPath(context.extensionUri, 'assets', 'favicon.png'),
         dark: vscode.Uri.joinPath(context.extensionUri, 'assets', 'favicon.png')
     };
+}
+
+function pinPanelIfEnabled() {
+    if (vsCodeSettingsManager.getSettings().pinApplication !== false) {
+        logInfo(`pinApplication = ${vsCodeSettingsManager.getSettings().pinApplication}`);
+        vscode.commands.executeCommand('workbench.action.pinEditor');
+    }
 }
 
 function manageBackendServices(panel: vscode.WebviewPanel, context: vscode.ExtensionContext) {
@@ -91,8 +134,8 @@ function manageDisposedWebviewPanel(panel: vscode.WebviewPanel, saveListener: vs
         logInfo('Webview panel disposed.');
         saveListener.dispose();
         pythonScriptExecutionManager.killAll();
-        //currentExtensionContext = undefined;
         currentWebviewPanel = undefined;
+        vscode.commands.executeCommand('setContext', 'tokenRazor.isToolOpened', false);
     });
 }
 

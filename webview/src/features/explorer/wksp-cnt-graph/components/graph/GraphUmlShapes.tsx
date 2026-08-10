@@ -16,23 +16,29 @@ export const NODE_STYLE_REGISTRY: Record<string, NodeStyle> = {
     badge: '🎨 React Component',
     iconColor: 'text-emerald-400'
   },
+  module: {
+    bg: 'bg-purple-600 dark:bg-purple-950/80',
+    border: 'border-purple-500',
+    badge: '📦 Module / Service',
+    iconColor: 'text-purple-400'
+  },
   interface: {
     bg: 'bg-indigo-700 dark:bg-indigo-950/80',
     border: 'border-indigo-500',
-    badge: '⚙️ Java Interface',
+    badge: '⚙️ Interface',
     iconColor: 'text-indigo-400'
   },
   class: {
     bg: 'bg-blue-600 dark:bg-blue-950/80',
     border: 'border-blue-500',
-    badge: '☕ Java Class',
+    badge: '☕ Class',
     iconColor: 'text-blue-400'
   },
   default: {
-    bg: 'bg-blue-600 dark:bg-blue-950/80',
-    border: 'border-blue-500',
-    badge: '☕ Java Class',
-    iconColor: 'text-blue-400'
+    bg: 'bg-slate-700 dark:bg-slate-900/80',
+    border: 'border-slate-500',
+    badge: '📄 Node / AST',
+    iconColor: 'text-slate-400'
   }
 };
 
@@ -41,6 +47,8 @@ export interface UmlClassNodeData extends CodebaseFile {
   impactedMembers?: string[];
   selectedMember?: string;
   onSelectMember: (nodeId: string, memberId: string) => void;
+  attributesVisible?: boolean;
+  methodsVisible?: boolean;
 }
 
 export interface FolderNodeProps {
@@ -67,39 +75,45 @@ export const UmlClassNode: React.FC<{ id: string; data: UmlClassNodeData }> = ({
           <h4 className="font-mono font-bold text-sm truncate">{data.name}</h4>
         </div>
       </div>
-      <div className="bg-muted/30 p-2.5 border-border border-b">
-        <div className="mb-1 font-bold text-[10px] text-muted-foreground uppercase">Attributes</div>
-        {(!data.attributes || data.attributes.length === 0) ? (
-          <div className="text-muted-foreground text-xs italic">no attributes available</div>
-        ) : (
-          <ul className="space-y-0.5 font-mono text-[11px] text-foreground/80">
-            {data.attributes.map((attr: CodebaseAttribute, idx: number) => (
-              <li key={idx} className="flex items-center gap-1">
-                <span className="text-muted-foreground">{attr.visibility === 'private' ? '-' : attr.visibility === 'protected' ? '#' : '+'}</span>
-                {attr.name}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-      <div className="p-2.5">
-        <div className="mb-1 font-bold text-[10px] text-muted-foreground uppercase">Methods / Exports</div>
-        <div className="space-y-2">
-          {data.methods?.map((m: CodebaseMethod) => {
-            const isMethodImpacted = data.impactedMembers && data.impactedMembers.includes(m.id);
-            const isSelected = data.selectedMember === m.id;
-            return (
-              <div key={m.id} onClick={(e) => { e.stopPropagation(); data.onSelectMember(id, m.id); }}
-                className={`pointer-events-auto group relative flex items-center justify-between p-1.5 rounded border transition-all cursor-pointer ${
-                  isSelected ? 'border-primary bg-primary/10' : isMethodImpacted ? 'border-orange-500 bg-orange-500/15 animate-pulse' : 'border-transparent hover:bg-muted'
-                }`}
-              >
-                <span className="font-mono text-foreground/90 text-xs">+ {m.name}</span>
-              </div>
-            );
-          })}
+
+      {data.attributesVisible && (
+        <div className="bg-muted/30 p-2.5 border-border border-b">
+          <div className="mb-1 font-bold text-[10px] text-muted-foreground uppercase">Attributes</div>
+          {(!data.attributes || data.attributes.length === 0) ? (
+            <div className="text-muted-foreground text-xs italic">no attributes available</div>
+          ) : (
+            <ul className="space-y-0.5 font-mono text-[11px] text-foreground/80">
+              {data.attributes.map((attr: CodebaseAttribute, idx: number) => (
+                <li key={idx} className="flex items-center gap-1">
+                  <span className="text-muted-foreground">{attr.visibility === 'private' ? '-' : attr.visibility === 'protected' ? '#' : '+'}</span>
+                  {attr.name}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
-      </div>
+      )}
+
+      {data.methodsVisible && (
+        <div className="p-2.5">
+          <div className="mb-1 font-bold text-[10px] text-muted-foreground uppercase">Methods / Exports</div>
+          <div className="space-y-2">
+            {data.methods?.map((m: CodebaseMethod) => {
+              const isMethodImpacted = data.impactedMembers && data.impactedMembers.includes(m.id);
+              const isSelected = data.selectedMember === m.id;
+              return (
+                <div key={m.id} onClick={(e) => { e.stopPropagation(); data.onSelectMember(id, m.id); }}
+                  className={`pointer-events-auto group relative flex items-center justify-between p-0 rounded border transition-all cursor-pointer ${
+                    isSelected ? 'border-primary bg-primary/10' : isMethodImpacted ? 'border-orange-500 bg-orange-500/15 animate-pulse' : 'border-transparent hover:bg-muted'
+                  }`}
+                >
+                  <span className="font-mono text-foreground/90 text-xs">+ {m.name}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

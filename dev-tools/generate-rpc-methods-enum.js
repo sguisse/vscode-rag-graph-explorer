@@ -5,6 +5,11 @@ const rootDir = path.resolve(__dirname, '../');
 const servicesDir = path.join(rootDir, 'shared/services');
 const outputPath = path.join(rootDir, 'shared/config/rpc-methods.enum.gen.ts');
 
+const IGNORED_KEYWORDS = new Set([
+    'export', 'interface', 'import', 'type', 'from', 'return',
+    'if', 'for', 'while', 'switch', 'function', 'const', 'let', 'var'
+]);
+
 function findPortFiles(dir, fileList = []) {
     if (!fs.existsSync(dir)) return fileList;
     const files = fs.readdirSync(dir);
@@ -36,11 +41,14 @@ function generateRpcMethodsEnum() {
         const fileName = path.basename(filePath, '.ts').replace(/(-service)?\.port$/, '');
         const prefix = fileName.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
 
-        const methodRegex = /^\s*([a-zA-Z0-9_]+)\s*\(/gm;
+        // Updated regex to support modifiers, optional methods (?) and generics (<...>)
+        const methodRegex = /^\s*(?:public\s+|async\s+)?([a-zA-Z0-9_]+)\??\s*(?:<[^>]+>)?\s*\(/gm;
         let match;
 
         while ((match = methodRegex.exec(content)) !== null) {
             const methodName = match[1];
+            if (IGNORED_KEYWORDS.has(methodName)) continue;
+
             const methodUpperSnake = camelToUpperSnake(methodName);
             const enumKey = `${prefix}_${methodUpperSnake}`;
 

@@ -1,22 +1,12 @@
-import {
-  AttributeVisibility,
-  FileType,
-  DependencyRelation,
-  SelectedEntityType,
-  ImpactDirection
-} from './types';
-
-export * from './types';
-
 export interface CodebaseAttribute {
   name: string;
-  visibility: AttributeVisibility;
+  visibility: string;
 }
 
 export interface CodebaseMethod {
   id: string;
   name: string;
-  description: string;
+  description?: string;
 }
 
 export interface ConfigProperty {
@@ -27,11 +17,11 @@ export interface ConfigProperty {
 export interface CodebaseFile {
   id: string;
   name: string;
-  type: FileType;
+  type: 'class' | 'interface' | 'component' | 'module' | 'config' | string;
   path: string;
   language: string;
-  size: number;
-  complexity: number;
+  size?: number;
+  complexity?: number;
   attributes?: CodebaseAttribute[];
   methods?: CodebaseMethod[];
   configProperties?: ConfigProperty[];
@@ -43,8 +33,10 @@ export interface Dependency {
   sourceHandle: string;
   targetNode: string;
   targetHandle: string;
-  relation: DependencyRelation;
+  relation: string;
   label: string;
+  source?: string;
+  target?: string;
 }
 
 export interface CodebaseData {
@@ -52,11 +44,11 @@ export interface CodebaseData {
   dependencies: Dependency[];
 }
 
+export type ImpactDirection = 'callee' | 'caller';
+
 export interface SelectedEntity {
-  type: SelectedEntityType;
+  type: 'node' | 'member';
   nodeId: string;
   memberId?: string;
   edgeId?: string;
 }
-
-export type { ImpactDirection };

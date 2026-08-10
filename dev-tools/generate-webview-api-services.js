@@ -122,7 +122,7 @@ function generateWebviewApiServices() {
         const portRelPath = path.relative(sharedDir, filePath).replace(/\\/g, '/').replace(/\.ts$/, '');
         convertedImports.push(`import { ${portInterfaceName} } from '@/shared/${portRelPath}';`);
 
-        const methodRegex = /^\s*([a-zA-Z0-9_]+)\s*\(([\s\S]*?)\)\s*:\s*([^;]+);/gm;
+        const methodRegex = /^\s*(?:public\s+|async\s+)?([a-zA-Z0-9_]+)\??\s*(?:<[^>]+>)?\s*\(([\s\S]*?)\)\s*:\s*([^;]+);/gm;
         let match;
         const methodDeclarations = [];
 

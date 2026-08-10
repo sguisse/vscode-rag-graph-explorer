@@ -1,7 +1,10 @@
 import { CodebaseData } from "../../../../../shared/services/graph-rag-explorer";
+import codebaseJson from "./sample-ast-data.json";
 
 
-export const initialCodebase: CodebaseData = {
+export const initialCodebase: CodebaseData = codebaseJson as CodebaseData;
+
+export const initialCodebase_02: CodebaseData = {
   files: [
     {
       id: 'OrderButton.tsx', name: 'OrderButton.tsx', type: 'component', path: 'frontend/components/OrderButton.tsx', language: 'TypeScript (React)', size: 145, complexity: 4,

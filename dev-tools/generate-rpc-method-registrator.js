@@ -6,6 +6,11 @@ const sharedServicesDir = path.join(rootDir, 'shared/services');
 const rpcDir = path.join(rootDir, 'backend/src/config');
 const outputPath = path.join(rpcDir, 'rpc-method-registrator.gen.ts');
 
+const IGNORED_KEYWORDS = new Set([
+    'export', 'interface', 'import', 'type', 'from', 'return',
+    'if', 'for', 'while', 'switch', 'function', 'const', 'let', 'var'
+]);
+
 function findPortFiles(dir, fileList = []) {
     if (!fs.existsSync(dir)) return fileList;
     const files = fs.readdirSync(dir);
@@ -56,6 +61,8 @@ function generateRpcMethodRegistrator() {
 
         while ((match = methodRegex.exec(content)) !== null) {
             const methodName = match[1];
+            if (IGNORED_KEYWORDS.has(methodName)) continue;
+
             const methodUpperSnake = camelToUpperSnake(methodName);
             const rpcEnumKey = `${rpcPrefix}_${methodUpperSnake}`;
             methods.push({ enumKey: rpcEnumKey, methodName });

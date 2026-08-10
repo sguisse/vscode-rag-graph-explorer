@@ -19,9 +19,13 @@
         "command": "tokenRazor.openTool",
         "title": "Token Razor - 01 --> 🪒 Open UI",
         "icon": {
-            "light": "./assets/favicon.png",
-            "dark": "./assets/favicon.png"
+          "light": "./assets/favicon.png",
+          "dark": "./assets/favicon.png"
         }
+      },
+      {
+        "command": "tokenRazor.graphRagExplorer.addFromExplorer",
+        "title": "Token Razor - 02 --> ➕ Add selected file to Graph RAG Explorer"
       }
     ],
     "menus": {
@@ -29,12 +33,17 @@
         {
           "command": "tokenRazor.openTool",
           "group": "navigation"
-      }
+        }
       ],
       "explorer/context": [
         {
           "command": "tokenRazor.openTool",
           "group": "navigation@0"
+        },
+        {
+          "command": "tokenRazor.graphRagExplorer.addFromExplorer",
+          "group": "navigation@0",
+          "when": "tokenRazor.isToolOpened"
         }
       ]
     },
@@ -81,8 +90,6 @@
           "default": 5,
           "description": "Maximum number of historical log file nodes to keep before cycling."
         },
-
-
         "tokenRazor.graphRagExplorer.entitiesTypesList": {
           "type": "array",
           "description": "List of predefined entity types for the graph exploration.",
@@ -259,7 +266,9 @@
     "watch:webview": "cd webview && npm run dev",
     "compile": "npm run build"
   },
-  "dependencies": {},
+  "dependencies": {
+    "neo4j-driver": "^6.2.0"
+  },
   "devDependencies": {
     "@types/node": "^26.1.2",
     "@types/vscode": "^1.125.0",

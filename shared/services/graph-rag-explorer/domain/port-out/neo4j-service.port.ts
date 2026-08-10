@@ -1,8 +1,6 @@
-import { CodebaseData, CodebaseFile, Dependency, ImpactDirection, SelectedEntity } from '../model/codebase.model';
-import { IBackendService } from '../../../../core/backend-service.port';
+import { CodebaseData } from '../model/codebase.model';
 
-export interface INeo4jServicePort extends IBackendService {
-
-  //getJsonSchemaSpec(): Promise<unknown>;
-
+export interface INeo4jServicePort {
+  executeCypher(query: string, params?: Record<string, any>): Promise<any>;
+  getPathsChangeImpacts?(paths: string[]): Promise<CodebaseData>;
 }

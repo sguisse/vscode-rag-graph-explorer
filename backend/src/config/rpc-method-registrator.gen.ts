@@ -10,14 +10,12 @@ import { RpcProtocol } from '../../../shared/rpc/rpc-protocol';
  * Resolves services from the ServiceRegistry and registers all RPC protocol handlers.
  */
 export function registerRpcMethods(rpc: RpcProtocol): void {
-    const codebaseService = serviceRegistry.get(ServiceEnum.CODEBASE);
-    rpc.register(RpcMethodEnum.CODEBASE_GET_CODEBASE, codebaseService.getCodebase.bind(codebaseService));
-    rpc.register(RpcMethodEnum.CODEBASE_IMPORT_CODEBASE, codebaseService.importCodebase.bind(codebaseService));
-    rpc.register(RpcMethodEnum.CODEBASE_GET_FOLDER_POSITIONS, codebaseService.getFolderPositions.bind(codebaseService));
-
     const graphRagInstallerService = serviceRegistry.get(ServiceEnum.GRAPH_RAG_INSTALLER);
     rpc.register(RpcMethodEnum.INSTALLER_CHECK_INSTALLATION_STATUS, graphRagInstallerService.checkInstallationStatus.bind(graphRagInstallerService));
     rpc.register(RpcMethodEnum.INSTALLER_UNINSTALL_ALL, graphRagInstallerService.uninstallAll.bind(graphRagInstallerService));
+
+    const neo4jService = serviceRegistry.get(ServiceEnum.NEO4J);
+    rpc.register(RpcMethodEnum.NEO4J_EXECUTE_CYPHER, neo4jService.executeCypher.bind(neo4jService));
 
     const vsCodeService = serviceRegistry.get(ServiceEnum.VS_CODE);
     rpc.register(RpcMethodEnum.VSCODE_LOG_MESSAGE, vsCodeService.logMessage.bind(vsCodeService));

@@ -44,16 +44,26 @@ export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) 
       filesByFolder[folderKey].push(file);
     });
 
-    Object.keys(folderPositions).forEach(folderKey => {
+    // Collect all folder keys from positions config and discovered codebase files
+    const allFolderKeys = Array.from(
+      new Set([...Object.keys(folderPositions), ...Object.keys(filesByFolder)])
+    );
+
+    // Create container nodes for folders containing active files
+    allFolderKeys.forEach(folderKey => {
       if ((filesByFolder[folderKey] || []).length > 0) {
-        cy.add({ data: { id: `folder__${folderKey}`, label: folderPositions[folderKey].label }, classes: 'folder' });
+        const label = folderPositions[folderKey]?.label || `📂 ${folderKey.charAt(0).toUpperCase() + folderKey.slice(1)}`;
+        cy.add({ data: { id: `folder__${folderKey}`, label }, classes: 'folder' });
       }
     });
 
-    Object.entries(folderPositions).forEach(([folderKey]) => {
+    // Create file nodes inside their respective parent folder containers
+    allFolderKeys.forEach((folderKey, folderIdx) => {
       const folderFiles = filesByFolder[folderKey] || [];
+      if (folderFiles.length === 0) return;
+
       const dimensions = folderKey === 'config' ? NODE_DIMENSIONS_CONFIG.config : NODE_DIMENSIONS_CONFIG.default;
-      const baseX = FOLDER_BASE_X_POSITIONS_CONFIG[folderKey as keyof typeof FOLDER_BASE_X_POSITIONS_CONFIG] || 40;
+      const baseX = FOLDER_BASE_X_POSITIONS_CONFIG[folderKey as keyof typeof FOLDER_BASE_X_POSITIONS_CONFIG] || (40 + folderIdx * 400);
 
       folderFiles.forEach((file, index) => {
         const absX = baseX + 30 + (index % 2) * (dimensions.width + 50) + dimensions.width / 2;
@@ -65,18 +75,29 @@ export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) 
       });
     });
 
+    // Safely render edges with normalized schema handles and element collection length checks
     codebase.dependencies.forEach((dep: Dependency) => {
-      if (visibleFiles[dep.sourceNode] && visibleFiles[dep.targetNode] &&
-          searchFilteredFiles.some(f => f.id === dep.sourceNode) &&
-          searchFilteredFiles.some(f => f.id === dep.targetNode)) {
+      const sourceNodeId = dep.sourceNode || dep.source;
+      const targetNodeId = dep.targetNode || dep.target;
+      const sourceHandle = dep.sourceHandle || 'header';
+      const targetHandle = dep.targetHandle || 'header';
 
-        const sourceKeyMember = buildMemberKeyToken(dep.sourceNode, dep.sourceHandle);
-        const targetKeyMember = buildMemberKeyToken(dep.targetNode, dep.targetHandle);
-        const isEdgeImpacted = impactedSet.has(dep.sourceHandle === 'header' ? dep.sourceNode : sourceKeyMember) &&
-                               impactedSet.has(dep.targetHandle === 'header' ? dep.targetNode : targetKeyMember);
+      if (
+        sourceNodeId &&
+        targetNodeId &&
+        visibleFiles[sourceNodeId] &&
+        visibleFiles[targetNodeId] &&
+        cy.getElementById(sourceNodeId).length > 0 &&
+        cy.getElementById(targetNodeId).length > 0
+      ) {
+        const sourceKeyMember = buildMemberKeyToken(sourceNodeId, sourceHandle);
+        const targetKeyMember = buildMemberKeyToken(targetNodeId, targetHandle);
+        const isEdgeImpacted =
+          impactedSet.has(sourceHandle === 'header' ? sourceNodeId : sourceKeyMember) &&
+          impactedSet.has(targetHandle === 'header' ? targetNodeId : targetKeyMember);
 
         cy.add({
-          data: { id: dep.id, source: dep.sourceNode, target: dep.targetNode, label: dep.label },
+          data: { id: dep.id, source: sourceNodeId, target: targetNodeId, label: dep.label },
           classes: isEdgeImpacted ? 'impacted' : ''
         });
       }

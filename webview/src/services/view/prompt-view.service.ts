@@ -16,7 +16,7 @@ export function generateMarkdownRecipe(
       }
     }
     md += `**Trigger Element :** ${startElement}\n`;
-    md += `**Direction of Propagation :** ${impactDirection === 'aval' ? 'Downstream (Descendants callees)' : 'Upstream (Ascending callers)'}\n\n`;
+    md += `**Direction of Propagation :** ${impactDirection === 'callee' ? 'Downstream (Descendants callees)' : 'Upstream (Ascending callers)'}\n\n`;
     md += `#### 📋 List of components to retest\n\n`;
     codebase.files.forEach((file: CodebaseFile) => {
       if (impactedSet.has(file.id)) {

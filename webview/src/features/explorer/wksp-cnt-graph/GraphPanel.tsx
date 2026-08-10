@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Info } from 'lucide-react';
 import { FolderNode, UmlClassNode, ConfigNode, UmlClassNodeData } from './components/graph/GraphUmlShapes';
 import { SelectedEntity, CodebaseFile } from '@/shared/services/graph-rag-explorer';
@@ -18,6 +18,8 @@ interface GraphPanelProps {
   searchFilteredFiles: CodebaseFile[];
   impactedSet: Set<string>;
   handleSelectMember: (nodeId: string, memberId: string) => void;
+  attributesVisible: boolean;
+  methodsVisible: boolean;
 }
 
 export function GraphPanel({
@@ -29,15 +31,36 @@ export function GraphPanel({
   selectedEntity,
   searchFilteredFiles,
   impactedSet,
-  handleSelectMember
+  handleSelectMember,
+  attributesVisible,
+  methodsVisible
 }: GraphPanelProps) {
+  const effectiveFolderPositions = useMemo(() => {
+    const folderMap: Record<string, { label: string }> = { ...folderPositions };
+
+    Object.keys(graphState.nodePositions).forEach((nodeKey) => {
+      if (nodeKey.startsWith('folder__')) {
+        const folderKey = nodeKey.replace('folder__', '');
+        if (!folderMap[folderKey]) {
+          folderMap[folderKey] = {
+            label: `📂 ${folderKey.charAt(0).toUpperCase() + folderKey.slice(1)}`
+          };
+        }
+      }
+    });
+
+    return folderMap;
+  }, [folderPositions, graphState.nodePositions]);
+
   return (
     <div className="absolute inset-0 outline-none w-full h-full overflow-hidden">
       <div
         ref={containerRef}
         className="z-0 absolute inset-0 w-full h-full"
         style={showGrid ? {
-          backgroundImage: isDarkMode ? 'radial-gradient(#334155 1.2px, transparent 1.2px)' : 'radial-gradient(#cbd5e1 1.2px, transparent 1.2px)',
+          backgroundImage: isDarkMode
+            ? 'radial-gradient(#334155 1.2px, transparent 1.2px)'
+            : 'radial-gradient(#cbd5e1 1.2px, transparent 1.2px)',
           backgroundSize: `${16 * graphState.zoom}px ${16 * graphState.zoom}px`,
           backgroundPosition: `${graphState.pan.x}px ${graphState.pan.y}px`
         } : undefined}
@@ -47,12 +70,16 @@ export function GraphPanel({
         className="z-10 absolute inset-0 origin-top-left pointer-events-none select-none"
         style={{ transform: `translate(${graphState.pan.x}px, ${graphState.pan.y}px) scale(${graphState.zoom})` }}
       >
-        {Object.entries(folderPositions).map(([folderKey, initialPos]) => {
+        {Object.entries(effectiveFolderPositions).map(([folderKey, initialPos]) => {
           const bounds = graphState.nodePositions[`folder__${folderKey}`];
           if (!bounds) return null;
           const isSelected = selectedEntity?.nodeId === `folder__${folderKey}`;
           return (
-            <div key={`folder-box-${folderKey}`} className="z-10 absolute transition-all duration-75 ease-out" style={{ left: bounds.x, top: bounds.y, width: bounds.w, height: bounds.h }}>
+            <div
+              key={`folder-box-${folderKey}`}
+              className="z-10 absolute transition-all duration-75 ease-out"
+              style={{ left: bounds.x, top: bounds.y, width: bounds.w, height: bounds.h }}
+            >
               <FolderNode data={{ label: initialPos.label }} isSelected={isSelected} />
             </div>
           );
@@ -76,18 +103,31 @@ export function GraphPanel({
             isDimmed,
             impactedMembers,
             selectedMember: selectedEntity?.nodeId === file.id ? selectedEntity?.memberId : undefined,
-            onSelectMember: handleSelectMember
+            onSelectMember: handleSelectMember,
+            attributesVisible,
+            methodsVisible
           };
 
           return (
-            <div key={file.id} className="z-20 absolute transition-all duration-75 ease-out pointer-events-none" style={{ left: bounds.x, top: bounds.y, width: bounds.w, height: bounds.h }}>
-              {file.type === 'config' ? <ConfigNode id={file.id} data={nodeData} /> : <UmlClassNode id={file.id} data={nodeData} />}
+            <div
+              key={file.id}
+              className="z-20 absolute transition-all duration-75 ease-out pointer-events-none"
+              style={{ left: bounds.x, top: bounds.y, width: bounds.w, height: bounds.h }}
+            >
+              {file.type === 'config' ? (
+                <ConfigNode id={file.id} data={nodeData} />
+              ) : (
+                <UmlClassNode id={file.id} data={nodeData} />
+              )}
             </div>
           );
         })}
       </div>
 
-      <div id="cytoscape-engine-info" className="top-4 left-4 z-20 absolute bg-card/90 shadow-md backdrop-blur p-3 border border-border rounded-lg max-w-sm font-mono text-xs pointer-events-auto">
+      <div
+        id="cytoscape-engine-info"
+        className="top-4 left-4 z-20 absolute bg-card/90 shadow-md backdrop-blur p-3 border border-border rounded-lg max-w-sm font-mono text-xs pointer-events-auto"
+      >
         <div className="flex justify-between items-center gap-2 mb-1">
           <div className="flex items-center gap-2">
             <Info size={14} className="text-primary" />
@@ -107,7 +147,9 @@ export function GraphPanel({
             </svg>
           </button>
         </div>
-        <p className="text-[10px] text-muted-foreground">Drag-and-drop on headers and wheel zoom use Cytoscape's responsive architecture.</p>
+        <p className="text-[10px] text-muted-foreground">
+          Drag-and-drop on headers and wheel zoom use Cytoscape's responsive architecture.
+        </p>
       </div>
     </div>
   );

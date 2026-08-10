@@ -1,249 +1,540 @@
 #!/usr/bin/env bash
 set -e
 
-mkdir -p scripts/graph_rag_explorer/install/modules/java/jqassistant_graph_rag
+# Ensure target directories exist
+mkdir -p webview/src/features/explorer/wksp-cnt-graph
+mkdir -p webview/src/features/explorer
 
-cat << 'EOF' > scripts/graph_rag_explorer/install/modules/java/jqassistant_graph_rag/install.py
-import os
-import sys
-import ssl
-import json
-import re
-import shutil
-import socket
-import time
-import subprocess
-import urllib.request
-import urllib.error
-from typing import Optional
-from pathlib import Path
-from install.base import BaseInstallModule
-from install.registry import InstallerRegistry
-from core.utils import info, success, error, warn
-from core.sources_discovery import discover_workspace_sources
-from graph_rag_explorer.install.modules.java.jqassistant_graph_rag.check import JQAssistantGraphRagChecker
-from graph_rag_explorer.install.modules.java.jqassistant_graph_rag.tools.graph_rag_llm_model_dwn import download_graph_rag_llm_model
-from graph_rag_explorer.install.modules.java.jqassistant_graph_rag.context import JQAssistantGraphRagContext
-from core.VsCodeSettings_gen import vsCodeSettings
-from graph_rag_explorer.install.utils.py_venv_install import venv_install, get_venv_python
+# 1. Update GraphPanelHeader.tsx: Move toggles to HeaderRight & swap icons (Code2 <-> Braces)
+cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/GraphPanelHeader.tsx
+import React from 'react';
+import { Grid, Database, User, Baby, Plus, Minus, Focus, Braces, Code2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
+import { ToggleButton } from '@/components/app/toggle-button';
+import { ToolbarSeparator } from '@/components/app/toolbar-separator';
 
+import {
+  DISPLAY_LEVEL_LIST,
+  DISPLAY_LEVEL_ICON_MAP,
+  GRAPH_LAYOUT_LIST,
+  GRAPH_LAYOUT_ICON_MAP
+} from '@/shared/services/graph-rag-explorer/domain/model/types';
+import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
+import { vscodeSettings } from '@/App';
 
-def is_port_open(port: int, host: str = "127.0.0.1") -> bool:
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(1.0)
-            return s.connect_ex((host, port)) == 0
-    except Exception:
-        return False
+export interface GraphPanelHeaderLeftProps {
 
+}
 
-@InstallerRegistry.register_installer
-class JQAssistantGraphRagInstaller(BaseInstallModule):
-    def __init__(self, context):
-        super().__init__(context)
-        self.jqa_gr = JQAssistantGraphRagContext(context)
+export const GraphPanelHeaderLeft: React.FC<GraphPanelHeaderLeftProps> = () => (
+  <div className="flex items-center gap-2">
+    <span className="font-bold text-foreground truncate uppercase tracking-wider">Topological Network</span>
+  </div>
+);
 
-        self._last_reported_percent = -5
+export interface GraphPanelHeaderCenterProps {
+  maxNodesLimit: number;
+  setMaxNodesLimit: (val: number) => void;
+  callersDepth: number;
+  setCallersDepth: (val: number) => void;
+  calleesDepth: number;
+  setCalleesDepth: (val: number) => void;
+  displayLevel: string;
+  setDisplayLevel: (val: string) => void;
+  currentLayout: string;
+  setCurrentLayout: (val: string) => void;
+}
 
-    @property
-    def name(self) -> str: return "java_jqassistant_graph_rag"
+export const GraphPanelHeaderCenter: React.FC<GraphPanelHeaderCenterProps> = ({
+  maxNodesLimit,
+  setMaxNodesLimit,
+  callersDepth,
+  setCallersDepth,
+  calleesDepth,
+  setCalleesDepth,
+  displayLevel,
+  setDisplayLevel,
+  currentLayout,
+  setCurrentLayout,
+}) => {
+  const displayNeo4jHandler = () => {
+    vsCodeApiService.openUrl(vscodeSettings.graphRagExplorer.neo4j.url, true);
+  };
 
-    def install_jqassistant_graph_rag_tool(self):
-        source_path = Path(self.jqa_gr.git_clone_dir)
-        target_path = Path(self.jqa_gr.tools_git_clone)
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1.5 bg-background px-2 py-0.5 border border-border rounded-sm">
+        <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">Limit:</span>
+        <Input
+          id="input-max-nodes-limit"
+          type="number"
+          min={1}
+          max={100}
+          className="bg-transparent shadow-none px-1 border-0 focus:ring-0 w-12 h-5 font-bold text-foreground text-xs text-center"
+          value={maxNodesLimit}
+          onChange={(e) => setMaxNodesLimit(Number(e.target.value) || 50)}
+        />
+      </div>
+      <Button
+        id="btn-neo4j-connect"
+        className="flex items-center gap-1.5 bg-gradient-to-r from-orange-600 to-orange-500 shadow-sm px-2.5 border border-orange-700 rounded-md h-6 font-bold text-[10px] text-white uppercase tracking-wider"
+        onClick={displayNeo4jHandler}
+      >
+        <Database size={11} /> Neo4j
+      </Button>
+      <div className="flex items-center gap-1 bg-background px-1.5 py-0.5 border border-border rounded-sm">
+        <User size={12} className="text-muted-foreground" />
+        <Input
+          id="input-callers-depth"
+          type="number"
+          min={0}
+          max={20}
+          className="bg-transparent p-0 border-0 focus:ring-0 w-8 h-5 text-foreground text-xs text-center"
+          value={callersDepth}
+          onChange={(e) => setCallersDepth(Number(e.target.value) || 0)}
+        />
+      </div>
+      <div className="flex items-center gap-1 bg-background px-1.5 py-0.5 border border-border rounded-sm">
+        <Baby size={12} className="text-muted-foreground" />
+        <Input
+          id="input-callees-depth"
+          type="number"
+          min={0}
+          max={20}
+          className="bg-transparent p-0 border-0 focus:ring-0 w-8 h-5 text-foreground text-xs text-center"
+          value={calleesDepth}
+          onChange={(e) => setCalleesDepth(Number(e.target.value) || 0)}
+        />
+      </div>
+      <SelectFromTypeBuilder
+        id="select-display-level"
+        value={displayLevel}
+        onChange={setDisplayLevel}
+        options={DISPLAY_LEVEL_LIST.map((key) => ({
+          value: key,
+          icon: DISPLAY_LEVEL_ICON_MAP[key].icon,
+          label: DISPLAY_LEVEL_ICON_MAP[key].label,
+        }))}
+      />
+      <SelectFromTypeBuilder
+        id="select-graph-layout"
+        value={currentLayout}
+        onChange={setCurrentLayout}
+        options={GRAPH_LAYOUT_LIST.map((key) => ({
+          value: key,
+          icon: GRAPH_LAYOUT_ICON_MAP[key].icon,
+          label: GRAPH_LAYOUT_ICON_MAP[key].label,
+        }))}
+      />
+    </div>
+  );
+};
 
-        if not os.path.exists(source_path):
-            error(f"Source tool directory missing at {source_path}", component=self.name)
-            return
+export interface GraphPanelHeaderRightProps {
+  cyRef: React.RefObject<any>;
+  isGraphMaximized: boolean;
+  setIsGraphMaximized: (maximized: boolean) => void;
+  showGrid: boolean;
+  setShowGrid: (show: boolean) => void;
+  attributesVisible: boolean;
+  setAttributesVisible: (val: boolean) => void;
+  methodsVisible: boolean;
+  setMethodsVisible: (val: boolean) => void;
+}
 
-        info(f"Installing jqassistant-graph-rag tool from {source_path} to {target_path}...", component=self.name)
-        os.makedirs(target_path, exist_ok=True)
-        shutil.copytree(source_path, target_path, dirs_exist_ok=True)
+export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
+  cyRef,
+  isGraphMaximized,
+  setIsGraphMaximized,
+  showGrid,
+  setShowGrid,
+  attributesVisible,
+  setAttributesVisible,
+  methodsVisible,
+  setMethodsVisible,
+}) => (
+  <div className="flex items-center gap-1">
+    <ToggleButton
+      id="btn-toggle-attributes-visibility"
+      isSelected={attributesVisible}
+      onToggle={() => setAttributesVisible(!attributesVisible)}
+      tooltipText="Toggle Attributes Visibility"
+      icon={<Code2 size={12} />}
+    />
+    <ToggleButton
+      id="btn-toggle-methods-visibility"
+      isSelected={methodsVisible}
+      onToggle={() => setMethodsVisible(!methodsVisible)}
+      tooltipText="Toggle Methods Visibility"
+      icon={<Braces size={12} />}
+    />
 
-        info(f"Installing jqassistant-graph-rag tool dedicated python environment...", component=self.name)
-        venv_install(target_path)
+    <ToolbarSeparator />
 
-        success(f"jqassistant_graph_rag tool installed successfully into {target_path}", component=self.name)
+    <ToggleButton
+      id="btn-toggle-grid"
+      isSelected={showGrid}
+      onToggle={() => setShowGrid(!showGrid)}
+      tooltipText="Toggle Grid"
+      icon={<Grid size={12} />}
+    />
 
-    def fetch_and_install_jqassistant_graph_rag_llm_model(self):
-        targetPath = f"{self.jqa_gr.tools_models_dir}/{self.jqa_gr.llm_model_name}"
-        if not os.path.exists(targetPath):
-            os.makedirs(targetPath, exist_ok=True)
+    <ToolbarSeparator />
 
-        download_url = f"{self.jqa_gr.llm_download_url}/{self.jqa_gr.llm_model_name}"
-        info(f"Downloading GraphRag LLM model from {download_url} to {targetPath} …", component=self.name)
-
-        download_graph_rag_llm_model(download_url=download_url, downloadTargetPath=Path(targetPath))
-        success(f"GraphRag LLM model installed successfully into {targetPath}", component=self.name)
-
-    def inject_mcp_server_config(self):
-        mcp_dir = os.path.join(self.context.workspace_root, ".vscode")
-        os.makedirs(mcp_dir, exist_ok=True)
-        mcp_path = os.path.join(mcp_dir, "mcp.json")
-
-        if not os.path.exists(self.jqa_gr.mcp_server_template_path):
-            error("MCP Server template missing from installer resources.", component=self.name)
-            return
-
-        with open(self.jqa_gr.mcp_server_template_path, "r", encoding="utf-8") as f:
-            template_content = f.read()
-
-        template_content = template_content.replace("{{JQA_MCP_HOST}}", str(self.jqa_gr.mcp_host)).replace("{{JQA_MCP_PORT}}", str(self.jqa_gr.mcp_port))
-
-        try:
-            template_data = json.loads(template_content)
-        except json.JSONDecodeError as e:
-            error(f"Malformed MCP template JSON: {e}", component=self.name)
-            return
-
-        mcp_data = {}
-        if os.path.exists(mcp_path):
-            try:
-                with open(mcp_path, "r", encoding="utf-8") as f:
-                    mcp_data = json.load(f)
-            except json.JSONDecodeError:
-                warn("Existing .vscode/mcp.json is malformed. Overwriting.", component=self.name)
-
-        if "servers" not in mcp_data:
-            mcp_data["servers"] = {}
-
-        if self.jqa_gr.mcp_server_key in template_data:
-            mcp_data["servers"][self.jqa_gr.mcp_server_key] = template_data[self.jqa_gr.mcp_server_key]
-        elif "servers" in template_data and self.jqa_gr.mcp_server_key in template_data["servers"]:
-            mcp_data["servers"][self.jqa_gr.mcp_server_key] = template_data["servers"][self.jqa_gr.mcp_server_key]
-
-        with open(mcp_path, "w", encoding="utf-8") as f:
-            json.dump(mcp_data, f, indent=4)
-        success(f"MCP server config injected successfully into {mcp_path}", component=self.name)
-
-    def start_mcp_server(self) -> bool:
-        grd = Path(self.jqa_gr.tools_git_clone)
-        venv_path = grd / ".venv"
-        py = get_venv_python(venv_path) or get_venv_python(grd) or Path(sys.executable)
-
-        info(f"▶ Starting MCP server (port {self.jqa_gr.mcp_port}) …", component=self.name)
-        info(f"   Graph RAG tool path: {grd}", component=self.name)
-        info(f"   Using Python       : {py}", component=self.name)
-
-        result = subprocess.run([str(py), "-c", "import fastmcp"], capture_output=True)
-        if result.returncode != 0:
-            error(f"❌ fastmcp not importable with {py}", component=self.name)
-            if result.stderr:
-                error(result.stderr.decode("utf-8", errors="replace")[:1000], component=self.name)
-            return False
-
-        env = os.environ.copy()
-        env["MCP_PORT"] = str(self.jqa_gr.mcp_port)
-        env["PROJECT_ROOT_PATH"] = str(self.context.workspace_root)
-
-        model_path = Path(self.jqa_gr.tools_models_dir) / self.jqa_gr.llm_model_name
-        if model_path.exists():
-            env["SENTENCE_TRANSFORMER_MODEL"] = str(model_path)
-            info(f"   Using local model  : {model_path}", component=self.name)
-
-        mcp_py = grd / "mcp_server.py"
-        if not mcp_py.exists():
-            error(f"❌ MCP server script missing at {mcp_py}", component=self.name)
-            return False
-
-        log_dir = os.path.join(self.context.workspace_root, vsCodeSettings.backendWorkspacePath, "logs")
-        pids_dir = os.path.join(self.context.workspace_root, vsCodeSettings.backendWorkspacePath, "target", "pids")
-        os.makedirs(log_dir, exist_ok=True)
-        os.makedirs(pids_dir, exist_ok=True)
-
-        log_path = Path(log_dir) / "mcp_server.log"
-        pid_path = Path(pids_dir) / "mcp_server.pid"
-
-        neo4j_cfg = vsCodeSettings.graphRagExplorer.neo4j
-        neo4j_uri = neo4j_cfg.uri
-        if "${" in neo4j_uri:
-            neo4j_uri = f"bolt://{neo4j_cfg.host}:{neo4j_cfg.port.bolt}"
-
-        info("⏳ MCP server start in progress …", component=self.name)
-        try:
-            log_fh = open(log_path, "a", encoding="utf-8")
-            args = [
-                str(py),
-                str(mcp_py),
-                "--port",
-                str(self.jqa_gr.mcp_port),
-                "--uri",
-                neo4j_uri,
-                "--user",
-                neo4j_cfg.username,
-                "--password",
-                neo4j_cfg.password,
-            ]
-            kwargs = {
-                "cwd": str(grd),
-                "stdout": log_fh,
-                "stderr": log_fh,
-                "env": env,
-            }
-            if os.name == 'nt':
-                kwargs["creationflags"] = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 512)
-            else:
-                kwargs["start_new_session"] = True
-
-            proc = subprocess.Popen(args, **kwargs)
-            pid_path.write_text(str(proc.pid), encoding="utf-8")
-        except Exception as e:
-            error(f"❌ Failed to spawn MCP server process: {e}", component=self.name)
-            return False
-
-        for _ in range(30):
-            if proc.poll() is not None:
-                tail = "(no log available)"
-                try:
-                    if log_path.exists():
-                        with open(log_path, "r", encoding="utf-8", errors="replace") as lf:
-                            lines = lf.readlines()
-                            tail = "".join(lines[-200:])
-                except Exception:
-                    tail = "(failed to read log)"
-                error(f"❌ MCP process exited unexpectedly (PID {proc.pid}). See logs:\n{tail}", component=self.name)
-                if pid_path.exists():
-                    try:
-                        pid_path.unlink()
-                    except Exception:
-                        pass
-                return False
-
-            if is_port_open(self.jqa_gr.mcp_port, self.jqa_gr.mcp_host):
-                success(f"✅ MCP server ready on port {self.jqa_gr.mcp_port} (PID {proc.pid})", component=self.name)
-                info(f"Logs: {log_path}", component=self.name)
-                return True
-            time.sleep(1)
-
-        tail = "(no log available)"
-        try:
-            if log_path.exists():
-                with open(log_path, "r", encoding="utf-8", errors="replace") as lf:
-                    lines = lf.readlines()
-                    tail = "".join(lines[-200:])
-        except Exception:
-            tail = "(failed to read log)"
-
-        error(f"❌ MCP port {self.jqa_gr.mcp_port} did not open in 30 s — check {log_path}\nLast log lines:\n{tail}", component=self.name)
-        return False
-
-    def execute_all_installations(self, installStatus: Optional[dict] = None) -> None:
-        """Selectively runs configurations. """
-        checker = JQAssistantGraphRagChecker(self.context)
-        if installStatus is None:
-            installStatus = checker.execute_all_checks()
-
-        if installStatus.get("jqassistant_graph_rag_tool", {}).get("status") != "✅":
-            self.install_jqassistant_graph_rag_tool()
-
-        if installStatus.get("jqassistant_graph_rag_llm_model", {}).get("status") != "✅":
-            self.fetch_and_install_jqassistant_graph_rag_llm_model()
-
-        if installStatus.get("mcp_server_config", {}).get("status") != "✅":
-            self.inject_mcp_server_config()
-
-        if installStatus.get("mcp_server_up", {}).get("status") != "✅":
-            self.start_mcp_server()
+    <Button
+      id="btn-graph-zoom-in"
+      variant="ghost"
+      size="icon"
+      className="w-5 h-5 text-muted-foreground"
+      onClick={() => cyRef.current?.zoom((cyRef.current?.zoom() || 1) * 1.2)}
+    >
+      <Plus size={12} />
+    </Button>
+    <Button
+      id="btn-graph-zoom-out"
+      variant="ghost"
+      size="icon"
+      className="w-5 h-5 text-muted-foreground"
+      onClick={() => cyRef.current?.zoom((cyRef.current?.zoom() || 1) / 1.2)}
+    >
+      <Minus size={12} />
+    </Button>
+    <Button
+      id="btn-graph-fit-view"
+      variant="ghost"
+      size="icon"
+      className="w-5 h-5 text-muted-foreground"
+      onClick={() => {
+        cyRef.current?.fit();
+        cyRef.current?.center();
+      }}
+    >
+      <Focus size={12} />
+    </Button>
+  </div>
+);
 EOF
 
-echo "✅ fix: Resolved virtualenv Python resolution by targeting the '.venv' directory inside the tool git-clone root."
+# 2. Update ExplorerFeature.tsx to pass props to GraphPanelHeaderRight
+cat << 'EOF' > webview/src/features/explorer/ExplorerFeature.tsx
+import React, { useState, useEffect, useCallback } from 'react';
+import { useLayoutStore } from '@/store/useLayoutStore';
+import { useAppContextStore } from '@/store/useAppContextStore';
+import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
+
+import { ContextPathsPanel } from './wkp-top-paths/context-paths-panel';
+import { CodebaseExplorerPanel } from './wkp-lft-codebase-tree/CodebaseExplorerPanel';
+import { GraphPanel } from './wksp-cnt-graph/GraphPanel';
+import {
+  GraphPanelHeaderLeft,
+  GraphPanelHeaderCenter,
+  GraphPanelHeaderRight,
+} from './wksp-cnt-graph/GraphPanelHeader';
+import { GlobalInspectorPanel } from './wkp-rgt-tabs-inspector/global-inspector-panel';
+import { WkpBottomPanel } from './wkp-btm-infos/wkp-bottom-panel';
+import { EntityPropertiesPanel } from './sdb-rgt-properties/EntityPropertiesPanel';
+
+import { useCodebaseFilter } from './hooks/use-codebase-filter';
+import { useTransitiveImpact } from './hooks/use-transitive-impact';
+import { useGraph } from './wksp-cnt-graph/components/graph/use-graph';
+import { usePlantUml } from './wksp-cnt-graph/components/graph/use-plantuml';
+
+import { initialCodebase, FOLDER_POSITIONS } from './wksp-cnt-graph/components/graph/GraphData';
+
+import {
+  CodebaseData,
+  SelectedEntity,
+  ImpactDirection,
+} from '@/shared/services/graph-rag-explorer';
+
+export function ExplorerFeature() {
+  const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
+  const setContainerContent = useLayoutStore((s) => s.setContainerContent);
+  const toggleContainerMaximized = useLayoutStore((s) => s.toggleContainerMaximized);
+  const setNotification = useAppContextStore((s) => s.setNotification);
+  const isDarkMode = useAppContextStore((s) => s.isDarkMode);
+
+  const [codebase, setCodebase] = useState<CodebaseData>(initialCodebase);
+  const [folderPositions, setFolderPositions] = useState<Record<string, { label: string }>>(FOLDER_POSITIONS);
+  const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(null);
+  const [impactDirection, setImpactDirection] = useState<ImpactDirection>('callee');
+
+  const [showGrid, setShowGrid] = useState(true);
+  const [callersDepth, setCallersDepth] = useState(1);
+  const [calleesDepth, setCalleesDepth] = useState(1);
+  const [currentLayout, setCurrentLayout] = useState('preset');
+
+  const [attributesVisible, setAttributesVisible] = useState(false);
+  const [methodsVisible, setMethodsVisible] = useState(true);
+
+  const filter = useCodebaseFilter(codebase.files);
+  const { impactedSet } = useTransitiveImpact(selectedEntity, impactDirection, codebase.dependencies);
+
+  const handleNodeSelect = useCallback((nodeId: string) => {
+    setSelectedEntity({ type: 'node', nodeId });
+  }, []);
+
+  const handleSelectMember = useCallback((nodeId: string, memberId: string) => {
+    setSelectedEntity({ type: 'member', nodeId, memberId });
+  }, []);
+
+  const { containerRef, cyRef, graphState, updateGraphTopology, isReady } = useGraph(isDarkMode, handleNodeSelect);
+
+  const generatedPlantUML = usePlantUml(
+    filter.searchFilteredFiles,
+    filter.visibleFiles,
+    codebase.dependencies
+  );
+
+  useEffect(() => {
+    if (!isReady || Object.keys(folderPositions).length === 0) return;
+    updateGraphTopology(
+      filter.searchFilteredFiles,
+      filter.visibleFiles,
+      codebase,
+      impactedSet,
+      currentLayout,
+      folderPositions
+    );
+  }, [
+    isReady,
+    filter.searchFilteredFiles,
+    filter.visibleFiles,
+    codebase,
+    impactedSet,
+    currentLayout,
+    folderPositions,
+    updateGraphTopology,
+  ]);
+
+  const handleCopy = useCallback(
+    (text: string, message: string) => {
+      if (navigator?.clipboard?.writeText) {
+        navigator.clipboard.writeText(text);
+      }
+      setNotification(message);
+    },
+    [setNotification]
+  );
+
+  const handleImportCodebase = useCallback(
+    async (importedData: CodebaseData) => {
+      setCodebase(importedData);
+      setNotification('AST Codebase imported successfully!');
+    },
+    [setNotification]
+  );
+
+  useEffect(() => {
+    setLayoutContainers({
+      header: { visible: true, isResizable: false, isHiddable: false },
+      sidebarLeft: { visible: true, isResizable: true, isHiddable: true },
+      workspace: {
+        top: {
+          visible: true,
+          isResizable: true,
+          isHiddable: true,
+          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
+        },
+        left: {
+          visible: true,
+          isResizable: true,
+          isHiddable: true,
+          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
+        },
+        center: {
+          visible: true,
+          isResizable: false,
+          isHiddable: false,
+          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
+        },
+        right: {
+          visible: true,
+          isResizable: true,
+          isHiddable: true,
+          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
+        },
+        bottom: {
+          visible: true,
+          isResizable: true,
+          isHiddable: true,
+          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
+        },
+      },
+      sidebarRight: {
+        visible: true,
+        isResizable: true,
+        isHiddable: true,
+        maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
+      },
+      footer: { visible: true, isResizable: false, isHiddable: false },
+    });
+  }, [setLayoutContainers]);
+
+  useEffect(() => {
+    setContainerContent(
+      'workspace.top',
+      <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
+        <ContainerPanelHeader title="Context Paths" path="workspace.top" />
+        <div className="flex-1 min-h-0 overflow-auto">
+          <ContextPathsPanel />
+        </div>
+      </div>
+    );
+
+    setContainerContent(
+      'workspace.left',
+      <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden">
+        <ContainerPanelHeader title="Codebase Explorer" path="workspace.left" />
+        <div className="flex-1 min-h-0 overflow-auto">
+          <CodebaseExplorerPanel
+            codebase={codebase}
+            searchFilteredFiles={filter.searchFilteredFiles}
+            expandedFolders={filter.expandedFolders}
+            visibleFiles={filter.visibleFiles}
+            toggleFolder={filter.toggleFolder}
+            toggleFolderCheckbox={filter.toggleFolderCheckbox}
+            toggleFileCheckbox={filter.toggleFileCheckbox}
+            setSelectedEntity={setSelectedEntity}
+            onImportCodebase={handleImportCodebase}
+          />
+        </div>
+      </div>
+    );
+
+    setContainerContent(
+      'workspace.center',
+      <div className="relative flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
+        <ContainerPanelHeader
+          path="workspace.center"
+          isHiddable={false}
+          headerLeft={<GraphPanelHeaderLeft />}
+          headerCenter={
+            <GraphPanelHeaderCenter
+              maxNodesLimit={filter.maxNodesLimit}
+              setMaxNodesLimit={filter.setMaxNodesLimit}
+              callersDepth={callersDepth}
+              setCallersDepth={setCallersDepth}
+              calleesDepth={calleesDepth}
+              setCalleesDepth={setCalleesDepth}
+              displayLevel={filter.displayLevel}
+              setDisplayLevel={filter.setDisplayLevel}
+              currentLayout={currentLayout}
+              setCurrentLayout={setCurrentLayout}
+            />
+          }
+          headerRight={
+            <GraphPanelHeaderRight
+              cyRef={cyRef}
+              isGraphMaximized={false}
+              setIsGraphMaximized={() => toggleContainerMaximized('workspace.center')}
+              showGrid={showGrid}
+              setShowGrid={setShowGrid}
+              attributesVisible={attributesVisible}
+              setAttributesVisible={setAttributesVisible}
+              methodsVisible={methodsVisible}
+              setMethodsVisible={setMethodsVisible}
+            />
+          }
+        />
+        <div className="relative flex-1 w-full h-full min-h-0">
+          <GraphPanel
+            folderPositions={folderPositions}
+            containerRef={containerRef}
+            showGrid={showGrid}
+            isDarkMode={isDarkMode}
+            graphState={graphState}
+            selectedEntity={selectedEntity}
+            searchFilteredFiles={filter.searchFilteredFiles}
+            impactedSet={impactedSet}
+            handleSelectMember={handleSelectMember}
+            attributesVisible={attributesVisible}
+            methodsVisible={methodsVisible}
+          />
+        </div>
+      </div>
+    );
+
+    setContainerContent(
+      'workspace.right',
+      <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden">
+        <ContainerPanelHeader title="Global Inspector" path="workspace.right" />
+        <div className="flex-1 min-h-0 overflow-auto">
+          <GlobalInspectorPanel
+            selectedEntity={selectedEntity}
+            initialCodebase={codebase}
+            impactDirection={impactDirection}
+            setImpactDirection={setImpactDirection}
+            impactedSet={impactedSet}
+            handleCopy={handleCopy}
+            generatedPlantUML={generatedPlantUML}
+          />
+        </div>
+      </div>
+    );
+
+    setContainerContent(
+      'workspace.bottom',
+      <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
+        <ContainerPanelHeader title="Output & Logs" path="workspace.bottom" />
+        <div className="flex-1 min-h-0 overflow-auto">
+          <WkpBottomPanel />
+        </div>
+      </div>
+    );
+
+    setContainerContent(
+      'sidebarRight',
+      <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden">
+        <ContainerPanelHeader title="Entity Properties" path="sidebarRight" />
+        <div className="flex-1 min-h-0 overflow-auto">
+          <EntityPropertiesPanel selectedEntity={selectedEntity} />
+        </div>
+      </div>
+    );
+  }, [
+    setContainerContent,
+    toggleContainerMaximized,
+    filter.searchFilteredFiles,
+    filter.expandedFolders,
+    filter.visibleFiles,
+    filter.maxNodesLimit,
+    filter.displayLevel,
+    filter.toggleFolder,
+    filter.toggleFolderCheckbox,
+    filter.toggleFileCheckbox,
+    filter.setMaxNodesLimit,
+    filter.setDisplayLevel,
+    callersDepth,
+    calleesDepth,
+    currentLayout,
+    showGrid,
+    attributesVisible,
+    methodsVisible,
+    selectedEntity,
+    codebase,
+    folderPositions,
+    impactDirection,
+    impactedSet,
+    generatedPlantUML,
+    handleCopy,
+    handleImportCodebase,
+    handleSelectMember,
+    containerRef,
+    cyRef,
+    isDarkMode,
+    graphState,
+  ]);
+
+  return null;
+}
+
+export default ExplorerFeature;
+EOF
+
+echo "✅ refactor: Moved attribute and method toggles to GraphPanelHeaderRight and inverted icons!"
+
+# Rebuild webview
+npm run build:webview

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Grid, Database, User, Baby, Plus, Minus, Focus, Maximize, Minimize } from 'lucide-react';
+import { Grid, Database, User, Baby, Plus, Minus, Focus, Braces, Code2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
@@ -11,7 +11,7 @@ import {
   DISPLAY_LEVEL_ICON_MAP,
   GRAPH_LAYOUT_LIST,
   GRAPH_LAYOUT_ICON_MAP
-} from '@/shared/services/graph-rag-explorer';
+} from '@/shared/services/graph-rag-explorer/domain/model/types';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { vscodeSettings } from '@/App';
 
@@ -48,7 +48,7 @@ export const GraphPanelHeaderCenter: React.FC<GraphPanelHeaderCenterProps> = ({
   displayLevel,
   setDisplayLevel,
   currentLayout,
-  setCurrentLayout
+  setCurrentLayout,
 }) => {
   const displayNeo4jHandler = () => {
     vsCodeApiService.openUrl(vscodeSettings.graphRagExplorer.neo4j.url, true);
@@ -123,13 +123,16 @@ export const GraphPanelHeaderCenter: React.FC<GraphPanelHeaderCenterProps> = ({
   );
 };
 
-
 export interface GraphPanelHeaderRightProps {
   cyRef: React.RefObject<any>;
   isGraphMaximized: boolean;
   setIsGraphMaximized: (maximized: boolean) => void;
   showGrid: boolean;
   setShowGrid: (show: boolean) => void;
+  attributesVisible: boolean;
+  setAttributesVisible: (val: boolean) => void;
+  methodsVisible: boolean;
+  setMethodsVisible: (val: boolean) => void;
 }
 
 export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
@@ -138,15 +141,35 @@ export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
   setIsGraphMaximized,
   showGrid,
   setShowGrid,
+  attributesVisible,
+  setAttributesVisible,
+  methodsVisible,
+  setMethodsVisible,
 }) => (
-  <div className="flex items-center gap-1">
+  <div className="flex items-center gap-0.5">
+    <ToggleButton
+      id="btn-toggle-attributes-visibility"
+      isSelected={attributesVisible}
+      onToggle={() => setAttributesVisible(!attributesVisible)}
+      tooltipText="Toggle Attributes Visibility"
+      icon={<Code2 size={12} />}
+    />
+    <ToggleButton
+      id="btn-toggle-methods-visibility"
+      isSelected={methodsVisible}
+      onToggle={() => setMethodsVisible(!methodsVisible)}
+      tooltipText="Toggle Methods Visibility"
+      icon={<Braces size={12} />}
+    />
+
+    <ToolbarSeparator />
 
     <ToggleButton
-        id="btn-toggle-grid"
-        isSelected={showGrid}
-        onToggle={() => setShowGrid(!showGrid)}
-        tooltipText="Toggle Grid"
-        icon={<Grid size={12} />}
+      id="btn-toggle-grid"
+      isSelected={showGrid}
+      onToggle={() => setShowGrid(!showGrid)}
+      tooltipText="Toggle Grid"
+      icon={<Grid size={12} />}
     />
 
     <ToolbarSeparator />
@@ -181,6 +204,5 @@ export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
     >
       <Focus size={12} />
     </Button>
-
   </div>
 );

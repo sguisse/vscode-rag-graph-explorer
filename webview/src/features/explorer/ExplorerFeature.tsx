@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { codebaseApiService } from '@/services/api/codebase-api.service.gen';
 import { useLayoutStore } from '@/store/useLayoutStore';
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
@@ -21,6 +20,8 @@ import { useTransitiveImpact } from './hooks/use-transitive-impact';
 import { useGraph } from './wksp-cnt-graph/components/graph/use-graph';
 import { usePlantUml } from './wksp-cnt-graph/components/graph/use-plantuml';
 
+import { initialCodebase, FOLDER_POSITIONS } from './wksp-cnt-graph/components/graph/GraphData';
+
 import {
   CodebaseData,
   SelectedEntity,
@@ -34,20 +35,18 @@ export function ExplorerFeature() {
   const setNotification = useAppContextStore((s) => s.setNotification);
   const isDarkMode = useAppContextStore((s) => s.isDarkMode);
 
-  const [codebase, setCodebase] = useState<CodebaseData>({ files: [], dependencies: [] });
-  const [folderPositions, setFolderPositions] = useState<Record<string, { label: string }>>({});
+  const [codebase, setCodebase] = useState<CodebaseData>(initialCodebase);
+  const [folderPositions, setFolderPositions] = useState<Record<string, { label: string }>>(FOLDER_POSITIONS);
   const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(null);
-  const [impactDirection, setImpactDirection] = useState<ImpactDirection>('aval');
+  const [impactDirection, setImpactDirection] = useState<ImpactDirection>('callee');
 
   const [showGrid, setShowGrid] = useState(true);
   const [callersDepth, setCallersDepth] = useState(1);
   const [calleesDepth, setCalleesDepth] = useState(1);
   const [currentLayout, setCurrentLayout] = useState('preset');
 
-  useEffect(() => {
-    codebaseApiService.getCodebase().then(setCodebase).catch(console.error);
-    codebaseApiService.getFolderPositions().then(setFolderPositions).catch(console.error);
-  }, []);
+  const [attributesVisible, setAttributesVisible] = useState(false);
+  const [methodsVisible, setMethodsVisible] = useState(true);
 
   const filter = useCodebaseFilter(codebase.files);
   const { impactedSet } = useTransitiveImpact(selectedEntity, impactDirection, codebase.dependencies);
@@ -101,8 +100,7 @@ export function ExplorerFeature() {
 
   const handleImportCodebase = useCallback(
     async (importedData: CodebaseData) => {
-      await codebaseApiService.importCodebase(importedData);
-      setCodebase({ ...importedData });
+      setCodebase(importedData);
       setNotification('AST Codebase imported successfully!');
     },
     [setNotification]
@@ -213,6 +211,10 @@ export function ExplorerFeature() {
               setIsGraphMaximized={() => toggleContainerMaximized('workspace.center')}
               showGrid={showGrid}
               setShowGrid={setShowGrid}
+              attributesVisible={attributesVisible}
+              setAttributesVisible={setAttributesVisible}
+              methodsVisible={methodsVisible}
+              setMethodsVisible={setMethodsVisible}
             />
           }
         />
@@ -227,6 +229,8 @@ export function ExplorerFeature() {
             searchFilteredFiles={filter.searchFilteredFiles}
             impactedSet={impactedSet}
             handleSelectMember={handleSelectMember}
+            attributesVisible={attributesVisible}
+            methodsVisible={methodsVisible}
           />
         </div>
       </div>
@@ -286,6 +290,8 @@ export function ExplorerFeature() {
     calleesDepth,
     currentLayout,
     showGrid,
+    attributesVisible,
+    methodsVisible,
     selectedEntity,
     codebase,
     folderPositions,

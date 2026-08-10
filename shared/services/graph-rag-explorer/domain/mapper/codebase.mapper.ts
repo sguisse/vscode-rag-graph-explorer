@@ -5,9 +5,6 @@ import {
   CodebaseAttribute,
   CodebaseMethod,
   ConfigProperty,
-  getAttributeVisibility,
-  getDependencyRelation,
-  getFileType,
 } from '../model/codebase.model';
 import { CodebaseSchema } from '../model/neo4j/codebase.schema';
 
@@ -31,7 +28,7 @@ export function parseAndMap(jsonString: string): CodebaseData {
     const files: CodebaseFile[] = raw.files.map((file, idx) => ({
       id: String(file.id ?? `file-${idx}`),
       name: String(file.name ?? ''),
-      type: getFileType(file.type) ?? 'component',
+      type: String(file.type ?? 'component'),
       path: String(file.path ?? ''),
       language: String(file.language ?? 'unknown'),
       size: typeof file.size === 'number' ? file.size : 0,
@@ -40,7 +37,7 @@ export function parseAndMap(jsonString: string): CodebaseData {
         ? file.attributes.map(
             (attr: any): CodebaseAttribute => ({
               name: String(attr?.name ?? ''),
-              visibility: getAttributeVisibility(attr?.visibility) ?? 'public',
+              visibility: String(attr?.visibility ?? 'public'),
             })
           )
         : undefined,
@@ -73,7 +70,7 @@ export function parseAndMap(jsonString: string): CodebaseData {
         sourceHandle: String(dep.sourceHandle ?? sourceNode),
         targetNode,
         targetHandle: String(dep.targetHandle ?? targetNode),
-        relation: getDependencyRelation(dep.relation) ?? 'dependency',
+        relation: String(dep.relation ?? 'dependency'),
         label: String(dep.label ?? dep.relation ?? 'DEPENDS_ON'),
       };
     });
