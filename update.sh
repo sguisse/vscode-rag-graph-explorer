@@ -1,540 +1,199 @@
 #!/usr/bin/env bash
 set -e
 
-# Ensure target directories exist
-mkdir -p webview/src/features/explorer/wksp-cnt-graph
-mkdir -p webview/src/features/explorer
+# Ensure target directory exists
+mkdir -p webview/src/features/explorer/wksp-cnt-graph/components/graph
 
-# 1. Update GraphPanelHeader.tsx: Move toggles to HeaderRight & swap icons (Code2 <-> Braces)
-cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/GraphPanelHeader.tsx
-import React from 'react';
-import { Grid, Database, User, Baby, Plus, Minus, Focus, Braces, Code2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
-import { ToggleButton } from '@/components/app/toggle-button';
-import { ToolbarSeparator } from '@/components/app/toolbar-separator';
-
-import {
-  DISPLAY_LEVEL_LIST,
-  DISPLAY_LEVEL_ICON_MAP,
-  GRAPH_LAYOUT_LIST,
-  GRAPH_LAYOUT_ICON_MAP
-} from '@/shared/services/graph-rag-explorer/domain/model/types';
-import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
-import { vscodeSettings } from '@/App';
-
-export interface GraphPanelHeaderLeftProps {
-
-}
-
-export const GraphPanelHeaderLeft: React.FC<GraphPanelHeaderLeftProps> = () => (
-  <div className="flex items-center gap-2">
-    <span className="font-bold text-foreground truncate uppercase tracking-wider">Topological Network</span>
-  </div>
-);
-
-export interface GraphPanelHeaderCenterProps {
-  maxNodesLimit: number;
-  setMaxNodesLimit: (val: number) => void;
-  callersDepth: number;
-  setCallersDepth: (val: number) => void;
-  calleesDepth: number;
-  setCalleesDepth: (val: number) => void;
-  displayLevel: string;
-  setDisplayLevel: (val: string) => void;
-  currentLayout: string;
-  setCurrentLayout: (val: string) => void;
-}
-
-export const GraphPanelHeaderCenter: React.FC<GraphPanelHeaderCenterProps> = ({
-  maxNodesLimit,
-  setMaxNodesLimit,
-  callersDepth,
-  setCallersDepth,
-  calleesDepth,
-  setCalleesDepth,
-  displayLevel,
-  setDisplayLevel,
-  currentLayout,
-  setCurrentLayout,
-}) => {
-  const displayNeo4jHandler = () => {
-    vsCodeApiService.openUrl(vscodeSettings.graphRagExplorer.neo4j.url, true);
-  };
-
-  return (
-    <div className="flex items-center gap-3">
-      <div className="flex items-center gap-1.5 bg-background px-2 py-0.5 border border-border rounded-sm">
-        <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">Limit:</span>
-        <Input
-          id="input-max-nodes-limit"
-          type="number"
-          min={1}
-          max={100}
-          className="bg-transparent shadow-none px-1 border-0 focus:ring-0 w-12 h-5 font-bold text-foreground text-xs text-center"
-          value={maxNodesLimit}
-          onChange={(e) => setMaxNodesLimit(Number(e.target.value) || 50)}
-        />
-      </div>
-      <Button
-        id="btn-neo4j-connect"
-        className="flex items-center gap-1.5 bg-gradient-to-r from-orange-600 to-orange-500 shadow-sm px-2.5 border border-orange-700 rounded-md h-6 font-bold text-[10px] text-white uppercase tracking-wider"
-        onClick={displayNeo4jHandler}
-      >
-        <Database size={11} /> Neo4j
-      </Button>
-      <div className="flex items-center gap-1 bg-background px-1.5 py-0.5 border border-border rounded-sm">
-        <User size={12} className="text-muted-foreground" />
-        <Input
-          id="input-callers-depth"
-          type="number"
-          min={0}
-          max={20}
-          className="bg-transparent p-0 border-0 focus:ring-0 w-8 h-5 text-foreground text-xs text-center"
-          value={callersDepth}
-          onChange={(e) => setCallersDepth(Number(e.target.value) || 0)}
-        />
-      </div>
-      <div className="flex items-center gap-1 bg-background px-1.5 py-0.5 border border-border rounded-sm">
-        <Baby size={12} className="text-muted-foreground" />
-        <Input
-          id="input-callees-depth"
-          type="number"
-          min={0}
-          max={20}
-          className="bg-transparent p-0 border-0 focus:ring-0 w-8 h-5 text-foreground text-xs text-center"
-          value={calleesDepth}
-          onChange={(e) => setCalleesDepth(Number(e.target.value) || 0)}
-        />
-      </div>
-      <SelectFromTypeBuilder
-        id="select-display-level"
-        value={displayLevel}
-        onChange={setDisplayLevel}
-        options={DISPLAY_LEVEL_LIST.map((key) => ({
-          value: key,
-          icon: DISPLAY_LEVEL_ICON_MAP[key].icon,
-          label: DISPLAY_LEVEL_ICON_MAP[key].label,
-        }))}
-      />
-      <SelectFromTypeBuilder
-        id="select-graph-layout"
-        value={currentLayout}
-        onChange={setCurrentLayout}
-        options={GRAPH_LAYOUT_LIST.map((key) => ({
-          value: key,
-          icon: GRAPH_LAYOUT_ICON_MAP[key].icon,
-          label: GRAPH_LAYOUT_ICON_MAP[key].label,
-        }))}
-      />
-    </div>
-  );
-};
-
-export interface GraphPanelHeaderRightProps {
-  cyRef: React.RefObject<any>;
-  isGraphMaximized: boolean;
-  setIsGraphMaximized: (maximized: boolean) => void;
-  showGrid: boolean;
-  setShowGrid: (show: boolean) => void;
-  attributesVisible: boolean;
-  setAttributesVisible: (val: boolean) => void;
-  methodsVisible: boolean;
-  setMethodsVisible: (val: boolean) => void;
-}
-
-export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
-  cyRef,
-  isGraphMaximized,
-  setIsGraphMaximized,
-  showGrid,
-  setShowGrid,
-  attributesVisible,
-  setAttributesVisible,
-  methodsVisible,
-  setMethodsVisible,
-}) => (
-  <div className="flex items-center gap-1">
-    <ToggleButton
-      id="btn-toggle-attributes-visibility"
-      isSelected={attributesVisible}
-      onToggle={() => setAttributesVisible(!attributesVisible)}
-      tooltipText="Toggle Attributes Visibility"
-      icon={<Code2 size={12} />}
-    />
-    <ToggleButton
-      id="btn-toggle-methods-visibility"
-      isSelected={methodsVisible}
-      onToggle={() => setMethodsVisible(!methodsVisible)}
-      tooltipText="Toggle Methods Visibility"
-      icon={<Braces size={12} />}
-    />
-
-    <ToolbarSeparator />
-
-    <ToggleButton
-      id="btn-toggle-grid"
-      isSelected={showGrid}
-      onToggle={() => setShowGrid(!showGrid)}
-      tooltipText="Toggle Grid"
-      icon={<Grid size={12} />}
-    />
-
-    <ToolbarSeparator />
-
-    <Button
-      id="btn-graph-zoom-in"
-      variant="ghost"
-      size="icon"
-      className="w-5 h-5 text-muted-foreground"
-      onClick={() => cyRef.current?.zoom((cyRef.current?.zoom() || 1) * 1.2)}
-    >
-      <Plus size={12} />
-    </Button>
-    <Button
-      id="btn-graph-zoom-out"
-      variant="ghost"
-      size="icon"
-      className="w-5 h-5 text-muted-foreground"
-      onClick={() => cyRef.current?.zoom((cyRef.current?.zoom() || 1) / 1.2)}
-    >
-      <Minus size={12} />
-    </Button>
-    <Button
-      id="btn-graph-fit-view"
-      variant="ghost"
-      size="icon"
-      className="w-5 h-5 text-muted-foreground"
-      onClick={() => {
-        cyRef.current?.fit();
-        cyRef.current?.center();
-      }}
-    >
-      <Focus size={12} />
-    </Button>
-  </div>
-);
-EOF
-
-# 2. Update ExplorerFeature.tsx to pass props to GraphPanelHeaderRight
-cat << 'EOF' > webview/src/features/explorer/ExplorerFeature.tsx
-import React, { useState, useEffect, useCallback } from 'react';
-import { useLayoutStore } from '@/store/useLayoutStore';
-import { useAppContextStore } from '@/store/useAppContextStore';
-import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
-
-import { ContextPathsPanel } from './wkp-top-paths/context-paths-panel';
-import { CodebaseExplorerPanel } from './wkp-lft-codebase-tree/CodebaseExplorerPanel';
-import { GraphPanel } from './wksp-cnt-graph/GraphPanel';
-import {
-  GraphPanelHeaderLeft,
-  GraphPanelHeaderCenter,
-  GraphPanelHeaderRight,
-} from './wksp-cnt-graph/GraphPanelHeader';
-import { GlobalInspectorPanel } from './wkp-rgt-tabs-inspector/global-inspector-panel';
-import { WkpBottomPanel } from './wkp-btm-infos/wkp-bottom-panel';
-import { EntityPropertiesPanel } from './sdb-rgt-properties/EntityPropertiesPanel';
-
-import { useCodebaseFilter } from './hooks/use-codebase-filter';
-import { useTransitiveImpact } from './hooks/use-transitive-impact';
-import { useGraph } from './wksp-cnt-graph/components/graph/use-graph';
-import { usePlantUml } from './wksp-cnt-graph/components/graph/use-plantuml';
-
-import { initialCodebase, FOLDER_POSITIONS } from './wksp-cnt-graph/components/graph/GraphData';
-
+# Update useGraphTopology.ts with dynamic horizontal node spacing
+cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/components/graph/useGraphTopology.ts
+import { useCallback, useRef } from 'react';
+import cytoscape from 'cytoscape';
 import {
   CodebaseData,
+  CodebaseFile,
+  Dependency,
   SelectedEntity,
-  ImpactDirection,
 } from '@/shared/services/graph-rag-explorer';
+import { buildMemberKeyToken } from '@/services/view/graph-view.service';
+import { FOLDER_BASE_X_POSITIONS_CONFIG } from '@/features/explorer/constants/graph.constants';
 
-export function ExplorerFeature() {
-  const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
-  const setContainerContent = useLayoutStore((s) => s.setContainerContent);
-  const toggleContainerMaximized = useLayoutStore((s) => s.toggleContainerMaximized);
-  const setNotification = useAppContextStore((s) => s.setNotification);
-  const isDarkMode = useAppContextStore((s) => s.isDarkMode);
+function getNodeDimensions(
+  file: CodebaseFile,
+  attributesVisible: boolean,
+  methodsVisible: boolean
+): { width: number; height: number } {
+  if (file.type === 'config') {
+    return { width: 320, height: 240 };
+  }
 
-  const [codebase, setCodebase] = useState<CodebaseData>(initialCodebase);
-  const [folderPositions, setFolderPositions] = useState<Record<string, { label: string }>>(FOLDER_POSITIONS);
-  const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(null);
-  const [impactDirection, setImpactDirection] = useState<ImpactDirection>('callee');
+  const baseHeaderHeight = 76;
 
-  const [showGrid, setShowGrid] = useState(true);
-  const [callersDepth, setCallersDepth] = useState(1);
-  const [calleesDepth, setCalleesDepth] = useState(1);
-  const [currentLayout, setCurrentLayout] = useState('preset');
+  let attrHeight = 0;
+  if (attributesVisible) {
+    const attrCount = file.attributes?.length || 0;
+    attrHeight = attrCount > 0 ? 28 + attrCount * 18 : 36;
+  }
 
-  const [attributesVisible, setAttributesVisible] = useState(false);
-  const [methodsVisible, setMethodsVisible] = useState(true);
+  let methodHeight = 0;
+  if (methodsVisible) {
+    const methodCount = file.methods?.length || 0;
+    methodHeight = methodCount > 0 ? 28 + methodCount * 32 : 36;
+  }
 
-  const filter = useCodebaseFilter(codebase.files);
-  const { impactedSet } = useTransitiveImpact(selectedEntity, impactDirection, codebase.dependencies);
-
-  const handleNodeSelect = useCallback((nodeId: string) => {
-    setSelectedEntity({ type: 'node', nodeId });
-  }, []);
-
-  const handleSelectMember = useCallback((nodeId: string, memberId: string) => {
-    setSelectedEntity({ type: 'member', nodeId, memberId });
-  }, []);
-
-  const { containerRef, cyRef, graphState, updateGraphTopology, isReady } = useGraph(isDarkMode, handleNodeSelect);
-
-  const generatedPlantUML = usePlantUml(
-    filter.searchFilteredFiles,
-    filter.visibleFiles,
-    codebase.dependencies
-  );
-
-  useEffect(() => {
-    if (!isReady || Object.keys(folderPositions).length === 0) return;
-    updateGraphTopology(
-      filter.searchFilteredFiles,
-      filter.visibleFiles,
-      codebase,
-      impactedSet,
-      currentLayout,
-      folderPositions
-    );
-  }, [
-    isReady,
-    filter.searchFilteredFiles,
-    filter.visibleFiles,
-    codebase,
-    impactedSet,
-    currentLayout,
-    folderPositions,
-    updateGraphTopology,
-  ]);
-
-  const handleCopy = useCallback(
-    (text: string, message: string) => {
-      if (navigator?.clipboard?.writeText) {
-        navigator.clipboard.writeText(text);
-      }
-      setNotification(message);
-    },
-    [setNotification]
-  );
-
-  const handleImportCodebase = useCallback(
-    async (importedData: CodebaseData) => {
-      setCodebase(importedData);
-      setNotification('AST Codebase imported successfully!');
-    },
-    [setNotification]
-  );
-
-  useEffect(() => {
-    setLayoutContainers({
-      header: { visible: true, isResizable: false, isHiddable: false },
-      sidebarLeft: { visible: true, isResizable: true, isHiddable: true },
-      workspace: {
-        top: {
-          visible: true,
-          isResizable: true,
-          isHiddable: true,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
-        },
-        left: {
-          visible: true,
-          isResizable: true,
-          isHiddable: true,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
-        },
-        center: {
-          visible: true,
-          isResizable: false,
-          isHiddable: false,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
-        },
-        right: {
-          visible: true,
-          isResizable: true,
-          isHiddable: true,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
-        },
-        bottom: {
-          visible: true,
-          isResizable: true,
-          isHiddable: true,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
-        },
-      },
-      sidebarRight: {
-        visible: true,
-        isResizable: true,
-        isHiddable: true,
-        maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
-      },
-      footer: { visible: true, isResizable: false, isHiddable: false },
-    });
-  }, [setLayoutContainers]);
-
-  useEffect(() => {
-    setContainerContent(
-      'workspace.top',
-      <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
-        <ContainerPanelHeader title="Context Paths" path="workspace.top" />
-        <div className="flex-1 min-h-0 overflow-auto">
-          <ContextPathsPanel />
-        </div>
-      </div>
-    );
-
-    setContainerContent(
-      'workspace.left',
-      <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden">
-        <ContainerPanelHeader title="Codebase Explorer" path="workspace.left" />
-        <div className="flex-1 min-h-0 overflow-auto">
-          <CodebaseExplorerPanel
-            codebase={codebase}
-            searchFilteredFiles={filter.searchFilteredFiles}
-            expandedFolders={filter.expandedFolders}
-            visibleFiles={filter.visibleFiles}
-            toggleFolder={filter.toggleFolder}
-            toggleFolderCheckbox={filter.toggleFolderCheckbox}
-            toggleFileCheckbox={filter.toggleFileCheckbox}
-            setSelectedEntity={setSelectedEntity}
-            onImportCodebase={handleImportCodebase}
-          />
-        </div>
-      </div>
-    );
-
-    setContainerContent(
-      'workspace.center',
-      <div className="relative flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
-        <ContainerPanelHeader
-          path="workspace.center"
-          isHiddable={false}
-          headerLeft={<GraphPanelHeaderLeft />}
-          headerCenter={
-            <GraphPanelHeaderCenter
-              maxNodesLimit={filter.maxNodesLimit}
-              setMaxNodesLimit={filter.setMaxNodesLimit}
-              callersDepth={callersDepth}
-              setCallersDepth={setCallersDepth}
-              calleesDepth={calleesDepth}
-              setCalleesDepth={setCalleesDepth}
-              displayLevel={filter.displayLevel}
-              setDisplayLevel={filter.setDisplayLevel}
-              currentLayout={currentLayout}
-              setCurrentLayout={setCurrentLayout}
-            />
-          }
-          headerRight={
-            <GraphPanelHeaderRight
-              cyRef={cyRef}
-              isGraphMaximized={false}
-              setIsGraphMaximized={() => toggleContainerMaximized('workspace.center')}
-              showGrid={showGrid}
-              setShowGrid={setShowGrid}
-              attributesVisible={attributesVisible}
-              setAttributesVisible={setAttributesVisible}
-              methodsVisible={methodsVisible}
-              setMethodsVisible={setMethodsVisible}
-            />
-          }
-        />
-        <div className="relative flex-1 w-full h-full min-h-0">
-          <GraphPanel
-            folderPositions={folderPositions}
-            containerRef={containerRef}
-            showGrid={showGrid}
-            isDarkMode={isDarkMode}
-            graphState={graphState}
-            selectedEntity={selectedEntity}
-            searchFilteredFiles={filter.searchFilteredFiles}
-            impactedSet={impactedSet}
-            handleSelectMember={handleSelectMember}
-            attributesVisible={attributesVisible}
-            methodsVisible={methodsVisible}
-          />
-        </div>
-      </div>
-    );
-
-    setContainerContent(
-      'workspace.right',
-      <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden">
-        <ContainerPanelHeader title="Global Inspector" path="workspace.right" />
-        <div className="flex-1 min-h-0 overflow-auto">
-          <GlobalInspectorPanel
-            selectedEntity={selectedEntity}
-            initialCodebase={codebase}
-            impactDirection={impactDirection}
-            setImpactDirection={setImpactDirection}
-            impactedSet={impactedSet}
-            handleCopy={handleCopy}
-            generatedPlantUML={generatedPlantUML}
-          />
-        </div>
-      </div>
-    );
-
-    setContainerContent(
-      'workspace.bottom',
-      <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
-        <ContainerPanelHeader title="Output & Logs" path="workspace.bottom" />
-        <div className="flex-1 min-h-0 overflow-auto">
-          <WkpBottomPanel />
-        </div>
-      </div>
-    );
-
-    setContainerContent(
-      'sidebarRight',
-      <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden">
-        <ContainerPanelHeader title="Entity Properties" path="sidebarRight" />
-        <div className="flex-1 min-h-0 overflow-auto">
-          <EntityPropertiesPanel selectedEntity={selectedEntity} />
-        </div>
-      </div>
-    );
-  }, [
-    setContainerContent,
-    toggleContainerMaximized,
-    filter.searchFilteredFiles,
-    filter.expandedFolders,
-    filter.visibleFiles,
-    filter.maxNodesLimit,
-    filter.displayLevel,
-    filter.toggleFolder,
-    filter.toggleFolderCheckbox,
-    filter.toggleFileCheckbox,
-    filter.setMaxNodesLimit,
-    filter.setDisplayLevel,
-    callersDepth,
-    calleesDepth,
-    currentLayout,
-    showGrid,
-    attributesVisible,
-    methodsVisible,
-    selectedEntity,
-    codebase,
-    folderPositions,
-    impactDirection,
-    impactedSet,
-    generatedPlantUML,
-    handleCopy,
-    handleImportCodebase,
-    handleSelectMember,
-    containerRef,
-    cyRef,
-    isDarkMode,
-    graphState,
-  ]);
-
-  return null;
+  const totalHeight = baseHeaderHeight + attrHeight + methodHeight;
+  return { width: 288, height: totalHeight };
 }
 
-export default ExplorerFeature;
+export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) {
+  const lastTopologyKeyRef = useRef<string>('');
+
+  const updateGraphTopology = useCallback((
+    searchFilteredFiles: CodebaseFile[],
+    visibleFiles: Record<string, boolean>,
+    codebase: CodebaseData,
+    impactedSet: Set<string>,
+    currentLayout: string,
+    folderPositions: Record<string, { label: string }>,
+    attributesVisible: boolean = false,
+    methodsVisible: boolean = true,
+    selectedEntity: SelectedEntity | null = null,
+    showSelectedOnly: boolean = false
+  ) => {
+    if (!cyRef.current) return;
+    const cy = cyRef.current;
+
+    const effectiveFiles = (showSelectedOnly && selectedEntity)
+      ? searchFilteredFiles.filter(f => f.id === selectedEntity.nodeId || impactedSet.has(f.id))
+      : searchFilteredFiles;
+
+    const topologyKey = JSON.stringify({
+      files: effectiveFiles.map(f => f.id),
+      visible: visibleFiles,
+      impacted: Array.from(impactedSet),
+      layout: currentLayout,
+      attributesVisible,
+      methodsVisible,
+      selectedEntity,
+      showSelectedOnly
+    });
+
+    if (lastTopologyKeyRef.current === topologyKey) {
+      return;
+    }
+    lastTopologyKeyRef.current = topologyKey;
+
+    cy.elements().remove();
+
+    const filesByFolder: Record<string, CodebaseFile[]> = {};
+    effectiveFiles.forEach(file => {
+      const folderKey = file.path.split('/')[0] || 'other';
+      if (!filesByFolder[folderKey]) filesByFolder[folderKey] = [];
+      filesByFolder[folderKey].push(file);
+    });
+
+    const allFolderKeys = Array.from(
+      new Set([...Object.keys(folderPositions), ...Object.keys(filesByFolder)])
+    );
+
+    // Calculate dynamic horizontal gap: at least 50px or scaled to maximum dependency label length
+    let maxLabelLength = 0;
+    codebase.dependencies.forEach(dep => {
+      if (dep.label) {
+        maxLabelLength = Math.max(maxLabelLength, dep.label.length);
+      }
+    });
+    const dynamicGapX = Math.max(50, maxLabelLength * 8 + 24);
+
+    allFolderKeys.forEach(folderKey => {
+      if ((filesByFolder[folderKey] || []).length > 0) {
+        const label = folderPositions[folderKey]?.label || `📂 ${folderKey.charAt(0).toUpperCase() + folderKey.slice(1)}`;
+        cy.add({ data: { id: `folder__${folderKey}`, label }, classes: 'folder' });
+      }
+    });
+
+    allFolderKeys.forEach((folderKey, folderIdx) => {
+      const folderFiles = filesByFolder[folderKey] || [];
+      if (folderFiles.length === 0) return;
+
+      const baseX = FOLDER_BASE_X_POSITIONS_CONFIG[folderKey as keyof typeof FOLDER_BASE_X_POSITIONS_CONFIG] || (40 + folderIdx * 450);
+
+      const numCols = 2;
+      const gapX = dynamicGapX;
+      const gapY = 65;
+
+      let currentY = 80;
+      const rowCount = Math.ceil(folderFiles.length / numCols);
+
+      for (let r = 0; r < rowCount; r++) {
+        const rowFiles = folderFiles.slice(r * numCols, (r + 1) * numCols);
+        const rowHeights = rowFiles.map(f => getNodeDimensions(f, attributesVisible, methodsVisible).height);
+        const maxRowHeight = Math.max(...rowHeights, 76);
+
+        rowFiles.forEach((file, c) => {
+          const dims = getNodeDimensions(file, attributesVisible, methodsVisible);
+          const absX = baseX + 30 + c * (dims.width + gapX) + dims.width / 2;
+          const absY = currentY + dims.height / 2;
+
+          cy.add({
+            data: {
+              id: file.id,
+              parent: `folder__${folderKey}`,
+              width: dims.width,
+              height: dims.height
+            },
+            position: { x: absX, y: absY }
+          });
+        });
+
+        currentY += maxRowHeight + gapY;
+      }
+    });
+
+    codebase.dependencies.forEach((dep: Dependency) => {
+      const sourceNodeId = dep.sourceNode || dep.source;
+      const targetNodeId = dep.targetNode || dep.target;
+      const sourceHandle = dep.sourceHandle || 'header';
+      const targetHandle = dep.targetHandle || 'header';
+
+      if (
+        sourceNodeId &&
+        targetNodeId &&
+        visibleFiles[sourceNodeId] &&
+        visibleFiles[targetNodeId] &&
+        cy.getElementById(sourceNodeId).length > 0 &&
+        cy.getElementById(targetNodeId).length > 0
+      ) {
+        const sourceKeyMember = buildMemberKeyToken(sourceNodeId, sourceHandle);
+        const targetKeyMember = buildMemberKeyToken(targetNodeId, targetHandle);
+        const isEdgeImpacted =
+          (impactedSet.has(sourceNodeId) || impactedSet.has(sourceKeyMember)) &&
+          (impactedSet.has(targetNodeId) || impactedSet.has(targetKeyMember));
+
+        cy.add({
+          data: { id: dep.id, source: sourceNodeId, target: targetNodeId, label: dep.label },
+          classes: isEdgeImpacted ? 'impacted' : ''
+        });
+      }
+    });
+
+    cy.layout({
+      name: currentLayout,
+      animate: false,
+      fit: true,
+      padding: 40,
+      boundingBox: { x1: 0, y1: 0, w: 2000, h: 2000 }
+    } as cytoscape.LayoutOptions).run();
+
+    cy.fit(undefined, 40);
+    cy.center();
+
+  }, [cyRef]);
+
+  return { updateGraphTopology };
+}
 EOF
 
-echo "✅ refactor: Moved attribute and method toggles to GraphPanelHeaderRight and inverted icons!"
+echo "✅ feat: Configured horizontal node gap to be at least 50px or dynamically scaled according to dependency label character length!"
 
 # Rebuild webview
 npm run build:webview

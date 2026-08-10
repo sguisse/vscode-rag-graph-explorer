@@ -1,5 +1,5 @@
 import React from 'react';
-import { Grid, Database, User, Baby, Plus, Minus, Focus, Braces, Code2 } from 'lucide-react';
+import { Grid, Database, User, Baby, Plus, Minus, Focus, Braces, Code2, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
@@ -133,6 +133,8 @@ export interface GraphPanelHeaderRightProps {
   setAttributesVisible: (val: boolean) => void;
   methodsVisible: boolean;
   setMethodsVisible: (val: boolean) => void;
+  showSelectedOnly: boolean;
+  setShowSelectedOnly: (val: boolean) => void;
 }
 
 export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
@@ -145,8 +147,17 @@ export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
   setAttributesVisible,
   methodsVisible,
   setMethodsVisible,
+  showSelectedOnly,
+  setShowSelectedOnly,
 }) => (
-  <div className="flex items-center gap-0.5">
+  <div className="flex items-center gap-1">
+    <ToggleButton
+      id="btn-toggle-show-selected-only"
+      isSelected={showSelectedOnly}
+      onToggle={() => setShowSelectedOnly(!showSelectedOnly)}
+      tooltipText="Display Only Selected & Connected Items"
+      icon={<Target size={12} />}
+    />
     <ToggleButton
       id="btn-toggle-attributes-visibility"
       isSelected={attributesVisible}
@@ -198,7 +209,7 @@ export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
       size="icon"
       className="w-5 h-5 text-muted-foreground"
       onClick={() => {
-        cyRef.current?.fit();
+        cyRef.current?.fit(undefined, 40);
         cyRef.current?.center();
       }}
     >

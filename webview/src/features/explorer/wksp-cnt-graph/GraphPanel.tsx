@@ -20,6 +20,7 @@ interface GraphPanelProps {
   handleSelectMember: (nodeId: string, memberId: string) => void;
   attributesVisible: boolean;
   methodsVisible: boolean;
+  showSelectedOnly?: boolean;
 }
 
 export function GraphPanel({
@@ -33,7 +34,8 @@ export function GraphPanel({
   impactedSet,
   handleSelectMember,
   attributesVisible,
-  methodsVisible
+  methodsVisible,
+  showSelectedOnly = false
 }: GraphPanelProps) {
   const effectiveFolderPositions = useMemo(() => {
     const folderMap: Record<string, { label: string }> = { ...folderPositions };
@@ -51,6 +53,13 @@ export function GraphPanel({
 
     return folderMap;
   }, [folderPositions, graphState.nodePositions]);
+
+  const effectiveSearchFilteredFiles = useMemo(() => {
+    if (showSelectedOnly && selectedEntity) {
+      return searchFilteredFiles.filter(f => f.id === selectedEntity.nodeId || impactedSet.has(f.id));
+    }
+    return searchFilteredFiles;
+  }, [searchFilteredFiles, showSelectedOnly, selectedEntity, impactedSet]);
 
   return (
     <div className="absolute inset-0 outline-none w-full h-full overflow-hidden">
@@ -85,7 +94,7 @@ export function GraphPanel({
           );
         })}
 
-        {searchFilteredFiles.map((file: CodebaseFile) => {
+        {effectiveSearchFilteredFiles.map((file: CodebaseFile) => {
           const bounds = graphState.nodePositions[file.id];
           if (!bounds) return null;
 
@@ -95,12 +104,14 @@ export function GraphPanel({
               impactedMembers.push(extractMemberIdFromKeyToken(item));
             }
           });
-          const isNodeImpacted = impactedSet.has(file.id);
-          const isDimmed = selectedEntity !== null && impactedSet.size > 0 && !isNodeImpacted;
+
+          const isOrigin = selectedEntity?.nodeId === file.id;
+          const isDependency = impactedSet.has(file.id) && !isOrigin;
 
           const nodeData: UmlClassNodeData = {
             ...file,
-            isDimmed,
+            isOrigin,
+            isDependency,
             impactedMembers,
             selectedMember: selectedEntity?.nodeId === file.id ? selectedEntity?.memberId : undefined,
             onSelectMember: handleSelectMember,

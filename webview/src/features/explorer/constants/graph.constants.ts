@@ -23,7 +23,7 @@ export const NODE_DIMENSIONS_CONFIG = {
 } as const;
 
 export const GRAPH_THEME_COLOR_TOKENS_CONFIG = {
-  impactedEdge: '#f97316',
+  impactedEdge: '#eab308',
   darkLine: '#475569',
   lightLine: '#cbd5e1',
   darkBorder: '#334155',

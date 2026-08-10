@@ -47,9 +47,16 @@ export function ExplorerFeature() {
 
   const [attributesVisible, setAttributesVisible] = useState(false);
   const [methodsVisible, setMethodsVisible] = useState(true);
+  const [showSelectedOnly, setShowSelectedOnly] = useState(false);
 
   const filter = useCodebaseFilter(codebase.files);
-  const { impactedSet } = useTransitiveImpact(selectedEntity, impactDirection, codebase.dependencies);
+  const { impactedSet } = useTransitiveImpact(
+    selectedEntity,
+    impactDirection,
+    codebase.dependencies,
+    callersDepth,
+    calleesDepth
+  );
 
   const handleNodeSelect = useCallback((nodeId: string) => {
     setSelectedEntity({ type: 'node', nodeId });
@@ -75,7 +82,11 @@ export function ExplorerFeature() {
       codebase,
       impactedSet,
       currentLayout,
-      folderPositions
+      folderPositions,
+      attributesVisible,
+      methodsVisible,
+      selectedEntity,
+      showSelectedOnly
     );
   }, [
     isReady,
@@ -85,6 +96,10 @@ export function ExplorerFeature() {
     impactedSet,
     currentLayout,
     folderPositions,
+    attributesVisible,
+    methodsVisible,
+    selectedEntity,
+    showSelectedOnly,
     updateGraphTopology,
   ]);
 
@@ -215,6 +230,8 @@ export function ExplorerFeature() {
               setAttributesVisible={setAttributesVisible}
               methodsVisible={methodsVisible}
               setMethodsVisible={setMethodsVisible}
+              showSelectedOnly={showSelectedOnly}
+              setShowSelectedOnly={setShowSelectedOnly}
             />
           }
         />
@@ -231,6 +248,7 @@ export function ExplorerFeature() {
             handleSelectMember={handleSelectMember}
             attributesVisible={attributesVisible}
             methodsVisible={methodsVisible}
+            showSelectedOnly={showSelectedOnly}
           />
         </div>
       </div>
@@ -292,6 +310,7 @@ export function ExplorerFeature() {
     showGrid,
     attributesVisible,
     methodsVisible,
+    showSelectedOnly,
     selectedEntity,
     codebase,
     folderPositions,

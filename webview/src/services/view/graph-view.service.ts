@@ -1,5 +1,4 @@
 import { CodebaseData, CodebaseFile, Dependency, ImpactDirection, SelectedEntity } from "@/shared/services/graph-rag-explorer";
-import { neo4jApiService } from "@/services/api/neo4j-api.service.gen";
 import { initialCodebase } from "@/features/explorer/wksp-cnt-graph/components/graph/GraphData";
 import { MEMBER_KEY_SEPARATOR_TOKEN } from "@/shared/services/graph-rag-explorer/domain/model/codebase.constants";
 import { logInfo } from "./log-view.service.wrapper";
@@ -23,44 +22,56 @@ export function extractMemberIdFromKeyToken(key: string): string {
 export function calculateTransitiveImpact(
     selectedEntity: SelectedEntity | null,
     impactDirection: ImpactDirection,
-    dependencies: Dependency[]
+    dependencies: Dependency[],
+    maxDepth: number = 1
 ): Set<string> {
-    if (!selectedEntity) return new Set<string>();
+    if (!selectedEntity || maxDepth < 1) return new Set<string>();
 
     const visited = new Set<string>();
-    const queue: string[] = [];
+    const queue: Array<{ key: string; depth: number }> = [];
 
     const startKey = selectedEntity.type === 'member' && selectedEntity.memberId
       ? buildMemberKeyTokenSync(selectedEntity.nodeId, selectedEntity.memberId)
       : selectedEntity.nodeId;
 
     if (startKey) {
-      queue.push(startKey);
+      queue.push({ key: startKey, depth: 0 });
       visited.add(startKey);
+      visited.add(selectedEntity.nodeId);
     }
 
     while (queue.length > 0) {
-      const current = queue.shift()!;
+      const { key: current, depth } = queue.shift()!;
+
+      if (depth >= maxDepth) continue;
+
       dependencies.forEach(dep => {
-        const sourceKeyMember = buildMemberKeyTokenSync(dep.sourceNode, dep.sourceHandle);
-        const targetKeyMember = buildMemberKeyTokenSync(dep.targetNode, dep.targetHandle);
-        const sourceKey = dep.sourceHandle === 'header' ? dep.sourceNode : sourceKeyMember;
-        const targetKey = dep.targetHandle === 'header' ? dep.targetNode : targetKeyMember;
+        const depSourceNode = dep.sourceNode || dep.source;
+        const depTargetNode = dep.targetNode || dep.target;
+        const depSourceHandle = dep.sourceHandle || 'header';
+        const depTargetHandle = dep.targetHandle || 'header';
+
+        if (!depSourceNode || !depTargetNode) return;
+
+        const sourceKeyMember = buildMemberKeyTokenSync(depSourceNode, depSourceHandle);
+        const targetKeyMember = buildMemberKeyTokenSync(depTargetNode, depTargetHandle);
+        const sourceKey = depSourceHandle === 'header' ? depSourceNode : sourceKeyMember;
+        const targetKey = depTargetHandle === 'header' ? depTargetNode : targetKeyMember;
 
         if (impactDirection === 'callee') {
-          if (current === dep.sourceNode || current === sourceKey) {
-            if (!visited.has(targetKey)) {
+          if (current === depSourceNode || current === sourceKey || current === sourceKeyMember) {
+            if (!visited.has(targetKey) || !visited.has(depTargetNode)) {
               visited.add(targetKey);
-              visited.add(dep.targetNode);
-              queue.push(targetKey);
+              visited.add(depTargetNode);
+              queue.push({ key: targetKey, depth: depth + 1 });
             }
           }
         } else {
-          if (current === dep.targetNode || current === targetKey) {
-            if (!visited.has(sourceKey)) {
+          if (current === depTargetNode || current === targetKey || current === targetKeyMember) {
+            if (!visited.has(sourceKey) || !visited.has(depSourceNode)) {
               visited.add(sourceKey);
-              visited.add(dep.sourceNode);
-              queue.push(sourceKey);
+              visited.add(depSourceNode);
+              queue.push({ key: sourceKey, depth: depth + 1 });
             }
           }
         }
@@ -85,15 +96,9 @@ export function filterCodebaseFiles(
     }).slice(0, maxNodesLimit);
 }
 
-/**
- * Executes Cypher query using neo4j-service port to identify callers and callees
- * potentially impacted by a change in the specified input paths.
- * Returns output conforming to CodebaseData and CodebaseSchema.
- */
 export function getPathsChangeImpacts(paths: string | string[]): CodebaseData {
-        logInfo(`[getPathsChangeImpacts] Neo4j service is currently disabled. Returning initialCodebase as fallback.`);
-        return initialCodebase;
+    logInfo(`[getPathsChangeImpacts] Neo4j service is currently disabled. Returning initialCodebase as fallback.`);
+    return initialCodebase;
 }
 
-// Alias for exact method name compatibility
 export const getpathsChangeImpacts = getPathsChangeImpacts;
