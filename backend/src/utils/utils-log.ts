@@ -7,7 +7,7 @@ export let logChannel: vscode.LogOutputChannel;
 function getLogChannel() {
     if (!logChannel) {
         const appName = getAppNameFromPackageJson(getCurrentExtensionContext());
-        logChannel = vscode.window.createOutputChannel(`${appName} Logs`, { log: true });
+        logChannel = vscode.window.createOutputChannel(`${appName}`, { log: true });
         logChannel.show();
     }
     return logChannel;

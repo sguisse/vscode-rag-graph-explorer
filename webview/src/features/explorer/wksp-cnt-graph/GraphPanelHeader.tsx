@@ -1,5 +1,5 @@
 import React from 'react';
-import { Grid, Database, User, Baby, Plus, Minus, Focus, Braces, Code2, Target } from 'lucide-react';
+import { Grid, Database, User, Baby, Plus, Minus, Focus, SquareFunction, Code2, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
@@ -170,7 +170,7 @@ export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
       isSelected={methodsVisible}
       onToggle={() => setMethodsVisible(!methodsVisible)}
       tooltipText="Toggle Methods Visibility"
-      icon={<Braces size={12} />}
+      icon={<SquareFunction size={12} />}
     />
 
     <ToolbarSeparator />

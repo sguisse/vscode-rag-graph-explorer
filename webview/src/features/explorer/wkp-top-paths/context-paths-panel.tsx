@@ -37,7 +37,7 @@ export function ContextPathsPanel() {
   };
 
   return (
-    <div className="flex flex-col bg-background p-2 w-full h-full">
+    <div className="flex flex-col bg-background p-0 w-full h-full">
       <Textarea
         value={paths}
         onChange={handleTextareaChange}
