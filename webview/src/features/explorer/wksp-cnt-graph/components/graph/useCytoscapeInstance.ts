@@ -56,13 +56,15 @@ export function useCytoscapeInstance(
 
     cyRef.current = cy;
 
+    // Single Click: Select node in UI
     cy.on('tap', 'node', (evt) => {
       if (!evt.target.hasClass('folder')) {
         onNodeSelectRef.current(evt.target.id());
       }
     });
 
-    cy.on('dbltap dblclick', 'node', (evt) => {
+    // Double Click: Open and reveal in VS Code Explorer
+    cy.on('dbltap', 'node', (evt) => {
       if (!evt.target.hasClass('folder')) {
         onNodeDoubleClickRef.current?.(evt.target.id());
       }

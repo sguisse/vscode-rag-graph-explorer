@@ -9,7 +9,7 @@ export interface SidebarLeftContainerSize extends ContainerSize {
 }
 
 // Used to compute the left padding of the center content in the header, so that it is aligned with the left content of the sidebar left container
-export const headerLeftWidth = 130;
+export const headerLeftWidth = 210;
 
 export const DefaultContainersSize = {
   headerHeight: 40,

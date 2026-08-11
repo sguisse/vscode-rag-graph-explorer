@@ -1,195 +1,156 @@
 #!/usr/bin/env bash
 set -e
 
-# Ensure all target directories exist
-mkdir -p shared/services/vscode/domain/port-out
-mkdir -p shared/config
-mkdir -p backend/src/services/vscode
-mkdir -p backend/src/config
-mkdir -p webview/src/services/api
+# Ensure target directories exist
+mkdir -p webview/src/features/explorer/wksp-cnt-graph/components/graph
 mkdir -p webview/src/features/explorer
 
-# 1. Update IVsCodeServicePort interface
-cat << 'EOF' > shared/services/vscode/domain/port-out/vscode-service.port.ts
-import { LogLevel } from '../model/types';
-import { VsCodeSettings } from '../model/VsCodeSettings.gen';
+# 1. Update useCytoscapeInstance.ts to use clean 'dbltap' Cytoscape event
+cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/components/graph/useCytoscapeInstance.ts
+import { useEffect, useRef, useState, useCallback } from 'react';
+import cytoscape from 'cytoscape';
 
-export interface IVsCodeServicePort {
-    logMessage(level: LogLevel, message: string, details?: any): Promise<void>;
-    getExtentionSettings(): Promise<VsCodeSettings>;
-    openUrl(url: string, inExternalBrowser: boolean): Promise<void>;
-    revealInExplorer(targetPath: string): Promise<void>;
+export interface GraphState {
+  zoom: number;
+  pan: { x: number; y: number };
+  nodePositions: Record<string, { x: number; y: number; w: number; h: number }>;
 }
-EOF
 
-# 2. Update RpcMethodEnum to register VSCODE_REVEAL_IN_EXPLORER
-cat << 'EOF' > shared/config/rpc-methods.enum.gen.ts
-export enum RpcMethodEnum {
-    INSTALLER_CHECK_INSTALLATION_STATUS = 'INSTALLER_CHECK_INSTALLATION_STATUS',
-    INSTALLER_UNINSTALL_ALL = 'INSTALLER_UNINSTALL_ALL',
-    NEO4J_EXECUTE_CYPHER = 'NEO4J_EXECUTE_CYPHER',
-    NEO4J_GET_PATHS_CHANGE_IMPACTS = 'NEO4J_GET_PATHS_CHANGE_IMPACTS',
-    VSCODE_LOG_MESSAGE = 'VSCODE_LOG_MESSAGE',
-    VSCODE_GET_EXTENTION_SETTINGS = 'VSCODE_GET_EXTENTION_SETTINGS',
-    VSCODE_OPEN_URL = 'VSCODE_OPEN_URL',
-    VSCODE_REVEAL_IN_EXPLORER = 'VSCODE_REVEAL_IN_EXPLORER',
-}
-EOF
+export function useCytoscapeInstance(
+  isDarkMode: boolean,
+  onNodeSelect: (nodeId: string) => void,
+  onNodeDoubleClick?: (nodeId: string) => void
+) {
+  const [containerNode, setContainerNode] = useState<HTMLDivElement | null>(null);
+  const cyRef = useRef<cytoscape.Core | null>(null);
+  const rafIdRef = useRef<number | null>(null);
 
-# 3. Update VsCodeServiceAdapter with revealInExplorer implementation and .class -> .java resolution
-cat << 'EOF' > backend/src/services/vscode/vscode-service.adapter.ts
-import * as vscode from 'vscode';
-import * as path from 'path';
-import * as fs from 'fs';
-import { IVsCodeServicePort } from '../../../../shared/services/vscode/domain/port-out/vscode-service.port';
-import { LogLevel } from '../../../../shared/services/vscode/domain/model/types';
-import { VsCodeSettings } from '../../../../shared/services/vscode/domain/model/VsCodeSettings.gen';
-import { vsCodeSettingsManager } from '../../managers/VsCodeSettings.manager';
-import { logInfo, logWarn, logError } from '../../utils/utils-log';
-import { getWorkspaceRoot } from '../../utils/utils-vscode';
+  const onNodeSelectRef = useRef(onNodeSelect);
+  useEffect(() => {
+    onNodeSelectRef.current = onNodeSelect;
+  }, [onNodeSelect]);
 
-export class VsCodeServiceAdapter implements IVsCodeServicePort {
-    public async logMessage(level: LogLevel, message: string, details?: any): Promise<void> {
-        if (level === 'ERROR') {
-            logError(message, details);
-        } else if (level === 'WARN') {
-            logWarn(message, details);
-        } else {
-            logInfo(`[${level}] ${message}`, details);
-        }
+  const onNodeDoubleClickRef = useRef(onNodeDoubleClick);
+  useEffect(() => {
+    onNodeDoubleClickRef.current = onNodeDoubleClick;
+  }, [onNodeDoubleClick]);
+
+  const [graphState, setGraphState] = useState<GraphState>({
+    zoom: 1,
+    pan: { x: 0, y: 0 },
+    nodePositions: {}
+  });
+
+  const containerRef = useCallback((node: HTMLDivElement | null) => {
+    if (node !== null) {
+      setContainerNode(node);
     }
+  }, []);
 
-    public async getExtentionSettings(): Promise<VsCodeSettings> {
-        return vsCodeSettingsManager.getSettings();
-    }
+  useEffect(() => {
+    if (!containerNode) return;
 
-    public async openUrl(url: string, inExternalBrowser: boolean): Promise<void> {
-        if (url) {
-            const uri = vscode.Uri.parse(url);
-            if (inExternalBrowser) {
-                await vscode.env.openExternal(uri);
-            } else {
-                await vscode.commands.executeCommand('vscode.open', uri);
+    const cy = cytoscape({
+      container: containerNode,
+      style: [
+        { selector: 'node[width][height]', style: { 'shape': 'rectangle', 'opacity': 0.0, 'width': 'data(width)', 'height': 'data(height)' } },
+        { selector: 'node.folder', style: { 'shape': 'rectangle', 'opacity': 1.0, 'label': 'data(label)', 'text-valign': 'top', 'text-halign': 'center', 'text-margin-y': -12, 'font-size': '12px', 'font-family': 'monospace', 'font-weight': 'bold', 'color': isDarkMode ? '#94a3b8' : '#475569', 'background-opacity': 0.02, 'background-color': isDarkMode ? '#475569' : '#94a3b8', 'border-width': '2px', 'border-color': isDarkMode ? '#334155' : '#cbd5e1', 'border-style': 'dashed', 'padding': '40' } },
+        { selector: 'edge', style: { 'width': 2, 'line-color': isDarkMode ? '#475569' : '#cbd5e1', 'target-arrow-color': isDarkMode ? '#475569' : '#cbd5e1', 'target-arrow-shape': 'triangle', 'curve-style': 'bezier', 'label': 'data(label)', 'font-size': '9px', 'font-family': 'monospace', 'color': isDarkMode ? '#94a3b8' : '#475569', 'text-background-opacity': 1, 'text-background-color': isDarkMode ? '#18181b' : '#ffffff', 'text-background-padding': '3px', 'text-background-shape': 'roundrectangle' } },
+        { selector: 'edge.impacted', style: { 'line-color': '#eab308', 'target-arrow-color': '#eab308', 'width': 3.5, 'color': isDarkMode ? '#fef08a' : '#854d0e', 'text-background-color': isDarkMode ? '#422006' : '#fef9c3', 'text-background-opacity': 1 } }
+      ],
+      userZoomingEnabled: true,
+      userPanningEnabled: true,
+      boxSelectionEnabled: false
+    });
+
+    cyRef.current = cy;
+
+    // Single Click: Select node in UI
+    cy.on('tap', 'node', (evt) => {
+      if (!evt.target.hasClass('folder')) {
+        onNodeSelectRef.current(evt.target.id());
+      }
+    });
+
+    // Double Click: Open and reveal in VS Code Explorer
+    cy.on('dbltap', 'node', (evt) => {
+      if (!evt.target.hasClass('folder')) {
+        onNodeDoubleClickRef.current?.(evt.target.id());
+      }
+    });
+
+    const syncGraph = () => {
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+
+      rafIdRef.current = requestAnimationFrame(() => {
+        if (!cyRef.current || cyRef.current.destroyed()) return;
+
+        const currentCy = cyRef.current;
+        const zoom = currentCy.zoom();
+        const pan = currentCy.pan();
+        const positions: Record<string, { x: number; y: number; w: number; h: number }> = {};
+
+        currentCy.nodes().forEach(node => {
+          if (node.hasClass('folder')) return;
+          const bb = node.boundingBox({ includeLabels: false, includeEdges: false });
+          positions[node.id()] = {
+            x: Math.round(bb.x1),
+            y: Math.round(bb.y1),
+            w: Math.round(bb.w),
+            h: Math.round(bb.h)
+          };
+        });
+
+        setGraphState(prev => {
+          const zoomDiff = Math.abs(prev.zoom - zoom);
+          const panXDiff = Math.abs(prev.pan.x - pan.x);
+          const panYDiff = Math.abs(prev.pan.y - pan.y);
+
+          let positionsChanged = Object.keys(prev.nodePositions).length !== Object.keys(positions).length;
+          if (!positionsChanged) {
+            for (const key of Object.keys(positions)) {
+              const p1 = prev.nodePositions[key];
+              const p2 = positions[key];
+              if (!p1 || Math.abs(p1.x - p2.x) > 1 || Math.abs(p1.y - p2.y) > 1 || Math.abs(p1.w - p2.w) > 1 || Math.abs(p1.h - p2.h) > 1) {
+                positionsChanged = true;
+                break;
+              }
             }
-        }
-    }
+          }
 
-    public async revealInExplorer(targetPath: string): Promise<void> {
-        logInfo(`[VsCodeServiceAdapter] revealInExplorer invoked with path: ${targetPath}`);
-        try {
-            const workspaceFolders = vscode.workspace.workspaceFolders;
-            const rootPath = workspaceFolders && workspaceFolders.length > 0 ? workspaceFolders[0].uri.fsPath : getWorkspaceRoot();
-            let fullPath = targetPath;
+          if (zoomDiff < 0.001 && panXDiff < 0.5 && panYDiff < 0.5 && !positionsChanged) {
+            return prev;
+          }
 
-            if (!path.isAbsolute(fullPath) && rootPath) {
-                fullPath = path.join(rootPath, fullPath);
-            }
+          return { zoom, pan: { x: pan.x, y: pan.y }, nodePositions: positions };
+        });
+      });
+    };
 
-            // Translate compiled .class files to source .java files
-            fullPath = this.resolveSourceFilePath(fullPath);
+    cy.on('dragfree pan zoom layoutstop', syncGraph);
 
-            if (fs.existsSync(fullPath)) {
-                logInfo(`[VsCodeServiceAdapter] Revealing file in VS Code Explorer: ${fullPath}`);
-                const uri = vscode.Uri.file(fullPath);
-                await vscode.commands.executeCommand('revealInExplorer', uri);
-                const doc = await vscode.workspace.openTextDocument(uri);
-                await vscode.window.showTextDocument(doc, { preview: true, preserveFocus: true });
-            } else {
-                logWarn(`[VsCodeServiceAdapter] Resolved file path does not exist: ${fullPath}`);
-            }
-        } catch (err) {
-            logError(`[VsCodeServiceAdapter] Failed to reveal file in explorer: ${err}`);
-        }
-    }
+    requestAnimationFrame(() => {
+      if (cyRef.current && !cyRef.current.destroyed()) {
+        cyRef.current.resize();
+      }
+    });
 
-    private resolveSourceFilePath(filePath: string): string {
-        if (!filePath.endsWith('.class')) {
-            return filePath;
-        }
+    return () => {
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+      cy.destroy();
+      cyRef.current = null;
+    };
+  }, [containerNode, isDarkMode]);
 
-        // 1. Remove inner class suffix ($1, $SubClass, etc.) and convert extension
-        let javaPath = filePath.replace(/\$[^/]+\.class$/, '.class').replace(/\.class$/, '.java');
-
-        // 2. Map target/build output paths back to source directories
-        const replacements = [
-            { from: '/target/classes/', to: '/src/main/java/' },
-            { from: '/target/test-classes/', to: '/src/test/java/' },
-            { from: '/build/classes/java/main/', to: '/src/main/java/' },
-            { from: '/build/classes/java/test/', to: '/src/test/java/' },
-            { from: '/out/production/', to: '/src/' }
-        ];
-
-        for (const { from, to } of replacements) {
-            if (javaPath.includes(from)) {
-                const candidate = javaPath.replace(from, to);
-                if (fs.existsSync(candidate)) {
-                    return candidate;
-                }
-            }
-        }
-
-        if (fs.existsSync(javaPath)) {
-            return javaPath;
-        }
-
-        return filePath;
-    }
-}
-
-export const vsCodeServiceAdapter = new VsCodeServiceAdapter();
-EOF
-
-# 4. Register VSCODE_REVEAL_IN_EXPLORER in rpc-method-registrator.gen.ts
-cat << 'EOF' > backend/src/config/rpc-method-registrator.gen.ts
-import { RpcProtocol } from '../../shared/rpc/rpc-protocol';
-import { RpcMethodEnum } from '../../shared/config/rpc-methods.enum.gen';
-import { vsCodeServiceAdapter } from '../services/vscode/vscode-service.adapter';
-
-export function registerRpcMethods(rpc: RpcProtocol): void {
-    rpc.register(RpcMethodEnum.VSCODE_LOG_MESSAGE, (level, message, details) => vsCodeServiceAdapter.logMessage(level, message, details));
-    rpc.register(RpcMethodEnum.VSCODE_GET_EXTENTION_SETTINGS, () => vsCodeServiceAdapter.getExtentionSettings());
-    rpc.register(RpcMethodEnum.VSCODE_OPEN_URL, (url, inExternalBrowser) => vsCodeServiceAdapter.openUrl(url, inExternalBrowser));
-    rpc.register(RpcMethodEnum.VSCODE_REVEAL_IN_EXPLORER, (targetPath) => vsCodeServiceAdapter.revealInExplorer(targetPath));
+  return { containerRef, cyRef, graphState, isReady: !!containerNode };
 }
 EOF
 
-# 5. Update vs-code-api.service.gen.ts
-cat << 'EOF' > webview/src/services/api/vs-code-api.service.gen.ts
-// AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY.
-// Rebuild using: npm run generate:webview-api-services
-
-import { RpcMethodEnum } from '@/shared/config/rpc-methods.enum.gen';
-import { AbstractApiService } from './abstract-api.service';
-import { LogLevel } from '@/shared/services/vscode/domain/model/types';
-import { VsCodeSettings } from '@/shared/services/vscode/domain/model/VsCodeSettings.gen';
-import { IVsCodeServicePort } from '@/shared/services/vscode/domain/port-out/vscode-service.port';
-
-class VsCodeApiService extends AbstractApiService implements IVsCodeServicePort {
-    constructor() {
-        super();
-    }
-
-    public async logMessage(level: LogLevel, message: string, details?: any): Promise<void> {
-        return await this.rpc.call(RpcMethodEnum.VSCODE_LOG_MESSAGE, level, message, details);
-    }
-
-    public async getExtentionSettings(): Promise<VsCodeSettings> {
-        return await this.rpc.call(RpcMethodEnum.VSCODE_GET_EXTENTION_SETTINGS);
-    }
-
-    public async openUrl(url: string, inExternalBrowser: boolean): Promise<void> {
-        return await this.rpc.call(RpcMethodEnum.VSCODE_OPEN_URL, url, inExternalBrowser);
-    }
-
-    public async revealInExplorer(targetPath: string): Promise<void> {
-        return await this.rpc.call(RpcMethodEnum.VSCODE_REVEAL_IN_EXPLORER, targetPath);
-    }
-}
-
-export const vsCodeApiService = new VsCodeApiService();
-EOF
-
-# 6. Update ExplorerFeature.tsx to call vsCodeApiService.revealInExplorer
+# 2. Update ExplorerFeature.tsx to restrict revealInExplorer strictly to double-click events
 cat << 'EOF' > webview/src/features/explorer/ExplorerFeature.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLayoutStore } from '@/store/useLayoutStore';
@@ -270,15 +231,6 @@ export function ExplorerFeature() {
       vsCodeApiService.revealInExplorer(targetFile.path);
     }
   }, [codebase.files]);
-
-  // Reveal corresponding file in VS Code File Explorer upon single-click selection
-  useEffect(() => {
-    if (!selectedEntity) return;
-    const targetFile = codebase.files.find((f) => f.id === selectedEntity.nodeId);
-    if (targetFile && targetFile.path) {
-      vsCodeApiService.revealInExplorer(targetFile.path);
-    }
-  }, [selectedEntity, codebase.files]);
 
   const { containerRef, cyRef, graphState, updateGraphTopology, isReady } = useGraph(
     isDarkMode,
@@ -554,7 +506,7 @@ export function ExplorerFeature() {
 export default ExplorerFeature;
 EOF
 
-echo "✅ fix: Registered VSCODE_REVEAL_IN_EXPLORER RPC method and added Java .class -> .java source resolution!"
+echo "✅ fix: Separated single-click selection from double-click file revealing!"
 
 # Rebuild project
 npm run build

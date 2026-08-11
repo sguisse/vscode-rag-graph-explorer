@@ -6,7 +6,7 @@ import { INITIAL_VISIBLE_FILES_CONFIG } from '../constants/graph.constants';
 export function useCodebaseFilter(allFiles: CodebaseFile[]) {
   const [searchTerm, setSearchTerm] = useState('');
   const [displayLevel, setDisplayLevel] = useState('all');
-  const [maxNodesLimit, setMaxNodesLimit] = useState(50);
+  const [maxNodesLimit, setMaxNodesLimit] = useState(5);
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({
     frontend: true,
     backend: true,

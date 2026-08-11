@@ -43,13 +43,13 @@ export function ExplorerFeature() {
   const [enableDownstream, setEnableDownstream] = useState<boolean>(true);
   const [enableUpstream, setEnableUpstream] = useState<boolean>(false);
 
-  const [showGrid, setShowGrid] = useState(true);
+  const [showGrid, setShowGrid] = useState(false);
   const [callersDepth, setCallersDepth] = useState(1);
   const [calleesDepth, setCalleesDepth] = useState(1);
   const [currentLayout, setCurrentLayout] = useState('preset');
 
   const [attributesVisible, setAttributesVisible] = useState(false);
-  const [methodsVisible, setMethodsVisible] = useState(true);
+  const [methodsVisible, setMethodsVisible] = useState(false);
   const [showSelectedOnly, setShowSelectedOnly] = useState(false);
 
   const filter = useCodebaseFilter(codebase.files);
@@ -77,15 +77,6 @@ export function ExplorerFeature() {
       vsCodeApiService.revealInExplorer(targetFile.path);
     }
   }, [codebase.files]);
-
-  // Reveal corresponding file in VS Code File Explorer upon single-click selection
-  useEffect(() => {
-    if (!selectedEntity) return;
-    const targetFile = codebase.files.find((f) => f.id === selectedEntity.nodeId);
-    if (targetFile && targetFile.path) {
-      vsCodeApiService.revealInExplorer(targetFile.path);
-    }
-  }, [selectedEntity, codebase.files]);
 
   const { containerRef, cyRef, graphState, updateGraphTopology, isReady } = useGraph(
     isDarkMode,
