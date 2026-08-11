@@ -9,7 +9,6 @@
 @import "@fontsource-variable/source-serif-4";
 @import "@fontsource-variable/jetbrains-mono";
 
-
 @custom-variant dark (&:is(.dark *));
 
 :root {
@@ -160,5 +159,36 @@
     margin: 0;
     padding: 0;
     overflow: hidden;
+  }
+
+  /* Prime Scrollback & Scrollbar Style - Dark Mode */
+  .dark {
+    scrollbar-width: thin;
+    scrollbar-color: oklch(0.38 0 0) transparent;
+  }
+
+  .dark ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .dark ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    background-color: oklch(0.38 0 0 / 0.6);
+    border-radius: 9999px;
+    border: 1px solid transparent;
+    background-clip: content-box;
+    transition: background-color 0.2s ease;
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background-color: oklch(0.62 0.19 259.76 / 0.8);
+  }
+
+  .dark ::-webkit-scrollbar-corner {
+    background: transparent;
   }
 }
