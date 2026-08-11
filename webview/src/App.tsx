@@ -30,7 +30,7 @@ export default function App() {
   // Trigger remote API log on mount
   useEffect(() => {
     logInfo(`SGU App component mounted. Active feature: ${activeFeature}`);
-    vsCodeApiService.getExtentionSettings().then((settings: VsCodeSettings) => {
+    vsCodeApiService.getExtensionSettings().then((settings: VsCodeSettings) => {
         vscodeSettings = settings;
     });
   }, []);

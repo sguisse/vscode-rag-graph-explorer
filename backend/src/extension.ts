@@ -23,7 +23,19 @@ export function activate(extentionContext: vscode.ExtensionContext) {
 
     workspaceInstallationManager.syncScripts(extentionContext);
 
-    const openTool = () => {
+    const openToolCmd = createOpenToolCommand(extentionContext);
+    const registeredOpenToolCmd = vscode.commands.registerCommand(`${EXTENSION_BASE_CONFIG_NAME}.openTool`, openToolCmd);
+    extentionContext.subscriptions.push(registeredOpenToolCmd);
+
+    const addFromExplorerCmd = createAddFromExplorerCommand(openToolCmd);
+    const registeredAddFromExplorerCmd = vscode.commands.registerCommand(`${EXTENSION_BASE_CONFIG_NAME}.graphRagExplorer.addFromExplorer`, addFromExplorerCmd);
+    extentionContext.subscriptions.push(registeredAddFromExplorerCmd);
+
+    logInfo('Extension activated successfully.');
+}
+
+function createOpenToolCommand(extentionContext: vscode.ExtensionContext) {
+    return () => {
         if (currentWebviewPanel) {
             currentWebviewPanel.reveal(vscode.ViewColumn.One);
             return;
@@ -48,8 +60,10 @@ export function activate(extentionContext: vscode.ExtensionContext) {
 
         runPythonScan("deep");
     };
+}
 
-    const addFromExplorer = (uri?: vscode.Uri, uris?: vscode.Uri[]) => {
+function createAddFromExplorerCommand(openTool: () => void) {
+    return (uri?: vscode.Uri, uris?: vscode.Uri[]) => {
         let paths: string[] = [];
         if (uris && uris.length > 0) {
             paths = uris.map((u) => u.fsPath);
@@ -75,20 +89,6 @@ export function activate(extentionContext: vscode.ExtensionContext) {
             });
         }
     };
-
-    const disposableOpen = vscode.commands.registerCommand(`${EXTENSION_BASE_CONFIG_NAME}.openTool`, openTool);
-    extentionContext.subscriptions.push(disposableOpen);
-
-    const primaryCmd = `${EXTENSION_BASE_CONFIG_NAME}.graphRagExplorer.addFromExplorer`;
-    const disposableAdd = vscode.commands.registerCommand(primaryCmd, addFromExplorer);
-    extentionContext.subscriptions.push(disposableAdd);
-
-    if (primaryCmd !== 'tokenRazor.graphRagExplorer.addFromExplorer') {
-        const disposableAddFallback = vscode.commands.registerCommand('tokenRazor.graphRagExplorer.addFromExplorer', addFromExplorer);
-        extentionContext.subscriptions.push(disposableAddFallback);
-    }
-
-    logInfo('Extension activated successfully.');
 }
 
 function createWebviewPanel(context: vscode.ExtensionContext): vscode.WebviewPanel {

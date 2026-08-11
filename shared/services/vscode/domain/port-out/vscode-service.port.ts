@@ -1,9 +1,9 @@
-import { IBackendService } from '../../../../core/backend-service.port';
 import { LogLevel } from '../model/types';
 import { VsCodeSettings } from '../model/VsCodeSettings.gen';
 
-export interface IVsCodeServicePort extends IBackendService {
+export interface IVsCodeServicePort {
     logMessage(level: LogLevel, message: string, details?: any): Promise<void>;
-    getExtentionSettings (): Promise<VsCodeSettings>;
+    getExtensionSettings(): Promise<VsCodeSettings>;
     openUrl(url: string, inExternalBrowser: boolean): Promise<void>;
+    revealInExplorer(targetPath: string): Promise<void>;
 }

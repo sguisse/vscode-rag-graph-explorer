@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useLayoutStore } from '@/store/useLayoutStore';
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
+import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 import { ContextPathsPanel } from './wkp-top-paths/context-paths-panel';
 import { CodebaseExplorerPanel } from './wkp-lft-codebase-tree/CodebaseExplorerPanel';
@@ -68,7 +70,28 @@ export function ExplorerFeature() {
     setSelectedEntity({ type: 'member', nodeId, memberId });
   }, []);
 
-  const { containerRef, cyRef, graphState, updateGraphTopology, isReady } = useGraph(isDarkMode, handleNodeSelect);
+  const handleNodeDoubleClick = useCallback((nodeId: string) => {
+    const targetFile = codebase.files.find((f) => f.id === nodeId);
+    if (targetFile && targetFile.path) {
+      logInfo(`Double-clicked graph item: ${nodeId}. Revealing path in VS Code Explorer: ${targetFile.path}`);
+      vsCodeApiService.revealInExplorer(targetFile.path);
+    }
+  }, [codebase.files]);
+
+  // Reveal corresponding file in VS Code File Explorer upon single-click selection
+  useEffect(() => {
+    if (!selectedEntity) return;
+    const targetFile = codebase.files.find((f) => f.id === selectedEntity.nodeId);
+    if (targetFile && targetFile.path) {
+      vsCodeApiService.revealInExplorer(targetFile.path);
+    }
+  }, [selectedEntity, codebase.files]);
+
+  const { containerRef, cyRef, graphState, updateGraphTopology, isReady } = useGraph(
+    isDarkMode,
+    handleNodeSelect,
+    handleNodeDoubleClick
+  );
 
   const generatedPlantUML = usePlantUml(
     filter.searchFilteredFiles,
@@ -325,6 +348,7 @@ export function ExplorerFeature() {
     handleCopy,
     handleImportCodebase,
     handleSelectMember,
+    handleNodeDoubleClick,
     containerRef,
     cyRef,
     isDarkMode,

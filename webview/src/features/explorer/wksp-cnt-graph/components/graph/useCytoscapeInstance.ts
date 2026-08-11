@@ -7,7 +7,11 @@ export interface GraphState {
   nodePositions: Record<string, { x: number; y: number; w: number; h: number }>;
 }
 
-export function useCytoscapeInstance(isDarkMode: boolean, onNodeSelect: (nodeId: string) => void) {
+export function useCytoscapeInstance(
+  isDarkMode: boolean,
+  onNodeSelect: (nodeId: string) => void,
+  onNodeDoubleClick?: (nodeId: string) => void
+) {
   const [containerNode, setContainerNode] = useState<HTMLDivElement | null>(null);
   const cyRef = useRef<cytoscape.Core | null>(null);
   const rafIdRef = useRef<number | null>(null);
@@ -16,6 +20,11 @@ export function useCytoscapeInstance(isDarkMode: boolean, onNodeSelect: (nodeId:
   useEffect(() => {
     onNodeSelectRef.current = onNodeSelect;
   }, [onNodeSelect]);
+
+  const onNodeDoubleClickRef = useRef(onNodeDoubleClick);
+  useEffect(() => {
+    onNodeDoubleClickRef.current = onNodeDoubleClick;
+  }, [onNodeDoubleClick]);
 
   const [graphState, setGraphState] = useState<GraphState>({
     zoom: 1,
@@ -50,6 +59,12 @@ export function useCytoscapeInstance(isDarkMode: boolean, onNodeSelect: (nodeId:
     cy.on('tap', 'node', (evt) => {
       if (!evt.target.hasClass('folder')) {
         onNodeSelectRef.current(evt.target.id());
+      }
+    });
+
+    cy.on('dbltap dblclick', 'node', (evt) => {
+      if (!evt.target.hasClass('folder')) {
+        onNodeDoubleClickRef.current?.(evt.target.id());
       }
     });
 
