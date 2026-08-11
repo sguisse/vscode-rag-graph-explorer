@@ -1,7 +1,8 @@
 import { CodebaseData, CodebaseFile, Dependency, SelectedEntity } from "@/shared/services/graph-rag-explorer";
 import { initialCodebase } from "@/features/explorer/wksp-cnt-graph/components/graph/GraphData";
 import { MEMBER_KEY_SEPARATOR_TOKEN } from "@/shared/services/graph-rag-explorer/domain/model/codebase.constants";
-import { logInfo } from "./log-view.service.wrapper";
+import { logError, logInfo } from "./log-view.service.wrapper";
+import { neo4jApiService } from "../api/neo4j-api.service.gen";
 
 function buildMemberKeyTokenSync(nodeId: string, memberId: string): string {
     return `${nodeId}${MEMBER_KEY_SEPARATOR_TOKEN}${memberId}`;
@@ -112,9 +113,31 @@ export function filterCodebaseFiles(
     }).slice(0, maxNodesLimit);
 }
 
-export function getPathsChangeImpacts(paths: string | string[]): CodebaseData {
-    logInfo(`[getPathsChangeImpacts] Neo4j service is currently disabled. Returning initialCodebase as fallback.`);
-    return initialCodebase;
-}
+export async function getPathsChangeImpacts(paths: string | string[]): Promise<CodebaseData> {
+    // Normalize string/string[] input into a clean array of non-empty paths
+  const pathArray = typeof paths === 'string'
+    ? paths.split('\n').map((p) => p.trim()).filter(Boolean)
+    : paths.flatMap((p) => p.split('\n').map((item) => item.trim()).filter(Boolean));
 
-export const getpathsChangeImpacts = getPathsChangeImpacts;
+
+  try {
+    logInfo(`[getPathsChangeImpacts] Neo4j service is activated. Returning real codebase data.`, pathArray);
+    const result: any = await neo4jApiService.getPathsChangeImpacts(pathArray, 2);
+    // 1. Handle array response wrappers cleanly
+    const codebaseData = Array.isArray(result)
+    ? result[0]?.codebaseData
+    : result?.codebaseData || result;
+
+    // 2. Extract files and dependencies safely
+    const files = codebaseData?.files || [];
+    const dependencies = codebaseData?.dependencies || [];
+
+    // 3. Log accurate counts
+    logInfo(`[getPathsChangeImpacts] result for ${pathArray.length} path(s), ${files.length} files, ${dependencies.length} dependencies`);
+    return codebaseData;
+
+  } catch (error: any) {
+    logError(`[getPathsChangeImpacts] Neo4j call failed. Returning initialCodebase fallback.`, error);
+    return initialCodebase;
+  }
+}

@@ -16,6 +16,7 @@ export function registerRpcMethods(rpc: RpcProtocol): void {
 
     const neo4jService = serviceRegistry.get(ServiceEnum.NEO4J);
     rpc.register(RpcMethodEnum.NEO4J_EXECUTE_CYPHER, neo4jService.executeCypher.bind(neo4jService));
+    rpc.register(RpcMethodEnum.NEO4J_GET_PATHS_CHANGE_IMPACTS, neo4jService.getPathsChangeImpacts.bind(neo4jService));
 
     const vsCodeService = serviceRegistry.get(ServiceEnum.VS_CODE);
     rpc.register(RpcMethodEnum.VSCODE_LOG_MESSAGE, vsCodeService.logMessage.bind(vsCodeService));

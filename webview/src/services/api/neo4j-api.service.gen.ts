@@ -15,8 +15,8 @@ class Neo4jApiService extends AbstractApiService implements INeo4jServicePort {
         return await this.rpc.call(RpcMethodEnum.NEO4J_EXECUTE_CYPHER, query, params);
     }
 
-    public async getPathsChangeImpacts(paths: string[]): Promise<CodebaseData> {
-        return await this.rpc.call(RpcMethodEnum.NEO4J_GET_PATHS_CHANGE_IMPACTS, paths);
+    public async getPathsChangeImpacts(paths: string[], maxDepth: number): Promise<CodebaseData> {
+        return await this.rpc.call(RpcMethodEnum.NEO4J_GET_PATHS_CHANGE_IMPACTS, paths, maxDepth);
     }
 }
 

@@ -6,6 +6,7 @@ import neo4j, { Driver } from 'neo4j-driver';
 import { logError, logInfo } from '../../utils/utils-log';
 import { CodebaseData } from '../../../../shared/services/graph-rag-explorer';
 import { initialCodebase } from './data/codebase.data';
+import { log } from 'console';
 
 export class Neo4jAdapter extends AbstractServiceAdapter implements INeo4jServicePort, vscode.Disposable {
   private neo4jDriver: Driver | null = null;
@@ -33,7 +34,7 @@ export class Neo4jAdapter extends AbstractServiceAdapter implements INeo4jServic
     const session = this.neo4jDriver!.session();
 
     try {
-      logInfo(`Executing Cypher query: ${query} with parameters: ${JSON.stringify(params)}`);
+      logInfo(`Executing Cypher query: ${query} \n\n with parameters: \n${JSON.stringify(params)}`);
       const result = await session.run(query, params);
 
       const rows = result.records.map((record) => {
@@ -95,15 +96,90 @@ export class Neo4jAdapter extends AbstractServiceAdapter implements INeo4jServic
     return value;
   }
 
-  public async getPathsChangeImpacts?(paths: string[]): Promise<CodebaseData> {
-    this.executeCypher(`MATCH (f:File)
-      WHERE any(p IN $paths WHERE f.path CONTAINS p OR f.name CONTAINS p OR p CONTAINS f.path OR f.id CONTAINS p)
-      OPTIONAL MATCH (caller)-[r1:CALLS|DEPENDS_ON|USES|INVOKES|IMPORTS]->(f)
-      OPTIONAL MATCH (f)-[r2:CALLS|DEPENDS_ON|USES|INVOKES|IMPORTS]->(callee)
-      RETURN f, collect(distinct caller) as callers, collect(distinct callee) as callees, collect(distinct r1) as inRels, collect(distinct r2) as outRels`, { paths });
+  public async getPathsChangeImpacts(paths: string[], maxDepth: number = 3): Promise<CodebaseData> {
+    // Convert paths and maxDepth to a format suitable for Neo4j query parameters
+    const params = { paths, maxDepth };
+
+    logInfo(`Fetching change impacts for params: ${JSON.stringify(params)}`);
+
+    return this.executeCypher(`
+WITH $paths AS inputPaths, toInteger(COALESCE($maxDepth, 3)) AS depthLimit
+
+UNWIND inputPaths AS inputPath
+
+// 1. Find initial source nodes
+MATCH (startClass:Class)
+WHERE inputPath ENDS WITH replace(startClass.fileName, ".class", ".java")
+   OR (startClass.absolute_path IS NOT NULL AND inputPath = startClass.absolute_path)
+
+// 2. Traversal: Outgoing (Callees) and Incoming (Callers)
+OPTIONAL MATCH calleePath = (startClass)-[:DEPENDS_ON*1..5]->(calleeClass:Class)
+WHERE calleeClass <> startClass AND length(calleePath) <= depthLimit
+
+OPTIONAL MATCH callerPath = (callerClass:Class)-[:DEPENDS_ON*1..5]->(startClass)
+WHERE callerClass <> startClass AND length(callerPath) <= depthLimit
+
+// 3. Aggregate all nodes and path relationships in the impact graph
+WITH startClass,
+     collect(DISTINCT calleeClass) + collect(DISTINCT callerClass) + [startClass] AS rawNodes,
+     [p IN collect(DISTINCT calleePath) + collect(DISTINCT callerPath) WHERE p IS NOT NULL | relationships(p)] AS pathRels
+
+UNWIND rawNodes AS n
+WITH startClass, collect(DISTINCT n) AS allNodes, pathRels
+
+UNWIND (CASE WHEN size(pathRels) = 0 THEN [[]] ELSE pathRels END) AS relList
+UNWIND relList AS rel
+WITH allNodes, collect(DISTINCT rel) AS allRels
+
+// 4. Map Nodes to CodebaseFile objects (including attributes & methods)
+UNWIND allNodes AS node
+OPTIONAL MATCH (node)-[:DECLARES]->(f:Field)
+WITH allRels, node, collect(DISTINCT {
+  name: f.name,
+  visibility: COALESCE(f.visibility, 'package')
+}) AS rawFields
+
+OPTIONAL MATCH (node)-[:DECLARES]->(m:Method)
+WITH allRels, node, rawFields, collect(DISTINCT {
+  id: COALESCE(m.entity_id, m.signature, m.name),
+  name: m.name,
+  description: m.signature
+}) AS rawMethods
+
+WITH allRels, collect(DISTINCT {
+  id: COALESCE(node.entity_id, node.fqn, node.name),
+  name: node.name + ".java",
+  type: CASE WHEN "Interface" IN labels(node) THEN "interface" ELSE "class" END,
+  path: COALESCE(node.absolute_path, replace(node.fileName, ".class", ".java")),
+  language: "java",
+  size: COALESCE(node.effectiveLineCount, 0),
+  complexity: COALESCE(node.cyclomaticComplexity, 0),
+  attributes: [x IN rawFields WHERE x.name IS NOT NULL],
+  methods: [x IN rawMethods WHERE x.name IS NOT NULL],
+  configProperties: []
+}) AS files
+
+// 5. Map Edges to Dependency objects
+UNWIND (CASE WHEN size(allRels) = 0 THEN [null] ELSE allRels END) AS rel
+WITH files, collect(DISTINCT CASE WHEN rel IS NOT NULL THEN {
+  id: COALESCE(startNode(rel).entity_id, startNode(rel).name) + "->" + COALESCE(endNode(rel).entity_id, endNode(rel).name),
+  sourceNode: COALESCE(startNode(rel).entity_id, startNode(rel).fqn, startNode(rel).name),
+  sourceHandle: "source",
+  targetNode: COALESCE(endNode(rel).entity_id, endNode(rel).fqn, endNode(rel).name),
+  targetHandle: "target",
+  relation: type(rel),
+  label: type(rel),
+  source: COALESCE(startNode(rel).entity_id, startNode(rel).fqn, startNode(rel).name),
+  target: COALESCE(endNode(rel).entity_id, endNode(rel).fqn, endNode(rel).name)
+} END) AS dependencies
+
+RETURN {
+  files: files,
+  dependencies: [x IN dependencies WHERE x IS NOT NULL]
+} AS codebaseData`, params);
     //return { files: [], dependencies: [] };
 
-    return initialCodebase;
+    //return initialCodebase;
   }
 
   public dispose() {

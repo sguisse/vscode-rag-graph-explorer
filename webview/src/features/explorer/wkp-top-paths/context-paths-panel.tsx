@@ -3,11 +3,22 @@ import { Textarea } from '@/components/ui/textarea';
 import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
 import { useContextPaths } from './use-context-paths';
 import { getPathsChangeImpacts } from '@/services/view/graph-view.service';
-import { logError, logInfo } from '@/services/view/log-view.service.wrapper';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 export function ContextPathsPanel() {
-  const { currentPath, updatePath } = useContextPaths();
+  const { currentPath, updatePath, setCodebaseData } = useContextPaths();
   const [paths, setPaths] = useState<string>(currentPath);
+
+  // Helper function to handle async impact fetching
+  const fetchImpacts = async (targetPaths: string) => {
+    if (!targetPaths.trim()) return;
+    const realCodebaseData = await getPathsChangeImpacts(targetPaths);
+
+    // Update state or context with the real Neo4j data
+    if (setCodebaseData) {
+      setCodebaseData(realCodebaseData);
+    }
+  };
 
   useEffect(() => {
     // Register listener for 'selectedPath'
@@ -17,7 +28,7 @@ export function ContextPathsPanel() {
         setPaths((prev) => {
           const updated = prev ? `${prev}\n${message.payload}` : message.payload;
           updatePath(updated);
-          getPathsChangeImpacts(updated);
+          fetchImpacts(updated);
           return updated;
         });
       }
@@ -33,7 +44,7 @@ export function ContextPathsPanel() {
     const val = e.target.value;
     setPaths(val);
     updatePath(val);
-    //getPathsChangeImpacts(val);
+    fetchImpacts(val);
   };
 
   return (
