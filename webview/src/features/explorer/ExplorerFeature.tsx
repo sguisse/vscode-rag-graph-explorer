@@ -15,7 +15,7 @@ import {
 } from './wksp-cnt-graph/GraphPanelHeader';
 import { TabsFilesContextContainer } from './wkp-rgt-tabs-files-context/tabs-files-context-container';
 import { WkpBottomPanel } from './wkp-btm-infos/wkp-bottom-panel';
-import { EntityPropertiesPanel } from './sdb-rgt-properties/EntityPropertiesPanel';
+import { TabsPromptContainer } from './sdb-rgt-prompt/tabs-prompt-container';
 
 import { useCodebaseFilter } from './hooks/use-codebase-filter';
 import { useTransitiveImpact } from './hooks/use-transitive-impact';
@@ -295,9 +295,13 @@ export function ExplorerFeature() {
     setContainerContent(
       'sidebarRight',
       <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden">
-        <ContainerPanelHeader title="Entity Properties" path="sidebarRight" />
+        <ContainerPanelHeader title="Prompt & LLM Studio" path="sidebarRight" />
         <div className="flex-1 min-h-0 overflow-auto">
-          <EntityPropertiesPanel selectedEntity={selectedEntity} />
+          <TabsPromptContainer
+            selectedEntity={selectedEntity}
+            initialCodebase={codebase}
+            handleCopy={handleCopy}
+          />
         </div>
       </div>
     );

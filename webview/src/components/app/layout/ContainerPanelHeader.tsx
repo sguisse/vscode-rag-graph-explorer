@@ -1,16 +1,13 @@
 import React from 'react';
 import { Maximize2, Minimize2, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { LeftCenterRightPanel } from '../left-center-right-panel';
 import { useLayoutStore } from '@/store/useLayoutStore';
-import { LayoutContainer } from './types';
+import { LeftCenterRightPanel } from '@/components/app/left-center-right-panel';
 
 export interface ContainerPanelHeaderProps {
   id?: string;
   title?: React.ReactNode;
-  path?: string;
-  isMaximized?: boolean;
-  isMaximizable?: boolean;
+  path: string;
   isHiddable?: boolean;
   headerLeft?: React.ReactNode;
   headerCenter?: React.ReactNode;
@@ -18,42 +15,61 @@ export interface ContainerPanelHeaderProps {
   className?: string;
 }
 
+// Helper to safely extract container by dot-notated path
+function getContainerFromState(state: any, path: string) {
+  if (!path || !state) return undefined;
+  if (typeof state.getContainerByPath === 'function') {
+    return state.getContainerByPath(path);
+  }
+  if (state.containers) {
+    return path.split('.').reduce((acc: any, key: string) => acc?.[key], state.containers);
+  }
+  return undefined;
+}
+
 export function ContainerPanelHeader({
   id,
   title,
   path,
-  isMaximized: isMaximizedProp,
-  isMaximizable: isMaximizableProp,
-  isHiddable: isHiddableProp,
+  isHiddable = true,
   headerLeft,
   headerCenter,
   headerRight,
-  className,
+  className = '',
 }: ContainerPanelHeaderProps) {
-  const toggleContainerMaximized = useLayoutStore((s) => s.toggleContainerMaximized);
-  const setContainerVisible = useLayoutStore((s) => s.setContainerVisible);
-  const containers = useLayoutStore((s) => s.containers);
+  // Primitive Zustand selectors to force component re-renders when booleans toggle
+  const isMaximized = useLayoutStore((state: any) => {
+    const container = getContainerFromState(state, path);
+    return Boolean(container?.maximizeContainer?.isMaximized);
+  });
 
-  const getContainerByPath = (p?: string): LayoutContainer | undefined => {
-    if (!p) return undefined;
-    const parts = p.split('.');
-    let current: any = containers;
-    for (const part of parts) {
-      if (!current) return undefined;
-      current = current[part];
+  const isMaximizable = useLayoutStore((state: any) => {
+    const container = getContainerFromState(state, path);
+    return container?.maximizeContainer?.isMaximizable ?? true;
+  });
+
+  const toggleContainerMaximized = useLayoutStore((state: any) => state.toggleContainerMaximized);
+  const toggleContainerVisible = useLayoutStore((state: any) => state.toggleContainerVisible);
+
+  const handleMaximizeToggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof toggleContainerMaximized === 'function') {
+      toggleContainerMaximized(path);
     }
-    return current;
   };
 
-  const storeContainer = path ? getContainerByPath(path) : undefined;
-
-  const isMaximized = isMaximizedProp ?? storeContainer?.maximizeContainer?.isMaximized;
-  const isMaximizable = isMaximizableProp ?? storeContainer?.maximizeContainer?.isMaximizable ?? true;
-  const isHiddable = isHiddableProp ?? storeContainer?.isHiddable ?? true;
+  const handleVisibleToggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof toggleContainerVisible === 'function') {
+      toggleContainerVisible(path);
+    }
+  };
 
   const computedLeft = headerLeft || (
     typeof title === 'string' ? (
-      <span className="font-bold uppercase tracking-wider truncate text-foreground">{title}</span>
+      <span className="font-bold text-foreground truncate">{title}</span>
     ) : (
       title
     )
@@ -62,28 +78,34 @@ export function ContainerPanelHeader({
   const computedRight = (
     <div className="flex items-center gap-1">
       {headerRight}
-      {isMaximizable && path && (
+
+      {isMaximizable && (
         <Button
           id={`btn-maximize-${path.replace(/\./g, '-')}`}
-          variant="ghost"
           size="icon-xs"
-          onClick={() => toggleContainerMaximized(path)}
-          className="w-5 h-5 text-muted-foreground hover:text-foreground shrink-0"
+          variant="ghost"
+          onClick={handleMaximizeToggle}
+          className={
+            isMaximized
+              ? "bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors cursor-pointer"
+              : "text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
+          }
           data-tooltip={isMaximized ? "Restore Panel Size" : "Maximize Panel"}
         >
-          {isMaximized ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+          {isMaximized ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
         </Button>
       )}
-      {isHiddable && path && (
+
+      {isHiddable && (
         <Button
           id={`btn-hide-${path.replace(/\./g, '-')}`}
-          variant="ghost"
           size="icon-xs"
-          onClick={() => setContainerVisible(path, false)}
-          className="w-5 h-5 text-muted-foreground hover:text-foreground shrink-0"
-          data-tooltip="Hide Panel"
+          variant="ghost"
+          onClick={handleVisibleToggle}
+          className="hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
+          data-tooltip="Hide panel"
         >
-          <EyeOff size={12} />
+          <EyeOff size={13} />
         </Button>
       )}
     </div>
@@ -99,3 +121,5 @@ export function ContainerPanelHeader({
     />
   );
 }
+
+export default ContainerPanelHeader;
