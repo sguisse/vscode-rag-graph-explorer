@@ -13,14 +13,13 @@ import {
   GraphPanelHeaderCenter,
   GraphPanelHeaderRight,
 } from './wksp-cnt-graph/GraphPanelHeader';
-import { GlobalInspectorPanel } from './wkp-rgt-tabs-inspector/global-inspector-panel';
+import { TabsFilesContextContainer } from './wkp-rgt-tabs-files-context/tabs-files-context-container';
 import { WkpBottomPanel } from './wkp-btm-infos/wkp-bottom-panel';
 import { EntityPropertiesPanel } from './sdb-rgt-properties/EntityPropertiesPanel';
 
 import { useCodebaseFilter } from './hooks/use-codebase-filter';
 import { useTransitiveImpact } from './hooks/use-transitive-impact';
 import { useGraph } from './wksp-cnt-graph/components/graph/use-graph';
-import { usePlantUml } from './wksp-cnt-graph/components/graph/use-plantuml';
 
 import { initialCodebase, FOLDER_POSITIONS } from './wksp-cnt-graph/components/graph/GraphData';
 
@@ -82,12 +81,6 @@ export function ExplorerFeature() {
     isDarkMode,
     handleNodeSelect,
     handleNodeDoubleClick
-  );
-
-  const generatedPlantUML = usePlantUml(
-    filter.searchFilteredFiles,
-    filter.visibleFiles,
-    codebase.dependencies
   );
 
   useEffect(() => {
@@ -273,9 +266,9 @@ export function ExplorerFeature() {
     setContainerContent(
       'workspace.right',
       <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden">
-        <ContainerPanelHeader title="Global Inspector" path="workspace.right" />
+        <ContainerPanelHeader title="Files Context Builder" path="workspace.right" />
         <div className="flex-1 min-h-0 overflow-auto">
-          <GlobalInspectorPanel
+          <TabsFilesContextContainer
             selectedEntity={selectedEntity}
             initialCodebase={codebase}
             enableDownstream={enableDownstream}
@@ -284,7 +277,6 @@ export function ExplorerFeature() {
             setEnableUpstream={setEnableUpstream}
             impactedSet={impactedSet}
             handleCopy={handleCopy}
-            generatedPlantUML={generatedPlantUML}
           />
         </div>
       </div>
@@ -335,7 +327,6 @@ export function ExplorerFeature() {
     enableDownstream,
     enableUpstream,
     impactedSet,
-    generatedPlantUML,
     handleCopy,
     handleImportCodebase,
     handleSelectMember,

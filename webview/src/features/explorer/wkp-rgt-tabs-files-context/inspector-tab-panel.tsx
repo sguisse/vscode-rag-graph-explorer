@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
-import { FileCode, ShieldAlert, GitFork, Copy } from 'lucide-react';
+import { FileCode, ShieldAlert, Copy, Fingerprint, Tag, Code2, Layers, Hash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   CodebaseData,
   CodebaseFile,
@@ -88,37 +89,67 @@ export function InspectorTabPanel({
         </div>
       </div>
 
-      {/* Impact Direction Controls */}
-      <div className="space-y-2">
-        <div className="flex justify-between items-center">
-          <label className="font-mono font-bold text-[11px] text-muted-foreground uppercase">Impact Propagation</label>
-          <span className="bg-amber-500/10 px-2 py-0.5 border border-amber-500/30 rounded font-mono text-[10px] text-amber-500">Transitive BFS</span>
-        </div>
-        <div className="gap-2 grid grid-cols-2">
-          <Button
-            onClick={() => setEnableDownstream(prev => !prev)}
-            className={`flex items-center justify-center gap-1.5 py-2 px-3 font-mono text-xs font-bold rounded border transition-all h-9 cursor-pointer ${
-              enableDownstream
-                ? 'bg-orange-500 border-orange-400 text-white shadow-md'
-                : 'bg-muted border-border text-foreground hover:bg-muted/80'
-            }`}
-          >
-            <GitFork size={13} className="rotate-180" />
-            Downstream
-          </Button>
-          <Button
-            onClick={() => setEnableUpstream(prev => !prev)}
-            className={`flex items-center justify-center gap-1.5 py-2 px-3 font-mono text-xs font-bold rounded border transition-all h-9 cursor-pointer ${
-              enableUpstream
-                ? 'bg-orange-500 border-orange-400 text-white shadow-md'
-                : 'bg-muted border-border text-foreground hover:bg-muted/80'
-            }`}
-          >
-            <GitFork size={13} />
-            Upstream
-          </Button>
-        </div>
-      </div>
+      {/* Moved EntityPropertiesPanel Content */}
+      <Card className="bg-card/50 shadow-xs border-border overflow-hidden">
+        <CardHeader className="bg-muted/40 p-3 border-border/60 border-b">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <Fingerprint className="w-4 h-4 text-primary shrink-0" />
+              <CardTitle className="font-mono font-bold text-foreground text-xs uppercase tracking-wider">
+                Identity Attributes
+              </CardTitle>
+            </div>
+            <span className="bg-primary/10 px-2 py-0.5 rounded-full font-mono font-semibold text-[10px] text-primary uppercase">
+              {selectedEntity.type}
+            </span>
+          </div>
+          <CardDescription className="mt-0.5 font-mono text-[10px] text-muted-foreground">
+            Global entity property parameters
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="space-y-2.5 p-3 font-mono text-[11px]">
+          <div className="space-y-1.5 bg-muted/30 p-2 border border-border/40 rounded-md">
+            <div className="flex items-center gap-1 font-semibold text-[10px] text-muted-foreground uppercase">
+              <Hash className="w-3 h-3 text-primary" /> FQN Identifier
+            </div>
+            <div className="bg-background/80 p-1.5 border border-border/30 rounded font-medium text-foreground text-xs break-all">
+              {selectedEntity.nodeId}
+            </div>
+          </div>
+
+          <div className="gap-2 grid grid-cols-2 pt-1">
+            <div className="bg-muted/20 p-2 border border-border/30 rounded">
+              <span className="block flex items-center gap-1 text-[10px] text-muted-foreground uppercase">
+                <Tag className="w-3 h-3 text-amber-500" /> Entity Type
+              </span>
+              <span className="block mt-0.5 font-bold text-foreground text-xs uppercase">
+                {selectedEntity.type}
+              </span>
+            </div>
+
+            <div className="bg-muted/20 p-2 border border-border/30 rounded">
+              <span className="block flex items-center gap-1 text-[10px] text-muted-foreground uppercase">
+                <Layers className="w-3 h-3 text-indigo-500" /> Target Member
+              </span>
+              <span className="block mt-0.5 font-bold text-foreground text-xs truncate">
+                {selectedEntity.memberId ? `${selectedEntity.memberId}()` : 'N/A'}
+              </span>
+            </div>
+          </div>
+
+          {selectedEntity.edgeId && (
+            <div className="bg-muted/20 p-2 border border-border/30 rounded">
+              <span className="block flex items-center gap-1 text-[10px] text-muted-foreground uppercase">
+                <Code2 className="w-3 h-3 text-emerald-500" /> Edge ID
+              </span>
+              <span className="block mt-0.5 font-bold text-foreground text-xs break-all">
+                {selectedEntity.edgeId}
+              </span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Fluorescent Impact Plan */}
       <div className="space-y-3 bg-orange-500/5 p-4 border border-orange-500/25 rounded-lg">

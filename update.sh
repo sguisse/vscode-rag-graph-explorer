@@ -1,208 +1,449 @@
 #!/usr/bin/env bash
 set -e
 
-# Ensure webview CSS directory exists
-mkdir -p webview/src
+# 1. Remove json-tab-panel.tsx and plantuml-tab-panel.tsx files if present
+rm -f webview/src/features/explorer/wkp-rgt-tabs-files-context/json-tab-panel.tsx
+rm -f webview/src/features/explorer/wkp-rgt-tabs-files-context/plantuml-tab-panel.tsx
 
-# Update index.css with sleek dark mode scrollbar styling
-cat << 'EOF' > webview/src/index.css
-@import "tailwindcss";
+# 2. Update webview/src/features/explorer/wkp-rgt-tabs-files-context/tabs-files-context-container.tsx
+cat << 'EOF' > webview/src/features/explorer/wkp-rgt-tabs-files-context/tabs-files-context-container.tsx
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { InspectorTabPanel } from './inspector-tab-panel';
+import { FilesContextPanel } from './files-context';
+import { ContextTransformerPanel } from './context-transformer';
+import { CodebaseData, SelectedEntity } from '@/shared/services/graph-rag-explorer';
 
-@source "./**/*.{ts,tsx,js,jsx,html}";
-
-/* Use @import for CSS-first Tailwind v4 packages */
-@import "tw-animate-css";
-
-@import "@fontsource-variable/inter";
-@import "@fontsource-variable/source-serif-4";
-@import "@fontsource-variable/jetbrains-mono";
-
-@custom-variant dark (&:is(.dark *));
-
-:root {
-  --background: oklch(1.00 0 0);
-  --foreground: oklch(0.32 0 0);
-  --card: oklch(1.00 0 0);
-  --card-foreground: oklch(0.32 0 0);
-  --card-spacing: 2px;
-  --popover: oklch(1.00 0 0);
-  --popover-foreground: oklch(0.32 0 0);
-  --primary: oklch(0.62 0.19 259.76);
-  --primary-foreground: oklch(1.00 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.45 0.03 257.68);
-  --muted: oklch(0.98 0 0);
-  --muted-foreground: oklch(0.55 0.02 264.41);
-  --accent: oklch(0.95 0.03 233.56);
-  --accent-foreground: oklch(0.38 0.14 265.59);
-  --border: oklch(0.93 0.01 261.82);
-  --input: oklch(0.93 0.01 261.82);
-  --ring: oklch(0.62 0.19 259.76);
-  --chart-1: oklch(0.62 0.19 259.76);
-  --chart-2: oklch(0.55 0.22 262.96);
-  --chart-3: oklch(0.49 0.22 264.43);
-  --chart-4: oklch(0.42 0.18 265.55);
-  --chart-5: oklch(0.38 0.14 265.59);
-  --sidebar: oklch(0.98 0 0);
-  --sidebar-foreground: oklch(0.14 0 0);
-  --sidebar-primary: oklch(0.20 0 0);
-  --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.62 0.19 259.76 / 0.12);
-  --sidebar-accent-foreground: oklch(0.62 0.19 259.76);
-  --sidebar-border: oklch(0.92 0 0);
-  --sidebar-ring: oklch(0.71 0 0);
-
-  --success: oklch(0.95 0.04 145);
-  --success-foreground: oklch(56.929% 0.19252 142.534);
-
-  --destructive: oklch(72.511% 0.13565 30.077);
-  --destructive-foreground: oklch(44.463% 0.15275 20.104 / 0.769);
-
-  --warning: oklch(0.96 0.05 75);
-  --warning-foreground: oklch(0.42 0.14 75);
-
-  --info: oklch(0.94 0.04 240);
-  --info-foreground: oklch(0.38 0.15 240);
+interface TabsFilesContextContainerProps {
+  selectedEntity: SelectedEntity | null;
+  initialCodebase: CodebaseData;
+  enableDownstream: boolean;
+  setEnableDownstream: React.Dispatch<React.SetStateAction<boolean>>;
+  enableUpstream: boolean;
+  setEnableUpstream: React.Dispatch<React.SetStateAction<boolean>>;
+  impactedSet: Set<string>;
+  handleCopy: (text: string, message: string) => void;
 }
 
-.dark {
-  --background: oklch(0.20 0 0);
-  --foreground: oklch(0.92 0 0);
-  --card: oklch(0.27 0 0);
-  --card-foreground: oklch(0.92 0 0);
-  --card-spacing: 5px;
-  --popover: oklch(0.27 0 0);
-  --popover-foreground: oklch(0.92 0 0);
-  --primary: oklch(0.62 0.19 259.76);
-  --primary-foreground: oklch(1.00 0 0);
-  --secondary: oklch(0.27 0 0);
-  --secondary-foreground: oklch(0.92 0 0);
-  --muted: oklch(0.27 0 0);
-  --muted-foreground: oklch(0.72 0 0);
-  --accent: oklch(0.38 0.14 265.59);
-  --accent-foreground: oklch(0.88 0.06 254.63);
-  --border: oklch(0.37 0 0);
-  --input: oklch(0.37 0 0);
-  --ring: oklch(0.62 0.19 259.76);
-  --chart-1: oklch(0.71 0.14 254.69);
-  --chart-2: oklch(0.62 0.19 259.76);
-  --chart-3: oklch(0.55 0.22 262.96);
-  --chart-4: oklch(0.49 0.22 264.43);
-  --chart-5: oklch(0.42 0.18 265.55);
-  --sidebar: oklch(0.21 0.01 285.93);
-  --sidebar-foreground: oklch(0.99 0 0);
-  --sidebar-primary: oklch(0.49 0.24 264.40);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.62 0.19 259.76 / 0.20);
-  --sidebar-accent-foreground: oklch(0.62 0.19 259.76);
-  --sidebar-border: oklch(1.00 0 0 / 10%);
-  --sidebar-ring: oklch(0.55 0.02 285.93);
+export function TabsFilesContextContainer({
+  selectedEntity,
+  initialCodebase,
+  enableDownstream,
+  setEnableDownstream,
+  enableUpstream,
+  setEnableUpstream,
+  impactedSet,
+  handleCopy
+}: TabsFilesContextContainerProps) {
+  const [rightPanelTab, setRightPanelTab] = useState<'inspect' | 'files_context' | 'transformer'>('files_context');
 
-  --success: oklch(0.25 0.06 145);
-  --success-foreground: oklch(0.86 0.14 145);
-
-  --destructive: oklch(49.319% 0.1778 28.578);
-  --destructive-foreground: oklch(0.65 0.21 25);
-
-  --warning: oklch(0.25 0.06 75);
-  --warning-foreground: oklch(0.86 0.15 75);
-
-  --info: oklch(0.23 0.06 240);
-  --info-foreground: oklch(0.82 0.14 240);
-}
-
-@theme {
-  --font-sans: 'Inter Variable', system-ui, -apple-system, sans-serif;
-  --font-heading: 'Inter Variable', system-ui, -apple-system, sans-serif;
-  --font-body: 'Inter Variable', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
-
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-success: var(--success);
-  --color-success-foreground: var(--success-foreground);
-  --color-warning: var(--warning);
-  --color-warning-foreground: var(--warning-foreground);
-  --color-info: var(--info);
-  --color-info-foreground: var(--info-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
-
-  --card-spacing: var(--card-spacing);
-}
-
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  html {
-    font-family: var(--font-sans);
-  }
-  body {
-    @apply bg-background text-foreground;
-    font-family: var(--font-sans);
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-  }
-
-  /* Prime Scrollback & Scrollbar Style - Dark Mode */
-  .dark {
-    scrollbar-width: thin;
-    scrollbar-color: oklch(0.38 0 0) transparent;
-  }
-
-  .dark ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  .dark ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .dark ::-webkit-scrollbar-thumb {
-    background-color: oklch(0.38 0 0 / 0.6);
-    border-radius: 9999px;
-    border: 1px solid transparent;
-    background-clip: content-box;
-    transition: background-color 0.2s ease;
-  }
-
-  .dark ::-webkit-scrollbar-thumb:hover {
-    background-color: oklch(0.62 0.19 259.76 / 0.8);
-  }
-
-  .dark ::-webkit-scrollbar-corner {
-    background: transparent;
-  }
+  return (
+    <div className="flex flex-col bg-card h-full">
+      <div className="flex bg-muted/40 border-border border-b overflow-x-auto shrink-0">
+        <Button
+          variant="ghost"
+          onClick={() => setRightPanelTab('inspect')}
+          className={`flex-1 min-w-[70px] py-2 text-[11px] font-bold rounded-none border-b-2 ${rightPanelTab === 'inspect' ? 'border-b-primary text-primary bg-background' : 'text-muted-foreground border-transparent'}`}
+        >
+          Inspector
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={() => setRightPanelTab('files_context')}
+          className={`flex-1 min-w-[70px] py-2 text-[11px] font-bold rounded-none border-b-2 ${rightPanelTab === 'files_context' ? 'border-b-primary text-primary bg-background' : 'text-muted-foreground border-transparent'}`}
+        >
+          Context
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={() => setRightPanelTab('transformer')}
+          className={`flex-1 min-w-[80px] py-2 text-[11px] font-bold rounded-none border-b-2 ${rightPanelTab === 'transformer' ? 'border-b-primary text-primary bg-background' : 'text-muted-foreground border-transparent'}`}
+        >
+          Transformer
+        </Button>
+      </div>
+      <div className="flex-1 p-4 overflow-y-auto text-xs">
+        {rightPanelTab === 'files_context' && (
+          <FilesContextPanel
+            initialCodebase={initialCodebase}
+            selectedEntity={selectedEntity}
+            enableDownstream={enableDownstream}
+            setEnableDownstream={setEnableDownstream}
+            enableUpstream={enableUpstream}
+            setEnableUpstream={setEnableUpstream}
+            impactedSet={impactedSet}
+            handleCopy={handleCopy}
+          />
+        )}
+        {rightPanelTab === 'transformer' && (
+          <ContextTransformerPanel
+            initialCodebase={initialCodebase}
+            handleCopy={handleCopy}
+          />
+        )}
+        {rightPanelTab === 'inspect' && (
+          <InspectorTabPanel
+            selectedEntity={selectedEntity}
+            initialCodebase={initialCodebase}
+            enableDownstream={enableDownstream}
+            setEnableDownstream={setEnableDownstream}
+            enableUpstream={enableUpstream}
+            setEnableUpstream={setEnableUpstream}
+            impactedSet={impactedSet}
+            handleCopy={handleCopy}
+          />
+        )}
+      </div>
+    </div>
+  );
 }
 EOF
 
-echo "✅ style: Defined prime dark mode scrollback/scrollbar styling in index.css!"
+# 3. Update webview/src/features/explorer/ExplorerFeature.tsx
+cat << 'EOF' > webview/src/features/explorer/ExplorerFeature.tsx
+import React, { useState, useEffect, useCallback } from 'react';
+import { useLayoutStore } from '@/store/useLayoutStore';
+import { useAppContextStore } from '@/store/useAppContextStore';
+import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
+import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
 
-# Rebuild webview
-npm run build:webview
+import { ContextPathsPanel } from './wkp-top-paths/context-paths-panel';
+import { CodebaseExplorerPanel } from './wkp-lft-codebase-tree/CodebaseExplorerPanel';
+import { GraphPanel } from './wksp-cnt-graph/GraphPanel';
+import {
+  GraphPanelHeaderLeft,
+  GraphPanelHeaderCenter,
+  GraphPanelHeaderRight,
+} from './wksp-cnt-graph/GraphPanelHeader';
+import { TabsFilesContextContainer } from './wkp-rgt-tabs-files-context/tabs-files-context-container';
+import { WkpBottomPanel } from './wkp-btm-infos/wkp-bottom-panel';
+import { EntityPropertiesPanel } from './sdb-rgt-properties/EntityPropertiesPanel';
+
+import { useCodebaseFilter } from './hooks/use-codebase-filter';
+import { useTransitiveImpact } from './hooks/use-transitive-impact';
+import { useGraph } from './wksp-cnt-graph/components/graph/use-graph';
+
+import { initialCodebase, FOLDER_POSITIONS } from './wksp-cnt-graph/components/graph/GraphData';
+
+import {
+  CodebaseData,
+  SelectedEntity,
+} from '@/shared/services/graph-rag-explorer';
+
+export function ExplorerFeature() {
+  const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
+  const setContainerContent = useLayoutStore((s) => s.setContainerContent);
+  const toggleContainerMaximized = useLayoutStore((s) => s.toggleContainerMaximized);
+  const setNotification = useAppContextStore((s) => s.setNotification);
+  const isDarkMode = useAppContextStore((s) => s.isDarkMode);
+
+  const [codebase, setCodebase] = useState<CodebaseData>(initialCodebase);
+  const [folderPositions, setFolderPositions] = useState<Record<string, { label: string }>>(FOLDER_POSITIONS);
+  const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(null);
+
+  const [enableDownstream, setEnableDownstream] = useState<boolean>(true);
+  const [enableUpstream, setEnableUpstream] = useState<boolean>(false);
+
+  const [showGrid, setShowGrid] = useState(false);
+  const [callersDepth, setCallersDepth] = useState(1);
+  const [calleesDepth, setCalleesDepth] = useState(1);
+  const [currentLayout, setCurrentLayout] = useState('preset');
+
+  const [attributesVisible, setAttributesVisible] = useState(false);
+  const [methodsVisible, setMethodsVisible] = useState(false);
+  const [showSelectedOnly, setShowSelectedOnly] = useState(false);
+
+  const filter = useCodebaseFilter(codebase.files);
+  const { impactedSet } = useTransitiveImpact(
+    selectedEntity,
+    codebase.dependencies,
+    callersDepth,
+    calleesDepth,
+    enableDownstream,
+    enableUpstream
+  );
+
+  const handleNodeSelect = useCallback((nodeId: string) => {
+    setSelectedEntity({ type: 'node', nodeId });
+  }, []);
+
+  const handleSelectMember = useCallback((nodeId: string, memberId: string) => {
+    setSelectedEntity({ type: 'member', nodeId, memberId });
+  }, []);
+
+  const handleNodeDoubleClick = useCallback((nodeId: string) => {
+    const targetFile = codebase.files.find((f) => f.id === nodeId);
+    if (targetFile && targetFile.path) {
+      logInfo(`Double-clicked graph item: ${nodeId}. Revealing path in VS Code Explorer: ${targetFile.path}`);
+      vsCodeApiService.revealInExplorer(targetFile.path);
+    }
+  }, [codebase.files]);
+
+  const { containerRef, cyRef, graphState, updateGraphTopology, isReady } = useGraph(
+    isDarkMode,
+    handleNodeSelect,
+    handleNodeDoubleClick
+  );
+
+  useEffect(() => {
+    if (!isReady || Object.keys(folderPositions).length === 0) return;
+    updateGraphTopology(
+      filter.searchFilteredFiles,
+      filter.visibleFiles,
+      codebase,
+      impactedSet,
+      currentLayout,
+      folderPositions,
+      attributesVisible,
+      methodsVisible,
+      selectedEntity,
+      showSelectedOnly
+    );
+  }, [
+    isReady,
+    filter.searchFilteredFiles,
+    filter.visibleFiles,
+    codebase,
+    impactedSet,
+    currentLayout,
+    folderPositions,
+    attributesVisible,
+    methodsVisible,
+    selectedEntity,
+    showSelectedOnly,
+    updateGraphTopology,
+  ]);
+
+  const handleCopy = useCallback(
+    (text: string, message: string) => {
+      if (navigator?.clipboard?.writeText) {
+        navigator.clipboard.writeText(text);
+      }
+      setNotification(message);
+    },
+    [setNotification]
+  );
+
+  const handleImportCodebase = useCallback(
+    async (importedData: CodebaseData) => {
+      setCodebase(importedData);
+      setNotification('AST Codebase imported successfully!');
+    },
+    [setNotification]
+  );
+
+  useEffect(() => {
+    setLayoutContainers({
+      header: { visible: true, isResizable: false, isHiddable: false },
+      sidebarLeft: { visible: true, isResizable: true, isHiddable: true },
+      workspace: {
+        top: {
+          visible: true,
+          isResizable: true,
+          isHiddable: true,
+          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
+        },
+        left: {
+          visible: true,
+          isResizable: true,
+          isHiddable: true,
+          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
+        },
+        center: {
+          visible: true,
+          isResizable: false,
+          isHiddable: false,
+          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
+        },
+        right: {
+          visible: true,
+          isResizable: true,
+          isHiddable: true,
+          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
+        },
+        bottom: {
+          visible: true,
+          isResizable: true,
+          isHiddable: true,
+          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
+        },
+      },
+      sidebarRight: {
+        visible: true,
+        isResizable: true,
+        isHiddable: true,
+        maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
+      },
+      footer: { visible: true, isResizable: false, isHiddable: false },
+    });
+  }, [setLayoutContainers]);
+
+  useEffect(() => {
+    setContainerContent(
+      'workspace.top',
+      <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
+        <ContainerPanelHeader title="Context Paths" path="workspace.top" />
+        <div className="flex-1 min-h-0 overflow-auto">
+          <ContextPathsPanel />
+        </div>
+      </div>
+    );
+
+    setContainerContent(
+      'workspace.left',
+      <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden">
+        <ContainerPanelHeader title="Codebase Explorer" path="workspace.left" />
+        <div className="flex-1 min-h-0 overflow-auto">
+          <CodebaseExplorerPanel
+            codebase={codebase}
+            searchFilteredFiles={filter.searchFilteredFiles}
+            expandedFolders={filter.expandedFolders}
+            visibleFiles={filter.visibleFiles}
+            toggleFolder={filter.toggleFolder}
+            toggleFolderCheckbox={filter.toggleFolderCheckbox}
+            toggleFileCheckbox={filter.toggleFileCheckbox}
+            setSelectedEntity={setSelectedEntity}
+            onImportCodebase={handleImportCodebase}
+          />
+        </div>
+      </div>
+    );
+
+    setContainerContent(
+      'workspace.center',
+      <div className="relative flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
+        <ContainerPanelHeader
+          path="workspace.center"
+          isHiddable={false}
+          headerLeft={<GraphPanelHeaderLeft />}
+          headerCenter={
+            <GraphPanelHeaderCenter
+              maxNodesLimit={filter.maxNodesLimit}
+              setMaxNodesLimit={filter.setMaxNodesLimit}
+              callersDepth={callersDepth}
+              setCallersDepth={setCallersDepth}
+              calleesDepth={calleesDepth}
+              setCalleesDepth={setCalleesDepth}
+              displayLevel={filter.displayLevel}
+              setDisplayLevel={filter.setDisplayLevel}
+              currentLayout={currentLayout}
+              setCurrentLayout={setCurrentLayout}
+            />
+          }
+          headerRight={
+            <GraphPanelHeaderRight
+              cyRef={cyRef}
+              isGraphMaximized={false}
+              setIsGraphMaximized={() => toggleContainerMaximized('workspace.center')}
+              showGrid={showGrid}
+              setShowGrid={setShowGrid}
+              attributesVisible={attributesVisible}
+              setAttributesVisible={setAttributesVisible}
+              methodsVisible={methodsVisible}
+              setMethodsVisible={setMethodsVisible}
+              showSelectedOnly={showSelectedOnly}
+              setShowSelectedOnly={setShowSelectedOnly}
+            />
+          }
+        />
+        <div className="relative flex-1 w-full h-full min-h-0">
+          <GraphPanel
+            folderPositions={folderPositions}
+            containerRef={containerRef}
+            showGrid={showGrid}
+            isDarkMode={isDarkMode}
+            graphState={graphState}
+            selectedEntity={selectedEntity}
+            searchFilteredFiles={filter.searchFilteredFiles}
+            impactedSet={impactedSet}
+            handleSelectMember={handleSelectMember}
+            attributesVisible={attributesVisible}
+            methodsVisible={methodsVisible}
+            showSelectedOnly={showSelectedOnly}
+          />
+        </div>
+      </div>
+    );
+
+    setContainerContent(
+      'workspace.right',
+      <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden">
+        <ContainerPanelHeader title="Files Context Builder" path="workspace.right" />
+        <div className="flex-1 min-h-0 overflow-auto">
+          <TabsFilesContextContainer
+            selectedEntity={selectedEntity}
+            initialCodebase={codebase}
+            enableDownstream={enableDownstream}
+            setEnableDownstream={setEnableDownstream}
+            enableUpstream={enableUpstream}
+            setEnableUpstream={setEnableUpstream}
+            impactedSet={impactedSet}
+            handleCopy={handleCopy}
+          />
+        </div>
+      </div>
+    );
+
+    setContainerContent(
+      'workspace.bottom',
+      <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
+        <ContainerPanelHeader title="Output & Logs" path="workspace.bottom" />
+        <div className="flex-1 min-h-0 overflow-auto">
+          <WkpBottomPanel />
+        </div>
+      </div>
+    );
+
+    setContainerContent(
+      'sidebarRight',
+      <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden">
+        <ContainerPanelHeader title="Entity Properties" path="sidebarRight" />
+        <div className="flex-1 min-h-0 overflow-auto">
+          <EntityPropertiesPanel selectedEntity={selectedEntity} />
+        </div>
+      </div>
+    );
+  }, [
+    setContainerContent,
+    toggleContainerMaximized,
+    filter.searchFilteredFiles,
+    filter.expandedFolders,
+    filter.visibleFiles,
+    filter.maxNodesLimit,
+    filter.displayLevel,
+    filter.toggleFolder,
+    filter.toggleFolderCheckbox,
+    filter.toggleFileCheckbox,
+    filter.setMaxNodesLimit,
+    filter.setDisplayLevel,
+    callersDepth,
+    calleesDepth,
+    currentLayout,
+    showGrid,
+    attributesVisible,
+    methodsVisible,
+    showSelectedOnly,
+    selectedEntity,
+    codebase,
+    folderPositions,
+    enableDownstream,
+    enableUpstream,
+    impactedSet,
+    handleCopy,
+    handleImportCodebase,
+    handleSelectMember,
+    handleNodeDoubleClick,
+    containerRef,
+    cyRef,
+    isDarkMode,
+    graphState,
+  ]);
+
+  return null;
+}
+
+export default ExplorerFeature;
+EOF
+
+echo "✅ refactor: Successfully removed json-tab-panel and plantuml-tab-panel along with all associated imports and props!"
