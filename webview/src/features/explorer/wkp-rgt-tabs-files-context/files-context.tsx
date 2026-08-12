@@ -168,10 +168,10 @@ export function FilesContextPanel({
   const getGroupStyle = (key: string) => {
     if (key === 'target') {
       return {
-        border: 'border-emerald-500/40 dark:border-emerald-500/50',
-        bgHeader: 'bg-emerald-500/15 border-b border-emerald-500/30',
-        text: 'text-emerald-600 dark:text-emerald-400 font-bold',
-        icon: 'text-emerald-500 dark:text-emerald-400',
+        border: 'border-orange-500/20 dark:border-orange-500/30',
+        bgHeader: 'bg-orange-500/10 border-b border-orange-500/20',
+        text: 'text-orange-500',
+        icon: 'text-orange-500',
       };
     }
     if (key.startsWith('upstream')) {
@@ -191,10 +191,10 @@ export function FilesContextPanel({
       };
     }
     return {
-      border: 'border-orange-500/20 dark:border-orange-500/30',
-      bgHeader: 'bg-orange-500/10 border-b border-orange-500/20',
-      text: 'text-orange-500',
-      icon: 'text-orange-500',
+      border: 'border-emerald-500/40 dark:border-emerald-500/50',
+      bgHeader: 'bg-emerald-500/15 border-b border-emerald-500/30',
+      text: 'text-emerald-600 dark:text-emerald-400 font-bold',
+      icon: 'text-emerald-500 dark:text-emerald-400',
     };
   };
 
@@ -352,14 +352,14 @@ export function FilesContextPanel({
             <ShieldAlert size={14} className="text-orange-500" />
             <h5 className="font-mono font-bold text-orange-500 text-xs">Fluorescent Impact Plan</h5>
           </div>
-          <span className="bg-orange-500/10 px-2 py-0.5 border border-orange-500/20 rounded font-mono text-[10px] text-orange-500 font-bold">
+          <span className="bg-orange-500/10 px-2 py-0.5 border border-orange-500/20 rounded font-mono font-bold text-[10px] text-orange-500">
             {selectedCount} Selected
           </span>
         </div>
 
-        <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+        <div className="space-y-2 pr-1 max-h-60 overflow-y-auto">
           {depthGroups.length === 0 ? (
-            <div className="text-muted-foreground text-[11px] italic py-2 text-center">
+            <div className="py-2 text-[11px] text-muted-foreground text-center italic">
               No impacted files or selected target entity.
             </div>
           ) : (
@@ -375,7 +375,7 @@ export function FilesContextPanel({
                 <div key={group.key} className={`border ${style.border} rounded-md bg-background/60 overflow-hidden`}>
                   {/* Group Header */}
                   <div className={`flex items-center justify-between px-2 py-1.5 ${style.bgHeader} select-none`}>
-                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                    <div className="flex flex-1 items-center gap-1.5 min-w-0">
                       <TriStateCheckbox
                         checked={isAllChecked}
                         indeterminate={isIndeterminate}
@@ -383,7 +383,7 @@ export function FilesContextPanel({
                         className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
                       />
                       <div
-                        className="flex items-center gap-1 min-w-0 cursor-pointer flex-1"
+                        className="flex flex-1 items-center gap-1 min-w-0 cursor-pointer"
                         onClick={() => toggleGroupExpand(group.key)}
                       >
                         {isExpanded ? (
@@ -394,20 +394,20 @@ export function FilesContextPanel({
                         <span className={`text-[11px] truncate ${style.text}`}>{group.label}</span>
                       </div>
                     </div>
-                    <span className="bg-muted px-1.5 py-0.5 rounded text-[9px] text-muted-foreground ml-2 font-mono">
+                    <span className="bg-muted ml-2 px-1.5 py-0.5 rounded font-mono text-[9px] text-muted-foreground">
                       {groupFiles.filter((f) => selectedFiles[f.id]).length}/{groupFiles.length}
                     </span>
                   </div>
 
                   {/* Group File Items */}
                   {isExpanded && (
-                    <div className="p-1 space-y-1 bg-background/40">
+                    <div className="space-y-1 bg-background/40 p-1">
                       {groupFiles.map((file) => (
                         <div
                           key={file.id}
-                          className="flex items-center justify-between px-2 py-1 rounded hover:bg-muted/50 transition-colors"
+                          className="flex justify-between items-center hover:bg-muted/50 px-2 py-1 rounded transition-colors"
                         >
-                          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                          <div className="flex flex-1 items-center gap-1.5 min-w-0">
                             <input
                               type="checkbox"
                               checked={!!selectedFiles[file.id]}
@@ -423,7 +423,7 @@ export function FilesContextPanel({
                               {file.name}
                             </span>
                           </div>
-                          <span className="bg-muted px-1.5 py-0.5 rounded text-[9px] text-muted-foreground ml-2 shrink-0">
+                          <span className="bg-muted ml-2 px-1.5 py-0.5 rounded text-[9px] text-muted-foreground shrink-0">
                             {file.language}
                           </span>
                         </div>
@@ -483,7 +483,7 @@ export function FilesContextPanel({
             <span>Context Preview ({selectedCount} files)</span>
             <span>All-In-One Unified File</span>
           </div>
-          <pre className="bg-slate-950 p-3 border border-slate-800 rounded-md max-h-64 font-mono text-[10px] text-slate-300 leading-relaxed overflow-x-auto overflow-y-auto whitespace-pre-wrap">
+          <pre className="bg-slate-950 p-3 border border-slate-800 rounded-md max-h-64 overflow-x-auto overflow-y-auto font-mono text-[10px] text-slate-300 leading-relaxed whitespace-pre-wrap">
             {combinedFilesContext || '// No files selected for context generation.'}
           </pre>
         </div>
