@@ -1,23 +1,23 @@
 import React from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { CodebaseData } from '@/shared/services/graph-rag-explorer';
-import { useContextPaths } from './use-context-paths';
+import { useImpactedPaths } from './use-impacted-paths';
 
-interface ContextPathsPanelProps {
+interface ImpactedPathsPanelProps {
   onCodebaseChange?: (codebase: CodebaseData) => void;
   upstreamDepth?: number;
   downstreamDepth?: number;
 }
 
-export function ContextPathsPanel({
+export function ImpactedPathsPanel({
   onCodebaseChange,
   upstreamDepth = 2,
   downstreamDepth = 2,
-}: ContextPathsPanelProps = {}) {
+}: ImpactedPathsPanelProps = {}) {
   const {
     paths,
     handleTextareaChange,
-  } = useContextPaths({
+  } = useImpactedPaths({
     onCodebaseChange,
     upstreamDepth,
     downstreamDepth,

@@ -6,12 +6,12 @@ import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 
-import { ContextPathsPanel } from './wkp-top-paths/context-paths-panel';
+import { ImpactedPathsPanel } from './wkp-top-impacted-paths/impacted-paths-panel';
 import {
-  PathsPanelHeaderLeft,
-  PathsPanelHeaderCenter,
-  PathsPanelHeaderRight,
-} from './wkp-top-paths/PathsPanelHeader';
+  ImpactedPathsPanelHeaderLeft,
+  ImpactedPathsPanelHeaderCenter,
+  ImpactedPathsPanelHeaderRight,
+} from './wkp-top-impacted-paths/ImpactedPathsPanelHeader';
 import { CodebaseExplorerPanel } from './wkp-lft-codebase-tree/CodebaseExplorerPanel';
 import { GraphPanel } from './wksp-cnt-graph/GraphPanel';
 import {
@@ -113,7 +113,6 @@ export function ExplorerFeature() {
         });
       }
     }
-    // Activate blinking pulse effect on the graph node for 2 seconds
     setFocusedNodeId(nodeId);
     setTimeout(() => {
       setFocusedNodeId((prev) => (prev === nodeId ? null : prev));
@@ -219,19 +218,19 @@ export function ExplorerFeature() {
       <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
         <ContainerPanelHeader
           path="workspace.top"
-          headerLeft={<PathsPanelHeaderLeft />}
+          headerLeft={<ImpactedPathsPanelHeaderLeft />}
           headerCenter={
-            <PathsPanelHeaderCenter
+            <ImpactedPathsPanelHeaderCenter
               upstreamDepth={upstreamDepth}
               setUpstreamDepth={setUpstreamDepth}
               downstreamDepth={downstreamDepth}
               setDownstreamDepth={setDownstreamDepth}
             />
           }
-          headerRight={<PathsPanelHeaderRight />}
+          headerRight={<ImpactedPathsPanelHeaderRight />}
         />
         <div className="flex-1 min-h-0 overflow-auto">
-          <ContextPathsPanel
+          <ImpactedPathsPanel
             onCodebaseChange={handleImportCodebase}
             upstreamDepth={upstreamDepth}
             downstreamDepth={downstreamDepth}

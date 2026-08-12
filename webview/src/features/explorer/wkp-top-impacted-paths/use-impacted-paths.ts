@@ -5,14 +5,14 @@ import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { CodebaseData } from '@/shared/services/graph-rag-explorer';
 import { initialCodebase } from '@/features/explorer/wksp-cnt-graph/components/graph/GraphData';
 
-export interface UseContextPathsOptions {
+export interface UseImpactedPathsOptions {
   defaultCodebase?: CodebaseData;
   onCodebaseChange?: (codebase: CodebaseData) => void;
   upstreamDepth?: number;
   downstreamDepth?: number;
 }
 
-export function useContextPaths(options: UseContextPathsOptions = {}) {
+export function useImpactedPaths(options: UseImpactedPathsOptions = {}) {
   const {
     defaultCodebase = initialCodebase,
     onCodebaseChange,
@@ -63,7 +63,7 @@ export function useContextPaths(options: UseContextPathsOptions = {}) {
       down = depthRef.current.downstreamDepth
     ) => {
       if (!targetPaths.trim()) return;
-      logInfo(`[useContextPaths] Fetching impacts for paths with upstreamDepth=${up}, downstreamDepth=${down}`);
+      logInfo(`[useImpactedPaths] Fetching impacts for paths with upstreamDepth=${up}, downstreamDepth=${down}`);
       const realCodebaseData = await getPathsChangeImpacts(targetPaths, up, down);
 
       if (realCodebaseData) {
@@ -92,7 +92,7 @@ export function useContextPaths(options: UseContextPathsOptions = {}) {
         if (prev.trim()) {
           const existingLines = prev.split('\n').map((l) => l.trim()).filter(Boolean);
           if (!existingLines.includes(newPath.trim())) {
-            updated = `${newPath.trim()}\n${prev.trim()}`;
+            updated = `${prev.trim()}\n${newPath.trim()}`;
           } else {
             updated = prev;
           }
@@ -125,7 +125,6 @@ export function useContextPaths(options: UseContextPathsOptions = {}) {
     [paths, fetchImpacts]
   );
 
-  // FIX REGRESSION: Automatically re-trigger fetchImpacts whenever effective depths change and paths is active
   const isFirstRender = useRef(true);
   useEffect(() => {
     if (isFirstRender.current) {
@@ -138,17 +137,15 @@ export function useContextPaths(options: UseContextPathsOptions = {}) {
   }, [effectiveUpstreamDepth, effectiveDownstreamDepth, fetchImpacts, paths]);
 
   useEffect(() => {
-    // Register listener for 'selectedPath'
     const unsubscribeStatus = vsCodeHandleMessage.on('selectedPath', (message) => {
-      logInfo(`[useContextPaths] selectedPath event received: ${message.payload}`);
+      logInfo(`[useImpactedPaths] selectedPath event received: ${message.payload}`);
       if (message.payload) {
         handlePathsChange(message.payload);
       }
     });
 
-    // Register listener for 'addPathToTop' (e.g. Cmd + Click on graph element)
     const unsubscribeAddPath = vsCodeHandleMessage.on('addPathToTop', (message) => {
-      logInfo(`[useContextPaths] addPathToTop event received: ${message.payload}`);
+      logInfo(`[useImpactedPaths] addPathToTop event received: ${message.payload}`);
       if (message.payload) {
         appendOrReplacePath(message.payload);
       }

@@ -2,12 +2,12 @@ import React from 'react';
 import { ArrowUp, ArrowDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
-export interface PathsPanelHeaderLeftProps {
+export interface ImpactedPathsPanelHeaderLeftProps {
   title?: string;
 }
 
-export const PathsPanelHeaderLeft: React.FC<PathsPanelHeaderLeftProps> = ({
-  title = 'Context Paths',
+export const ImpactedPathsPanelHeaderLeft: React.FC<ImpactedPathsPanelHeaderLeftProps> = ({
+  title = 'Impacted Paths to analyze',
 }) => (
   <div className="flex items-center gap-2">
     <span className="font-bold text-foreground truncate uppercase tracking-wider">
@@ -16,14 +16,14 @@ export const PathsPanelHeaderLeft: React.FC<PathsPanelHeaderLeftProps> = ({
   </div>
 );
 
-export interface PathsPanelHeaderCenterProps {
+export interface ImpactedPathsPanelHeaderCenterProps {
   upstreamDepth: number;
   setUpstreamDepth: (val: number) => void;
   downstreamDepth: number;
   setDownstreamDepth: (val: number) => void;
 }
 
-export const PathsPanelHeaderCenter: React.FC<PathsPanelHeaderCenterProps> = ({
+export const ImpactedPathsPanelHeaderCenter: React.FC<ImpactedPathsPanelHeaderCenterProps> = ({
   upstreamDepth,
   setUpstreamDepth,
   downstreamDepth,
@@ -41,7 +41,7 @@ export const PathsPanelHeaderCenter: React.FC<PathsPanelHeaderCenterProps> = ({
           type="number"
           min={0}
           max={20}
-          className="bg-transparent shadow-none p-0 border-0 focus:ring-0 focus-visible:ring-0 w-8 h-5 font-bold text-foreground text-xs text-center"
+          className="bg-transparent shadow-none p-0 border-0 focus-visible:ring-0 focus:ring-0 w-8 h-5 font-bold text-foreground text-xs text-center"
           value={upstreamDepth}
           onChange={(e) => setUpstreamDepth(Number(e.target.value) || 0)}
         />
@@ -56,7 +56,7 @@ export const PathsPanelHeaderCenter: React.FC<PathsPanelHeaderCenterProps> = ({
           type="number"
           min={0}
           max={20}
-          className="bg-transparent shadow-none p-0 border-0 focus:ring-0 focus-visible:ring-0 w-8 h-5 font-bold text-foreground text-xs text-center"
+          className="bg-transparent shadow-none p-0 border-0 focus-visible:ring-0 focus:ring-0 w-8 h-5 font-bold text-foreground text-xs text-center"
           value={downstreamDepth}
           onChange={(e) => setDownstreamDepth(Number(e.target.value) || 0)}
         />
@@ -65,6 +65,33 @@ export const PathsPanelHeaderCenter: React.FC<PathsPanelHeaderCenterProps> = ({
   );
 };
 
-export interface PathsPanelHeaderRightProps {}
+export interface ImpactedPathsPanelHeaderRightProps {}
 
-export const PathsPanelHeaderRight: React.FC<PathsPanelHeaderRightProps> = () => null;
+export const ImpactedPathsPanelHeaderRight: React.FC<ImpactedPathsPanelHeaderRightProps> = () => null;
+
+export interface ImpactedPathsPanelHeaderProps extends ImpactedPathsPanelHeaderCenterProps {
+  title?: string;
+}
+
+export const ImpactedPathsPanelHeader: React.FC<ImpactedPathsPanelHeaderProps> = ({
+  title,
+  upstreamDepth,
+  setUpstreamDepth,
+  downstreamDepth,
+  setDownstreamDepth,
+}) => {
+  return (
+    <div className="flex justify-between items-center px-2 py-1 w-full">
+      <ImpactedPathsPanelHeaderLeft title={title} />
+      <ImpactedPathsPanelHeaderCenter
+        upstreamDepth={upstreamDepth}
+        setUpstreamDepth={setUpstreamDepth}
+        downstreamDepth={downstreamDepth}
+        setDownstreamDepth={setDownstreamDepth}
+      />
+      <ImpactedPathsPanelHeaderRight />
+    </div>
+  );
+};
+
+export default ImpactedPathsPanelHeader;

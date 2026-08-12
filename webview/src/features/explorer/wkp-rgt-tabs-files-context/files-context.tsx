@@ -3,6 +3,7 @@ import { GitFork, FileText, Copy, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CodebaseData, CodebaseFile, SelectedEntity } from '@/shared/services/graph-rag-explorer';
 import { generateMarkdownRecipe } from '@/services/view/prompt-view.service';
+import { calculateTransitiveImpact } from '@/services/view/graph-view.service';
 
 interface FilesContextPanelProps {
   initialCodebase: CodebaseData;
@@ -26,9 +27,17 @@ export function FilesContextPanel({
   handleCopy
 }: FilesContextPanelProps) {
 
-  const generatedMarkdownRecipe = useMemo(() => {
-    return generateMarkdownRecipe(selectedEntity, enableDownstream, enableUpstream, impactedSet, initialCodebase);
-  }, [selectedEntity, enableDownstream, enableUpstream, impactedSet, initialCodebase]);
+  const downstreamCount = useMemo(() => {
+    if (!selectedEntity || !initialCodebase?.dependencies) return 0;
+    const dsSet = calculateTransitiveImpact(selectedEntity, initialCodebase.dependencies, 20, 20, true, false);
+    return initialCodebase.files.filter(f => dsSet.has(f.id) && f.id !== selectedEntity.nodeId).length;
+  }, [selectedEntity, initialCodebase]);
+
+  const upstreamCount = useMemo(() => {
+    if (!selectedEntity || !initialCodebase?.dependencies) return 0;
+    const usSet = calculateTransitiveImpact(selectedEntity, initialCodebase.dependencies, 20, 20, false, true);
+    return initialCodebase.files.filter(f => usSet.has(f.id) && f.id !== selectedEntity.nodeId).length;
+  }, [selectedEntity, initialCodebase]);
 
   const combinedFilesContext = useMemo(() => {
     if (!initialCodebase?.files) return '';
@@ -78,7 +87,7 @@ export function FilesContextPanel({
   };
 
   return (
-    <div className="space-y-4 animate-in duration-200 fade-in font-mono text-xs">
+    <div className="space-y-4 font-mono text-xs animate-in duration-200 fade-in">
       {/* Impact Propagation Controls */}
       <div className="space-y-2 bg-muted/30 p-3 border border-border rounded-lg">
         <div className="flex justify-between items-center">
@@ -86,17 +95,6 @@ export function FilesContextPanel({
           <span className="bg-amber-500/10 px-2 py-0.5 border border-amber-500/30 rounded font-mono text-[10px] text-amber-500">Transitive BFS</span>
         </div>
         <div className="gap-2 grid grid-cols-2">
-          <Button
-            onClick={() => setEnableDownstream(prev => !prev)}
-            className={`flex items-center justify-center gap-1.5 py-2 px-3 font-mono text-xs font-bold rounded border transition-all h-9 cursor-pointer ${
-              enableDownstream
-                ? 'bg-orange-500 border-orange-400 text-white shadow-md'
-                : 'bg-muted border-border text-foreground hover:bg-muted/80'
-            }`}
-          >
-            <GitFork size={13} className="rotate-180" />
-            Downstream
-          </Button>
           <Button
             onClick={() => setEnableUpstream(prev => !prev)}
             className={`flex items-center justify-center gap-1.5 py-2 px-3 font-mono text-xs font-bold rounded border transition-all h-9 cursor-pointer ${
@@ -106,7 +104,18 @@ export function FilesContextPanel({
             }`}
           >
             <GitFork size={13} />
-            Upstream
+            Upstream ({upstreamCount})
+          </Button>
+          <Button
+            onClick={() => setEnableDownstream(prev => !prev)}
+            className={`flex items-center justify-center gap-1.5 py-2 px-3 font-mono text-xs font-bold rounded border transition-all h-9 cursor-pointer ${
+              enableDownstream
+                ? 'bg-orange-500 border-orange-400 text-white shadow-md'
+                : 'bg-muted border-border text-foreground hover:bg-muted/80'
+            }`}
+          >
+            <GitFork size={13} className="rotate-180" />
+            Downstream ({downstreamCount})
           </Button>
         </div>
       </div>
@@ -118,12 +127,6 @@ export function FilesContextPanel({
             <ShieldAlert size={14} className="text-orange-500" />
             <h5 className="font-mono font-bold text-orange-500 text-xs">Fluorescent Impact Plan</h5>
           </div>
-          <Button
-            onClick={() => handleCopy(generatedMarkdownRecipe, "Markdown impact recipe copied to clip-board!")}
-            className="flex items-center gap-1 bg-muted hover:bg-muted/80 px-2 py-1 border border-border rounded h-6 font-mono text-[10px] text-foreground cursor-pointer"
-          >
-            <Copy size={10} />Copy Recipes
-          </Button>
         </div>
         <div className="space-y-1.5 max-h-48 overflow-y-auto">
           {initialCodebase.files.map((f: CodebaseFile) =>
@@ -155,30 +158,30 @@ export function FilesContextPanel({
           </Button>
         </div>
 
-        <div className="gap-2 grid grid-cols-3 text-center">
+        <div className="gap-2 grid grid-cols-5 text-center">
           <div className="bg-muted/40 p-2 border border-border/50 rounded">
-            <span className="block text-[10px] text-muted-foreground uppercase">Total Files</span>
+            <span className="block text-[9px] text-muted-foreground truncate uppercase">Total Files</span>
             <span className="font-bold text-foreground text-xs">{initialCodebase?.files?.length || 0}</span>
           </div>
+          <div className="bg-indigo-500/10 p-2 border border-indigo-500/20 rounded">
+            <span className="block text-[9px] text-indigo-500 truncate uppercase">Upstream</span>
+            <span className="font-bold text-indigo-500 text-xs">{upstreamCount}</span>
+          </div>
+          <div className="bg-blue-500/10 p-2 border border-blue-500/20 rounded">
+            <span className="block text-[9px] text-blue-500 truncate uppercase">Downstream</span>
+            <span className="font-bold text-blue-500 text-xs">{downstreamCount}</span>
+          </div>
           <div className="bg-orange-500/10 p-2 border border-orange-500/20 rounded">
-            <span className="block text-[10px] text-orange-500 uppercase">Impacted Files</span>
+            <span className="block text-[9px] text-orange-500 truncate uppercase">Impacted</span>
             <span className="font-bold text-orange-500 text-xs">{impactedSet.size}</span>
           </div>
           <div className="bg-muted/40 p-2 border border-border/50 rounded">
-            <span className="block text-[10px] text-muted-foreground uppercase">Context Size</span>
+            <span className="block text-[9px] text-muted-foreground truncate uppercase">Context Size</span>
             <span className="font-bold text-foreground text-xs">{(combinedFilesContext.length / 1024).toFixed(1)} KB</span>
           </div>
         </div>
 
-        <div className="space-y-1">
-          <div className="flex justify-between items-center text-[10px] text-muted-foreground uppercase">
-            <span>Context Preview</span>
-            <span>All-In-One Unified File</span>
-          </div>
-          <pre className="bg-slate-950 p-3 border border-slate-800 rounded-md max-h-64 font-mono text-[10px] text-slate-300 leading-relaxed overflow-x-auto overflow-y-auto whitespace-pre-wrap">
-            {combinedFilesContext}
-          </pre>
-        </div>
+
       </div>
     </div>
   );

@@ -2,354 +2,218 @@
 set -e
 
 # Ensure target directory exists
-mkdir -p webview/src/features/explorer/wksp-cnt-graph/components/graph
+mkdir -p webview/src/features/explorer/wkp-rgt-tabs-files-context
 
-# Update useGraphTopology.ts with explicit type guards for src and tgt dependencies in applyCustomHierarchicalLayout
-cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/components/graph/useGraphTopology.ts
-import { useCallback, useRef } from 'react';
-import cytoscape from 'cytoscape';
-import {
-  CodebaseData,
-  CodebaseFile,
-  Dependency,
-  SelectedEntity,
-} from '@/shared/services/graph-rag-explorer';
-import { buildMemberKeyToken } from '@/services/view/graph-view.service';
-import { FOLDER_BASE_X_POSITIONS_CONFIG } from '@/features/explorer/constants/graph.constants';
+# Update files-context.tsx to calculate and render Downstream & Upstream metrics in the meta grid
+cat << 'EOF' > webview/src/features/explorer/wkp-rgt-tabs-files-context/files-context.tsx
+import React, { useMemo } from 'react';
+import { GitFork, FileText, Copy, ShieldAlert } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { CodebaseData, CodebaseFile, SelectedEntity } from '@/shared/services/graph-rag-explorer';
+import { generateMarkdownRecipe } from '@/services/view/prompt-view.service';
+import { calculateTransitiveImpact } from '@/services/view/graph-view.service';
 
-function getNodeDimensions(
-  file: CodebaseFile,
-  attributesVisible: boolean,
-  methodsVisible: boolean
-): { width: number; height: number } {
-  if (file.type === 'config') {
-    return { width: 320, height: 240 };
-  }
-
-  const baseHeaderHeight = 76;
-
-  let attrHeight = 0;
-  if (attributesVisible) {
-    const attrCount = file.attributes?.length || 0;
-    attrHeight = attrCount > 0 ? 28 + attrCount * 18 : 36;
-  }
-
-  let methodHeight = 0;
-  if (methodsVisible) {
-    const methodCount = file.methods?.length || 0;
-    methodHeight = methodCount > 0 ? 28 + methodCount * 32 : 36;
-  }
-
-  const totalHeight = baseHeaderHeight + attrHeight + methodHeight;
-  return { width: 288, height: totalHeight };
+interface FilesContextPanelProps {
+  initialCodebase: CodebaseData;
+  selectedEntity: SelectedEntity | null;
+  enableDownstream: boolean;
+  setEnableDownstream: React.Dispatch<React.SetStateAction<boolean>>;
+  enableUpstream: boolean;
+  setEnableUpstream: React.Dispatch<React.SetStateAction<boolean>>;
+  impactedSet: Set<string>;
+  handleCopy: (text: string, message: string) => void;
 }
 
-/**
- * Calculates custom topological/hierarchical level coordinates ensuring:
- * - Minimal horizontal gap between nodes = 10px (or relation label length * 7 + 20px if edge label exists)
- * - Minimal vertical gap between levels = 50px
- */
-function applyCustomHierarchicalLayout(
-  cy: cytoscape.Core,
-  effectiveFiles: CodebaseFile[],
-  codebase: CodebaseData,
-  attributesVisible: boolean,
-  methodsVisible: boolean
-) {
-  if (effectiveFiles.length === 0) return;
+export function FilesContextPanel({
+  initialCodebase,
+  selectedEntity,
+  enableDownstream,
+  setEnableDownstream,
+  enableUpstream,
+  setEnableUpstream,
+  impactedSet,
+  handleCopy
+}: FilesContextPanelProps) {
 
-  // 1. Build adjacency & calculate in-degrees for level assignment
-  const inDegree = new Map<string, number>();
-  const adj = new Map<string, string[]>();
+  const generatedMarkdownRecipe = useMemo(() => {
+    return generateMarkdownRecipe(selectedEntity, enableDownstream, enableUpstream, impactedSet, initialCodebase);
+  }, [selectedEntity, enableDownstream, enableUpstream, impactedSet, initialCodebase]);
 
-  effectiveFiles.forEach(f => {
-    inDegree.set(f.id, 0);
-    adj.set(f.id, []);
-  });
+  const downstreamCount = useMemo(() => {
+    if (!selectedEntity || !initialCodebase?.dependencies) return 0;
+    const dsSet = calculateTransitiveImpact(selectedEntity, initialCodebase.dependencies, 20, 20, true, false);
+    return initialCodebase.files.filter(f => dsSet.has(f.id) && f.id !== selectedEntity.nodeId).length;
+  }, [selectedEntity, initialCodebase]);
 
-  codebase.dependencies.forEach(dep => {
-    const src = dep.sourceNode || dep.source;
-    const tgt = dep.targetNode || dep.target;
-    if (src && tgt && inDegree.has(src) && inDegree.has(tgt) && src !== tgt) {
-      adj.get(src)!.push(tgt);
-      inDegree.set(tgt, (inDegree.get(tgt) || 0) + 1);
-    }
-  });
+  const upstreamCount = useMemo(() => {
+    if (!selectedEntity || !initialCodebase?.dependencies) return 0;
+    const usSet = calculateTransitiveImpact(selectedEntity, initialCodebase.dependencies, 20, 20, false, true);
+    return initialCodebase.files.filter(f => usSet.has(f.id) && f.id !== selectedEntity.nodeId).length;
+  }, [selectedEntity, initialCodebase]);
 
-  // 2. Assign levels using BFS
-  const levelMap = new Map<string, number>();
-  const queue: string[] = [];
+  const combinedFilesContext = useMemo(() => {
+    if (!initialCodebase?.files) return '';
 
-  effectiveFiles.forEach(f => {
-    if ((inDegree.get(f.id) || 0) === 0) {
-      levelMap.set(f.id, 0);
-      queue.push(f.id);
-    }
-  });
+    return initialCodebase.files
+      .map((file: CodebaseFile) => {
+        const isImpacted = impactedSet.has(file.id);
+        const isSelected = selectedEntity?.nodeId === file.id;
+        const statusTag = isSelected ? '[SELECTED]' : isImpacted ? '[IMPACTED]' : '[AVAILABLE]';
 
-  if (queue.length === 0 && effectiveFiles.length > 0) {
-    levelMap.set(effectiveFiles[0].id, 0);
-    queue.push(effectiveFiles[0].id);
-  }
+        let content = `// ==========================================\n`;
+        content += `// File: ${file.path} ${statusTag}\n`;
+        content += `// Language: ${file.language} | Size: ${file.size} LOC | Complexity: V(g)=${file.complexity}\n`;
+        content += `// ==========================================\n\n`;
 
-  while (queue.length > 0) {
-    const curr = queue.shift()!;
-    const currLevel = levelMap.get(curr) || 0;
-
-    const neighbors = adj.get(curr) || [];
-    neighbors.forEach(nbr => {
-      const nextLevel = currLevel + 1;
-      if (!levelMap.has(nbr) || levelMap.get(nbr)! < nextLevel) {
-        levelMap.set(nbr, nextLevel);
-        queue.push(nbr);
-      }
-    });
-  }
-
-  effectiveFiles.forEach(f => {
-    if (!levelMap.has(f.id)) {
-      levelMap.set(f.id, 0);
-    }
-  });
-
-  // 3. Group nodes by level
-  const maxLevel = Math.max(...Array.from(levelMap.values()), 0);
-  const levels: CodebaseFile[][] = Array.from({ length: maxLevel + 1 }, () => []);
-
-  effectiveFiles.forEach(f => {
-    const lvl = levelMap.get(f.id) || 0;
-    levels[lvl].push(f);
-  });
-
-  // 4. Map edge labels to compute required horizontal gaps between connected pairs
-  const edgeLabelLengths = new Map<string, number>();
-  codebase.dependencies.forEach(dep => {
-    const src = dep.sourceNode || dep.source;
-    const tgt = dep.targetNode || dep.target;
-    const label = dep.label || '';
-    if (src && tgt && label) {
-      const key1 = `${src}__${tgt}`;
-      const key2 = `${tgt}__${src}`;
-      edgeLabelLengths.set(key1, Math.max(edgeLabelLengths.get(key1) || 0, label.length));
-      edgeLabelLengths.set(key2, Math.max(edgeLabelLengths.get(key2) || 0, label.length));
-    }
-  });
-
-  // 5. Position nodes level by level
-  let currentY = 80;
-
-  levels.forEach((levelFiles) => {
-    if (levelFiles.length === 0) return;
-
-    const levelHeights = levelFiles.map(f => getNodeDimensions(f, attributesVisible, methodsVisible).height);
-    const maxLevelHeight = Math.max(...levelHeights, 76);
-    const dimsList = levelFiles.map(f => getNodeDimensions(f, attributesVisible, methodsVisible));
-
-    // Calculate dynamic horizontal gap per node pair: min 10px or relation label size + 20px
-    const gaps: number[] = [];
-    for (let i = 0; i < levelFiles.length - 1; i++) {
-      const f1 = levelFiles[i].id;
-      const f2 = levelFiles[i + 1].id;
-      const labelLen = Math.max(
-        edgeLabelLengths.get(`${f1}__${f2}`) || 0,
-        edgeLabelLengths.get(`${f2}__${f1}`) || 0
-      );
-      const gapX = labelLen > 0 ? Math.round(labelLen * 7) + 20 : 10;
-      gaps.push(gapX);
-    }
-
-    const totalLevelWidth = dimsList.reduce((acc, d) => acc + d.width, 0) + gaps.reduce((acc, g) => acc + g, 0);
-    let currentX = 600 - totalLevelWidth / 2;
-
-    levelFiles.forEach((file, idx) => {
-      const cyNode = cy.getElementById(file.id);
-      const dims = dimsList[idx];
-
-      if (cyNode && cyNode.length > 0) {
-        cyNode.position({
-          x: currentX + dims.width / 2,
-          y: currentY + maxLevelHeight / 2
-        });
-      }
-
-      currentX += dims.width + (gaps[idx] || 10);
-    });
-
-    // Enforce minimal 50px vertical spacing between consecutive levels
-    currentY += maxLevelHeight + 50;
-  });
-}
-
-export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) {
-  const lastStructureKeyRef = useRef<string>('');
-
-  const updateGraphTopology = useCallback((
-    searchFilteredFiles: CodebaseFile[],
-    visibleFiles: Record<string, boolean>,
-    codebase: CodebaseData,
-    impactedSet: Set<string>,
-    currentLayout: string,
-    folderPositions: Record<string, { label: string }>,
-    attributesVisible: boolean = false,
-    methodsVisible: boolean = true,
-    selectedEntity: SelectedEntity | null = null,
-    showSelectedOnly: boolean = false
-  ) => {
-    if (!cyRef.current) return;
-    const cy = cyRef.current;
-
-    const effectiveFiles = (showSelectedOnly && selectedEntity)
-      ? searchFilteredFiles.filter(f => f.id === selectedEntity.nodeId || impactedSet.has(f.id))
-      : searchFilteredFiles;
-
-    const structureKey = JSON.stringify({
-      files: effectiveFiles.map(f => f.id),
-      visible: visibleFiles,
-      layout: currentLayout,
-      attributesVisible,
-      methodsVisible,
-      deps: codebase.dependencies.map(d => d.id)
-    });
-
-    const isStructureChanged = lastStructureKeyRef.current !== structureKey;
-
-    if (isStructureChanged) {
-      lastStructureKeyRef.current = structureKey;
-
-      cy.elements().remove();
-
-      const filesByFolder: Record<string, CodebaseFile[]> = {};
-      effectiveFiles.forEach(file => {
-        const folderKey = file.path.split('/')[0] || 'other';
-        if (!filesByFolder[folderKey]) filesByFolder[folderKey] = [];
-        filesByFolder[folderKey].push(file);
-      });
-
-      const allFolderKeys = Array.from(
-        new Set([...Object.keys(folderPositions), ...Object.keys(filesByFolder)])
-      );
-
-      // Rule: Minimal 10px if no relation label, or relation label character size + 20px
-      let maxLabelLength = 0;
-      codebase.dependencies.forEach(dep => {
-        if (dep.label) {
-          maxLabelLength = Math.max(maxLabelLength, dep.label.length);
-        }
-      });
-      const dynamicGapX = maxLabelLength > 0 ? Math.round(maxLabelLength * 7) + 20 : 10;
-      const gapY = 50;
-
-      allFolderKeys.forEach(folderKey => {
-        if ((filesByFolder[folderKey] || []).length > 0) {
-          const label = folderPositions[folderKey]?.label || `📂 ${folderKey.charAt(0).toUpperCase() + folderKey.slice(1)}`;
-          cy.add({ data: { id: `folder__${folderKey}`, label }, classes: 'folder' });
-        }
-      });
-
-      allFolderKeys.forEach((folderKey, folderIdx) => {
-        const folderFiles = filesByFolder[folderKey] || [];
-        if (folderFiles.length === 0) return;
-
-        const baseX = FOLDER_BASE_X_POSITIONS_CONFIG[folderKey as keyof typeof FOLDER_BASE_X_POSITIONS_CONFIG] || (40 + folderIdx * 450);
-
-        const numCols = 2;
-        let currentY = 80;
-        const rowCount = Math.ceil(folderFiles.length / numCols);
-
-        for (let r = 0; r < rowCount; r++) {
-          const rowFiles = folderFiles.slice(r * numCols, (r + 1) * numCols);
-          const rowHeights = rowFiles.map(f => getNodeDimensions(f, attributesVisible, methodsVisible).height);
-          const maxRowHeight = Math.max(...rowHeights, 76);
-
-          rowFiles.forEach((file, c) => {
-            const dims = getNodeDimensions(file, attributesVisible, methodsVisible);
-            const absX = baseX + 30 + c * (dims.width + dynamicGapX) + dims.width / 2;
-            const absY = currentY + dims.height / 2;
-
-            cy.add({
-              data: {
-                id: file.id,
-                parent: `folder__${folderKey}`,
-                width: dims.width,
-                height: dims.height
-              },
-              position: { x: absX, y: absY }
-            });
+        if (file.attributes && file.attributes.length > 0) {
+          content += `// Attributes:\n`;
+          file.attributes.forEach((attr) => {
+            content += `//   ${attr.visibility} ${attr.name}\n`;
           });
-
-          currentY += maxRowHeight + gapY;
+          content += `\n`;
         }
-      });
 
-      codebase.dependencies.forEach((dep: Dependency) => {
-        const sourceNodeId = dep.sourceNode || dep.source;
-        const targetNodeId = dep.targetNode || dep.target;
-
-        if (
-          sourceNodeId &&
-          targetNodeId &&
-          visibleFiles[sourceNodeId] &&
-          visibleFiles[targetNodeId] &&
-          cy.getElementById(sourceNodeId).length > 0 &&
-          cy.getElementById(targetNodeId).length > 0
-        ) {
-          cy.add({
-            data: { id: dep.id, source: sourceNodeId, target: targetNodeId, label: dep.label }
+        if (file.methods && file.methods.length > 0) {
+          content += `// Methods:\n`;
+          file.methods.forEach((m) => {
+            content += `//   + ${m.name}: ${m.description}\n`;
           });
+          content += `\n`;
         }
-      });
 
-      // Apply Layout Engine based on selected view mode
-      if (currentLayout === 'hierarchical' || currentLayout === 'breadthfirst' || currentLayout === 'dagre') {
-        applyCustomHierarchicalLayout(cy, effectiveFiles, codebase, attributesVisible, methodsVisible);
-      } else if (currentLayout !== 'preset') {
-        cy.layout({
-          name: currentLayout,
-          animate: false,
-          fit: true,
-          padding: 30,
-        } as cytoscape.LayoutOptions).run();
-      }
-
-      cy.fit(undefined, 30);
-      if (cy.zoom() > 1) {
-        cy.zoom(1);
-      }
-      cy.center();
-    }
-
-    // Dynamically update highlighted dependency classes on existing edges
-    codebase.dependencies.forEach((dep: Dependency) => {
-      const edge = cy.getElementById(dep.id);
-      if (edge && edge.length > 0) {
-        const sourceNodeId = dep.sourceNode || dep.source;
-        const targetNodeId = dep.targetNode || dep.target;
-        const sourceHandle = dep.sourceHandle || 'header';
-        const targetHandle = dep.targetHandle || 'header';
-
-        if (sourceNodeId && targetNodeId) {
-          const sourceKeyMember = buildMemberKeyToken(sourceNodeId, sourceHandle);
-          const targetKeyMember = buildMemberKeyToken(targetNodeId, targetHandle);
-
-          const isEdgeImpacted =
-            (impactedSet.has(sourceNodeId) || impactedSet.has(sourceKeyMember)) &&
-            (impactedSet.has(targetNodeId) || impactedSet.has(targetKeyMember));
-
-          if (isEdgeImpacted) {
-            edge.addClass('impacted');
-          } else {
-            edge.removeClass('impacted');
-          }
+        if (file.configProperties && file.configProperties.length > 0) {
+          content += `// Configuration Properties:\n`;
+          file.configProperties.forEach((prop) => {
+            content += `${prop.key}=${prop.value}\n`;
+          });
+          content += `\n`;
         }
-      }
-    });
 
-  }, [cyRef]);
+        return content;
+      })
+      .join('\n');
+  }, [initialCodebase, impactedSet, selectedEntity]);
 
-  return { updateGraphTopology };
+  const copyContext = () => {
+    handleCopy(combinedFilesContext, "Full Files Context copied to clipboard!");
+  };
+
+  return (
+    <div className="space-y-4 animate-in duration-200 fade-in font-mono text-xs">
+      {/* Impact Propagation Controls */}
+      <div className="space-y-2 bg-muted/30 p-3 border border-border rounded-lg">
+        <div className="flex justify-between items-center">
+          <label className="font-mono font-bold text-[11px] text-muted-foreground uppercase">Impact Propagation</label>
+          <span className="bg-amber-500/10 px-2 py-0.5 border border-amber-500/30 rounded font-mono text-[10px] text-amber-500">Transitive BFS</span>
+        </div>
+        <div className="gap-2 grid grid-cols-2">
+          <Button
+            onClick={() => setEnableDownstream(prev => !prev)}
+            className={`flex items-center justify-center gap-1.5 py-2 px-3 font-mono text-xs font-bold rounded border transition-all h-9 cursor-pointer ${
+              enableDownstream
+                ? 'bg-orange-500 border-orange-400 text-white shadow-md'
+                : 'bg-muted border-border text-foreground hover:bg-muted/80'
+            }`}
+          >
+            <GitFork size={13} className="rotate-180" />
+            Downstream ({downstreamCount})
+          </Button>
+          <Button
+            onClick={() => setEnableUpstream(prev => !prev)}
+            className={`flex items-center justify-center gap-1.5 py-2 px-3 font-mono text-xs font-bold rounded border transition-all h-9 cursor-pointer ${
+              enableUpstream
+                ? 'bg-orange-500 border-orange-400 text-white shadow-md'
+                : 'bg-muted border-border text-foreground hover:bg-muted/80'
+            }`}
+          >
+            <GitFork size={13} />
+            Upstream ({upstreamCount})
+          </Button>
+        </div>
+      </div>
+
+      {/* Fluorescent Impact Plan */}
+      <div className="space-y-3 bg-orange-500/5 p-4 border border-orange-500/25 rounded-lg">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-1.5">
+            <ShieldAlert size={14} className="text-orange-500" />
+            <h5 className="font-mono font-bold text-orange-500 text-xs">Fluorescent Impact Plan</h5>
+          </div>
+          <Button
+            onClick={() => handleCopy(generatedMarkdownRecipe, "Markdown impact recipe copied to clip-board!")}
+            className="flex items-center gap-1 bg-muted hover:bg-muted/80 px-2 py-1 border border-border rounded h-6 font-mono text-[10px] text-foreground cursor-pointer"
+          >
+            <Copy size={10} />Copy Recipes
+          </Button>
+        </div>
+        <div className="space-y-1.5 max-h-48 overflow-y-auto">
+          {initialCodebase.files.map((f: CodebaseFile) =>
+            impactedSet.has(f.id) ? (
+              <div key={f.id} className="flex justify-between items-center bg-background px-2 py-1.5 border border-orange-500/20 rounded font-mono text-[11px]">
+                <span className="font-semibold text-foreground truncate">{f.name}</span>
+                <span className="bg-muted px-1.5 py-0.5 rounded text-[9px] text-muted-foreground">{f.language}</span>
+              </div>
+            ) : null
+          )}
+        </div>
+      </div>
+
+      {/* Unified Files Context Preview & Meta */}
+      <div className="space-y-3 bg-card p-4 border border-border rounded-lg">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <FileText size={16} className="text-primary" />
+            <h4 className="font-mono font-bold text-foreground text-xs uppercase tracking-wider">
+              Unified Files Context
+            </h4>
+          </div>
+          <Button
+            size="sm"
+            onClick={copyContext}
+            className="flex items-center gap-1.5 h-7 font-mono text-[11px] cursor-pointer"
+          >
+            <Copy size={12} /> Copy Context
+          </Button>
+        </div>
+
+        <div className="gap-2 grid grid-cols-5 text-center">
+          <div className="bg-muted/40 p-2 border border-border/50 rounded">
+            <span className="block text-[9px] text-muted-foreground uppercase truncate">Total Files</span>
+            <span className="font-bold text-foreground text-xs">{initialCodebase?.files?.length || 0}</span>
+          </div>
+          <div className="bg-blue-500/10 p-2 border border-blue-500/20 rounded">
+            <span className="block text-[9px] text-blue-500 uppercase truncate">Downstream</span>
+            <span className="font-bold text-blue-500 text-xs">{downstreamCount}</span>
+          </div>
+          <div className="bg-indigo-500/10 p-2 border border-indigo-500/20 rounded">
+            <span className="block text-[9px] text-indigo-500 uppercase truncate">Upstream</span>
+            <span className="font-bold text-indigo-500 text-xs">{upstreamCount}</span>
+          </div>
+          <div className="bg-orange-500/10 p-2 border border-orange-500/20 rounded">
+            <span className="block text-[9px] text-orange-500 uppercase truncate">Impacted</span>
+            <span className="font-bold text-orange-500 text-xs">{impactedSet.size}</span>
+          </div>
+          <div className="bg-muted/40 p-2 border border-border/50 rounded">
+            <span className="block text-[9px] text-muted-foreground uppercase truncate">Context Size</span>
+            <span className="font-bold text-foreground text-xs">{(combinedFilesContext.length / 1024).toFixed(1)} KB</span>
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <div className="flex justify-between items-center text-[10px] text-muted-foreground uppercase">
+            <span>Context Preview</span>
+            <span>All-In-One Unified File</span>
+          </div>
+          <pre className="bg-slate-950 p-3 border border-slate-800 rounded-md max-h-64 font-mono text-[10px] text-slate-300 leading-relaxed overflow-x-auto overflow-y-auto whitespace-pre-wrap">
+            {combinedFilesContext}
+          </pre>
+        </div>
+      </div>
+    </div>
+  );
 }
 EOF
 
-npm run compile
+#npm run compile
 
-echo "✅ fix(ts-compile): Added explicit type checks for 'src' and 'tgt' variables in applyCustomHierarchicalLayout to satisfy TypeScript strict mode and compiled project!"
+echo "✅ feat(files-context): Added Downstream and Upstream metrics boxes in the meta section and updated button labels!"
