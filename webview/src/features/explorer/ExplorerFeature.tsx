@@ -3,6 +3,7 @@ import { useLayoutStore } from '@/store/useLayoutStore';
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
+import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 import { ContextPathsPanel } from './wkp-top-paths/context-paths-panel';
@@ -86,10 +87,18 @@ export function ExplorerFeature() {
     }
   }, [codebase.files]);
 
+  const handleNodeCmdClick = useCallback((nodeId: string) => {
+    const targetFile = codebase.files.find((f) => f.id === nodeId);
+    const pathToAdd = targetFile?.path || nodeId;
+    logInfo(`Cmd+Clicked graph item: ${nodeId}. Appending path to context paths panel: ${pathToAdd}`);
+    vsCodeHandleMessage.emit('addPathToTop', { command: 'addPathToTop', payload: pathToAdd });
+  }, [codebase.files]);
+
   const { containerRef, cyRef, graphState, updateGraphTopology, isReady } = useGraph(
     isDarkMode,
     handleNodeSelect,
-    handleNodeDoubleClick
+    handleNodeDoubleClick,
+    handleNodeCmdClick
   );
 
   const handleFocusNode = useCallback((nodeId: string) => {
@@ -385,6 +394,7 @@ export function ExplorerFeature() {
     handleSelectMember,
     handleNodeDoubleClick,
     handleFocusNode,
+    handleNodeCmdClick,
     containerRef,
     cyRef,
     isDarkMode,

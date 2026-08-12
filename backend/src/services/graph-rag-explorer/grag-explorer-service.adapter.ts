@@ -105,7 +105,7 @@ RETURN sf.entity_id AS fileId,
     `
     , params);
 
-    logInfo(`Change impacts fetched successfully for params: ${JSON.stringify(params)}`, records);
+    logInfo(`Change impacts fetched successfully for params: ${JSON.stringify(params)}`);
 
     // Transform the result into the CodebaseData structure
     const codebaseData: CodebaseData = mapToCodebaseData(records);

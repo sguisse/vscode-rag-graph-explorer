@@ -10,7 +10,8 @@ export interface GraphState {
 export function useCytoscapeInstance(
   isDarkMode: boolean,
   onNodeSelect: (nodeId: string) => void,
-  onNodeDoubleClick?: (nodeId: string) => void
+  onNodeDoubleClick?: (nodeId: string) => void,
+  onNodeCmdClick?: (nodeId: string) => void
 ) {
   const [containerNode, setContainerNode] = useState<HTMLDivElement | null>(null);
   const cyRef = useRef<cytoscape.Core | null>(null);
@@ -25,6 +26,11 @@ export function useCytoscapeInstance(
   useEffect(() => {
     onNodeDoubleClickRef.current = onNodeDoubleClick;
   }, [onNodeDoubleClick]);
+
+  const onNodeCmdClickRef = useRef(onNodeCmdClick);
+  useEffect(() => {
+    onNodeCmdClickRef.current = onNodeCmdClick;
+  }, [onNodeCmdClick]);
 
   const [graphState, setGraphState] = useState<GraphState>({
     zoom: 1,
@@ -56,10 +62,15 @@ export function useCytoscapeInstance(
 
     cyRef.current = cy;
 
-    // Single Click: Select node in UI
+    // Single / Cmd + Click: Handle node selection or Cmd+Click path addition
     cy.on('tap', 'node', (evt) => {
       if (!evt.target.hasClass('folder')) {
-        onNodeSelectRef.current(evt.target.id());
+        const origEvt = evt.originalEvent as MouseEvent | undefined;
+        if (origEvt && (origEvt.metaKey || origEvt.ctrlKey)) {
+          onNodeCmdClickRef.current?.(evt.target.id());
+        } else {
+          onNodeSelectRef.current(evt.target.id());
+        }
       }
     });
 

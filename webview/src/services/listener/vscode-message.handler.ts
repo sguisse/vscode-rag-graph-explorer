@@ -58,6 +58,23 @@ export class VsCodeHandleMessage {
             this.listeners.get(command)!.delete(callback);
         }
     }
+
+    /**
+     * Triggers an event locally across all subscribed webview listeners.
+     */
+    public emit<T = any>(command: string, messageOrPayload: BackendEventMessage<T> | T): void {
+        if (this.listeners.has(command)) {
+            const callbacks = this.listeners.get(command)!;
+            const message: BackendEventMessage<T> =
+                typeof messageOrPayload === 'object' &&
+                messageOrPayload !== null &&
+                'command' in (messageOrPayload as object)
+                    ? (messageOrPayload as BackendEventMessage<T>)
+                    : { command, payload: messageOrPayload as T };
+
+            callbacks.forEach((callback) => callback(message));
+        }
+    }
 }
 
 export const vsCodeHandleMessage = VsCodeHandleMessage.getInstance();

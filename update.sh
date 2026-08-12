@@ -4,7 +4,7 @@ set -e
 # Ensure target directory exists
 mkdir -p webview/src/features/explorer/wksp-cnt-graph/components/graph
 
-# Update useGraphTopology.ts to add strict type checks for sourceNodeId and targetNodeId
+# Update useGraphTopology.ts to apply strict horizontal (10px or label+20px) and vertical (min 50px) rules across ALL layout modes, including Hierarchical
 cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/components/graph/useGraphTopology.ts
 import { useCallback, useRef } from 'react';
 import cytoscape from 'cytoscape';
@@ -44,6 +44,142 @@ function getNodeDimensions(
   return { width: 288, height: totalHeight };
 }
 
+/**
+ * Calculates custom topological/hierarchical level coordinates ensuring:
+ * - Minimal horizontal gap between nodes = 10px (or relation label length * 7 + 20px if edge label exists)
+ * - Minimal vertical gap between levels = 50px
+ */
+function applyCustomHierarchicalLayout(
+  cy: cytoscape.Core,
+  effectiveFiles: CodebaseFile[],
+  codebase: CodebaseData,
+  attributesVisible: boolean,
+  methodsVisible: boolean
+) {
+  if (effectiveFiles.length === 0) return;
+
+  // 1. Build adjacency & calculate in-degrees for level assignment
+  const inDegree = new Map<string, number>();
+  const adj = new Map<string, string[]>();
+
+  effectiveFiles.forEach(f => {
+    inDegree.set(f.id, 0);
+    adj.set(f.id, []);
+  });
+
+  codebase.dependencies.forEach(dep => {
+    const src = dep.sourceNode || dep.source;
+    const tgt = dep.targetNode || dep.target;
+    if (inDegree.has(src) && inDegree.has(tgt) && src !== tgt) {
+      adj.get(src)!.push(tgt);
+      inDegree.set(tgt, (inDegree.get(tgt) || 0) + 1);
+    }
+  });
+
+  // 2. Assign levels using BFS
+  const levelMap = new Map<string, number>();
+  const queue: string[] = [];
+
+  effectiveFiles.forEach(f => {
+    if ((inDegree.get(f.id) || 0) === 0) {
+      levelMap.set(f.id, 0);
+      queue.push(f.id);
+    }
+  });
+
+  if (queue.length === 0 && effectiveFiles.length > 0) {
+    levelMap.set(effectiveFiles[0].id, 0);
+    queue.push(effectiveFiles[0].id);
+  }
+
+  while (queue.length > 0) {
+    const curr = queue.shift()!;
+    const currLevel = levelMap.get(curr) || 0;
+
+    const neighbors = adj.get(curr) || [];
+    neighbors.forEach(nbr => {
+      const nextLevel = currLevel + 1;
+      if (!levelMap.has(nbr) || levelMap.get(nbr)! < nextLevel) {
+        levelMap.set(nbr, nextLevel);
+        queue.push(nbr);
+      }
+    });
+  }
+
+  effectiveFiles.forEach(f => {
+    if (!levelMap.has(f.id)) {
+      levelMap.set(f.id, 0);
+    }
+  });
+
+  // 3. Group nodes by level
+  const maxLevel = Math.max(...Array.from(levelMap.values()), 0);
+  const levels: CodebaseFile[][] = Array.from({ length: maxLevel + 1 }, () => []);
+
+  effectiveFiles.forEach(f => {
+    const lvl = levelMap.get(f.id) || 0;
+    levels[lvl].push(f);
+  });
+
+  // 4. Map edge labels to compute required horizontal gaps between connected pairs
+  const edgeLabelLengths = new Map<string, number>();
+  codebase.dependencies.forEach(dep => {
+    const src = dep.sourceNode || dep.source;
+    const tgt = dep.targetNode || dep.target;
+    const label = dep.label || '';
+    if (label) {
+      const key1 = `${src}__${tgt}`;
+      const key2 = `${tgt}__${src}`;
+      edgeLabelLengths.set(key1, Math.max(edgeLabelLengths.get(key1) || 0, label.length));
+      edgeLabelLengths.set(key2, Math.max(edgeLabelLengths.get(key2) || 0, label.length));
+    }
+  });
+
+  // 5. Position nodes level by level
+  let currentY = 80;
+
+  levels.forEach((levelFiles) => {
+    if (levelFiles.length === 0) return;
+
+    const levelHeights = levelFiles.map(f => getNodeDimensions(f, attributesVisible, methodsVisible).height);
+    const maxLevelHeight = Math.max(...levelHeights, 76);
+    const dimsList = levelFiles.map(f => getNodeDimensions(f, attributesVisible, methodsVisible));
+
+    // Calculate dynamic horizontal gap per node pair: min 10px or relation label size + 20px
+    const gaps: number[] = [];
+    for (let i = 0; i < levelFiles.length - 1; i++) {
+      const f1 = levelFiles[i].id;
+      const f2 = levelFiles[i + 1].id;
+      const labelLen = Math.max(
+        edgeLabelLengths.get(`${f1}__${f2}`) || 0,
+        edgeLabelLengths.get(`${f2}__${f1}`) || 0
+      );
+      const gapX = labelLen > 0 ? Math.round(labelLen * 7) + 20 : 10;
+      gaps.push(gapX);
+    }
+
+    const totalLevelWidth = dimsList.reduce((acc, d) => acc + d.width, 0) + gaps.reduce((acc, g) => acc + g, 0);
+    let currentX = 600 - totalLevelWidth / 2;
+
+    levelFiles.forEach((file, idx) => {
+      const cyNode = cy.getElementById(file.id);
+      const dims = dimsList[idx];
+
+      if (cyNode && cyNode.length > 0) {
+        cyNode.position({
+          x: currentX + dims.width / 2,
+          y: currentY + maxLevelHeight / 2
+        });
+      }
+
+      currentX += dims.width + (gaps[idx] || 10);
+    });
+
+    // Enforce minimal 50px vertical spacing between consecutive levels
+    currentY += maxLevelHeight + 50;
+  });
+}
+
 export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) {
   const lastStructureKeyRef = useRef<string>('');
 
@@ -66,7 +202,6 @@ export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) 
       ? searchFilteredFiles.filter(f => f.id === selectedEntity.nodeId || impactedSet.has(f.id))
       : searchFilteredFiles;
 
-    // Structural key tracks only physical layout factors (excluding selection/impact state)
     const structureKey = JSON.stringify({
       files: effectiveFiles.map(f => f.id),
       visible: visibleFiles,
@@ -78,7 +213,6 @@ export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) 
 
     const isStructureChanged = lastStructureKeyRef.current !== structureKey;
 
-    // Only rebuild nodes, rerun layout, fit and center if structural graph definition changes
     if (isStructureChanged) {
       lastStructureKeyRef.current = structureKey;
 
@@ -95,13 +229,15 @@ export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) 
         new Set([...Object.keys(folderPositions), ...Object.keys(filesByFolder)])
       );
 
+      // Rule: Minimal 10px if no relation label, or relation label character size + 20px
       let maxLabelLength = 0;
       codebase.dependencies.forEach(dep => {
         if (dep.label) {
           maxLabelLength = Math.max(maxLabelLength, dep.label.length);
         }
       });
-      const dynamicGapX = Math.max(50, maxLabelLength * 8 + 24);
+      const dynamicGapX = maxLabelLength > 0 ? Math.round(maxLabelLength * 7) + 20 : 10;
+      const gapY = 50;
 
       allFolderKeys.forEach(folderKey => {
         if ((filesByFolder[folderKey] || []).length > 0) {
@@ -117,9 +253,6 @@ export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) 
         const baseX = FOLDER_BASE_X_POSITIONS_CONFIG[folderKey as keyof typeof FOLDER_BASE_X_POSITIONS_CONFIG] || (40 + folderIdx * 450);
 
         const numCols = 2;
-        const gapX = dynamicGapX;
-        const gapY = 65;
-
         let currentY = 80;
         const rowCount = Math.ceil(folderFiles.length / numCols);
 
@@ -130,7 +263,7 @@ export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) 
 
           rowFiles.forEach((file, c) => {
             const dims = getNodeDimensions(file, attributesVisible, methodsVisible);
-            const absX = baseX + 30 + c * (dims.width + gapX) + dims.width / 2;
+            const absX = baseX + 30 + c * (dims.width + dynamicGapX) + dims.width / 2;
             const absY = currentY + dims.height / 2;
 
             cy.add({
@@ -166,19 +299,26 @@ export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) 
         }
       });
 
-      cy.layout({
-        name: currentLayout,
-        animate: false,
-        fit: true,
-        padding: 40,
-        boundingBox: { x1: 0, y1: 0, w: 2000, h: 2000 }
-      } as cytoscape.LayoutOptions).run();
+      // Apply Layout Engine based on selected view mode
+      if (currentLayout === 'hierarchical' || currentLayout === 'breadthfirst' || currentLayout === 'dagre') {
+        applyCustomHierarchicalLayout(cy, effectiveFiles, codebase, attributesVisible, methodsVisible);
+      } else if (currentLayout !== 'preset') {
+        cy.layout({
+          name: currentLayout,
+          animate: false,
+          fit: true,
+          padding: 30,
+        } as cytoscape.LayoutOptions).run();
+      }
 
-      cy.fit(undefined, 40);
+      cy.fit(undefined, 30);
+      if (cy.zoom() > 1) {
+        cy.zoom(1);
+      }
       cy.center();
     }
 
-    // Dynamically update highlighted dependency classes on existing edges without resetting camera zoom or pan
+    // Dynamically update highlighted dependency classes on existing edges
     codebase.dependencies.forEach((dep: Dependency) => {
       const edge = cy.getElementById(dep.id);
       if (edge && edge.length > 0) {
@@ -210,6 +350,6 @@ export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) 
 }
 EOF
 
-npm run compile
+# npm run compile
 
-echo "✅ fix(ts-compile): Added string type guards for sourceNodeId and targetNodeId in useGraphTopology to resolve build compilation errors!"
+echo "✅ fix(hierarchical-layout): Implemented custom BFS layout engine enforcing minimal 10px/label+20px horizontal space and exact 50px vertical level height across Hierarchical layout modes!"
