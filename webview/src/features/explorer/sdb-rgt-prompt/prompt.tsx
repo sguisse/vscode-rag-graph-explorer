@@ -4,61 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { useGraphRagExplorerStore } from './graph-rag-explorer-store';
-
-const PREDEFINED_PROMPTS_JSON = [
-  {
-    id: 'refactor',
-    name: '⚡ Code Refactoring & Optimization',
-    data: {
-      mode: 'role' as const,
-      roleOrAgent: 'Senior Clean Code Architect',
-      selectedAgent: 'CodeRefactoringAgent',
-      tone: 'Surgical, concise, zero fluff',
-      context: 'Refactoring large legacy component functions into clean modular handlers.',
-      expected: 'Refactored code with improved readability and lower complexity.',
-      output: 'Complete TypeScript/React code without placeholders.',
-      samples: 'const handleAction = useCallback(() => { ... }, []);',
-    },
-  },
-  {
-    id: 'security',
-    name: '🛡️ Security & Vulnerability Audit',
-    data: {
-      mode: 'agent' as const,
-      roleOrAgent: 'AppSec Audit Specialist',
-      selectedAgent: 'SecurityAuditAgent',
-      tone: 'Strict, diagnostic, analytical',
-      context: 'Reviewing API handlers and data transformers for secret leaks or injection risks.',
-      expected: 'List of detected risks with patched code snippets.',
-      output: 'Structured markdown report followed by fixed source code.',
-      samples: 'Avoid hardcoded credentials and unsafe regex evaluations.',
-    },
-  },
-  {
-    id: 'tests',
-    name: '🧪 Unit & Integration Test Generation',
-    data: {
-      mode: 'role' as const,
-      roleOrAgent: 'QA & Test Engineering Specialist',
-      selectedAgent: 'TestGeneratorAgent',
-      tone: 'Methodical, thorough, precise',
-      context: 'Writing full test suites for state stores and UI components.',
-      expected: '100% code coverage including edge cases and error states.',
-      output: 'Vitest / Jest test file code.',
-      samples: 'describe("StateStore", () => { it("should update state", () => { ... }); });',
-    },
-  },
-];
-
-const AGENTS_LIST = [
-  'CodeRefactoringAgent',
-  'SecurityAuditAgent',
-  'ASTGraphAgent',
-  'TestGeneratorAgent',
-  'DocumentationAgent',
-];
+import PREDEFINED_PROMPTS from './data/predefined-prompts.yaml';
+import { AGENTS_LIST } from './data/data-constants';
 
 interface PromptPanelProps {
   handleCopy?: (text: string, message: string) => void;
@@ -77,9 +27,13 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
   };
 
   const handlePredefinedChange = (presetId: string) => {
-    const found = PREDEFINED_PROMPTS_JSON.find((p) => p.id === presetId);
+    const found = PREDEFINED_PROMPTS.find((p: any) => p.id === presetId);
     if (found) {
-      updatePromptFields({ ...found.data, predefined: presetId });
+      updatePromptFields({
+        ...found.data,
+        mode: found.data.mode as 'role' | 'agent',
+        predefined: presetId,
+      });
       notify(`Loaded predefined template: ${found.name}`);
     } else {
       updatePromptFields({ predefined: presetId });
@@ -103,31 +57,32 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
     notify(`Inserted agent ${promptFields.selectedAgent} into field!`);
   };
 
-  return (
-    <div className="space-y-3 font-mono text-xs animate-in duration-200 fade-in">
-      {/* Predefined Prompt Dropdown */}
-      <div className="space-y-1 bg-muted/20 p-2.5 border border-border rounded-lg">
-        <label className="block font-bold text-[10px] text-muted-foreground uppercase">
-          Predefined :
-        </label>
-        <Select
-          value={promptFields.predefined}
-          onValueChange={(val) => val && handlePredefinedChange(val)}
-        >
-          <SelectTrigger className="bg-background h-8 text-xs">
-            <SelectValue placeholder="Select a predefined prompt template..." />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="custom">✍️ Custom Prompt</SelectItem>
-            {PREDEFINED_PROMPTS_JSON.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+  const topContent = (
+    <div className="space-y-1 bg-muted/20 p-2.5 border border-border rounded-lg w-full">
+      <label className="block font-bold text-[10px] text-muted-foreground uppercase">
+        Predefined :
+      </label>
+      <Select
+        value={promptFields.predefined}
+        onValueChange={(val) => val && handlePredefinedChange(val)}
+      >
+        <SelectTrigger className="bg-background h-8 text-xs">
+          <SelectValue placeholder="Select a predefined prompt template..." />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="custom">✍️ Custom Prompt</SelectItem>
+          {PREDEFINED_PROMPTS.map((p: any) => (
+            <SelectItem key={p.id} value={p.id}>
+              {p.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
 
+  const middleContent = (
+    <div className="space-y-3 py-2 pr-1 w-full font-mono text-xs">
       {/* Role / Agent Toggle & Field */}
       <div className="space-y-2 bg-card p-2.5 border border-border rounded-lg">
         <div className="flex justify-between items-center">
@@ -173,7 +128,7 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
               value={promptFields.selectedAgent}
               onValueChange={(val) => val && updatePromptFields({ selectedAgent: val })}
             >
-              <SelectTrigger className="bg-background h-7 text-xs flex-1">
+              <SelectTrigger className="flex-1 bg-background h-7 text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -191,7 +146,7 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
           value={promptFields.roleOrAgent}
           onChange={(e) => updatePromptFields({ roleOrAgent: e.target.value })}
           placeholder={promptFields.mode === 'agent' ? 'Specify Agent role description...' : 'Specify Role title...'}
-          className="bg-background h-8 text-xs font-semibold"
+          className="bg-background h-8 font-semibold text-xs"
         />
       </div>
 
@@ -202,7 +157,7 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
           value={promptFields.tone}
           onChange={(e) => updatePromptFields({ tone: e.target.value })}
           placeholder="Define communication tone and style..."
-          className="bg-background min-h-14 text-xs font-mono resize-y"
+          className="bg-background min-h-14 font-mono text-xs resize-y"
         />
       </div>
 
@@ -213,7 +168,7 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
           value={promptFields.context}
           onChange={(e) => updatePromptFields({ context: e.target.value })}
           placeholder="Describe technical context and background..."
-          className="bg-background min-h-16 text-xs font-mono resize-y"
+          className="bg-background min-h-16 font-mono text-xs resize-y"
         />
       </div>
 
@@ -224,7 +179,7 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
           value={promptFields.expected}
           onChange={(e) => updatePromptFields({ expected: e.target.value })}
           placeholder="Specify expected deliverables and constraints..."
-          className="bg-background min-h-16 text-xs font-mono resize-y"
+          className="bg-background min-h-16 font-mono text-xs resize-y"
         />
       </div>
 
@@ -235,7 +190,7 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
           value={promptFields.output}
           onChange={(e) => updatePromptFields({ output: e.target.value })}
           placeholder="Format requirements (e.g., Markdown, Single file, JSON)..."
-          className="bg-background min-h-14 text-xs font-mono resize-y"
+          className="bg-background min-h-14 font-mono text-xs resize-y"
         />
       </div>
 
@@ -246,27 +201,31 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
           value={promptFields.samples}
           onChange={(e) => updatePromptFields({ samples: e.target.value })}
           placeholder="Provide reference examples or code snippets..."
-          className="bg-background min-h-16 text-xs font-mono resize-y"
+          className="bg-background min-h-16 font-mono text-xs resize-y"
         />
       </div>
+    </div>
+  );
 
+  const bottomContent = (
+    <div className="space-y-2 bg-background pt-2 border-border border-t w-full">
       {/* Action Buttons */}
-      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border">
+      <div className="gap-2 grid grid-cols-2">
         <Button
           onClick={handleCopyFilesCtx}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-9 text-xs rounded-lg shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+          className="flex justify-center items-center gap-1.5 bg-blue-600 hover:bg-blue-700 shadow-sm rounded-lg h-9 font-bold text-white text-xs cursor-pointer"
         >
           <FileText size={14} /> Copy files ctx
         </Button>
         <Button
           onClick={handleCopyPrompt}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-9 text-xs rounded-lg shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+          className="flex justify-center items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 shadow-sm rounded-lg h-9 font-bold text-white text-xs cursor-pointer"
         >
           <Copy size={14} /> Copy prompt
         </Button>
       </div>
 
-      <div className="flex justify-end pt-1">
+      <div className="flex justify-end">
         <Button
           size="sm"
           variant="ghost"
@@ -280,5 +239,15 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
         </Button>
       </div>
     </div>
+  );
+
+  return (
+    <TopMiddleBottomPanel
+      id="prompt-panel"
+      top={topContent}
+      middle={middleContent}
+      bottom={bottomContent}
+      className="h-full font-mono text-xs animate-in duration-200 fade-in"
+    />
   );
 }
