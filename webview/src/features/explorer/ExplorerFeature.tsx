@@ -6,6 +6,11 @@ import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 import { ContextPathsPanel } from './wkp-top-paths/context-paths-panel';
+import {
+  PathsPanelHeaderLeft,
+  PathsPanelHeaderCenter,
+  PathsPanelHeaderRight,
+} from './wkp-top-paths/PathsPanelHeader';
 import { CodebaseExplorerPanel } from './wkp-lft-codebase-tree/CodebaseExplorerPanel';
 import { GraphPanel } from './wksp-cnt-graph/GraphPanel';
 import {
@@ -41,6 +46,9 @@ export function ExplorerFeature() {
 
   const [enableDownstream, setEnableDownstream] = useState<boolean>(true);
   const [enableUpstream, setEnableUpstream] = useState<boolean>(false);
+
+  const [upstreamDepth, setUpstreamDepth] = useState<number>(2);
+  const [downstreamDepth, setDownstreamDepth] = useState<number>(2);
 
   const [showGrid, setShowGrid] = useState(false);
   const [callersDepth, setCallersDepth] = useState(1);
@@ -180,9 +188,25 @@ export function ExplorerFeature() {
     setContainerContent(
       'workspace.top',
       <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
-        <ContainerPanelHeader title="Context Paths" path="workspace.top" />
+        <ContainerPanelHeader
+          path="workspace.top"
+          headerLeft={<PathsPanelHeaderLeft />}
+          headerCenter={
+            <PathsPanelHeaderCenter
+              upstreamDepth={upstreamDepth}
+              setUpstreamDepth={setUpstreamDepth}
+              downstreamDepth={downstreamDepth}
+              setDownstreamDepth={setDownstreamDepth}
+            />
+          }
+          headerRight={<PathsPanelHeaderRight />}
+        />
         <div className="flex-1 min-h-0 overflow-auto">
-          <ContextPathsPanel onCodebaseChange={handleImportCodebase} />
+          <ContextPathsPanel
+            onCodebaseChange={handleImportCodebase}
+            upstreamDepth={upstreamDepth}
+            downstreamDepth={downstreamDepth}
+          />
         </div>
       </div>
     );
@@ -318,6 +342,8 @@ export function ExplorerFeature() {
     filter.toggleFileCheckbox,
     filter.setMaxNodesLimit,
     filter.setDisplayLevel,
+    upstreamDepth,
+    downstreamDepth,
     callersDepth,
     calleesDepth,
     currentLayout,

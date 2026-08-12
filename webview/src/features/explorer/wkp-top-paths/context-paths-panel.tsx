@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
 import { useContextPaths } from './use-context-paths';
@@ -8,37 +8,62 @@ import { CodebaseData } from '@/shared/services/graph-rag-explorer';
 
 interface ContextPathsPanelProps {
   onCodebaseChange?: (codebase: CodebaseData) => void;
+  upstreamDepth?: number;
+  downstreamDepth?: number;
 }
 
-export function ContextPathsPanel({ onCodebaseChange }: ContextPathsPanelProps = {}) {
+export function ContextPathsPanel({
+  onCodebaseChange,
+  upstreamDepth = 2,
+  downstreamDepth = 2,
+}: ContextPathsPanelProps = {}) {
   const { currentPath, updatePath, setCodebaseData } = useContextPaths();
   const [paths, setPaths] = useState<string>(currentPath);
 
-  // Helper function to handle async impact fetching
-  const fetchImpacts = async (targetPaths: string) => {
-    if (!targetPaths.trim()) return;
-    const realCodebaseData = await getPathsChangeImpacts(targetPaths);
+  // Keep fresh references of depths for effect callbacks
+  const depthRef = useRef({ upstreamDepth, downstreamDepth });
+  useEffect(() => {
+    depthRef.current = { upstreamDepth, downstreamDepth };
+  }, [upstreamDepth, downstreamDepth]);
 
-    // Update state or context with the real Neo4j data
-    if (setCodebaseData) {
-      setCodebaseData(realCodebaseData);
+  // Helper function to handle async impact fetching
+  const fetchImpacts = useCallback(
+    async (
+      targetPaths: string,
+      up = depthRef.current.upstreamDepth,
+      down = depthRef.current.downstreamDepth
+    ) => {
+      if (!targetPaths.trim()) return;
+      const realCodebaseData = await getPathsChangeImpacts(targetPaths, up, down);
+
+      // Update state or context with the real Neo4j data
+      if (setCodebaseData) {
+        setCodebaseData(realCodebaseData);
+      }
+      if (onCodebaseChange && realCodebaseData) {
+        onCodebaseChange(realCodebaseData);
+      }
+    },
+    [setCodebaseData, onCodebaseChange]
+  );
+
+  // Trigger impacts fetch if depths change while target paths are active
+  useEffect(() => {
+    if (paths.trim()) {
+      fetchImpacts(paths, upstreamDepth, downstreamDepth);
     }
-    if (onCodebaseChange && realCodebaseData) {
-      onCodebaseChange(realCodebaseData);
-    }
-  };
+  }, [upstreamDepth, downstreamDepth, fetchImpacts]);
 
   useEffect(() => {
     // Register listener for 'selectedPath'
     const unsubscribeStatus = vsCodeHandleMessage.on('selectedPath', (message) => {
       logInfo(`Status received from extension: ${message.payload}`);
       if (message.payload) {
-        setPaths((prev) => {
-          const updated = prev ? `${prev}\n${message.payload}` : message.payload;
-          updatePath(updated);
-          fetchImpacts(updated);
-          return updated;
-        });
+        // Atomic update replacing Textarea content in one step
+        const newPath = message.payload;
+        setPaths(newPath);
+        updatePath(newPath);
+        fetchImpacts(newPath, depthRef.current.upstreamDepth, depthRef.current.downstreamDepth);
       }
     });
 
@@ -46,13 +71,13 @@ export function ContextPathsPanel({ onCodebaseChange }: ContextPathsPanelProps =
     return () => {
       unsubscribeStatus();
     };
-  }, [updatePath]);
+  }, [updatePath, fetchImpacts]);
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
     setPaths(val);
     updatePath(val);
-    fetchImpacts(val);
+    fetchImpacts(val, upstreamDepth, downstreamDepth);
   };
 
   return (
