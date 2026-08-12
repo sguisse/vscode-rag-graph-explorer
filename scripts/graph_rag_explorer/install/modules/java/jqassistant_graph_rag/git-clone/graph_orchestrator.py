@@ -61,6 +61,7 @@ class GraphOrchestrator:
         # to their on-disk source code.
         source_linker.link_types_to_source_files()
         source_linker.link_members_to_source_files()
+        source_linker.link_source_file_dependencies()
 
         # --- Phase 3: Hierarchical Structure Establishment ---
         # Now that the graph is normalized and linked, build the clean

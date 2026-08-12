@@ -104,5 +104,6 @@ export const initialCodebase_02 = {
 export const FOLDER_POSITIONS: Record<string, any> = {
   'frontend': { label: '📂 Client Frontend (TSX/TS)' },
   'backend': { label: '📂 API Backend (Spring Boot / Java)' },
-  'config': { label: '⚙️ Configurations d\'Écosystème' }
+  'config': { label: '⚙️ Configurations d\'Écosystème' },
+  'other': { label: '📂 Other Context Modules' }
 };

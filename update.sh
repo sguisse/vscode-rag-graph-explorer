@@ -1,706 +1,199 @@
 #!/usr/bin/env bash
 set -e
 
-echo "🎨 Updating panel maximize/minimize icon styling with pastel destructive theme..."
+mkdir -p webview/src/features/explorer/wkp-lft-codebase-tree
 
-# 1. Create or update ContainerPanelHeader.tsx
-mkdir -p webview/src/components/app/layout
-
-cat << 'EOF' > webview/src/components/app/layout/ContainerPanelHeader.tsx
-import React from 'react';
-import { Maximize2, Minimize2, EyeOff } from 'lucide-react';
+cat << 'EOF' > webview/src/features/explorer/wkp-lft-codebase-tree/CodebaseExplorerPanel.tsx
+import React, { useRef, useEffect, useState } from 'react';
+import { ChevronDown, ChevronRight, Folder, FileCode, Database, Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useLayoutStore } from '@/store/useLayoutStore';
+import { ImportAstDialog } from './import-ast-dialog';
+import { ToolbarSeparator } from '@/components/app/toolbar-separator';
+import {
+  CodebaseFile,
+  CodebaseData,
+  SelectedEntity
+} from '@/shared/services/graph-rag-explorer';
+import { FOLDER_KEYS_REGISTERED_CONFIG, FOLDER_THEME_REGISTRY_CONFIG } from '../constants/graph.constants';
 
-interface ContainerPanelHeaderProps {
-  title?: React.ReactNode;
-  path?: string;
-  isHiddable?: boolean;
-  headerLeft?: React.ReactNode;
-  headerCenter?: React.ReactNode;
-  headerRight?: React.ReactNode;
+interface TriStateCheckboxProps {
+  checked: boolean;
+  indeterminate: boolean;
+  onChange: () => void;
   className?: string;
 }
 
-export function ContainerPanelHeader({
-  title,
-  path,
-  isHiddable = true,
-  headerLeft,
-  headerCenter,
-  headerRight,
-  className = '',
-}: ContainerPanelHeaderProps) {
-  const toggleContainerMaximized = useLayoutStore((s) => s.toggleContainerMaximized);
-  const toggleContainerVisible = useLayoutStore((s) => s.toggleContainerVisible);
-  const isMaximized = useLayoutStore((s) => {
-    if (!path) return false;
-    if (typeof s.isContainerMaximized === 'function') {
-      return s.isContainerMaximized(path);
-    }
-    return !!(s.containers as any)?.[path]?.maximizeContainer?.isMaximized;
-  });
+function TriStateCheckbox({ checked, indeterminate, onChange, className }: TriStateCheckboxProps) {
+  const checkboxRef = useRef<HTMLInputElement>(null);
 
-  const handleMaximizeToggle = () => {
-    if (path) {
-      toggleContainerMaximized(path);
+  useEffect(() => {
+    if (checkboxRef.current) {
+      checkboxRef.current.indeterminate = indeterminate;
     }
-  };
-
-  const handleHide = () => {
-    if (path) {
-      toggleContainerVisible(path);
-    }
-  };
+  }, [indeterminate]);
 
   return (
-    <div className={`flex items-center justify-between bg-muted/40 px-2.5 py-1.5 border-b border-border text-xs select-none shrink-0 min-h-[32px] ${className}`}>
-      <div className="flex items-center gap-2 min-w-0 font-mono font-bold text-foreground">
-        {headerLeft ? headerLeft : (typeof title === 'string' ? <span className="truncate">{title}</span> : title)}
+    <input
+      ref={checkboxRef}
+      type="checkbox"
+      checked={checked}
+      onChange={onChange}
+      className={className}
+    />
+  );
+}
+
+interface CodebaseExplorerPanelProps {
+  codebase: CodebaseData;
+  searchFilteredFiles: CodebaseFile[];
+  expandedFolders: Record<string, boolean>;
+  visibleFiles: Record<string, boolean>;
+  toggleFolder: (folder: string) => void;
+  toggleFolderCheckbox: (folder: string) => void;
+  toggleFileCheckbox: (id: string) => void;
+  setSelectedEntity: (entity: SelectedEntity) => void;
+  onImportCodebase?: (importedData: CodebaseData) => void;
+}
+
+export function CodebaseExplorerPanel({
+  codebase,
+  searchFilteredFiles,
+  expandedFolders,
+  visibleFiles,
+  toggleFolder,
+  toggleFolderCheckbox,
+  toggleFileCheckbox,
+  setSelectedEntity,
+  onImportCodebase
+}: CodebaseExplorerPanelProps) {
+  const [isImportOpen, setIsImportOpen] = useState(false);
+
+  const handleExportCodebase = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(codebase, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", "codebase-ast.json");
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  const registeredFolders = [...FOLDER_KEYS_REGISTERED_CONFIG];
+  const hasOtherFiles = codebase.files.some((f: CodebaseFile) => !registeredFolders.some(rf => f.path.startsWith(rf)));
+  const allFolderKeys = hasOtherFiles ? [...registeredFolders, 'other'] : registeredFolders;
+
+  return (
+    <div id="panel-codebase-explorer" className="flex flex-col bg-card h-full">
+      <div className="flex justify-end items-center bg-muted/20 p-1 border-border border-b">
+        <ToolbarSeparator />
+
+        <Button
+          id="btn-open-import-ast-dialog"
+          className="hover:bg-muted p-1.5 rounded w-8 h-8 text-muted-foreground hover:text-foreground transition-colors"
+          variant="ghost"
+          size="icon"
+          onClick={() => setIsImportOpen(true)}
+          data-tooltip="Open AST Codebase import dialog"
+        >
+          <Upload size={12} />
+        </Button>
+
+        <Button
+          id="btn-export-ast-json"
+          className="hover:bg-muted p-1.5 rounded w-8 h-8 text-muted-foreground hover:text-foreground transition-colors"
+          variant="ghost"
+          size="icon"
+          onClick={handleExportCodebase}
+          data-tooltip="Export current session structure as AST Codebase to JSON file"
+        >
+          <Download size={12} />
+        </Button>
       </div>
 
-      {headerCenter && (
-        <div className="flex items-center justify-center flex-1 px-2 overflow-hidden">
-          {headerCenter}
+      <ImportAstDialog
+        open={isImportOpen}
+        onOpenChange={setIsImportOpen}
+        onImport={(data) => {
+          if (onImportCodebase) onImportCodebase(data);
+        }}
+      />
+
+      <div id="tree-codebase-files" className="flex-1 p-4 overflow-y-auto font-mono text-xs">
+        {allFolderKeys.map(folder => {
+          const theme = FOLDER_THEME_REGISTRY_CONFIG[folder] || FOLDER_THEME_REGISTRY_CONFIG.default;
+          const isRegistered = registeredFolders.includes(folder as any);
+          const folderFiles = (isRegistered
+            ? codebase.files.filter((f: CodebaseFile) => f.path.startsWith(folder))
+            : codebase.files.filter((f: CodebaseFile) => !registeredFolders.some(rf => f.path.startsWith(rf)))
+          ).sort((a: CodebaseFile, b: CodebaseFile) =>
+            a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
+          );
+
+          if (folderFiles.length === 0 && !isRegistered) return null;
+
+          const isAllChecked = folderFiles.length > 0 && folderFiles.every((f: CodebaseFile) => visibleFiles[f.id]);
+          const isSomeChecked = folderFiles.some((f: CodebaseFile) => visibleFiles[f.id]);
+          const isIndeterminate = isSomeChecked && !isAllChecked;
+
+          return (
+            <div key={folder} className="mb-4">
+              <div className="group flex items-center gap-1.5 hover:bg-muted/50 px-1 py-1 rounded">
+                <TriStateCheckbox
+                  checked={isAllChecked}
+                  indeterminate={isIndeterminate}
+                  onChange={() => toggleFolderCheckbox(folder)}
+                  className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
+                />
+                <div className="flex flex-1 items-center gap-1.5 min-w-0 cursor-pointer" onClick={() => toggleFolder(folder)}>
+                  {expandedFolders[folder] ? <ChevronDown size={14} className="shrink-0" /> : <ChevronRight size={14} className="shrink-0" />}
+                  <Folder size={15} className={`${theme.fill} ${theme.text} shrink-0`} />
+                  <span className="font-bold truncate">{folder}/</span>
+                </div>
+              </div>
+              {expandedFolders[folder] && (
+                <div className="space-y-1 mt-1 ml-2.5 pl-6 border-border border-l">
+                  {folderFiles.map((file: CodebaseFile) => (
+                    <div key={file.id} className="group flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded">
+                      <input
+                        type="checkbox"
+                        checked={!!visibleFiles[file.id]}
+                        onChange={() => toggleFileCheckbox(file.id)}
+                        className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
+                      />
+                      <span
+                        className={`flex items-center gap-1.5 truncate cursor-pointer flex-1 min-w-0 ${visibleFiles[file.id] ? 'text-foreground font-medium' : 'text-muted-foreground line-through'}`}
+                        onClick={() => setSelectedEntity({ type: 'node', nodeId: file.id })}
+                      >
+                        {folder === 'config' ? (
+                          <Database size={13} className="text-amber-500 shrink-0" />
+                        ) : (
+                          <FileCode size={13} className={file.type === 'interface' ? 'text-indigo-400 shrink-0' : (folder === 'frontend' ? 'text-emerald-500 shrink-0' : folder === 'backend' ? 'text-blue-500 shrink-0' : 'text-slate-400 shrink-0')} />
+                        )}
+                        <span className="truncate">{file.name}</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Bottom Panel */}
+      <div id="panel-codebase-explorer-bottom" className="bg-muted/20 p-3 border-border border-t">
+        <div>
+          <h3 className="flex items-center gap-2 font-mono font-bold text-muted-foreground text-xs uppercase tracking-wider">
+            <span>Codebase Explorer</span>
+            <span id="badge-file-count" className="bg-muted px-2 py-0.5 rounded text-[10px] text-foreground">
+              {searchFilteredFiles.length}/{codebase.files.length}
+            </span>
+          </h3>
         </div>
-      )}
-
-      <div className="flex items-center gap-1 shrink-0 ml-auto">
-        {headerRight}
-
-        {path && (
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={handleMaximizeToggle}
-            className={`p-1 rounded transition-colors w-6 h-6 cursor-pointer ${
-              isMaximized
-                ? 'bg-destructive/15 text-destructive hover:bg-destructive/25 border border-destructive/30'
-                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-            }`}
-            data-tooltip={isMaximized ? "Restore / Minimize Panel" : "Maximize Panel"}
-          >
-            {isMaximized ? <Minimize2 size={12} className="text-destructive shrink-0" /> : <Maximize2 size={12} className="shrink-0" />}
-          </Button>
-        )}
-
-        {isHiddable && path && (
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={handleHide}
-            className="p-1 rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors w-6 h-6 cursor-pointer"
-            data-tooltip="Hide Panel"
-          >
-            <EyeOff size={12} className="shrink-0" />
-          </Button>
-        )}
       </div>
     </div>
   );
 }
-
-export default ContainerPanelHeader;
 EOF
 
-# 2. Update GraphPanelHeader.tsx
-cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/GraphPanelHeader.tsx
-import React from 'react';
-import { Grid, Database, User, Baby, Plus, Minus, Focus, SquareFunction, Code2, Target, Maximize2, Minimize2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
-import { ToggleButton } from '@/components/app/toggle-button';
-import { ToolbarSeparator } from '@/components/app/toolbar-separator';
-
-import {
-  DISPLAY_LEVEL_LIST,
-  DISPLAY_LEVEL_ICON_MAP,
-  GRAPH_LAYOUT_LIST,
-  GRAPH_LAYOUT_ICON_MAP
-} from '@/shared/services/graph-rag-explorer/domain/model/types';
-import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
-import { vscodeSettings } from '@/App';
-
-export interface GraphPanelHeaderLeftProps {
-
-}
-
-export const GraphPanelHeaderLeft: React.FC<GraphPanelHeaderLeftProps> = () => (
-  <div className="flex items-center gap-2">
-    <span className="font-bold text-foreground truncate uppercase tracking-wider">Topological Network</span>
-  </div>
-);
-
-export interface GraphPanelHeaderCenterProps {
-  maxNodesLimit: number;
-  setMaxNodesLimit: (val: number) => void;
-  callersDepth: number;
-  setCallersDepth: (val: number) => void;
-  calleesDepth: number;
-  setCalleesDepth: (val: number) => void;
-  displayLevel: string;
-  setDisplayLevel: (val: string) => void;
-  currentLayout: string;
-  setCurrentLayout: (val: string) => void;
-}
-
-export const GraphPanelHeaderCenter: React.FC<GraphPanelHeaderCenterProps> = ({
-  maxNodesLimit,
-  setMaxNodesLimit,
-  callersDepth,
-  setCallersDepth,
-  calleesDepth,
-  setCalleesDepth,
-  displayLevel,
-  setDisplayLevel,
-  currentLayout,
-  setCurrentLayout,
-}) => {
-  const displayNeo4jHandler = () => {
-    vsCodeApiService.openUrl(vscodeSettings.graphRagExplorer.neo4j.url, true);
-  };
-
-  return (
-    <div className="flex items-center gap-3">
-      <div className="flex items-center gap-1.5 bg-background px-2 py-0.5 border border-border rounded-sm">
-        <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">Limit:</span>
-        <Input
-          id="input-max-nodes-limit"
-          type="number"
-          min={1}
-          max={100}
-          className="bg-transparent shadow-none px-1 border-0 focus:ring-0 w-12 h-5 font-bold text-foreground text-xs text-center"
-          value={maxNodesLimit}
-          onChange={(e) => setMaxNodesLimit(Number(e.target.value) || 50)}
-        />
-      </div>
-      <Button
-        id="btn-neo4j-connect"
-        className="flex items-center gap-1.5 bg-gradient-to-r from-orange-600 to-orange-500 shadow-sm px-2.5 border border-orange-700 rounded-md h-6 font-bold text-[10px] text-white uppercase tracking-wider cursor-pointer"
-        onClick={displayNeo4jHandler}
-      >
-        <Database size={11} /> Neo4j
-      </Button>
-      <div className="flex items-center gap-1 bg-background px-1.5 py-0.5 border border-border rounded-sm">
-        <User size={12} className="text-muted-foreground" />
-        <Input
-          id="input-callers-depth"
-          type="number"
-          min={0}
-          max={20}
-          className="bg-transparent p-0 border-0 focus:ring-0 w-8 h-5 text-foreground text-xs text-center"
-          value={callersDepth}
-          onChange={(e) => setCallersDepth(Number(e.target.value) || 0)}
-        />
-      </div>
-      <div className="flex items-center gap-1 bg-background px-1.5 py-0.5 border border-border rounded-sm">
-        <Baby size={12} className="text-muted-foreground" />
-        <Input
-          id="input-callees-depth"
-          type="number"
-          min={0}
-          max={20}
-          className="bg-transparent p-0 border-0 focus:ring-0 w-8 h-5 text-foreground text-xs text-center"
-          value={calleesDepth}
-          onChange={(e) => setCalleesDepth(Number(e.target.value) || 0)}
-        />
-      </div>
-      <SelectFromTypeBuilder
-        id="select-display-level"
-        value={displayLevel}
-        onChange={setDisplayLevel}
-        options={DISPLAY_LEVEL_LIST.map((key) => ({
-          value: key,
-          icon: DISPLAY_LEVEL_ICON_MAP[key].icon,
-          label: DISPLAY_LEVEL_ICON_MAP[key].label,
-        }))}
-      />
-      <SelectFromTypeBuilder
-        id="select-graph-layout"
-        value={currentLayout}
-        onChange={setCurrentLayout}
-        options={GRAPH_LAYOUT_LIST.map((key) => ({
-          value: key,
-          icon: GRAPH_LAYOUT_ICON_MAP[key].icon,
-          label: GRAPH_LAYOUT_ICON_MAP[key].label,
-        }))}
-      />
-    </div>
-  );
-};
-
-export interface GraphPanelHeaderRightProps {
-  cyRef: React.RefObject<any>;
-  isGraphMaximized: boolean;
-  setIsGraphMaximized: (maximized: boolean) => void;
-  showGrid: boolean;
-  setShowGrid: (show: boolean) => void;
-  attributesVisible: boolean;
-  setAttributesVisible: (val: boolean) => void;
-  methodsVisible: boolean;
-  setMethodsVisible: (val: boolean) => void;
-  showSelectedOnly: boolean;
-  setShowSelectedOnly: (val: boolean) => void;
-}
-
-export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
-  cyRef,
-  isGraphMaximized,
-  setIsGraphMaximized,
-  showGrid,
-  setShowGrid,
-  attributesVisible,
-  setAttributesVisible,
-  methodsVisible,
-  setMethodsVisible,
-  showSelectedOnly,
-  setShowSelectedOnly,
-}) => (
-  <div className="flex items-center gap-1">
-    <ToggleButton
-      id="btn-toggle-show-selected-only"
-      isSelected={showSelectedOnly}
-      onToggle={() => setShowSelectedOnly(!showSelectedOnly)}
-      tooltipText="Display Only Selected & Connected Items"
-      icon={<Target size={12} />}
-    />
-    <ToggleButton
-      id="btn-toggle-attributes-visibility"
-      isSelected={attributesVisible}
-      onToggle={() => setAttributesVisible(!attributesVisible)}
-      tooltipText="Toggle Attributes Visibility"
-      icon={<Code2 size={12} />}
-    />
-    <ToggleButton
-      id="btn-toggle-methods-visibility"
-      isSelected={methodsVisible}
-      onToggle={() => setMethodsVisible(!methodsVisible)}
-      tooltipText="Toggle Methods Visibility"
-      icon={<SquareFunction size={12} />}
-    />
-
-    <ToolbarSeparator />
-
-    <ToggleButton
-      id="btn-toggle-grid"
-      isSelected={showGrid}
-      onToggle={() => setShowGrid(!showGrid)}
-      tooltipText="Toggle Grid"
-      icon={<Grid size={12} />}
-    />
-
-    <ToolbarSeparator />
-
-    <Button
-      id="btn-graph-zoom-in"
-      variant="ghost"
-      size="icon-xs"
-      className="w-5 h-5 text-muted-foreground hover:bg-muted cursor-pointer"
-      onClick={() => cyRef.current?.zoom((cyRef.current?.zoom() || 1) * 1.2)}
-    >
-      <Plus size={12} />
-    </Button>
-    <Button
-      id="btn-graph-zoom-out"
-      variant="ghost"
-      size="icon-xs"
-      className="w-5 h-5 text-muted-foreground hover:bg-muted cursor-pointer"
-      onClick={() => cyRef.current?.zoom((cyRef.current?.zoom() || 1) / 1.2)}
-    >
-      <Minus size={12} />
-    </Button>
-    <Button
-      id="btn-graph-fit-view"
-      variant="ghost"
-      size="icon-xs"
-      className="w-5 h-5 text-muted-foreground hover:bg-muted cursor-pointer"
-      onClick={() => {
-        cyRef.current?.fit(undefined, 40);
-        cyRef.current?.center();
-      }}
-    >
-      <Focus size={12} />
-    </Button>
-
-    <Button
-      id="btn-graph-maximize-toggle"
-      variant="ghost"
-      size="icon-xs"
-      onClick={() => setIsGraphMaximized(!isGraphMaximized)}
-      className={`p-1 rounded transition-colors w-6 h-6 cursor-pointer ${
-        isGraphMaximized
-          ? 'bg-destructive/15 text-destructive hover:bg-destructive/25 border border-destructive/30'
-          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-      }`}
-      data-tooltip={isGraphMaximized ? "Restore / Minimize Graph" : "Maximize Graph"}
-    >
-      {isGraphMaximized ? <Minimize2 size={12} className="text-destructive shrink-0" /> : <Maximize2 size={12} className="shrink-0" />}
-    </Button>
-  </div>
-);
-EOF
-
-# 3. Update ExplorerFeature.tsx to pass the real maximized state
-cat << 'EOF' > webview/src/features/explorer/ExplorerFeature.tsx
-import React, { useState, useEffect, useCallback } from 'react';
-import { useLayoutStore } from '@/store/useLayoutStore';
-import { useAppContextStore } from '@/store/useAppContextStore';
-import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
-import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
-import { logInfo } from '@/services/view/log-view.service.wrapper';
-
-import { ContextPathsPanel } from './wkp-top-paths/context-paths-panel';
-import { CodebaseExplorerPanel } from './wkp-lft-codebase-tree/CodebaseExplorerPanel';
-import { GraphPanel } from './wksp-cnt-graph/GraphPanel';
-import {
-  GraphPanelHeaderLeft,
-  GraphPanelHeaderCenter,
-  GraphPanelHeaderRight,
-} from './wksp-cnt-graph/GraphPanelHeader';
-import { TabsFilesContextContainer } from './wkp-rgt-tabs-files-context/tabs-files-context-container';
-import { WkpBottomPanel } from './wkp-btm-infos/wkp-bottom-panel';
-import { TabsPromptContainer } from './sdb-rgt-prompt/tabs-prompt-container';
-
-import { useCodebaseFilter } from './hooks/use-codebase-filter';
-import { useTransitiveImpact } from './hooks/use-transitive-impact';
-import { useGraph } from './wksp-cnt-graph/components/graph/use-graph';
-
-import { initialCodebase, FOLDER_POSITIONS } from './wksp-cnt-graph/components/graph/GraphData';
-
-import {
-  CodebaseData,
-  SelectedEntity,
-} from '@/shared/services/graph-rag-explorer';
-
-export function ExplorerFeature() {
-  const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
-  const setContainerContent = useLayoutStore((s) => s.setContainerContent);
-  const toggleContainerMaximized = useLayoutStore((s) => s.toggleContainerMaximized);
-  const isCenterMaximized = useLayoutStore((s) => {
-    if (typeof s.isContainerMaximized === 'function') {
-      return s.isContainerMaximized('workspace.center');
-    }
-    return !!(s.containers as any)?.['workspace.center']?.maximizeContainer?.isMaximized;
-  });
-
-  const setNotification = useAppContextStore((s) => s.setNotification);
-  const isDarkMode = useAppContextStore((s) => s.isDarkMode);
-
-  const [codebase, setCodebase] = useState<CodebaseData>(initialCodebase);
-  const [folderPositions, setFolderPositions] = useState<Record<string, { label: string }>>(FOLDER_POSITIONS);
-  const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(null);
-
-  const [enableDownstream, setEnableDownstream] = useState<boolean>(true);
-  const [enableUpstream, setEnableUpstream] = useState<boolean>(false);
-
-  const [showGrid, setShowGrid] = useState(false);
-  const [callersDepth, setCallersDepth] = useState(1);
-  const [calleesDepth, setCalleesDepth] = useState(1);
-  const [currentLayout, setCurrentLayout] = useState('preset');
-
-  const [attributesVisible, setAttributesVisible] = useState(false);
-  const [methodsVisible, setMethodsVisible] = useState(false);
-  const [showSelectedOnly, setShowSelectedOnly] = useState(false);
-
-  const filter = useCodebaseFilter(codebase.files);
-  const { impactedSet } = useTransitiveImpact(
-    selectedEntity,
-    codebase.dependencies,
-    callersDepth,
-    calleesDepth,
-    enableDownstream,
-    enableUpstream
-  );
-
-  const handleNodeSelect = useCallback((nodeId: string) => {
-    setSelectedEntity({ type: 'node', nodeId });
-  }, []);
-
-  const handleSelectMember = useCallback((nodeId: string, memberId: string) => {
-    setSelectedEntity({ type: 'member', nodeId, memberId });
-  }, []);
-
-  const handleNodeDoubleClick = useCallback((nodeId: string) => {
-    const targetFile = codebase.files.find((f) => f.id === nodeId);
-    if (targetFile && targetFile.path) {
-      logInfo(`Double-clicked graph item: ${nodeId}. Revealing path in VS Code Explorer: ${targetFile.path}`);
-      vsCodeApiService.revealInExplorer(targetFile.path);
-    }
-  }, [codebase.files]);
-
-  const { containerRef, cyRef, graphState, updateGraphTopology, isReady } = useGraph(
-    isDarkMode,
-    handleNodeSelect,
-    handleNodeDoubleClick
-  );
-
-  useEffect(() => {
-    if (!isReady || Object.keys(folderPositions).length === 0) return;
-    updateGraphTopology(
-      filter.searchFilteredFiles,
-      filter.visibleFiles,
-      codebase,
-      impactedSet,
-      currentLayout,
-      folderPositions,
-      attributesVisible,
-      methodsVisible,
-      selectedEntity,
-      showSelectedOnly
-    );
-  }, [
-    isReady,
-    filter.searchFilteredFiles,
-    filter.visibleFiles,
-    codebase,
-    impactedSet,
-    currentLayout,
-    folderPositions,
-    attributesVisible,
-    methodsVisible,
-    selectedEntity,
-    showSelectedOnly,
-    updateGraphTopology,
-  ]);
-
-  const handleCopy = useCallback(
-    (text: string, message: string) => {
-      if (navigator?.clipboard?.writeText) {
-        navigator.clipboard.writeText(text);
-      }
-      setNotification(message);
-    },
-    [setNotification]
-  );
-
-  const handleImportCodebase = useCallback(
-    async (importedData: CodebaseData) => {
-      setCodebase(importedData);
-      setNotification('AST Codebase imported successfully!');
-    },
-    [setNotification]
-  );
-
-  useEffect(() => {
-    setLayoutContainers({
-      header: { visible: true, isResizable: false, isHiddable: false },
-      sidebarLeft: { visible: true, isResizable: true, isHiddable: true },
-      workspace: {
-        top: {
-          visible: true,
-          isResizable: true,
-          isHiddable: true,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
-        },
-        left: {
-          visible: true,
-          isResizable: true,
-          isHiddable: true,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
-        },
-        center: {
-          visible: true,
-          isResizable: false,
-          isHiddable: false,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
-        },
-        right: {
-          visible: true,
-          isResizable: true,
-          isHiddable: true,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
-        },
-        bottom: {
-          visible: true,
-          isResizable: true,
-          isHiddable: true,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
-        },
-      },
-      sidebarRight: {
-        visible: true,
-        isResizable: true,
-        isHiddable: true,
-        maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
-      },
-      footer: { visible: true, isResizable: false, isHiddable: false },
-    });
-  }, [setLayoutContainers]);
-
-  useEffect(() => {
-    setContainerContent(
-      'workspace.top',
-      <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
-        <ContainerPanelHeader title="Context Paths" path="workspace.top" />
-        <div className="flex-1 min-h-0 overflow-auto">
-          <ContextPathsPanel />
-        </div>
-      </div>
-    );
-
-    setContainerContent(
-      'workspace.left',
-      <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden">
-        <ContainerPanelHeader title="Codebase Explorer" path="workspace.left" />
-        <div className="flex-1 min-h-0 overflow-auto">
-          <CodebaseExplorerPanel
-            codebase={codebase}
-            searchFilteredFiles={filter.searchFilteredFiles}
-            expandedFolders={filter.expandedFolders}
-            visibleFiles={filter.visibleFiles}
-            toggleFolder={filter.toggleFolder}
-            toggleFolderCheckbox={filter.toggleFolderCheckbox}
-            toggleFileCheckbox={filter.toggleFileCheckbox}
-            setSelectedEntity={setSelectedEntity}
-            onImportCodebase={handleImportCodebase}
-          />
-        </div>
-      </div>
-    );
-
-    setContainerContent(
-      'workspace.center',
-      <div className="relative flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
-        <ContainerPanelHeader
-          path="workspace.center"
-          isHiddable={false}
-          headerLeft={<GraphPanelHeaderLeft />}
-          headerCenter={
-            <GraphPanelHeaderCenter
-              maxNodesLimit={filter.maxNodesLimit}
-              setMaxNodesLimit={filter.setMaxNodesLimit}
-              callersDepth={callersDepth}
-              setCallersDepth={setCallersDepth}
-              calleesDepth={calleesDepth}
-              setCalleesDepth={setCalleesDepth}
-              displayLevel={filter.displayLevel}
-              setDisplayLevel={filter.setDisplayLevel}
-              currentLayout={currentLayout}
-              setCurrentLayout={setCurrentLayout}
-            />
-          }
-          headerRight={
-            <GraphPanelHeaderRight
-              cyRef={cyRef}
-              isGraphMaximized={isCenterMaximized}
-              setIsGraphMaximized={() => toggleContainerMaximized('workspace.center')}
-              showGrid={showGrid}
-              setShowGrid={setShowGrid}
-              attributesVisible={attributesVisible}
-              setAttributesVisible={setAttributesVisible}
-              methodsVisible={methodsVisible}
-              setMethodsVisible={setMethodsVisible}
-              showSelectedOnly={showSelectedOnly}
-              setShowSelectedOnly={setShowSelectedOnly}
-            />
-          }
-        />
-        <div className="relative flex-1 w-full h-full min-h-0">
-          <GraphPanel
-            folderPositions={folderPositions}
-            containerRef={containerRef}
-            showGrid={showGrid}
-            isDarkMode={isDarkMode}
-            graphState={graphState}
-            selectedEntity={selectedEntity}
-            searchFilteredFiles={filter.searchFilteredFiles}
-            impactedSet={impactedSet}
-            handleSelectMember={handleSelectMember}
-            attributesVisible={attributesVisible}
-            methodsVisible={methodsVisible}
-            showSelectedOnly={showSelectedOnly}
-          />
-        </div>
-      </div>
-    );
-
-    setContainerContent(
-      'workspace.right',
-      <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden">
-        <ContainerPanelHeader title="Files Context Builder" path="workspace.right" />
-        <div className="flex-1 min-h-0 overflow-auto">
-          <TabsFilesContextContainer
-            selectedEntity={selectedEntity}
-            initialCodebase={codebase}
-            enableDownstream={enableDownstream}
-            setEnableDownstream={setEnableDownstream}
-            enableUpstream={enableUpstream}
-            setEnableUpstream={setEnableUpstream}
-            impactedSet={impactedSet}
-            handleCopy={handleCopy}
-          />
-        </div>
-      </div>
-    );
-
-    setContainerContent(
-      'workspace.bottom',
-      <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
-        <ContainerPanelHeader title="Output & Logs" path="workspace.bottom" />
-        <div className="flex-1 min-h-0 overflow-auto">
-          <WkpBottomPanel />
-        </div>
-      </div>
-    );
-
-    setContainerContent(
-      'sidebarRight',
-      <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden">
-        <ContainerPanelHeader title="Prompt & LLM Studio" path="sidebarRight" />
-        <div className="flex-1 min-h-0 overflow-auto">
-          <TabsPromptContainer
-            selectedEntity={selectedEntity}
-            initialCodebase={codebase}
-            handleCopy={handleCopy}
-          />
-        </div>
-      </div>
-    );
-  }, [
-    setContainerContent,
-    toggleContainerMaximized,
-    isCenterMaximized,
-    filter.searchFilteredFiles,
-    filter.expandedFolders,
-    filter.visibleFiles,
-    filter.maxNodesLimit,
-    filter.displayLevel,
-    filter.toggleFolder,
-    filter.toggleFolderCheckbox,
-    filter.toggleFileCheckbox,
-    filter.setMaxNodesLimit,
-    filter.setDisplayLevel,
-    callersDepth,
-    calleesDepth,
-    currentLayout,
-    showGrid,
-    attributesVisible,
-    methodsVisible,
-    showSelectedOnly,
-    selectedEntity,
-    codebase,
-    folderPositions,
-    enableDownstream,
-    enableUpstream,
-    impactedSet,
-    handleCopy,
-    handleImportCodebase,
-    handleSelectMember,
-    handleNodeDoubleClick,
-    containerRef,
-    cyRef,
-    isDarkMode,
-    graphState,
-  ]);
-
-  return null;
-}
-
-export default ExplorerFeature;
-EOF
-
-echo "⚙️ Rebuilding project..."
-npm run compile
-
-echo "✅ style: Updated panel minimize icon to display in red (text-destructive) with light red pastel background (bg-destructive/15) when maximized!"
+echo "✅ feat: Sorted file items in Codebase Explorer panel alphabetically in ascending order (A-Z)."

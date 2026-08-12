@@ -126,3 +126,9 @@ class GraphEntitySetter:
         )
         logger.info("Generated entity_id for :Member nodes.")
         logger.info("--- Finished Pass: Create Entities and Stable IDs ---")
+
+        # 7. Add index on SourceFile.absolute_path
+        logger.info("--- Starting Pass: Add index on SourceFile.absolute_path ---")
+        self.neo4j_manager.execute_write_query(
+            "CREATE INDEX sourcefile_path_index IF NOT EXISTS FOR (sf:SourceFile) ON (sf.absolute_path)"
+        )

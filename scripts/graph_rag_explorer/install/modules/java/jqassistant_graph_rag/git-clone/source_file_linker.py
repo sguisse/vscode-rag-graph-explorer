@@ -124,3 +124,20 @@ class SourceFileLinker:
         )
 
         return total_relationships_created
+
+    def link_source_file_dependencies(self):
+        """
+        Crée des relations directes [:DEPENDS_ON] entre les nœuds :SourceFile
+        en se basant sur les dépendances de leurs :Type contenus.
+        """
+        logger.info("--- Starting Pass: Link SourceFile Dependencies ---")
+        query = """
+        MATCH (sf1:SourceFile)<-[:WITH_SOURCE]-(t1:Type)-[:DEPENDS_ON]->(t2:Type)-[:WITH_SOURCE]->(sf2:SourceFile)
+        WHERE sf1 <> sf2
+        WITH DISTINCT sf1, sf2
+        MERGE (sf1)-[r:DEPENDS_ON]->(sf2)
+        RETURN count(r) AS relationshipsCreated
+        """
+        result = self.neo4j_manager.execute_write_query(query)
+        logger.info(f"Created {result.relationships_created} direct [:DEPENDS_ON] between SourceFiles.")
+        logger.info("--- Finished Pass: Link SourceFile Dependencies ---")

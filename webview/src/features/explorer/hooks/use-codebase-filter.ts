@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { CodebaseFile } from '@/shared/services/graph-rag-explorer';
 import { filterCodebaseFiles } from '@/services/view/graph-view.service';
-import { INITIAL_VISIBLE_FILES_CONFIG } from '../constants/graph.constants';
+import { INITIAL_VISIBLE_FILES_CONFIG, FOLDER_KEYS_REGISTERED_CONFIG } from '../constants/graph.constants';
 
 export function useCodebaseFilter(allFiles: CodebaseFile[]) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -10,7 +10,8 @@ export function useCodebaseFilter(allFiles: CodebaseFile[]) {
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({
     frontend: true,
     backend: true,
-    config: true
+    config: true,
+    other: true
   });
   const [visibleFiles, setVisibleFiles] = useState<Record<string, boolean>>(INITIAL_VISIBLE_FILES_CONFIG);
 
@@ -31,8 +32,14 @@ export function useCodebaseFilter(allFiles: CodebaseFile[]) {
   }, []);
 
   const toggleFolderCheckbox = useCallback((folderName: string) => {
-    const folderFiles = allFiles.filter(f => f.path.startsWith(folderName));
-    const isCurrentlyChecked = folderFiles.every(f => visibleFiles[f.id]);
+    const registeredFolders = [...FOLDER_KEYS_REGISTERED_CONFIG];
+    const folderFiles = allFiles.filter(f => {
+      if (registeredFolders.includes(folderName as any)) {
+        return f.path.startsWith(folderName);
+      }
+      return !registeredFolders.some(rf => f.path.startsWith(rf));
+    });
+    const isCurrentlyChecked = folderFiles.length > 0 && folderFiles.every(f => visibleFiles[f.id]);
     const targetState = !isCurrentlyChecked;
 
     setVisibleFiles(prev => {

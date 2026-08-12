@@ -4,8 +4,13 @@ import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler'
 import { useContextPaths } from './use-context-paths';
 import { getPathsChangeImpacts } from '@/services/view/graph-view.service';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
+import { CodebaseData } from '@/shared/services/graph-rag-explorer';
 
-export function ContextPathsPanel() {
+interface ContextPathsPanelProps {
+  onCodebaseChange?: (codebase: CodebaseData) => void;
+}
+
+export function ContextPathsPanel({ onCodebaseChange }: ContextPathsPanelProps = {}) {
   const { currentPath, updatePath, setCodebaseData } = useContextPaths();
   const [paths, setPaths] = useState<string>(currentPath);
 
@@ -17,6 +22,9 @@ export function ContextPathsPanel() {
     // Update state or context with the real Neo4j data
     if (setCodebaseData) {
       setCodebaseData(realCodebaseData);
+    }
+    if (onCodebaseChange && realCodebaseData) {
+      onCodebaseChange(realCodebaseData);
     }
   };
 

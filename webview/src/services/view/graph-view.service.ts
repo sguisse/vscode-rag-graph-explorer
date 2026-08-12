@@ -3,6 +3,7 @@ import { initialCodebase } from "@/features/explorer/wksp-cnt-graph/components/g
 import { MEMBER_KEY_SEPARATOR_TOKEN } from "@/shared/services/graph-rag-explorer/domain/model/codebase.constants";
 import { logError, logInfo } from "./log-view.service.wrapper";
 import { neo4jApiService } from "../api/neo4j-api.service.gen";
+import { graphRagExplorerApiService } from "../api/graph-rag-explorer-api.service.gen";
 
 function buildMemberKeyTokenSync(nodeId: string, memberId: string): string {
     return `${nodeId}${MEMBER_KEY_SEPARATOR_TOKEN}${memberId}`;
@@ -113,16 +114,16 @@ export function filterCodebaseFiles(
     }).slice(0, maxNodesLimit);
 }
 
-export async function getPathsChangeImpacts(paths: string | string[]): Promise<CodebaseData> {
+export async function getPathsChangeImpacts(paths: string | string[], upstreamDepth: number = 2, downstreamDepth: number = 2): Promise<CodebaseData> {
     // Normalize string/string[] input into a clean array of non-empty paths
-  const pathArray = typeof paths === 'string'
+  const pathArray: string[] = typeof paths === 'string'
     ? paths.split('\n').map((p) => p.trim()).filter(Boolean)
     : paths.flatMap((p) => p.split('\n').map((item) => item.trim()).filter(Boolean));
 
 
   try {
-    logInfo(`[getPathsChangeImpacts] Neo4j service is activated. Returning real codebase data.`, pathArray);
-    const result: any = await neo4jApiService.getPathsChangeImpacts(pathArray, 2);
+    logInfo(`[getPathsChangeImpacts] Neo4j service is activated. Returning real codebase data.`, [pathArray, upstreamDepth, downstreamDepth]);
+    const result: any = await graphRagExplorerApiService.getPathsChangeImpacts(pathArray, upstreamDepth, downstreamDepth);
     // 1. Handle array response wrappers cleanly
     const codebaseData = Array.isArray(result)
     ? result[0]?.codebaseData

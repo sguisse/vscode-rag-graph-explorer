@@ -66,7 +66,8 @@ export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) 
       attributesVisible,
       methodsVisible,
       selectedEntity,
-      showSelectedOnly
+      showSelectedOnly,
+      deps: codebase.dependencies.map(d => d.id)
     });
 
     if (lastTopologyKeyRef.current === topologyKey) {

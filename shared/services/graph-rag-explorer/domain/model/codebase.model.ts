@@ -6,6 +6,7 @@ export interface CodebaseAttribute {
 export interface CodebaseMethod {
   id: string;
   name: string;
+  signature?: string;
   description?: string;
 }
 

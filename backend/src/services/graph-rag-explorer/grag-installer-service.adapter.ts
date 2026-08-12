@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { IGraphRagInstallerServicePort } from '../../../../shared/services/graph-rag-explorer/domain/port-out/installer-service.port';
+import { IGraphRagInstallerServicePort } from '../../../../shared/services/graph-rag-explorer/domain/port-out/grag-installer-service.port';
 import { AbstractServiceAdapter } from '../../core/AbstractServiceAdapter';
 import { vsCodeSettingsManager } from '../../managers/VsCodeSettings.manager';
 import { getWorkspaceRoot } from '../../utils/utils-vscode';

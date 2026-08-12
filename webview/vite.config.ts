@@ -37,12 +37,27 @@ export default defineConfig({
   build: {
     outDir: '../dist-webview',
     emptyOutDir: true,
+    chunkSizeWarningLimit: 1200,
     rollupOptions: {
       output: {
         entryFileNames: "assets/[name].js",
         chunkFileNames: "assets/[name].js",
-        assetFileNames: "assets/[name].[ext]"
-      }
-    }
-  }
+        assetFileNames: "assets/[name].[ext]",
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('cytoscape')) {
+              return 'vendor-cytoscape';
+            }
+            if (id.includes('react') || id.includes('react-dom') || id.includes('zustand')) {
+              return 'vendor-react';
+            }
+            if (id.includes('lucide-react')) {
+              return 'vendor-lucide';
+            }
+            return 'vendor';
+          }
+        },
+      },
+    },
+  },
 });

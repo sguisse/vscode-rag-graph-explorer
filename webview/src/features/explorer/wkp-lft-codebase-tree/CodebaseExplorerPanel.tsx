@@ -72,6 +72,10 @@ export function CodebaseExplorerPanel({
     downloadAnchor.remove();
   };
 
+  const registeredFolders = [...FOLDER_KEYS_REGISTERED_CONFIG];
+  const hasOtherFiles = codebase.files.some((f: CodebaseFile) => !registeredFolders.some(rf => f.path.startsWith(rf)));
+  const allFolderKeys = hasOtherFiles ? [...registeredFolders, 'other'] : registeredFolders;
+
   return (
     <div id="panel-codebase-explorer" className="flex flex-col bg-card h-full">
       <div className="flex justify-end items-center bg-muted/20 p-1 border-border border-b">
@@ -109,9 +113,18 @@ export function CodebaseExplorerPanel({
       />
 
       <div id="tree-codebase-files" className="flex-1 p-4 overflow-y-auto font-mono text-xs">
-        {FOLDER_KEYS_REGISTERED_CONFIG.map(folder => {
+        {allFolderKeys.map(folder => {
           const theme = FOLDER_THEME_REGISTRY_CONFIG[folder] || FOLDER_THEME_REGISTRY_CONFIG.default;
-          const folderFiles = codebase.files.filter((f: CodebaseFile) => f.path.startsWith(folder));
+          const isRegistered = registeredFolders.includes(folder as any);
+          const folderFiles = (isRegistered
+            ? codebase.files.filter((f: CodebaseFile) => f.path.startsWith(folder))
+            : codebase.files.filter((f: CodebaseFile) => !registeredFolders.some(rf => f.path.startsWith(rf)))
+          ).sort((a: CodebaseFile, b: CodebaseFile) =>
+            a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
+          );
+
+          if (folderFiles.length === 0 && !isRegistered) return null;
+
           const isAllChecked = folderFiles.length > 0 && folderFiles.every((f: CodebaseFile) => visibleFiles[f.id]);
           const isSomeChecked = folderFiles.some((f: CodebaseFile) => visibleFiles[f.id]);
           const isIndeterminate = isSomeChecked && !isAllChecked;
@@ -148,7 +161,7 @@ export function CodebaseExplorerPanel({
                         {folder === 'config' ? (
                           <Database size={13} className="text-amber-500 shrink-0" />
                         ) : (
-                          <FileCode size={13} className={file.type === 'interface' ? 'text-indigo-400 shrink-0' : (folder === 'frontend' ? 'text-emerald-500 shrink-0' : 'text-blue-500 shrink-0')} />
+                          <FileCode size={13} className={file.type === 'interface' ? 'text-indigo-400 shrink-0' : (folder === 'frontend' ? 'text-emerald-500 shrink-0' : folder === 'backend' ? 'text-blue-500 shrink-0' : 'text-slate-400 shrink-0')} />
                         )}
                         <span className="truncate">{file.name}</span>
                       </span>

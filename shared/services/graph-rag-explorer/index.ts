@@ -1,4 +1,3 @@
 export * from './domain/model/codebase.model';
-export * from './domain/model/neo4j/codebase.schema';
-export * from './domain/port-out/neo4j-service.port';
-export * from './domain/mapper/codebase.mapper';
+export * from './domain/port-out/grag-explorer-service.port';
+export * from './domain/mapper/getPathsChangeImpacts.mapper';

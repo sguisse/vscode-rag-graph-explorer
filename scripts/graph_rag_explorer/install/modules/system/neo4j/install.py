@@ -77,7 +77,8 @@ class SystemNeo4jInstaller(BaseInstallModule):
             self.boot_neo4j_process(self.neo4j_ctx.neo4j_cmd)
 
         # 3. Initialize Remote Metadata Token Verification Schema
-        self.initialize_remote_database_token(self.neo4j_ctx.cypher_shell_cmd)
+        if installStatus.get("remote_database_token", {}).get("status") != "✅":
+            self.initialize_remote_database_token(self.neo4j_ctx.cypher_shell_cmd)
 
         success(f"Neo4j instance initialized smoothly. Browser UI: {self.neo4j_ctx.http_url} | Bolt profile: {self.neo4j_ctx.bolt_uri} [User: {self.neo4j_ctx.user} | Pass: {self.neo4j_ctx.password}]", component=self.name)
 
