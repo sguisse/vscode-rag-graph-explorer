@@ -1,181 +1,379 @@
 #!/usr/bin/env bash
 set -e
 
-# Create folder structure for wkp-top-paths feature component
-mkdir -p webview/src/features/explorer/wkp-top-paths
+# Ensure target directories exist
+mkdir -p webview/src/features/explorer/wksp-cnt-graph/components/graph
+mkdir -p webview/src/features/explorer/wksp-cnt-graph
+mkdir -p webview/src/features/explorer
 
-# 1. Create the NEW PathsPanelHeader file
-cat << 'EOF' > webview/src/features/explorer/wkp-top-paths/PathsPanelHeader.tsx
+# 1. Update GraphUmlShapes.tsx to add `isFocused` support with a blinking ring effect
+cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/components/graph/GraphUmlShapes.tsx
 import React from 'react';
-import { ArrowUp, ArrowDown } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { FileCode, Settings } from 'lucide-react';
+import { CodebaseFile, CodebaseAttribute, CodebaseMethod, ConfigProperty } from '@/shared/services/graph-rag-explorer';
 
-export interface PathsPanelHeaderLeftProps {
-  title?: string;
+export interface NodeStyle {
+  bg: string;
+  border: string;
+  badge: string;
+  iconColor: string;
 }
 
-export const PathsPanelHeaderLeft: React.FC<PathsPanelHeaderLeftProps> = ({
-  title = 'Context Paths',
-}) => (
-  <div className="flex items-center gap-2">
-    <span className="font-bold text-foreground truncate uppercase tracking-wider">
-      {title}
-    </span>
-  </div>
+export const NODE_STYLE_REGISTRY: Record<string, NodeStyle> = {
+  component: {
+    bg: 'bg-emerald-600 dark:bg-emerald-900/80',
+    border: 'border-emerald-500',
+    badge: '🎨 React Component',
+    iconColor: 'text-emerald-400'
+  },
+  module: {
+    bg: 'bg-purple-600 dark:bg-purple-950/80',
+    border: 'border-purple-500',
+    badge: '📦 Module / Service',
+    iconColor: 'text-purple-400'
+  },
+  interface: {
+    bg: 'bg-indigo-700 dark:bg-indigo-950/80',
+    border: 'border-indigo-500',
+    badge: '⚙️ Interface',
+    iconColor: 'text-indigo-400'
+  },
+  class: {
+    bg: 'bg-blue-600 dark:bg-blue-950/80',
+    border: 'border-blue-500',
+    badge: '☕ Class',
+    iconColor: 'text-blue-400'
+  },
+  default: {
+    bg: 'bg-slate-700 dark:bg-slate-900/80',
+    border: 'border-slate-500',
+    badge: '📄 Node / AST',
+    iconColor: 'text-slate-400'
+  }
+};
+
+export interface UmlClassNodeData extends CodebaseFile {
+  isDimmed?: boolean;
+  isOrigin?: boolean;
+  isDependency?: boolean;
+  isFocused?: boolean;
+  impactedMembers?: string[];
+  selectedMember?: string;
+  onSelectMember: (nodeId: string, memberId: string) => void;
+  attributesVisible?: boolean;
+  methodsVisible?: boolean;
+}
+
+export interface FolderNodeProps {
+  data: { label: string };
+  isSelected?: boolean;
+}
+
+export const FolderNode: React.FC<FolderNodeProps> = ({ isSelected }) => (
+  <div className={`w-full h-full rounded-lg transition-all ${isSelected ? 'ring-2 ring-primary' : ''}`} />
 );
 
-export interface PathsPanelHeaderCenterProps {
-  upstreamDepth: number;
-  setUpstreamDepth: (val: number) => void;
-  downstreamDepth: number;
-  setDownstreamDepth: (val: number) => void;
-}
+export const UmlClassNode: React.FC<{ id: string; data: UmlClassNodeData }> = ({ id, data }) => {
+  const style = NODE_STYLE_REGISTRY[data.type] || NODE_STYLE_REGISTRY.default;
 
-export const PathsPanelHeaderCenter: React.FC<PathsPanelHeaderCenterProps> = ({
-  upstreamDepth,
-  setUpstreamDepth,
-  downstreamDepth,
-  setDownstreamDepth,
-}) => {
+  let borderClass = style.border;
+  let headerBg = `${style.bg} text-white`;
+  let iconColor = style.iconColor;
+
+  if (data.isFocused) {
+    borderClass = 'border-amber-400 dark:border-amber-400 ring-4 ring-amber-400/80 ring-offset-2 ring-offset-background animate-pulse scale-105 shadow-2xl shadow-amber-500/50';
+    headerBg = 'bg-amber-500/40 dark:bg-amber-500/45 text-foreground';
+    iconColor = 'text-amber-400';
+  } else if (data.isOrigin) {
+    borderClass = 'border-red-500 dark:border-red-500 ring-2 ring-red-500/60 shadow-lg shadow-red-500/20';
+    headerBg = 'bg-red-500/30 dark:bg-red-500/35 text-foreground';
+    iconColor = 'text-red-500 dark:text-red-400';
+  } else if (data.isDependency) {
+    borderClass = 'border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/50 shadow-lg shadow-amber-500/10';
+    headerBg = 'bg-amber-500/30 dark:bg-amber-500/35 text-foreground';
+    iconColor = 'text-amber-500 dark:text-amber-400';
+  }
+
   return (
-    <div className="flex items-center gap-3 font-mono text-xs">
-      <div className="flex items-center gap-1.5 bg-background px-2 py-0.5 border border-border rounded-sm">
-        <ArrowUp size={12} className="text-muted-foreground" />
-        <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">
-          Upstream Depth:
-        </span>
-        <Input
-          id="input-upstream-depth"
-          type="number"
-          min={0}
-          max={20}
-          className="bg-transparent shadow-none p-0 border-0 focus:ring-0 focus-visible:ring-0 w-8 h-5 font-bold text-foreground text-xs text-center"
-          value={upstreamDepth}
-          onChange={(e) => setUpstreamDepth(Number(e.target.value) || 0)}
-        />
+    <div className={`w-72 bg-card rounded-lg shadow-xl border-2 ${borderClass} relative transition-all duration-300 opacity-100`}>
+      <div className={`${headerBg} p-3 relative rounded-t-[5px] transition-colors`}>
+        <div className="flex justify-between items-center">
+          <span className="bg-black/30 opacity-85 px-2 py-0.5 rounded font-mono text-[10px] uppercase tracking-wider">{style.badge}</span>
+          <span className="opacity-60 font-mono text-[10px]">{data.language}</span>
+        </div>
+        <div className="flex items-center gap-2 mt-2">
+          <FileCode size={18} className={iconColor} />
+          <h4 className="font-mono font-bold text-sm truncate">{data.name}</h4>
+        </div>
       </div>
-      <div className="flex items-center gap-1.5 bg-background px-2 py-0.5 border border-border rounded-sm">
-        <ArrowDown size={12} className="text-muted-foreground" />
-        <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">
-          Downstream Depth:
-        </span>
-        <Input
-          id="input-downstream-depth"
-          type="number"
-          min={0}
-          max={20}
-          className="bg-transparent shadow-none p-0 border-0 focus:ring-0 focus-visible:ring-0 w-8 h-5 font-bold text-foreground text-xs text-center"
-          value={downstreamDepth}
-          onChange={(e) => setDownstreamDepth(Number(e.target.value) || 0)}
-        />
-      </div>
+
+      {data.attributesVisible && (
+        <div className="bg-muted/30 p-2.5 border-border border-b">
+          <div className="mb-1 font-bold text-[10px] text-muted-foreground uppercase">Attributes</div>
+          {(!data.attributes || data.attributes.length === 0) ? (
+            <div className="text-muted-foreground text-xs italic">no attributes available</div>
+          ) : (
+            <ul className="space-y-0.5 font-mono text-[11px] text-foreground/80">
+              {data.attributes.map((attr: CodebaseAttribute, idx: number) => (
+                <li key={idx} className="flex items-center gap-1">
+                  <span className="text-muted-foreground">{attr.visibility === 'private' ? '-' : attr.visibility === 'protected' ? '#' : '+'}</span>
+                  {attr.name}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {data.methodsVisible && (
+        <div className="p-2.5">
+          <div className="mb-1 font-bold text-[10px] text-muted-foreground uppercase">Methods / Exports</div>
+          <div className="space-y-2">
+            {data.methods?.map((m: CodebaseMethod) => {
+              const isMethodImpacted = data.impactedMembers && data.impactedMembers.includes(m.id);
+              const isSelected = data.selectedMember === m.id;
+              return (
+                <div key={m.id} onClick={(e) => { e.stopPropagation(); data.onSelectMember(id, m.id); }}
+                  className={`pointer-events-auto group relative flex items-center justify-between p-1.5 rounded border transition-all cursor-pointer ${
+                    isSelected ? 'border-red-500 bg-red-500/20 text-foreground font-bold' : isMethodImpacted ? 'border-amber-500 bg-amber-500/15 animate-pulse' : 'border-transparent hover:bg-muted'
+                  }`}
+                >
+                  <span className="font-mono text-foreground/90 text-xs">+ {m.name}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export interface PathsPanelHeaderRightProps {}
+export const ConfigNode: React.FC<{ id: string; data: UmlClassNodeData }> = ({ id, data }) => {
+  let borderClass = 'border-amber-500';
+  let headerBg = 'bg-amber-500 text-white';
+  let iconColor = 'text-amber-100';
 
-export const PathsPanelHeaderRight: React.FC<PathsPanelHeaderRightProps> = () => null;
+  if (data.isFocused) {
+    borderClass = 'border-amber-400 dark:border-amber-400 ring-4 ring-amber-400/80 ring-offset-2 ring-offset-background animate-pulse scale-105 shadow-2xl shadow-amber-500/50';
+    headerBg = 'bg-amber-500/40 dark:bg-amber-500/45 text-foreground';
+    iconColor = 'text-amber-400';
+  } else if (data.isOrigin) {
+    borderClass = 'border-red-500 dark:border-red-500 ring-2 ring-red-500/60 shadow-lg shadow-red-500/20';
+    headerBg = 'bg-red-500/30 dark:bg-red-500/35 text-foreground';
+    iconColor = 'text-red-500 dark:text-red-400';
+  } else if (data.isDependency) {
+    borderClass = 'border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/50 shadow-lg shadow-amber-500/10';
+    headerBg = 'bg-amber-500/30 dark:bg-amber-500/35 text-foreground';
+    iconColor = 'text-amber-500';
+  }
+
+  return (
+    <div className={`w-80 bg-card rounded-lg shadow-xl border-2 ${borderClass} relative transition-all duration-300 opacity-100`}>
+      <div className={`flex justify-between items-center ${headerBg} p-2.5 rounded-t-[5px] transition-colors`}>
+        <div className="flex items-center gap-1.5">
+          <Settings size={16} className={iconColor} />
+          <h4 className="font-mono font-bold text-xs truncate">{data.name}</h4>
+        </div>
+        <span className="bg-black/20 px-1.5 py-0.5 rounded font-mono text-[9px] uppercase tracking-widest">Configuration</span>
+      </div>
+      <div className="space-y-2 bg-black/90 p-3 max-h-64 overflow-y-auto font-mono text-[10px] text-slate-300">
+        {data.configProperties?.map((prop: ConfigProperty) => {
+          const isPropImpacted = data.impactedMembers && data.impactedMembers.includes(prop.key);
+          const isSelected = data.selectedMember === prop.key;
+          return (
+            <div key={prop.key} onClick={(e) => { e.stopPropagation(); data.onSelectMember(id, prop.key); }}
+              className={`pointer-events-auto group relative p-2 rounded border transition-all cursor-pointer ${
+                isSelected ? 'border-red-500 bg-red-500/20 text-white' : isPropImpacted ? 'border-amber-500 bg-amber-950/50 text-amber-400' : 'border-slate-800 hover:bg-slate-900'
+              }`}
+            >
+              <div className="font-semibold text-amber-400 truncate">{prop.key}:</div>
+              <div className="pl-2 text-slate-400 truncate">{prop.value}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 EOF
 
-# 2. Rewrite context-paths-panel.tsx with depth parameters and single-event selectedPath handling
-cat << 'EOF' > webview/src/features/explorer/wkp-top-paths/context-paths-panel.tsx
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Textarea } from '@/components/ui/textarea';
-import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
-import { useContextPaths } from './use-context-paths';
-import { getPathsChangeImpacts } from '@/services/view/graph-view.service';
-import { logInfo } from '@/services/view/log-view.service.wrapper';
-import { CodebaseData } from '@/shared/services/graph-rag-explorer';
+# 2. Update GraphPanel.tsx to accept focusedNodeId prop
+cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/GraphPanel.tsx
+import React, { useMemo } from 'react';
+import { Info } from 'lucide-react';
+import { FolderNode, UmlClassNode, ConfigNode, UmlClassNodeData } from './components/graph/GraphUmlShapes';
+import { SelectedEntity, CodebaseFile } from '@/shared/services/graph-rag-explorer';
+import { isMemberKeyForFileToken, extractMemberIdFromKeyToken } from '@/services/view/graph-view.service';
 
-interface ContextPathsPanelProps {
-  onCodebaseChange?: (codebase: CodebaseData) => void;
-  upstreamDepth?: number;
-  downstreamDepth?: number;
+interface GraphPanelProps {
+  folderPositions: Record<string, { label: string }>;
+  containerRef: (node: HTMLDivElement | null) => void;
+  showGrid: boolean;
+  isDarkMode: boolean;
+  graphState: {
+    zoom: number;
+    pan: { x: number; y: number };
+    nodePositions: Record<string, { x: number; y: number; w: number; h: number }>;
+  };
+  selectedEntity: SelectedEntity | null;
+  focusedNodeId?: string | null;
+  searchFilteredFiles: CodebaseFile[];
+  impactedSet: Set<string>;
+  handleSelectMember: (nodeId: string, memberId: string) => void;
+  attributesVisible: boolean;
+  methodsVisible: boolean;
+  showSelectedOnly?: boolean;
 }
 
-export function ContextPathsPanel({
-  onCodebaseChange,
-  upstreamDepth = 2,
-  downstreamDepth = 2,
-}: ContextPathsPanelProps = {}) {
-  const { currentPath, updatePath, setCodebaseData } = useContextPaths();
-  const [paths, setPaths] = useState<string>(currentPath);
+export function GraphPanel({
+  folderPositions,
+  containerRef,
+  showGrid,
+  isDarkMode,
+  graphState,
+  selectedEntity,
+  focusedNodeId,
+  searchFilteredFiles,
+  impactedSet,
+  handleSelectMember,
+  attributesVisible,
+  methodsVisible,
+  showSelectedOnly = false
+}: GraphPanelProps) {
+  const effectiveFolderPositions = useMemo(() => {
+    const folderMap: Record<string, { label: string }> = { ...folderPositions };
 
-  // Keep fresh references of depths for effect callbacks
-  const depthRef = useRef({ upstreamDepth, downstreamDepth });
-  useEffect(() => {
-    depthRef.current = { upstreamDepth, downstreamDepth };
-  }, [upstreamDepth, downstreamDepth]);
-
-  // Helper function to handle async impact fetching
-  const fetchImpacts = useCallback(
-    async (
-      targetPaths: string,
-      up = depthRef.current.upstreamDepth,
-      down = depthRef.current.downstreamDepth
-    ) => {
-      if (!targetPaths.trim()) return;
-      const realCodebaseData = await getPathsChangeImpacts(targetPaths, up, down);
-
-      // Update state or context with the real Neo4j data
-      if (setCodebaseData) {
-        setCodebaseData(realCodebaseData);
-      }
-      if (onCodebaseChange && realCodebaseData) {
-        onCodebaseChange(realCodebaseData);
-      }
-    },
-    [setCodebaseData, onCodebaseChange]
-  );
-
-  // Trigger impacts fetch if depths change while target paths are active
-  useEffect(() => {
-    if (paths.trim()) {
-      fetchImpacts(paths, upstreamDepth, downstreamDepth);
-    }
-  }, [upstreamDepth, downstreamDepth, fetchImpacts]);
-
-  useEffect(() => {
-    // Register listener for 'selectedPath'
-    const unsubscribeStatus = vsCodeHandleMessage.on('selectedPath', (message) => {
-      logInfo(`Status received from extension: ${message.payload}`);
-      if (message.payload) {
-        // Atomic update replacing Textarea content in one step
-        const newPath = message.payload;
-        setPaths(newPath);
-        updatePath(newPath);
-        fetchImpacts(newPath, depthRef.current.upstreamDepth, depthRef.current.downstreamDepth);
+    Object.keys(graphState.nodePositions).forEach((nodeKey) => {
+      if (nodeKey.startsWith('folder__')) {
+        const folderKey = nodeKey.replace('folder__', '');
+        if (!folderMap[folderKey]) {
+          folderMap[folderKey] = {
+            label: `📂 ${folderKey.charAt(0).toUpperCase() + folderKey.slice(1)}`
+          };
+        }
       }
     });
 
-    // Cleanup event listeners on unmount
-    return () => {
-      unsubscribeStatus();
-    };
-  }, [updatePath, fetchImpacts]);
+    return folderMap;
+  }, [folderPositions, graphState.nodePositions]);
 
-  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const val = e.target.value;
-    setPaths(val);
-    updatePath(val);
-    fetchImpacts(val, upstreamDepth, downstreamDepth);
-  };
+  const effectiveSearchFilteredFiles = useMemo(() => {
+    if (showSelectedOnly && selectedEntity) {
+      return searchFilteredFiles.filter(f => f.id === selectedEntity.nodeId || impactedSet.has(f.id));
+    }
+    return searchFilteredFiles;
+  }, [searchFilteredFiles, showSelectedOnly, selectedEntity, impactedSet]);
 
   return (
-    <div className="flex flex-col bg-background p-0 w-full h-full">
-      <Textarea
-        value={paths}
-        onChange={handleTextareaChange}
-        placeholder="Selected paths from explorer..."
-        className="bg-muted/20 border-border focus-visible:ring-1 w-full h-full min-h-[50px] font-mono text-foreground text-xs resize-none"
+    <div className="absolute inset-0 outline-none w-full h-full overflow-hidden">
+      <div
+        ref={containerRef}
+        className="z-0 absolute inset-0 w-full h-full"
+        style={showGrid ? {
+          backgroundImage: isDarkMode
+            ? 'radial-gradient(#334155 1.2px, transparent 1.2px)'
+            : 'radial-gradient(#cbd5e1 1.2px, transparent 1.2px)',
+          backgroundSize: `${16 * graphState.zoom}px ${16 * graphState.zoom}px`,
+          backgroundPosition: `${graphState.pan.x}px ${graphState.pan.y}px`
+        } : undefined}
       />
+
+      <div
+        className="z-10 absolute inset-0 origin-top-left pointer-events-none select-none"
+        style={{ transform: `translate(${graphState.pan.x}px, ${graphState.pan.y}px) scale(${graphState.zoom})` }}
+      >
+        {Object.entries(effectiveFolderPositions).map(([folderKey, initialPos]) => {
+          const bounds = graphState.nodePositions[`folder__${folderKey}`];
+          if (!bounds) return null;
+          const isSelected = selectedEntity?.nodeId === `folder__${folderKey}`;
+          return (
+            <div
+              key={`folder-box-${folderKey}`}
+              className="z-10 absolute transition-all duration-75 ease-out"
+              style={{ left: bounds.x, top: bounds.y, width: bounds.w, height: bounds.h }}
+            >
+              <FolderNode data={{ label: initialPos.label }} isSelected={isSelected} />
+            </div>
+          );
+        })}
+
+        {effectiveSearchFilteredFiles.map((file: CodebaseFile) => {
+          const bounds = graphState.nodePositions[file.id];
+          if (!bounds) return null;
+
+          const impactedMembers: string[] = [];
+          impactedSet.forEach(item => {
+            if (isMemberKeyForFileToken(item, file.id)) {
+              impactedMembers.push(extractMemberIdFromKeyToken(item));
+            }
+          });
+
+          const isOrigin = selectedEntity?.nodeId === file.id;
+          const isDependency = impactedSet.has(file.id) && !isOrigin;
+          const isFocused = focusedNodeId === file.id;
+
+          const nodeData: UmlClassNodeData = {
+            ...file,
+            isOrigin,
+            isDependency,
+            isFocused,
+            impactedMembers,
+            selectedMember: selectedEntity?.nodeId === file.id ? selectedEntity?.memberId : undefined,
+            onSelectMember: handleSelectMember,
+            attributesVisible,
+            methodsVisible
+          };
+
+          return (
+            <div
+              key={file.id}
+              className={`absolute transition-all duration-75 ease-out pointer-events-none ${isFocused ? 'z-30' : 'z-20'}`}
+              style={{ left: bounds.x, top: bounds.y, width: bounds.w, height: bounds.h }}
+            >
+              {file.type === 'config' ? (
+                <ConfigNode id={file.id} data={nodeData} />
+              ) : (
+                <UmlClassNode id={file.id} data={nodeData} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div
+        id="cytoscape-engine-info"
+        className="top-4 left-4 z-20 absolute bg-card/90 shadow-md backdrop-blur p-3 border border-border rounded-lg max-w-sm font-mono text-xs pointer-events-auto"
+      >
+        <div className="flex justify-between items-center gap-2 mb-1">
+          <div className="flex items-center gap-2">
+            <Info size={14} className="text-primary" />
+            <span className="font-bold">Surgical Analysis (Cytoscape Engine)</span>
+          </div>
+          <button
+            onClick={() => {
+              const infoDiv = document.getElementById('cytoscape-engine-info');
+              if (infoDiv) infoDiv.style.display = 'none';
+            }}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Close info"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <p className="text-[10px] text-muted-foreground">
+          Drag-and-drop on headers and wheel zoom use Cytoscape's responsive architecture.
+        </p>
+      </div>
     </div>
   );
 }
 EOF
 
-# 3. Update ExplorerFeature.tsx to integrate PathsPanelHeader components and depth states into workspace.top
+# 3. Update ExplorerFeature.tsx to trigger graph camera centering AND blinking effect for focused node
 cat << 'EOF' > webview/src/features/explorer/ExplorerFeature.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLayoutStore } from '@/store/useLayoutStore';
@@ -222,9 +420,10 @@ export function ExplorerFeature() {
   const [codebase, setCodebase] = useState<CodebaseData>(initialCodebase);
   const [folderPositions, setFolderPositions] = useState<Record<string, { label: string }>>(FOLDER_POSITIONS);
   const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(null);
+  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
 
   const [enableDownstream, setEnableDownstream] = useState<boolean>(true);
-  const [enableUpstream, setEnableUpstream] = useState<boolean>(false);
+  const [enableUpstream, setEnableUpstream] = useState<boolean>(true);
 
   const [upstreamDepth, setUpstreamDepth] = useState<number>(2);
   const [downstreamDepth, setDownstreamDepth] = useState<number>(2);
@@ -269,6 +468,25 @@ export function ExplorerFeature() {
     handleNodeSelect,
     handleNodeDoubleClick
   );
+
+  const handleFocusNode = useCallback((nodeId: string) => {
+    const cy = cyRef.current;
+    if (cy) {
+      const targetNode = cy.getElementById(nodeId);
+      if (targetNode && targetNode.length > 0) {
+        cy.animate({
+          center: { eles: targetNode },
+          duration: 300,
+          easing: 'ease-in-out-cubic'
+        });
+      }
+    }
+    // Activate blinking pulse effect on the graph node for 2 seconds
+    setFocusedNodeId(nodeId);
+    setTimeout(() => {
+      setFocusedNodeId((prev) => (prev === nodeId ? null : prev));
+    }, 2000);
+  }, [cyRef]);
 
   useEffect(() => {
     if (!isReady || Object.keys(folderPositions).length === 0) return;
@@ -404,6 +622,7 @@ export function ExplorerFeature() {
             toggleFolderCheckbox={filter.toggleFolderCheckbox}
             toggleFileCheckbox={filter.toggleFileCheckbox}
             setSelectedEntity={setSelectedEntity}
+            onFocusNode={handleFocusNode}
             onImportCodebase={handleImportCodebase}
           />
         </div>
@@ -455,6 +674,7 @@ export function ExplorerFeature() {
             isDarkMode={isDarkMode}
             graphState={graphState}
             selectedEntity={selectedEntity}
+            focusedNodeId={focusedNodeId}
             searchFilteredFiles={filter.searchFilteredFiles}
             impactedSet={impactedSet}
             handleSelectMember={handleSelectMember}
@@ -531,6 +751,7 @@ export function ExplorerFeature() {
     methodsVisible,
     showSelectedOnly,
     selectedEntity,
+    focusedNodeId,
     codebase,
     folderPositions,
     enableDownstream,
@@ -540,6 +761,7 @@ export function ExplorerFeature() {
     handleImportCodebase,
     handleSelectMember,
     handleNodeDoubleClick,
+    handleFocusNode,
     containerRef,
     cyRef,
     isDarkMode,
@@ -554,4 +776,4 @@ EOF
 
 npm run compile
 
-echo "✅ feat/refactor: Added PathsPanelHeader component, integrated upstream/downstream depth state into ExplorerFeature's workspace.top container, and ensured selectedPath replaces Textarea atomically without duplicate events!"
+echo "✅ feat(graph-animation): Added pulsing amber ring blink effect on centered node when clicked from codebase tree!"

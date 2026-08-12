@@ -2,7 +2,6 @@ import { CodebaseData, CodebaseFile, Dependency, SelectedEntity } from "@/shared
 import { initialCodebase } from "@/features/explorer/wksp-cnt-graph/components/graph/GraphData";
 import { MEMBER_KEY_SEPARATOR_TOKEN } from "@/shared/services/graph-rag-explorer/domain/model/codebase.constants";
 import { logError, logInfo } from "./log-view.service.wrapper";
-import { neo4jApiService } from "../api/neo4j-api.service.gen";
 import { graphRagExplorerApiService } from "../api/graph-rag-explorer-api.service.gen";
 
 function buildMemberKeyTokenSync(nodeId: string, memberId: string): string {
@@ -19,6 +18,12 @@ export function isMemberKeyForFileToken(key: string, fileId: string): boolean {
 
 export function extractMemberIdFromKeyToken(key: string): string {
     return key.split(MEMBER_KEY_SEPARATOR_TOKEN)[1] || '';
+}
+
+export function extractFileIdFromKeyToken(key: string): string {
+    return key.includes(MEMBER_KEY_SEPARATOR_TOKEN)
+        ? key.split(MEMBER_KEY_SEPARATOR_TOKEN)[0]
+        : key;
 }
 
 export function calculateTransitiveImpact(
@@ -45,12 +50,18 @@ export function calculateTransitiveImpact(
     const runBfs = (direction: 'callee' | 'caller', maxDepth: number) => {
       if (maxDepth < 1) return;
 
-      const queue: Array<{ key: string; depth: number }> = [{ key: startKey, depth: 0 }];
+      // Initialize queue with both member key and parent file node ID at depth 0
+      const queue: Array<{ key: string; depth: number }> = [
+        { key: startKey, depth: 0 },
+        { key: selectedEntity.nodeId, depth: 0 }
+      ];
 
       while (queue.length > 0) {
         const { key: current, depth } = queue.shift()!;
 
         if (depth >= maxDepth) continue;
+
+        const currentFileId = extractFileIdFromKeyToken(current);
 
         dependencies.forEach(dep => {
           const depSourceNode = dep.sourceNode || dep.source;
@@ -66,20 +77,36 @@ export function calculateTransitiveImpact(
           const targetKey = depTargetHandle === 'header' ? depTargetNode : targetKeyMember;
 
           if (direction === 'callee') {
-            if (current === depSourceNode || current === sourceKey || current === sourceKeyMember) {
-              if (!visited.has(targetKey) || !visited.has(depTargetNode)) {
-                visited.add(targetKey);
-                visited.add(depTargetNode);
-                queue.push({ key: targetKey, depth: depth + 1 });
-              }
+            const matchesSource =
+              current === depSourceNode ||
+              current === sourceKey ||
+              current === sourceKeyMember ||
+              currentFileId === depSourceNode;
+
+            if (matchesSource) {
+              const nextKeys = [targetKey, depTargetNode];
+              nextKeys.forEach((nextKey) => {
+                if (!visited.has(nextKey)) {
+                  visited.add(nextKey);
+                  queue.push({ key: nextKey, depth: depth + 1 });
+                }
+              });
             }
           } else {
-            if (current === depTargetNode || current === targetKey || current === targetKeyMember) {
-              if (!visited.has(sourceKey) || !visited.has(depSourceNode)) {
-                visited.add(sourceKey);
-                visited.add(depSourceNode);
-                queue.push({ key: sourceKey, depth: depth + 1 });
-              }
+            const matchesTarget =
+              current === depTargetNode ||
+              current === targetKey ||
+              current === targetKeyMember ||
+              currentFileId === depTargetNode;
+
+            if (matchesTarget) {
+              const nextKeys = [sourceKey, depSourceNode];
+              nextKeys.forEach((nextKey) => {
+                if (!visited.has(nextKey)) {
+                  visited.add(nextKey);
+                  queue.push({ key: nextKey, depth: depth + 1 });
+                }
+              });
             }
           }
         });

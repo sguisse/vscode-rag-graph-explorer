@@ -46,6 +46,7 @@ interface CodebaseExplorerPanelProps {
   toggleFolderCheckbox: (folder: string) => void;
   toggleFileCheckbox: (id: string) => void;
   setSelectedEntity: (entity: SelectedEntity) => void;
+  onFocusNode?: (nodeId: string) => void;
   onImportCodebase?: (importedData: CodebaseData) => void;
 }
 
@@ -58,6 +59,7 @@ export function CodebaseExplorerPanel({
   toggleFolderCheckbox,
   toggleFileCheckbox,
   setSelectedEntity,
+  onFocusNode,
   onImportCodebase
 }: CodebaseExplorerPanelProps) {
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -156,7 +158,13 @@ export function CodebaseExplorerPanel({
                       />
                       <span
                         className={`flex items-center gap-1.5 truncate cursor-pointer flex-1 min-w-0 ${visibleFiles[file.id] ? 'text-foreground font-medium' : 'text-muted-foreground line-through'}`}
-                        onClick={() => setSelectedEntity({ type: 'node', nodeId: file.id })}
+                        onClick={() => {
+                          if (onFocusNode) {
+                            onFocusNode(file.id);
+                          } else {
+                            setSelectedEntity({ type: 'node', nodeId: file.id });
+                          }
+                        }}
                       >
                         {folder === 'config' ? (
                           <Database size={13} className="text-amber-500 shrink-0" />

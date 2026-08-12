@@ -15,6 +15,7 @@ interface GraphPanelProps {
     nodePositions: Record<string, { x: number; y: number; w: number; h: number }>;
   };
   selectedEntity: SelectedEntity | null;
+  focusedNodeId?: string | null;
   searchFilteredFiles: CodebaseFile[];
   impactedSet: Set<string>;
   handleSelectMember: (nodeId: string, memberId: string) => void;
@@ -30,6 +31,7 @@ export function GraphPanel({
   isDarkMode,
   graphState,
   selectedEntity,
+  focusedNodeId,
   searchFilteredFiles,
   impactedSet,
   handleSelectMember,
@@ -107,11 +109,13 @@ export function GraphPanel({
 
           const isOrigin = selectedEntity?.nodeId === file.id;
           const isDependency = impactedSet.has(file.id) && !isOrigin;
+          const isFocused = focusedNodeId === file.id;
 
           const nodeData: UmlClassNodeData = {
             ...file,
             isOrigin,
             isDependency,
+            isFocused,
             impactedMembers,
             selectedMember: selectedEntity?.nodeId === file.id ? selectedEntity?.memberId : undefined,
             onSelectMember: handleSelectMember,
@@ -122,7 +126,7 @@ export function GraphPanel({
           return (
             <div
               key={file.id}
-              className="z-20 absolute transition-all duration-75 ease-out pointer-events-none"
+              className={`absolute transition-all duration-75 ease-out pointer-events-none ${isFocused ? 'z-30' : 'z-20'}`}
               style={{ left: bounds.x, top: bounds.y, width: bounds.w, height: bounds.h }}
             >
               {file.type === 'config' ? (

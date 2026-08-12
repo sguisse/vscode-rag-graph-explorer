@@ -46,6 +46,7 @@ export interface UmlClassNodeData extends CodebaseFile {
   isDimmed?: boolean;
   isOrigin?: boolean;
   isDependency?: boolean;
+  isFocused?: boolean;
   impactedMembers?: string[];
   selectedMember?: string;
   onSelectMember: (nodeId: string, memberId: string) => void;
@@ -69,7 +70,11 @@ export const UmlClassNode: React.FC<{ id: string; data: UmlClassNodeData }> = ({
   let headerBg = `${style.bg} text-white`;
   let iconColor = style.iconColor;
 
-  if (data.isOrigin) {
+  if (data.isFocused) {
+    borderClass = 'border-amber-400 dark:border-amber-400 ring-4 ring-amber-400/80 ring-offset-2 ring-offset-background animate-pulse scale-105 shadow-2xl shadow-amber-500/50';
+    headerBg = 'bg-amber-500/40 dark:bg-amber-500/45 text-foreground';
+    iconColor = 'text-amber-400';
+  } else if (data.isOrigin) {
     borderClass = 'border-red-500 dark:border-red-500 ring-2 ring-red-500/60 shadow-lg shadow-red-500/20';
     headerBg = 'bg-red-500/30 dark:bg-red-500/35 text-foreground';
     iconColor = 'text-red-500 dark:text-red-400';
@@ -139,7 +144,11 @@ export const ConfigNode: React.FC<{ id: string; data: UmlClassNodeData }> = ({ i
   let headerBg = 'bg-amber-500 text-white';
   let iconColor = 'text-amber-100';
 
-  if (data.isOrigin) {
+  if (data.isFocused) {
+    borderClass = 'border-amber-400 dark:border-amber-400 ring-4 ring-amber-400/80 ring-offset-2 ring-offset-background animate-pulse scale-105 shadow-2xl shadow-amber-500/50';
+    headerBg = 'bg-amber-500/40 dark:bg-amber-500/45 text-foreground';
+    iconColor = 'text-amber-400';
+  } else if (data.isOrigin) {
     borderClass = 'border-red-500 dark:border-red-500 ring-2 ring-red-500/60 shadow-lg shadow-red-500/20';
     headerBg = 'bg-red-500/30 dark:bg-red-500/35 text-foreground';
     iconColor = 'text-red-500 dark:text-red-400';

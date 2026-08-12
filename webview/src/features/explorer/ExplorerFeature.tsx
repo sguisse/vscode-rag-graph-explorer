@@ -43,9 +43,10 @@ export function ExplorerFeature() {
   const [codebase, setCodebase] = useState<CodebaseData>(initialCodebase);
   const [folderPositions, setFolderPositions] = useState<Record<string, { label: string }>>(FOLDER_POSITIONS);
   const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>(null);
+  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
 
   const [enableDownstream, setEnableDownstream] = useState<boolean>(true);
-  const [enableUpstream, setEnableUpstream] = useState<boolean>(false);
+  const [enableUpstream, setEnableUpstream] = useState<boolean>(true);
 
   const [upstreamDepth, setUpstreamDepth] = useState<number>(2);
   const [downstreamDepth, setDownstreamDepth] = useState<number>(2);
@@ -90,6 +91,25 @@ export function ExplorerFeature() {
     handleNodeSelect,
     handleNodeDoubleClick
   );
+
+  const handleFocusNode = useCallback((nodeId: string) => {
+    const cy = cyRef.current;
+    if (cy) {
+      const targetNode = cy.getElementById(nodeId);
+      if (targetNode && targetNode.length > 0) {
+        cy.animate({
+          center: { eles: targetNode },
+          duration: 300,
+          easing: 'ease-in-out-cubic'
+        });
+      }
+    }
+    // Activate blinking pulse effect on the graph node for 2 seconds
+    setFocusedNodeId(nodeId);
+    setTimeout(() => {
+      setFocusedNodeId((prev) => (prev === nodeId ? null : prev));
+    }, 2000);
+  }, [cyRef]);
 
   useEffect(() => {
     if (!isReady || Object.keys(folderPositions).length === 0) return;
@@ -225,6 +245,7 @@ export function ExplorerFeature() {
             toggleFolderCheckbox={filter.toggleFolderCheckbox}
             toggleFileCheckbox={filter.toggleFileCheckbox}
             setSelectedEntity={setSelectedEntity}
+            onFocusNode={handleFocusNode}
             onImportCodebase={handleImportCodebase}
           />
         </div>
@@ -276,6 +297,7 @@ export function ExplorerFeature() {
             isDarkMode={isDarkMode}
             graphState={graphState}
             selectedEntity={selectedEntity}
+            focusedNodeId={focusedNodeId}
             searchFilteredFiles={filter.searchFilteredFiles}
             impactedSet={impactedSet}
             handleSelectMember={handleSelectMember}
@@ -352,6 +374,7 @@ export function ExplorerFeature() {
     methodsVisible,
     showSelectedOnly,
     selectedEntity,
+    focusedNodeId,
     codebase,
     folderPositions,
     enableDownstream,
@@ -361,6 +384,7 @@ export function ExplorerFeature() {
     handleImportCodebase,
     handleSelectMember,
     handleNodeDoubleClick,
+    handleFocusNode,
     containerRef,
     cyRef,
     isDarkMode,
