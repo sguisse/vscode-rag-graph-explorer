@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { GitFork, FileText, Copy, ShieldAlert, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CodebaseData, CodebaseFile, SelectedEntity } from '@/shared/services/graph-rag-explorer';
-import { generateMarkdownRecipe } from '@/services/view/prompt-view.service';
 import { calculateTransitiveImpact } from '@/services/view/graph-view.service';
 
 interface FilesContextPanelProps {
@@ -258,10 +257,6 @@ export function FilesContextPanel({
     return Object.values(selectedFiles).filter(Boolean).length;
   }, [selectedFiles]);
 
-  const generatedMarkdownRecipe = useMemo(() => {
-    return generateMarkdownRecipe(selectedEntity, enableDownstream, enableUpstream, impactedSet, initialCodebase);
-  }, [selectedEntity, enableDownstream, enableUpstream, impactedSet, initialCodebase]);
-
   // Build final context containing ONLY selected files
   const combinedFilesContext = useMemo(() => {
     if (!initialCodebase?.files) return '';
@@ -269,38 +264,8 @@ export function FilesContextPanel({
     return initialCodebase.files
       .filter((file) => !!selectedFiles[file.id])
       .map((file: CodebaseFile) => {
-        const isImpacted = impactedSet.has(file.id);
-        const isSelected = selectedEntity?.nodeId === file.id;
-        const statusTag = isSelected ? '[SELECTED]' : isImpacted ? '[IMPACTED]' : '[AVAILABLE]';
 
-        let content = `// ==========================================\n`;
-        content += `// File: ${file.path} ${statusTag}\n`;
-        content += `// Language: ${file.language} | Size: ${file.size} LOC | Complexity: V(g)=${file.complexity}\n`;
-        content += `// ==========================================\n\n`;
-
-        if (file.attributes && file.attributes.length > 0) {
-          content += `// Attributes:\n`;
-          file.attributes.forEach((attr) => {
-            content += `//   ${attr.visibility} ${attr.name}\n`;
-          });
-          content += `\n`;
-        }
-
-        if (file.methods && file.methods.length > 0) {
-          content += `// Methods:\n`;
-          file.methods.forEach((m) => {
-            content += `//   + ${m.name}: ${m.description}\n`;
-          });
-          content += `\n`;
-        }
-
-        if (file.configProperties && file.configProperties.length > 0) {
-          content += `// Configuration Properties:\n`;
-          file.configProperties.forEach((prop) => {
-            content += `${prop.key}=${prop.value}\n`;
-          });
-          content += `\n`;
-        }
+        let content = `File: ${file.path}\n`;
 
         return content;
       })
