@@ -3,6 +3,9 @@ import { GitFork, FileText, Copy, ShieldAlert, ChevronDown, ChevronRight } from 
 import { Button } from '@/components/ui/button';
 import { CodebaseData, CodebaseFile, SelectedEntity } from '@/shared/services/graph-rag-explorer';
 import { calculateTransitiveImpact } from '@/services/view/graph-view.service';
+import { codebaseExporterApiService } from '@/services/api/codebase-exporter-api.service.gen';
+import { logInfo, logError } from '@/services/view/log-view.service.wrapper';
+import { ExportFormat } from '@/shared/services/codebase-exporter/domain/model/types';
 
 interface FilesContextPanelProps {
   initialCodebase: CodebaseData;
@@ -265,15 +268,33 @@ export function FilesContextPanel({
       .filter((file) => !!selectedFiles[file.id])
       .map((file: CodebaseFile) => {
 
-        let content = `File: ${file.path}\n`;
+        let content = `${file.path}`;
 
         return content;
       })
       .join('\n');
   }, [initialCodebase, selectedFiles, impactedSet, selectedEntity]);
 
-  const copyContext = () => {
-    handleCopy(combinedFilesContext, "Selected Files Context copied to clipboard!");
+  const copyContext = async () => {
+    const targetFilePaths = combinedFilesContext
+                          ? combinedFilesContext.split('\n').map((p) => p.trim()).filter(Boolean)
+                          : [];
+
+    const exportFormat: ExportFormat = 'YAML'; //
+    logInfo(`[FilesContextPanel] Exporting ${targetFilePaths} selected file(s) for context export in format '${exportFormat}'...`);
+    const exportedFilePath = await codebaseExporterApiService.exportSelectedFiles(targetFilePaths, exportFormat);
+    logInfo(`[FilesContextPanel] exportedFilePath ${exportedFilePath} for context export in format '${exportFormat}'...`);
+
+    let combinedFilesContent = '';
+    try {
+        // Use fs.readFile instead of fetch for local disk paths
+        combinedFilesContent = await codebaseExporterApiService.readExportedFileContent(exportedFilePath);
+        logInfo(`[FilesContextPanel] Successfully read content (${combinedFilesContent.length} chars) from exportedFilePath: ${exportedFilePath}`);
+    } catch (err: any) {
+    logError('Failed to read content from exportedFilePath:', err);
+    }
+
+    handleCopy(combinedFilesContent, "Selected Files Content copied to clipboard!");
   };
 
   return (

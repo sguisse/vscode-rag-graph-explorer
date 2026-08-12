@@ -2,6 +2,9 @@
 // Rebuild using: npm run generate:rpc-methods
 
 export enum RpcMethodEnum {
+    CODEBASEEXPORTER_EXPORT_SELECTED_FILES = 'exportSelectedFiles',
+    CODEBASEEXPORTER_READ_EXPORTED_FILE_CONTENT = 'readExportedFileContent',
+    CODEBASEEXPORTER_STORE_EXPORTED_FILE_IN_CLIPBOARD = 'storeExportedFileInClipboard',
     GRAGEXPLORER_GET_PATHS_CHANGE_IMPACTS = 'getPathsChangeImpacts',
     GRAGINSTALLER_CHECK_INSTALLATION_STATUS = 'checkInstallationStatus',
     GRAGINSTALLER_UNINSTALL_ALL = 'uninstallAll',

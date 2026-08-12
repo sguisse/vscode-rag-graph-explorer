@@ -10,6 +10,11 @@ import { RpcProtocol } from '../../../shared/rpc/rpc-protocol';
  * Resolves services from the ServiceRegistry and registers all RPC protocol handlers.
  */
 export function registerRpcMethods(rpc: RpcProtocol): void {
+    const codebaseExporterService = serviceRegistry.get(ServiceEnum.CODEBASE_EXPORTER);
+    rpc.register(RpcMethodEnum.CODEBASEEXPORTER_EXPORT_SELECTED_FILES, codebaseExporterService.exportSelectedFiles.bind(codebaseExporterService));
+    rpc.register(RpcMethodEnum.CODEBASEEXPORTER_READ_EXPORTED_FILE_CONTENT, codebaseExporterService.readExportedFileContent.bind(codebaseExporterService));
+    rpc.register(RpcMethodEnum.CODEBASEEXPORTER_STORE_EXPORTED_FILE_IN_CLIPBOARD, codebaseExporterService.storeExportedFileInClipboard.bind(codebaseExporterService));
+
     const graphRagExplorerService = serviceRegistry.get(ServiceEnum.GRAPH_RAG_EXPLORER);
     rpc.register(RpcMethodEnum.GRAGEXPLORER_GET_PATHS_CHANGE_IMPACTS, graphRagExplorerService.getPathsChangeImpacts.bind(graphRagExplorerService));
 

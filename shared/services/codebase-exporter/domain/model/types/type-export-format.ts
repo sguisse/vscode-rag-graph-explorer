@@ -1,11 +1,11 @@
-export const EXPORT_FORMAT_LIST: readonly string[] = ["YAML", "JSON", "TOML", "XML", "TXT"];
+export const EXPORT_FORMAT_LIST: readonly string[] = ["yaml", "json", "toml", "xml", "txt"];
 
 export const EXPORT_FORMAT_ICON_MAP: { [K in (typeof EXPORT_FORMAT_LIST)[number]]: any } = {
-  YAML: { icon: "📄", label: "YAML" },
-  JSON: { icon: "🟦", label: "JSON" },
-  TOML: { icon: "🟫", label: "TOML" },
-  XML: { icon: "🔤", label: "XML" },
-  TXT: { icon: "📝", label: "TXT" },
+  yaml: { icon: "📄", label: "YAML" },
+  json: { icon: "🟦", label: "JSON" },
+  toml: { icon: "🟫", label: "TOML" },
+  xml: { icon: "🔤", label: "XML" },
+  txt: { icon: "📝", label: "TXT" },
 } as const;
 
 export type ExportFormat = (typeof EXPORT_FORMAT_LIST)[number];
