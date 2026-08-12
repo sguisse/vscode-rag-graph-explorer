@@ -99,7 +99,7 @@ export const UmlClassNode: React.FC<{ id: string; data: UmlClassNodeData }> = ({
 
       {data.attributesVisible && (
         <div className="bg-muted/30 p-2.5 border-border border-b">
-          <div className="mb-1 font-bold text-[10px] text-muted-foreground uppercase">Attributes</div>
+          <div className="mb-1 font-bold text-[11px] text-muted-foreground uppercase">Attributes</div>
           {(!data.attributes || data.attributes.length === 0) ? (
             <div className="text-muted-foreground text-xs italic">no attributes available</div>
           ) : (
@@ -117,14 +117,14 @@ export const UmlClassNode: React.FC<{ id: string; data: UmlClassNodeData }> = ({
 
       {data.methodsVisible && (
         <div className="p-2.5">
-          <div className="mb-1 font-bold text-[10px] text-muted-foreground uppercase">Methods / Exports</div>
-          <div className="space-y-2">
+          <div className="mb-1 font-bold text-[11px] text-muted-foreground uppercase">Methods / Exports</div>
+          <div className="space-y-0">
             {data.methods?.map((m: CodebaseMethod) => {
               const isMethodImpacted = data.impactedMembers && data.impactedMembers.includes(m.id);
               const isSelected = data.selectedMember === m.id;
               return (
                 <div key={m.id} onClick={(e) => { e.stopPropagation(); data.onSelectMember(id, m.id); }}
-                  className={`pointer-events-auto group relative flex items-center justify-between p-1.5 rounded border transition-all cursor-pointer ${
+                  className={`pointer-events-auto group relative flex items-center justify-between p-0.5 rounded border transition-all cursor-pointer ${
                     isSelected ? 'border-red-500 bg-red-500/20 text-foreground font-bold' : isMethodImpacted ? 'border-amber-500 bg-amber-500/15 animate-pulse' : 'border-transparent hover:bg-muted'
                   }`}
                 >

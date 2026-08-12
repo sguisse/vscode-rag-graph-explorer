@@ -1,11 +1,3 @@
-#!/usr/bin/env bash
-set -e
-
-# Ensure target directory exists
-mkdir -p webview/src/features/explorer/wkp-rgt-tabs-files-context
-
-# Update inspector-panel.tsx to invert attribute badge order, group attributes by visibility, add method signature tooltips, and reduce vertical spacing
-cat << 'EOF' > webview/src/features/explorer/wkp-rgt-tabs-files-context/inspector-panel.tsx
 import React, { useMemo } from 'react';
 import {
   FileCode,
@@ -109,14 +101,14 @@ export function InspectorPanel({
   }, [groupedAttributes]);
 
   return (
-    <div className="space-y-2.5 animate-in duration-200 fade-in font-mono text-xs">
+    <div className="space-y-2.5 font-mono text-xs animate-in duration-200 fade-in">
       {/* Active Subsystem Header */}
       <div className="space-y-2 bg-primary/5 p-3 border border-primary/20 rounded-lg">
         <div className="flex justify-between items-center">
           <span className="font-mono font-bold text-[10px] text-primary uppercase tracking-wider">
             ACTIVE SUBSYSTEM
           </span>
-          <span className="bg-primary/10 px-2 py-0.5 rounded font-mono font-bold text-primary text-[11px]">
+          <span className="bg-primary/10 px-2 py-0.5 rounded font-mono font-bold text-[11px] text-primary">
             {currentFile.language}
           </span>
         </div>
@@ -135,20 +127,20 @@ export function InspectorPanel({
         <div className="gap-2 grid grid-cols-2 pt-2 border-border border-t">
           <div className="bg-background p-1.5 border border-border rounded">
             <span className="block font-mono text-[9px] text-muted-foreground uppercase">Volume of Code</span>
-            <span className="font-mono font-bold text-foreground text-[11px]">{currentFile.size || 0} LOC</span>
+            <span className="font-mono font-bold text-[11px] text-foreground">{currentFile.size || 0} LOC</span>
           </div>
           <div className="bg-background p-1.5 border border-border rounded">
             <span className="block font-mono text-[9px] text-muted-foreground uppercase">Complexity V(g)</span>
-            <span className="font-mono font-bold text-foreground text-[11px]">Level {currentFile.complexity || 1}</span>
+            <span className="font-mono font-bold text-[11px] text-foreground">Level {currentFile.complexity || 1}</span>
           </div>
         </div>
 
         {/* Resizable and Scrollable Functional Documentation Box */}
-        <div className="bg-slate-950 mt-2 p-2 border border-slate-800 rounded font-mono text-slate-300 text-xs min-h-[60px] max-h-[250px] overflow-auto resize-y">
-          <div className="mb-1 font-bold text-[9px] text-amber-400 uppercase select-none sticky top-0 bg-slate-950/90 py-0.5 backdrop-blur-xs">
+        <div className="bg-slate-950 mt-2 p-2 border border-slate-800 rounded min-h-[60px] max-h-[250px] overflow-auto font-mono text-slate-300 text-xs resize-y">
+          <div className="top-0 sticky bg-slate-950/90 backdrop-blur-xs mb-1 py-0.5 font-bold text-[9px] text-amber-400 uppercase select-none">
             Functional Documentation:
           </div>
-          <div className="whitespace-pre-wrap leading-relaxed text-[11px]">
+          <div className="text-[11px] leading-relaxed whitespace-pre-wrap">
             {selectedMethod?.description || selectedProp?.value || (
               `File container (${currentFile.type}) encapsulating polyglot AST architecture layers at ${currentFile.path}.`
             )}
@@ -162,7 +154,7 @@ export function InspectorPanel({
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-1.5">
               <Fingerprint className="w-3.5 h-3.5 text-primary shrink-0" />
-              <CardTitle className="font-mono font-bold text-foreground text-[11px] uppercase tracking-wider">
+              <CardTitle className="font-mono font-bold text-[11px] text-foreground uppercase tracking-wider">
                 Identity Attributes
               </CardTitle>
             </div>
@@ -177,7 +169,7 @@ export function InspectorPanel({
             <div className="flex items-center gap-1 font-semibold text-[9px] text-muted-foreground uppercase">
               <Hash className="w-3 h-3 text-primary" /> FQN Identifier
             </div>
-            <div className="bg-background/80 p-1 border border-border/30 rounded font-medium text-foreground text-[11px] break-all">
+            <div className="bg-background/80 p-1 border border-border/30 rounded font-medium text-[11px] text-foreground break-all">
               {selectedEntity.nodeId}
             </div>
           </div>
@@ -187,7 +179,7 @@ export function InspectorPanel({
               <span className="block flex items-center gap-1 text-[9px] text-muted-foreground uppercase">
                 <Tag className="w-3 h-3 text-amber-500" /> Entity Type
               </span>
-              <span className="block mt-0.5 font-bold text-foreground text-[11px] uppercase">
+              <span className="block mt-0.5 font-bold text-[11px] text-foreground uppercase">
                 {currentFile.type}
               </span>
             </div>
@@ -196,7 +188,7 @@ export function InspectorPanel({
               <span className="block flex items-center gap-1 text-[9px] text-muted-foreground uppercase">
                 <Layers className="w-3 h-3 text-indigo-500" /> Target Member
               </span>
-              <span className="block mt-0.5 font-bold text-foreground text-[11px] truncate">
+              <span className="block mt-0.5 font-bold text-[11px] text-foreground truncate">
                 {selectedEntity.memberId ? `${selectedEntity.memberId}` : 'N/A'}
               </span>
             </div>
@@ -207,7 +199,7 @@ export function InspectorPanel({
               <span className="block flex items-center gap-1 text-[9px] text-muted-foreground uppercase">
                 <Code2 className="w-3 h-3 text-emerald-500" /> Edge ID
               </span>
-              <span className="block mt-0.5 font-bold text-foreground text-[11px] break-all">
+              <span className="block mt-0.5 font-bold text-[11px] text-foreground break-all">
                 {selectedEntity.edgeId}
               </span>
             </div>
@@ -221,7 +213,7 @@ export function InspectorPanel({
           <CardHeader className="bg-muted/40 p-2 border-border/60 border-b">
             <div className="flex items-center gap-1.5">
               <Settings className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-              <CardTitle className="font-mono font-bold text-foreground text-[11px] uppercase tracking-wider">
+              <CardTitle className="font-mono font-bold text-[11px] text-foreground uppercase tracking-wider">
                 Config Properties ({currentFile.configProperties?.length || 0})
               </CardTitle>
             </div>
@@ -256,7 +248,7 @@ export function InspectorPanel({
             <CardHeader className="bg-muted/40 p-2 border-border/60 border-b">
               <div className="flex items-center gap-1.5">
                 <ListTree className="w-3.5 h-3.5 text-primary shrink-0" />
-                <CardTitle className="font-mono font-bold text-foreground text-[11px] uppercase tracking-wider">
+                <CardTitle className="font-mono font-bold text-[11px] text-foreground uppercase tracking-wider">
                   Attributes / Fields ({currentFile.attributes?.length || 0})
                 </CardTitle>
               </div>
@@ -268,16 +260,16 @@ export function InspectorPanel({
                 <div className="space-y-1.5 max-h-36 overflow-y-auto">
                   {sortedVisibilities.map((vis) => (
                     <div key={vis} className="space-y-0.5">
-                      <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider px-0.5">
+                      <div className="px-0.5 font-bold text-[9px] text-muted-foreground uppercase tracking-wider">
                         {vis}
                       </div>
                       <div className="space-y-0.5">
                         {groupedAttributes[vis].map((attr: CodebaseAttribute, idx: number) => (
                           <div
                             key={idx}
-                            className="flex items-center gap-1.5 px-1.5 py-0.5 bg-muted/20 border border-border/30 rounded text-[11px]"
+                            className="flex items-center gap-1.5 bg-muted/20 px-1.5 py-0.5 border border-border/30 rounded text-[11px]"
                           >
-                            <span className="bg-primary/10 px-1 py-0.2 rounded text-[9px] text-primary uppercase font-bold shrink-0">
+                            <span className="bg-primary/10 px-1 py-0.2 rounded font-bold text-[9px] text-primary uppercase shrink-0">
                               {attr.visibility}
                             </span>
                             <span className="font-semibold text-foreground truncate">{attr.name}</span>
@@ -296,7 +288,7 @@ export function InspectorPanel({
             <CardHeader className="bg-muted/40 p-2 border-border/60 border-b">
               <div className="flex items-center gap-1.5">
                 <Code2 className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                <CardTitle className="font-mono font-bold text-foreground text-[11px] uppercase tracking-wider">
+                <CardTitle className="font-mono font-bold text-[11px] text-foreground uppercase tracking-wider">
                   Methods / Exports ({currentFile.methods?.length || 0})
                 </CardTitle>
               </div>
@@ -308,11 +300,6 @@ export function InspectorPanel({
                 <div className="space-y-1 max-h-44 overflow-y-auto">
                   {currentFile.methods.map((m: CodebaseMethod) => {
                     const isSelected = selectedEntity.memberId === m.id;
-                    const methodSignature = (m as any).signature || m.name;
-                    const methodTooltip = m.description
-                      ? `${methodSignature} — ${m.description}`
-                      : methodSignature;
-
                     return (
                       <div
                         key={m.id}
@@ -321,9 +308,8 @@ export function InspectorPanel({
                         }`}
                       >
                         <span
-                          className="block font-semibold text-foreground cursor-help truncate"
-                          data-tooltip={methodTooltip}
-                          title={methodTooltip}
+                          className="block font-semibold text-foreground truncate cursor-help"
+                          data-tooltip={m.signature || ''}
                         >
                           + {m.name}
                         </span>
@@ -344,8 +330,3 @@ export function InspectorPanel({
     </div>
   );
 }
-EOF
-
-npm run compile
-
-echo "✅ feat(inspector): Grouped attributes by visibility, inverted visibility badge order, added method signature tooltips, and compacted vertical spacing!"

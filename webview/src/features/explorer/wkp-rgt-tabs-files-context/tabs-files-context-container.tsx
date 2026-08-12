@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { InspectorTabPanel } from './inspector-tab-panel';
+import { InspectorPanel } from './inspector-panel';
 import { FilesContextPanel } from './files-context';
 import { ContextTransformerPanel } from './context-transformer';
 import { CodebaseData, SelectedEntity } from '@/shared/services/graph-rag-explorer';
@@ -73,7 +73,7 @@ export function TabsFilesContextContainer({
           />
         )}
         {rightPanelTab === 'inspect' && (
-          <InspectorTabPanel
+          <InspectorPanel
             selectedEntity={selectedEntity}
             initialCodebase={initialCodebase}
             enableDownstream={enableDownstream}
