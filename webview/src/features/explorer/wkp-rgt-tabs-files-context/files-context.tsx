@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
-import { GitFork, FileText, Copy } from 'lucide-react';
+import { GitFork, FileText, Copy, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CodebaseData, CodebaseFile, SelectedEntity } from '@/shared/services/graph-rag-explorer';
+import { generateMarkdownRecipe } from '@/services/view/prompt-view.service';
 
 interface FilesContextPanelProps {
   initialCodebase: CodebaseData;
@@ -24,6 +25,10 @@ export function FilesContextPanel({
   impactedSet,
   handleCopy
 }: FilesContextPanelProps) {
+
+  const generatedMarkdownRecipe = useMemo(() => {
+    return generateMarkdownRecipe(selectedEntity, enableDownstream, enableUpstream, impactedSet, initialCodebase);
+  }, [selectedEntity, enableDownstream, enableUpstream, impactedSet, initialCodebase]);
 
   const combinedFilesContext = useMemo(() => {
     if (!initialCodebase?.files) return '';
@@ -74,7 +79,7 @@ export function FilesContextPanel({
 
   return (
     <div className="space-y-4 animate-in duration-200 fade-in font-mono text-xs">
-      {/* Moved Impact Direction Controls */}
+      {/* Impact Propagation Controls */}
       <div className="space-y-2 bg-muted/30 p-3 border border-border rounded-lg">
         <div className="flex justify-between items-center">
           <label className="font-mono font-bold text-[11px] text-muted-foreground uppercase">Impact Propagation</label>
@@ -106,6 +111,32 @@ export function FilesContextPanel({
         </div>
       </div>
 
+      {/* Fluorescent Impact Plan */}
+      <div className="space-y-3 bg-orange-500/5 p-4 border border-orange-500/25 rounded-lg">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-1.5">
+            <ShieldAlert size={14} className="text-orange-500" />
+            <h5 className="font-mono font-bold text-orange-500 text-xs">Fluorescent Impact Plan</h5>
+          </div>
+          <Button
+            onClick={() => handleCopy(generatedMarkdownRecipe, "Markdown impact recipe copied to clip-board!")}
+            className="flex items-center gap-1 bg-muted hover:bg-muted/80 px-2 py-1 border border-border rounded h-6 font-mono text-[10px] text-foreground cursor-pointer"
+          >
+            <Copy size={10} />Copy Recipes
+          </Button>
+        </div>
+        <div className="space-y-1.5 max-h-48 overflow-y-auto">
+          {initialCodebase.files.map((f: CodebaseFile) =>
+            impactedSet.has(f.id) ? (
+              <div key={f.id} className="flex justify-between items-center bg-background px-2 py-1.5 border border-orange-500/20 rounded font-mono text-[11px]">
+                <span className="font-semibold text-foreground truncate">{f.name}</span>
+                <span className="bg-muted px-1.5 py-0.5 rounded text-[9px] text-muted-foreground">{f.language}</span>
+              </div>
+            ) : null
+          )}
+        </div>
+      </div>
+
       {/* Unified Files Context Preview & Meta */}
       <div className="space-y-3 bg-card p-4 border border-border rounded-lg">
         <div className="flex justify-between items-center">
@@ -118,7 +149,7 @@ export function FilesContextPanel({
           <Button
             size="sm"
             onClick={copyContext}
-            className="flex items-center gap-1.5 h-7 font-mono text-[11px]"
+            className="flex items-center gap-1.5 h-7 font-mono text-[11px] cursor-pointer"
           >
             <Copy size={12} /> Copy Context
           </Button>

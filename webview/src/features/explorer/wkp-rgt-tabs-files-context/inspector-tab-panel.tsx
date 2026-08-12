@@ -1,6 +1,5 @@
-import React, { useMemo } from 'react';
-import { FileCode, ShieldAlert, Copy, Fingerprint, Tag, Code2, Layers, Hash } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React from 'react';
+import { FileCode, ShieldAlert, Fingerprint, Tag, Code2, Layers, Hash } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   CodebaseData,
@@ -9,7 +8,6 @@ import {
   CodebaseMethod,
   ConfigProperty,
 } from '@/shared/services/graph-rag-explorer';
-import { generateMarkdownRecipe } from '@/services/view/prompt-view.service';
 
 interface InspectorTabPanelProps {
   selectedEntity: SelectedEntity | null;
@@ -25,17 +23,7 @@ interface InspectorTabPanelProps {
 export function InspectorTabPanel({
   selectedEntity,
   initialCodebase,
-  enableDownstream,
-  setEnableDownstream,
-  enableUpstream,
-  setEnableUpstream,
-  impactedSet,
-  handleCopy
 }: InspectorTabPanelProps) {
-
-  const generatedMarkdownRecipe = useMemo(() => {
-    return generateMarkdownRecipe(selectedEntity, enableDownstream, enableUpstream, impactedSet, initialCodebase);
-  }, [selectedEntity, enableDownstream, enableUpstream, impactedSet, initialCodebase]);
 
   if (!selectedEntity) {
     return (
@@ -89,7 +77,7 @@ export function InspectorTabPanel({
         </div>
       </div>
 
-      {/* Moved EntityPropertiesPanel Content */}
+      {/* Entity Properties Panel */}
       <Card className="bg-card/50 shadow-xs border-border overflow-hidden">
         <CardHeader className="bg-muted/40 p-3 border-border/60 border-b">
           <div className="flex justify-between items-center">
@@ -150,21 +138,6 @@ export function InspectorTabPanel({
           )}
         </CardContent>
       </Card>
-
-      {/* Fluorescent Impact Plan */}
-      <div className="space-y-3 bg-orange-500/5 p-4 border border-orange-500/25 rounded-lg">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-1.5"><ShieldAlert size={14} className="text-orange-500" /><h5 className="font-mono font-bold text-orange-500 text-xs">Fluorescent Impact Plan</h5></div>
-          <Button onClick={() => handleCopy(generatedMarkdownRecipe, "Markdown impact recipe copied to clip-board!")} className="flex items-center gap-1 bg-muted hover:bg-muted/80 px-2 py-1 border border-border rounded h-6 font-mono text-[10px] text-foreground">
-            <Copy size={10} />Copy Recipes
-          </Button>
-        </div>
-        <div className="space-y-1.5 max-h-48 overflow-y-auto">
-          {initialCodebase.files.map((f: CodebaseFile) => impactedSet.has(f.id) ? (
-            <div key={f.id} className="flex justify-between items-center bg-background px-2 py-1.5 border border-orange-500/20 rounded font-mono text-[11px]"><span className="font-semibold text-foreground truncate">{f.name}</span><span className="bg-muted px-1.5 py-0.5 rounded text-[9px] text-muted-foreground">{f.language}</span></div>
-          ) : null)}
-        </div>
-      </div>
     </div>
   );
 }
