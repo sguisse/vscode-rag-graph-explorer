@@ -37,7 +37,7 @@ function getNodeDimensions(
 }
 
 export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) {
-  const lastTopologyKeyRef = useRef<string>('');
+  const lastStructureKeyRef = useRef<string>('');
 
   const updateGraphTopology = useCallback((
     searchFilteredFiles: CodebaseFile[],
@@ -58,127 +58,143 @@ export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) 
       ? searchFilteredFiles.filter(f => f.id === selectedEntity.nodeId || impactedSet.has(f.id))
       : searchFilteredFiles;
 
-    const topologyKey = JSON.stringify({
+    // Structural key tracks only physical layout factors (excluding selection/impact state)
+    const structureKey = JSON.stringify({
       files: effectiveFiles.map(f => f.id),
       visible: visibleFiles,
-      impacted: Array.from(impactedSet),
       layout: currentLayout,
       attributesVisible,
       methodsVisible,
-      selectedEntity,
-      showSelectedOnly,
       deps: codebase.dependencies.map(d => d.id)
     });
 
-    if (lastTopologyKeyRef.current === topologyKey) {
-      return;
-    }
-    lastTopologyKeyRef.current = topologyKey;
+    const isStructureChanged = lastStructureKeyRef.current !== structureKey;
 
-    cy.elements().remove();
+    // Only rebuild nodes, rerun layout, fit and center if structural graph definition changes
+    if (isStructureChanged) {
+      lastStructureKeyRef.current = structureKey;
 
-    const filesByFolder: Record<string, CodebaseFile[]> = {};
-    effectiveFiles.forEach(file => {
-      const folderKey = file.path.split('/')[0] || 'other';
-      if (!filesByFolder[folderKey]) filesByFolder[folderKey] = [];
-      filesByFolder[folderKey].push(file);
-    });
+      cy.elements().remove();
 
-    const allFolderKeys = Array.from(
-      new Set([...Object.keys(folderPositions), ...Object.keys(filesByFolder)])
-    );
+      const filesByFolder: Record<string, CodebaseFile[]> = {};
+      effectiveFiles.forEach(file => {
+        const folderKey = file.path.split('/')[0] || 'other';
+        if (!filesByFolder[folderKey]) filesByFolder[folderKey] = [];
+        filesByFolder[folderKey].push(file);
+      });
 
-    // Calculate dynamic horizontal gap: at least 50px or scaled to maximum dependency label length
-    let maxLabelLength = 0;
-    codebase.dependencies.forEach(dep => {
-      if (dep.label) {
-        maxLabelLength = Math.max(maxLabelLength, dep.label.length);
-      }
-    });
-    const dynamicGapX = Math.max(50, maxLabelLength * 8 + 24);
+      const allFolderKeys = Array.from(
+        new Set([...Object.keys(folderPositions), ...Object.keys(filesByFolder)])
+      );
 
-    allFolderKeys.forEach(folderKey => {
-      if ((filesByFolder[folderKey] || []).length > 0) {
-        const label = folderPositions[folderKey]?.label || `📂 ${folderKey.charAt(0).toUpperCase() + folderKey.slice(1)}`;
-        cy.add({ data: { id: `folder__${folderKey}`, label }, classes: 'folder' });
-      }
-    });
+      let maxLabelLength = 0;
+      codebase.dependencies.forEach(dep => {
+        if (dep.label) {
+          maxLabelLength = Math.max(maxLabelLength, dep.label.length);
+        }
+      });
+      const dynamicGapX = Math.max(50, maxLabelLength * 8 + 24);
 
-    allFolderKeys.forEach((folderKey, folderIdx) => {
-      const folderFiles = filesByFolder[folderKey] || [];
-      if (folderFiles.length === 0) return;
+      allFolderKeys.forEach(folderKey => {
+        if ((filesByFolder[folderKey] || []).length > 0) {
+          const label = folderPositions[folderKey]?.label || `📂 ${folderKey.charAt(0).toUpperCase() + folderKey.slice(1)}`;
+          cy.add({ data: { id: `folder__${folderKey}`, label }, classes: 'folder' });
+        }
+      });
 
-      const baseX = FOLDER_BASE_X_POSITIONS_CONFIG[folderKey as keyof typeof FOLDER_BASE_X_POSITIONS_CONFIG] || (40 + folderIdx * 450);
+      allFolderKeys.forEach((folderKey, folderIdx) => {
+        const folderFiles = filesByFolder[folderKey] || [];
+        if (folderFiles.length === 0) return;
 
-      const numCols = 2;
-      const gapX = dynamicGapX;
-      const gapY = 65;
+        const baseX = FOLDER_BASE_X_POSITIONS_CONFIG[folderKey as keyof typeof FOLDER_BASE_X_POSITIONS_CONFIG] || (40 + folderIdx * 450);
 
-      let currentY = 80;
-      const rowCount = Math.ceil(folderFiles.length / numCols);
+        const numCols = 2;
+        const gapX = dynamicGapX;
+        const gapY = 65;
 
-      for (let r = 0; r < rowCount; r++) {
-        const rowFiles = folderFiles.slice(r * numCols, (r + 1) * numCols);
-        const rowHeights = rowFiles.map(f => getNodeDimensions(f, attributesVisible, methodsVisible).height);
-        const maxRowHeight = Math.max(...rowHeights, 76);
+        let currentY = 80;
+        const rowCount = Math.ceil(folderFiles.length / numCols);
 
-        rowFiles.forEach((file, c) => {
-          const dims = getNodeDimensions(file, attributesVisible, methodsVisible);
-          const absX = baseX + 30 + c * (dims.width + gapX) + dims.width / 2;
-          const absY = currentY + dims.height / 2;
+        for (let r = 0; r < rowCount; r++) {
+          const rowFiles = folderFiles.slice(r * numCols, (r + 1) * numCols);
+          const rowHeights = rowFiles.map(f => getNodeDimensions(f, attributesVisible, methodsVisible).height);
+          const maxRowHeight = Math.max(...rowHeights, 76);
 
-          cy.add({
-            data: {
-              id: file.id,
-              parent: `folder__${folderKey}`,
-              width: dims.width,
-              height: dims.height
-            },
-            position: { x: absX, y: absY }
+          rowFiles.forEach((file, c) => {
+            const dims = getNodeDimensions(file, attributesVisible, methodsVisible);
+            const absX = baseX + 30 + c * (dims.width + gapX) + dims.width / 2;
+            const absY = currentY + dims.height / 2;
+
+            cy.add({
+              data: {
+                id: file.id,
+                parent: `folder__${folderKey}`,
+                width: dims.width,
+                height: dims.height
+              },
+              position: { x: absX, y: absY }
+            });
           });
-        });
 
-        currentY += maxRowHeight + gapY;
-      }
-    });
+          currentY += maxRowHeight + gapY;
+        }
+      });
 
+      codebase.dependencies.forEach((dep: Dependency) => {
+        const sourceNodeId = dep.sourceNode || dep.source;
+        const targetNodeId = dep.targetNode || dep.target;
+
+        if (
+          sourceNodeId &&
+          targetNodeId &&
+          visibleFiles[sourceNodeId] &&
+          visibleFiles[targetNodeId] &&
+          cy.getElementById(sourceNodeId).length > 0 &&
+          cy.getElementById(targetNodeId).length > 0
+        ) {
+          cy.add({
+            data: { id: dep.id, source: sourceNodeId, target: targetNodeId, label: dep.label }
+          });
+        }
+      });
+
+      cy.layout({
+        name: currentLayout,
+        animate: false,
+        fit: true,
+        padding: 40,
+        boundingBox: { x1: 0, y1: 0, w: 2000, h: 2000 }
+      } as cytoscape.LayoutOptions).run();
+
+      cy.fit(undefined, 40);
+      cy.center();
+    }
+
+    // Dynamically update highlighted dependency classes on existing edges without resetting camera zoom or pan
     codebase.dependencies.forEach((dep: Dependency) => {
-      const sourceNodeId = dep.sourceNode || dep.source;
-      const targetNodeId = dep.targetNode || dep.target;
-      const sourceHandle = dep.sourceHandle || 'header';
-      const targetHandle = dep.targetHandle || 'header';
+      const edge = cy.getElementById(dep.id);
+      if (edge && edge.length > 0) {
+        const sourceNodeId = dep.sourceNode || dep.source;
+        const targetNodeId = dep.targetNode || dep.target;
+        const sourceHandle = dep.sourceHandle || 'header';
+        const targetHandle = dep.targetHandle || 'header';
 
-      if (
-        sourceNodeId &&
-        targetNodeId &&
-        visibleFiles[sourceNodeId] &&
-        visibleFiles[targetNodeId] &&
-        cy.getElementById(sourceNodeId).length > 0 &&
-        cy.getElementById(targetNodeId).length > 0
-      ) {
-        const sourceKeyMember = buildMemberKeyToken(sourceNodeId, sourceHandle);
-        const targetKeyMember = buildMemberKeyToken(targetNodeId, targetHandle);
-        const isEdgeImpacted =
-          (impactedSet.has(sourceNodeId) || impactedSet.has(sourceKeyMember)) &&
-          (impactedSet.has(targetNodeId) || impactedSet.has(targetKeyMember));
+        if (sourceNodeId && targetNodeId) {
+          const sourceKeyMember = buildMemberKeyToken(sourceNodeId, sourceHandle);
+          const targetKeyMember = buildMemberKeyToken(targetNodeId, targetHandle);
 
-        cy.add({
-          data: { id: dep.id, source: sourceNodeId, target: targetNodeId, label: dep.label },
-          classes: isEdgeImpacted ? 'impacted' : ''
-        });
+          const isEdgeImpacted =
+            (impactedSet.has(sourceNodeId) || impactedSet.has(sourceKeyMember)) &&
+            (impactedSet.has(targetNodeId) || impactedSet.has(targetKeyMember));
+
+          if (isEdgeImpacted) {
+            edge.addClass('impacted');
+          } else {
+            edge.removeClass('impacted');
+          }
+        }
       }
     });
-
-    cy.layout({
-      name: currentLayout,
-      animate: false,
-      fit: true,
-      padding: 40,
-      boundingBox: { x1: 0, y1: 0, w: 2000, h: 2000 }
-    } as cytoscape.LayoutOptions).run();
-
-    cy.fit(undefined, 40);
-    cy.center();
 
   }, [cyRef]);
 
