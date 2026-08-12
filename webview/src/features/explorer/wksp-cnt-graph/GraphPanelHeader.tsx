@@ -56,7 +56,7 @@ export const GraphPanelHeaderCenter: React.FC<GraphPanelHeaderCenterProps> = ({
 
   return (
     <div className="flex items-center gap-3">
-      <div className="flex items-center gap-1.5 bg-background px-2 py-0.5 border border-border rounded-sm">
+      <div className="flex items-center gap-1.5 bg-background px-2 py-0.5 border border-border rounded-sm h-6">
         <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">Limit:</span>
         <Input
           id="input-max-nodes-limit"
@@ -75,7 +75,7 @@ export const GraphPanelHeaderCenter: React.FC<GraphPanelHeaderCenterProps> = ({
       >
         <Database size={11} /> Neo4j
       </Button>
-      <div className="flex items-center gap-1 bg-background px-1.5 py-0.5 border border-border rounded-sm">
+      <div className="flex items-center gap-1 bg-background px-1.5 py-0.5 border border-border rounded-sm h-6">
         <User size={12} className="text-muted-foreground" />
         <Input
           id="input-callers-depth"
@@ -87,7 +87,7 @@ export const GraphPanelHeaderCenter: React.FC<GraphPanelHeaderCenterProps> = ({
           onChange={(e) => setCallersDepth(Number(e.target.value) || 0)}
         />
       </div>
-      <div className="flex items-center gap-1 bg-background px-1.5 py-0.5 border border-border rounded-sm">
+      <div className="flex items-center gap-1 bg-background px-1.5 py-0.5 border border-border rounded-sm h-6">
         <Baby size={12} className="text-muted-foreground" />
         <Input
           id="input-callees-depth"
@@ -103,6 +103,8 @@ export const GraphPanelHeaderCenter: React.FC<GraphPanelHeaderCenterProps> = ({
         id="select-display-level"
         value={displayLevel}
         onChange={setDisplayLevel}
+        className="py-0"
+        triggerClassName="!h-6 min-h-0 py-0 px-2 text-xs border-border rounded-sm font-mono"
         options={DISPLAY_LEVEL_LIST.map((key) => ({
           value: key,
           icon: DISPLAY_LEVEL_ICON_MAP[key].icon,
@@ -113,6 +115,8 @@ export const GraphPanelHeaderCenter: React.FC<GraphPanelHeaderCenterProps> = ({
         id="select-graph-layout"
         value={currentLayout}
         onChange={setCurrentLayout}
+        className="py-0"
+        triggerClassName="!h-6 min-h-0 py-0 px-2 text-xs border-border rounded-sm font-mono"
         options={GRAPH_LAYOUT_LIST.map((key) => ({
           value: key,
           icon: GRAPH_LAYOUT_ICON_MAP[key].icon,

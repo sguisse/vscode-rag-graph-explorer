@@ -1,10 +1,10 @@
 export const GRAPH_LAYOUT_LIST: readonly string[] = ["preset", "grid", "breadthfirst", "cose"];
 
 export const GRAPH_LAYOUT_ICON_MAP: { [K in (typeof GRAPH_LAYOUT_LIST)[number]]: any } = {
-  preset: { icon: "📦", label: "Default (Packages)" },
-  grid: { icon: "▦", label: "Grid Distribution" },
-  breadthfirst: { icon: "🌲", label: "Hierarchical (BFS)" },
-  cose: { icon: "🧲", label: "Force-Directed (Cose)" },
+  preset: { icon: "📦", label: "Packages" },
+  grid: { icon: "▦", label: "Grid" },
+  breadthfirst: { icon: "🌲", label: "Tree (BFS)" },
+  cose: { icon: "🧲", label: "Force (Cose)" },
 } as const;
 
 export type GraphLayout = (typeof GRAPH_LAYOUT_LIST)[number];

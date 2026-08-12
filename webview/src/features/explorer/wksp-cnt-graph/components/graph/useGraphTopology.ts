@@ -62,7 +62,7 @@ function applyCustomHierarchicalLayout(
   codebase.dependencies.forEach(dep => {
     const src = dep.sourceNode || dep.source;
     const tgt = dep.targetNode || dep.target;
-    if (inDegree.has(src) && inDegree.has(tgt) && src !== tgt) {
+    if (src && tgt && inDegree.has(src) && inDegree.has(tgt) && src !== tgt) {
       adj.get(src)!.push(tgt);
       inDegree.set(tgt, (inDegree.get(tgt) || 0) + 1);
     }
@@ -119,7 +119,7 @@ function applyCustomHierarchicalLayout(
     const src = dep.sourceNode || dep.source;
     const tgt = dep.targetNode || dep.target;
     const label = dep.label || '';
-    if (label) {
+    if (src && tgt && label) {
       const key1 = `${src}__${tgt}`;
       const key2 = `${tgt}__${src}`;
       edgeLabelLengths.set(key1, Math.max(edgeLabelLengths.get(key1) || 0, label.length));

@@ -14,7 +14,9 @@ export const SelectFromTypeBuilder = ({
   desc,
   value,
   onChange,
-  options
+  options,
+  className = '',
+  triggerClassName = ''
 }: {
   id?: string;
   icon?: string | React.ReactNode;
@@ -23,11 +25,13 @@ export const SelectFromTypeBuilder = ({
   value: string;
   onChange: (v: string) => void;
   options: SelectOption[];
+  className?: string;
+  triggerClassName?: string;
 }) => {
   const selectedOption = options.find((opt) => opt.value === value);
 
   return (
-    <div id={id} className="flex flex-col gap-1 py-1">
+    <div id={id} className={`flex flex-col gap-1 ${className}`}>
       {label && (
         <span className="flex items-center gap-1.5 font-medium text-neutral-900 dark:text-neutral-100 text-xs">
           {icon && <span>{icon}</span>}
@@ -40,7 +44,7 @@ export const SelectFromTypeBuilder = ({
             onChange(val);
             }
         }}>
-        <SelectTrigger id={id ? `${id}-trigger` : undefined} className="bg-white dark:bg-neutral-800 h-8 text-xs">
+        <SelectTrigger id={id ? `${id}-trigger` : undefined} size="sm" className={`bg-background border-border shadow-none !h-6 min-h-0 py-0 px-2 rounded-sm text-xs font-mono flex items-center gap-1 ${triggerClassName}`}>
           <SelectValue>
             {selectedOption ? (
               <span className="flex items-center gap-1.5 truncate">
