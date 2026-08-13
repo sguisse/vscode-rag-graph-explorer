@@ -58,8 +58,8 @@ export function AppLayout({
   }, [isDarkMode]);
 
   const [sidebarLeftMode, setSidebarLeftMode] = useState<'normal' | 'minimal'>('normal');
-  const [sidebarLeftWidth, startSidebarLeftResize] = useResizable(DefaultContainersSize.sidebarLeftWidth, 160, 450, true, false);
-  const [sidebarRightWidth, startSidebarRightResize] = useResizable(DefaultContainersSize.sidebarRightWidth, 180, 500, true, true);
+  const [sidebarLeftWidth, startSidebarLeftResize] = useResizable(DefaultContainersSize.sidebarLeftWidth, 160, 1000, true, false);
+  const [sidebarRightWidth, startSidebarRightResize] = useResizable(DefaultContainersSize.sidebarRightWidth, 180, 1000, true, true);
 
   const effectiveSidebarLeftWidth = sidebarLeftMode === 'minimal' ? DefaultContainersSize.sidebarLeftMinimizedWidth : sidebarLeftWidth;
 

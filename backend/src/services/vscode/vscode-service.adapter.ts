@@ -92,6 +92,16 @@ export class VsCodeServiceAdapter extends AbstractServiceAdapter implements IVsC
         return filePath;
     }
 
+    public async copyToClipboard(text: string): Promise<void> {
+        logInfo(`[VsCodeServiceAdapter] copyToClipboard invoked (${text.length} chars)`);
+        try {
+            await vscode.env.clipboard.writeText(text);
+        } catch (err) {
+            logError(`[VsCodeServiceAdapter] Failed to copy to clipboard: ${err}`);
+            throw err;
+        }
+    }
+
     public dispose() {
         if (logChannel) {
             logChannel.dispose();

@@ -48,9 +48,9 @@ export function WorkspaceLayout({ containers: propContainers }: WorkspaceLayoutP
     bottom: bottomConfig,
   };
 
-  const [topHeight, startTopResize] = useResizable(DefaultContainersSize.workspaceTopHeight, 40, 300, false, false);
-  const [leftWidth, startLeftResize] = useResizable(DefaultContainersSize.workspaceLeftWidth, 150, 600, true, false);
-  const [rightWidth, startRightResize] = useResizable(DefaultContainersSize.workspaceRightWidth, 150, 600, true, true);
+  const [topHeight, startTopResize] = useResizable(DefaultContainersSize.workspaceTopHeight, 40, 400, false, false);
+  const [leftWidth, startLeftResize] = useResizable(DefaultContainersSize.workspaceLeftWidth, 150, 1000, true, false);
+  const [rightWidth, startRightResize] = useResizable(DefaultContainersSize.workspaceRightWidth, 150, 1000, true, true);
   const [bottomHeight, startBottomResize] = useResizable(DefaultContainersSize.workspaceBottomHeight, 40, 400, false, true);
 
   const workspaceKeys = ['top', 'left', 'center', 'right', 'bottom'] as const;

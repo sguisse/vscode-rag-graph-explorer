@@ -257,6 +257,8 @@
     }
   },
   "scripts": {
+    "postinstall": "npm install --prefix webview",
+    "install:all": "npm install && npm install --prefix webview",
     "vscode:prepublish": "npm run build",
     "generate:code": "node dev-tools/generate-all.js",
     "build:backend": "npm run generate:code && tsc -p backend/tsconfig.json",

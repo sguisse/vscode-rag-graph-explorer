@@ -23,7 +23,7 @@
         "../src/*": "${workspaceFolder}/backend/src/*",
         "*": "${workspaceFolder}/*"
       },
-      "preLaunchTask": "build:backend"
+      "preLaunchTask": "prepare:launch"
     }
   ]
 }

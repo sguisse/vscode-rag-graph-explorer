@@ -7,6 +7,17 @@
       "script": "build:backend",
       "group": { "kind": "build", "isDefault": true },
       "problemMatcher": ["$tsc"]
+    },
+    {
+      "label": "ensure:vite",
+      "type": "shell",
+      "command": "node -e \"const net = require('net'); const s = net.connect(5173, 'localhost', () => { console.log('✅ Port 5173 in use (Vite already running).'); s.destroy(); process.exit(0); }); s.on('error', () => { console.log('⚡ Port 5173 free. Starting Vite dev server in background...'); require('child_process').spawn('npm', ['run', 'watch:webview'], { detached: true, stdio: 'ignore', shell: true }).unref(); process.exit(0); });\"",
+      "problemMatcher": []
+    },
+    {
+      "label": "prepare:launch",
+      "dependsOn": ["build:backend", "ensure:vite"],
+      "problemMatcher": []
     }
   ]
 }

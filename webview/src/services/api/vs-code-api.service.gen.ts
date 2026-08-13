@@ -27,6 +27,10 @@ class VsCodeApiService extends AbstractApiService implements IVsCodeServicePort 
     public async revealInExplorer(targetPath: string): Promise<void> {
         return await this.rpc.call(RpcMethodEnum.VSCODE_REVEAL_IN_EXPLORER, targetPath);
     }
+
+    public async copyToClipboard(text: string): Promise<void> {
+        return await this.rpc.call(RpcMethodEnum.VSCODE_COPY_TO_CLIPBOARD, text);
+    }
 }
 
 export const vsCodeApiService = new VsCodeApiService();

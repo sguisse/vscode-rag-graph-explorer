@@ -1,14 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Copy, Bot, User, Sparkles, RefreshCw, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { useGraphRagExplorerStore } from './graph-rag-explorer-store';
 import PREDEFINED_PROMPTS from './data/predefined-prompts.yaml';
+import TEMPLATE_PROMPTS from './data/template-prompts.yaml';
 import { AGENTS_LIST } from './data/data-constants';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
+import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 
 interface PromptPanelProps {
   handleCopy?: (text: string, message: string) => void;
@@ -16,7 +20,17 @@ interface PromptPanelProps {
 
 export function PromptPanel({ handleCopy }: PromptPanelProps) {
   const setNotification = useAppContextStore((s) => s.setNotification);
-  const { promptFields, updatePromptFields, getFullPrompt, resetPromptFields } = useGraphRagExplorerStore();
+  const { promptFields, config, updatePromptFields, getFullPrompt, resetPromptFields } = useGraphRagExplorerStore();
+
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(
+    TEMPLATE_PROMPTS[0]?.id || ''
+  );
+
+  // States for File Ctx export options (shadcn controls)
+  const [exportFormat, setExportFormat] = useState<string>('yaml');
+  const [maxChunk, setMaxChunk] = useState<string>('0');
+  const [splitChunkByFileExtension, setSplitChunkByFileExtension] = useState<boolean>(false);
+  const [copyGeneratedFilesToClipboard, setCopyGeneratedFilesToClipboard] = useState<boolean>(false);
 
   const notify = (msg: string) => {
     if (handleCopy) {
@@ -40,12 +54,42 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
     }
   };
 
-  const handleCopyPrompt = () => {
-    const fullPrompt = getFullPrompt();
-    if (navigator?.clipboard?.writeText) {
-      navigator.clipboard.writeText(fullPrompt);
+  const handleCopyPrompt = async () => {
+    const templateItem = TEMPLATE_PROMPTS.find((t: any) => t.id === selectedTemplateId);
+    let fullPrompt = '';
+
+    if (templateItem && templateItem.data) {
+      const roleHeader =
+        promptFields.mode === 'agent'
+          ? `[AGENT]: ${promptFields.selectedAgent} (${promptFields.roleOrAgent})`
+          : `[ROLE]: ${promptFields.roleOrAgent}`;
+
+      const replacements: Record<string, string> = {
+        '{{ ROLE_AGENT }}': roleHeader,
+        '{{ TONE }}': promptFields.tone || '',
+        '{{ GLOBAL_CONTEXT_SCOPE }}': config.systemPromptPrefix || '',
+        '{{ TASK_CONTEXT_SCOPE }}': promptFields.context || '',
+        '{{ EXPECTED_DELIVERABLES }}': promptFields.expected || '',
+        '{{ OUTPUT_FORMAT_CONSTRAINTS }}': promptFields.output || '',
+        '{{ REFERENCE_SAMPLES }}': promptFields.samples || '',
+      };
+
+      fullPrompt = templateItem.data;
+      Object.entries(replacements).forEach(([key, value]) => {
+        fullPrompt = fullPrompt.replaceAll(key, value);
+      });
+    } else {
+      fullPrompt = getFullPrompt();
     }
-    notify('✅ Full prompt copied to clipboard!');
+
+    logInfo(`Full prompt generated: ${fullPrompt}`);
+
+    try {
+      await vsCodeApiService.copyToClipboard(fullPrompt);
+      setNotification('✅ Full prompt copied to clipboard!');
+    } catch {
+      setNotification('❌ Failed to copy prompt to clipboard');
+    }
   };
 
   const handleCopyFilesCtx = () => {
@@ -58,26 +102,29 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
   };
 
   const topContent = (
-    <div className="space-y-1 bg-muted/20 p-2.5 border border-border rounded-lg w-full">
-      <label className="block font-bold text-[10px] text-muted-foreground uppercase">
-        Predefined :
-      </label>
-      <Select
-        value={promptFields.predefined}
-        onValueChange={(val) => val && handlePredefinedChange(val)}
-      >
-        <SelectTrigger className="bg-background h-8 text-xs">
-          <SelectValue placeholder="Select a predefined prompt template..." />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="custom">✍️ Custom Prompt</SelectItem>
-          {PREDEFINED_PROMPTS.map((p: any) => (
-            <SelectItem key={p.id} value={p.id}>
-              {p.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+    <div className="space-y-2 bg-muted/20 p-2.5 border border-border rounded-lg w-full">
+      {/* Predefined Presets Selector */}
+      <div className="space-y-1 w-full">
+        <label className="block font-bold text-[10px] text-muted-foreground uppercase">
+          Predefined :
+        </label>
+        <Select
+          value={promptFields.predefined}
+          onValueChange={(val) => val && handlePredefinedChange(val)}
+        >
+          <SelectTrigger className="bg-background h-8 text-xs">
+            <SelectValue placeholder="Select a predefined prompt preset..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="custom">✍️ Custom Prompt</SelectItem>
+            {PREDEFINED_PROMPTS.map((p: any) => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
     </div>
   );
 
@@ -142,11 +189,15 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
           </div>
         )}
 
-        <Input
+        <Textarea
           value={promptFields.roleOrAgent}
           onChange={(e) => updatePromptFields({ roleOrAgent: e.target.value })}
-          placeholder={promptFields.mode === 'agent' ? 'Specify Agent role description...' : 'Specify Role title...'}
-          className="bg-background h-8 font-semibold text-xs"
+          placeholder={
+            promptFields.mode === 'agent'
+              ? 'Specify Agent role description...'
+              : 'Specify Role title...'
+          }
+          className="bg-background min-h-14 font-mono text-xs resize-y"
         />
       </div>
 
@@ -157,7 +208,7 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
           value={promptFields.tone}
           onChange={(e) => updatePromptFields({ tone: e.target.value })}
           placeholder="Define communication tone and style..."
-          className="bg-background min-h-14 font-mono text-xs resize-y"
+          className="bg-background min-h-10 font-mono text-xs resize-y"
         />
       </div>
 
@@ -179,7 +230,7 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
           value={promptFields.expected}
           onChange={(e) => updatePromptFields({ expected: e.target.value })}
           placeholder="Specify expected deliverables and constraints..."
-          className="bg-background min-h-16 font-mono text-xs resize-y"
+          className="bg-background min-h-30 font-mono text-xs resize-y"
         />
       </div>
 
@@ -208,18 +259,117 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
   );
 
   const bottomContent = (
-    <div className="space-y-2 bg-background pt-2 border-border border-t w-full">
-      {/* Action Buttons */}
-      <div className="gap-2 grid grid-cols-2">
+    <div className="space-y-3 bg-background pt-2 border-border border-t w-full">
+      {/* Line 1: Copy files ctx Button & Shadcn Equivalent Options */}
+      <div className="space-y-2 bg-card p-2.5 border border-border rounded-lg">
         <Button
           onClick={handleCopyFilesCtx}
-          className="flex justify-center items-center gap-1.5 bg-blue-600 hover:bg-blue-700 shadow-sm rounded-lg h-9 font-bold text-white text-xs cursor-pointer"
+          className="flex justify-center items-center gap-1.5 bg-blue-600 hover:bg-blue-700 shadow-sm rounded-lg w-full h-9 font-bold text-white text-xs cursor-pointer"
         >
           <FileText size={14} /> Copy files ctx
         </Button>
+
+        {/* Shadcn controls behind Copy file ctx */}
+        <div className="items-end gap-2 grid grid-cols-2 pt-1">
+          {/* Output Format */}
+            <div className="space-y-1">
+            <label
+                className="block font-medium text-[10px] text-muted-foreground"
+                title="Structured file format schema template applied to aggregate the files contents."
+            >
+                Output Format
+            </label>
+            <Select value={exportFormat} onValueChange={(val) => val && setExportFormat(val)}>
+                <SelectTrigger className="bg-background h-7 text-xs">
+                <SelectValue placeholder="Format" />
+                </SelectTrigger>
+                <SelectContent>
+                <SelectItem value="yaml">YAML</SelectItem>
+                <SelectItem value="json">JSON</SelectItem>
+                <SelectItem value="xml">XML</SelectItem>
+                <SelectItem value="toml">TOML</SelectItem>
+                <SelectItem value="txt">TXT</SelectItem>
+                </SelectContent>
+            </Select>
+            </div>
+
+          {/* Max Chunk (KB) */}
+          <div className="space-y-1">
+            <label
+              className="block font-medium text-[10px] text-muted-foreground"
+              title="Maximum payload slice limit for chunk splitting in Kilobytes (0 means unlimitted size)."
+            >
+              Max Chunk (KB)
+            </label>
+            <Input
+              type="number"
+              value={maxChunk}
+              onChange={(e) => setMaxChunk(e.target.value)}
+              className="bg-background h-7 text-xs"
+            />
+          </div>
+
+          {/* Split by ext */}
+          <div className="flex items-center gap-1.5 h-7">
+            <Checkbox
+              id="splitChunkByFileExtension"
+              checked={splitChunkByFileExtension}
+              onCheckedChange={(checked) => setSplitChunkByFileExtension(!!checked)}
+            />
+            <label
+              htmlFor="splitChunkByFileExtension"
+              className="font-medium text-[10px] text-muted-foreground leading-none cursor-pointer"
+              title="Force the export runner to partition output chunks whenever a change of file extension occurs."
+            >
+              Split by ext
+            </label>
+          </div>
+
+          {/* Copy to clip */}
+          <div className="flex items-center gap-1.5 h-7">
+            <Checkbox
+              id="copyGeneratedFilesToClipboard"
+              checked={copyGeneratedFilesToClipboard}
+              onCheckedChange={(checked) => setCopyGeneratedFilesToClipboard(!!checked)}
+            />
+            <label
+              htmlFor="copyGeneratedFilesToClipboard"
+              className="font-medium text-[10px] text-muted-foreground leading-none cursor-pointer"
+              title="Automatically copy generated export files to the OS clipboard after each successful run."
+            >
+              Copy to clip
+            </label>
+          </div>
+        </div>
+      </div>
+
+      {/* Line 2: Prompt Template Selector & Copy prompt Button */}
+      <div className="space-y-2 bg-card p-2.5 border border-border rounded-lg">
+        {/* Prompt Template Selector in front of Copy prompt button */}
+        <div className="space-y-1">
+          <label className="block font-bold text-[10px] text-muted-foreground uppercase">
+            Template :
+          </label>
+          <Select
+            value={selectedTemplateId}
+            onValueChange={(val) => val && setSelectedTemplateId(val)}
+          >
+            <SelectTrigger className="bg-background h-8 text-xs">
+              <SelectValue placeholder="Select a prompt template..." />
+            </SelectTrigger>
+            <SelectContent>
+              {TEMPLATE_PROMPTS.map((t: any) => (
+                <SelectItem key={t.id} value={t.id}>
+                  {t.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <Button
           onClick={handleCopyPrompt}
-          className="flex justify-center items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 shadow-sm rounded-lg h-9 font-bold text-white text-xs cursor-pointer"
+          className="flex justify-center items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 shadow-sm rounded-lg w-full h-9 font-bold text-white text-xs cursor-pointer"
         >
           <Copy size={14} /> Copy prompt
         </Button>
