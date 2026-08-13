@@ -11,8 +11,8 @@ class CodebaseExporterApiService extends AbstractApiService implements ICodebase
         super();
     }
 
-    public async exportSelectedFiles(files: string[], format: ExportFormat): Promise<string> {
-        return await this.rpc.call(RpcMethodEnum.CODEBASEEXPORTER_EXPORT_SELECTED_FILES, files, format);
+    public async exportSelectedFiles(files: string[], format: ExportFormat, maxChunk: number, splitByExt: boolean, copyToClipboard: boolean): Promise<string> {
+        return await this.rpc.call(RpcMethodEnum.CODEBASEEXPORTER_EXPORT_SELECTED_FILES, files, format, maxChunk, splitByExt, copyToClipboard);
     }
 
     public async readExportedFileContent(filePath: string): Promise<string> {
