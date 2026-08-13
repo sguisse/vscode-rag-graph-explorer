@@ -107,7 +107,7 @@ class JQAssistantGraphRagAnalyzer(BaseAnalyser):
         env["JQA_METHOD_MIN_CYCLOMATIC"] = str(min_cyclomatic)
 
         # Configure Local LLM API (defaults to 'ollama', overridable via JQA_LLM_API)
-        llm_api = os.environ.get("JQA_LLM_API", "ollama")
+        llm_api = "fake"  # os.environ.get("JQA_LLM_API", "ollama")
         env["JQA_OLLAMA_MODEL"] = os.environ.get(
             "JQA_OLLAMA_MODEL", "deepseek-coder:6.7b"
         )

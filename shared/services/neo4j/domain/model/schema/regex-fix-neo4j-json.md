@@ -1,3 +1,16 @@
+## NEO4J Clean ALL
+```cypher
+// 1. Drop all Schema Constraints & Indexes
+CALL apoc.schema.assert({}, {}, true);
+
+// 2. Batched-delete all Nodes and Relationships
+CALL apoc.periodic.iterate(
+  "MATCH (n) RETURN n",
+  "DETACH DELETE n",
+  { batchSize: 10000, parallel: false }
+);
+```
+
 ## NEO4J JSON schema call
 ```cypher
 CALL apoc.meta.schema() YIELD value

@@ -30,11 +30,13 @@ export class GraphRagExplorerAdapter extends AbstractServiceAdapter implements I
 
     const records: any = await this.getNeo4jService().executeCypher(`
     // 1. Capture of all upstream and downstream paths
+// 1. Upstream and Downstream Traversal (Works for Java :SourceFile and TS :Module as both have label :File)
 CALL {
-  MATCH (target:SourceFile {absolute_path: $targetPath})
+  MATCH (target:File)
+  WHERE target.absolute_path = $targetPath OR target.absoluteFileName = $targetPath
   CALL apoc.path.expandConfig(target, {
     relationshipFilter: "<DEPENDS_ON",
-    labelFilter: "+SourceFile",
+    labelFilter: "+File",
     minLevel: 0,
     maxLevel: $upstreamDepth,
     uniqueness: "NODE_GLOBAL"
@@ -43,10 +45,11 @@ CALL {
 
   UNION
 
-  MATCH (target:SourceFile {absolute_path: $targetPath})
+  MATCH (target:File)
+  WHERE target.absolute_path = $targetPath OR target.absoluteFileName = $targetPath
   CALL apoc.path.expandConfig(target, {
     relationshipFilter: "DEPENDS_ON>",
-    labelFilter: "+SourceFile",
+    labelFilter: "+File",
     minLevel: 0,
     maxLevel: $downstreamDepth,
     uniqueness: "NODE_GLOBAL"
@@ -63,45 +66,60 @@ UNWIND relationships(p) AS relNode
 WITH collect(DISTINCT sfNode) AS impactedFiles,
      collect(DISTINCT relNode) AS traversedRels
 
-// 3. Aggregation of members (Types, Methods, Fields) for each file
+// 3. Aggregation of Types/Classes/Interfaces and Members (Java & TS)
 UNWIND impactedFiles AS sf
 
-OPTIONAL MATCH (t:Type)-[:WITH_SOURCE]->(sf)
-OPTIONAL MATCH (t)-[:DECLARES]->(m:Method)
-OPTIONAL MATCH (t)-[:DECLARES]->(f:Field)
+// Match Java types (WITH_SOURCE -> file) OR TypeScript declarations (file -> DECLARES)
+OPTIONAL MATCH (sf)<-[:WITH_SOURCE]-(tJava:Type)
+OPTIONAL MATCH (sf)-[:DECLARES]->(tTS)
+WHERE tTS:Class OR tTS:Interface OR tTS:TypeAlias OR tTS:Enum
+
+WITH sf, coalesce(tJava, tTS) AS t, traversedRels
+
+// Match Methods (Java Method or TS Method/Function) and Fields (Java Field or TS Property)
+OPTIONAL MATCH (t)-[:DECLARES]->(m) WHERE m:Method OR m:Function
+OPTIONAL MATCH (t)-[:DECLARES]->(f) WHERE f:Field OR f:Property
 
 WITH sf, t,
      collect(DISTINCT m) AS methods,
      collect(DISTINCT f) AS fields,
      traversedRels
 
-// 4. Projection aligned to the RawNeo4jRecord interface
-RETURN sf.entity_id AS fileId,
+// 4. Projection aligned to RawNeo4jRecord interface
+WITH sf,
+     coalesce(sf.absolute_path, sf.absoluteFileName) AS filePath,
+     t,
+     methods,
+     fields,
+     traversedRels
+
+RETURN coalesce(sf.entity_id, sf.globalFqn, elementId(sf)) AS fileId,
        sf.fileName AS fileName,
        replace(
-         split(sf.absolute_path, "/")[-1],
-         "." + split(sf.absolute_path, ".")[-1],
+         split(filePath, "/")[-1],
+         "." + split(filePath, ".")[-1],
          ""
        ) AS name,
-       sf.absolute_path AS path,
+       filePath AS path,
        labels(t) AS typeLabels,
-       t.fqn AS fqn,
-       [m IN methods WHERE m.entity_id IS NOT NULL | {
-         id: m.entity_id,
+       coalesce(t.fqn, t.globalFqn, t.localFqn, t.name) AS fqn,
+       [m IN methods WHERE m IS NOT NULL | {
+         id: coalesce(m.entity_id, m.globalFqn, elementId(m)),
          name: m.name,
-         signature: m.signature,
+         signature: coalesce(m.signature, m.name),
          summary: m.summary
        }] AS methodsData,
        [f IN fields WHERE f.name IS NOT NULL | {
          name: f.name,
-         visibility: f.visibility
+         visibility: coalesce(f.visibility, "public")
        }] AS fieldsData,
        [r IN traversedRels | {
          id: elementId(r),
-         source: startNode(r).entity_id,
-         target: endNode(r).entity_id,
+         source: coalesce(startNode(r).entity_id, startNode(r).globalFqn, elementId(startNode(r))),
+         target: coalesce(endNode(r).entity_id, endNode(r).globalFqn, elementId(endNode(r))),
          type: type(r)
        }] AS relsData
+
     `
     , params);
 
