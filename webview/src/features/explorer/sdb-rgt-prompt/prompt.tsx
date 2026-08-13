@@ -5,12 +5,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
 import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { useGraphRagExplorerStore } from './graph-rag-explorer-store';
 import PREDEFINED_PROMPTS from './data/predefined-prompts.yaml';
 import TEMPLATE_PROMPTS from './data/template-prompts.yaml';
 import { AGENTS_LIST } from './data/data-constants';
+import {
+  EXPORT_FORMAT_LIST,
+  EXPORT_FORMAT_ICON_MAP,
+  ExportFormat,
+} from '@/shared/services/codebase-exporter/domain/model/types';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 
@@ -26,8 +32,8 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
     TEMPLATE_PROMPTS[0]?.id || ''
   );
 
-  // States for File Ctx export options (shadcn controls)
-  const [exportFormat, setExportFormat] = useState<string>('yaml');
+  // States for File Ctx export options
+  const [exportFormat, setExportFormat] = useState<ExportFormat>('yaml');
   const [maxChunk, setMaxChunk] = useState<string>('0');
   const [splitChunkByFileExtension, setSplitChunkByFileExtension] = useState<boolean>(false);
   const [copyGeneratedFilesToClipboard, setCopyGeneratedFilesToClipboard] = useState<boolean>(false);
@@ -259,45 +265,37 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
   );
 
   const bottomContent = (
-    <div className="space-y-3 bg-background pt-2 border-border border-t w-full">
-      {/* Line 1: Copy files ctx Button & Shadcn Equivalent Options */}
-      <div className="space-y-2 bg-card p-2.5 border border-border rounded-lg">
-        <Button
-          onClick={handleCopyFilesCtx}
-          className="flex justify-center items-center gap-1.5 bg-blue-600 hover:bg-blue-700 shadow-sm rounded-lg w-full h-9 font-bold text-white text-xs cursor-pointer"
-        >
-          <FileText size={14} /> Copy files ctx
-        </Button>
-
-        {/* Shadcn controls behind Copy file ctx */}
-        <div className="items-end gap-2 grid grid-cols-2 pt-1">
+    <div className="space-y-2 bg-background pt-2 border-border border-t w-full">
+      {/* Box 1: File Context Controls & Copy files ctx Button */}
+      <div className="flex items-center gap-3 bg-card p-2.5 border border-border rounded-lg w-full">
+        {/* Scrollable left area */}
+        <div className="flex flex-1 items-center gap-2.5 min-w-0 overflow-x-auto">
           {/* Output Format */}
-            <div className="space-y-1">
+          <div className="space-y-1 shrink-0">
             <label
-                className="block font-medium text-[10px] text-muted-foreground"
-                title="Structured file format schema template applied to aggregate the files contents."
+              className="block font-medium text-[10px] text-muted-foreground whitespace-nowrap"
+              title="Structured file format schema template applied to aggregate the files contents."
             >
-                Output Format
+              Output Format
             </label>
-            <Select value={exportFormat} onValueChange={(val) => val && setExportFormat(val)}>
-                <SelectTrigger className="bg-background h-7 text-xs">
-                <SelectValue placeholder="Format" />
-                </SelectTrigger>
-                <SelectContent>
-                <SelectItem value="yaml">YAML</SelectItem>
-                <SelectItem value="json">JSON</SelectItem>
-                <SelectItem value="xml">XML</SelectItem>
-                <SelectItem value="toml">TOML</SelectItem>
-                <SelectItem value="txt">TXT</SelectItem>
-                </SelectContent>
-            </Select>
-            </div>
+            <SelectFromTypeBuilder
+              id="select-export-format"
+              value={exportFormat}
+              onChange={(val) => setExportFormat(val as ExportFormat)}
+              triggerClassName="!h-8 min-h-0 py-0 px-2 text-xs border-border rounded-md font-mono w-24"
+              options={EXPORT_FORMAT_LIST.map((key) => ({
+                value: key,
+                icon: EXPORT_FORMAT_ICON_MAP[key]?.icon,
+                label: EXPORT_FORMAT_ICON_MAP[key]?.label,
+              }))}
+            />
+          </div>
 
           {/* Max Chunk (KB) */}
-          <div className="space-y-1">
+          <div className="space-y-1 shrink-0">
             <label
-              className="block font-medium text-[10px] text-muted-foreground"
-              title="Maximum payload slice limit for chunk splitting in Kilobytes (0 means unlimitted size)."
+              className="block font-medium text-[10px] text-muted-foreground whitespace-nowrap"
+              title="Maximum payload slice limit for chunk splitting in Kilobytes (0 means unlimited size)."
             >
               Max Chunk (KB)
             </label>
@@ -305,56 +303,67 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
               type="number"
               value={maxChunk}
               onChange={(e) => setMaxChunk(e.target.value)}
-              className="bg-background h-7 text-xs"
+              className="bg-background w-20 h-8 text-xs"
             />
           </div>
 
           {/* Split by ext */}
-          <div className="flex items-center gap-1.5 h-7">
-            <Checkbox
-              id="splitChunkByFileExtension"
-              checked={splitChunkByFileExtension}
-              onCheckedChange={(checked) => setSplitChunkByFileExtension(!!checked)}
-            />
+          <div className="flex flex-col items-center space-y-1 shrink-0">
             <label
               htmlFor="splitChunkByFileExtension"
-              className="font-medium text-[10px] text-muted-foreground leading-none cursor-pointer"
+              className="font-medium text-[10px] text-muted-foreground whitespace-nowrap cursor-pointer"
               title="Force the export runner to partition output chunks whenever a change of file extension occurs."
             >
-              Split by ext
+              Split by Ext
             </label>
+            <div className="flex justify-center items-center h-8">
+              <Checkbox
+                id="splitChunkByFileExtension"
+                checked={splitChunkByFileExtension}
+                onCheckedChange={(checked) => setSplitChunkByFileExtension(!!checked)}
+              />
+            </div>
           </div>
 
           {/* Copy to clip */}
-          <div className="flex items-center gap-1.5 h-7">
-            <Checkbox
-              id="copyGeneratedFilesToClipboard"
-              checked={copyGeneratedFilesToClipboard}
-              onCheckedChange={(checked) => setCopyGeneratedFilesToClipboard(!!checked)}
-            />
+          <div className="flex flex-col items-center space-y-1 shrink-0">
             <label
               htmlFor="copyGeneratedFilesToClipboard"
-              className="font-medium text-[10px] text-muted-foreground leading-none cursor-pointer"
+              className="font-medium text-[10px] text-muted-foreground whitespace-nowrap cursor-pointer"
               title="Automatically copy generated export files to the OS clipboard after each successful run."
             >
               Copy to clip
             </label>
+            <div className="flex justify-center items-center h-8">
+              <Checkbox
+                id="copyGeneratedFilesToClipboard"
+                checked={copyGeneratedFilesToClipboard}
+                onCheckedChange={(checked) => setCopyGeneratedFilesToClipboard(!!checked)}
+              />
+            </div>
           </div>
         </div>
+
+        {/* Copy files ctx Button */}
+        <Button
+          onClick={handleCopyFilesCtx}
+          className="flex justify-center items-center gap-1.5 bg-blue-500 hover:bg-blue-600 shadow-sm rounded-lg w-36 h-8 font-bold text-white text-xs whitespace-nowrap cursor-pointer shrink-0"
+        >
+          <FileText size={14} /> Copy files ctx
+        </Button>
       </div>
 
-      {/* Line 2: Prompt Template Selector & Copy prompt Button */}
-      <div className="space-y-2 bg-card p-2.5 border border-border rounded-lg">
-        {/* Prompt Template Selector in front of Copy prompt button */}
-        <div className="space-y-1">
+      {/* Box 2: Template Dropdown & Copy Prompt Button */}
+      <div className="flex items-center gap-3 bg-card p-2.5 border border-border rounded-lg w-full">
+        <div className="flex-1 space-y-1 min-w-0">
           <label className="block font-bold text-[10px] text-muted-foreground uppercase">
-            Template :
+            TEMPLATE
           </label>
           <Select
             value={selectedTemplateId}
             onValueChange={(val) => val && setSelectedTemplateId(val)}
           >
-            <SelectTrigger className="bg-background h-8 text-xs">
+            <SelectTrigger className="bg-background py-0 w-full h-8 text-xs">
               <SelectValue placeholder="Select a prompt template..." />
             </SelectTrigger>
             <SelectContent>
@@ -367,15 +376,17 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
           </Select>
         </div>
 
+        {/* Copy prompt Button */}
         <Button
           onClick={handleCopyPrompt}
-          className="flex justify-center items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 shadow-sm rounded-lg w-full h-9 font-bold text-white text-xs cursor-pointer"
+          className="flex justify-center items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 shadow-sm mt-4 rounded-lg w-36 h-8 font-bold text-white text-xs whitespace-nowrap cursor-pointer shrink-0"
         >
           <Copy size={14} /> Copy prompt
         </Button>
       </div>
 
-      <div className="flex justify-end">
+      {/* Bottom Right: Reset Form Button */}
+      <div className="flex justify-end pt-0.5">
         <Button
           size="sm"
           variant="ghost"
