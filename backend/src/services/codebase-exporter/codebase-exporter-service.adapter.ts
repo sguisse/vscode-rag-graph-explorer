@@ -7,6 +7,7 @@ import { getWorkspaceExtentionPath } from '../../utils/utils-vscode';
 import { runPythonScript } from '../../utils/utils-python';
 import { ICodebaseExporterServicePort } from '../../../../shared/services/codebase-exporter';
 import { ExportFormat } from '../../../../shared/services/codebase-exporter/domain/model/types';
+import { copyToClipboard } from '@/frontend/lib/utils';
 
 export class CodebaseExporterAdapter extends AbstractServiceAdapter implements ICodebaseExporterServicePort, vscode.Disposable {
 
@@ -14,7 +15,7 @@ export class CodebaseExporterAdapter extends AbstractServiceAdapter implements I
         super();
     }
 
-    public async exportSelectedFiles(files: string[], format: ExportFormat): Promise<string> {
+    public async exportSelectedFiles(files: string[], format: ExportFormat, maxChunk: number, splitByExt: boolean, copyToClipboard: boolean): Promise<string> {
         const destDir = path.join(
             getWorkspaceExtentionPath(),
             'tmp',

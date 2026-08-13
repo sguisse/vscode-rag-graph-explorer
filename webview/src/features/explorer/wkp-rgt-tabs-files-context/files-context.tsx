@@ -260,8 +260,29 @@ export function FilesContextPanel({
     return Object.values(selectedFiles).filter(Boolean).length;
   }, [selectedFiles]);
 
+  const selectedUpstreamCount = useMemo(() => {
+    return depthGroups
+      .filter((g) => g.key.startsWith('upstream'))
+      .reduce((acc, g) => acc + g.files.filter((f) => selectedFiles[f.id]).length, 0);
+  }, [depthGroups, selectedFiles]);
+
+  const selectedDownstreamCount = useMemo(() => {
+    return depthGroups
+      .filter((g) => g.key.startsWith('downstream'))
+      .reduce((acc, g) => acc + g.files.filter((f) => selectedFiles[f.id]).length, 0);
+  }, [depthGroups, selectedFiles]);
+
+  // Build context containing ALL files in codebase
+  const totalFilesContext = useMemo(() => {
+    if (!initialCodebase?.files) return '';
+
+    return initialCodebase.files
+      .map((file: CodebaseFile) => file.path)
+      .join('\n');
+  }, [initialCodebase]);
+
   // Build final context containing ONLY selected files
-  const combinedFilesContext = useMemo(() => {
+  const combinedSelectedFilesContext = useMemo(() => {
     if (!initialCodebase?.files) return '';
 
     return initialCodebase.files
@@ -276,22 +297,21 @@ export function FilesContextPanel({
   }, [initialCodebase, selectedFiles, impactedSet, selectedEntity]);
 
   const copyContext = async () => {
-    const targetFilePaths = combinedFilesContext
-                          ? combinedFilesContext.split('\n').map((p) => p.trim()).filter(Boolean)
+    const targetFilePaths = combinedSelectedFilesContext
+                          ? combinedSelectedFilesContext.split('\n').map((p) => p.trim()).filter(Boolean)
                           : [];
 
-    const exportFormat: ExportFormat = 'YAML'; //
+    const exportFormat: ExportFormat = 'YAML';
     logInfo(`[FilesContextPanel] Exporting ${targetFilePaths} selected file(s) for context export in format '${exportFormat}'...`);
     const exportedFilePath = await codebaseExporterApiService.exportSelectedFiles(targetFilePaths, exportFormat);
     logInfo(`[FilesContextPanel] exportedFilePath ${exportedFilePath} for context export in format '${exportFormat}'...`);
 
     let combinedFilesContent = '';
     try {
-        // Use fs.readFile instead of fetch for local disk paths
         combinedFilesContent = await codebaseExporterApiService.readExportedFileContent(exportedFilePath);
         logInfo(`[FilesContextPanel] Successfully read content (${combinedFilesContent.length} chars) from exportedFilePath: ${exportedFilePath}`);
     } catch (err: any) {
-    logError('Failed to read content from exportedFilePath:', err);
+      logError('Failed to read content from exportedFilePath:', err);
     }
 
     handleCopy(combinedFilesContent, "Selected Files Content copied to clipboard!");
@@ -385,35 +405,47 @@ export function FilesContextPanel({
                     </span>
                   </div>
 
-                  {/* Group File Items */}
+                  {/* Group File Items with Filename, File Type & File Size Columns */}
                   {isExpanded && (
                     <div className="space-y-1 bg-background/40 p-1">
-                      {groupFiles.map((file) => (
-                        <div
-                          key={file.id}
-                          className="flex justify-between items-center hover:bg-muted/50 px-2 py-1 rounded transition-colors"
-                        >
-                          <div className="flex flex-1 items-center gap-1.5 min-w-0">
-                            <input
-                              type="checkbox"
-                              checked={!!selectedFiles[file.id]}
-                              onChange={() => toggleFileCheckbox(file.id)}
-                              className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
-                            />
-                            <span
-                              className={`truncate text-[11px] cursor-pointer ${
-                                selectedFiles[file.id] ? 'font-semibold text-foreground' : 'text-muted-foreground line-through'
-                              }`}
-                              onClick={() => toggleFileCheckbox(file.id)}
-                            >
-                              {file.name}
-                            </span>
+                      {groupFiles.map((file) => {
+                        const fileSizeKb = (((file as any).size || file.content?.length || 0) / 1024).toFixed(1);
+
+                        return (
+                          <div
+                            key={file.id}
+                            className="flex justify-between items-center hover:bg-muted/50 px-2 py-1 rounded transition-colors"
+                          >
+                            {/* Column 1: Filename & Checkbox */}
+                            <div className="flex flex-1 items-center gap-1.5 min-w-0">
+                              <input
+                                type="checkbox"
+                                checked={!!selectedFiles[file.id]}
+                                onChange={() => toggleFileCheckbox(file.id)}
+                                className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
+                              />
+                              <span
+                                className={`truncate text-[11px] cursor-pointer ${
+                                  selectedFiles[file.id] ? 'font-semibold text-foreground' : 'text-muted-foreground line-through'
+                                }`}
+                                onClick={() => toggleFileCheckbox(file.id)}
+                              >
+                                {file.name}
+                              </span>
+                            </div>
+
+                            {/* Column 2 & 3: File Type & File Size */}
+                            <div className="flex items-center gap-1.5 ml-2 shrink-0">
+                              <span className="bg-muted px-1.5 py-0.5 rounded text-[9px] text-muted-foreground">
+                                {file.language || 'unknown'}
+                              </span>
+                              <span className="bg-muted px-1.5 py-0.5 rounded font-mono text-[9px] text-muted-foreground">
+                                {fileSizeKb} KB
+                              </span>
+                            </div>
                           </div>
-                          <span className="bg-muted ml-2 px-1.5 py-0.5 rounded text-[9px] text-muted-foreground shrink-0">
-                            {file.language}
-                          </span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -441,7 +473,8 @@ export function FilesContextPanel({
           </Button>
         </div>
 
-        <div className="gap-2 grid grid-cols-5 text-center">
+        {/* Row 1: Total Codebase Summary */}
+        <div className="gap-2 grid grid-cols-4 text-center">
           <div className="bg-muted/40 p-2 border border-border/50 rounded">
             <span className="block text-[9px] text-muted-foreground truncate uppercase">Total Files</span>
             <span className="font-bold text-foreground text-xs">{initialCodebase?.files?.length || 0}</span>
@@ -454,13 +487,34 @@ export function FilesContextPanel({
             <span className="block text-[9px] text-blue-500 truncate uppercase">Downstream</span>
             <span className="font-bold text-blue-500 text-xs">{downstreamCount}</span>
           </div>
+          <div className="bg-yellow-500/10 p-2 border border-yellow-500/30 rounded">
+            <span className="block text-[9px] text-yellow-600 dark:text-yellow-400 truncate uppercase">
+                Token Size
+            </span>
+            <span className="font-bold text-yellow-600 dark:text-yellow-400 text-xs">
+                {(totalFilesContext.length / 1024).toFixed(1)} KB
+            </span>
+          </div>
+        </div>
+
+        {/* Row 2: Selected Context Summary */}
+        <div className="gap-2 grid grid-cols-4 text-center">
           <div className="bg-orange-500/10 p-2 border border-orange-500/20 rounded">
             <span className="block text-[9px] text-orange-500 truncate uppercase">Selected</span>
             <span className="font-bold text-orange-500 text-xs">{selectedCount}</span>
           </div>
-          <div className="bg-muted/40 p-2 border border-border/50 rounded">
-            <span className="block text-[9px] text-muted-foreground truncate uppercase">Context Size</span>
-            <span className="font-bold text-foreground text-xs">{(combinedFilesContext.length / 1024).toFixed(1)} KB</span>
+          <div className="bg-indigo-500/10 p-2 border border-indigo-500/20 rounded">
+            <span className="block text-[9px] text-indigo-500 truncate uppercase">Upstream</span>
+            <span className="font-bold text-indigo-500 text-xs">{selectedUpstreamCount}</span>
+          </div>
+          <div className="bg-blue-500/10 p-2 border border-blue-500/20 rounded">
+            <span className="block text-[9px] text-blue-500 truncate uppercase">Downstream</span>
+            <span className="font-bold text-blue-500 text-xs">{selectedDownstreamCount}</span>
+          </div>
+
+          <div className="bg-emerald-500/10 p-2 border border-emerald-500/20 rounded">
+            <span className="block text-[9px] text-emerald-500 truncate uppercase">Token Size</span>
+            <span className="font-bold text-emerald-500 text-xs">{(combinedSelectedFilesContext.length / 1024).toFixed(1)} KB</span>
           </div>
         </div>
 
@@ -470,7 +524,7 @@ export function FilesContextPanel({
             <span>All-In-One Unified File</span>
           </div>
           <pre className="bg-slate-950 p-3 border border-slate-800 rounded-md max-h-64 overflow-x-auto overflow-y-auto font-mono text-[10px] text-slate-300 leading-relaxed whitespace-pre-wrap">
-            {combinedFilesContext || '// No files selected for context generation.'}
+            {combinedSelectedFilesContext || '// No files selected for context generation.'}
           </pre>
         </div>
       </div>
