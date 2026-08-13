@@ -37,8 +37,13 @@ class JQAssistantAnalyzer(BaseAnalyser):
 
         # 1. Discovery Phase
         discovered_sources = self._run_discovery()
-        if not discovered_sources["java_src"] and not discovered_sources["java_classes"]:
-            info("No Java source or class directories detected. Bypassing jQAssistant pipeline.", component=self.name)
+        has_sources = any(
+            discovered_sources.get(k)
+            for k in ["java_src", "java_classes", "typescript_src", "javascript_src"]
+        )
+
+        if not has_sources:
+            info("No Java or TS/JS source directories detected. Bypassing jQAssistant pipeline.", component=self.name)
             return
 
         # 2. Binary Resolution Phase
@@ -60,13 +65,16 @@ class JQAssistantAnalyzer(BaseAnalyser):
         else:
             warn(f"SDKMAN target path absent at {sdkman_java_home}. Inheriting global default system JDK.", component=self.name)
 
-        # 4. Diagnostics Phase
+        # 4. Pre-scan TypeScript AST extraction via @jqassistant/ts-lce
+        self._extract_typescript_ast(discovered_sources, custom_env)
+
+        # 5. Diagnostics Phase
         self._dump_diagnostics(executable_target, custom_env)
 
-        # 5. Execution Phase
+        # 6. Execution Phase
         scan_return_code = self._execute_scan_and_analyze(executable_target, discovered_sources, custom_env)
 
-        # 6. Fallback Linking Phase
+        # 7. Fallback Linking Phase
         if scan_return_code != 0:
             info(f"Scan code {scan_return_code}. Activating semantic code relationship fallback parser layers...", component=self.name)
 
@@ -186,3 +194,68 @@ class JQAssistantAnalyzer(BaseAnalyser):
         # Split runner commands line by line in stdout/log stream for transparent debugging topology layout
         formatted_cmd_string = " \\\n  ".join(cmd)
         info(f"Executing tracking cmd:\n  {formatted_cmd_string}\n(cwd={cwd})", component=self.name)
+
+    #----------------
+    def _extract_typescript_ast(self, discovered_sources: dict, custom_env: dict) -> None:
+        """Runs @jqassistant/ts-lce in TypeScript project roots and moves generated AST JSON to proj_root."""
+        ts_sources = discovered_sources.get("typescript_src", [])
+        if not ts_sources:
+            return
+
+        jqa_ts_output = "jqa-ts-output.json"
+        info(f"Extracting TypeScript AST for {len(ts_sources)} target path(s)...", component=self.name)
+
+        processed_roots = set()
+        for ts_path in ts_sources:
+            proj_root = ts_path.replace(jqa_ts_output, "").rstrip("/")
+            proj_root = proj_root.replace("typescript:project::", "")
+            # Resolve project root containing package.json or tsconfig.json
+            info(f"Extracting TypeScript AST for '{proj_root}' proj_root path...", component=self.name)
+
+            # Destination outside hidden folder so jQAssistant won't skip it
+            target_output_file = os.path.join(proj_root, jqa_ts_output)
+
+            info(f"Running '@jqassistant/ts-lce' extractor in: {proj_root}", component=self.name)
+
+            # Check if tsconfig.json exists in the project root
+            cmd_p=""
+            tsconfig_path = os.path.join(proj_root, "tsconfig.json")
+            if os.path.exists(tsconfig_path):
+              cmd_p="-p" # -p / --project: Indicates scanning a TypeScript project based on tsconfig.json
+
+            # Check if react is used in the project by looking for react in package.json dependencies
+            cmd_e=""
+            package_json_path = os.path.join(proj_root, "package.json")
+            if os.path.exists(package_json_path):
+                with open(package_json_path, "r", encoding="utf-8") as f:
+                    package_data = json.load(f)
+                    dependencies = package_data.get("dependencies", {})
+                    dev_dependencies = package_data.get("devDependencies", {})
+                    if "react" in dependencies or "react" in dev_dependencies:
+                      cmd_e="-e react" # -e <extractor> / --extractors: Specifies additional framework-specific concept extractors to activate (e.g., -e react to extract React components and JSX render hierarchies).
+
+            cmd = ["npx", "--yes", "@jqassistant/ts-lce@1.4.4", cmd_p, cmd_e]
+            info(f"Running jqassistant/ts-lce command: {' '.join(cmd)} in {proj_root}", component=self.name)
+
+            try:
+                # 1. Execute ts-lce (generates .reports/jqa/ts-output.json inside proj_root)
+                execute_tracked_command(cmd, "ts_lce_extractor", cwd=proj_root, env=custom_env)
+
+                # 2. Locate default output inside hidden folder
+                reports_dir = os.path.join(proj_root, ".reports")
+                default_generated_path = os.path.join(reports_dir, "jqa", "ts-output.json")
+
+                # 3. Move to project root where scanner can freely read it
+                if os.path.exists(default_generated_path):
+                    shutil.move(default_generated_path, target_output_file)
+                    info(f"Moved TypeScript AST report from '{default_generated_path}' -> '{target_output_file}'", component=self.name)
+
+                    # 4. Clean up temporary .reports directory
+                    if os.path.exists(reports_dir):
+                        shutil.rmtree(reports_dir, ignore_errors=True)
+                        info(f"Deleted temporary directory: {reports_dir}", component=self.name)
+                else:
+                    warn(f"Expected ts-lce report not found at: {default_generated_path}", component=self.name)
+
+            except Exception as e:
+                warn(f"TypeScript AST extraction failed in {proj_root}: {e}", component=self.name)

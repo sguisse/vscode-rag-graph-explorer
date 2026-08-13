@@ -480,7 +480,7 @@
         ]]></cypher>
     </concept>
 
-    <concept id="smart-assessment-microservices-assessment:MarkDeadCodeCandidates">
+    <concept id="{{PROJECT_NAME}}:MarkDeadCodeCandidates">
         <description>Identifies classes that are completely unreachable from the Spring Boot main application entry point.</description>
         <cypher><![CDATA[
             // 1. Trouver le point d'entrée Spring Boot
@@ -513,6 +513,29 @@
             SET m:ThrowsException, handler:ExceptionInterceptor
             MERGE (m)-[:PROPAGATES_ERROR_TO]->(ex)
             RETURN count(m) AS LinkedExceptionPaths
+        ]]></cypher>
+    </concept>
+
+    <!-- ======================= -->
+    <!-- Concepts for TypeScript -->
+    <!-- ======================= -->
+    <concept id="{{PROJECT_NAME}}:MarkReactComponents">
+        <description>Labels TypeScript JSX/TSX files and functions as :ReactComponent</description>
+        <cypher><![CDATA[
+            MATCH (f:TypeScript:File)
+            WHERE f.fileName ENDS WITH '.tsx' OR f.fileName ENDS WITH '.jsx'
+            SET f:ReactComponent
+            RETURN count(f) AS MarkedReactComponents
+        ]]></cypher>
+    </concept>
+
+    <concept id="{{PROJECT_NAME}}:MarkStateStores">
+        <description>Labels Zustand/Redux state stores in TypeScript</description>
+        <cypher><![CDATA[
+            MATCH (f:TypeScript:File)
+            WHERE f.fileName CONTAINS 'Store' OR f.fileName CONTAINS 'store'
+            SET f:StateStore
+            RETURN count(f) AS MarkedStateStores
         ]]></cypher>
     </concept>
 
@@ -571,6 +594,12 @@
         <includeConcept refId="{{PROJECT_NAME}}:LinkSpringValueProperties"/>
         <includeConcept refId="{{PROJECT_NAME}}:MarkDeadCodeCandidates"/>
         <includeConcept refId="{{PROJECT_NAME}}:LinkExceptionToHandlers"/>
+
+        <!-- =================== -->
+        <!-- TypeScript Concepts -->
+        <!-- =================== -->
+        <includeConcept refId="{{PROJECT_NAME}}:MarkReactComponents"/>
+        <includeConcept refId="{{PROJECT_NAME}}:MarkStateStores"/>
 
     </group>
 

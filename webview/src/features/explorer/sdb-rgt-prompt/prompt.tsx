@@ -95,7 +95,7 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
                 onChange={() => updatePromptFields({ mode: 'role' })}
                 className="text-primary cursor-pointer"
               />
-              <User size={12} className="text-primary" /> Rôle
+              <User size={12} className="text-primary" /> Role
             </label>
             <label className="flex items-center gap-1 font-bold text-[10px] text-foreground uppercase cursor-pointer">
               <input
@@ -152,7 +152,7 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
 
       {/* Tone Field */}
       <div className="space-y-1">
-        <label className="block font-bold text-[10px] text-muted-foreground uppercase">tone :</label>
+        <label className="block font-bold text-[10px] text-muted-foreground uppercase">🗣 tone :</label>
         <Textarea
           value={promptFields.tone}
           onChange={(e) => updatePromptFields({ tone: e.target.value })}
@@ -163,7 +163,7 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
 
       {/* Context Field */}
       <div className="space-y-1">
-        <label className="block font-bold text-[10px] text-muted-foreground uppercase">context :</label>
+        <label className="block font-bold text-[10px] text-muted-foreground uppercase">🧠 context :</label>
         <Textarea
           value={promptFields.context}
           onChange={(e) => updatePromptFields({ context: e.target.value })}
@@ -174,7 +174,7 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
 
       {/* Expected Field */}
       <div className="space-y-1">
-        <label className="block font-bold text-[10px] text-muted-foreground uppercase">Expected :</label>
+        <label className="block font-bold text-[10px] text-muted-foreground uppercase">🎯 Expected :</label>
         <Textarea
           value={promptFields.expected}
           onChange={(e) => updatePromptFields({ expected: e.target.value })}
@@ -185,7 +185,7 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
 
       {/* Output Field */}
       <div className="space-y-1">
-        <label className="block font-bold text-[10px] text-muted-foreground uppercase">Output :</label>
+        <label className="block font-bold text-[10px] text-muted-foreground uppercase">🧭 Output :</label>
         <Textarea
           value={promptFields.output}
           onChange={(e) => updatePromptFields({ output: e.target.value })}
@@ -196,7 +196,7 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
 
       {/* Samples Field */}
       <div className="space-y-1">
-        <label className="block font-bold text-[10px] text-muted-foreground uppercase">Samples :</label>
+        <label className="block font-bold text-[10px] text-muted-foreground uppercase">💡 Samples :</label>
         <Textarea
           value={promptFields.samples}
           onChange={(e) => updatePromptFields({ samples: e.target.value })}

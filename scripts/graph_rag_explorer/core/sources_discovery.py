@@ -2,7 +2,7 @@ import os
 import re
 import json
 from typing import List, Set, Dict
-from core.utils import info
+from core.utils import info, debug
 
 def _process_java_src(norm_root: str, discovered_set: Set[str]) -> None:
     """Identifies and registers Java source code roots."""
@@ -19,10 +19,27 @@ def _process_java_classes(norm_root: str, discovered_set: Set[str]) -> None:
 def _process_web_src(norm_root: str, files: List[str], discovered: Dict[str, Set[str]]) -> None:
     """Identifies and registers JavaScript and TypeScript UI layers."""
     if norm_root.endswith("src") or norm_root.endswith("src/main/ts"):
+        target_path = norm_root
+        if target_path.endswith("/src/main/ts"):
+            target_path = target_path[:-12]
+        elif target_path.endswith("/src"):
+            target_path = target_path[:-4]
+
+        # 1. Register unignored ts-output.json in project root
+        ts_json_root_path = f"{target_path}/jqa-ts-output.json"
+        debug(f"Checking '{ts_json_root_path}' in discovered['typescript_src'] if it exists", component="SourceDiscovery")
+        if os.path.exists(ts_json_root_path):
+            discovered["typescript_src"].add(f"typescript:project::{ts_json_root_path}")
+            info(f"Added '{target_path}' in discovered['typescript_src']", component="SourceDiscovery")
+            return
+
+        # 2. Register project root directory for initial detection
         if any(f.endswith(".ts") or f.endswith(".tsx") for f in files):
-            discovered["typescript_src"].add(norm_root)
+            discovered["typescript_src"].add(target_path)
+            info(f"Added '{target_path}' in discovered['typescript_src']", component="SourceDiscovery")
         if any(f.endswith(".js") or f.endswith(".jsx") for f in files):
-            discovered["javascript_src"].add(norm_root)
+            discovered["javascript_src"].add(target_path)
+            info(f"Added '{target_path}' in discovered['javascript_src']", component="SourceDiscovery")
 
 def discover_workspace_sources(workspace_root: str, exclude_paths_regex: str) -> dict:
     info(f"Starting workspace source discovery in: {workspace_root} with exclusion pattern: {exclude_paths_regex}", component="SourceDiscovery")

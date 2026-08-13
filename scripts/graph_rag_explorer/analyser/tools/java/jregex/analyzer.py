@@ -5,6 +5,7 @@ from analyser.registry import AnalyserRegistry
 from analyser.tools.neo4j.neo4j_client import Neo4jClient
 from core.utils import debug, info, error
 from install.modules.java.jqassistant.context import JQAssistantContext
+from graph_rag_explorer.core.sources_discovery import discover_workspace_sources
 
 # TODO: Consider refactoring this into a more modular design, potentially splitting the regex analysis into separate classes for maintainability.
 # TODO:    Do the same thing for typescript, javascript, ... analyzers in the future.
@@ -31,7 +32,11 @@ class JavaRegexAnalyzer(BaseAnalyser):
         return "03-java_regex_analyzer"
 
     def run_analysis(self, neo4j_client: Neo4jClient) -> None:
-        java_src_paths = self.jqa.get_java_src_paths_from_jqa_config()
+        discovered = discover_workspace_sources(
+            workspace_root=self.jqa.workspace_root,
+            exclude_paths_regex=self.jqa.exclude_paths_regex
+        )
+        java_src_paths = list(discovered.get("java_src", []))
 
         if not java_src_paths:
             info("No Java source paths found in jQAssistant config. Skipping.", component=self.name)

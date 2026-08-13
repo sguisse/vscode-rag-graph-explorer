@@ -22,7 +22,7 @@ jqassistant:
       version: 1.0.0-M2
     - group-id: org.jqassistant.plugin.typescript
       artifact-id: jqassistant-typescript-plugin
-      version: 1.4.0
+      version: 1.4.4
 
   # ---------------------------------------------------------------------------
   # Store — NEO4J database configuration (embedded or remote)
@@ -80,7 +80,11 @@ jqassistant:
       # TODO: Adjust the following to your project structure if needed (after a fresh installation).
       # ! If you do a new fresh installation, manual modifications to this file will be overwritten. Instead, adjust the source discovery logic in scripts/core/sources_discovery.py and re-run the installation.
   {{JQA_SRC_DIRS_YAML_LIST}}
-
+    properties:
+      file.exclude:
+        - /node_modules/**
+        - /dist.*/**
+        - /out.*/**
 
       #urls:
 

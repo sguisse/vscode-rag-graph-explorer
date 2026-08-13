@@ -87,9 +87,12 @@ class JavaJQAssistantInstaller(BaseInstallModule):
         with open(self.jqa.jqassistant_template_path, "r", encoding="utf-8") as f:
             content = f.read()
 
-        jqa_src_yaml  = "\n".join([f"        - '{path}'" for path in discovered["java_src"]])
-        jqa_src_yaml += "\n"
-        jqa_src_yaml += "\n".join([f"        - '{path}'" for path in discovered["java_classes"]])
+        yaml_lines = []
+        for key, paths in discovered.items():
+            if paths:
+                yaml_lines.extend([f"        - '{path}'" for path in paths])
+
+        jqa_src_yaml = "\n".join(yaml_lines)
 
         neo4j_uri = vsCodeSettings.graphRagExplorer.neo4j.uri
         neo4j_user = vsCodeSettings.graphRagExplorer.neo4j.username

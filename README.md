@@ -4,7 +4,7 @@
 
 Welcome! **RAG Graph Explorer** is an extension built for developers who want to share their project contexts with Artificial Intelligence models (like Google Gemini, Claude, or ChatGPT) or perform deep code reviews.
 
-When you ask an AI to help you adapt your architecture or write new features, the AI needs to understand how your existing files connect. Copying and pasting dozens of files manually takes hours and leads to mistakes. This extension automates the entire process: it crawls your directories, ignores useless junk files (like images, logs, or dependencies), and compresses your complete codebase into a single well-structured text file that you can drag and drop into an AI chat!
+When you ask an **AI** to help you adapt your architecture or write new features, the AI needs to understand how your existing files connect. Copying and pasting dozens of files manually takes hours and leads to mistakes. This extension automates the entire process: it crawls your directories, ignores useless junk files (like images, logs, or dependencies), and compresses your complete codebase into a single well-structured text file that you can drag and drop into an AI chat!
 
 ## 🚀 Core Capabilities
 
