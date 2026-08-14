@@ -46,3 +46,11 @@ export function logWarn(message: string, details?: any): void {
 export function logError(message: string, details?: any): void {
   logMessage('ERROR', message, details);
 }
+
+export function log(origin: string, message: string, details?: any): void {
+  getLogChannel().appendLine(`[${origin}] ${message}`);
+  if (details !== undefined && details !== null) {
+      const detailsString = typeof details === 'object' ? JSON.stringify(details, null, 2) : String(details);
+      getLogChannel().appendLine(detailsString);
+  }
+}

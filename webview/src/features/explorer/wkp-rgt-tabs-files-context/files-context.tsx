@@ -1,11 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { GitFork, FileText, Copy, ShieldAlert, ChevronDown, ChevronRight } from 'lucide-react';
+import { GitFork, FileText, ShieldAlert, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CodebaseData, CodebaseFile, SelectedEntity } from '@/shared/services/graph-rag-explorer';
 import { calculateTransitiveImpact } from '@/services/view/graph-view.service';
-import { codebaseExporterApiService } from '@/services/api/codebase-exporter-api.service.gen';
-import { logInfo, logError } from '@/services/view/log-view.service.wrapper';
-import { ExportFormat } from '@/shared/services/codebase-exporter/domain/model/types';
 import { FileCtxControlsAndCopyCtxBtn } from '../components/file-ctx-controls-and-copy-ctx-btn';
 
 interface FilesContextPanelProps {
@@ -288,35 +285,15 @@ export function FilesContextPanel({
 
     return initialCodebase.files
       .filter((file) => !!selectedFiles[file.id])
-      .map((file: CodebaseFile) => {
-
-        let content = `${file.path}`;
-
-        return content;
-      })
+      .map((file: CodebaseFile) => file.path)
       .join('\n');
-  }, [initialCodebase, selectedFiles, impactedSet, selectedEntity]);
+  }, [initialCodebase, selectedFiles]);
 
-  const copyContext = async () => {
-    const targetFilePaths = combinedSelectedFilesContext
-                          ? combinedSelectedFilesContext.split('\n').map((p) => p.trim()).filter(Boolean)
-                          : [];
-
-    const exportFormat: ExportFormat = 'YAML';
-    logInfo(`[FilesContextPanel] Exporting ${targetFilePaths} selected file(s) for context export in format '${exportFormat}'...`);
-    const exportedFilePath = await codebaseExporterApiService.exportSelectedFiles(targetFilePaths, exportFormat);
-    logInfo(`[FilesContextPanel] exportedFilePath ${exportedFilePath} for context export in format '${exportFormat}'...`);
-
-    let combinedFilesContent = '';
-    try {
-        combinedFilesContent = await codebaseExporterApiService.readExportedFileContent(exportedFilePath);
-        logInfo(`[FilesContextPanel] Successfully read content (${combinedFilesContent.length} chars) from exportedFilePath: ${exportedFilePath}`);
-    } catch (err: any) {
-      logError('Failed to read content from exportedFilePath:', err);
-    }
-
-    handleCopy(combinedFilesContent, "Selected Files Content copied to clipboard!");
-  };
+  const targetFilePaths = useMemo(() => {
+    return combinedSelectedFilesContext
+      ? combinedSelectedFilesContext.split('\n').map((p) => p.trim()).filter(Boolean)
+      : [];
+  }, [combinedSelectedFilesContext]);
 
   return (
     <div className="space-y-4 font-mono text-xs animate-in duration-200 fade-in">
@@ -410,7 +387,7 @@ export function FilesContextPanel({
                   {isExpanded && (
                     <div className="space-y-1 bg-background/40 p-1">
                       {groupFiles.map((file) => {
-                        const fileSizeKb = (((file as any).size || file.content?.length || 0) / 1024).toFixed(1);
+                        const fileSizeKb = (((file as any).size || (file as any).content?.length || 0) / 1024).toFixed(1);
 
                         return (
                           <div
@@ -465,13 +442,6 @@ export function FilesContextPanel({
               Unified Files Context
             </h4>
           </div>
-          <Button
-            size="sm"
-            onClick={copyContext}
-            className="flex items-center gap-1.5 h-7 font-mono text-[11px] cursor-pointer"
-          >
-            <Copy size={12} /> Copy Context
-          </Button>
         </div>
 
         {/* Row 1: Total Codebase Summary */}
@@ -515,19 +485,10 @@ export function FilesContextPanel({
           </div>
         </div>
 
-        <div className="space-y-1">
-          <div className="flex justify-between items-center text-[10px] text-muted-foreground uppercase">
-            <span>Context Preview ({selectedCount} files)</span>
-            <span>All-In-One Unified File</span>
-          </div>
-          <pre className="bg-slate-950 p-3 border border-slate-800 rounded-md max-h-64 overflow-x-auto overflow-y-auto font-mono text-[10px] text-slate-300 leading-relaxed whitespace-pre-wrap">
-            {combinedSelectedFilesContext || '// No files selected for context generation.'}
-          </pre>
-        </div>
       </div>
 
       {/* File Context Controls & Copy files ctx Button */}
-      <FileCtxControlsAndCopyCtxBtn handleCopy={handleCopy} onCopyFilesCtx={copyContext} />
+      <FileCtxControlsAndCopyCtxBtn targetFilePaths={targetFilePaths} handleCopy={handleCopy} />
     </div>
   );
 }

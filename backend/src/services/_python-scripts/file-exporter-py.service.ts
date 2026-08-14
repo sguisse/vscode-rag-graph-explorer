@@ -4,9 +4,9 @@ import { PythonScriptStatus } from "../../../../shared/services/_python-scripts"
 import { ExportArgs } from "../../../../shared/services/codebase-exporter/domain/model/export-args";
 import { pythonScriptExecutionManager } from '../../managers/PythonScriptExecution.manager';
 import { ChildProcess } from 'child_process';
-import { getWorkspaceRoot } from '../../utils/utils-vscode';
+import { getWorkspaceExtentionPath, getWorkspaceRoot } from '../../utils/utils-vscode';
 
-const PYTHON_SCRIPT_PATH = path.join('codebase_exporter', 'files-exporter.py');
+const PYTHON_SCRIPT_PATH = path.join(getWorkspaceExtentionPath(), 'scripts', 'codebase_exporter', 'files-exporter.py');
 
 export async function callFileExporterScript(exportArgs: ExportArgs): Promise<PythonScriptStatus> {
     const rootPath = getWorkspaceRoot();

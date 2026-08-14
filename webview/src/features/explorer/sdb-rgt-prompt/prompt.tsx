@@ -249,8 +249,6 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
 
   const bottomContent = (
     <div className="space-y-2 bg-background pt-2 border-border border-t w-full">
-      {/* Box 1: File Context Controls & Copy files ctx Button */}
-      <FileCtxControlsAndCopyCtxBtn handleCopy={handleCopy} />
 
       {/* Box 2: Template Dropdown & Copy Prompt Button */}
       <div className="flex items-center gap-3 bg-card p-2.5 border border-border rounded-lg w-full">
@@ -284,20 +282,9 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
         </Button>
       </div>
 
-      {/* Bottom Right: Reset Form Button */}
-      <div className="flex justify-end pt-0.5">
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => {
-            resetPromptFields();
-            notify('Reset prompt fields to default values');
-          }}
-          className="h-6 text-[10px] text-muted-foreground hover:text-foreground cursor-pointer"
-        >
-          <RefreshCw size={10} className="mr-1" /> Reset Form
-        </Button>
-      </div>
+      {/* Box 1: File Context Controls & Copy files ctx Button */}
+      <FileCtxControlsAndCopyCtxBtn handleCopy={handleCopy} />
+
     </div>
   );
 

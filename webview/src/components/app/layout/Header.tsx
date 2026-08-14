@@ -44,7 +44,7 @@ export function Header({
         <img src={isDarkMode ? logoDark : logoLight} alt="App Logo" className="w-full h-full object-contain" />
       </span>
       <span id="app-title" className="font-bold text-foreground text-sm tracking-tight">
-        <ApplicationTitle label='Token Razor'/>
+        <ApplicationTitle label='Token Ra$or'/>
       </span>
 
     </div>

@@ -2,15 +2,11 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as childProcess from 'child_process';
-import { getWorkspaceExtentionPath } from'../utils/utils-vscode';
-import { logInfo } from '../utils/utils-log';
+import { getWorkspaceExtentionPath } from '../utils/utils-vscode';
+import { logInfo, log } from '../utils/utils-log';
 
 const PID_PYTHON_PATH_LOCATION = 'pids_python';
 
-/**
- * Manages Python script execution instances and persists active process PIDs
- * in individual files on disk to eliminate JSON file lock and concurrency issues.
- */
 export class PythonScriptExecutionManager {
     private static instance: PythonScriptExecutionManager;
     private pidsDir: string;
@@ -44,9 +40,37 @@ export class PythonScriptExecutionManager {
     }
 
     /**
+     * Attaches line-buffered stream readers to route stdout/stderr to log(origin, message).
+     */
+    private bindStreamLogging(stream: NodeJS.ReadableStream | null, origin: string): void {
+        if (!stream) return;
+
+        let buffer = '';
+        stream.on('data', (chunk: Buffer | string) => {
+            buffer += chunk.toString('utf-8');
+            const lines = buffer.split(/\r?\n/);
+
+            // Keep incomplete last line in the buffer
+            buffer = lines.pop() ?? '';
+
+            for (const line of lines) {
+                if (line.trim()) {
+                    log(origin, line);
+                }
+            }
+        });
+
+        stream.on('end', () => {
+            if (buffer.trim()) {
+                log(origin, buffer.trim());
+            }
+        });
+    }
+
+    /**
      * Registers an active process in memory and creates an individual PID file on disk.
      */
-    public registerProcess(child: childProcess.ChildProcess): number | undefined {
+    public registerProcess(child: childProcess.ChildProcess, scriptOrigin?: string): number | undefined {
         const pid = child.pid;
         if (!pid) return undefined;
 
@@ -59,19 +83,29 @@ export class PythonScriptExecutionManager {
             // Ignore file write issues
         }
 
+        const origin = scriptOrigin || `PythonProcess[PID:${pid}]`;
+
+        // Route live output streams
+        this.bindStreamLogging(child.stdout, origin);
+        this.bindStreamLogging(child.stderr, `${origin}:ERR`);
+
         const cleanup = () => {
             this.unregisterPid(pid);
         };
 
-        child.once('exit', cleanup);
-        child.once('error', cleanup);
+        child.once('exit', (code, signal) => {
+            log(origin, `Process exited with code ${code ?? 'N/A'}${signal ? ` (signal: ${signal})` : ''}`);
+            cleanup();
+        });
+
+        child.once('error', (err) => {
+            log(`${origin}:ERR`, `Process error: ${err.message}`, err);
+            cleanup();
+        });
 
         return pid;
     }
 
-    /**
-     * Unregisters a process PID from memory and removes its individual PID file on disk.
-     */
     public unregisterPid(pid: number): void {
         this.activeProcesses.delete(pid);
         const pidFile = this.getPidFilePath(pid);
@@ -85,10 +119,7 @@ export class PythonScriptExecutionManager {
     }
 
     /**
-     * Executes a Python script file directly, resolving platform binary and tracking PID.
-     * @param scriptPath Path to the target Python script.
-     * @param args Array of command-line arguments to pass to the script.
-     * @param options ChildProcess spawn options.
+     * Executes a Python script file directly with forced unbuffered stdio (PYTHONUNBUFFERED=1).
      */
     public executeScript(
         scriptPath: string,
@@ -97,28 +128,38 @@ export class PythonScriptExecutionManager {
     ): childProcess.ChildProcess {
         const isWindows = process.platform === 'win32';
         const pythonBinary = isWindows ? 'python' : 'python3';
-        const fullArgs = [scriptPath, ...args];
 
-        logInfo(`Executing Python script: ${pythonBinary} ${fullArgs.join('\n')}`);
-        return this.spawnPythonProcess(pythonBinary, fullArgs, options);
+        // Pass -u flag to python for unbuffered stdout/stderr
+        const fullArgs = ['-u', scriptPath, ...args];
+
+        // Ensure PYTHONUNBUFFERED is set in spawn environment
+        const spawnOptions: childProcess.SpawnOptions = {
+            ...options,
+            env: {
+                ...process.env,
+                PYTHONUNBUFFERED: '1',
+                ...(options.env || {})
+            }
+        };
+
+        logInfo(`Executing Python script: ${pythonBinary} ${fullArgs.map(arg => arg.replace(/,/g, ',\n')).join('\n')}`,
+               { scriptPath, args, options: spawnOptions });
+
+        const origin = path.basename(scriptPath);
+        return this.spawnPythonProcess(pythonBinary, fullArgs, spawnOptions, origin);
     }
 
-    /**
-     * Spawns a Python script process and tracks its PID on disk and in memory.
-     */
     public spawnPythonProcess(
         pythonBinary: string,
         args: string[],
-        options: childProcess.SpawnOptions = {}
+        options: childProcess.SpawnOptions = {},
+        origin?: string
     ): childProcess.ChildProcess {
         const child = childProcess.spawn(pythonBinary, args, options);
-        this.registerProcess(child);
+        this.registerProcess(child, origin);
         return child;
     }
 
-    /**
-     * Kills a specific running process by PID.
-     */
     public killPid(pid: number, signal: NodeJS.Signals | number = 'SIGKILL'): boolean {
         let killed = false;
 
@@ -138,7 +179,7 @@ export class PythonScriptExecutionManager {
                 process.kill(pid, signal);
                 killed = true;
             } catch (err) {
-                // Process already dead or missing permissions
+                // Process already dead
             }
         }
 
@@ -146,9 +187,6 @@ export class PythonScriptExecutionManager {
         return killed;
     }
 
-    /**
-     * Terminate all recorded Python process instances from memory and disk files.
-     */
     public killAll(signal: NodeJS.Signals | number = 'SIGKILL'): void {
         for (const [pid, child] of this.activeProcesses.entries()) {
             try {
@@ -170,9 +208,6 @@ export class PythonScriptExecutionManager {
         }
     }
 
-    /**
-     * Purges stale PID files for processes that are no longer active in the OS.
-     */
     public cleanStalePids(): void {
         if (!fs.existsSync(this.pidsDir)) return;
         try {
@@ -191,9 +226,6 @@ export class PythonScriptExecutionManager {
         }
     }
 
-    /**
-     * Retrieves all active process PIDs currently stored on disk.
-     */
     public getActivePids(): number[] {
         if (!fs.existsSync(this.pidsDir)) return [];
         const activePids: number[] = [];
@@ -218,9 +250,6 @@ export class PythonScriptExecutionManager {
         return activePids;
     }
 
-    /**
-     * Checks if a process with given PID is currently active.
-     */
     public isRunning(pid: number): boolean {
         try {
             process.kill(pid, 0);
