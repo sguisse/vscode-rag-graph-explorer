@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as childProcess from 'child_process';
 import { getWorkspaceExtentionPath } from'../utils/utils-vscode';
+import { logInfo } from '../utils/utils-log';
 
 const PID_PYTHON_PATH_LOCATION = 'pids_python';
 
@@ -97,6 +98,8 @@ export class PythonScriptExecutionManager {
         const isWindows = process.platform === 'win32';
         const pythonBinary = isWindows ? 'python' : 'python3';
         const fullArgs = [scriptPath, ...args];
+
+        logInfo(`Executing Python script: ${pythonBinary} ${fullArgs.join('\n')}`);
         return this.spawnPythonProcess(pythonBinary, fullArgs, options);
     }
 

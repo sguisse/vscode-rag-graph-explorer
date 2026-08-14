@@ -5,8 +5,13 @@ import { AbstractServiceAdapter } from '../../core/AbstractServiceAdapter';
 import { logInfo, logError } from '../../utils/utils-log';
 import { getWorkspaceExtentionPath } from '../../utils/utils-vscode';
 import { runPythonScript } from '../../utils/utils-python';
-import { ICodebaseExporterServicePort } from '../../../../shared/services/codebase-exporter';
 import { ExportFormat } from '../../../../shared/services/codebase-exporter/domain/model/types';
+import { ExportArgs } from '../../../../shared/services/codebase-exporter/domain/model/export-args';
+import { getFormattedTimestamp } from '../../utils/utils-datetime';
+import { PythonScriptStatus } from '../../../../shared/services/_python-scripts';
+import { ICodebaseExporterServicePort, ExportStatus } from '../../../../shared/services/codebase-exporter';
+import { callFileExporterScript } from '../_python-scripts/file-exporter-py.service';
+
 
 export class CodebaseExporterAdapter extends AbstractServiceAdapter implements ICodebaseExporterServicePort, vscode.Disposable {
 
@@ -14,114 +19,63 @@ export class CodebaseExporterAdapter extends AbstractServiceAdapter implements I
         super();
     }
 
-    public async exportSelectedFiles(files: string[], format: ExportFormat, maxChunk: number, splitByExt: boolean, copyToClipboard: boolean): Promise<string> {
-        const destDir = path.join(
-            getWorkspaceExtentionPath(),
-            'tmp',
-            'python',
-            'exportSelectedFiles'
-        );
-
-        if (!fs.existsSync(destDir)) {
-            fs.mkdirSync(destDir, { recursive: true });
+    private buildExportDirectory(exportArgs: ExportArgs): string {
+        if (!exportArgs.timestamp || exportArgs.timestamp.trim() === '') {
+            exportArgs.timestamp = getFormattedTimestamp();
         }
 
-        const relativeScriptPath = path.join('codebase_exporter', 'files-exporter.py');
-        const scriptArgs = [
-            '--mode', 'paths-export',
-            '--format', format,
-            '--dest', destDir,
-            '--src', ...files
-        ];
+        const datetimeFolderName: string = exportArgs.timestamp;
+        let exportDirectory = exportArgs.destDir;
 
-        try {
-            logInfo(`[CodebaseExporterAdapter] Triggering export for ${files.length} file(s) into: ${destDir}`);
-            await runPythonScript(relativeScriptPath, scriptArgs);
-
-            const { exportFile, generatedFiles } = this.getLatestExportFile(destDir, format);
-
-            const resultFilePath = exportFile
-                ? path.join(destDir, exportFile)
-                : path.join(destDir, generatedFiles[0] || '');
-
-            logInfo(`[CodebaseExporterAdapter] Files exported successfully to: ${resultFilePath}`);
-            return resultFilePath;
-
-        } catch (error) {
-            logError(`[CodebaseExporterAdapter] Export failed: ${error}`);
-            throw error;
+        if (!exportDirectory || exportDirectory.trim() === '') {
+            exportDirectory = getWorkspaceExtentionPath();
         }
+
+        exportDirectory = path.join(exportDirectory, 'tmp', 'python', 'export-files', datetimeFolderName);
+
+        if (!fs.existsSync(exportDirectory)) {
+            fs.mkdirSync(exportDirectory, { recursive: true });
+        }
+
+        exportArgs.destDir = exportDirectory;
+
+        return exportDirectory;
     }
 
-    private getLatestExportFile(destDir: string, format: ExportFormat) {
-        const generatedFiles = fs.readdirSync(destDir);
+    public async exportSelectedFiles(files: string[], format: ExportFormat, maxChunk: number, groupByExt: boolean): Promise<ExportStatus> {
+        const exportArgs: ExportArgs = {
+            paths: files,
+            timestamp: getFormattedTimestamp(),
+            mode: 'paths-export',
+            format: format,
+            maxChunk: maxChunk,
+            groupByExt: groupByExt
+        };
 
-        const exportFile = generatedFiles
-            .filter((file) => {
-                const lowerFile = file.toLowerCase();
-                const hasValidExt = lowerFile.endsWith(`.${format}`);
-                const isNotReportOrTree = !lowerFile.includes('-report') && !lowerFile.includes('-tree');
-                return hasValidExt && isNotReportOrTree;
-            })
-            .sort((a, b) => {
-                // Sort by latest file modification time
-                const mtimeA = fs.statSync(path.join(destDir, a)).mtimeMs;
-                const mtimeB = fs.statSync(path.join(destDir, b)).mtimeMs;
-                return mtimeB - mtimeA;
-            })[0];
-        return { exportFile, generatedFiles };
+        return await this.exportFiles(exportArgs);
     }
 
 
-    public async readExportedFileContent(filePath: string): Promise<string> {
-        if (!fs.existsSync(filePath)) {
-            throw new Error(`File not found: ${filePath}`);
-        }
-        return fs.promises.readFile(filePath, 'utf-8');
+    public async exportFiles (exportArgs: ExportArgs): Promise<ExportStatus> {
+        const exportDirectory = this.buildExportDirectory(exportArgs);
+        const pythonScriptStatus: PythonScriptStatus = await callFileExporterScript(exportArgs);
+
+        const exportStatus: ExportStatus = {
+            exportDir: exportDirectory,
+            pythonScriptStatus: pythonScriptStatus,
+        };
+
+        return exportStatus;
     }
 
 
-    public async storeExportedFileInClipboard(filePath: string): Promise<boolean> {
-        if (!fs.existsSync(filePath)) {
-            logError(`[CodebaseExporterAdapter] Cannot copy to clipboard. File not found: ${filePath}`);
-            return false;
-        }
 
-        const tempDir = path.join(
-            getWorkspaceExtentionPath(),
-            'tmp',
-            'python'
-        );
-
-        if (!fs.existsSync(tempDir)) {
-            fs.mkdirSync(tempDir, { recursive: true });
-        }
-
-        const tempJsonPath = path.join(tempDir, `clipboard_input_${Date.now()}.json`);
-
-        try {
-            // Write the target file path as a JSON array expected by copy-files-to-clipboard.py
-            await fs.promises.writeFile(tempJsonPath, JSON.stringify([filePath]), 'utf-8');
-
-            const relativeScriptPath = path.join('codebase_exporter', 'copy-files-to-clipboard.py');
-            logInfo(`[CodebaseExporterAdapter] Copying file to clipboard via script: ${filePath}`);
-
-            await runPythonScript(relativeScriptPath, [tempJsonPath]);
-            return true;
-
-        } catch (error) {
-            logError(`[CodebaseExporterAdapter] Failed to copy file to clipboard: ${error}`);
-            return false;
-        } finally {
-            // Clean up temporary JSON file
-            if (fs.existsSync(tempJsonPath)) {
-                fs.promises.unlink(tempJsonPath).catch((err) => {
-                    logError(`[CodebaseExporterAdapter] Failed to clean up temp file ${tempJsonPath}: ${err}`);
-                });
-            }
-        }
+    readExportedFileContent(filePath: string): Promise<string> {
+        throw new Error('Method not implemented.');
     }
-
+    storeExportedFileInClipboard(filePath: string): Promise<boolean> {
+        throw new Error('Method not implemented.');
+    }
 
     public dispose() {
     }

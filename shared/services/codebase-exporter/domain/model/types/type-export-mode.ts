@@ -1,0 +1,20 @@
+export const EXPORT_MODE_LIST: readonly string[] = ["standard", "filter-check", "paths-export"];
+
+export const EXPORT_MODE_ICON_MAP: { [K in (typeof EXPORT_MODE_LIST)[number]]: any } = {
+  standard: { icon: "📄", label: "Standard" },
+  "filter-check": { icon: "✅", label: "Filter Check" },
+  "paths-export": { icon: "🛠️", label: "Paths Export" },
+} as const;
+
+export type ExportMode = (typeof EXPORT_MODE_LIST)[number];
+
+export function isExportMode(value: unknown): value is ExportMode {
+  return typeof value === "string" && EXPORT_MODE_LIST.includes(value);
+}
+
+export function getExportMode(value: unknown): ExportMode | undefined {
+  if (typeof value === "string" && EXPORT_MODE_LIST.includes(value)) {
+    return value as ExportMode;
+  }
+  return undefined;
+}

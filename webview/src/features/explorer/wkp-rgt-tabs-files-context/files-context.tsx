@@ -6,6 +6,7 @@ import { calculateTransitiveImpact } from '@/services/view/graph-view.service';
 import { codebaseExporterApiService } from '@/services/api/codebase-exporter-api.service.gen';
 import { logInfo, logError } from '@/services/view/log-view.service.wrapper';
 import { ExportFormat } from '@/shared/services/codebase-exporter/domain/model/types';
+import { FileCtxControlsAndCopyCtxBtn } from '../components/file-ctx-controls-and-copy-ctx-btn';
 
 interface FilesContextPanelProps {
   initialCodebase: CodebaseData;
@@ -488,12 +489,8 @@ export function FilesContextPanel({
             <span className="font-bold text-blue-500 text-xs">{downstreamCount}</span>
           </div>
           <div className="bg-yellow-500/10 p-2 border border-yellow-500/30 rounded">
-            <span className="block text-[9px] text-yellow-600 dark:text-yellow-400 truncate uppercase">
-                Token Size
-            </span>
-            <span className="font-bold text-yellow-600 dark:text-yellow-400 text-xs">
-                {(totalFilesContext.length / 1024).toFixed(1)} KB
-            </span>
+            <span className="block text-[9px] text-yellow-600 dark:text-yellow-400 truncate uppercase">Token Size</span>
+            <span className="font-bold text-yellow-600 dark:text-yellow-400 text-xs">{(totalFilesContext.length / 1024).toFixed(1)} KB</span>
           </div>
         </div>
 
@@ -528,6 +525,9 @@ export function FilesContextPanel({
           </pre>
         </div>
       </div>
+
+      {/* File Context Controls & Copy files ctx Button */}
+      <FileCtxControlsAndCopyCtxBtn handleCopy={handleCopy} onCopyFilesCtx={copyContext} />
     </div>
   );
 }

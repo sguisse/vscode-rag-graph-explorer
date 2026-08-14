@@ -462,6 +462,7 @@ def parse_arguments():
     parser.add_argument("--log-console", action="store_true", default=HARDCODED_DEFAULTS['log_console'])
     parser.add_argument("--log-file", action="store_true", default=HARDCODED_DEFAULTS['log_file'])
     parser.add_argument("--tree-view", action="store_true", default=False)
+    parser.add_argument("--timestamp", default=None, help="Custom timestamp identifier to use for generated files.")
     parser.add_argument("--show-help", action="store_true", help="Show detailed help with samples")
 
     return parser.parse_args()
@@ -604,7 +605,8 @@ def main():
     GENERATE_LOG_FILE = args.log_file
     GENERATE_TREE_VIEW = args.tree_view
 
-    TIMESTAMP = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    # Use provided timestamp or initialize with current date/time if not supplied
+    TIMESTAMP = args.timestamp if args.timestamp else datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     LOG_FILE_PATH = os.path.join(DEST_DIR, f"export-{TIMESTAMP}.log")
     LOG_FILE_HANDLE = open(LOG_FILE_PATH, 'w', encoding='utf-8') if GENERATE_LOG_FILE else None
 

@@ -1,24 +1,17 @@
 import React, { useState } from 'react';
-import { Copy, Bot, User, Sparkles, RefreshCw, FileText } from 'lucide-react';
+import { Copy, Bot, User, Sparkles, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
 import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { useGraphRagExplorerStore } from './graph-rag-explorer-store';
 import PREDEFINED_PROMPTS from './data/predefined-prompts.yaml';
 import TEMPLATE_PROMPTS from './data/template-prompts.yaml';
 import { AGENTS_LIST } from './data/data-constants';
-import {
-  EXPORT_FORMAT_LIST,
-  EXPORT_FORMAT_ICON_MAP,
-  ExportFormat,
-} from '@/shared/services/codebase-exporter/domain/model/types';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
+import { FileCtxControlsAndCopyCtxBtn } from '../components/file-ctx-controls-and-copy-ctx-btn';
 
 interface PromptPanelProps {
   handleCopy?: (text: string, message: string) => void;
@@ -31,12 +24,6 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(
     TEMPLATE_PROMPTS[0]?.id || ''
   );
-
-  // States for File Ctx export options
-  const [exportFormat, setExportFormat] = useState<ExportFormat>('yaml');
-  const [maxChunk, setMaxChunk] = useState<string>('0');
-  const [splitChunkByFileExtension, setSplitChunkByFileExtension] = useState<boolean>(false);
-  const [copyGeneratedFilesToClipboard, setCopyGeneratedFilesToClipboard] = useState<boolean>(false);
 
   const notify = (msg: string) => {
     if (handleCopy) {
@@ -96,10 +83,6 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
     } catch {
       setNotification('❌ Failed to copy prompt to clipboard');
     }
-  };
-
-  const handleCopyFilesCtx = () => {
-    notify('📋 Files context snapshot copied to clipboard!');
   };
 
   const handleInsertAgent = () => {
@@ -267,91 +250,7 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
   const bottomContent = (
     <div className="space-y-2 bg-background pt-2 border-border border-t w-full">
       {/* Box 1: File Context Controls & Copy files ctx Button */}
-      <div className="flex items-center gap-3 bg-card p-2.5 border border-border rounded-lg w-full">
-        {/* Scrollable left area */}
-        <div className="flex flex-1 items-center gap-2.5 min-w-0 overflow-x-auto">
-          {/* Output Format */}
-          <div className="space-y-1 shrink-0">
-            <label
-              className="block font-medium text-[10px] text-muted-foreground whitespace-nowrap"
-              title="Structured file format schema template applied to aggregate the files contents."
-            >
-              Output Format
-            </label>
-            <SelectFromTypeBuilder
-              id="select-export-format"
-              value={exportFormat}
-              onChange={(val) => setExportFormat(val as ExportFormat)}
-              triggerClassName="!h-8 min-h-0 py-0 px-2 text-xs border-border rounded-md font-mono w-24"
-              options={EXPORT_FORMAT_LIST.map((key) => ({
-                value: key,
-                icon: EXPORT_FORMAT_ICON_MAP[key]?.icon,
-                label: EXPORT_FORMAT_ICON_MAP[key]?.label,
-              }))}
-            />
-          </div>
-
-          {/* Max Chunk (KB) */}
-          <div className="space-y-1 shrink-0">
-            <label
-              className="block font-medium text-[10px] text-muted-foreground whitespace-nowrap"
-              title="Maximum payload slice limit for chunk splitting in Kilobytes (0 means unlimited size)."
-            >
-              Max Chunk (KB)
-            </label>
-            <Input
-              type="number"
-              value={maxChunk}
-              onChange={(e) => setMaxChunk(e.target.value)}
-              className="bg-background w-20 h-8 text-xs"
-            />
-          </div>
-
-          {/* Split by ext */}
-          <div className="flex flex-col items-center space-y-1 shrink-0">
-            <label
-              htmlFor="splitChunkByFileExtension"
-              className="font-medium text-[10px] text-muted-foreground whitespace-nowrap cursor-pointer"
-              title="Force the export runner to partition output chunks whenever a change of file extension occurs."
-            >
-              Split by Ext
-            </label>
-            <div className="flex justify-center items-center h-8">
-              <Checkbox
-                id="splitChunkByFileExtension"
-                checked={splitChunkByFileExtension}
-                onCheckedChange={(checked) => setSplitChunkByFileExtension(!!checked)}
-              />
-            </div>
-          </div>
-
-          {/* Copy to clip */}
-          <div className="flex flex-col items-center space-y-1 shrink-0">
-            <label
-              htmlFor="copyGeneratedFilesToClipboard"
-              className="font-medium text-[10px] text-muted-foreground whitespace-nowrap cursor-pointer"
-              title="Automatically copy generated export files to the OS clipboard after each successful run."
-            >
-              Copy to clip
-            </label>
-            <div className="flex justify-center items-center h-8">
-              <Checkbox
-                id="copyGeneratedFilesToClipboard"
-                checked={copyGeneratedFilesToClipboard}
-                onCheckedChange={(checked) => setCopyGeneratedFilesToClipboard(!!checked)}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Copy files ctx Button */}
-        <Button
-          onClick={handleCopyFilesCtx}
-          className="flex justify-center items-center gap-1.5 bg-blue-500 hover:bg-blue-600 shadow-sm rounded-lg w-36 h-8 font-bold text-white text-xs whitespace-nowrap cursor-pointer shrink-0"
-        >
-          <FileText size={14} /> Copy files ctx
-        </Button>
-      </div>
+      <FileCtxControlsAndCopyCtxBtn handleCopy={handleCopy} />
 
       {/* Box 2: Template Dropdown & Copy Prompt Button */}
       <div className="flex items-center gap-3 bg-card p-2.5 border border-border rounded-lg w-full">
