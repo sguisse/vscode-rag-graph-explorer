@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
 import { CodebaseData, CodebaseFile, SelectedEntity } from '@/shared/services/graph-rag-explorer';
 import { calculateTransitiveImpact } from '@/services/view/graph-view.service';
-import { FileCtxControlsAndCopyCtxBtn } from '../components/file-ctx-controls-and-copy-ctx-btn';
+import { FilesCtxExportPanel } from '../components/files-ctx-export-panel';
+import { useFilesCtxExportStore } from '../store/use-files-ctx-export-store';
 
 interface FilesContextPanelProps {
   initialCodebase: CodebaseData;
@@ -61,6 +62,7 @@ export function FilesContextPanel({
   impactedSet,
   handleCopy
 }: FilesContextPanelProps) {
+  const setTargetFilePaths = useFilesCtxExportStore((s) => s.setTargetFilePaths);
 
   const downstreamCount = useMemo(() => {
     if (!selectedEntity || !initialCodebase?.dependencies) return 0;
@@ -296,6 +298,11 @@ export function FilesContextPanel({
       : [];
   }, [combinedSelectedFilesContext]);
 
+  // Synchronize targetFilePaths with useFilesCtxExportStore
+  useEffect(() => {
+    setTargetFilePaths(targetFilePaths);
+  }, [targetFilePaths, setTargetFilePaths]);
+
   const topContent = (
     <div className="space-y-2 mb-2 w-full">
       {/* Unified Files Context Preview & Meta */}
@@ -509,7 +516,7 @@ export function FilesContextPanel({
 
       <div className="bg-background pt-2 w-full">
         {/* File Context Controls & Copy files ctx Button */}
-        <FileCtxControlsAndCopyCtxBtn targetFilePaths={targetFilePaths} handleCopy={handleCopy} />
+        <FilesCtxExportPanel targetFilePaths={targetFilePaths} handleCopy={handleCopy} />
       </div>
     </div>
   );

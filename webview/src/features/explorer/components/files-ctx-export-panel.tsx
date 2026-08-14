@@ -10,33 +10,34 @@ import {
   EXPORT_FORMAT_ICON_MAP,
   ExportFormat,
 } from '@/shared/services/codebase-exporter/domain/model/types';
-import { useFileCtxExportStore } from '../store/use-file-ctx-export-store';
+import { useFilesCtxExportStore } from '../store/use-files-ctx-export-store';
 import { codebaseExporterApiService } from '@/services/api/codebase-exporter-api.service.gen';
 import { logInfo, logError } from '@/services/view/log-view.service.wrapper';
 import { ExportStatus } from '@/shared/services/codebase-exporter/domain/model/export-status';
 
-interface FileCtxControlsAndCopyCtxBtnProps {
+interface FilesCtxExportPanelProps {
   handleCopy?: (text: string, message: string) => void;
   onCopyFilesCtx?: () => void;
   targetFilePaths?: string[];
 }
 
-export function FileCtxControlsAndCopyCtxBtn({
+export function FilesCtxExportPanel({
   handleCopy,
   onCopyFilesCtx,
-  targetFilePaths = [],
-}: FileCtxControlsAndCopyCtxBtnProps) {
+  targetFilePaths,
+}: FilesCtxExportPanelProps) {
   const setNotification = useAppContextStore((s) => s.setNotification);
   const {
     exportFormat,
     maxChunk,
     splitChunkByFileExtension,
     copyAsFilesToClipboard,
+    targetFilePaths: storeTargetFilePaths,
     setExportFormat,
     setMaxChunk,
     setSplitChunkByFileExtension,
     setCopyAsFilesToClipboard,
-  } = useFileCtxExportStore();
+  } = useFilesCtxExportStore();
 
   const handleCopyFilesCtx = async () => {
     if (onCopyFilesCtx) {
@@ -44,10 +45,13 @@ export function FileCtxControlsAndCopyCtxBtn({
       return;
     }
 
-    const files = targetFilePaths || [];
+    const files = (targetFilePaths && targetFilePaths.length > 0)
+      ? targetFilePaths
+      : (storeTargetFilePaths || []);
+
     const parsedMaxChunk = typeof maxChunk === 'number' ? maxChunk : (parseInt(String(maxChunk), 10) || 0);
 
-    logInfo(`[FileCtxControlsAndCopyCtxBtn] Exporting ${files.length} selected file(s) in format '${exportFormat}'...`);
+    logInfo(`[FilesCtxExportPanel] Exporting ${files.length} selected file(s) in format '${exportFormat}'...`);
 
     try {
       const exportStatus: ExportStatus = await codebaseExporterApiService.exportSelectedFiles(
@@ -57,15 +61,15 @@ export function FileCtxControlsAndCopyCtxBtn({
         splitChunkByFileExtension
       );
 
-      logInfo(`[FileCtxControlsAndCopyCtxBtn] exportStatus received: ${JSON.stringify(exportStatus)}`);
+      logInfo(`[FilesCtxExportPanel] exportStatus received: ${JSON.stringify(exportStatus)}`);
 
       // Wait for the export process to finish
-        const checkStatusInterval = 1000; // 1 second
-        let currentStatus = exportStatus;
-        while (currentStatus.pythonScriptStatus.isRunning) {
-            await new Promise((resolve) => setTimeout(resolve, checkStatusInterval));
-            currentStatus = await codebaseExporterApiService.getExportFilesStatus(currentStatus.pythonScriptStatus.pid);
-        }
+      const checkStatusInterval = 1000; // 1 second
+      let currentStatus = exportStatus;
+      while (currentStatus.pythonScriptStatus.isRunning) {
+        await new Promise((resolve) => setTimeout(resolve, checkStatusInterval));
+        currentStatus = await codebaseExporterApiService.getExportFilesStatus(currentStatus.pythonScriptStatus.pid);
+      }
 
       const exportResult = await codebaseExporterApiService.getExportFilesResult(
         exportStatus.pythonScriptStatus.pid,
@@ -73,18 +77,17 @@ export function FileCtxControlsAndCopyCtxBtn({
         exportStatus.exportArgs?.timestamp || ''
       );
 
-
       if (copyAsFilesToClipboard) {
         const result: boolean = await codebaseExporterApiService.storeExportedFilesInClipboard(
           currentStatus.pythonScriptStatus.pid,
           exportResult
         );
         if (result) {
-            if (handleCopy) {
-                handleCopy('', 'Selected Files Content copied to clipboard as files!');
-            } else {
-                setNotification('Selected Files Content copied to clipboard as files!');
-            }
+          if (handleCopy) {
+            handleCopy('', 'Selected Files Content copied to clipboard as files!');
+          } else {
+            setNotification('Selected Files Content copied to clipboard as files!');
+          }
         }
       } else {
         const combinedFilesContent = await codebaseExporterApiService.readExportedFilesContent(
@@ -93,15 +96,13 @@ export function FileCtxControlsAndCopyCtxBtn({
         );
 
         if (handleCopy) {
-        handleCopy(combinedFilesContent, 'Selected Files Content copied to clipboard!');
-      } else {
-        setNotification('Selected Files Content copied to clipboard!');
+          handleCopy(combinedFilesContent, 'Selected Files Content copied to clipboard!');
+        } else {
+          setNotification('Selected Files Content copied to clipboard!');
+        }
       }
-      }
-
-
     } catch (err: any) {
-      logError('[FileCtxControlsAndCopyCtxBtn] Error during exportSelectedFiles:', err);
+      logError('[FilesCtxExportPanel] Error during exportSelectedFiles:', err);
       setNotification('Failed to export selected files context.');
     }
   };

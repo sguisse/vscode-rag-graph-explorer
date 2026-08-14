@@ -11,7 +11,7 @@ import TEMPLATE_PROMPTS from './data/template-prompts.yaml';
 import { AGENTS_LIST } from './data/data-constants';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
-import { FileCtxControlsAndCopyCtxBtn } from '../components/file-ctx-controls-and-copy-ctx-btn';
+import { FilesCtxExportPanel } from '../components/files-ctx-export-panel';
 
 interface PromptPanelProps {
   handleCopy?: (text: string, message: string) => void;
@@ -283,7 +283,7 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
       </div>
 
       {/* Box 1: File Context Controls & Copy files ctx Button */}
-      <FileCtxControlsAndCopyCtxBtn handleCopy={handleCopy} />
+      <FilesCtxExportPanel handleCopy={handleCopy} />
 
     </div>
   );
