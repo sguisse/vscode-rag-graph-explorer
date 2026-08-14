@@ -13,21 +13,25 @@ export class PythonScriptExecutionManager {
     private static instance: PythonScriptExecutionManager;
     private pidsDir: string;
     private processTimeout: number;
+    private timeoutCheckInterval?: NodeJS.Timeout;
 
     // Active and Completed Process Tracking Stores
     private activeProcesses: Map<number, childProcess.ChildProcess> = new Map();
     private startTimes: Map<number, Date> = new Map();
+    private scriptOrigins: Map<number, string> = new Map();
     private finishedProcesses: Map<number, PythonScriptStatus> = new Map();
 
     // Cap finished process history to avoid unbounded memory growth
     private readonly MAX_FINISHED_PROCESSES = 100;
     private readonly MAX_PROCESS_TIMEOUT_IN_MS = 10000;
+    private readonly TIMEOUT_CHECK_INTERVAL_MS = 1000; // Check active processes every 1 second
 
     private constructor() {
         this.pidsDir = path.join(getWorkspaceExtentionPath(), PID_PYTHON_PATH_LOCATION);
         this.processTimeout = 0;
         this.ensureDirExists();
         this.cleanStalePids();
+        this.startTimeoutChecker();
     }
 
     public getProcessTimeout(): number {
@@ -56,6 +60,53 @@ export class PythonScriptExecutionManager {
 
     private getPidFilePath(pid: number): string {
         return path.join(this.pidsDir, `${pid}.pid`);
+    }
+
+    /**
+     * Starts the periodic cron checker for process timeouts.
+     */
+    private startTimeoutChecker(): void {
+        this.timeoutCheckInterval = setInterval(() => {
+            this.checkActiveProcessesTimeout();
+        }, this.TIMEOUT_CHECK_INTERVAL_MS);
+
+        // Allow Node.js event loop to exit cleanly if this timer is the only active handle
+        if (this.timeoutCheckInterval && typeof this.timeoutCheckInterval.unref === 'function') {
+            this.timeoutCheckInterval.unref();
+        }
+    }
+
+    /**
+     * Checks all running active processes against getProcessTimeout().
+     * Kills any process that has exceeded its allowed run time.
+     */
+    private checkActiveProcessesTimeout(): void {
+        const now = Date.now();
+        const timeoutMs = this.getProcessTimeout();
+        const timeoutSec = timeoutMs / 1000;
+
+        for (const [pid, startTime] of this.startTimes.entries()) {
+            const elapsedMs = now - startTime.getTime();
+
+            if (elapsedMs >= timeoutMs) {
+                const origin = this.scriptOrigins.get(pid) || `PythonProcess[PID:${pid}]`;
+                const timeoutMsg = `process reach timeout of ${timeoutSec} seconds, it has been killed.`;
+
+                log(origin, timeoutMsg);
+                logInfo(`[PID:${pid}] ${timeoutMsg}`);
+
+                this.recordFinishedProcess({
+                    pid,
+                    startTime,
+                    endTime: new Date(),
+                    isRunning: false,
+                    exitCode: -1,
+                    message: timeoutMsg
+                });
+
+                this.killPid(pid);
+            }
+        }
     }
 
     /**
@@ -108,8 +159,11 @@ export class PythonScriptExecutionManager {
         if (!pid) return undefined;
 
         const startTime = new Date();
+        const origin = scriptOrigin || `PythonProcess[PID:${pid}]`;
+
         this.activeProcesses.set(pid, child);
         this.startTimes.set(pid, startTime);
+        this.scriptOrigins.set(pid, origin);
         this.ensureDirExists();
 
         try {
@@ -117,8 +171,6 @@ export class PythonScriptExecutionManager {
         } catch (err) {
             // Ignore file write issues
         }
-
-        const origin = scriptOrigin || `PythonProcess[PID:${pid}]`;
 
         // Route live output streams
         this.bindStreamLogging(child.stdout, origin);
@@ -134,14 +186,16 @@ export class PythonScriptExecutionManager {
             const exitMsg = `Process exited with code ${code ?? 'N/A'}${signal ? ` (signal: ${signal})` : ''}`;
             log(origin, exitMsg);
 
-            this.recordFinishedProcess({
-                pid,
-                startTime: this.startTimes.get(pid) || startTime,
-                endTime,
-                isRunning: false,
-                exitCode: code ?? (signal ? -1 : 0),
-                message: exitMsg
-            });
+            if (!this.finishedProcesses.has(pid)) {
+                this.recordFinishedProcess({
+                    pid,
+                    startTime: this.startTimes.get(pid) || startTime,
+                    endTime,
+                    isRunning: false,
+                    exitCode: code ?? (signal ? -1 : 0),
+                    message: exitMsg
+                });
+            }
 
             cleanup();
         });
@@ -152,14 +206,16 @@ export class PythonScriptExecutionManager {
             const errorMsg = `Process error: ${err.message}`;
             log(`${origin}:ERR`, errorMsg, err);
 
-            this.recordFinishedProcess({
-                pid,
-                startTime: this.startTimes.get(pid) || startTime,
-                endTime,
-                isRunning: false,
-                exitCode: 1,
-                message: errorMsg
-            });
+            if (!this.finishedProcesses.has(pid)) {
+                this.recordFinishedProcess({
+                    pid,
+                    startTime: this.startTimes.get(pid) || startTime,
+                    endTime,
+                    isRunning: false,
+                    exitCode: 1,
+                    message: errorMsg
+                });
+            }
 
             cleanup();
         });
@@ -170,6 +226,7 @@ export class PythonScriptExecutionManager {
     public unregisterPid(pid: number): void {
         this.activeProcesses.delete(pid);
         this.startTimes.delete(pid);
+        this.scriptOrigins.delete(pid);
 
         const pidFile = this.getPidFilePath(pid);
         if (fs.existsSync(pidFile)) {

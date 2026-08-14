@@ -12,6 +12,7 @@ import { PythonScriptStatus } from '../../../../shared/services/_python-scripts'
 import { ICodebaseExporterServicePort, ExportStatus, ExportResult, ExportReport } from '../../../../shared/services/codebase-exporter';
 import { callFileExporterScript } from '../_python-scripts/file-exporter-py.service';
 import { pythonScriptExecutionManager } from '../../managers/PythonScriptExecution.manager';
+import { callCopyFilesToClipboardScript } from '../_python-scripts/copy-files-to-clipboard-py.service';
 
 
 export class CodebaseExporterAdapter extends AbstractServiceAdapter implements ICodebaseExporterServicePort, vscode.Disposable {
@@ -63,6 +64,7 @@ export class CodebaseExporterAdapter extends AbstractServiceAdapter implements I
         const pythonScriptStatus: PythonScriptStatus = await callFileExporterScript(exportArgs);
 
         const exportStatus: ExportStatus = {
+            exportArgs: exportArgs,
             pythonScriptStatus: pythonScriptStatus,
         };
 
@@ -70,7 +72,7 @@ export class CodebaseExporterAdapter extends AbstractServiceAdapter implements I
     }
 
 
-    public async checkExportFilesStatus (pid: number): Promise<ExportStatus> {
+    public async getExportFilesStatus (pid: number): Promise<ExportStatus> {
         const status = pythonScriptExecutionManager.getProcessStatus(pid || 0);
         if (status) {
             const exportStatus: ExportStatus = {
@@ -82,12 +84,12 @@ export class CodebaseExporterAdapter extends AbstractServiceAdapter implements I
         }
     }
 
-    public async getExportFilesResult (pid: number, exportArgs: ExportArgs): Promise<ExportResult> {
+    public async getExportFilesResult (pid: number, exportDirectory: string, timestamp: string): Promise<ExportResult> {
         this.checkProcessIsFinished(pid);
 
         const exportResult: ExportResult = {
             pid: pid,
-            report: this.readExportReportFromFile(exportArgs.destDir || '', exportArgs.timestamp || '')
+            report: this.readExportReportFromPath(exportDirectory || '', timestamp)
         };
         return exportResult;
     }
@@ -98,12 +100,12 @@ export class CodebaseExporterAdapter extends AbstractServiceAdapter implements I
         if (!status) {
             throw new Error(`Process with PID ${pid} does not exist.`);
         }
-        if (!status.isRunning) {
+        if (status.isRunning) {
             throw new Error(`Process with PID ${pid} is still running.`);
         }
     }
 
-    private readExportReportFromFile(exportDirectory: string, timestamp: string): ExportReport {
+    private readExportReportFromPath(exportDirectory: string, timestamp: string): ExportReport {
         // Find file contain ends with report.json
         const reportFilePath = path.join(exportDirectory, `export-${timestamp}-report.json`);
         if (!fs.existsSync(reportFilePath)) {
@@ -116,39 +118,32 @@ export class CodebaseExporterAdapter extends AbstractServiceAdapter implements I
     }
 
 
-    public async readExportedFilesContent(pid: number, exportArgs: ExportArgs): Promise<string> {
+    public async readExportedFilesContent(pid: number, exportResult: ExportResult): Promise<string> {
         this.checkProcessIsFinished(pid);
 
-        // Concat all exported files in the export directory into a single string
-        // Excluded filesname contains ['report', 'log', 'tree'] in their names
-        const exportDirectory = exportArgs.destDir || '';
-        if (!fs.existsSync(exportDirectory)) {
-            throw new Error(`Export directory does not exist: ${exportDirectory}`);
+        const exportedFiles = exportResult.report.results.generated_files.exports;
+        if (!exportedFiles || exportedFiles.length === 0) {
+            throw new Error(`No exported files found.`);
         }
 
-        const files = fs.readdirSync(exportDirectory);
-        const exportedFiles = files.filter(file => {
-            return !file.includes('-report') && !file.includes('-log') && !file.includes('-tree');
-        });
-        logInfo(`Read ${exportedFiles.length} exported files / ${files.length} generated files in the export directory: '${exportDirectory}''`);
+        logInfo(`Read ${exportedFiles.length} exported files in the export directory '${exportResult.report.configuration.dest_dir}'.`);
 
         let content = '';
-        for (const file of exportedFiles) {
-            const filePath = path.join(exportDirectory, file);
+        for (const filePath of exportedFiles) {
             const fileContent = fs.readFileSync(filePath, 'utf-8');
-            content += `\n\n--- Content of ${file} ---\n\n`;
+            content += `\n\n--- Content of ${filePath} ---\n\n`;
             content += fileContent;
         }
 
         return content;
     }
 
-    public async storeExportedFilesInClipboard(pid: number, exportArgs: ExportArgs): Promise<boolean> {
+    public async storeExportedFilesInClipboard(pid: number, exportResult: ExportResult): Promise<boolean> {
         this.checkProcessIsFinished(pid);
 
+        await callCopyFilesToClipboardScript(exportResult.report.results.generated_files.exports || []);
 
-
-        throw new Error('Method not implemented.');
+        return true;
     }
 
     public dispose() {

@@ -31,11 +31,11 @@ export function FileCtxControlsAndCopyCtxBtn({
     exportFormat,
     maxChunk,
     splitChunkByFileExtension,
-    copyGeneratedFilesToClipboard,
+    copyAsFilesToClipboard,
     setExportFormat,
     setMaxChunk,
     setSplitChunkByFileExtension,
-    setCopyGeneratedFilesToClipboard,
+    setCopyAsFilesToClipboard,
   } = useFileCtxExportStore();
 
   const handleCopyFilesCtx = async () => {
@@ -54,27 +54,52 @@ export function FileCtxControlsAndCopyCtxBtn({
         files,
         exportFormat,
         parsedMaxChunk,
-        splitChunkByFileExtension,
-        copyGeneratedFilesToClipboard
+        splitChunkByFileExtension
       );
 
       logInfo(`[FileCtxControlsAndCopyCtxBtn] exportStatus received: ${JSON.stringify(exportStatus)}`);
 
-      let combinedFilesContent = '';
-      if (exportStatus?.exportDir) {
-        try {
-          combinedFilesContent = await codebaseExporterApiService.readExportedFileContent(exportStatus.exportDir);
-          logInfo(`[FileCtxControlsAndCopyCtxBtn] Successfully read content (${combinedFilesContent.length} chars) from exportDir: ${exportStatus.exportDir}`);
-        } catch (readErr: any) {
-          logError('[FileCtxControlsAndCopyCtxBtn] Failed to read content from exportDir:', readErr);
+      // Wait for the export process to finish
+        const checkStatusInterval = 1000; // 1 second
+        let currentStatus = exportStatus;
+        while (currentStatus.pythonScriptStatus.isRunning) {
+            await new Promise((resolve) => setTimeout(resolve, checkStatusInterval));
+            currentStatus = await codebaseExporterApiService.getExportFilesStatus(currentStatus.pythonScriptStatus.pid);
         }
-      }
 
-      if (handleCopy) {
+      const exportResult = await codebaseExporterApiService.getExportFilesResult(
+        exportStatus.pythonScriptStatus.pid,
+        exportStatus.exportArgs?.destDir || '',
+        exportStatus.exportArgs?.timestamp || ''
+      );
+
+
+      if (copyAsFilesToClipboard) {
+        const result: boolean = await codebaseExporterApiService.storeExportedFilesInClipboard(
+          currentStatus.pythonScriptStatus.pid,
+          exportResult
+        );
+        if (result) {
+            if (handleCopy) {
+                handleCopy('', 'Selected Files Content copied to clipboard as files!');
+            } else {
+                setNotification('Selected Files Content copied to clipboard as files!');
+            }
+        }
+      } else {
+        const combinedFilesContent = await codebaseExporterApiService.readExportedFilesContent(
+          currentStatus.pythonScriptStatus.pid,
+          exportResult
+        );
+
+        if (handleCopy) {
         handleCopy(combinedFilesContent, 'Selected Files Content copied to clipboard!');
       } else {
         setNotification('Selected Files Content copied to clipboard!');
       }
+      }
+
+
     } catch (err: any) {
       logError('[FileCtxControlsAndCopyCtxBtn] Error during exportSelectedFiles:', err);
       setNotification('Failed to export selected files context.');
@@ -143,17 +168,17 @@ export function FileCtxControlsAndCopyCtxBtn({
         {/* Copy to clip */}
         <div className="flex flex-col items-center space-y-1 shrink-0">
           <label
-            htmlFor="copyGeneratedFilesToClipboard"
+            htmlFor="copyAsFilesToClipboard"
             className="font-medium text-[10px] text-muted-foreground whitespace-nowrap cursor-pointer"
             title="Automatically copy generated export files to the OS clipboard after each successful run."
           >
-            Copy to clip
+            Copy as Files
           </label>
           <div className="flex justify-center items-center h-8">
             <Checkbox
-              id="copyGeneratedFilesToClipboard"
-              checked={copyGeneratedFilesToClipboard}
-              onCheckedChange={(checked) => setCopyGeneratedFilesToClipboard(!!checked)}
+              id="copyAsFilesToClipboard"
+              checked={copyAsFilesToClipboard}
+              onCheckedChange={(checked) => setCopyAsFilesToClipboard(!!checked)}
             />
           </div>
         </div>

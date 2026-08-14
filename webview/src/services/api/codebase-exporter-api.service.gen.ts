@@ -14,28 +14,28 @@ class CodebaseExporterApiService extends AbstractApiService implements ICodebase
         super();
     }
 
-    public async exportSelectedFiles(files: string[], format: ExportFormat, maxChunk: number, groupByExt: boolean, copyToClipboard: boolean): Promise<ExportStatus> {
-        return await this.rpc.call(RpcMethodEnum.CODEBASEEXPORTER_EXPORT_SELECTED_FILES, files, format, maxChunk, groupByExt, copyToClipboard);
+    public async exportSelectedFiles(files: string[], format: ExportFormat, maxChunk: number, groupByExt: boolean): Promise<ExportStatus> {
+        return await this.rpc.call(RpcMethodEnum.CODEBASEEXPORTER_EXPORT_SELECTED_FILES, files, format, maxChunk, groupByExt);
     }
 
     public async exportFiles(exportArgs: ExportArgs): Promise<ExportStatus> {
         return await this.rpc.call(RpcMethodEnum.CODEBASEEXPORTER_EXPORT_FILES, exportArgs);
     }
 
-    public async checkExportFilesStatus(pid: number): Promise<ExportStatus> {
-        return await this.rpc.call(RpcMethodEnum.CODEBASEEXPORTER_CHECK_EXPORT_FILES_STATUS, pid);
+    public async getExportFilesStatus(pid: number): Promise<ExportStatus> {
+        return await this.rpc.call(RpcMethodEnum.CODEBASEEXPORTER_GET_EXPORT_FILES_STATUS, pid);
     }
 
-    public async getExportFilesResult(pid: number, exportArgs: ExportArgs): Promise<ExportResult> {
-        return await this.rpc.call(RpcMethodEnum.CODEBASEEXPORTER_GET_EXPORT_FILES_RESULT, pid, exportArgs);
+    public async getExportFilesResult(pid: number, exportDirectory: string, timestamp: string): Promise<ExportResult> {
+        return await this.rpc.call(RpcMethodEnum.CODEBASEEXPORTER_GET_EXPORT_FILES_RESULT, pid, exportDirectory, timestamp);
     }
 
-    public async readExportedFilesContent(pid: number, exportArgs: ExportArgs): Promise<string> {
-        return await this.rpc.call(RpcMethodEnum.CODEBASEEXPORTER_READ_EXPORTED_FILES_CONTENT, pid, exportArgs);
+    public async readExportedFilesContent(pid: number, exportResult: ExportResult): Promise<string> {
+        return await this.rpc.call(RpcMethodEnum.CODEBASEEXPORTER_READ_EXPORTED_FILES_CONTENT, pid, exportResult);
     }
 
-    public async storeExportedFilesInClipboard(pid: number, exportArgs: ExportArgs): Promise<boolean> {
-        return await this.rpc.call(RpcMethodEnum.CODEBASEEXPORTER_STORE_EXPORTED_FILES_IN_CLIPBOARD, pid, exportArgs);
+    public async storeExportedFilesInClipboard(pid: number, exportResult: ExportResult): Promise<boolean> {
+        return await this.rpc.call(RpcMethodEnum.CODEBASEEXPORTER_STORE_EXPORTED_FILES_IN_CLIPBOARD, pid, exportResult);
     }
 }
 

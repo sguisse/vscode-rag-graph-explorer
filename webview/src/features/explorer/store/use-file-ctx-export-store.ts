@@ -5,22 +5,22 @@ export interface FileCtxExportState {
   exportFormat: ExportFormat;
   maxChunk: string;
   splitChunkByFileExtension: boolean;
-  copyGeneratedFilesToClipboard: boolean;
+  copyAsFilesToClipboard: boolean;
   setExportFormat: (exportFormat: ExportFormat) => void;
   setMaxChunk: (maxChunk: string) => void;
   setSplitChunkByFileExtension: (splitChunkByFileExtension: boolean) => void;
-  setCopyGeneratedFilesToClipboard: (copyGeneratedFilesToClipboard: boolean) => void;
+  setCopyAsFilesToClipboard: (copyAsFilesToClipboard: boolean) => void;
 }
 
 export const useFileCtxExportStore = create<FileCtxExportState>((set) => ({
   exportFormat: 'yaml',
   maxChunk: '0',
   splitChunkByFileExtension: false,
-  copyGeneratedFilesToClipboard: false,
+  copyAsFilesToClipboard: false,
   setExportFormat: (exportFormat) => set({ exportFormat }),
   setMaxChunk: (maxChunk) => set({ maxChunk }),
   setSplitChunkByFileExtension: (splitChunkByFileExtension) =>
     set({ splitChunkByFileExtension }),
-  setCopyGeneratedFilesToClipboard: (copyGeneratedFilesToClipboard) =>
-    set({ copyGeneratedFilesToClipboard }),
+  setCopyAsFilesToClipboard: (copyAsFilesToClipboard) =>
+    set({ copyAsFilesToClipboard }),
 }));
