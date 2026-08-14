@@ -1,6 +1,6 @@
 import { PythonScriptStatus } from "../../../_python-scripts";
+import { ExportArgs } from "./export-args";
 
 export interface ExportStatus {
-   exportDir: string;
    pythonScriptStatus: PythonScriptStatus;
 }

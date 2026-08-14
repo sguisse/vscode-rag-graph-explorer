@@ -12,8 +12,11 @@ import { RpcProtocol } from '../../../shared/rpc/rpc-protocol';
 export function registerRpcMethods(rpc: RpcProtocol): void {
     const codebaseExporterService = serviceRegistry.get(ServiceEnum.CODEBASE_EXPORTER);
     rpc.register(RpcMethodEnum.CODEBASEEXPORTER_EXPORT_SELECTED_FILES, codebaseExporterService.exportSelectedFiles.bind(codebaseExporterService));
-    rpc.register(RpcMethodEnum.CODEBASEEXPORTER_READ_EXPORTED_FILE_CONTENT, codebaseExporterService.readExportedFileContent.bind(codebaseExporterService));
-    rpc.register(RpcMethodEnum.CODEBASEEXPORTER_STORE_EXPORTED_FILE_IN_CLIPBOARD, codebaseExporterService.storeExportedFileInClipboard.bind(codebaseExporterService));
+    rpc.register(RpcMethodEnum.CODEBASEEXPORTER_EXPORT_FILES, codebaseExporterService.exportFiles.bind(codebaseExporterService));
+    rpc.register(RpcMethodEnum.CODEBASEEXPORTER_CHECK_EXPORT_FILES_STATUS, codebaseExporterService.checkExportFilesStatus.bind(codebaseExporterService));
+    rpc.register(RpcMethodEnum.CODEBASEEXPORTER_GET_EXPORT_FILES_RESULT, codebaseExporterService.getExportFilesResult.bind(codebaseExporterService));
+    rpc.register(RpcMethodEnum.CODEBASEEXPORTER_READ_EXPORTED_FILES_CONTENT, codebaseExporterService.readExportedFilesContent.bind(codebaseExporterService));
+    rpc.register(RpcMethodEnum.CODEBASEEXPORTER_STORE_EXPORTED_FILES_IN_CLIPBOARD, codebaseExporterService.storeExportedFilesInClipboard.bind(codebaseExporterService));
 
     const graphRagExplorerService = serviceRegistry.get(ServiceEnum.GRAPH_RAG_EXPLORER);
     rpc.register(RpcMethodEnum.GRAGEXPLORER_GET_PATHS_CHANGE_IMPACTS, graphRagExplorerService.getPathsChangeImpacts.bind(graphRagExplorerService));

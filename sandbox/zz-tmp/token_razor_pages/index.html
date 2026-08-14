@@ -8,7 +8,7 @@
       window.$RefreshSig$ = () => (type) => type;
       window.__vite_plugin_react_preamble_installed__ = true;
     </script>
-          <meta charset="UTF-8">
+    <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Token Razor - 30 Showcase Pages Gallery</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
@@ -18,14 +18,14 @@
       background: #090a0f;
       color: #fff;
       font-family: 'Plus Jakarta Sans', sans-serif;
-      padding: 40px;
+      padding: 40px 20px;
     }
     header {
       text-align: center;
-      margin-bottom: 50px;
+      margin-bottom: 40px;
     }
     h1 {
-      font-size: 1rem;
+      font-size: 2.2rem;
       font-weight: 800;
       background: linear-gradient(90deg, #38bdf8, #c084fc);
       -webkit-background-clip: text;
@@ -33,76 +33,325 @@
     }
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 20px;
-      max-width: 1200px;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 24px;
+      max-width: 1500px;
       margin: 0 auto;
     }
-    a.card {
+    .card {
       background: rgba(255, 255, 255, 0.03);
       border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 14px;
-      padding: 20px;
-      color: #fff;
-      text-decoration: none;
-      transition: all 0.3s ease;
+      border-radius: 16px;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
+      transition: border-color 0.3s ease, transform 0.3s ease;
     }
-    a.card:hover {
-      background: rgba(255, 255, 255, 0.08);
+    .card:hover {
       border-color: #38bdf8;
       transform: translateY(-4px);
     }
-    .num {
+    .card-header {
+      padding: 14px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.02);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-num {
       font-size: 0.8rem;
       color: #38bdf8;
-      font-weight: 700;
+      font-weight: 800;
+      background: rgba(56, 189, 248, 0.1);
+      padding: 2px 8px;
+      border-radius: 6px;
     }
-    .title {
-      font-size: 1.1rem;
+    .open-btn {
+      color: #38bdf8;
+      text-decoration: none;
+      font-size: 0.8rem;
       font-weight: 700;
-      margin-top: 10px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      transition: all 0.2s ease;
+    }
+    .open-btn:hover {
+      background: #38bdf8;
+      color: #090a0f;
+    }
+    .iframe-wrapper {
+      position: relative;
+      width: 100%;
+      height: 240px;
+      background: #000;
+      overflow: hidden;
+    }
+    .iframe-wrapper iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
   <header>
     <h1>Token Razor Showcase Gallery</h1>
-    <p style="color: #9ca3af; margin-top: 10px;">Select any theme below to view full HTML/CSS showcase page</p>
+    <p style="color: #9ca3af; margin-top: 10px;">Interactive live iframe previews of all 30 theme pages</p>
   </header>
   <div class="grid">
-    <a class="card" href="page_01_neumorphism.html"><span class="num">01</span><span class="title">Neumorphism Soft UI</span></a>
-    <a class="card" href="page_02_crt_terminal.html"><span class="num">02</span><span class="title">Retro CRT Terminal</span></a>
-    <a class="card" href="page_03_swiss_minimal.html"><span class="num">03</span><span class="title">Swiss Minimalist Grid</span></a>
-    <a class="card" href="page_04_amber_laser.html"><span class="num">04</span><span class="title">Amber Laser Cut</span></a>
-    <a class="card" href="page_05_vaporwave.html"><span class="num">05</span><span class="title">Vaporwave Dreamscape</span></a>
-    <a class="card" href="page_06_military_hud.html"><span class="num">06</span><span class="title">Military Tactical HUD</span></a>
-    <a class="card" href="page_07_glass_mesh.html"><span class="num">07</span><span class="title">Glassmorphism Wave</span></a>
-    <a class="card" href="page_08_nordic_frost.html"><span class="num">08</span><span class="title">Nordic Frost Clean</span></a>
-    <a class="card" href="page_09_dusk_horizon.html"><span class="num">09</span><span class="title">Dusk Horizon Minimal</span></a>
-    <a class="card" href="page_10_bioluminescence.html"><span class="num">10</span><span class="title">Deep Ocean Bioluminescence</span></a>
-    <a class="card" href="page_11_luxury_editorial.html"><span class="num">11</span><span class="title">Asymmetric Luxury Editorial</span></a>
-    <a class="card" href="page_12_paper_depth.html"><span class="num">12</span><span class="title">Layered Paper Cutout</span></a>
-    <a class="card" href="page_13_pixel_arcade.html"><span class="num">13</span><span class="title">8-Bit Pixel Arcade</span></a>
-    <a class="card" href="page_14_industrial_hazard.html"><span class="num">14</span><span class="title">Industrial Hazard Warning</span></a>
-    <a class="card" href="page_15_soft_clay.html"><span class="num">15</span><span class="title">Soft Claymorphic Pastel</span></a>
-    <a class="card" href="page_16_quantum_ring.html"><span class="num">16</span><span class="title">Quantum Orbit Ring Glow</span></a>
-    <a class="card" href="page_17_solarized_ide.html"><span class="num">17</span><span class="title">Solarized Dark IDE</span></a>
-    <a class="card" href="page_18_blade_laser.html"><span class="num">18</span><span class="title">Diagonal Slanted Laser Cut</span></a>
-    <a class="card" href="page_19_emerald_royal.html"><span class="num">19</span><span class="title">Deep Emerald Royal</span></a>
-    <a class="card" href="page_20_cosmic_nebula.html"><span class="num">20</span><span class="title">Cosmic Starfield Nebula</span></a>
-    <a class="card" href="page_21_neon_wireframe.html"><span class="num">21</span><span class="title">Nightclub Neon Sign</span></a>
-    <a class="card" href="page_22_modern_saas.html"><span class="num">22</span><span class="title">Modern Dark SaaS Hero</span></a>
-    <a class="card" href="page_23_zen_sumi_ink.html"><span class="num">23</span><span class="title">Minimal Japanese Ink</span></a>
-    <a class="card" href="page_24_holographic_stroke.html"><span class="num">24</span><span class="title">Holographic Text Stroke</span></a>
-    <a class="card" href="page_25_carbon_racing.html"><span class="num">25</span><span class="title">Carbon Fiber Motorsport</span></a>
-    <a class="card" href="page_26_outrun_retrowave.html"><span class="num">26</span><span class="title">80s Synth Retrowave</span></a>
-    <a class="card" href="page_27_liquid_aura.html"><span class="num">27</span><span class="title">Morphing Liquid Aura</span></a>
-    <a class="card" href="page_28_gothic_chrome.html"><span class="num">28</span><span class="title">Gothic Metallic Bevel</span></a>
-    <a class="card" href="page_29_bento_grid.html"><span class="num">29</span><span class="title">Bento Box Showcase Grid</span></a>
-    <a class="card" href="page_30_interactive_3d_tilt.html"><span class="num">30</span><span class="title">3D Perspective Tilt Card</span></a>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">01</span> Neumorphism Soft UI</span>
+        <a class="open-btn" href="page_01_neumorphism.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_01_neumorphism.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">02</span> Retro CRT Terminal</span>
+        <a class="open-btn" href="page_02_crt_terminal.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_02_crt_terminal.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">03</span> Swiss Minimalist Grid</span>
+        <a class="open-btn" href="page_03_swiss_minimal.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_03_swiss_minimal.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">04</span> Amber Laser Cut</span>
+        <a class="open-btn" href="page_04_amber_laser.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_04_amber_laser.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">05</span> Vaporwave Dreamscape</span>
+        <a class="open-btn" href="page_05_vaporwave.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_05_vaporwave.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">06</span> Military Tactical HUD</span>
+        <a class="open-btn" href="page_06_military_hud.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_06_military_hud.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">07</span> Glassmorphism Wave</span>
+        <a class="open-btn" href="page_07_glass_mesh.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_07_glass_mesh.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">08</span> Nordic Frost Clean</span>
+        <a class="open-btn" href="page_08_nordic_frost.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_08_nordic_frost.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">09</span> Dusk Horizon Minimal</span>
+        <a class="open-btn" href="page_09_dusk_horizon.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_09_dusk_horizon.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">10</span> Deep Ocean Bioluminescence</span>
+        <a class="open-btn" href="page_10_bioluminescence.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_10_bioluminescence.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">11</span> Asymmetric Luxury Editorial</span>
+        <a class="open-btn" href="page_11_luxury_editorial.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_11_luxury_editorial.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">12</span> Layered Paper Cutout</span>
+        <a class="open-btn" href="page_12_paper_depth.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_12_paper_depth.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">13</span> 8-Bit Pixel Arcade</span>
+        <a class="open-btn" href="page_13_pixel_arcade.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_13_pixel_arcade.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">14</span> Industrial Hazard Warning</span>
+        <a class="open-btn" href="page_14_industrial_hazard.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_14_industrial_hazard.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">15</span> Soft Claymorphic Pastel</span>
+        <a class="open-btn" href="page_15_soft_clay.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_15_soft_clay.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">16</span> Quantum Orbit Ring Glow</span>
+        <a class="open-btn" href="page_16_quantum_ring.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_16_quantum_ring.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">17</span> Solarized Dark IDE</span>
+        <a class="open-btn" href="page_17_solarized_ide.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_17_solarized_ide.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">18</span> Diagonal Slanted Laser Cut</span>
+        <a class="open-btn" href="page_18_blade_laser.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_18_blade_laser.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">19</span> Deep Emerald Royal</span>
+        <a class="open-btn" href="page_19_emerald_royal.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_19_emerald_royal.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">20</span> Cosmic Starfield Nebula</span>
+        <a class="open-btn" href="page_20_cosmic_nebula.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_20_cosmic_nebula.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">21</span> Nightclub Neon Sign</span>
+        <a class="open-btn" href="page_21_neon_wireframe.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_21_neon_wireframe.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">22</span> Modern Dark SaaS Hero</span>
+        <a class="open-btn" href="page_22_modern_saas.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_22_modern_saas.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">23</span> Minimal Japanese Ink</span>
+        <a class="open-btn" href="page_23_zen_sumi_ink.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_23_zen_sumi_ink.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">24</span> Holographic Text Stroke</span>
+        <a class="open-btn" href="page_24_holographic_stroke.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_24_holographic_stroke.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">25</span> Carbon Fiber Motorsport</span>
+        <a class="open-btn" href="page_25_carbon_racing.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_25_carbon_racing.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">26</span> 80s Synth Retrowave</span>
+        <a class="open-btn" href="page_26_outrun_retrowave.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_26_outrun_retrowave.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">27</span> Morphing Liquid Aura</span>
+        <a class="open-btn" href="page_27_liquid_aura.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_27_liquid_aura.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">28</span> Gothic Metallic Bevel</span>
+        <a class="open-btn" href="page_28_gothic_chrome.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_28_gothic_chrome.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">29</span> Bento Box Showcase Grid</span>
+        <a class="open-btn" href="page_29_bento_grid.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_29_bento_grid.html"></iframe></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><span class="card-num">30</span> 3D Perspective Tilt Card</span>
+        <a class="open-btn" href="page_30_interactive_3d_tilt.html" target="_blank">Open ↗</a>
+      </div>
+      <div class="iframe-wrapper"><iframe src="page_30_interactive_3d_tilt.html"></iframe></div>
+    </div>
+
   </div>
 </body>
 </html>

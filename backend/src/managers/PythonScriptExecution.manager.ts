@@ -4,18 +4,37 @@ import * as path from 'path';
 import * as childProcess from 'child_process';
 import { getWorkspaceExtentionPath } from '../utils/utils-vscode';
 import { logInfo, log } from '../utils/utils-log';
+import { PythonScriptStatus } from '../../../shared/services/_python-scripts';
+import { vsCodeSettingsManager } from './VsCodeSettings.manager';
 
 const PID_PYTHON_PATH_LOCATION = 'pids_python';
 
 export class PythonScriptExecutionManager {
     private static instance: PythonScriptExecutionManager;
     private pidsDir: string;
+    private processTimeout: number;
+
+    // Active and Completed Process Tracking Stores
     private activeProcesses: Map<number, childProcess.ChildProcess> = new Map();
+    private startTimes: Map<number, Date> = new Map();
+    private finishedProcesses: Map<number, PythonScriptStatus> = new Map();
+
+    // Cap finished process history to avoid unbounded memory growth
+    private readonly MAX_FINISHED_PROCESSES = 100;
+    private readonly MAX_PROCESS_TIMEOUT_IN_MS = 10000;
 
     private constructor() {
         this.pidsDir = path.join(getWorkspaceExtentionPath(), PID_PYTHON_PATH_LOCATION);
+        this.processTimeout = 0;
         this.ensureDirExists();
         this.cleanStalePids();
+    }
+
+    public getProcessTimeout(): number {
+        if (this.processTimeout <= 0) {
+            this.processTimeout = vsCodeSettingsManager.getSettings().processTimeout || this.MAX_PROCESS_TIMEOUT_IN_MS;
+        }
+        return this.processTimeout;
     }
 
     public static getInstance(): PythonScriptExecutionManager {
@@ -37,6 +56,19 @@ export class PythonScriptExecutionManager {
 
     private getPidFilePath(pid: number): string {
         return path.join(this.pidsDir, `${pid}.pid`);
+    }
+
+    /**
+     * Helper to safely store finished status while capping max history size.
+     */
+    private recordFinishedProcess(status: PythonScriptStatus): void {
+        if (this.finishedProcesses.size >= this.MAX_FINISHED_PROCESSES) {
+            const oldestPid = this.finishedProcesses.keys().next().value;
+            if (oldestPid !== undefined) {
+                this.finishedProcesses.delete(oldestPid);
+            }
+        }
+        this.finishedProcesses.set(status.pid, status);
     }
 
     /**
@@ -68,13 +100,16 @@ export class PythonScriptExecutionManager {
     }
 
     /**
-     * Registers an active process in memory and creates an individual PID file on disk.
+     * Registers an active process in memory, records its start time,
+     * and sets up exit listeners to transition it to finishedProcesses upon completion.
      */
     public registerProcess(child: childProcess.ChildProcess, scriptOrigin?: string): number | undefined {
         const pid = child.pid;
         if (!pid) return undefined;
 
+        const startTime = new Date();
         this.activeProcesses.set(pid, child);
+        this.startTimes.set(pid, startTime);
         this.ensureDirExists();
 
         try {
@@ -93,13 +128,39 @@ export class PythonScriptExecutionManager {
             this.unregisterPid(pid);
         };
 
+        // Transition active process -> finishedProcesses on EXIT
         child.once('exit', (code, signal) => {
-            log(origin, `Process exited with code ${code ?? 'N/A'}${signal ? ` (signal: ${signal})` : ''}`);
+            const endTime = new Date();
+            const exitMsg = `Process exited with code ${code ?? 'N/A'}${signal ? ` (signal: ${signal})` : ''}`;
+            log(origin, exitMsg);
+
+            this.recordFinishedProcess({
+                pid,
+                startTime: this.startTimes.get(pid) || startTime,
+                endTime,
+                isRunning: false,
+                exitCode: code ?? (signal ? -1 : 0),
+                message: exitMsg
+            });
+
             cleanup();
         });
 
+        // Transition active process -> finishedProcesses on ERROR
         child.once('error', (err) => {
-            log(`${origin}:ERR`, `Process error: ${err.message}`, err);
+            const endTime = new Date();
+            const errorMsg = `Process error: ${err.message}`;
+            log(`${origin}:ERR`, errorMsg, err);
+
+            this.recordFinishedProcess({
+                pid,
+                startTime: this.startTimes.get(pid) || startTime,
+                endTime,
+                isRunning: false,
+                exitCode: 1,
+                message: errorMsg
+            });
+
             cleanup();
         });
 
@@ -108,6 +169,8 @@ export class PythonScriptExecutionManager {
 
     public unregisterPid(pid: number): void {
         this.activeProcesses.delete(pid);
+        this.startTimes.delete(pid);
+
         const pidFile = this.getPidFilePath(pid);
         if (fs.existsSync(pidFile)) {
             try {
@@ -118,9 +181,38 @@ export class PythonScriptExecutionManager {
         }
     }
 
+    // ─── Query Methods for Process Status ─────────────────────────────────────
+
     /**
-     * Executes a Python script file directly with forced unbuffered stdio (PYTHONUNBUFFERED=1).
+     * Gets the status of any process (active or finished) by PID.
      */
+    public getProcessStatus(pid: number): PythonScriptStatus | undefined {
+        if (this.activeProcesses.has(pid)) {
+            return {
+                pid,
+                startTime: this.startTimes.get(pid) || new Date(),
+                isRunning: true
+            };
+        }
+        return this.finishedProcesses.get(pid);
+    }
+
+    /**
+     * Returns an array of all recently finished process statuses.
+     */
+    public getFinishedProcesses(): PythonScriptStatus[] {
+        return Array.from(this.finishedProcesses.values());
+    }
+
+    /**
+     * Clears the historical finished process store.
+     */
+    public clearFinishedProcesses(): void {
+        this.finishedProcesses.clear();
+    }
+
+    // ─── Execution Methods ───────────────────────────────────────────────────
+
     public executeScript(
         scriptPath: string,
         args: string[] = [],
@@ -171,7 +263,6 @@ export class PythonScriptExecutionManager {
             } catch (err) {
                 // Process already exited
             }
-            this.activeProcesses.delete(pid);
         }
 
         if (this.isRunning(pid)) {
@@ -195,7 +286,6 @@ export class PythonScriptExecutionManager {
                 // Process already dead
             }
         }
-        this.activeProcesses.clear();
 
         const storedPids = this.getActivePids();
         for (const pid of storedPids) {

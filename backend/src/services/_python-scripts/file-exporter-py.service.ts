@@ -26,10 +26,10 @@ export async function callFileExporterScript(exportArgs: ExportArgs): Promise<Py
     // Execute via pythonScriptExecutionManager
     const childProcess: ChildProcess = await pythonScriptExecutionManager.executeScript(PYTHON_SCRIPT_PATH, args);
 
-    const pythonScriptStatus: PythonScriptStatus = {
-        pid: childProcess.pid || 0,
-        startTime: new Date()
-    };
+    const pythonScriptStatus = pythonScriptExecutionManager.getProcessStatus(childProcess.pid || 0);
+    if (!pythonScriptStatus) {
+        throw new Error(`Failed to retrieve status for the Python script process with PID: ${childProcess.pid}`);
+    }
 
     return pythonScriptStatus;
 }

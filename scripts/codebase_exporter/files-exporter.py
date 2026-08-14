@@ -607,7 +607,7 @@ def main():
 
     # Use provided timestamp or initialize with current date/time if not supplied
     TIMESTAMP = args.timestamp if args.timestamp else datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    LOG_FILE_PATH = os.path.join(DEST_DIR, f"export-{TIMESTAMP}.log")
+    LOG_FILE_PATH = os.path.join(DEST_DIR, f"export-{TIMESTAMP}-log.log")
     LOG_FILE_HANDLE = open(LOG_FILE_PATH, 'w', encoding='utf-8') if GENERATE_LOG_FILE else None
 
     # 4. ─── Dispatch Standard Export Modes ───

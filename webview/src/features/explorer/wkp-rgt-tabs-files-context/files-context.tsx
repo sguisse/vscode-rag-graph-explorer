@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { GitFork, FileText, ShieldAlert, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
 import { CodebaseData, CodebaseFile, SelectedEntity } from '@/shared/services/graph-rag-explorer';
 import { calculateTransitiveImpact } from '@/services/view/graph-view.service';
 import { FileCtxControlsAndCopyCtxBtn } from '../components/file-ctx-controls-and-copy-ctx-btn';
@@ -295,10 +296,42 @@ export function FilesContextPanel({
       : [];
   }, [combinedSelectedFilesContext]);
 
-  return (
-    <div className="space-y-4 font-mono text-xs animate-in duration-200 fade-in">
-      {/* Impact Propagation Controls */}
-      <div className="space-y-2 bg-muted/30 p-3 border border-border rounded-lg">
+  const topContent = (
+    <div className="space-y-2 mb-2 w-full">
+      {/* Unified Files Context Preview & Meta */}
+      <div className="space-y-3 bg-card p-4 border border-border rounded-lg w-full">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <FileText size={16} className="text-primary" />
+            <h4 className="font-mono font-bold text-foreground text-xs uppercase tracking-wider">
+              Unified Files Context
+            </h4>
+          </div>
+        </div>
+
+        {/* Row 1: Total Codebase Summary */}
+        <div className="gap-2 grid grid-cols-4 text-center">
+          <div className="bg-muted/40 p-2 border border-border/50 rounded">
+            <span className="block text-[9px] text-muted-foreground truncate uppercase">Total Files</span>
+            <span className="font-bold text-foreground text-xs">{initialCodebase?.files?.length || 0}</span>
+          </div>
+          <div className="bg-indigo-500/10 p-2 border border-indigo-500/20 rounded">
+            <span className="block text-[9px] text-indigo-500 truncate uppercase">Upstream</span>
+            <span className="font-bold text-indigo-500 text-xs">{upstreamCount}</span>
+          </div>
+          <div className="bg-blue-500/10 p-2 border border-blue-500/20 rounded">
+            <span className="block text-[9px] text-blue-500 truncate uppercase">Downstream</span>
+            <span className="font-bold text-blue-500 text-xs">{downstreamCount}</span>
+          </div>
+          <div className="bg-yellow-500/10 p-2 border border-yellow-500/30 rounded">
+            <span className="block text-[9px] text-yellow-600 dark:text-yellow-400 truncate uppercase">Token Size</span>
+            <span className="font-bold text-yellow-600 dark:text-yellow-400 text-xs">{(totalFilesContext.length / 1024).toFixed(1)} KB</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Impact Propagation */}
+      <div className="space-y-2 bg-muted/30 p-3 border border-border rounded-lg w-full">
         <div className="flex justify-between items-center">
           <label className="font-mono font-bold text-[11px] text-muted-foreground uppercase">Impact Propagation</label>
           <span className="bg-amber-500/10 px-2 py-0.5 border border-amber-500/30 rounded font-mono text-[10px] text-amber-500">Transitive BFS</span>
@@ -328,7 +361,11 @@ export function FilesContextPanel({
           </Button>
         </div>
       </div>
+    </div>
+  );
 
+  const middleContent = (
+    <div className="space-y-3 py-2 pr-1 w-full font-mono text-xs">
       {/* Fluorescent Impact Plan with Collapsible Depth Groups & 3-State Checkboxes */}
       <div className="space-y-3 bg-orange-500/5 p-4 border border-orange-500/25 rounded-lg">
         <div className="flex justify-between items-center">
@@ -432,39 +469,23 @@ export function FilesContextPanel({
           )}
         </div>
       </div>
+    </div>
+  );
 
-      {/* Unified Files Context Preview & Meta */}
-      <div className="space-y-3 bg-card p-4 border border-border rounded-lg">
+  const bottomContent = (
+    <div className="space-y-2 mt-2 w-full">
+      {/* Selected Files Context Preview & Meta */}
+      <div className="space-y-3 bg-card p-4 border border-border rounded-lg w-full">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
             <FileText size={16} className="text-primary" />
             <h4 className="font-mono font-bold text-foreground text-xs uppercase tracking-wider">
-              Unified Files Context
+              Selected Files Context
             </h4>
           </div>
         </div>
 
-        {/* Row 1: Total Codebase Summary */}
-        <div className="gap-2 grid grid-cols-4 text-center">
-          <div className="bg-muted/40 p-2 border border-border/50 rounded">
-            <span className="block text-[9px] text-muted-foreground truncate uppercase">Total Files</span>
-            <span className="font-bold text-foreground text-xs">{initialCodebase?.files?.length || 0}</span>
-          </div>
-          <div className="bg-indigo-500/10 p-2 border border-indigo-500/20 rounded">
-            <span className="block text-[9px] text-indigo-500 truncate uppercase">Upstream</span>
-            <span className="font-bold text-indigo-500 text-xs">{upstreamCount}</span>
-          </div>
-          <div className="bg-blue-500/10 p-2 border border-blue-500/20 rounded">
-            <span className="block text-[9px] text-blue-500 truncate uppercase">Downstream</span>
-            <span className="font-bold text-blue-500 text-xs">{downstreamCount}</span>
-          </div>
-          <div className="bg-yellow-500/10 p-2 border border-yellow-500/30 rounded">
-            <span className="block text-[9px] text-yellow-600 dark:text-yellow-400 truncate uppercase">Token Size</span>
-            <span className="font-bold text-yellow-600 dark:text-yellow-400 text-xs">{(totalFilesContext.length / 1024).toFixed(1)} KB</span>
-          </div>
-        </div>
-
-        {/* Row 2: Selected Context Summary */}
+        {/* Row 1: Selected Context Summary */}
         <div className="gap-2 grid grid-cols-4 text-center">
           <div className="bg-orange-500/10 p-2 border border-orange-500/20 rounded">
             <span className="block text-[9px] text-orange-500 truncate uppercase">Selected</span>
@@ -484,11 +505,22 @@ export function FilesContextPanel({
             <span className="font-bold text-emerald-500 text-xs">{(combinedSelectedFilesContext.length / 1024).toFixed(1)} KB</span>
           </div>
         </div>
-
       </div>
 
-      {/* File Context Controls & Copy files ctx Button */}
-      <FileCtxControlsAndCopyCtxBtn targetFilePaths={targetFilePaths} handleCopy={handleCopy} />
+      <div className="bg-background pt-2 w-full">
+        {/* File Context Controls & Copy files ctx Button */}
+        <FileCtxControlsAndCopyCtxBtn targetFilePaths={targetFilePaths} handleCopy={handleCopy} />
+      </div>
     </div>
+  );
+
+  return (
+    <TopMiddleBottomPanel
+      id="files-context-panel"
+      top={topContent}
+      middle={middleContent}
+      bottom={bottomContent}
+      className="h-full font-mono text-xs animate-in duration-200 fade-in"
+    />
   );
 }

@@ -211,6 +211,7 @@ class VsCodeSettings:
     logFileEnabled: bool = True
     logFileMaxSize: int = 5
     logFileMaxCountRetention: int = 5
+    processTimeout: int = 10000
     graphRagExplorer: "GraphRagExplorerSettings" = field(default_factory=GraphRagExplorerSettings)
 
     @classmethod
@@ -235,6 +236,8 @@ class VsCodeSettings:
             obj.logFileMaxSize = data["logFileMaxSize"]
         if "logFileMaxCountRetention" in data:
             obj.logFileMaxCountRetention = data["logFileMaxCountRetention"]
+        if "processTimeout" in data:
+            obj.processTimeout = data["processTimeout"]
         if "graphRagExplorer" in data:
             obj.graphRagExplorer = GraphRagExplorerSettings.from_dict(data["graphRagExplorer"])
         return obj

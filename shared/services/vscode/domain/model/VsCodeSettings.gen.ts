@@ -18,6 +18,8 @@ export class VsCodeSettings {
 
     logFileMaxCountRetention = 5;
 
+    processTimeout = 10000;
+
     graphRagExplorer = {
         entitiesTypesList: ["file","class","method","document"],
         regexFilterEnabled: false,

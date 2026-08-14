@@ -90,6 +90,11 @@
           "default": 5,
           "description": "Maximum number of historical log file nodes to keep before cycling."
         },
+        "tokenRazor.processTimeout": {
+          "type": "number",
+          "default": 10000,
+          "description": "Default external process timeout in milliseconds (python scripts, sh scripts, ...)."
+        },
         "tokenRazor.graphRagExplorer.entitiesTypesList": {
           "type": "array",
           "description": "List of predefined entity types for the graph exploration.",
