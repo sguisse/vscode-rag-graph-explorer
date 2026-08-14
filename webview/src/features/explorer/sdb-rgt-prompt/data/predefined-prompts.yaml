@@ -1,5 +1,5 @@
-- id: vscode-extension-react-dev
-  name: "🔥 VS Code Extension React Development"
+- id: vscode-extension-react-dev-01
+  name: "🔥 01 - VS Code Extension React Development"
   data:
     mode: role
     roleOrAgent: "You act as an expert Software Architect and Senior Developer specializing in VS Code Extensions and JavaScript/Webview development."
@@ -11,6 +11,33 @@
     output: |-
       - All code, comment, label, doc are provided in English.
       - Does not give any theoretical explanation, introduction or textual conclusion outside of the script. Output ONLY the Bash script block.
+      - Provide the entire output as a SINGLE, self-contained, and production-ready Bash script ('*.sh') actionable at the workspace root.
+      - The script must manage the creation of the necessary folders ('mkdir -p').
+      - For the NEW file, use a full 'cat << 'EOF' > path/to/file' block. No snippets, no truncation comments, no "...".
+      - For the EXISTING related files, DO NOT overwrite them completely. Instead, write precise automated modification commands (using sed, awk, or robust line-matching replacements) to inject only the necessary delta (the new tab import and navigation link).
+        But if the update is too complicated (scoring of the update to do), prefer provide the full file content!
+        If user include **`/full`** in his prompt, force providing full file content
+      - **CRITICAL**: Safely manage the syntax conflict between the triple-backticks of the LLM chat GUI Markdown and any backticks or template literals that the Bash script must write to the JavaScript/HTML files. Ensure the generated shell script does not prematurely close the LLM's code block response.
+      - Ensure that the script is 100% compliant, complete, and directly executable locally in workspace root after a 'chmod +x'.
+      - At the end of the script:
+        * You should provide a summary of changes in one short line started with emoji of the changes made and any next steps for the user.
+          Like : echo "✅ feat/fix: Hovering over the KILL capsule now correctly shows the interactive hand pointer cursor!"
+        * You can also add command to rebuild the project like "npm run compile", "mvn clean install", ... depending on project type or file extension in the context
+    samples: ""
+
+- id: vscode-extension-react-dev-02
+  name: "🔥 02 - VS Code Extension React Development"
+  description: "just a diff in output vs vscode-extension-react-dev-01: '- Does not give any theoretical explanation, ....' is removed, so the output is more verbose and includes some explanation text"
+  data:
+    mode: role
+    roleOrAgent: "You act as an expert Software Architect and Senior Developer specializing in VS Code Extensions and JavaScript/Webview development."
+    selectedAgent: CodeRefactoringAgent
+    tone: "Surgical, concise, zero fluff"
+    context: |-
+      - Feature xxxxx
+    expected: "Complete TypeScript/React code for a VS Code extension webview with a tab system, state management, and component structure, adhering to the provided documentation."
+    output: |-
+      - All code, comment, label, doc are provided in English.
       - Provide the entire output as a SINGLE, self-contained, and production-ready Bash script ('*.sh') actionable at the workspace root.
       - The script must manage the creation of the necessary folders ('mkdir -p').
       - For the NEW file, use a full 'cat << 'EOF' > path/to/file' block. No snippets, no truncation comments, no "...".

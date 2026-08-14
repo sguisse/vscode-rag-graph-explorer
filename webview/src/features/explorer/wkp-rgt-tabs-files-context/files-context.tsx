@@ -4,8 +4,8 @@ import { Button } from '@/components/ui/button';
 import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
 import { CodebaseData, CodebaseFile, SelectedEntity } from '@/shared/services/graph-rag-explorer';
 import { calculateTransitiveImpact } from '@/services/view/graph-view.service';
-import { FilesCtxExportPanel } from '../components/files-ctx-export-panel';
-import { useFilesCtxExportStore } from '../store/use-files-ctx-export-store';
+import { FilesCtxExportPanel } from '../components/files-ctx-export/files-ctx-export-panel';
+import { useFilesCtxExportStore } from '../components/files-ctx-export/use-files-ctx-export-store';
 
 interface FilesContextPanelProps {
   initialCodebase: CodebaseData;

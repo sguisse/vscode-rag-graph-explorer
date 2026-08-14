@@ -10,7 +10,7 @@ import {
   EXPORT_FORMAT_ICON_MAP,
   ExportFormat,
 } from '@/shared/services/codebase-exporter/domain/model/types';
-import { useFilesCtxExportStore } from '../store/use-files-ctx-export-store';
+import { useFilesCtxExportStore } from './use-files-ctx-export-store';
 import { codebaseExporterApiService } from '@/services/api/codebase-exporter-api.service.gen';
 import { logInfo, logError } from '@/services/view/log-view.service.wrapper';
 import { ExportStatus } from '@/shared/services/codebase-exporter/domain/model/export-status';

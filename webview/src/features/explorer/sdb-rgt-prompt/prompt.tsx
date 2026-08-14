@@ -11,7 +11,7 @@ import TEMPLATE_PROMPTS from './data/template-prompts.yaml';
 import { AGENTS_LIST } from './data/data-constants';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
-import { FilesCtxExportPanel } from '../components/files-ctx-export-panel';
+import { FilesCtxExportPanel } from '../components/files-ctx-export/files-ctx-export-panel';
 
 interface PromptPanelProps {
   handleCopy?: (text: string, message: string) => void;
@@ -55,7 +55,7 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
       const roleHeader =
         promptFields.mode === 'agent'
           ? `[AGENT]: ${promptFields.selectedAgent} (${promptFields.roleOrAgent})`
-          : `[ROLE]: ${promptFields.roleOrAgent}`;
+          : `${promptFields.roleOrAgent}`;
 
       const replacements: Record<string, string> = {
         '{{ ROLE_AGENT }}': roleHeader,

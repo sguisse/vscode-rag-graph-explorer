@@ -1,26 +1,62 @@
 ### 🎭 Role
-  [ROLE]: Senior React & TypeScript Architect
+  You act as an expert Software Architect and Senior Developer specializing in LLM Provider and how to configure each of them to execute chat
 
 ### 🗣 Tone
-  Concise, surgical, highly technical
+  Surgical, concise, zero fluff
 
 ### 🛠️ Global Context & Scope
-  You must always follow and respect the following rules as the foundation of the project.
-  <GLOBAL_CONTEXT_SCOPE>
+  You must load and respect the following attachment file which contains rules as the foundation of the project.
     You are an expert senior software architect.
-  </GLOBAL_CONTEXT_SCOPE>
 
 ### 🧠 Task Context & Scope
-  This following section contains the codebase to analyse as implied in the task.
-  <TASK_CONTEXT_SCOPE>
-    Optimizing codebase dependencies and AST context for LLM prompt engineering.
-  </TASK_CONTEXT_SCOPE>
+  You have to load the following attachment file which contains the codebase to analyse as implied in the task.
+    - Feature webview/src/features/explorer
 
 ### 🎯 Expected Deliverables
-  Clean, production-ready React component with Tailwind CSS styling.
+  Based on
+scripts/graph_rag_explorer/install/modules/java/jqassistant_graph_rag/git-clone/llm_client.py
+I want you define a more beautiful development design respecting SOLID PRinciples, Separation of concerns, And enterprise best practices to interact with LLM.
+I want you focus on 3 LLMs providers for the moment "Ollama", "Gemini" and "Copilot".
+
+I have initialized some files to help you split elements, components, ...
+Like :
+backend/src/services/llm-chat
+backend/src/services/llm-chat/delegate
+backend/src/services/llm-chat/delegate/copilot.delegate.ts
+backend/src/services/llm-chat/delegate/gemini.delegate.ts
+backend/src/services/llm-chat/delegate/ollama.delegate.ts
+backend/src/services/llm-chat/llm-chat-service.adapter.ts
+
+shared/services/llm-chat
+shared/services/llm-chat/domain
+shared/services/llm-chat/domain/mapper
+shared/services/llm-chat/domain/model
+shared/services/llm-chat/domain/model/types
+shared/services/llm-chat/domain/port-out
+shared/services/llm-chat/domain/port-out/llm-chat-service.port.ts
+shared/services/llm-chat/index.ts
+
+webview/src/services/api/llm-chat-api.service.gen.ts
+webview/src/features/explorer/sdb-rgt-prompt/LLM.tsx
+
+But you have to create more files and folders to respect the separation of concerns, and the SOLID principles.
+refactor the codebase to respect the separation of concerns, and the SOLID principles.
+define and use domian objects, value objects, and data transfer objects to encapsulate the data and behavior of the LLM chat service.
+...
 
 ### 🧭 Output Format & Constraints
-  Single self-contained file with full implementation.
+  - All code, comment, label, doc are provided in English.
+- Provide the entire output as a SINGLE, self-contained, and production-ready Bash script ('*.sh') actionable at the workspace root.
+- The script must manage the creation of the necessary folders ('mkdir -p').
+- For the NEW file, use a full 'cat << 'EOF' > path/to/file' block. No snippets, no truncation comments, no "...".
+- For the EXISTING related files, DO NOT overwrite them completely. Instead, write precise automated modification commands (using sed, awk, or robust line-matching replacements) to inject only the necessary delta (the new tab import and navigation link).
+  But if the update is too complicated (scoring of the update to do), prefer provide the full file content!
+  If user include **`/full`** in his prompt, force providing full file content
+- **CRITICAL**: Safely manage the syntax conflict between the triple-backticks of the LLM chat GUI Markdown and any backticks or template literals that the Bash script must write to the JavaScript/HTML files. Ensure the generated shell script does not prematurely close the LLM's code block response.
+- Ensure that the script is 100% compliant, complete, and directly executable locally in workspace root after a 'chmod +x'.
+- At the end of the script:
+  * You should provide a summary of changes in one short line started with emoji of the changes made and any next steps for the user.
+    Like : echo "✅ feat/fix: Hovering over the KILL capsule now correctly shows the interactive hand pointer cursor!"
+  * You can also add command to rebuild the project like "npm run compile", "mvn clean install", ... depending on project type or file extension in the context
 
 ### 💡 Reference / Samples
-  Include full imports and type declarations without truncation.
