@@ -13,6 +13,7 @@ import {
   PanelLeftOpen,
   PanelRightOpen,
 } from 'lucide-react';
+import { PanelCenter } from '@/components/app/core/icons/PanelCenter';
 import { LeftCenterRightPanel } from '@/components/app/left-center-right-panel';
 import { ToggleButton } from '@/components/app/toggle-button';
 import { useLayoutStore } from '@/store/useLayoutStore';
@@ -46,25 +47,23 @@ export function Header({
       <span id="app-title" className="font-bold text-foreground text-sm tracking-tight">
         <ApplicationTitle label='Token Ra$or'/>
       </span>
-
     </div>
   );
 
   const centerContent = (
     <div className="flex flex-1 justify-left items-center gap-2">
-    <span style={{ paddingLeft: `${DefaultContainersSize.sidebarLeftWidth - headerLeftWidth}px` }}>
-      <ToggleButton
-        id="toggle-sidebar-left"
-        isSelected={!!containers.sidebarLeft?.visible}
-        onToggle={() => toggleContainerVisible('sidebarLeft')}
-        tooltipText="Toggle Sidebar Left"
-        icon={<Layers size={14} />}
-      />
+      <span style={{ paddingLeft: `${DefaultContainersSize.sidebarLeftWidth - headerLeftWidth}px` }}>
+        <ToggleButton
+          id="toggle-sidebar-left"
+          isSelected={!!containers.sidebarLeft?.visible}
+          onToggle={() => toggleContainerVisible('sidebarLeft')}
+          tooltipText="Toggle Sidebar Left"
+          icon={<Layers size={14} />}
+        />
       </span>
       <span id="active-feature" className="bg-primary/15 px-2 py-0.5 rounded font-semibold text-[10px] text-primary">
         {activeFeature}
       </span>
-
     </div>
   );
 
@@ -110,6 +109,13 @@ export function Header({
         onToggle={() => toggleContainerVisible('workspace.left')}
         tooltipText="Toggle Workspace Left"
         icon={<PanelLeftOpen size={14} />}
+      />
+      <ToggleButton
+        id="toggle-wkp-center"
+        isSelected={!!containers.workspace?.center?.visible}
+        onToggle={() => toggleContainerVisible('workspace.center')}
+        tooltipText="Toggle Workspace Center"
+        icon={<PanelCenter size={14} />}
       />
       <ToggleButton
         id="toggle-wkp-right"

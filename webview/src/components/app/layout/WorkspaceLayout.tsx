@@ -107,7 +107,7 @@ export function WorkspaceLayout({ containers: propContainers }: WorkspaceLayoutP
         )}
 
         {centerConfig?.visible !== false && (
-          <div className="flex flex-col flex-1 border-border min-w-0 h-full overflow-hidden">
+          <div id="workspace-center" className="flex flex-col flex-1 border-border min-w-0 h-full overflow-hidden">
             {centerConfig?.container}
           </div>
         )}

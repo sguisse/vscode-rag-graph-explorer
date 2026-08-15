@@ -1,0 +1,196 @@
+.dark {
+  /* --- Dark Palette Scale Definitions --- */
+  --gray-0: #D2D9D4;
+  --gray-1: #C4CCC6;
+  --gray-2: #A4AEA6;
+  --gray-3: #7C8980;
+  --gray-4: #58635B;
+  --gray-5: #353D37;
+  --gray-6: #262C28;
+  --gray-7: #191F1B;
+  --gray-8: #0F1511;
+  --gray-9: #060907;
+
+  --blue-0: #C2EDFF;
+  --blue-1: #A2DAFF;
+  --blue-2: #78BAFE;
+  --blue-3: #3094FF;
+  --blue-4: #0377FF;
+  --blue-5: #0A50DB;
+  --blue-6: #1530B7;
+  --blue-7: #082A8F;
+  --blue-8: #052063;
+  --blue-9: #000839;
+
+  --green-0: #CDFCD9;
+  --green-1: #8CF2A6;
+  --green-2: #5FED83;
+  --green-3: #23EA57;
+  --green-4: #0FBF3E;
+  --green-5: #08872B;
+  --green-6: #0D6731;
+  --green-7: #0E422C;
+  --green-8: #0D3024;
+  --green-9: #0A241B;
+
+  --yellow-0: #F8E3A1;
+  --yellow-1: #F7D162;
+  --yellow-2: #FABF21;
+  --yellow-3: #DB9D00;
+  --yellow-4: #BE7D00;
+  --yellow-5: #A06100;
+  --yellow-6: #834800;
+  --yellow-7: #653200;
+  --yellow-8: #471F00;
+  --yellow-9: #2A1000;
+
+  --orange-0: #FFE2CC;
+  --orange-1: #FAB580;
+  --orange-2: #F08A3A;
+  --orange-3: #EA7110;
+  --orange-4: #D56101;
+  --orange-5: #B35101;
+  --orange-6: #924100;
+  --orange-7: #703100;
+  --orange-8: #572400;
+  --orange-9: #3D1800;
+
+  --red-0: #FFD9D6;
+  --red-1: #FEB2AE;
+  --red-2: #FD8986;
+  --red-3: #FC5C5D;
+  --red-4: #FA383D;
+  --red-5: #D31231;
+  --red-6: #AE0B29;
+  --red-7: #860620;
+  --red-8: #5E0217;
+  --red-9: #33000D;
+
+  --purple-0: #EADBFF;
+  --purple-1: #D3B3FE;
+  --purple-2: #C08BFC;
+  --purple-3: #A665F9;
+  --purple-4: #8B40F5;
+  --purple-5: #6619E1;
+  --purple-6: #43179E;
+  --purple-7: #26115F;
+  --purple-8: #160048;
+  --purple-9: #0E022C;
+
+  --pink-0: #FFDBF7;
+  --pink-1: #FCABE7;
+  --pink-2: #F67ED2;
+  --pink-3: #ED55BA;
+  --pink-4: #E22D9F;
+  --pink-5: #CA2186;
+  --pink-6: #961C66;
+  --pink-7: #741550;
+  --pink-8: #520E39;
+  --pink-9: #30081F;
+
+  --coral-0: #FFD5C7;
+  --coral-1: #FDB7A1;
+  --coral-2: #FA9072;
+  --coral-3: #F66945;
+  --coral-4: #EF4319;
+  --coral-5: #C53211;
+  --coral-6: #A22710;
+  --coral-7: #801E0F;
+  --coral-8: #500A00;
+  --coral-9: #3C0000;
+
+  --lemon-0: #FCF2A5;
+  --lemon-1: #F9E76A;
+  --lemon-2: #F4DA38;
+  --lemon-3: #E4C411;
+  --lemon-4: #C7A60B;
+  --lemon-5: #A98906;
+  --lemon-6: #876A04;
+  --lemon-7: #654D02;
+  --lemon-8: #423101;
+  --lemon-9: #241900;
+
+  --lime-0: #EDFFC9;
+  --lime-1: #DCFF96;
+  --lime-2: #CDF041;
+  --lime-3: #B1E119;
+  --lime-4: #88B80F;
+  --lime-5: #608A10;
+  --lime-6: #3E5F0F;
+  --lime-7: #22360B;
+  --lime-8: #142A08;
+  --lime-9: #091D05;
+
+  --teal-0: #CFF7F2;
+  --teal-1: #99F1E8;
+  --teal-2: #61EEE3;
+  --teal-3: #26EDE2;
+  --teal-4: #10DCD4;
+  --teal-5: #0BBAB6;
+  --teal-6: #079695;
+  --teal-7: #047172;
+  --teal-8: #024B4D;
+  --teal-9: #052D2E;
+
+  --indigo-0: #DBE3FF;
+  --indigo-1: #B3C1FD;
+  --indigo-2: #8D9FF8;
+  --indigo-3: #6A7DF0;
+  --indigo-4: #4A5CE5;
+  --indigo-5: #2D3DD7;
+  --indigo-6: #232FB3;
+  --indigo-7: #212183;
+  --indigo-8: #161962;
+  --indigo-9: #0D103F;
+
+  --black-0: #000000;
+  --white-0: #ffffff;
+
+  /* --- Semantic Mappings (Dark Mode) --- */
+  --background: var(--gray-7);
+  --foreground: var(--gray-0);
+  --card: var(--gray-6);
+  --card-foreground: var(--gray-0);
+  --card-spacing: 5px;
+  --popover: var(--gray-6);
+  --popover-foreground: var(--gray-0);
+  --primary: var(--blue-3);
+  --primary-foreground: var(--white-0);
+  --secondary: var(--gray-6);
+  --secondary-foreground: var(--gray-0);
+  --muted: var(--gray-6);
+  --muted-foreground: var(--gray-2);
+  --accent: var(--blue-7);
+  --accent-foreground: var(--blue-1);
+  --border: var(--gray-5);
+  --input: var(--gray-5);
+  --ring: var(--blue-3);
+  --chart-1: var(--blue-3);
+  --chart-2: var(--teal-3);
+  --chart-3: var(--indigo-3);
+  --chart-4: var(--orange-3);
+  --chart-5: var(--purple-3);
+  --sidebar: var(--gray-7);
+  --sidebar-foreground: var(--gray-0);
+  --sidebar-primary: var(--blue-3);
+  --sidebar-primary-foreground: var(--white-0);
+  --sidebar-accent: var(--blue-8);
+  --sidebar-accent-foreground: var(--blue-1);
+  --sidebar-border: var(--gray-6);
+  --sidebar-ring: var(--blue-3);
+
+  --success: var(--green-9);
+  --success-foreground: var(--green-1);
+
+  --destructive: var(--red-9);
+  --destructive-foreground: var(--red-2);
+
+  --warning: var(--yellow-9);
+  --warning-foreground: var(--yellow-1);
+
+  --info: var(--blue-9);
+  --info-foreground: var(--blue-1);
+
+  --user-bg: var(--blue-9);
+  --user-border: var(--blue-7);
+}

@@ -1,726 +1,593 @@
 #!/usr/bin/env bash
 set -e
 
-echo "🚀 Updating token formatting in LLM Chat View..."
+echo "🎨 Externalizing Light & Dark color palettes into separate CSS files..."
 
 # ==============================================================================
-# Step 1: Update Webview React UI Component (LLM.tsx)
+# Step 1: Create webview/src/color-light-palette.css
 # ==============================================================================
-cat << 'EOF' > webview/src/features/explorer/sdb-rgt-prompt/LLM.tsx
-import React, { useState, useEffect } from 'react';
-import {
-  LlmProvider,
-  IChatMessageDto,
-  ILlmModelInfo,
-  IFileContextDto,
-} from '../../../../../shared/services/llm-chat';
-import { llmChatApiService } from '../../../services/api/llm-chat-api.service.gen';
+cat << 'EOF' > webview/src/color-light-palette.css
+:root {
+  /* --- Light Palette Scale Definitions --- */
+  --gray-0: #F2F5F3;
+  --gray-1: #E4EBE6;
+  --gray-2: #D2D9D4;
+  --gray-3: #C4CCC6;
+  --gray-4: #B6BFB8;
+  --gray-5: #96A199;
+  --gray-6: #77827A;
+  --gray-7: #58635B;
+  --gray-8: #353D37;
+  --gray-9: #191F1B;
 
-const logInfo = (message: string, ...meta: any[]) => {
-  console.log(`[LLMExplorerChat UI] ℹ️ ${message}`, meta.length ? meta : '');
-};
+  --blue-0: #DDF4FF;
+  --blue-1: #BCECFF;
+  --blue-2: #8DD6FF;
+  --blue-3: #5FB9FF;
+  --blue-4: #3094FF;
+  --blue-5: #0377FF;
+  --blue-6: #0055D5;
+  --blue-7: #0040A7;
+  --blue-8: #002F7A;
+  --blue-9: #001C4D;
 
-const formatExecutionTime = (timeMs?: number): string => {
-  if (!timeMs || timeMs < 0) return '00m:00s';
-  const totalSeconds = Math.floor(timeMs / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes.toString().padStart(2, '0')}m:${seconds.toString().padStart(2, '0')}s`;
-};
+  --green-0: #EBF9F4;
+  --green-1: #BFFFD1;
+  --green-2: #8CF2A6;
+  --green-3: #5FED83;
+  --green-4: #23EA57;
+  --green-5: #0FBF3E;
+  --green-6: #08872B;
+  --green-7: #0D6731;
+  --green-8: #0E4A2E;
+  --green-9: #0D3024;
 
-const formatDateTime = (timestamp?: number): string => {
-  if (!timestamp) return '';
-  const d = new Date(timestamp);
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  const year = d.getFullYear();
-  const month = pad(d.getMonth() + 1);
-  const day = pad(d.getDate());
-  const hours = pad(d.getHours());
-  const minutes = pad(d.getMinutes());
-  const seconds = pad(d.getSeconds());
-  return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
-};
+  --yellow-0: #FFF8C5;
+  --yellow-1: #FFE777;
+  --yellow-2: #FFD743;
+  --yellow-3: #FABF21;
+  --yellow-4: #DB9D00;
+  --yellow-5: #BE7D00;
+  --yellow-6: #A06100;
+  --yellow-7: #824800;
+  --yellow-8: #653200;
+  --yellow-9: #471F00;
 
-const formatTokenCount = (count?: number): string => {
-  if (count === undefined || count === null || isNaN(count) || count < 0) return '0';
-  if (count > 999999) {
-    return `${(count / 1000000).toFixed(1)} MB`;
-  }
-  if (count > 9999) {
-    return `${(count / 1000).toFixed(1)} KB`;
-  }
-  if (count > 999) {
-    return count.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  }
-  return count.toString();
-};
+  --orange-0: #FFF1E5;
+  --orange-1: #FCCEAB;
+  --orange-2: #F4A876;
+  --orange-3: #F08A3A;
+  --orange-4: #DA7210;
+  --orange-5: #B85B06;
+  --orange-6: #954502;
+  --orange-7: #703100;
+  --orange-8: #5C2300;
+  --orange-9: #471700;
 
-const formatPromptWithContext = (instruction: string, files: IFileContextDto[]): string => {
-  if (!files || files.length === 0) {
-    return instruction;
-  }
+  --red-0: #FFEBE9;
+  --red-1: #FFCECB;
+  --red-2: #FFABA8;
+  --red-3: #FF8182;
+  --red-4: #FA4549;
+  --red-5: #CF2230;
+  --red-6: #AE0B29;
+  --red-7: #860620;
+  --red-8: #730019;
+  --red-9: #420011;
 
-  const fileBlocks = files
-    .map((f) => `  <file path="${f.path}">\n${f.content || '// Content unavailable'}\n  </file>`)
-    .join('\n');
+  --purple-0: #F0E5FF;
+  --purple-1: #DBBFFD;
+  --purple-2: #C898FD;
+  --purple-3: #B870FF;
+  --purple-4: #9F51FA;
+  --purple-5: #8534F3;
+  --purple-6: #6619E1;
+  --purple-7: #43179E;
+  --purple-8: #26115F;
+  --purple-9: #160048;
 
-  return `<context>\n${fileBlocks}\n</context>\n\n<instruction>\n  ${instruction}\n</instruction>`;
-};
+  --pink-0: #FFF0FC;
+  --pink-1: #FFC9F2;
+  --pink-2: #F67ED2;
+  --pink-3: #FF80D2;
+  --pink-4: #FF4AC0;
+  --pink-5: #EF2AA4;
+  --pink-6: #CA2186;
+  --pink-7: #952866;
+  --pink-8: #651643;
+  --pink-9: #3D0A28;
 
-const parseUserMessageContent = (content: string) => {
-  const contextMatch = content.match(/<context>([\s\S]*?)<\/context>/);
-  const instructionMatch = content.match(/<instruction>([\s\S]*?)<\/instruction>/);
+  --coral-0: #FFF0EB;
+  --coral-1: #FFCAB8;
+  --coral-2: #FFA387;
+  --coral-3: #FF7B56;
+  --coral-4: #FE4C25;
+  --coral-5: #E13F1B;
+  --coral-6: #C53211;
+  --coral-7: #A22710;
+  --coral-8: #801E0F;
+  --coral-9: #500A00;
 
-  if (contextMatch || instructionMatch) {
-    return {
-      contextText: contextMatch ? contextMatch[0].trim() : null,
-      instructionText: instructionMatch
-        ? instructionMatch[1].trim()
-        : content.replace(/<context>[\s\S]*?<\/context>/, '').trim(),
-    };
-  }
+  --lemon-0: #FDF5B3;
+  --lemon-1: #F5E36B;
+  --lemon-2: #F2DA3B;
+  --lemon-3: #E1C50F;
+  --lemon-4: #C7A60B;
+  --lemon-5: #A98906;
+  --lemon-6: #806803;
+  --lemon-7: #614D01;
+  --lemon-8: #413200;
+  --lemon-9: #322400;
 
-  return {
-    contextText: null,
-    instructionText: content,
-  };
-};
+  --lime-0: #F3FEC8;
+  --lime-1: #E8FC97;
+  --lime-2: #DCFA67;
+  --lime-3: #D1F441;
+  --lime-4: #B2DE28;
+  --lime-5: #92C219;
+  --lime-6: #698E17;
+  --lime-7: #425E13;
+  --lime-8: #2C440B;
+  --lime-9: #182C01;
 
-const CopyButton: React.FC<{ text: string; title?: string }> = ({ text, title = 'Copy content' }) => {
-  const [copied, setCopied] = useState(false);
+  --teal-0: #DAF9F5;
+  --teal-1: #A4EFE8;
+  --teal-2: #6EE5DC;
+  --teal-3: #39DAD2;
+  --teal-4: #23B1AE;
+  --teal-5: #197B7B;
+  --teal-6: #136061;
+  --teal-7: #024B4D;
+  --teal-8: #083D3D;
+  --teal-9: #052B2C;
 
-  const handleCopy = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      logInfo('Failed to copy text', err);
-    }
-  };
+  --indigo-0: #EFF2FF;
+  --indigo-1: #D4DBFF;
+  --indigo-2: #B3C1FD;
+  --indigo-3: #8E9DF7;
+  --indigo-4: #6B7BEF;
+  --indigo-5: #4956E5;
+  --indigo-6: #2D3DD7;
+  --indigo-7: #262DAE;
+  --indigo-8: #212183;
+  --indigo-9: #12144F;
 
-  return (
-    <button
-      onClick={handleCopy}
-      title={title}
-      style={{
-        background: 'transparent',
-        border: 'none',
-        color: 'inherit',
-        cursor: 'pointer',
-        fontSize: '0.9em',
-        padding: '2px 4px',
-        borderRadius: '3px',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        opacity: 0.85,
-        transition: 'opacity 0.2s',
-      }}
-      onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-      onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.85')}
-    >
-      {copied ? '✅' : '📋'}
-    </button>
-  );
-};
+  --black-0: #000000;
+  --white-0: #ffffff;
 
-interface CollapsibleCardProps {
-  title: string;
-  badge?: string;
-  defaultExpanded?: boolean;
-  contentToCopy: string;
-  children: React.ReactNode;
+  /* --- Semantic Mappings (Light Mode) --- */
+  --background: var(--white-0);
+  --foreground: var(--gray-8);
+  --card: var(--white-0);
+  --card-foreground: var(--gray-8);
+  --card-spacing: 2px;
+  --popover: var(--white-0);
+  --popover-foreground: var(--gray-8);
+  --primary: var(--blue-5);
+  --primary-foreground: var(--white-0);
+  --secondary: var(--gray-0);
+  --secondary-foreground: var(--gray-7);
+  --muted: var(--gray-0);
+  --muted-foreground: var(--gray-6);
+  --accent: var(--blue-0);
+  --accent-foreground: var(--blue-8);
+  --border: var(--gray-1);
+  --input: var(--gray-1);
+  --ring: var(--blue-5);
+  --chart-1: var(--blue-5);
+  --chart-2: var(--teal-4);
+  --chart-3: var(--indigo-5);
+  --chart-4: var(--orange-4);
+  --chart-5: var(--purple-4);
+  --sidebar: var(--gray-0);
+  --sidebar-foreground: var(--gray-9);
+  --sidebar-primary: var(--gray-8);
+  --sidebar-primary-foreground: var(--gray-0);
+  --sidebar-accent: var(--blue-0);
+  --sidebar-accent-foreground: var(--blue-5);
+  --sidebar-border: var(--gray-2);
+  --sidebar-ring: var(--blue-5);
+
+  --success: var(--green-0);
+  --success-foreground: var(--green-7);
+
+  --destructive: var(--red-0);
+  --destructive-foreground: var(--red-6);
+
+  --warning: var(--yellow-0);
+  --warning-foreground: var(--yellow-7);
+
+  --info: var(--blue-0);
+  --info-foreground: var(--blue-7);
+
+  --user-bg: var(--blue-0);
+  --user-border: var(--blue-2);
+
+  --radius: 0.625rem;
 }
-
-const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
-  title,
-  badge,
-  defaultExpanded = false,
-  contentToCopy,
-  children,
-}) => {
-  const [isOpen, setIsOpen] = useState(defaultExpanded);
-
-  return (
-    <div
-      style={{
-        border: '1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.3))',
-        borderRadius: '6px',
-        backgroundColor: 'var(--vscode-editor-background, rgba(0, 0, 0, 0.15))',
-        overflow: 'hidden',
-      }}
-    >
-      {/* Sub-Card Header */}
-      <div
-        onClick={() => setIsOpen(!isOpen)}
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '4px 8px',
-          backgroundColor: 'var(--vscode-sideBarSectionHeader-background, rgba(128, 128, 128, 0.12))',
-          cursor: 'pointer',
-          userSelect: 'none',
-          borderBottom: isOpen ? '1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.2))' : 'none',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8em', fontWeight: 'bold' }}>
-          <span style={{ fontSize: '0.8em' }}>{isOpen ? '▼' : '►'}</span>
-          <span>{title}</span>
-          {badge && (
-            <span
-              style={{
-                fontSize: '0.75em',
-                fontWeight: 'normal',
-                background: 'var(--vscode-badge-background)',
-                color: 'var(--vscode-badge-foreground)',
-                padding: '1px 6px',
-                borderRadius: '10px',
-              }}
-            >
-              {badge}
-            </span>
-          )}
-        </div>
-
-        <CopyButton text={contentToCopy} title="Copy sub-block content" />
-      </div>
-
-      {/* Sub-Card Body */}
-      {isOpen && (
-        <div
-          style={{
-            padding: '8px 10px',
-            fontSize: '0.85em',
-            lineHeight: '1.4',
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
-            fontFamily: 'var(--vscode-editor-font-family, monospace)',
-          }}
-        >
-          {children}
-        </div>
-      )}
-    </div>
-  );
-};
-
-const UserMessageBlock: React.FC<{ msg: IChatMessageDto }> = ({ msg }) => {
-  const [isBlockExpanded, setIsBlockExpanded] = useState(true);
-  const { contextText, instructionText } = parseUserMessageContent(msg.content);
-
-  const userBg = 'var(--vscode-inputValidation-infoBackground, rgba(14, 99, 156, 0.12))';
-  const userBorder = 'var(--vscode-inputValidation-infoBorder, rgba(14, 99, 156, 0.35))';
-
-  return (
-    <div
-      style={{
-        alignSelf: 'flex-end',
-        maxWidth: '90%',
-        width: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '6px',
-        backgroundColor: userBg,
-        color: 'var(--vscode-foreground)',
-        padding: '8px 12px',
-        borderRadius: '8px',
-        border: `1px solid ${userBorder}`,
-      }}
-    >
-      {/* Sticky Header Bar */}
-      <div
-        onClick={() => setIsBlockExpanded(!isBlockExpanded)}
-        style={{
-          position: 'sticky',
-          top: 0,
-          backgroundColor: userBg,
-          zIndex: 2,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          fontSize: '0.78em',
-          fontWeight: 'bold',
-          cursor: 'pointer',
-          userSelect: 'none',
-          paddingBottom: isBlockExpanded ? '4px' : '0px',
-          borderBottom: isBlockExpanded ? `1px solid ${userBorder}` : 'none',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span>{isBlockExpanded ? '▼' : '►'}</span>
-          <span>👤 USER REQUEST</span>
-        </div>
-        <CopyButton text={msg.content} title="Copy entire user request" />
-      </div>
-
-      {/* Expandable Content Body */}
-      {isBlockExpanded && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
-          {contextText && (
-            <CollapsibleCard
-              title="📄 Attached File Context"
-              badge={msg.fileCount ? `${msg.fileCount} files` : 'xml'}
-              defaultExpanded={false}
-              contentToCopy={contextText}
-            >
-              {contextText}
-            </CollapsibleCard>
-          )}
-
-          <CollapsibleCard
-            title="💬 Instruction Prompt"
-            defaultExpanded={true}
-            contentToCopy={instructionText}
-          >
-            {instructionText}
-          </CollapsibleCard>
-        </div>
-      )}
-
-      {/* Footer Metadata (ALWAYS visible even if block is collapsed) */}
-      <div
-        style={{
-          fontSize: '0.7em',
-          opacity: 0.7,
-          textAlign: 'right',
-          marginTop: '4px',
-          borderTop: isBlockExpanded ? '1px dashed var(--vscode-panel-border, rgba(128, 128, 128, 0.3))' : 'none',
-          paddingTop: '3px',
-          fontStyle: 'italic',
-        }}
-      >
-        {formatDateTime(msg.timestamp)} | Context Files: {msg.fileCount ?? 0}
-      </div>
-    </div>
-  );
-};
-
-const AssistantMessageBlock: React.FC<{
-  msg: IChatMessageDto;
-  fallbackProvider: LlmProvider;
-  fallbackModel: string;
-}> = ({ msg, fallbackProvider, fallbackModel }) => {
-  const [isBlockExpanded, setIsBlockExpanded] = useState(true);
-  const bubbleBg = 'var(--vscode-editor-inactiveSelectionBackground, rgba(128, 128, 128, 0.15))';
-  const bubbleBorder = '1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.3))';
-
-  return (
-    <div
-      style={{
-        alignSelf: 'flex-start',
-        backgroundColor: bubbleBg,
-        color: 'var(--vscode-editor-foreground, var(--vscode-foreground))',
-        padding: '8px 12px',
-        borderRadius: '8px',
-        maxWidth: '85%',
-        width: '100%',
-        whiteSpace: 'pre-wrap',
-        wordBreak: 'break-word',
-        position: 'relative',
-        border: bubbleBorder,
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      {/* Sticky Header Bar */}
-      <div
-        onClick={() => setIsBlockExpanded(!isBlockExpanded)}
-        style={{
-          position: 'sticky',
-          top: 0,
-          backgroundColor: bubbleBg,
-          zIndex: 2,
-          paddingBottom: isBlockExpanded ? '4px' : '0px',
-          marginBottom: isBlockExpanded ? '6px' : '0px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          fontSize: '0.78em',
-          fontWeight: 'bold',
-          cursor: 'pointer',
-          userSelect: 'none',
-          borderBottom: isBlockExpanded ? '1px dotted var(--vscode-panel-border)' : 'none',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span>{isBlockExpanded ? '▼' : '►'}</span>
-          <span>🤖 {(msg.provider || fallbackProvider).toUpperCase()} ({msg.model || fallbackModel})</span>
-        </div>
-        <CopyButton text={msg.content} title="Copy assistant response" />
-      </div>
-
-      {/* Content Body */}
-      {isBlockExpanded && <div>{msg.content}</div>}
-
-      {/* Footer Metadata (ALWAYS visible even if block is collapsed) */}
-      {(msg.promptTokens !== undefined || msg.executionTimeMs !== undefined) && (
-        <div
-          style={{
-            fontSize: '0.7em',
-            opacity: 0.65,
-            textAlign: 'right',
-            marginTop: '6px',
-            borderTop: isBlockExpanded ? '1px dashed var(--vscode-panel-border, rgba(128, 128, 128, 0.3))' : 'none',
-            paddingTop: '3px',
-            fontStyle: 'italic',
-          }}
-        >
-          In: {formatTokenCount(msg.promptTokens)} tokens | Out: {formatTokenCount(msg.completionTokens)} tokens | Time:{' '}
-          {formatExecutionTime(msg.executionTimeMs)}
-        </div>
-      )}
-    </div>
-  );
-};
-
-export const LLMExplorerChat: React.FC = () => {
-  const [provider, setProvider] = useState<LlmProvider>(LlmProvider.OLLAMA);
-  const [models, setModels] = useState<ILlmModelInfo[]>([]);
-  const [selectedModel, setSelectedModel] = useState<string>('');
-  const [messages, setMessages] = useState<IChatMessageDto[]>([]);
-  const [inputPrompt, setInputPrompt] = useState<string>('');
-  const [systemPrompt] = useState<string>('You are an expert Graph RAG Assistant.');
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [temperature, setTemperature] = useState<number>(0.7);
-
-  // File Context state
-  const [attachedFiles, setAttachedFiles] = useState<IFileContextDto[]>([]);
-  const [filePathInput, setFilePathInput] = useState<string>('');
-  const [isReadingFile, setIsReadingFile] = useState<boolean>(false);
-
-  useEffect(() => {
-    logInfo('Provider selection updated. Fetching models...', { provider });
-    loadModels(provider);
-  }, [provider]);
-
-  const loadModels = async (prov: LlmProvider) => {
-    try {
-      const available = await llmChatApiService.listAvailableModels(prov);
-      logInfo('Models loaded for provider', { provider: prov, count: available.length });
-      setModels(available);
-      if (available.length > 0) {
-        setSelectedModel(available[0].id);
-      } else {
-        setSelectedModel('');
-      }
-    } catch (err: any) {
-      logInfo('Failed to load models for provider', { provider: prov, error: err?.message });
-      setModels([]);
-    }
-  };
-
-  const handleAddFileContext = async () => {
-    const trimmedPath = filePathInput.trim();
-    if (!trimmedPath) return;
-
-    if (attachedFiles.some((f) => f.path === trimmedPath)) {
-      logInfo('File path already attached as context', { path: trimmedPath });
-      setFilePathInput('');
-      return;
-    }
-
-    setIsReadingFile(true);
-    logInfo('Attaching file path context...', { path: trimmedPath });
-
-    try {
-      const content = await llmChatApiService.readFileContent(trimmedPath);
-      setAttachedFiles((prev) => [...prev, { path: trimmedPath, content }]);
-      logInfo('Successfully attached file content', { path: trimmedPath, chars: content.length });
-    } catch (err: any) {
-      logInfo('Error reading file content. Adding fallback entry.', { path: trimmedPath, error: err?.message });
-      setAttachedFiles((prev) => [...prev, { path: trimmedPath, content: `// Unable to load ${trimmedPath}` }]);
-    } finally {
-      setFilePathInput('');
-      setIsReadingFile(false);
-    }
-  };
-
-  const handleRemoveFileContext = (pathToRemove: string) => {
-    logInfo('Removing attached file context', { path: pathToRemove });
-    setAttachedFiles((prev) => prev.filter((f) => f.path !== pathToRemove));
-  };
-
-  const handleSend = async () => {
-    if (!inputPrompt.trim() || isLoading) return;
-
-    const requestTimestamp = Date.now();
-    const formattedPrompt = formatPromptWithContext(inputPrompt, attachedFiles);
-    const contextFileCount = attachedFiles.length;
-
-    logInfo('User submitted chat prompt with context', {
-      provider,
-      model: selectedModel,
-      contextFilesCount: contextFileCount,
-      rawPromptLength: inputPrompt.length,
-      formattedPromptLength: formattedPrompt.length,
-      timestamp: requestTimestamp,
-    });
-
-    const userMessage: IChatMessageDto = {
-      id: `user-${requestTimestamp}`,
-      role: 'user',
-      content: formattedPrompt,
-      timestamp: requestTimestamp,
-      fileCount: contextFileCount,
-    };
-
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
-    setInputPrompt('');
-    setIsLoading(true);
-
-    try {
-      const response = await llmChatApiService.executeChat({
-        provider,
-        model: selectedModel,
-        messages: newMessages,
-        systemPrompt,
-        fileContexts: attachedFiles,
-        temperature,
-      });
-
-      if (response.error) {
-        logInfo('Chat response received with error', { error: response.error });
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `err-${Date.now()}`,
-            role: 'assistant',
-            content: `⚠️ Error: ${response.error}`,
-            timestamp: Date.now(),
-            provider: response.provider || provider,
-            model: response.model || selectedModel,
-          },
-        ]);
-      } else {
-        logInfo('Chat response received successfully', {
-          messageId: response.messageId,
-          provider: response.provider,
-          model: response.model,
-          executionTimeMs: response.executionTimeMs,
-          promptTokens: response.promptTokens,
-          completionTokens: response.completionTokens,
-        });
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: response.messageId,
-            role: 'assistant',
-            content: response.content,
-            timestamp: Date.now(),
-            provider: response.provider || provider,
-            model: response.model || selectedModel,
-            promptTokens: response.promptTokens,
-            completionTokens: response.completionTokens,
-            totalTokens: response.totalTokens,
-            executionTimeMs: response.executionTimeMs,
-          },
-        ]);
-      }
-    } catch (err: any) {
-      logInfo('Chat request failed with exception', { error: err?.message });
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `err-${Date.now()}`,
-          role: 'assistant',
-          content: `❌ Communication Failure: ${err?.message || 'Unknown error'}`,
-          timestamp: Date.now(),
-          provider,
-          model: selectedModel,
-        },
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', height: '100%', gap: '12px', fontFamily: 'var(--vscode-font-family, sans-serif)', color: 'var(--vscode-foreground)' }}>
-      {/* Header controls */}
-      <header style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', borderBottom: '1px solid var(--vscode-panel-border)', paddingBottom: '8px' }}>
-        <label style={{ fontWeight: 'bold' }}>Provider:</label>
-        <select
-          value={provider}
-          onChange={(e) => setProvider(e.target.value as LlmProvider)}
-          style={{ background: 'var(--vscode-dropdown-background)', color: 'var(--vscode-dropdown-foreground)', border: '1px solid var(--vscode-dropdown-border)', padding: '4px 8px' }}
-        >
-          <option value={LlmProvider.OLLAMA}>🦙 Ollama</option>
-          <option value={LlmProvider.GEMINI}>♊ Gemini</option>
-          <option value={LlmProvider.COPILOT}>✈️ Copilot</option>
-        </select>
-
-        <label style={{ fontWeight: 'bold', marginLeft: '12px' }}>Model:</label>
-        <select
-          value={selectedModel}
-          onChange={(e) => setSelectedModel(e.target.value)}
-          style={{ background: 'var(--vscode-dropdown-background)', color: 'var(--vscode-dropdown-foreground)', border: '1px solid var(--vscode-dropdown-border)', padding: '4px 8px' }}
-        >
-          {models.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.name}
-            </option>
-          ))}
-        </select>
-
-        <label style={{ marginLeft: '12px' }}>Temp ({temperature}):</label>
-        <input
-          type="range"
-          min="0"
-          max="1"
-          step="0.1"
-          value={temperature}
-          onChange={(e) => setTemperature(parseFloat(e.target.value))}
-          style={{ width: '80px' }}
-        />
-      </header>
-
-      {/* Message history */}
-      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '4px' }}>
-        {messages.length === 0 ? (
-          <div style={{ opacity: 0.6, fontStyle: 'italic', textAlign: 'center', marginTop: '32px' }}>
-            No conversation started. Attach files as context and type your instruction below.
-          </div>
-        ) : (
-          messages.map((msg) =>
-            msg.role === 'user' ? (
-              <UserMessageBlock key={msg.id} msg={msg} />
-            ) : (
-              <AssistantMessageBlock
-                key={msg.id}
-                msg={msg}
-                fallbackProvider={provider}
-                fallbackModel={selectedModel}
-              />
-            )
-          )
-        )}
-      </div>
-
-      {/* Footer controls: File Context Bar & Prompt Input */}
-      <footer style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--vscode-panel-border)', paddingTop: '8px' }}>
-        {/* Attached file context chips */}
-        {attachedFiles.length > 0 && (
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8em', fontWeight: 'bold', opacity: 0.8 }}>Context Files:</span>
-            {attachedFiles.map((file) => (
-              <span
-                key={file.path}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  background: 'var(--vscode-badge-background)',
-                  color: 'var(--vscode-badge-foreground)',
-                  padding: '2px 8px',
-                  borderRadius: '12px',
-                  fontSize: '0.75em',
-                  fontFamily: 'monospace',
-                }}
-              >
-                📄 {file.path}
-                <button
-                  onClick={() => handleRemoveFileContext(file.path)}
-                  title="Remove file context"
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'inherit',
-                    cursor: 'pointer',
-                    fontWeight: 'bold',
-                    padding: '0 2px',
-                  }}
-                >
-                  ✕
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Input to attach new file path context */}
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <input
-            type="text"
-            value={filePathInput}
-            onChange={(e) => setFilePathInput(e.target.value)}
-            placeholder="Add file path as context (e.g. src/services/user.service.ts)..."
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleAddFileContext();
-              }
-            }}
-            style={{
-              flex: 1,
-              background: 'var(--vscode-input-background)',
-              color: 'var(--vscode-input-foreground)',
-              border: '1px solid var(--vscode-input-border)',
-              padding: '4px 8px',
-              fontSize: '0.85em',
-            }}
-          />
-          <button
-            onClick={handleAddFileContext}
-            disabled={isReadingFile || !filePathInput.trim()}
-            style={{
-              background: 'var(--vscode-button-secondaryBackground, #3a3d41)',
-              color: 'var(--vscode-button-secondaryForeground, #ffffff)',
-              border: 'none',
-              padding: '4px 12px',
-              cursor: isReadingFile || !filePathInput.trim() ? 'not-allowed' : 'pointer',
-              fontSize: '0.85em',
-            }}
-          >
-            {isReadingFile ? 'Reading...' : '+ Add Context'}
-          </button>
-        </div>
-
-        {/* Instruction Prompt & Send Button */}
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <textarea
-            value={inputPrompt}
-            onChange={(e) => setInputPrompt(e.target.value)}
-            placeholder="Type your instruction for LLM..."
-            rows={2}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            style={{
-              flex: 1,
-              background: 'var(--vscode-input-background)',
-              color: 'var(--vscode-input-foreground)',
-              border: '1px solid var(--vscode-input-border)',
-              padding: '6px',
-              resize: 'none',
-            }}
-          />
-          <button
-            onClick={handleSend}
-            disabled={isLoading}
-            style={{
-              background: 'var(--vscode-button-background)',
-              color: 'var(--vscode-button-foreground)',
-              border: 'none',
-              padding: '0 16px',
-              cursor: isLoading ? 'not-allowed' : 'pointer',
-              fontWeight: 'bold',
-            }}
-          >
-            {isLoading ? 'Thinking...' : 'Send'}
-          </button>
-        </div>
-      </footer>
-    </div>
-  );
-};
 EOF
 
-echo "✅ feat: Formatted token counts with space separators (> 999) and KB/MB units (> 9 999)!"
+# ==============================================================================
+# Step 2: Create webview/src/color-dark-palette.css
+# ==============================================================================
+cat << 'EOF' > webview/src/color-dark-palette.css
+.dark {
+  /* --- Dark Palette Scale Definitions --- */
+  --gray-0: #D2D9D4;
+  --gray-1: #C4CCC6;
+  --gray-2: #A4AEA6;
+  --gray-3: #7C8980;
+  --gray-4: #58635B;
+  --gray-5: #353D37;
+  --gray-6: #262C28;
+  --gray-7: #191F1B;
+  --gray-8: #0F1511;
+  --gray-9: #060907;
+
+  --blue-0: #C2EDFF;
+  --blue-1: #A2DAFF;
+  --blue-2: #78BAFE;
+  --blue-3: #3094FF;
+  --blue-4: #0377FF;
+  --blue-5: #0A50DB;
+  --blue-6: #1530B7;
+  --blue-7: #082A8F;
+  --blue-8: #052063;
+  --blue-9: #000839;
+
+  --green-0: #CDFCD9;
+  --green-1: #8CF2A6;
+  --green-2: #5FED83;
+  --green-3: #23EA57;
+  --green-4: #0FBF3E;
+  --green-5: #08872B;
+  --green-6: #0D6731;
+  --green-7: #0E422C;
+  --green-8: #0D3024;
+  --green-9: #0A241B;
+
+  --yellow-0: #F8E3A1;
+  --yellow-1: #F7D162;
+  --yellow-2: #FABF21;
+  --yellow-3: #DB9D00;
+  --yellow-4: #BE7D00;
+  --yellow-5: #A06100;
+  --yellow-6: #834800;
+  --yellow-7: #653200;
+  --yellow-8: #471F00;
+  --yellow-9: #2A1000;
+
+  --orange-0: #FFE2CC;
+  --orange-1: #FAB580;
+  --orange-2: #F08A3A;
+  --orange-3: #EA7110;
+  --orange-4: #D56101;
+  --orange-5: #B35101;
+  --orange-6: #924100;
+  --orange-7: #703100;
+  --orange-8: #572400;
+  --orange-9: #3D1800;
+
+  --red-0: #FFD9D6;
+  --red-1: #FEB2AE;
+  --red-2: #FD8986;
+  --red-3: #FC5C5D;
+  --red-4: #FA383D;
+  --red-5: #D31231;
+  --red-6: #AE0B29;
+  --red-7: #860620;
+  --red-8: #5E0217;
+  --red-9: #33000D;
+
+  --purple-0: #EADBFF;
+  --purple-1: #D3B3FE;
+  --purple-2: #C08BFC;
+  --purple-3: #A665F9;
+  --purple-4: #8B40F5;
+  --purple-5: #6619E1;
+  --purple-6: #43179E;
+  --purple-7: #26115F;
+  --purple-8: #160048;
+  --purple-9: #0E022C;
+
+  --pink-0: #FFDBF7;
+  --pink-1: #FCABE7;
+  --pink-2: #F67ED2;
+  --pink-3: #ED55BA;
+  --pink-4: #E22D9F;
+  --pink-5: #CA2186;
+  --pink-6: #961C66;
+  --pink-7: #741550;
+  --pink-8: #520E39;
+  --pink-9: #30081F;
+
+  --coral-0: #FFD5C7;
+  --coral-1: #FDB7A1;
+  --coral-2: #FA9072;
+  --coral-3: #F66945;
+  --coral-4: #EF4319;
+  --coral-5: #C53211;
+  --coral-6: #A22710;
+  --coral-7: #801E0F;
+  --coral-8: #500A00;
+  --coral-9: #3C0000;
+
+  --lemon-0: #FCF2A5;
+  --lemon-1: #F9E76A;
+  --lemon-2: #F4DA38;
+  --lemon-3: #E4C411;
+  --lemon-4: #C7A60B;
+  --lemon-5: #A98906;
+  --lemon-6: #876A04;
+  --lemon-7: #654D02;
+  --lemon-8: #423101;
+  --lemon-9: #241900;
+
+  --lime-0: #EDFFC9;
+  --lime-1: #DCFF96;
+  --lime-2: #CDF041;
+  --lime-3: #B1E119;
+  --lime-4: #88B80F;
+  --lime-5: #608A10;
+  --lime-6: #3E5F0F;
+  --lime-7: #22360B;
+  --lime-8: #142A08;
+  --lime-9: #091D05;
+
+  --teal-0: #CFF7F2;
+  --teal-1: #99F1E8;
+  --teal-2: #61EEE3;
+  --teal-3: #26EDE2;
+  --teal-4: #10DCD4;
+  --teal-5: #0BBAB6;
+  --teal-6: #079695;
+  --teal-7: #047172;
+  --teal-8: #024B4D;
+  --teal-9: #052D2E;
+
+  --indigo-0: #DBE3FF;
+  --indigo-1: #B3C1FD;
+  --indigo-2: #8D9FF8;
+  --indigo-3: #6A7DF0;
+  --indigo-4: #4A5CE5;
+  --indigo-5: #2D3DD7;
+  --indigo-6: #232FB3;
+  --indigo-7: #212183;
+  --indigo-8: #161962;
+  --indigo-9: #0D103F;
+
+  --black-0: #000000;
+  --white-0: #ffffff;
+
+  /* --- Semantic Mappings (Dark Mode) --- */
+  --background: var(--gray-7);
+  --foreground: var(--gray-0);
+  --card: var(--gray-6);
+  --card-foreground: var(--gray-0);
+  --card-spacing: 5px;
+  --popover: var(--gray-6);
+  --popover-foreground: var(--gray-0);
+  --primary: var(--blue-3);
+  --primary-foreground: var(--white-0);
+  --secondary: var(--gray-6);
+  --secondary-foreground: var(--gray-0);
+  --muted: var(--gray-6);
+  --muted-foreground: var(--gray-2);
+  --accent: var(--blue-7);
+  --accent-foreground: var(--blue-1);
+  --border: var(--gray-5);
+  --input: var(--gray-5);
+  --ring: var(--blue-3);
+  --chart-1: var(--blue-3);
+  --chart-2: var(--teal-3);
+  --chart-3: var(--indigo-3);
+  --chart-4: var(--orange-3);
+  --chart-5: var(--purple-3);
+  --sidebar: var(--gray-7);
+  --sidebar-foreground: var(--gray-0);
+  --sidebar-primary: var(--blue-3);
+  --sidebar-primary-foreground: var(--white-0);
+  --sidebar-accent: var(--blue-8);
+  --sidebar-accent-foreground: var(--blue-1);
+  --sidebar-border: var(--gray-6);
+  --sidebar-ring: var(--blue-3);
+
+  --success: var(--green-9);
+  --success-foreground: var(--green-1);
+
+  --destructive: var(--red-9);
+  --destructive-foreground: var(--red-2);
+
+  --warning: var(--yellow-9);
+  --warning-foreground: var(--yellow-1);
+
+  --info: var(--blue-9);
+  --info-foreground: var(--blue-1);
+
+  --user-bg: var(--blue-9);
+  --user-border: var(--blue-7);
+}
+EOF
+
+# ==============================================================================
+# Step 3: Update webview/src/index.css to import both palette files
+# ==============================================================================
+cat << 'EOF' > webview/src/index.css
+@import "tailwindcss";
+
+@source "./**/*.{ts,tsx,js,jsx,html}";
+
+/* Use @import for CSS-first Tailwind v4 packages */
+@import "tw-animate-css";
+
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/source-serif-4";
+@import "@fontsource-variable/jetbrains-mono";
+@import "shadcn/tailwind.css";
+
+/* Externalized Light & Dark Palettes */
+@import "./color-light-palette.css";
+@import "./color-dark-palette.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-sans: 'Inter Variable', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Inter Variable', system-ui, -apple-system, sans-serif;
+  --font-body: 'Inter Variable', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --card-spacing: var(--card-spacing);
+
+  /* Color scale registrations */
+  --color-gray-0: var(--gray-0);
+  --color-gray-1: var(--gray-1);
+  --color-gray-2: var(--gray-2);
+  --color-gray-3: var(--gray-3);
+  --color-gray-4: var(--gray-4);
+  --color-gray-5: var(--gray-5);
+  --color-gray-6: var(--gray-6);
+  --color-gray-7: var(--gray-7);
+  --color-gray-8: var(--gray-8);
+  --color-gray-9: var(--gray-9);
+
+  --color-blue-0: var(--blue-0);
+  --color-blue-1: var(--blue-1);
+  --color-blue-2: var(--blue-2);
+  --color-blue-3: var(--blue-3);
+  --color-blue-4: var(--blue-4);
+  --color-blue-5: var(--blue-5);
+  --color-blue-6: var(--blue-6);
+  --color-blue-7: var(--blue-7);
+  --color-blue-8: var(--blue-8);
+  --color-blue-9: var(--blue-9);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    font-family: var(--font-sans);
+    @apply font-sans;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  /* Prime Scrollback & Scrollbar Style - Dark Mode */
+  .dark {
+    scrollbar-width: thin;
+    scrollbar-color: var(--gray-5) transparent;
+  }
+
+  .dark ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .dark ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    background-color: var(--gray-5);
+    border-radius: 9999px;
+    border: 1px solid transparent;
+    background-clip: content-box;
+    transition: background-color 0.2s ease;
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--blue-4);
+  }
+
+  .dark ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: 'Inter Variable', sans-serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+EOF
+
+echo "✅ feat: Externalized color palettes into color-light-palette.css and color-dark-palette.css, imported by index.css!"
 npm run compile

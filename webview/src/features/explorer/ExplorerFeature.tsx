@@ -186,7 +186,7 @@ export function ExplorerFeature() {
         center: {
           visible: true,
           isResizable: false,
-          isHiddable: false,
+          isHiddable: true,
           maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
         },
         right: {
@@ -265,7 +265,7 @@ export function ExplorerFeature() {
       <div className="relative flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
         <ContainerPanelHeader
           path="workspace.center"
-          isHiddable={false}
+          isHiddable={true}
           headerLeft={<GraphPanelHeaderLeft />}
           headerCenter={
             <GraphPanelHeaderCenter

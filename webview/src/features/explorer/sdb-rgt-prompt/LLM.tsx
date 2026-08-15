@@ -137,9 +137,9 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
   return (
     <div
       style={{
-        border: '1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.3))',
+        border: '1px solid var(--border)',
         borderRadius: '6px',
-        backgroundColor: 'var(--vscode-editor-background, rgba(0, 0, 0, 0.15))',
+        backgroundColor: 'var(--card)',
         overflow: 'hidden',
       }}
     >
@@ -151,10 +151,10 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
           justifyContent: 'space-between',
           alignItems: 'center',
           padding: '4px 8px',
-          backgroundColor: 'var(--vscode-sideBarSectionHeader-background, rgba(128, 128, 128, 0.12))',
+          backgroundColor: 'var(--secondary)',
           cursor: 'pointer',
           userSelect: 'none',
-          borderBottom: isOpen ? '1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.2))' : 'none',
+          borderBottom: isOpen ? '1px solid var(--border)' : 'none',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8em', fontWeight: 'bold' }}>
@@ -165,8 +165,8 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
               style={{
                 fontSize: '0.75em',
                 fontWeight: 'normal',
-                background: 'var(--vscode-badge-background)',
-                color: 'var(--vscode-badge-foreground)',
+                background: 'var(--primary)',
+                color: 'var(--primary-foreground)',
                 padding: '1px 6px',
                 borderRadius: '10px',
               }}
@@ -188,7 +188,7 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
             lineHeight: '1.4',
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
-            fontFamily: 'var(--vscode-editor-font-family, monospace)',
+            fontFamily: 'var(--font-mono)',
           }}
         >
           {children}
@@ -202,8 +202,8 @@ const UserMessageBlock: React.FC<{ msg: IChatMessageDto }> = ({ msg }) => {
   const [isBlockExpanded, setIsBlockExpanded] = useState(true);
   const { contextText, instructionText } = parseUserMessageContent(msg.content);
 
-  const userBg = 'var(--vscode-inputValidation-infoBackground, rgba(14, 99, 156, 0.12))';
-  const userBorder = 'var(--vscode-inputValidation-infoBorder, rgba(14, 99, 156, 0.35))';
+  const userBg = 'var(--user-bg, var(--blue-0))';
+  const userBorder = 'var(--user-border, var(--blue-2))';
 
   return (
     <div
@@ -215,7 +215,7 @@ const UserMessageBlock: React.FC<{ msg: IChatMessageDto }> = ({ msg }) => {
         flexDirection: 'column',
         gap: '6px',
         backgroundColor: userBg,
-        color: 'var(--vscode-foreground)',
+        color: 'var(--foreground)',
         padding: '8px 12px',
         borderRadius: '8px',
         border: `1px solid ${userBorder}`,
@@ -275,10 +275,10 @@ const UserMessageBlock: React.FC<{ msg: IChatMessageDto }> = ({ msg }) => {
       <div
         style={{
           fontSize: '0.7em',
-          opacity: 0.7,
+          opacity: 0.75,
           textAlign: 'right',
           marginTop: '4px',
-          borderTop: isBlockExpanded ? '1px dashed var(--vscode-panel-border, rgba(128, 128, 128, 0.3))' : 'none',
+          borderTop: isBlockExpanded ? '1px dashed var(--border)' : 'none',
           paddingTop: '3px',
           fontStyle: 'italic',
         }}
@@ -295,15 +295,15 @@ const AssistantMessageBlock: React.FC<{
   fallbackModel: string;
 }> = ({ msg, fallbackProvider, fallbackModel }) => {
   const [isBlockExpanded, setIsBlockExpanded] = useState(true);
-  const bubbleBg = 'var(--vscode-editor-inactiveSelectionBackground, rgba(128, 128, 128, 0.15))';
-  const bubbleBorder = '1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.3))';
+  const bubbleBg = 'var(--card)';
+  const bubbleBorder = '1px solid var(--border)';
 
   return (
     <div
       style={{
         alignSelf: 'flex-start',
         backgroundColor: bubbleBg,
-        color: 'var(--vscode-editor-foreground, var(--vscode-foreground))',
+        color: 'var(--card-foreground)',
         padding: '8px 12px',
         borderRadius: '8px',
         maxWidth: '85%',
@@ -333,7 +333,7 @@ const AssistantMessageBlock: React.FC<{
           fontWeight: 'bold',
           cursor: 'pointer',
           userSelect: 'none',
-          borderBottom: isBlockExpanded ? '1px dotted var(--vscode-panel-border)' : 'none',
+          borderBottom: isBlockExpanded ? '1px dotted var(--border)' : 'none',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -354,7 +354,7 @@ const AssistantMessageBlock: React.FC<{
             opacity: 0.65,
             textAlign: 'right',
             marginTop: '6px',
-            borderTop: isBlockExpanded ? '1px dashed var(--vscode-panel-border, rgba(128, 128, 128, 0.3))' : 'none',
+            borderTop: isBlockExpanded ? '1px dashed var(--border)' : 'none',
             paddingTop: '3px',
             fontStyle: 'italic',
           }}
@@ -530,14 +530,14 @@ export const LLMExplorerChat: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', height: '100%', gap: '12px', fontFamily: 'var(--vscode-font-family, sans-serif)', color: 'var(--vscode-foreground)' }}>
+    <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', height: '100%', gap: '12px', fontFamily: 'var(--font-sans)', color: 'var(--foreground)', backgroundColor: 'var(--background)' }}>
       {/* Header controls */}
-      <header style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', borderBottom: '1px solid var(--vscode-panel-border)', paddingBottom: '8px' }}>
+      <header style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
         <label style={{ fontWeight: 'bold' }}>Provider:</label>
         <select
           value={provider}
           onChange={(e) => setProvider(e.target.value as LlmProvider)}
-          style={{ background: 'var(--vscode-dropdown-background)', color: 'var(--vscode-dropdown-foreground)', border: '1px solid var(--vscode-dropdown-border)', padding: '4px 8px' }}
+          style={{ background: 'var(--input)', color: 'var(--foreground)', border: '1px solid var(--border)', padding: '4px 8px', borderRadius: '4px' }}
         >
           <option value={LlmProvider.OLLAMA}>🦙 Ollama</option>
           <option value={LlmProvider.GEMINI}>♊ Gemini</option>
@@ -548,7 +548,7 @@ export const LLMExplorerChat: React.FC = () => {
         <select
           value={selectedModel}
           onChange={(e) => setSelectedModel(e.target.value)}
-          style={{ background: 'var(--vscode-dropdown-background)', color: 'var(--vscode-dropdown-foreground)', border: '1px solid var(--vscode-dropdown-border)', padding: '4px 8px' }}
+          style={{ background: 'var(--input)', color: 'var(--foreground)', border: '1px solid var(--border)', padding: '4px 8px', borderRadius: '4px' }}
         >
           {models.map((m) => (
             <option key={m.id} value={m.id}>
@@ -592,7 +592,7 @@ export const LLMExplorerChat: React.FC = () => {
       </div>
 
       {/* Footer controls: File Context Bar & Prompt Input */}
-      <footer style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--vscode-panel-border)', paddingTop: '8px' }}>
+      <footer style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border)', paddingTop: '8px' }}>
         {/* Attached file context chips */}
         {attachedFiles.length > 0 && (
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -604,12 +604,12 @@ export const LLMExplorerChat: React.FC = () => {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '4px',
-                  background: 'var(--vscode-badge-background)',
-                  color: 'var(--vscode-badge-foreground)',
+                  background: 'var(--primary)',
+                  color: 'var(--primary-foreground)',
                   padding: '2px 8px',
                   borderRadius: '12px',
                   fontSize: '0.75em',
-                  fontFamily: 'monospace',
+                  fontFamily: 'var(--font-mono)',
                 }}
               >
                 📄 {file.path}
@@ -647,23 +647,25 @@ export const LLMExplorerChat: React.FC = () => {
             }}
             style={{
               flex: 1,
-              background: 'var(--vscode-input-background)',
-              color: 'var(--vscode-input-foreground)',
-              border: '1px solid var(--vscode-input-border)',
+              background: 'var(--input)',
+              color: 'var(--foreground)',
+              border: '1px solid var(--border)',
               padding: '4px 8px',
               fontSize: '0.85em',
+              borderRadius: '4px',
             }}
           />
           <button
             onClick={handleAddFileContext}
             disabled={isReadingFile || !filePathInput.trim()}
             style={{
-              background: 'var(--vscode-button-secondaryBackground, #3a3d41)',
-              color: 'var(--vscode-button-secondaryForeground, #ffffff)',
-              border: 'none',
+              background: 'var(--secondary)',
+              color: 'var(--secondary-foreground)',
+              border: '1px solid var(--border)',
               padding: '4px 12px',
               cursor: isReadingFile || !filePathInput.trim() ? 'not-allowed' : 'pointer',
               fontSize: '0.85em',
+              borderRadius: '4px',
             }}
           >
             {isReadingFile ? 'Reading...' : '+ Add Context'}
@@ -685,23 +687,25 @@ export const LLMExplorerChat: React.FC = () => {
             }}
             style={{
               flex: 1,
-              background: 'var(--vscode-input-background)',
-              color: 'var(--vscode-input-foreground)',
-              border: '1px solid var(--vscode-input-border)',
+              background: 'var(--input)',
+              color: 'var(--foreground)',
+              border: '1px solid var(--border)',
               padding: '6px',
               resize: 'none',
+              borderRadius: '4px',
             }}
           />
           <button
             onClick={handleSend}
             disabled={isLoading}
             style={{
-              background: 'var(--vscode-button-background)',
-              color: 'var(--vscode-button-foreground)',
+              background: 'var(--primary)',
+              color: 'var(--primary-foreground)',
               border: 'none',
               padding: '0 16px',
               cursor: isLoading ? 'not-allowed' : 'pointer',
               fontWeight: 'bold',
+              borderRadius: '4px',
             }}
           >
             {isLoading ? 'Thinking...' : 'Send'}
