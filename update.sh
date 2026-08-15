@@ -1,782 +1,726 @@
 #!/usr/bin/env bash
 set -e
 
-# 1. Create necessary directories if not exists
-mkdir -p webview/src/features/explorer/store
-mkdir -p webview/src/features/explorer/components
-mkdir -p webview/src/features/explorer/wkp-rgt-tabs-files-context
+echo "🚀 Updating token formatting in LLM Chat View..."
 
-# 2. Update store to include targetFilePaths and setTargetFilePaths
-cat << 'EOF' > webview/src/features/explorer/store/use-files-ctx-export-store.ts
-import { create } from 'zustand';
-import { ExportFormat } from '@/shared/services/codebase-exporter/domain/model/types';
-
-export interface FilesCtxExportState {
-  exportFormat: ExportFormat;
-  maxChunk: string;
-  splitChunkByFileExtension: boolean;
-  copyAsFilesToClipboard: boolean;
-  targetFilePaths: string[];
-  setExportFormat: (exportFormat: ExportFormat) => void;
-  setMaxChunk: (maxChunk: string) => void;
-  setSplitChunkByFileExtension: (splitChunkByFileExtension: boolean) => void;
-  setCopyAsFilesToClipboard: (copyAsFilesToClipboard: boolean) => void;
-  setTargetFilePaths: (targetFilePaths: string[]) => void;
-}
-
-export const useFilesCtxExportStore = create<FilesCtxExportState>((set) => ({
-  exportFormat: 'yaml',
-  maxChunk: '0',
-  splitChunkByFileExtension: false,
-  copyAsFilesToClipboard: false,
-  targetFilePaths: [],
-  setExportFormat: (exportFormat) => set({ exportFormat }),
-  setMaxChunk: (maxChunk) => set({ maxChunk }),
-  setSplitChunkByFileExtension: (splitChunkByFileExtension) =>
-    set({ splitChunkByFileExtension }),
-  setCopyAsFilesToClipboard: (copyAsFilesToClipboard) =>
-    set({ copyAsFilesToClipboard }),
-  setTargetFilePaths: (targetFilePaths) => set({ targetFilePaths }),
-}));
-EOF
-
-# 3. Update FilesCtxExportPanel to consume targetFilePaths from store as fallback
-cat << 'EOF' > webview/src/features/explorer/components/files-ctx-export-panel.tsx
-import React from 'react';
-import { FileText } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
-import { useAppContextStore } from '@/store/useAppContextStore';
+# ==============================================================================
+# Step 1: Update Webview React UI Component (LLM.tsx)
+# ==============================================================================
+cat << 'EOF' > webview/src/features/explorer/sdb-rgt-prompt/LLM.tsx
+import React, { useState, useEffect } from 'react';
 import {
-  EXPORT_FORMAT_LIST,
-  EXPORT_FORMAT_ICON_MAP,
-  ExportFormat,
-} from '@/shared/services/codebase-exporter/domain/model/types';
-import { useFilesCtxExportStore } from '../store/use-files-ctx-export-store';
-import { codebaseExporterApiService } from '@/services/api/codebase-exporter-api.service.gen';
-import { logInfo, logError } from '@/services/view/log-view.service.wrapper';
-import { ExportStatus } from '@/shared/services/codebase-exporter/domain/model/export-status';
+  LlmProvider,
+  IChatMessageDto,
+  ILlmModelInfo,
+  IFileContextDto,
+} from '../../../../../shared/services/llm-chat';
+import { llmChatApiService } from '../../../services/api/llm-chat-api.service.gen';
 
-interface FilesCtxExportPanelProps {
-  handleCopy?: (text: string, message: string) => void;
-  onCopyFilesCtx?: () => void;
-  targetFilePaths?: string[];
+const logInfo = (message: string, ...meta: any[]) => {
+  console.log(`[LLMExplorerChat UI] ℹ️ ${message}`, meta.length ? meta : '');
+};
+
+const formatExecutionTime = (timeMs?: number): string => {
+  if (!timeMs || timeMs < 0) return '00m:00s';
+  const totalSeconds = Math.floor(timeMs / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes.toString().padStart(2, '0')}m:${seconds.toString().padStart(2, '0')}s`;
+};
+
+const formatDateTime = (timestamp?: number): string => {
+  if (!timestamp) return '';
+  const d = new Date(timestamp);
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  const year = d.getFullYear();
+  const month = pad(d.getMonth() + 1);
+  const day = pad(d.getDate());
+  const hours = pad(d.getHours());
+  const minutes = pad(d.getMinutes());
+  const seconds = pad(d.getSeconds());
+  return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
+};
+
+const formatTokenCount = (count?: number): string => {
+  if (count === undefined || count === null || isNaN(count) || count < 0) return '0';
+  if (count > 999999) {
+    return `${(count / 1000000).toFixed(1)} MB`;
+  }
+  if (count > 9999) {
+    return `${(count / 1000).toFixed(1)} KB`;
+  }
+  if (count > 999) {
+    return count.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  }
+  return count.toString();
+};
+
+const formatPromptWithContext = (instruction: string, files: IFileContextDto[]): string => {
+  if (!files || files.length === 0) {
+    return instruction;
+  }
+
+  const fileBlocks = files
+    .map((f) => `  <file path="${f.path}">\n${f.content || '// Content unavailable'}\n  </file>`)
+    .join('\n');
+
+  return `<context>\n${fileBlocks}\n</context>\n\n<instruction>\n  ${instruction}\n</instruction>`;
+};
+
+const parseUserMessageContent = (content: string) => {
+  const contextMatch = content.match(/<context>([\s\S]*?)<\/context>/);
+  const instructionMatch = content.match(/<instruction>([\s\S]*?)<\/instruction>/);
+
+  if (contextMatch || instructionMatch) {
+    return {
+      contextText: contextMatch ? contextMatch[0].trim() : null,
+      instructionText: instructionMatch
+        ? instructionMatch[1].trim()
+        : content.replace(/<context>[\s\S]*?<\/context>/, '').trim(),
+    };
+  }
+
+  return {
+    contextText: null,
+    instructionText: content,
+  };
+};
+
+const CopyButton: React.FC<{ text: string; title?: string }> = ({ text, title = 'Copy content' }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      logInfo('Failed to copy text', err);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      title={title}
+      style={{
+        background: 'transparent',
+        border: 'none',
+        color: 'inherit',
+        cursor: 'pointer',
+        fontSize: '0.9em',
+        padding: '2px 4px',
+        borderRadius: '3px',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: 0.85,
+        transition: 'opacity 0.2s',
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+      onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.85')}
+    >
+      {copied ? '✅' : '📋'}
+    </button>
+  );
+};
+
+interface CollapsibleCardProps {
+  title: string;
+  badge?: string;
+  defaultExpanded?: boolean;
+  contentToCopy: string;
+  children: React.ReactNode;
 }
 
-export function FilesCtxExportPanel({
-  handleCopy,
-  onCopyFilesCtx,
-  targetFilePaths,
-}: FilesCtxExportPanelProps) {
-  const setNotification = useAppContextStore((s) => s.setNotification);
-  const {
-    exportFormat,
-    maxChunk,
-    splitChunkByFileExtension,
-    copyAsFilesToClipboard,
-    targetFilePaths: storeTargetFilePaths,
-    setExportFormat,
-    setMaxChunk,
-    setSplitChunkByFileExtension,
-    setCopyAsFilesToClipboard,
-  } = useFilesCtxExportStore();
+const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
+  title,
+  badge,
+  defaultExpanded = false,
+  contentToCopy,
+  children,
+}) => {
+  const [isOpen, setIsOpen] = useState(defaultExpanded);
 
-  const handleCopyFilesCtx = async () => {
-    if (onCopyFilesCtx) {
-      onCopyFilesCtx();
+  return (
+    <div
+      style={{
+        border: '1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.3))',
+        borderRadius: '6px',
+        backgroundColor: 'var(--vscode-editor-background, rgba(0, 0, 0, 0.15))',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Sub-Card Header */}
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '4px 8px',
+          backgroundColor: 'var(--vscode-sideBarSectionHeader-background, rgba(128, 128, 128, 0.12))',
+          cursor: 'pointer',
+          userSelect: 'none',
+          borderBottom: isOpen ? '1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.2))' : 'none',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8em', fontWeight: 'bold' }}>
+          <span style={{ fontSize: '0.8em' }}>{isOpen ? '▼' : '►'}</span>
+          <span>{title}</span>
+          {badge && (
+            <span
+              style={{
+                fontSize: '0.75em',
+                fontWeight: 'normal',
+                background: 'var(--vscode-badge-background)',
+                color: 'var(--vscode-badge-foreground)',
+                padding: '1px 6px',
+                borderRadius: '10px',
+              }}
+            >
+              {badge}
+            </span>
+          )}
+        </div>
+
+        <CopyButton text={contentToCopy} title="Copy sub-block content" />
+      </div>
+
+      {/* Sub-Card Body */}
+      {isOpen && (
+        <div
+          style={{
+            padding: '8px 10px',
+            fontSize: '0.85em',
+            lineHeight: '1.4',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+            fontFamily: 'var(--vscode-editor-font-family, monospace)',
+          }}
+        >
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const UserMessageBlock: React.FC<{ msg: IChatMessageDto }> = ({ msg }) => {
+  const [isBlockExpanded, setIsBlockExpanded] = useState(true);
+  const { contextText, instructionText } = parseUserMessageContent(msg.content);
+
+  const userBg = 'var(--vscode-inputValidation-infoBackground, rgba(14, 99, 156, 0.12))';
+  const userBorder = 'var(--vscode-inputValidation-infoBorder, rgba(14, 99, 156, 0.35))';
+
+  return (
+    <div
+      style={{
+        alignSelf: 'flex-end',
+        maxWidth: '90%',
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
+        backgroundColor: userBg,
+        color: 'var(--vscode-foreground)',
+        padding: '8px 12px',
+        borderRadius: '8px',
+        border: `1px solid ${userBorder}`,
+      }}
+    >
+      {/* Sticky Header Bar */}
+      <div
+        onClick={() => setIsBlockExpanded(!isBlockExpanded)}
+        style={{
+          position: 'sticky',
+          top: 0,
+          backgroundColor: userBg,
+          zIndex: 2,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontSize: '0.78em',
+          fontWeight: 'bold',
+          cursor: 'pointer',
+          userSelect: 'none',
+          paddingBottom: isBlockExpanded ? '4px' : '0px',
+          borderBottom: isBlockExpanded ? `1px solid ${userBorder}` : 'none',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span>{isBlockExpanded ? '▼' : '►'}</span>
+          <span>👤 USER REQUEST</span>
+        </div>
+        <CopyButton text={msg.content} title="Copy entire user request" />
+      </div>
+
+      {/* Expandable Content Body */}
+      {isBlockExpanded && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+          {contextText && (
+            <CollapsibleCard
+              title="📄 Attached File Context"
+              badge={msg.fileCount ? `${msg.fileCount} files` : 'xml'}
+              defaultExpanded={false}
+              contentToCopy={contextText}
+            >
+              {contextText}
+            </CollapsibleCard>
+          )}
+
+          <CollapsibleCard
+            title="💬 Instruction Prompt"
+            defaultExpanded={true}
+            contentToCopy={instructionText}
+          >
+            {instructionText}
+          </CollapsibleCard>
+        </div>
+      )}
+
+      {/* Footer Metadata (ALWAYS visible even if block is collapsed) */}
+      <div
+        style={{
+          fontSize: '0.7em',
+          opacity: 0.7,
+          textAlign: 'right',
+          marginTop: '4px',
+          borderTop: isBlockExpanded ? '1px dashed var(--vscode-panel-border, rgba(128, 128, 128, 0.3))' : 'none',
+          paddingTop: '3px',
+          fontStyle: 'italic',
+        }}
+      >
+        {formatDateTime(msg.timestamp)} | Context Files: {msg.fileCount ?? 0}
+      </div>
+    </div>
+  );
+};
+
+const AssistantMessageBlock: React.FC<{
+  msg: IChatMessageDto;
+  fallbackProvider: LlmProvider;
+  fallbackModel: string;
+}> = ({ msg, fallbackProvider, fallbackModel }) => {
+  const [isBlockExpanded, setIsBlockExpanded] = useState(true);
+  const bubbleBg = 'var(--vscode-editor-inactiveSelectionBackground, rgba(128, 128, 128, 0.15))';
+  const bubbleBorder = '1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.3))';
+
+  return (
+    <div
+      style={{
+        alignSelf: 'flex-start',
+        backgroundColor: bubbleBg,
+        color: 'var(--vscode-editor-foreground, var(--vscode-foreground))',
+        padding: '8px 12px',
+        borderRadius: '8px',
+        maxWidth: '85%',
+        width: '100%',
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-word',
+        position: 'relative',
+        border: bubbleBorder,
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      {/* Sticky Header Bar */}
+      <div
+        onClick={() => setIsBlockExpanded(!isBlockExpanded)}
+        style={{
+          position: 'sticky',
+          top: 0,
+          backgroundColor: bubbleBg,
+          zIndex: 2,
+          paddingBottom: isBlockExpanded ? '4px' : '0px',
+          marginBottom: isBlockExpanded ? '6px' : '0px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontSize: '0.78em',
+          fontWeight: 'bold',
+          cursor: 'pointer',
+          userSelect: 'none',
+          borderBottom: isBlockExpanded ? '1px dotted var(--vscode-panel-border)' : 'none',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span>{isBlockExpanded ? '▼' : '►'}</span>
+          <span>🤖 {(msg.provider || fallbackProvider).toUpperCase()} ({msg.model || fallbackModel})</span>
+        </div>
+        <CopyButton text={msg.content} title="Copy assistant response" />
+      </div>
+
+      {/* Content Body */}
+      {isBlockExpanded && <div>{msg.content}</div>}
+
+      {/* Footer Metadata (ALWAYS visible even if block is collapsed) */}
+      {(msg.promptTokens !== undefined || msg.executionTimeMs !== undefined) && (
+        <div
+          style={{
+            fontSize: '0.7em',
+            opacity: 0.65,
+            textAlign: 'right',
+            marginTop: '6px',
+            borderTop: isBlockExpanded ? '1px dashed var(--vscode-panel-border, rgba(128, 128, 128, 0.3))' : 'none',
+            paddingTop: '3px',
+            fontStyle: 'italic',
+          }}
+        >
+          In: {formatTokenCount(msg.promptTokens)} tokens | Out: {formatTokenCount(msg.completionTokens)} tokens | Time:{' '}
+          {formatExecutionTime(msg.executionTimeMs)}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export const LLMExplorerChat: React.FC = () => {
+  const [provider, setProvider] = useState<LlmProvider>(LlmProvider.OLLAMA);
+  const [models, setModels] = useState<ILlmModelInfo[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string>('');
+  const [messages, setMessages] = useState<IChatMessageDto[]>([]);
+  const [inputPrompt, setInputPrompt] = useState<string>('');
+  const [systemPrompt] = useState<string>('You are an expert Graph RAG Assistant.');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [temperature, setTemperature] = useState<number>(0.7);
+
+  // File Context state
+  const [attachedFiles, setAttachedFiles] = useState<IFileContextDto[]>([]);
+  const [filePathInput, setFilePathInput] = useState<string>('');
+  const [isReadingFile, setIsReadingFile] = useState<boolean>(false);
+
+  useEffect(() => {
+    logInfo('Provider selection updated. Fetching models...', { provider });
+    loadModels(provider);
+  }, [provider]);
+
+  const loadModels = async (prov: LlmProvider) => {
+    try {
+      const available = await llmChatApiService.listAvailableModels(prov);
+      logInfo('Models loaded for provider', { provider: prov, count: available.length });
+      setModels(available);
+      if (available.length > 0) {
+        setSelectedModel(available[0].id);
+      } else {
+        setSelectedModel('');
+      }
+    } catch (err: any) {
+      logInfo('Failed to load models for provider', { provider: prov, error: err?.message });
+      setModels([]);
+    }
+  };
+
+  const handleAddFileContext = async () => {
+    const trimmedPath = filePathInput.trim();
+    if (!trimmedPath) return;
+
+    if (attachedFiles.some((f) => f.path === trimmedPath)) {
+      logInfo('File path already attached as context', { path: trimmedPath });
+      setFilePathInput('');
       return;
     }
 
-    const files = (targetFilePaths && targetFilePaths.length > 0)
-      ? targetFilePaths
-      : (storeTargetFilePaths || []);
-
-    const parsedMaxChunk = typeof maxChunk === 'number' ? maxChunk : (parseInt(String(maxChunk), 10) || 0);
-
-    logInfo(`[FilesCtxExportPanel] Exporting ${files.length} selected file(s) in format '${exportFormat}'...`);
+    setIsReadingFile(true);
+    logInfo('Attaching file path context...', { path: trimmedPath });
 
     try {
-      const exportStatus: ExportStatus = await codebaseExporterApiService.exportSelectedFiles(
-        files,
-        exportFormat,
-        parsedMaxChunk,
-        splitChunkByFileExtension
-      );
+      const content = await llmChatApiService.readFileContent(trimmedPath);
+      setAttachedFiles((prev) => [...prev, { path: trimmedPath, content }]);
+      logInfo('Successfully attached file content', { path: trimmedPath, chars: content.length });
+    } catch (err: any) {
+      logInfo('Error reading file content. Adding fallback entry.', { path: trimmedPath, error: err?.message });
+      setAttachedFiles((prev) => [...prev, { path: trimmedPath, content: `// Unable to load ${trimmedPath}` }]);
+    } finally {
+      setFilePathInput('');
+      setIsReadingFile(false);
+    }
+  };
 
-      logInfo(`[FilesCtxExportPanel] exportStatus received: ${JSON.stringify(exportStatus)}`);
+  const handleRemoveFileContext = (pathToRemove: string) => {
+    logInfo('Removing attached file context', { path: pathToRemove });
+    setAttachedFiles((prev) => prev.filter((f) => f.path !== pathToRemove));
+  };
 
-      // Wait for the export process to finish
-      const checkStatusInterval = 1000; // 1 second
-      let currentStatus = exportStatus;
-      while (currentStatus.pythonScriptStatus.isRunning) {
-        await new Promise((resolve) => setTimeout(resolve, checkStatusInterval));
-        currentStatus = await codebaseExporterApiService.getExportFilesStatus(currentStatus.pythonScriptStatus.pid);
-      }
+  const handleSend = async () => {
+    if (!inputPrompt.trim() || isLoading) return;
 
-      const exportResult = await codebaseExporterApiService.getExportFilesResult(
-        exportStatus.pythonScriptStatus.pid,
-        exportStatus.exportArgs?.destDir || '',
-        exportStatus.exportArgs?.timestamp || ''
-      );
+    const requestTimestamp = Date.now();
+    const formattedPrompt = formatPromptWithContext(inputPrompt, attachedFiles);
+    const contextFileCount = attachedFiles.length;
 
-      if (copyAsFilesToClipboard) {
-        const result: boolean = await codebaseExporterApiService.storeExportedFilesInClipboard(
-          currentStatus.pythonScriptStatus.pid,
-          exportResult
-        );
-        if (result) {
-          if (handleCopy) {
-            handleCopy('', 'Selected Files Content copied to clipboard as files!');
-          } else {
-            setNotification('Selected Files Content copied to clipboard as files!');
-          }
-        }
+    logInfo('User submitted chat prompt with context', {
+      provider,
+      model: selectedModel,
+      contextFilesCount: contextFileCount,
+      rawPromptLength: inputPrompt.length,
+      formattedPromptLength: formattedPrompt.length,
+      timestamp: requestTimestamp,
+    });
+
+    const userMessage: IChatMessageDto = {
+      id: `user-${requestTimestamp}`,
+      role: 'user',
+      content: formattedPrompt,
+      timestamp: requestTimestamp,
+      fileCount: contextFileCount,
+    };
+
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
+    setInputPrompt('');
+    setIsLoading(true);
+
+    try {
+      const response = await llmChatApiService.executeChat({
+        provider,
+        model: selectedModel,
+        messages: newMessages,
+        systemPrompt,
+        fileContexts: attachedFiles,
+        temperature,
+      });
+
+      if (response.error) {
+        logInfo('Chat response received with error', { error: response.error });
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `err-${Date.now()}`,
+            role: 'assistant',
+            content: `⚠️ Error: ${response.error}`,
+            timestamp: Date.now(),
+            provider: response.provider || provider,
+            model: response.model || selectedModel,
+          },
+        ]);
       } else {
-        const combinedFilesContent = await codebaseExporterApiService.readExportedFilesContent(
-          currentStatus.pythonScriptStatus.pid,
-          exportResult
-        );
-
-        if (handleCopy) {
-          handleCopy(combinedFilesContent, 'Selected Files Content copied to clipboard!');
-        } else {
-          setNotification('Selected Files Content copied to clipboard!');
-        }
+        logInfo('Chat response received successfully', {
+          messageId: response.messageId,
+          provider: response.provider,
+          model: response.model,
+          executionTimeMs: response.executionTimeMs,
+          promptTokens: response.promptTokens,
+          completionTokens: response.completionTokens,
+        });
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: response.messageId,
+            role: 'assistant',
+            content: response.content,
+            timestamp: Date.now(),
+            provider: response.provider || provider,
+            model: response.model || selectedModel,
+            promptTokens: response.promptTokens,
+            completionTokens: response.completionTokens,
+            totalTokens: response.totalTokens,
+            executionTimeMs: response.executionTimeMs,
+          },
+        ]);
       }
     } catch (err: any) {
-      logError('[FilesCtxExportPanel] Error during exportSelectedFiles:', err);
-      setNotification('Failed to export selected files context.');
+      logInfo('Chat request failed with exception', { error: err?.message });
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `err-${Date.now()}`,
+          role: 'assistant',
+          content: `❌ Communication Failure: ${err?.message || 'Unknown error'}`,
+          timestamp: Date.now(),
+          provider,
+          model: selectedModel,
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center gap-3 bg-card p-2.5 border border-border rounded-lg w-full">
-      {/* Scrollable left area */}
-      <div className="flex flex-1 items-center gap-2.5 min-w-0 overflow-x-auto">
-        {/* Output Format */}
-        <div className="space-y-1 shrink-0">
-          <label
-            className="block font-medium text-[10px] text-muted-foreground whitespace-nowrap"
-            title="Structured file format schema template applied to aggregate the files contents."
-          >
-            Output Format
-          </label>
-          <SelectFromTypeBuilder
-            id="select-export-format"
-            value={exportFormat}
-            onChange={(val) => setExportFormat(val as ExportFormat)}
-            triggerClassName="!h-8 min-h-0 py-0 px-2 text-xs border-border rounded-md font-mono w-24"
-            options={EXPORT_FORMAT_LIST.map((key) => ({
-              value: key,
-              icon: EXPORT_FORMAT_ICON_MAP[key]?.icon,
-              label: EXPORT_FORMAT_ICON_MAP[key]?.label,
-            }))}
-          />
-        </div>
+    <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', height: '100%', gap: '12px', fontFamily: 'var(--vscode-font-family, sans-serif)', color: 'var(--vscode-foreground)' }}>
+      {/* Header controls */}
+      <header style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', borderBottom: '1px solid var(--vscode-panel-border)', paddingBottom: '8px' }}>
+        <label style={{ fontWeight: 'bold' }}>Provider:</label>
+        <select
+          value={provider}
+          onChange={(e) => setProvider(e.target.value as LlmProvider)}
+          style={{ background: 'var(--vscode-dropdown-background)', color: 'var(--vscode-dropdown-foreground)', border: '1px solid var(--vscode-dropdown-border)', padding: '4px 8px' }}
+        >
+          <option value={LlmProvider.OLLAMA}>🦙 Ollama</option>
+          <option value={LlmProvider.GEMINI}>♊ Gemini</option>
+          <option value={LlmProvider.COPILOT}>✈️ Copilot</option>
+        </select>
 
-        {/* Max Chunk (KB) */}
-        <div className="space-y-1 shrink-0">
-          <label
-            className="block font-medium text-[10px] text-muted-foreground whitespace-nowrap"
-            title="Maximum payload slice limit for chunk splitting in Kilobytes (0 means unlimited size)."
-          >
-            Max Chunk (KB)
-          </label>
-          <Input
-            type="number"
-            value={maxChunk}
-            onChange={(e) => setMaxChunk(e.target.value)}
-            className="bg-background w-20 h-8 text-xs"
-          />
-        </div>
+        <label style={{ fontWeight: 'bold', marginLeft: '12px' }}>Model:</label>
+        <select
+          value={selectedModel}
+          onChange={(e) => setSelectedModel(e.target.value)}
+          style={{ background: 'var(--vscode-dropdown-background)', color: 'var(--vscode-dropdown-foreground)', border: '1px solid var(--vscode-dropdown-border)', padding: '4px 8px' }}
+        >
+          {models.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.name}
+            </option>
+          ))}
+        </select>
 
-        {/* Split by ext */}
-        <div className="flex flex-col items-center space-y-1 shrink-0">
-          <label
-            htmlFor="splitChunkByFileExtension"
-            className="font-medium text-[10px] text-muted-foreground whitespace-nowrap cursor-pointer"
-            title="Force the export runner to partition output chunks whenever a change of file extension occurs."
-          >
-            Split by Ext
-          </label>
-          <div className="flex justify-center items-center h-8">
-            <Checkbox
-              id="splitChunkByFileExtension"
-              checked={splitChunkByFileExtension}
-              onCheckedChange={(checked) => setSplitChunkByFileExtension(!!checked)}
-            />
+        <label style={{ marginLeft: '12px' }}>Temp ({temperature}):</label>
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.1"
+          value={temperature}
+          onChange={(e) => setTemperature(parseFloat(e.target.value))}
+          style={{ width: '80px' }}
+        />
+      </header>
+
+      {/* Message history */}
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '4px' }}>
+        {messages.length === 0 ? (
+          <div style={{ opacity: 0.6, fontStyle: 'italic', textAlign: 'center', marginTop: '32px' }}>
+            No conversation started. Attach files as context and type your instruction below.
           </div>
-        </div>
-
-        {/* Copy to clip */}
-        <div className="flex flex-col items-center space-y-1 shrink-0">
-          <label
-            htmlFor="copyAsFilesToClipboard"
-            className="font-medium text-[10px] text-muted-foreground whitespace-nowrap cursor-pointer"
-            title="Automatically copy generated export files to the OS clipboard after each successful run."
-          >
-            Copy as Files
-          </label>
-          <div className="flex justify-center items-center h-8">
-            <Checkbox
-              id="copyAsFilesToClipboard"
-              checked={copyAsFilesToClipboard}
-              onCheckedChange={(checked) => setCopyAsFilesToClipboard(!!checked)}
-            />
-          </div>
-        </div>
+        ) : (
+          messages.map((msg) =>
+            msg.role === 'user' ? (
+              <UserMessageBlock key={msg.id} msg={msg} />
+            ) : (
+              <AssistantMessageBlock
+                key={msg.id}
+                msg={msg}
+                fallbackProvider={provider}
+                fallbackModel={selectedModel}
+              />
+            )
+          )
+        )}
       </div>
 
-      {/* Copy files ctx Button */}
-      <Button
-        onClick={handleCopyFilesCtx}
-        className="flex justify-center items-center gap-1.5 bg-blue-500 hover:bg-blue-600 shadow-sm rounded-lg w-36 h-8 font-bold text-white text-xs whitespace-nowrap cursor-pointer shrink-0"
-      >
-        <FileText size={14} /> Copy files ctx
-      </Button>
+      {/* Footer controls: File Context Bar & Prompt Input */}
+      <footer style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--vscode-panel-border)', paddingTop: '8px' }}>
+        {/* Attached file context chips */}
+        {attachedFiles.length > 0 && (
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.8em', fontWeight: 'bold', opacity: 0.8 }}>Context Files:</span>
+            {attachedFiles.map((file) => (
+              <span
+                key={file.path}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: 'var(--vscode-badge-background)',
+                  color: 'var(--vscode-badge-foreground)',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  fontSize: '0.75em',
+                  fontFamily: 'monospace',
+                }}
+              >
+                📄 {file.path}
+                <button
+                  onClick={() => handleRemoveFileContext(file.path)}
+                  title="Remove file context"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'inherit',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    padding: '0 2px',
+                  }}
+                >
+                  ✕
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Input to attach new file path context */}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <input
+            type="text"
+            value={filePathInput}
+            onChange={(e) => setFilePathInput(e.target.value)}
+            placeholder="Add file path as context (e.g. src/services/user.service.ts)..."
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleAddFileContext();
+              }
+            }}
+            style={{
+              flex: 1,
+              background: 'var(--vscode-input-background)',
+              color: 'var(--vscode-input-foreground)',
+              border: '1px solid var(--vscode-input-border)',
+              padding: '4px 8px',
+              fontSize: '0.85em',
+            }}
+          />
+          <button
+            onClick={handleAddFileContext}
+            disabled={isReadingFile || !filePathInput.trim()}
+            style={{
+              background: 'var(--vscode-button-secondaryBackground, #3a3d41)',
+              color: 'var(--vscode-button-secondaryForeground, #ffffff)',
+              border: 'none',
+              padding: '4px 12px',
+              cursor: isReadingFile || !filePathInput.trim() ? 'not-allowed' : 'pointer',
+              fontSize: '0.85em',
+            }}
+          >
+            {isReadingFile ? 'Reading...' : '+ Add Context'}
+          </button>
+        </div>
+
+        {/* Instruction Prompt & Send Button */}
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <textarea
+            value={inputPrompt}
+            onChange={(e) => setInputPrompt(e.target.value)}
+            placeholder="Type your instruction for LLM..."
+            rows={2}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            style={{
+              flex: 1,
+              background: 'var(--vscode-input-background)',
+              color: 'var(--vscode-input-foreground)',
+              border: '1px solid var(--vscode-input-border)',
+              padding: '6px',
+              resize: 'none',
+            }}
+          />
+          <button
+            onClick={handleSend}
+            disabled={isLoading}
+            style={{
+              background: 'var(--vscode-button-background)',
+              color: 'var(--vscode-button-foreground)',
+              border: 'none',
+              padding: '0 16px',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              fontWeight: 'bold',
+            }}
+          >
+            {isLoading ? 'Thinking...' : 'Send'}
+          </button>
+        </div>
+      </footer>
     </div>
   );
-}
+};
 EOF
 
-# 4. Update files-context.tsx to synchronize targetFilePaths into useFilesCtxExportStore
-cat << 'EOF' > webview/src/features/explorer/wkp-rgt-tabs-files-context/files-context.tsx
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { GitFork, FileText, ShieldAlert, ChevronDown, ChevronRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
-import { CodebaseData, CodebaseFile, SelectedEntity } from '@/shared/services/graph-rag-explorer';
-import { calculateTransitiveImpact } from '@/services/view/graph-view.service';
-import { FilesCtxExportPanel } from '../components/files-ctx-export-panel';
-import { useFilesCtxExportStore } from '../store/use-files-ctx-export-store';
-
-interface FilesContextPanelProps {
-  initialCodebase: CodebaseData;
-  selectedEntity: SelectedEntity | null;
-  enableDownstream: boolean;
-  setEnableDownstream: React.Dispatch<React.SetStateAction<boolean>>;
-  enableUpstream: boolean;
-  setEnableUpstream: React.Dispatch<React.SetStateAction<boolean>>;
-  impactedSet: Set<string>;
-  handleCopy: (text: string, message: string) => void;
-}
-
-interface TriStateCheckboxProps {
-  checked: boolean;
-  indeterminate: boolean;
-  onChange: () => void;
-  className?: string;
-}
-
-function TriStateCheckbox({ checked, indeterminate, onChange, className }: TriStateCheckboxProps) {
-  const checkboxRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (checkboxRef.current) {
-      checkboxRef.current.indeterminate = indeterminate;
-    }
-  }, [indeterminate]);
-
-  return (
-    <input
-      ref={checkboxRef}
-      type="checkbox"
-      checked={checked}
-      onChange={onChange}
-      className={className}
-    />
-  );
-}
-
-interface DepthFileGroup {
-  key: string;
-  label: string;
-  order: number;
-  files: CodebaseFile[];
-}
-
-export function FilesContextPanel({
-  initialCodebase,
-  selectedEntity,
-  enableDownstream,
-  setEnableDownstream,
-  enableUpstream,
-  setEnableUpstream,
-  impactedSet,
-  handleCopy
-}: FilesContextPanelProps) {
-  const setTargetFilePaths = useFilesCtxExportStore((s) => s.setTargetFilePaths);
-
-  const downstreamCount = useMemo(() => {
-    if (!selectedEntity || !initialCodebase?.dependencies) return 0;
-    const dsSet = calculateTransitiveImpact(selectedEntity, initialCodebase.dependencies, 20, 20, true, false);
-    return initialCodebase.files.filter(f => dsSet.has(f.id) && f.id !== selectedEntity.nodeId).length;
-  }, [selectedEntity, initialCodebase]);
-
-  const upstreamCount = useMemo(() => {
-    if (!selectedEntity || !initialCodebase?.dependencies) return 0;
-    const usSet = calculateTransitiveImpact(selectedEntity, initialCodebase.dependencies, 20, 20, false, true);
-    return initialCodebase.files.filter(f => usSet.has(f.id) && f.id !== selectedEntity.nodeId).length;
-  }, [selectedEntity, initialCodebase]);
-
-  // Compute depth and direction groups for impacted / target files
-  const depthGroups = useMemo<DepthFileGroup[]>(() => {
-    if (!selectedEntity || !initialCodebase?.files) return [];
-
-    const targetId = selectedEntity.nodeId;
-    const deps = initialCodebase.dependencies || [];
-
-    // Downstream BFS
-    const dsDepthMap = new Map<string, number>();
-    const dsQueue: Array<{ id: string; depth: number }> = [{ id: targetId, depth: 0 }];
-    dsDepthMap.set(targetId, 0);
-
-    while (dsQueue.length > 0) {
-      const { id, depth } = dsQueue.shift()!;
-      deps.forEach((dep) => {
-        const src = dep.sourceNode || dep.source;
-        const tgt = dep.targetNode || dep.target;
-        if (src === id && tgt) {
-          if (!dsDepthMap.has(tgt) || dsDepthMap.get(tgt)! > depth + 1) {
-            dsDepthMap.set(tgt, depth + 1);
-            dsQueue.push({ id: tgt, depth: depth + 1 });
-          }
-        }
-      });
-    }
-
-    // Upstream BFS
-    const usDepthMap = new Map<string, number>();
-    const usQueue: Array<{ id: string; depth: number }> = [{ id: targetId, depth: 0 }];
-    usDepthMap.set(targetId, 0);
-
-    while (usQueue.length > 0) {
-      const { id, depth } = usQueue.shift()!;
-      deps.forEach((dep) => {
-        const src = dep.sourceNode || dep.source;
-        const tgt = dep.targetNode || dep.target;
-        if (tgt === id && src) {
-          if (!usDepthMap.has(src) || usDepthMap.get(src)! > depth + 1) {
-            usDepthMap.set(src, depth + 1);
-            usQueue.push({ id: src, depth: depth + 1 });
-          }
-        }
-      });
-    }
-
-    const groupsMap = new Map<string, DepthFileGroup>();
-
-    const getOrCreateGroup = (key: string, label: string, order: number) => {
-      if (!groupsMap.has(key)) {
-        groupsMap.set(key, { key, label, order, files: [] });
-      }
-      return groupsMap.get(key)!;
-    };
-
-    initialCodebase.files.forEach((file) => {
-      const isTarget = file.id === targetId;
-      const isImpacted = impactedSet.has(file.id) || Array.from(impactedSet).some(item => item === file.id || item.startsWith(file.id + '::'));
-
-      if (!isImpacted && !isTarget) return;
-
-      if (isTarget) {
-        getOrCreateGroup('target', 'Selected Target File', 150).files.push(file);
-      } else {
-        const usDepth = usDepthMap.get(file.id);
-        const dsDepth = dsDepthMap.get(file.id);
-
-        if (enableUpstream && usDepth !== undefined && usDepth > 0) {
-          const key = `upstream-${usDepth}`;
-          const label = `Upstream Depth ${usDepth} (Callers)`;
-          getOrCreateGroup(key, label, 100 + usDepth).files.push(file);
-        } else if (enableDownstream && dsDepth !== undefined && dsDepth > 0) {
-          const key = `downstream-${dsDepth}`;
-          const label = `Downstream Depth ${dsDepth} (Callees)`;
-          getOrCreateGroup(key, label, 200 + dsDepth).files.push(file);
-        } else if (usDepth !== undefined && usDepth > 0) {
-          const key = `upstream-${usDepth}`;
-          const label = `Upstream Depth ${usDepth} (Callers)`;
-          getOrCreateGroup(key, label, 100 + usDepth).files.push(file);
-        } else if (dsDepth !== undefined && dsDepth > 0) {
-          const key = `downstream-${dsDepth}`;
-          const label = `Downstream Depth ${dsDepth} (Callees)`;
-          getOrCreateGroup(key, label, 200 + dsDepth).files.push(file);
-        } else {
-          getOrCreateGroup('other-impacted', 'Other Impacted Files', 300).files.push(file);
-        }
-      }
-    });
-
-    return Array.from(groupsMap.values()).sort((a, b) => a.order - b.order);
-  }, [selectedEntity, initialCodebase, impactedSet, enableUpstream, enableDownstream]);
-
-  // Distinct Theme Color Token provider per group key
-  const getGroupStyle = (key: string) => {
-    if (key === 'target') {
-      return {
-        border: 'border-orange-500/20 dark:border-orange-500/30',
-        bgHeader: 'bg-orange-500/10 border-b border-orange-500/20',
-        text: 'text-orange-500',
-        icon: 'text-orange-500',
-      };
-    }
-    if (key.startsWith('upstream')) {
-      return {
-        border: 'border-indigo-500/30 dark:border-indigo-500/40',
-        bgHeader: 'bg-indigo-500/10 border-b border-indigo-500/20',
-        text: 'text-indigo-600 dark:text-indigo-400',
-        icon: 'text-indigo-500 dark:text-indigo-400',
-      };
-    }
-    if (key.startsWith('downstream')) {
-      return {
-        border: 'border-blue-500/30 dark:border-blue-500/40',
-        bgHeader: 'bg-blue-500/10 border-b border-blue-500/20',
-        text: 'text-blue-600 dark:text-blue-400',
-        icon: 'text-blue-500 dark:text-blue-400',
-      };
-    }
-    return {
-      border: 'border-emerald-500/40 dark:border-emerald-500/50',
-      bgHeader: 'bg-emerald-500/15 border-b border-emerald-500/30',
-      text: 'text-emerald-600 dark:text-emerald-400 font-bold',
-      icon: 'text-emerald-500 dark:text-emerald-400',
-    };
-  };
-
-  // Selection state for files
-  const [selectedFiles, setSelectedFiles] = useState<Record<string, boolean>>({});
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
-
-  // Sync selected files when depthGroups change
-  useEffect(() => {
-    const initialSelected: Record<string, boolean> = {};
-    const initialExpanded: Record<string, boolean> = {};
-
-    depthGroups.forEach((group) => {
-      initialExpanded[group.key] = true;
-      group.files.forEach((file) => {
-        initialSelected[file.id] = true;
-      });
-    });
-
-    setSelectedFiles((prev) => {
-      const updated = { ...initialSelected };
-      Object.keys(prev).forEach((id) => {
-        if (id in updated) {
-          updated[id] = prev[id];
-        }
-      });
-      return updated;
-    });
-
-    setExpandedGroups((prev) => ({ ...initialExpanded, ...prev }));
-  }, [depthGroups]);
-
-  const toggleGroupCheckbox = (groupKey: string, groupFiles: CodebaseFile[]) => {
-    const isAllChecked = groupFiles.length > 0 && groupFiles.every((f) => selectedFiles[f.id]);
-    const targetState = !isAllChecked;
-
-    setSelectedFiles((prev) => {
-      const updated = { ...prev };
-      groupFiles.forEach((file) => {
-        updated[file.id] = targetState;
-      });
-      return updated;
-    });
-  };
-
-  const toggleFileCheckbox = (fileId: string) => {
-    setSelectedFiles((prev) => ({
-      ...prev,
-      [fileId]: !prev[fileId],
-    }));
-  };
-
-  const toggleGroupExpand = (groupKey: string) => {
-    setExpandedGroups((prev) => ({
-      ...prev,
-      [groupKey]: !prev[groupKey],
-    }));
-  };
-
-  const selectedCount = useMemo(() => {
-    return Object.values(selectedFiles).filter(Boolean).length;
-  }, [selectedFiles]);
-
-  const selectedUpstreamCount = useMemo(() => {
-    return depthGroups
-      .filter((g) => g.key.startsWith('upstream'))
-      .reduce((acc, g) => acc + g.files.filter((f) => selectedFiles[f.id]).length, 0);
-  }, [depthGroups, selectedFiles]);
-
-  const selectedDownstreamCount = useMemo(() => {
-    return depthGroups
-      .filter((g) => g.key.startsWith('downstream'))
-      .reduce((acc, g) => acc + g.files.filter((f) => selectedFiles[f.id]).length, 0);
-  }, [depthGroups, selectedFiles]);
-
-  // Build context containing ALL files in codebase
-  const totalFilesContext = useMemo(() => {
-    if (!initialCodebase?.files) return '';
-
-    return initialCodebase.files
-      .map((file: CodebaseFile) => file.path)
-      .join('\n');
-  }, [initialCodebase]);
-
-  // Build final context containing ONLY selected files
-  const combinedSelectedFilesContext = useMemo(() => {
-    if (!initialCodebase?.files) return '';
-
-    return initialCodebase.files
-      .filter((file) => !!selectedFiles[file.id])
-      .map((file: CodebaseFile) => file.path)
-      .join('\n');
-  }, [initialCodebase, selectedFiles]);
-
-  const targetFilePaths = useMemo(() => {
-    return combinedSelectedFilesContext
-      ? combinedSelectedFilesContext.split('\n').map((p) => p.trim()).filter(Boolean)
-      : [];
-  }, [combinedSelectedFilesContext]);
-
-  // Synchronize targetFilePaths with useFilesCtxExportStore
-  useEffect(() => {
-    setTargetFilePaths(targetFilePaths);
-  }, [targetFilePaths, setTargetFilePaths]);
-
-  const topContent = (
-    <div className="space-y-2 mb-2 w-full">
-      {/* Unified Files Context Preview & Meta */}
-      <div className="space-y-3 bg-card p-4 border border-border rounded-lg w-full">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <FileText size={16} className="text-primary" />
-            <h4 className="font-mono font-bold text-foreground text-xs uppercase tracking-wider">
-              Unified Files Context
-            </h4>
-          </div>
-        </div>
-
-        {/* Row 1: Total Codebase Summary */}
-        <div className="gap-2 grid grid-cols-4 text-center">
-          <div className="bg-muted/40 p-2 border border-border/50 rounded">
-            <span className="block text-[9px] text-muted-foreground truncate uppercase">Total Files</span>
-            <span className="font-bold text-foreground text-xs">{initialCodebase?.files?.length || 0}</span>
-          </div>
-          <div className="bg-indigo-500/10 p-2 border border-indigo-500/20 rounded">
-            <span className="block text-[9px] text-indigo-500 truncate uppercase">Upstream</span>
-            <span className="font-bold text-indigo-500 text-xs">{upstreamCount}</span>
-          </div>
-          <div className="bg-blue-500/10 p-2 border border-blue-500/20 rounded">
-            <span className="block text-[9px] text-blue-500 truncate uppercase">Downstream</span>
-            <span className="font-bold text-blue-500 text-xs">{downstreamCount}</span>
-          </div>
-          <div className="bg-yellow-500/10 p-2 border border-yellow-500/30 rounded">
-            <span className="block text-[9px] text-yellow-600 dark:text-yellow-400 truncate uppercase">Token Size</span>
-            <span className="font-bold text-yellow-600 dark:text-yellow-400 text-xs">{(totalFilesContext.length / 1024).toFixed(1)} KB</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Impact Propagation */}
-      <div className="space-y-2 bg-muted/30 p-3 border border-border rounded-lg w-full">
-        <div className="flex justify-between items-center">
-          <label className="font-mono font-bold text-[11px] text-muted-foreground uppercase">Impact Propagation</label>
-          <span className="bg-amber-500/10 px-2 py-0.5 border border-amber-500/30 rounded font-mono text-[10px] text-amber-500">Transitive BFS</span>
-        </div>
-        <div className="gap-2 grid grid-cols-2">
-          <Button
-            onClick={() => setEnableUpstream(prev => !prev)}
-            className={`flex items-center justify-center gap-1.5 py-2 px-3 font-mono text-xs font-bold rounded border transition-all h-9 cursor-pointer ${
-              enableUpstream
-                ? 'bg-orange-500 border-orange-400 text-white shadow-md'
-                : 'bg-muted border-border text-foreground hover:bg-muted/80'
-            }`}
-          >
-            <GitFork size={13} />
-            Upstream ({upstreamCount})
-          </Button>
-          <Button
-            onClick={() => setEnableDownstream(prev => !prev)}
-            className={`flex items-center justify-center gap-1.5 py-2 px-3 font-mono text-xs font-bold rounded border transition-all h-9 cursor-pointer ${
-              enableDownstream
-                ? 'bg-orange-500 border-orange-400 text-white shadow-md'
-                : 'bg-muted border-border text-foreground hover:bg-muted/80'
-            }`}
-          >
-            <GitFork size={13} className="rotate-180" />
-            Downstream ({downstreamCount})
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-
-  const middleContent = (
-    <div className="space-y-3 py-2 pr-1 w-full font-mono text-xs">
-      {/* Fluorescent Impact Plan with Collapsible Depth Groups & 3-State Checkboxes */}
-      <div className="space-y-3 bg-orange-500/5 p-4 border border-orange-500/25 rounded-lg">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-1.5">
-            <ShieldAlert size={14} className="text-orange-500" />
-            <h5 className="font-mono font-bold text-orange-500 text-xs">Fluorescent Impact Plan</h5>
-          </div>
-          <span className="bg-orange-500/10 px-2 py-0.5 border border-orange-500/20 rounded font-mono font-bold text-[10px] text-orange-500">
-            {selectedCount} Selected
-          </span>
-        </div>
-
-        <div className="space-y-2 pr-1 max-h-60 overflow-y-auto">
-          {depthGroups.length === 0 ? (
-            <div className="py-2 text-[11px] text-muted-foreground text-center italic">
-              No impacted files or selected target entity.
-            </div>
-          ) : (
-            depthGroups.map((group) => {
-              const groupFiles = group.files;
-              const isAllChecked = groupFiles.length > 0 && groupFiles.every((f) => selectedFiles[f.id]);
-              const isSomeChecked = groupFiles.some((f) => selectedFiles[f.id]);
-              const isIndeterminate = isSomeChecked && !isAllChecked;
-              const isExpanded = expandedGroups[group.key] ?? true;
-              const style = getGroupStyle(group.key);
-
-              return (
-                <div key={group.key} className={`border ${style.border} rounded-md bg-background/60 overflow-hidden`}>
-                  {/* Group Header */}
-                  <div className={`flex items-center justify-between px-2 py-1.5 ${style.bgHeader} select-none`}>
-                    <div className="flex flex-1 items-center gap-1.5 min-w-0">
-                      <TriStateCheckbox
-                        checked={isAllChecked}
-                        indeterminate={isIndeterminate}
-                        onChange={() => toggleGroupCheckbox(group.key, groupFiles)}
-                        className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
-                      />
-                      <div
-                        className="flex flex-1 items-center gap-1 min-w-0 cursor-pointer"
-                        onClick={() => toggleGroupExpand(group.key)}
-                      >
-                        {isExpanded ? (
-                          <ChevronDown size={14} className={`${style.icon} shrink-0`} />
-                        ) : (
-                          <ChevronRight size={14} className={`${style.icon} shrink-0`} />
-                        )}
-                        <span className={`text-[11px] truncate ${style.text}`}>{group.label}</span>
-                      </div>
-                    </div>
-                    <span className="bg-muted ml-2 px-1.5 py-0.5 rounded font-mono text-[9px] text-muted-foreground">
-                      {groupFiles.filter((f) => selectedFiles[f.id]).length}/{groupFiles.length}
-                    </span>
-                  </div>
-
-                  {/* Group File Items with Filename, File Type & File Size Columns */}
-                  {isExpanded && (
-                    <div className="space-y-1 bg-background/40 p-1">
-                      {groupFiles.map((file) => {
-                        const fileSizeKb = (((file as any).size || (file as any).content?.length || 0) / 1024).toFixed(1);
-
-                        return (
-                          <div
-                            key={file.id}
-                            className="flex justify-between items-center hover:bg-muted/50 px-2 py-1 rounded transition-colors"
-                          >
-                            {/* Column 1: Filename & Checkbox */}
-                            <div className="flex flex-1 items-center gap-1.5 min-w-0">
-                              <input
-                                type="checkbox"
-                                checked={!!selectedFiles[file.id]}
-                                onChange={() => toggleFileCheckbox(file.id)}
-                                className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
-                              />
-                              <span
-                                className={`truncate text-[11px] cursor-pointer ${
-                                  selectedFiles[file.id] ? 'font-semibold text-foreground' : 'text-muted-foreground line-through'
-                                }`}
-                                onClick={() => toggleFileCheckbox(file.id)}
-                              >
-                                {file.name}
-                              </span>
-                            </div>
-
-                            {/* Column 2 & 3: File Type & File Size */}
-                            <div className="flex items-center gap-1.5 ml-2 shrink-0">
-                              <span className="bg-muted px-1.5 py-0.5 rounded text-[9px] text-muted-foreground">
-                                {file.language || 'unknown'}
-                              </span>
-                              <span className="bg-muted px-1.5 py-0.5 rounded font-mono text-[9px] text-muted-foreground">
-                                {fileSizeKb} KB
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })
-          )}
-        </div>
-      </div>
-    </div>
-  );
-
-  const bottomContent = (
-    <div className="space-y-2 mt-2 w-full">
-      {/* Selected Files Context Preview & Meta */}
-      <div className="space-y-3 bg-card p-4 border border-border rounded-lg w-full">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <FileText size={16} className="text-primary" />
-            <h4 className="font-mono font-bold text-foreground text-xs uppercase tracking-wider">
-              Selected Files Context
-            </h4>
-          </div>
-        </div>
-
-        {/* Row 1: Selected Context Summary */}
-        <div className="gap-2 grid grid-cols-4 text-center">
-          <div className="bg-orange-500/10 p-2 border border-orange-500/20 rounded">
-            <span className="block text-[9px] text-orange-500 truncate uppercase">Selected</span>
-            <span className="font-bold text-orange-500 text-xs">{selectedCount}</span>
-          </div>
-          <div className="bg-indigo-500/10 p-2 border border-indigo-500/20 rounded">
-            <span className="block text-[9px] text-indigo-500 truncate uppercase">Upstream</span>
-            <span className="font-bold text-indigo-500 text-xs">{selectedUpstreamCount}</span>
-          </div>
-          <div className="bg-blue-500/10 p-2 border border-blue-500/20 rounded">
-            <span className="block text-[9px] text-blue-500 truncate uppercase">Downstream</span>
-            <span className="font-bold text-blue-500 text-xs">{selectedDownstreamCount}</span>
-          </div>
-
-          <div className="bg-emerald-500/10 p-2 border border-emerald-500/20 rounded">
-            <span className="block text-[9px] text-emerald-500 truncate uppercase">Token Size</span>
-            <span className="font-bold text-emerald-500 text-xs">{(combinedSelectedFilesContext.length / 1024).toFixed(1)} KB</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-background pt-2 w-full">
-        {/* File Context Controls & Copy files ctx Button */}
-        <FilesCtxExportPanel targetFilePaths={targetFilePaths} handleCopy={handleCopy} />
-      </div>
-    </div>
-  );
-
-  return (
-    <TopMiddleBottomPanel
-      id="files-context-panel"
-      top={topContent}
-      middle={middleContent}
-      bottom={bottomContent}
-      className="h-full font-mono text-xs animate-in duration-200 fade-in"
-    />
-  );
-}
-EOF
-
-echo "✅ feat: Synchronized targetFilePaths state in useFilesCtxExportStore so Copy files ctx works smoothly across prompt and files-context panels!"
-echo "💡 Next step: Run 'npm run compile' to rebuild the project."
+echo "✅ feat: Formatted token counts with space separators (> 999) and KB/MB units (> 9 999)!"
+npm run compile

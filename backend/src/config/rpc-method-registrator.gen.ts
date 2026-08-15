@@ -25,6 +25,13 @@ export function registerRpcMethods(rpc: RpcProtocol): void {
     rpc.register(RpcMethodEnum.GRAGINSTALLER_CHECK_INSTALLATION_STATUS, graphRagInstallerService.checkInstallationStatus.bind(graphRagInstallerService));
     rpc.register(RpcMethodEnum.GRAGINSTALLER_UNINSTALL_ALL, graphRagInstallerService.uninstallAll.bind(graphRagInstallerService));
 
+    const llmChatService = serviceRegistry.get(ServiceEnum.LLM_CHAT);
+    rpc.register(RpcMethodEnum.LLMCHAT_EXECUTE_CHAT, llmChatService.executeChat.bind(llmChatService));
+    rpc.register(RpcMethodEnum.LLMCHAT_STREAM_CHAT, llmChatService.streamChat.bind(llmChatService));
+    rpc.register(RpcMethodEnum.LLMCHAT_LIST_AVAILABLE_MODELS, llmChatService.listAvailableModels.bind(llmChatService));
+    rpc.register(RpcMethodEnum.LLMCHAT_HEALTH_CHECK, llmChatService.healthCheck.bind(llmChatService));
+    rpc.register(RpcMethodEnum.LLMCHAT_READ_FILE_CONTENT, llmChatService.readFileContent.bind(llmChatService));
+
     const neo4jService = serviceRegistry.get(ServiceEnum.NEO4J);
     rpc.register(RpcMethodEnum.NEO4J_EXECUTE_CYPHER, neo4jService.executeCypher.bind(neo4jService));
 
