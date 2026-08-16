@@ -9,3 +9,4 @@ exported-files
 graphify-out
 __pycache__
 zz-tmp/rvng-jqassistant-analysis
+webview/src/features/explorer/wksp-cnt-graph/data/sample-ast-data-for-dev.json

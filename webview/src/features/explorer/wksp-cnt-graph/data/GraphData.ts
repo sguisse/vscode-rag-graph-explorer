@@ -1,10 +1,10 @@
 import { CodebaseData } from "@/shared/services/graph-rag-explorer";
 
 // Only used to provide a sample codebase data structure for testing and development purposes. This data structure represents a simplified version of a codebase with files and their dependencies, which can be used to visualize and analyze the relationships between different components in a software project.
-import codebaseJson from "./sample-ast-data-for-dev.json";
-export const initialCodebase_json: CodebaseData = codebaseJson as CodebaseData;
+//import codebaseJson from "./sample-ast-data-for-dev.json";
+//export const demoCodebase_json: CodebaseData = codebaseJson as CodebaseData;
 
-export const initialCodebase = {
+export const demoCodebase = {
   files: [
     {
       id: 'OrderButton.tsx', name: 'OrderButton.tsx', type: 'component', path: 'frontend/components/OrderButton.tsx', language: 'TypeScript (React)', size: 145, complexity: 4,

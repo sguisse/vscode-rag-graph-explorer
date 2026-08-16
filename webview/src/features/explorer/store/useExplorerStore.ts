@@ -9,7 +9,7 @@ import {
   IChatMessageDto,
   IFileContextDto,
 } from '@/shared/services/llm-chat';
-import { initialCodebase, FOLDER_POSITIONS } from '../wksp-cnt-graph/data/GraphData';
+import { demoCodebase, FOLDER_POSITIONS } from '../wksp-cnt-graph/data/GraphData';
 import { INITIAL_VISIBLE_FILES_CONFIG, FOLDER_KEYS_REGISTERED_CONFIG } from '../constants/graph.constants';
 
 // ============================================================================
@@ -317,7 +317,7 @@ export const useExplorerStore = create<ExplorerState>((set, get) => ({
     }),
 
   // workspace.center (GraphPanel)
-  codebase: initialCodebase,
+  codebase: demoCodebase,
   folderPositions: FOLDER_POSITIONS,
   selectedEntity: null,
   focusedNodeId: null,

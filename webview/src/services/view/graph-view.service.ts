@@ -1,5 +1,5 @@
 import { CodebaseData, CodebaseFile, Dependency, SelectedEntity } from "@/shared/services/graph-rag-explorer";
-import { initialCodebase } from "@/features/explorer/wksp-cnt-graph/data/GraphData";
+import { demoCodebase } from "@/features/explorer/wksp-cnt-graph/data/GraphData";
 import { MEMBER_KEY_SEPARATOR_TOKEN } from "@/shared/services/graph-rag-explorer/domain/model/codebase.constants";
 import { logError, logInfo } from "./log-view.service.wrapper";
 import { graphRagExplorerApiService } from "../api/graph-rag-explorer-api.service.gen";
@@ -166,6 +166,6 @@ export async function getPathsChangeImpacts(paths: string | string[], upstreamDe
 
   } catch (error: any) {
     logError(`[getPathsChangeImpacts] Neo4j call failed. Returning initialCodebase fallback.`, error);
-    return initialCodebase;
+    return demoCodebase;
   }
 }
