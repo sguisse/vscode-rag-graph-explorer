@@ -144,9 +144,9 @@ export function FilesContextPanel({
   );
 
   const middleContent = (
-    <div className="space-y-3 py-2 pr-1 w-full font-mono text-xs">
-      <div className="space-y-3 bg-orange-500/5 p-4 border border-orange-500/25 rounded-lg">
-        <div className="flex justify-between items-center">
+    <div className="flex flex-col h-full py-2 pr-1 w-full font-mono text-xs">
+      <div className="flex flex-col flex-1 space-y-3 bg-orange-500/5 p-4 border border-orange-500/25 rounded-lg min-h-0 h-full">
+        <div className="flex justify-between items-center shrink-0">
           <div className="flex items-center gap-1.5">
             <ShieldAlert size={14} className="text-orange-500" />
             <h5 className="font-mono font-bold text-orange-500 text-xs">Fluorescent Impact Plan</h5>
@@ -156,7 +156,7 @@ export function FilesContextPanel({
           </span>
         </div>
 
-        <div className="space-y-2 pr-1 max-h-60 overflow-y-auto">
+        <div className="flex-1 space-y-2 pr-1 min-h-0 overflow-y-auto">
           {depthGroups.length === 0 ? (
             <div className="py-2 text-[11px] text-muted-foreground text-center italic">
               No impacted files or selected target entity.

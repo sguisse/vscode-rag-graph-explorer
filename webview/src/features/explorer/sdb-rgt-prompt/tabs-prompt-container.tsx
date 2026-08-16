@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { PromptPanel } from './prompt';
-import { LLMExplorerChat } from './LLM';
+import { LLMExplorerChat } from './llm-chat/LLMExplorerChat';
 import { ConfigurationPanel } from './configuration';
 import { SelectedEntity, CodebaseData } from '@/shared/services/graph-rag-explorer';
 import { useTabsPrompt } from './hooks/use-tabs-prompt';
@@ -51,11 +51,11 @@ export function TabsPromptContainer({
         </Button>
       </div>
 
-      <div className="flex-1 p-3 overflow-y-auto">
+     <div className={`flex-1 overflow-y-auto ${activeTab === 'llm' ? '' : 'p-3'}`}>
         {activeTab === 'prompt' && <PromptPanel handleCopy={handleCopy} />}
         {activeTab === 'llm' && <LLMExplorerChat />}
         {activeTab === 'config' && <ConfigurationPanel />}
-      </div>
+     </div>
     </div>
   );
 }

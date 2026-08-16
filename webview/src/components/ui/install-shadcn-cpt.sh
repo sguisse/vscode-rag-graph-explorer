@@ -19,6 +19,6 @@ fi
 echo "🚀 Installing Shadcn components..."
 
 # Install basic form components
-npx shadcn@latest add checkbox -y
+npx shadcn@latest add toolbar -y
 
 echo "✅ Installation completed successfully!"

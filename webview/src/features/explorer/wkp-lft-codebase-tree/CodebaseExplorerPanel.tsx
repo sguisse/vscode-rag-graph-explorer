@@ -73,12 +73,12 @@ export function CodebaseExplorerPanel({
 
   return (
     <div id="panel-codebase-explorer" className="flex flex-col bg-card h-full">
-      <div className="flex justify-end items-center bg-muted/20 p-1 border-border border-b">
+      <div className="flex justify-end items-center bg-muted/20 border-border border-b">
         <ToolbarSeparator />
 
         <Button
           id="btn-open-import-ast-dialog"
-          className="hover:bg-muted p-1.5 rounded w-8 h-8 text-muted-foreground hover:text-foreground transition-colors"
+          className="hover:bg-muted rounded w-8 h-8 text-muted-foreground hover:text-foreground transition-colors"
           variant="ghost"
           size="icon"
           onClick={() => setIsImportOpen(true)}
@@ -89,7 +89,7 @@ export function CodebaseExplorerPanel({
 
         <Button
           id="btn-export-ast-json"
-          className="hover:bg-muted p-1.5 rounded w-8 h-8 text-muted-foreground hover:text-foreground transition-colors"
+          className="hover:bg-muted rounded w-8 h-8 text-muted-foreground hover:text-foreground transition-colors"
           variant="ghost"
           size="icon"
           onClick={handleExportCodebase}

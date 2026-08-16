@@ -18,7 +18,7 @@ export interface GraphPanelHeaderLeftProps {}
 
 export const GraphPanelHeaderLeft: React.FC<GraphPanelHeaderLeftProps> = () => (
   <div className="flex items-center gap-2">
-    <span className="font-bold text-foreground truncate uppercase tracking-wider">Topological Network</span>
+    <span className="font-bold text-foreground truncate uppercase tracking-wider">Dependencies</span>
   </div>
 );
 

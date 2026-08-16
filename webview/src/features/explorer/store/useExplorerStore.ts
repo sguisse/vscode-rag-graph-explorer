@@ -215,6 +215,7 @@ export interface SdbRgtLlmChatState {
   llmTemperature: number;
   llmAttachedFiles: IFileContextDto[];
   llmFilePathInput: string;
+  llmExpandedCards: Record<string, boolean>;
 
   setLlmProvider: (provider: LlmProvider) => void;
   setLlmSelectedModel: (model: string) => void;
@@ -227,6 +228,11 @@ export interface SdbRgtLlmChatState {
     files: IFileContextDto[] | ((prev: IFileContextDto[]) => IFileContextDto[])
   ) => void;
   setLlmFilePathInput: (input: string) => void;
+  setLlmExpandedCard: (cardId: string, expanded: boolean) => void;
+  toggleLlmExpandedCard: (cardId: string) => void;
+  setLlmExpandedCards: (
+    cards: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)
+  ) => void;
 }
 
 // ============================================================================
@@ -472,6 +478,7 @@ ${promptFields.samples}`;
   llmTemperature: 0.7,
   llmAttachedFiles: [],
   llmFilePathInput: '',
+  llmExpandedCards: {},
 
   setLlmProvider: (llmProvider) => set({ llmProvider }),
   setLlmSelectedModel: (llmSelectedModel) => set({ llmSelectedModel }),
@@ -486,4 +493,19 @@ ${promptFields.samples}`;
       llmAttachedFiles: typeof llmAttachedFiles === 'function' ? llmAttachedFiles(state.llmAttachedFiles) : llmAttachedFiles,
     })),
   setLlmFilePathInput: (llmFilePathInput) => set({ llmFilePathInput }),
+  setLlmExpandedCard: (cardId, expanded) =>
+    set((state) => ({
+      llmExpandedCards: { ...state.llmExpandedCards, [cardId]: expanded },
+    })),
+  toggleLlmExpandedCard: (cardId) =>
+    set((state) => ({
+      llmExpandedCards: {
+        ...state.llmExpandedCards,
+        [cardId]: !(state.llmExpandedCards[cardId] ?? true),
+      },
+    })),
+  setLlmExpandedCards: (cards) =>
+    set((state) => ({
+      llmExpandedCards: typeof cards === 'function' ? cards(state.llmExpandedCards) : cards,
+    })),
 }));

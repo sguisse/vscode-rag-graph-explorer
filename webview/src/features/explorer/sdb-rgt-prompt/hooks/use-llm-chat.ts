@@ -93,6 +93,7 @@ export function useLlmChat() {
   const setAttachedFiles = useExplorerStore((s) => s.setLlmAttachedFiles);
   const filePathInput = useExplorerStore((s) => s.llmFilePathInput);
   const setFilePathInput = useExplorerStore((s) => s.setLlmFilePathInput);
+  const setLlmExpandedCards = useExplorerStore((s) => s.setLlmExpandedCards);
 
   const [models, setModels] = useState<ILlmModelInfo[]>([]);
   const [systemPrompt] = useState<string>('You are an expert Graph RAG Assistant.');
@@ -277,10 +278,36 @@ export function useLlmChat() {
 
   const handleExpandAll = () => {
     setGlobalExpanded({ value: true, id: Date.now() });
+    setLlmExpandedCards((prev) => {
+      const updated: Record<string, boolean> = {};
+      Object.keys(prev).forEach((k) => {
+        updated[k] = true;
+      });
+      messages.forEach((m) => {
+        updated[`user-${m.id}`] = true;
+        updated[`user-ctx-${m.id}`] = true;
+        updated[`user-inst-${m.id}`] = true;
+        updated[`asst-${m.id}`] = true;
+      });
+      return updated;
+    });
   };
 
   const handleCollapseAll = () => {
     setGlobalExpanded({ value: false, id: Date.now() });
+    setLlmExpandedCards((prev) => {
+      const updated: Record<string, boolean> = {};
+      Object.keys(prev).forEach((k) => {
+        updated[k] = false;
+      });
+      messages.forEach((m) => {
+        updated[`user-${m.id}`] = false;
+        updated[`user-ctx-${m.id}`] = false;
+        updated[`user-inst-${m.id}`] = false;
+        updated[`asst-${m.id}`] = false;
+      });
+      return updated;
+    });
   };
 
   return {
