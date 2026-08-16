@@ -1,61 +1,10 @@
 import { CodebaseData } from "@/shared/services/graph-rag-explorer";
-import codebaseJson from "./sample-ast-data.json";
 
-export const JSON_SCHEMA_SPEC = {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "PolyglotDependencyUmlSchema",
-  "description": "Structure de données définissant un écosystème polyglotte avec ses relations UML multi-niveaux",
-  "type": "object",
-  "required": ["files", "dependencies"],
-  "properties": {
-    "files": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["id", "name", "type", "path", "language"],
-        "properties": {
-          "id": { "type": "string" },
-          "name": { "type": "string" },
-          "type": { "type": "string", "enum": ["class", "interface", "component", "module", "config"] },
-          "path": { "type": "string" },
-          "language": { "type": "string" },
-          "size": { "type": "number" },
-          "complexity": { "type": "number" },
-          "attributes": {
-            "type": "array",
-            "items": { "type": "object", "properties": { "name": { "type": "string" }, "visibility": { "type": "string" } } }
-          },
-          "methods": {
-            "type": "array",
-            "items": { "type": "object", "properties": { "id": { "type": "string" }, "name": { "type": "string" }, "description": { "type": "string" } } }
-          },
-          "configProperties": {
-            "type": "array",
-            "items": { "type": "object", "properties": { "key": { "type": "string" }, "value": { "type": "string" } } }
-          }
-        }
-      }
-    },
-    "dependencies": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["id", "source", "target", "relation"],
-        "properties": {
-          "id": { "type": "string" },
-          "source": { "type": "string" },
-          "target": { "type": "string" },
-          "relation": { "type": "string" },
-          "label": { "type": "string" }
-        }
-      }
-    }
-  }
-};
+// Only used to provide a sample codebase data structure for testing and development purposes. This data structure represents a simplified version of a codebase with files and their dependencies, which can be used to visualize and analyze the relationships between different components in a software project.
+import codebaseJson from "./sample-ast-data-for-dev.json";
+export const initialCodebase_json: CodebaseData = codebaseJson as CodebaseData;
 
-export const initialCodebase: CodebaseData = codebaseJson as CodebaseData;
-
-export const initialCodebase_02 = {
+export const initialCodebase = {
   files: [
     {
       id: 'OrderButton.tsx', name: 'OrderButton.tsx', type: 'component', path: 'frontend/components/OrderButton.tsx', language: 'TypeScript (React)', size: 145, complexity: 4,

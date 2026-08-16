@@ -1,6 +1,6 @@
 import React from 'react';
 import { Info } from 'lucide-react';
-import { FolderNode, UmlClassNode, ConfigNode, UmlClassNodeData } from './components/graph/GraphUmlShapes';
+import { FolderNode, UmlClassNode, ConfigNode, UmlClassNodeData } from './components/GraphUmlShapes';
 import { SelectedEntity, CodebaseFile } from '@/shared/services/graph-rag-explorer';
 import { isMemberKeyForFileToken, extractMemberIdFromKeyToken } from '@/services/view/graph-view.service';
 import { useGraphPanel } from './hooks/use-graph-panel';

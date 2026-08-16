@@ -4,7 +4,7 @@ import {
   CodebaseFile,
   SelectedEntity,
 } from '@/shared/services/graph-rag-explorer';
-import { initialCodebase, FOLDER_POSITIONS } from '../wksp-cnt-graph/components/graph/GraphData';
+import { initialCodebase, FOLDER_POSITIONS } from '../wksp-cnt-graph/data/GraphData';
 import { INITIAL_VISIBLE_FILES_CONFIG, FOLDER_KEYS_REGISTERED_CONFIG } from '../constants/graph.constants';
 
 // ============================================================================
