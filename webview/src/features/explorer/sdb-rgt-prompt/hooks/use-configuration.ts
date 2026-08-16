@@ -1,9 +1,10 @@
 import { useAppContextStore } from '@/store/useAppContextStore';
-import { useGraphRagExplorerStore } from '../graph-rag-explorer-store';
+import { useExplorerStore } from '../../store/useExplorerStore';
 
 export function useConfiguration() {
   const setNotification = useAppContextStore((s) => s.setNotification);
-  const { config, updateConfig } = useGraphRagExplorerStore();
+  const config = useExplorerStore((s) => s.config);
+  const updateConfig = useExplorerStore((s) => s.updateConfig);
 
   const handleSaveConfig = () => {
     setNotification(`✅ Configuration saved to local backend JSON: ${config.backendConfigPath}`);

@@ -4,8 +4,9 @@ import {
   IChatMessageDto,
   ILlmModelInfo,
   IFileContextDto,
-} from '../../../../../../shared/services/llm-chat';
-import { llmChatApiService } from '../../../../services/api/llm-chat-api.service.gen';
+} from '@/shared/services/llm-chat';
+import { llmChatApiService } from '@/services/api/llm-chat-api.service.gen';
+import { useExplorerStore } from '../../store/useExplorerStore';
 
 const logInfo = (message: string, ...meta: any[]) => {
   console.log(`[LLMExplorerChat UI] ℹ️ ${message}`, meta.length ? meta : '');
@@ -78,17 +79,24 @@ export function parseUserMessageContent(content: string) {
 }
 
 export function useLlmChat() {
-  const [provider, setProvider] = useState<LlmProvider>(LlmProvider.OLLAMA);
+  const provider = useExplorerStore((s) => s.llmProvider);
+  const setProvider = useExplorerStore((s) => s.setLlmProvider);
+  const selectedModel = useExplorerStore((s) => s.llmSelectedModel);
+  const setSelectedModel = useExplorerStore((s) => s.setLlmSelectedModel);
+  const messages = useExplorerStore((s) => s.llmMessages);
+  const setMessages = useExplorerStore((s) => s.setLmMessages);
+  const inputPrompt = useExplorerStore((s) => s.llmInputPrompt);
+  const setInputPrompt = useExplorerStore((s) => s.setLlmInputPrompt);
+  const temperature = useExplorerStore((s) => s.llmTemperature);
+  const setTemperature = useExplorerStore((s) => s.setLlmTemperature);
+  const attachedFiles = useExplorerStore((s) => s.llmAttachedFiles);
+  const setAttachedFiles = useExplorerStore((s) => s.setLlmAttachedFiles);
+  const filePathInput = useExplorerStore((s) => s.llmFilePathInput);
+  const setFilePathInput = useExplorerStore((s) => s.setLlmFilePathInput);
+
   const [models, setModels] = useState<ILlmModelInfo[]>([]);
-  const [selectedModel, setSelectedModel] = useState<string>('');
-  const [messages, setMessages] = useState<IChatMessageDto[]>([]);
-  const [inputPrompt, setInputPrompt] = useState<string>('');
   const [systemPrompt] = useState<string>('You are an expert Graph RAG Assistant.');
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [temperature, setTemperature] = useState<number>(0.7);
-
-  const [attachedFiles, setAttachedFiles] = useState<IFileContextDto[]>([]);
-  const [filePathInput, setFilePathInput] = useState<string>('');
   const [isReadingFile, setIsReadingFile] = useState<boolean>(false);
 
   useEffect(() => {
@@ -102,7 +110,9 @@ export function useLlmChat() {
       logInfo('Models loaded for provider', { provider: prov, count: available.length });
       setModels(available);
       if (available.length > 0) {
-        setSelectedModel(available[0].id);
+        if (!selectedModel || !available.some((m) => m.id === selectedModel)) {
+          setSelectedModel(available[0].id);
+        }
       } else {
         setSelectedModel('');
       }

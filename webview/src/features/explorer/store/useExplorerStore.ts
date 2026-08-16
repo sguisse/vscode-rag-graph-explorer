@@ -4,8 +4,63 @@ import {
   CodebaseFile,
   SelectedEntity,
 } from '@/shared/services/graph-rag-explorer';
+import {
+  LlmProvider,
+  IChatMessageDto,
+  IFileContextDto,
+} from '@/shared/services/llm-chat';
 import { initialCodebase, FOLDER_POSITIONS } from '../wksp-cnt-graph/data/GraphData';
 import { INITIAL_VISIBLE_FILES_CONFIG, FOLDER_KEYS_REGISTERED_CONFIG } from '../constants/graph.constants';
+
+// ============================================================================
+// Data Types & Schemas
+// ============================================================================
+
+export interface GraphRagExplorerConfig {
+  backendConfigPath: string;
+  defaultClient: string;
+  defaultModel: string;
+  maxTokens: number;
+  temperature: number;
+  systemPromptPrefix: string;
+  autoApplyChanges: boolean;
+  saveHistoryLocally: boolean;
+}
+
+export interface PromptFields {
+  predefined: string;
+  mode: 'role' | 'agent';
+  roleOrAgent: string;
+  selectedAgent: string;
+  tone: string;
+  context: string;
+  expected: string;
+  output: string;
+  samples: string;
+}
+
+const INITIAL_PROMPT_FIELDS: PromptFields = {
+  predefined: 'custom',
+  mode: 'role',
+  roleOrAgent: 'Senior React & TypeScript Architect',
+  selectedAgent: 'CodeRefactoringAgent',
+  tone: 'Concise, surgical, highly technical',
+  context: 'Optimizing codebase dependencies and AST context for LLM prompt engineering.',
+  expected: 'Clean, production-ready React component with Tailwind CSS styling.',
+  output: 'Single self-contained file with full implementation.',
+  samples: 'Include full imports and type declarations without truncation.',
+};
+
+const INITIAL_CONFIG: GraphRagExplorerConfig = {
+  backendConfigPath: '.token-razor/config/explorer-config.json',
+  defaultClient: 'Ollama',
+  defaultModel: 'llama3:latest',
+  maxTokens: 4096,
+  temperature: 0.2,
+  systemPromptPrefix: 'You are an expert senior software architect.',
+  autoApplyChanges: false,
+  saveHistoryLocally: true,
+};
 
 // ============================================================================
 // Dedicated Container & Panel Interfaces
@@ -112,11 +167,48 @@ export interface WkpRgtTabsFilesContextState {
 
 /**
  * State & Actions for Container: sidebarRight
- * Panels: TabsPromptContainer (PromptPanel, LLMExplorerChat, ConfigurationPanel)
+ * Tab navigation state
  */
-export interface SdbRgtPromptState {
+export interface SdbRgtPromptTabState {
   promptTab: 'prompt' | 'llm' | 'config';
   setPromptTab: (tab: 'prompt' | 'llm' | 'config') => void;
+}
+
+/**
+ * State & Actions for Panel: PromptPanel & ConfigurationPanel
+ */
+export interface SdbRgtPromptBuilderState {
+  config: GraphRagExplorerConfig;
+  promptFields: PromptFields;
+  updateConfig: (partial: Partial<GraphRagExplorerConfig>) => void;
+  updatePromptFields: (partial: Partial<PromptFields>) => void;
+  resetPromptFields: () => void;
+  getFullPrompt: () => string;
+}
+
+/**
+ * State & Actions for Panel: LLMExplorerChat
+ */
+export interface SdbRgtLlmChatState {
+  llmProvider: LlmProvider;
+  llmSelectedModel: string;
+  llmMessages: IChatMessageDto[];
+  llmInputPrompt: string;
+  llmTemperature: number;
+  llmAttachedFiles: IFileContextDto[];
+  llmFilePathInput: string;
+
+  setLlmProvider: (provider: LlmProvider) => void;
+  setLlmSelectedModel: (model: string) => void;
+  setLmMessages: (
+    messages: IChatMessageDto[] | ((prev: IChatMessageDto[]) => IChatMessageDto[])
+  ) => void;
+  setLlmInputPrompt: (prompt: string) => void;
+  setLlmTemperature: (temp: number) => void;
+  setLlmAttachedFiles: (
+    files: IFileContextDto[] | ((prev: IFileContextDto[]) => IFileContextDto[])
+  ) => void;
+  setLlmFilePathInput: (input: string) => void;
 }
 
 // ============================================================================
@@ -128,13 +220,15 @@ export interface ExplorerState
     WkpLftCodebaseTreeState,
     WkspCntGraphState,
     WkpRgtTabsFilesContextState,
-    SdbRgtPromptState {}
+    SdbRgtPromptTabState,
+    SdbRgtPromptBuilderState,
+    SdbRgtLlmChatState {}
 
 // ============================================================================
 // Store Implementation
 // ============================================================================
 
-export const useExplorerStore = create<ExplorerState>((set) => ({
+export const useExplorerStore = create<ExplorerState>((set, get) => ({
   // workspace.top (ImpactedPathsPanel)
   paths: '',
   currentPath: '',
@@ -297,7 +391,65 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
       expandedContextGroups: typeof groups === 'function' ? groups(state.expandedContextGroups) : groups,
     })),
 
-  // sidebarRight (TabsPromptContainer & Panels)
+  // sidebarRight: Navigation
   promptTab: 'prompt',
   setPromptTab: (promptTab) => set({ promptTab }),
+
+  // sidebarRight: Prompt Builder & Config
+  config: INITIAL_CONFIG,
+  promptFields: INITIAL_PROMPT_FIELDS,
+  updateConfig: (partial) =>
+    set((state) => ({ config: { ...state.config, ...partial } })),
+  updatePromptFields: (partial) =>
+    set((state) => ({ promptFields: { ...state.promptFields, ...partial } })),
+  resetPromptFields: () => set({ promptFields: INITIAL_PROMPT_FIELDS }),
+  getFullPrompt: () => {
+    const { promptFields, config } = get();
+    const roleHeader =
+      promptFields.mode === 'agent'
+        ? `[AGENT]: ${promptFields.selectedAgent} (${promptFields.roleOrAgent})`
+        : `[ROLE]: ${promptFields.roleOrAgent}`;
+
+    return `${config.systemPromptPrefix}
+
+${roleHeader}
+
+[TONE]
+${promptFields.tone}
+
+[CONTEXT]
+${promptFields.context}
+
+[EXPECTED]
+${promptFields.expected}
+
+[OUTPUT FORMAT]
+${promptFields.output}
+
+[SAMPLES / EXAMPLES]
+${promptFields.samples}`;
+  },
+
+  // sidebarRight: LLM Explorer Chat
+  llmProvider: LlmProvider.OLLAMA,
+  llmSelectedModel: '',
+  llmMessages: [],
+  llmInputPrompt: '',
+  llmTemperature: 0.7,
+  llmAttachedFiles: [],
+  llmFilePathInput: '',
+
+  setLlmProvider: (llmProvider) => set({ llmProvider }),
+  setLlmSelectedModel: (llmSelectedModel) => set({ llmSelectedModel }),
+  setLmMessages: (llmMessages) =>
+    set((state) => ({
+      llmMessages: typeof llmMessages === 'function' ? llmMessages(state.llmMessages) : llmMessages,
+    })),
+  setLlmInputPrompt: (llmInputPrompt) => set({ llmInputPrompt }),
+  setLlmTemperature: (llmTemperature) => set({ llmTemperature }),
+  setLlmAttachedFiles: (llmAttachedFiles) =>
+    set((state) => ({
+      llmAttachedFiles: typeof llmAttachedFiles === 'function' ? llmAttachedFiles(state.llmAttachedFiles) : llmAttachedFiles,
+    })),
+  setLlmFilePathInput: (llmFilePathInput) => set({ llmFilePathInput }),
 }));

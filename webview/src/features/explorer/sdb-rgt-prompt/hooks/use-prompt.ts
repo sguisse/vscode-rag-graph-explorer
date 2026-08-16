@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAppContextStore } from '@/store/useAppContextStore';
-import { useGraphRagExplorerStore } from '../graph-rag-explorer-store';
+import { useExplorerStore } from '../../store/useExplorerStore';
 import PREDEFINED_PROMPTS from '../data/predefined-prompts.yaml';
 import TEMPLATE_PROMPTS from '../data/template-prompts.yaml';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
@@ -8,7 +8,10 @@ import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 
 export function usePrompt(handleCopy?: (text: string, message: string) => void) {
   const setNotification = useAppContextStore((s) => s.setNotification);
-  const { promptFields, config, updatePromptFields, getFullPrompt } = useGraphRagExplorerStore();
+  const promptFields = useExplorerStore((s) => s.promptFields);
+  const config = useExplorerStore((s) => s.config);
+  const updatePromptFields = useExplorerStore((s) => s.updatePromptFields);
+  const getFullPrompt = useExplorerStore((s) => s.getFullPrompt);
 
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(
     TEMPLATE_PROMPTS[0]?.id || ''
