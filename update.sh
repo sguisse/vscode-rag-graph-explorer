@@ -3,208 +3,182 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
-echo "🎨 Enhancing light mode input field border and contour contrast..."
+echo "🚀 Updating WorkspaceLayout to dynamically scale panel widths when center panel is hidden..."
 
-# 1. Ensure directory exists
-mkdir -p webview/src/styles
+# Ensure target directory exists
+mkdir -p webview/src/components/app/layout
 
-# 2. Overwrite color-light-palette.css with distinct border and input variables
-cat << 'EOF' > webview/src/styles/color-light-palette.css
-:root {
-  /* --- Light Palette Scale Definitions --- */
-  --gray-0: #F2F5F3;
-  --gray-1: #E4EBE6;
-  --gray-2: #D2D9D4;
-  --gray-3: #C4CCC6;
-  --gray-4: #B6BFB8;
-  --gray-5: #96A199;
-  --gray-6: #77827A;
-  --gray-7: #58635B;
-  --gray-8: #353D37;
-  --gray-9: #191F1B;
+# Overwrite WorkspaceLayout.tsx with dynamic flex-grow rules for left, right, top, and bottom panels
+cat << 'EOF' > webview/src/components/app/layout/WorkspaceLayout.tsx
+import React from 'react';
+import { useLayoutStore } from '@/store/useLayoutStore';
+import { ResizableContainer } from '../container/resizable-container';
+import { useResizable } from '../container/hooks/use-resizable';
+import { WorkspaceContainers, LayoutContainer } from './types';
+import { DefaultContainersSize } from '@/constants/layout-constants';
 
-  --blue-0: #DDF4FF;
-  --blue-1: #BCECFF;
-  --blue-2: #8DD6FF;
-  --blue-3: #5FB9FF;
-  --blue-4: #3094FF;
-  --blue-5: #0377FF;
-  --blue-6: #0055D5;
-  --blue-7: #0040A7;
-  --blue-8: #002F7A;
-  --blue-9: #001C4D;
+interface WorkspaceLayoutProps {
+  containers?: WorkspaceContainers;
+}
 
-  --green-0: #EBF9F4;
-  --green-1: #BFFFD1;
-  --green-2: #8CF2A6;
-  --green-3: #5FED83;
-  --green-4: #23EA57;
-  --green-5: #0FBF3E;
-  --green-6: #08872B;
-  --green-7: #0D6731;
-  --green-8: #0E4A2E;
-  --green-9: #0D3024;
+export const mergeContainer = (storeC?: LayoutContainer, propC?: LayoutContainer): LayoutContainer => {
+  const isMaximized = storeC?.maximizeContainer?.isMaximized ?? propC?.maximizeContainer?.isMaximized ?? false;
+  const isMaximizable = propC?.maximizeContainer?.isMaximizable ?? storeC?.maximizeContainer?.isMaximizable ?? true;
+  const maximizeScope = propC?.maximizeContainer?.maximizeScope ?? storeC?.maximizeContainer?.maximizeScope ?? 'Main';
+  const visible = storeC?.visible ?? propC?.visible ?? true;
+  const isResizable = storeC?.isResizable ?? propC?.isResizable ?? true;
+  const isHiddable = storeC?.isHiddable ?? propC?.isHiddable ?? true;
+  const container = storeC?.container ?? propC?.container;
 
-  --yellow-0: #FFF8C5;
-  --yellow-1: #FFE777;
-  --yellow-2: #FFD743;
-  --yellow-3: #FABF21;
-  --yellow-4: #DB9D00;
-  --yellow-5: #BE7D00;
-  --yellow-6: #A06100;
-  --yellow-7: #824800;
-  --yellow-8: #653200;
-  --yellow-9: #471F00;
+  return {
+    visible,
+    isResizable,
+    isHiddable,
+    container,
+    maximizeContainer: {
+      isMaximized,
+      isMaximizable,
+      maximizeScope,
+    },
+  };
+};
 
-  --orange-0: #FFF1E5;
-  --orange-1: #FCCEAB;
-  --orange-2: #F4A876;
-  --orange-3: #F08A3A;
-  --orange-4: #DA7210;
-  --orange-5: #B85B06;
-  --orange-6: #954502;
-  --orange-7: #703100;
-  --orange-8: #5C2300;
-  --orange-9: #471700;
+export function WorkspaceLayout({ containers: propContainers }: WorkspaceLayoutProps) {
+  const storeWorkspace = useLayoutStore((s) => s.containers.workspace);
 
-  --red-0: #FFEBE9;
-  --red-1: #FFCECB;
-  --red-2: #FFABA8;
-  --red-3: #FF8182;
-  --red-4: #FA4549;
-  --red-5: #CF2230;
-  --red-6: #AE0B29;
-  --red-7: #860620;
-  --red-8: #730019;
-  --red-9: #420011;
+  const topConfig = mergeContainer(storeWorkspace?.top, propContainers?.top);
+  const leftConfig = mergeContainer(storeWorkspace?.left, propContainers?.left);
+  const centerConfig = mergeContainer(storeWorkspace?.center, propContainers?.center);
+  const rightConfig = mergeContainer(storeWorkspace?.right, propContainers?.right);
+  const bottomConfig = mergeContainer(storeWorkspace?.bottom, propContainers?.bottom);
 
-  --purple-0: #F0E5FF;
-  --purple-1: #DBBFFD;
-  --purple-2: #C898FD;
-  --purple-3: #B870FF;
-  --purple-4: #9F51FA;
-  --purple-5: #8534F3;
-  --purple-6: #6619E1;
-  --purple-7: #43179E;
-  --purple-8: #26115F;
-  --purple-9: #160048;
+  const mergedContainers = {
+    top: topConfig,
+    left: leftConfig,
+    center: centerConfig,
+    right: rightConfig,
+    bottom: bottomConfig,
+  };
 
-  --pink-0: #FFF0FC;
-  --pink-1: #FFC9F2;
-  --pink-2: #F67ED2;
-  --pink-3: #FF80D2;
-  --pink-4: #FF4AC0;
-  --pink-5: #EF2AA4;
-  --pink-6: #CA2186;
-  --pink-7: #952866;
-  --pink-8: #651643;
-  --pink-9: #3D0A28;
+  const [topHeight, startTopResize] = useResizable(DefaultContainersSize.workspaceTopHeight, 40, 400, false, false);
+  const [leftWidth, startLeftResize] = useResizable(DefaultContainersSize.workspaceLeftWidth, 150, 1000, true, false);
+  const [rightWidth, startRightResize] = useResizable(DefaultContainersSize.workspaceRightWidth, 150, 1000, true, true);
+  const [bottomHeight, startBottomResize] = useResizable(DefaultContainersSize.workspaceBottomHeight, 40, 400, false, true);
 
-  --coral-0: #FFF0EB;
-  --coral-1: #FFCAB8;
-  --coral-2: #FFA387;
-  --coral-3: #FF7B56;
-  --coral-4: #FE4C25;
-  --coral-5: #E13F1B;
-  --coral-6: #C53211;
-  --coral-7: #A22710;
-  --coral-8: #801E0F;
-  --coral-9: #500A00;
+  const workspaceKeys = ['top', 'left', 'center', 'right', 'bottom'] as const;
 
-  --lemon-0: #FDF5B3;
-  --lemon-1: #F5E36B;
-  --lemon-2: #F2DA3B;
-  --lemon-3: #E1C50F;
-  --lemon-4: #C7A60B;
-  --lemon-5: #A98906;
-  --lemon-6: #806803;
-  --lemon-7: #614D01;
-  --lemon-8: #413200;
-  --lemon-9: #322400;
+  const isWorkspaceScopeMaximized = (c?: LayoutContainer) =>
+    Boolean(
+      c?.visible !== false &&
+      c?.maximizeContainer?.isMaximizable !== false &&
+      c?.maximizeContainer?.isMaximized &&
+      c?.maximizeContainer?.maximizeScope === 'Workspace'
+    );
 
-  --lime-0: #F3FEC8;
-  --lime-1: #E8FC97;
-  --lime-2: #DCFA67;
-  --lime-3: #D1F441;
-  --lime-4: #B2DE28;
-  --lime-5: #92C219;
-  --lime-6: #698E17;
-  --lime-7: #425E13;
-  --lime-8: #2C440B;
-  --lime-9: #182C01;
+  const maximizedKey = workspaceKeys.find((key) => isWorkspaceScopeMaximized(mergedContainers[key]));
 
-  --teal-0: #DAF9F5;
-  --teal-1: #A4EFE8;
-  --teal-2: #6EE5DC;
-  --teal-3: #39DAD2;
-  --teal-4: #23B1AE;
-  --teal-5: #197B7B;
-  --teal-6: #136061;
-  --teal-7: #024B4D;
-  --teal-8: #083D3D;
-  --teal-9: #052B2C;
+  if (maximizedKey) {
+    const targetConfig = mergedContainers[maximizedKey];
 
-  --indigo-0: #EFF2FF;
-  --indigo-1: #D4DBFF;
-  --indigo-2: #B3C1FD;
-  --indigo-3: #8E9DF7;
-  --indigo-4: #6B7BEF;
-  --indigo-5: #4956E5;
-  --indigo-6: #2D3DD7;
-  --indigo-7: #262DAE;
-  --indigo-8: #212183;
-  --indigo-9: #12144F;
+    return (
+      <div className="flex flex-col flex-1 bg-background p-1 w-full min-w-0 h-full min-h-0 overflow-hidden">
+        <div className="flex-1 w-full min-w-0 h-full min-h-0 overflow-auto">
+          {targetConfig?.container}
+        </div>
+      </div>
+    );
+  }
 
-  --black-0: #000000;
-  --white-0: #ffffff;
+  const isTopVisible = topConfig?.visible !== false;
+  const isLeftVisible = leftConfig?.visible !== false;
+  const isCenterVisible = centerConfig?.visible !== false;
+  const isRightVisible = rightConfig?.visible !== false;
+  const isBottomVisible = bottomConfig?.visible !== false;
 
-  /* --- Semantic Mappings (Light Mode) --- */
-  --background: var(--white-0);
-  --foreground: var(--gray-8);
-  --card: var(--white-0);
-  --card-foreground: var(--gray-8);
-  --card-spacing: 2px;
-  --popover: var(--white-0);
-  --popover-foreground: var(--gray-8);
-  --primary: var(--blue-5);
-  --primary-foreground: var(--white-0);
-  --secondary: var(--gray-0);
-  --secondary-foreground: var(--gray-7);
-  --muted: var(--gray-0);
-  --muted-foreground: var(--gray-6);
-  --accent: var(--blue-0);
-  --accent-foreground: var(--blue-8);
-  --border: var(--gray-3);
-  --input: var(--gray-3);
-  --ring: var(--blue-5);
-  --chart-1: var(--blue-5);
-  --chart-2: var(--teal-4);
-  --chart-3: var(--indigo-5);
-  --chart-4: var(--orange-4);
-  --chart-5: var(--purple-4);
-  --sidebar: var(--gray-0);
-  --sidebar-foreground: var(--gray-9);
-  --sidebar-primary: var(--gray-8);
-  --sidebar-primary-foreground: var(--gray-0);
-  --sidebar-accent: var(--blue-0);
-  --sidebar-accent-foreground: var(--blue-5);
-  --sidebar-border: var(--gray-2);
-  --sidebar-ring: var(--blue-5);
+  const isMiddleRowVisible = isLeftVisible || isCenterVisible || isRightVisible;
 
-  --success: var(--green-0);
-  --success-foreground: var(--green-7);
+  return (
+    <div className="flex flex-col flex-1 bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
+      {isTopVisible && (
+        <ResizableContainer
+          id="workspace-top"
+          visible
+          resizeHandle={topConfig?.isResizable !== false && isMiddleRowVisible ? 'bottom' : 'none'}
+          onResizeStart={startTopResize}
+          style={isMiddleRowVisible ? { height: `${topHeight}px` } : undefined}
+          className={
+            isMiddleRowVisible
+              ? "border-border border-b"
+              : "flex-1 h-full min-h-0 w-full border-border border-b"
+          }
+        >
+          {topConfig?.container}
+        </ResizableContainer>
+      )}
 
-  --destructive: var(--red-0);
-  --destructive-foreground: var(--red-6);
+      {isMiddleRowVisible && (
+        <div className="flex flex-1 w-full min-h-0 overflow-hidden">
+          {isLeftVisible && (
+            <ResizableContainer
+              id="workspace-left"
+              visible
+              resizeHandle={leftConfig?.isResizable !== false && isCenterVisible ? 'right' : 'none'}
+              onResizeStart={startLeftResize}
+              style={isCenterVisible ? { width: `${leftWidth}px` } : undefined}
+              className={
+                isCenterVisible
+                  ? "border-border border-r shrink-0"
+                  : "flex-1 w-full min-w-0 h-full border-border border-r"
+              }
+            >
+              {leftConfig?.container}
+            </ResizableContainer>
+          )}
 
-  --warning: var(--yellow-0);
-  --warning-foreground: var(--yellow-7);
+          {isCenterVisible && (
+            <div id="workspace-center" className="flex flex-col flex-1 border-border min-w-0 h-full overflow-hidden">
+              {centerConfig?.container}
+            </div>
+          )}
 
-  --info: var(--blue-0);
-  --info-foreground: var(--blue-7);
+          {isRightVisible && (
+            <ResizableContainer
+              id="workspace-right"
+              visible
+              resizeHandle={rightConfig?.isResizable !== false && isCenterVisible ? 'left' : 'none'}
+              onResizeStart={startRightResize}
+              style={isCenterVisible ? { width: `${rightWidth}px` } : undefined}
+              className={
+                isCenterVisible
+                  ? "border-border border-l shrink-0"
+                  : "flex-1 w-full min-w-0 h-full border-border border-l"
+              }
+            >
+              {rightConfig?.container}
+            </ResizableContainer>
+          )}
+        </div>
+      )}
 
-  --radius: 0.625rem;
+      {isBottomVisible && (
+        <ResizableContainer
+          id="workspace-bottom"
+          visible
+          resizeHandle={bottomConfig?.isResizable !== false && isMiddleRowVisible ? 'top' : 'none'}
+          onResizeStart={startBottomResize}
+          style={isMiddleRowVisible ? { height: `${bottomHeight}px` } : undefined}
+          className={
+            isMiddleRowVisible
+              ? "border-border border-t"
+              : "flex-1 h-full min-h-0 w-full border-border border-t"
+          }
+        >
+          {bottomConfig?.container}
+        </ResizableContainer>
+      )}
+    </div>
+  );
 }
 EOF
 
-echo "✅ style: Re-mapped light mode border and input variables to var(--gray-3) for clear input contours!"
+echo "✅ layout: Left, right, top, and bottom panels now scale dynamically to 100% space when center/middle sections are hidden!"

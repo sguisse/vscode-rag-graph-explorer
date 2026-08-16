@@ -77,63 +77,89 @@ export function WorkspaceLayout({ containers: propContainers }: WorkspaceLayoutP
     );
   }
 
+  const isTopVisible = topConfig?.visible !== false;
+  const isLeftVisible = leftConfig?.visible !== false;
+  const isCenterVisible = centerConfig?.visible !== false;
+  const isRightVisible = rightConfig?.visible !== false;
+  const isBottomVisible = bottomConfig?.visible !== false;
+
+  const isMiddleRowVisible = isLeftVisible || isCenterVisible || isRightVisible;
+
   return (
     <div className="flex flex-col flex-1 bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
-      {topConfig?.visible !== false && (
+      {isTopVisible && (
         <ResizableContainer
           id="workspace-top"
           visible
-          resizeHandle={topConfig?.isResizable !== false ? 'bottom' : 'none'}
+          resizeHandle={topConfig?.isResizable !== false && isMiddleRowVisible ? 'bottom' : 'none'}
           onResizeStart={startTopResize}
-          style={{ height: `${topHeight}px` }}
-          className="border-border border-b"
+          style={isMiddleRowVisible ? { height: `${topHeight}px` } : undefined}
+          className={
+            isMiddleRowVisible
+              ? "border-border border-b"
+              : "flex-1 h-full min-h-0 w-full border-border border-b"
+          }
         >
           {topConfig?.container}
         </ResizableContainer>
       )}
 
-      <div className="flex flex-1 w-full min-h-0 overflow-hidden">
-        {leftConfig?.visible !== false && (
-          <ResizableContainer
-            id="workspace-left"
-            visible
-            resizeHandle={leftConfig?.isResizable !== false ? 'right' : 'none'}
-            onResizeStart={startLeftResize}
-            style={{ width: `${leftWidth}px` }}
-            className="border-border border-r"
-          >
-            {leftConfig?.container}
-          </ResizableContainer>
-        )}
+      {isMiddleRowVisible && (
+        <div className="flex flex-1 w-full min-h-0 overflow-hidden">
+          {isLeftVisible && (
+            <ResizableContainer
+              id="workspace-left"
+              visible
+              resizeHandle={leftConfig?.isResizable !== false && isCenterVisible ? 'right' : 'none'}
+              onResizeStart={startLeftResize}
+              style={isCenterVisible ? { width: `${leftWidth}px` } : undefined}
+              className={
+                isCenterVisible
+                  ? "border-border border-r shrink-0"
+                  : "flex-1 w-full min-w-0 h-full border-border border-r"
+              }
+            >
+              {leftConfig?.container}
+            </ResizableContainer>
+          )}
 
-        {centerConfig?.visible !== false && (
-          <div id="workspace-center" className="flex flex-col flex-1 border-border min-w-0 h-full overflow-hidden">
-            {centerConfig?.container}
-          </div>
-        )}
+          {isCenterVisible && (
+            <div id="workspace-center" className="flex flex-col flex-1 border-border min-w-0 h-full overflow-hidden">
+              {centerConfig?.container}
+            </div>
+          )}
 
-        {rightConfig?.visible !== false && (
-          <ResizableContainer
-            id="workspace-right"
-            visible
-            resizeHandle={rightConfig?.isResizable !== false ? 'left' : 'none'}
-            onResizeStart={startRightResize}
-            style={{ width: `${rightWidth}px` }}
-            className="border-border border-l"
-          >
-            {rightConfig?.container}
-          </ResizableContainer>
-        )}
-      </div>
+          {isRightVisible && (
+            <ResizableContainer
+              id="workspace-right"
+              visible
+              resizeHandle={rightConfig?.isResizable !== false && isCenterVisible ? 'left' : 'none'}
+              onResizeStart={startRightResize}
+              style={isCenterVisible ? { width: `${rightWidth}px` } : undefined}
+              className={
+                isCenterVisible
+                  ? "border-border border-l shrink-0"
+                  : "flex-1 w-full min-w-0 h-full border-border border-l"
+              }
+            >
+              {rightConfig?.container}
+            </ResizableContainer>
+          )}
+        </div>
+      )}
 
-      {bottomConfig?.visible !== false && (
+      {isBottomVisible && (
         <ResizableContainer
           id="workspace-bottom"
           visible
-          resizeHandle={bottomConfig?.isResizable !== false ? 'top' : 'none'}
+          resizeHandle={bottomConfig?.isResizable !== false && isMiddleRowVisible ? 'top' : 'none'}
           onResizeStart={startBottomResize}
-          style={{ height: `${bottomHeight}px` }}
-          className="border-border border-t"
+          style={isMiddleRowVisible ? { height: `${bottomHeight}px` } : undefined}
+          className={
+            isMiddleRowVisible
+              ? "border-border border-t"
+              : "flex-1 h-full min-h-0 w-full border-border border-t"
+          }
         >
           {bottomConfig?.container}
         </ResizableContainer>
