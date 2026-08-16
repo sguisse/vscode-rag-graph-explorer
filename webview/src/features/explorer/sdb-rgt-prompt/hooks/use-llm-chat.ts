@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   LlmProvider,
   IChatMessageDto,
@@ -98,11 +98,19 @@ export function useLlmChat() {
   const [systemPrompt] = useState<string>('You are an expert Graph RAG Assistant.');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isReadingFile, setIsReadingFile] = useState<boolean>(false);
+  const [globalExpanded, setGlobalExpanded] = useState<{ value: boolean; id: number } | undefined>(undefined);
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     logInfo('Provider selection updated. Fetching models...', { provider });
     loadModels(provider);
   }, [provider]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const loadModels = async (prov: LlmProvider) => {
     try {
@@ -110,8 +118,14 @@ export function useLlmChat() {
       logInfo('Models loaded for provider', { provider: prov, count: available.length });
       setModels(available);
       if (available.length > 0) {
+        const preferredModel = prov === LlmProvider.OLLAMA ? 'qwen2.5-coder:1.5b' : available[0].id;
+        const matchingModel = available.find(
+          (m) => m.id === preferredModel || m.name === preferredModel
+        );
+        const targetModelId = matchingModel ? matchingModel.id : available[0].id;
+
         if (!selectedModel || !available.some((m) => m.id === selectedModel)) {
-          setSelectedModel(available[0].id);
+          setSelectedModel(targetModelId);
         }
       } else {
         setSelectedModel('');
@@ -155,6 +169,8 @@ export function useLlmChat() {
 
   const handleSend = async () => {
     if (!inputPrompt.trim() || isLoading) return;
+
+    setGlobalExpanded(undefined);
 
     const requestTimestamp = Date.now();
     const formattedPrompt = formatPromptWithContext(inputPrompt, attachedFiles);
@@ -248,6 +264,25 @@ export function useLlmChat() {
     }
   };
 
+  const handleScrollToTop = () => {
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleScrollToBottom = () => {
+    scrollContainerRef.current?.scrollTo({
+      top: scrollContainerRef.current.scrollHeight,
+      behavior: 'smooth',
+    });
+  };
+
+  const handleExpandAll = () => {
+    setGlobalExpanded({ value: true, id: Date.now() });
+  };
+
+  const handleCollapseAll = () => {
+    setGlobalExpanded({ value: false, id: Date.now() });
+  };
+
   return {
     provider,
     setProvider,
@@ -264,8 +299,15 @@ export function useLlmChat() {
     setFilePathInput,
     isReadingFile,
     isLoading,
+    globalExpanded,
+    scrollContainerRef,
+    messagesEndRef,
     handleAddFileContext,
     handleRemoveFileContext,
     handleSend,
+    handleScrollToTop,
+    handleScrollToBottom,
+    handleExpandAll,
+    handleCollapseAll,
   };
 }

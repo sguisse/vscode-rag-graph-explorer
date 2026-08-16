@@ -1,7 +1,6 @@
 import { useMemo, useEffect } from 'react';
 import { CodebaseData, CodebaseFile, SelectedEntity } from '@/shared/services/graph-rag-explorer';
 import { calculateTransitiveImpact } from '@/services/view/graph-view.service';
-import { useFilesCtxExportStore } from '../../components/files-ctx-export/use-files-ctx-export-store';
 import { useExplorerStore } from '../../store/useExplorerStore';
 
 export interface DepthFileGroup {
@@ -18,7 +17,7 @@ export function useFilesContext(
   enableUpstream: boolean,
   impactedSet: Set<string>
 ) {
-  const setTargetFilePaths = useFilesCtxExportStore((s) => s.setTargetFilePaths);
+  const setTargetFilePaths = useExplorerStore((s) => s.setTargetFilePaths);
 
   const selectedFiles = useExplorerStore((s) => s.selectedContextFiles);
   const setSelectedFiles = useExplorerStore((s) => s.setSelectedContextFiles);

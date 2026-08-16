@@ -1,8 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { ChevronsDown, ChevronsUp, ArrowUp, ArrowDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import {
   LlmProvider,
   IChatMessageDto,
-} from '../../../../../shared/services/llm-chat';
+} from '@/shared/services/llm-chat';
 import {
   useLlmChat,
   formatExecutionTime,
@@ -29,22 +33,7 @@ const CopyButton: React.FC<{ text: string; title?: string }> = ({ text, title = 
     <button
       onClick={handleCopy}
       title={title}
-      style={{
-        background: 'transparent',
-        border: 'none',
-        color: 'inherit',
-        cursor: 'pointer',
-        fontSize: '0.9em',
-        padding: '2px 4px',
-        borderRadius: '3px',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        opacity: 0.85,
-        transition: 'opacity 0.2s',
-      }}
-      onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-      onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.85')}
+      className="inline-flex justify-center items-center opacity-85 hover:opacity-100 p-0.5 rounded-sm text-xs transition-opacity cursor-pointer"
     >
       {copied ? '✅' : '📋'}
     </button>
@@ -52,169 +41,169 @@ const CopyButton: React.FC<{ text: string; title?: string }> = ({ text, title = 
 };
 
 interface CollapsibleCardProps {
-  title: string;
+  title: React.ReactNode;
   badge?: string;
   defaultExpanded?: boolean;
+  globalExpanded?: { value: boolean; id: number };
   contentToCopy: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+  headerClassName?: string;
+  headerStyle?: React.CSSProperties;
+  footer?: React.ReactNode;
+  footerStyle?: React.CSSProperties;
 }
 
 const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
   title,
   badge,
-  defaultExpanded = false,
+  defaultExpanded = true,
+  globalExpanded,
   contentToCopy,
   children,
+  className,
+  style,
+  headerClassName,
+  headerStyle,
+  footer,
+  footerStyle,
 }) => {
   const [isOpen, setIsOpen] = useState(defaultExpanded);
+  const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (globalExpanded !== undefined) {
+      setIsOpen(globalExpanded.value);
+    }
+  }, [globalExpanded?.id]);
 
   return (
-    <div
-      style={{
-        border: '1px solid var(--border)',
-        borderRadius: '6px',
-        backgroundColor: 'var(--card)',
-        overflow: 'hidden',
-      }}
+    <Card
+      className={cn("flex flex-col py-0 border rounded-sm overflow-hidden shrink-0", className)}
+      style={style}
     >
-      <div
-        onClick={() => setIsOpen(!isOpen)}
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '4px 8px',
-          backgroundColor: 'var(--secondary)',
-          cursor: 'pointer',
-          userSelect: 'none',
-          borderBottom: isOpen ? '1px solid var(--border)' : 'none',
-        }}
+      {/* Header fills top corners completely and is clipped by Card's overflow-hidden */}
+      <CardHeader
+        onClick={() => setIsOpen((prev) => !prev)}
+        className={cn("flex flex-row justify-between items-center space-y-0 p-0.5 px-3 rounded-t-none transition-colors cursor-pointer select-none", headerClassName)}
+        style={headerStyle}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8em', fontWeight: 'bold' }}>
-          <span style={{ fontSize: '0.8em' }}>{isOpen ? '▼' : '►'}</span>
-          <span>{title}</span>
+        <div className="flex items-center gap-1.5 font-bold text-xs">
+          <span className="text-[10px]">{isOpen ? '▼' : '►'}</span>
+          {typeof title === 'string' ? <span>{title}</span> : title}
           {badge && (
-            <span
-              style={{
-                fontSize: '0.75em',
-                fontWeight: 'normal',
-                background: 'var(--primary)',
-                color: 'var(--primary-foreground)',
-                padding: '1px 6px',
-                borderRadius: '10px',
-              }}
-            >
+            <span className="bg-primary/10 px-1.5 py-0.2 rounded-sm font-semibold text-[9px] text-primary">
               {badge}
             </span>
           )}
         </div>
 
-        <CopyButton text={contentToCopy} title="Copy sub-block content" />
-      </div>
+        <CopyButton text={contentToCopy} title="Copy block content" />
+      </CardHeader>
 
-      {isOpen && (
-        <div
-          style={{
-            padding: '8px 10px',
-            fontSize: '0.85em',
-            lineHeight: '1.4',
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
-            fontFamily: 'var(--font-mono)',
-          }}
-        >
+      {/* Sub-Card / Block Body */}
+      {isOpen && children && (
+        <CardContent className="p-2 px-2.5 font-mono text-[11px] break-words leading-relaxed whitespace-pre-wrap">
           {children}
-        </div>
+        </CardContent>
       )}
-    </div>
+
+      {/* Footer Metadata */}
+      {footer && (
+        <CardFooter
+          className="justify-end opacity-70 p-1 px-2.5 text-[10px] italic"
+          style={footerStyle}
+        >
+          {footer}
+        </CardFooter>
+      )}
+    </Card>
   );
 };
 
-const UserMessageBlock: React.FC<{ msg: IChatMessageDto }> = ({ msg }) => {
-  const [isBlockExpanded, setIsBlockExpanded] = useState(true);
+const UserMessageBlock: React.FC<{
+  msg: IChatMessageDto;
+  globalExpanded?: { value: boolean; id: number };
+}> = ({ msg, globalExpanded }) => {
   const { contextText, instructionText } = parseUserMessageContent(msg.content);
 
-  const userBg = 'var(--user-bg, var(--blue-0))';
-  const userBorder = 'var(--user-border, var(--blue-2))';
+  const userBg = 'color-mix(in srgb, var(--blue-1, #1e293b) 30%, var(--card))';
+  const userBgHeader = 'color-mix(in srgb, var(--blue-1, #1e293b) 60%, var(--card))';
+  const userBorder = 'color-mix(in srgb, var(--blue-2, #38bdf8) 40%, var(--border))';
+
+  const subCardBg = 'color-mix(in srgb, var(--white, #ffffff) 15%, var(--card))';
+  const subCardHeader = 'color-mix(in srgb, var(--gray-1, #1e293b) 35%, var(--card))';
+  const subCardBorder = 'color-mix(in srgb, var(--gray-2, #475569) 30%, var(--border))';
 
   return (
-    <div
+    <CollapsibleCard
+      title={
+        <span className="flex items-center gap-1.5 font-bold text-blue-600 dark:text-blue-400 text-xs">
+          👤 USER REQUEST
+        </span>
+      }
+      defaultExpanded={true}
+      globalExpanded={globalExpanded}
+      contentToCopy={msg.content}
+      className="self-end w-full max-w-[90%]"
       style={{
-        alignSelf: 'flex-end',
-        maxWidth: '90%',
-        width: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '6px',
         backgroundColor: userBg,
-        color: 'var(--foreground)',
-        padding: '8px 12px',
-        borderRadius: '8px',
-        border: `1px solid ${userBorder}`,
+        borderColor: userBorder,
+        color: 'var(--foreground)'
       }}
+      headerStyle={{
+        backgroundColor: userBgHeader,
+        borderBottom: `1px solid ${userBorder}`,
+      }}
+      footerStyle={{
+        borderTop: `1px dashed ${userBorder}`,
+      }}
+      footer={`${formatDateTime(msg.timestamp)} | Context Files: ${msg.fileCount ?? 0}`}
     >
-      <div
-        onClick={() => setIsBlockExpanded(!isBlockExpanded)}
-        style={{
-          position: 'sticky',
-          top: 0,
-          backgroundColor: userBg,
-          zIndex: 2,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          fontSize: '0.78em',
-          fontWeight: 'bold',
-          cursor: 'pointer',
-          userSelect: 'none',
-          paddingBottom: isBlockExpanded ? '4px' : '0px',
-          borderBottom: isBlockExpanded ? `1px solid ${userBorder}` : 'none',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span>{isBlockExpanded ? '▼' : '►'}</span>
-          <span>👤 USER REQUEST</span>
-        </div>
-        <CopyButton text={msg.content} title="Copy entire user request" />
-      </div>
-
-      {isBlockExpanded && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
-          {contextText && (
-            <CollapsibleCard
-              title="📄 Attached File Context"
-              badge={msg.fileCount ? `${msg.fileCount} files` : 'xml'}
-              defaultExpanded={false}
-              contentToCopy={contextText}
-            >
-              {contextText}
-            </CollapsibleCard>
-          )}
-
+      <div className="flex flex-col gap-1.5">
+        {contextText && (
           <CollapsibleCard
-            title="💬 Instruction Prompt"
-            defaultExpanded={true}
-            contentToCopy={instructionText}
+            title="📄 Attached File Context"
+            badge={msg.fileCount ? `${msg.fileCount} files` : 'xml'}
+            defaultExpanded={false}
+            globalExpanded={globalExpanded}
+            contentToCopy={contextText}
+            style={{
+              backgroundColor: subCardBg,
+              borderColor: subCardBorder,
+            }}
+            headerStyle={{
+              backgroundColor: subCardHeader,
+              borderBottom: `1px solid ${subCardBorder}`,
+            }}
           >
-            {instructionText}
+            {contextText}
           </CollapsibleCard>
-        </div>
-      )}
+        )}
 
-      <div
-        style={{
-          fontSize: '0.7em',
-          opacity: 0.75,
-          textAlign: 'right',
-          marginTop: '4px',
-          borderTop: isBlockExpanded ? '1px dashed var(--border)' : 'none',
-          paddingTop: '3px',
-          fontStyle: 'italic',
-        }}
-      >
-        {formatDateTime(msg.timestamp)} | Context Files: {msg.fileCount ?? 0}
+        <CollapsibleCard
+          title="💬 Instruction Prompt"
+          defaultExpanded={true}
+          globalExpanded={globalExpanded}
+          contentToCopy={instructionText}
+          style={{
+            backgroundColor: subCardBg,
+            borderColor: subCardBorder,
+          }}
+          headerStyle={{
+            backgroundColor: subCardHeader,
+            borderBottom: `1px solid ${subCardBorder}`,
+          }}
+        >
+          {instructionText}
+        </CollapsibleCard>
       </div>
-    </div>
+    </CollapsibleCard>
   );
 };
 
@@ -222,74 +211,47 @@ const AssistantMessageBlock: React.FC<{
   msg: IChatMessageDto;
   fallbackProvider: LlmProvider;
   fallbackModel: string;
-}> = ({ msg, fallbackProvider, fallbackModel }) => {
-  const [isBlockExpanded, setIsBlockExpanded] = useState(true);
-  const bubbleBg = 'var(--card)';
-  const bubbleBorder = '1px solid var(--border)';
+  globalExpanded?: { value: boolean; id: number };
+}> = ({ msg, fallbackProvider, fallbackModel, globalExpanded }) => {
+  const assistantBg = 'color-mix(in srgb, var(--yellow-0, #451a03) 30%, var(--card))';
+  const assistantBgHeader = 'color-mix(in srgb, var(--yellow-0, #451a03) 60%, var(--card))';
+  const assistantBorder = 'color-mix(in srgb, var(--yellow-1, #eab308) 40%, var(--border))';
+
+  const showFooter = msg.promptTokens !== undefined || msg.executionTimeMs !== undefined;
 
   return (
-    <div
+    <CollapsibleCard
+      title={
+        <span className="flex items-center gap-1.5 font-bold text-foreground text-xs">
+          🤖 {(msg.provider || fallbackProvider).toUpperCase()} ({msg.model || fallbackModel})
+        </span>
+      }
+      defaultExpanded={true}
+      globalExpanded={globalExpanded}
+      contentToCopy={msg.content}
+      className="self-start w-full max-w-[85%]"
       style={{
-        alignSelf: 'flex-start',
-        backgroundColor: bubbleBg,
-        color: 'var(--card-foreground)',
-        padding: '8px 12px',
-        borderRadius: '8px',
-        maxWidth: '85%',
-        width: '100%',
-        whiteSpace: 'pre-wrap',
-        wordBreak: 'break-word',
-        position: 'relative',
-        border: bubbleBorder,
-        display: 'flex',
-        flexDirection: 'column',
+        backgroundColor: assistantBg,
+        borderColor: assistantBorder,
+        color: 'var(--foreground)',
       }}
+      headerStyle={{
+        backgroundColor: assistantBgHeader,
+        borderBottom: `1px solid ${assistantBorder}`,
+      }}
+      footerStyle={{
+        borderTop: `1px dashed ${assistantBorder}`,
+      }}
+      footer={
+        showFooter
+          ? `In: ${formatTokenCount(msg.promptTokens)} tokens | Out: ${formatTokenCount(msg.completionTokens)} tokens | Time: ${formatExecutionTime(msg.executionTimeMs)}`
+          : undefined
+      }
     >
-      <div
-        onClick={() => setIsBlockExpanded(!isBlockExpanded)}
-        style={{
-          position: 'sticky',
-          top: 0,
-          backgroundColor: bubbleBg,
-          zIndex: 2,
-          paddingBottom: isBlockExpanded ? '4px' : '0px',
-          marginBottom: isBlockExpanded ? '6px' : '0px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          fontSize: '0.78em',
-          fontWeight: 'bold',
-          cursor: 'pointer',
-          userSelect: 'none',
-          borderBottom: isBlockExpanded ? '1px dotted var(--border)' : 'none',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span>{isBlockExpanded ? '▼' : '►'}</span>
-          <span>🤖 {(msg.provider || fallbackProvider).toUpperCase()} ({msg.model || fallbackModel})</span>
-        </div>
-        <CopyButton text={msg.content} title="Copy assistant response" />
+      <div className="font-sans text-xs break-words leading-relaxed whitespace-pre-wrap">
+        {msg.content}
       </div>
-
-      {isBlockExpanded && <div>{msg.content}</div>}
-
-      {(msg.promptTokens !== undefined || msg.executionTimeMs !== undefined) && (
-        <div
-          style={{
-            fontSize: '0.7em',
-            opacity: 0.65,
-            textAlign: 'right',
-            marginTop: '6px',
-            borderTop: isBlockExpanded ? '1px dashed var(--border)' : 'none',
-            paddingTop: '3px',
-            fontStyle: 'italic',
-          }}
-        >
-          In: {formatTokenCount(msg.promptTokens)} tokens | Out: {formatTokenCount(msg.completionTokens)} tokens | Time:{' '}
-          {formatExecutionTime(msg.executionTimeMs)}
-        </div>
-      )}
-    </div>
+    </CollapsibleCard>
   );
 };
 
@@ -310,102 +272,150 @@ export const LLMExplorerChat: React.FC = () => {
     setFilePathInput,
     isReadingFile,
     isLoading,
+    globalExpanded,
+    scrollContainerRef,
+    messagesEndRef,
     handleAddFileContext,
     handleRemoveFileContext,
     handleSend,
+    handleScrollToTop,
+    handleScrollToBottom,
+    handleExpandAll,
+    handleCollapseAll,
   } = useLlmChat();
 
   return (
-    <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', height: '100%', gap: '12px', fontFamily: 'var(--font-sans)', color: 'var(--foreground)', backgroundColor: 'var(--background)' }}>
-      <header style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
-        <label style={{ fontWeight: 'bold' }}>Provider:</label>
-        <select
-          value={provider}
-          onChange={(e) => setProvider(e.target.value as LlmProvider)}
-          style={{ background: 'var(--input)', color: 'var(--foreground)', border: '1px solid var(--border)', padding: '4px 8px', borderRadius: '4px' }}
-        >
-          <option value={LlmProvider.OLLAMA}>🦙 Ollama</option>
-          <option value={LlmProvider.GEMINI}>♊ Gemini</option>
-          <option value={LlmProvider.COPILOT}>✈️ Copilot</option>
-        </select>
+    <div className="flex flex-col gap-3 bg-background p-3 w-full h-full min-h-0 overflow-hidden font-sans text-foreground">
 
-        <label style={{ fontWeight: 'bold', marginLeft: '12px' }}>Model:</label>
-        <select
-          value={selectedModel}
-          onChange={(e) => setSelectedModel(e.target.value)}
-          style={{ background: 'var(--input)', color: 'var(--foreground)', border: '1px solid var(--border)', padding: '4px 8px', borderRadius: '4px' }}
-        >
-          {models.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.name}
-            </option>
-          ))}
-        </select>
+      {/* Action Toolbar: Expand / Collapse All & Scroll to Top / Bottom */}
+      <div className="flex justify-between items-center bg-muted/30 p-1 px-2 border border-border rounded-sm font-mono text-[11px] shrink-0">
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1 px-2 h-6 font-mono text-[10px] text-muted-foreground hover:text-foreground cursor-pointer"
+            onClick={handleExpandAll}
+            title="Expand All Panels"
+          >
+            <ChevronsDown size={12} /> Expand All
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1 px-2 h-6 font-mono text-[10px] text-muted-foreground hover:text-foreground cursor-pointer"
+            onClick={handleCollapseAll}
+            title="Collapse All Panels"
+          >
+            <ChevronsUp size={12} /> Collapse All
+          </Button>
+        </div>
 
-        <label style={{ marginLeft: '12px' }}>Temp ({temperature}):</label>
-        <input
-          type="range"
-          min="0"
-          max="1"
-          step="0.1"
-          value={temperature}
-          onChange={(e) => setTemperature(parseFloat(e.target.value))}
-          style={{ width: '80px' }}
-        />
-      </header>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1 px-2 h-6 font-mono text-[10px] text-muted-foreground hover:text-foreground cursor-pointer"
+            onClick={handleScrollToTop}
+            title="Scroll to Beginning"
+          >
+            <ArrowUp size={12} /> Top
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1 px-2 h-6 font-mono text-[10px] text-muted-foreground hover:text-foreground cursor-pointer"
+            onClick={handleScrollToBottom}
+            title="Scroll to End"
+          >
+            <ArrowDown size={12} /> Bottom
+          </Button>
+        </div>
+      </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '4px' }}>
+      {/* Scrollable Message history */}
+      <div
+        ref={scrollContainerRef}
+        className="flex flex-col flex-1 gap-2.5 pr-1 min-h-0 overflow-y-auto"
+      >
         {messages.length === 0 ? (
-          <div style={{ opacity: 0.6, fontStyle: 'italic', textAlign: 'center', marginTop: '32px' }}>
+          <div className="opacity-60 mt-8 font-mono text-xs text-center italic">
             No conversation started. Attach files as context and type your instruction below.
           </div>
         ) : (
           messages.map((msg) =>
             msg.role === 'user' ? (
-              <UserMessageBlock key={msg.id} msg={msg} />
+              <UserMessageBlock
+                key={msg.id}
+                msg={msg}
+                globalExpanded={globalExpanded}
+              />
             ) : (
               <AssistantMessageBlock
                 key={msg.id}
                 msg={msg}
                 fallbackProvider={provider}
                 fallbackModel={selectedModel}
+                globalExpanded={globalExpanded}
               />
             )
           )
         )}
+        <div ref={messagesEndRef} />
       </div>
 
-      <footer style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border)', paddingTop: '8px' }}>
+      {/* Footer controls */}
+      <footer className="flex flex-col gap-2 pt-2 border-border border-t text-xs shrink-0">
+        {/* LLM controls */}
+        <div className="flex flex-wrap items-center gap-2 pb-2 border-border border-b text-xs shrink-0">
+            <label className="font-bold">Provider:</label>
+            <select
+            value={provider}
+            onChange={(e) => setProvider(e.target.value as LlmProvider)}
+            className="bg-input px-2 py-1 border border-border rounded-sm font-mono text-foreground text-xs"
+            >
+            <option value={LlmProvider.OLLAMA}>🦙 Ollama</option>
+            <option value={LlmProvider.GEMINI}>♊ Gemini</option>
+            <option value={LlmProvider.COPILOT}>✈️ Copilot</option>
+            </select>
+
+            <label className="ml-2 font-bold">Model:</label>
+            <select
+            value={selectedModel}
+            onChange={(e) => setSelectedModel(e.target.value)}
+            className="bg-input px-2 py-1 border border-border rounded-sm font-mono text-foreground text-xs"
+            >
+            {models.map((m) => (
+                <option key={m.id} value={m.id}>
+                {m.name}
+                </option>
+            ))}
+            </select>
+
+            <label className="ml-2">Temp ({temperature}):</label>
+            <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.1"
+            value={temperature}
+            onChange={(e) => setTemperature(parseFloat(e.target.value))}
+            className="w-16"
+            />
+        </div>
+
         {attachedFiles.length > 0 && (
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8em', fontWeight: 'bold', opacity: 0.8 }}>Context Files:</span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="opacity-80 font-bold text-[11px]">Context Files:</span>
             {attachedFiles.map((file) => (
               <span
                 key={file.path}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  background: 'var(--primary)',
-                  color: 'var(--primary-foreground)',
-                  padding: '2px 8px',
-                  borderRadius: '12px',
-                  fontSize: '0.75em',
-                  fontFamily: 'var(--font-mono)',
-                }}
+                className="inline-flex items-center gap-1 bg-primary px-2 py-0.5 rounded-full font-mono text-[10px] text-primary-foreground"
               >
                 📄 {file.path}
                 <button
                   onClick={() => handleRemoveFileContext(file.path)}
                   title="Remove file context"
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'inherit',
-                    cursor: 'pointer',
-                    fontWeight: 'bold',
-                    padding: '0 2px',
-                  }}
+                  className="px-0.5 font-bold cursor-pointer"
                 >
                   ✕
                 </button>
@@ -414,7 +424,7 @@ export const LLMExplorerChat: React.FC = () => {
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div className="flex items-center gap-2">
           <input
             type="text"
             value={filePathInput}
@@ -426,34 +436,18 @@ export const LLMExplorerChat: React.FC = () => {
                 handleAddFileContext();
               }
             }}
-            style={{
-              flex: 1,
-              background: 'var(--input)',
-              color: 'var(--foreground)',
-              border: '1px solid var(--border)',
-              padding: '4px 8px',
-              fontSize: '0.85em',
-              borderRadius: '4px',
-            }}
+            className="flex-1 bg-input px-2 py-1 border border-border rounded-sm font-mono text-foreground text-xs"
           />
           <button
             onClick={handleAddFileContext}
             disabled={isReadingFile || !filePathInput.trim()}
-            style={{
-              background: 'var(--secondary)',
-              color: 'var(--secondary-foreground)',
-              border: '1px solid var(--border)',
-              padding: '4px 12px',
-              cursor: isReadingFile || !filePathInput.trim() ? 'not-allowed' : 'pointer',
-              fontSize: '0.85em',
-              borderRadius: '4px',
-            }}
+            className="bg-secondary disabled:opacity-50 px-3 py-1 border border-border rounded-sm font-mono text-xs cursor-pointer disabled:cursor-not-allowed"
           >
             {isReadingFile ? 'Reading...' : '+ Add Context'}
           </button>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div className="flex gap-2">
           <textarea
             value={inputPrompt}
             onChange={(e) => setInputPrompt(e.target.value)}
@@ -465,28 +459,12 @@ export const LLMExplorerChat: React.FC = () => {
                 handleSend();
               }
             }}
-            style={{
-              flex: 1,
-              background: 'var(--input)',
-              color: 'var(--foreground)',
-              border: '1px solid var(--border)',
-              padding: '6px',
-              resize: 'none',
-              borderRadius: '4px',
-            }}
+            className="flex-1 bg-input p-1.5 border border-border rounded-sm font-mono text-xs resize-none"
           />
           <button
             onClick={handleSend}
             disabled={isLoading}
-            style={{
-              background: 'var(--primary)',
-              color: 'var(--primary-foreground)',
-              border: 'none',
-              padding: '0 16px',
-              cursor: isLoading ? 'not-allowed' : 'pointer',
-              fontWeight: 'bold',
-              borderRadius: '4px',
-            }}
+            className="bg-primary disabled:opacity-50 px-4 rounded-sm font-bold text-primary-foreground text-xs cursor-pointer disabled:cursor-not-allowed"
           >
             {isLoading ? 'Thinking...' : 'Send'}
           </button>

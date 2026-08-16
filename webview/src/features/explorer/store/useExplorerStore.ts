@@ -9,6 +9,7 @@ import {
   IChatMessageDto,
   IFileContextDto,
 } from '@/shared/services/llm-chat';
+import { ExportFormat } from '@/shared/services/codebase-exporter/domain/model/types';
 import { demoCodebase, FOLDER_POSITIONS } from '../wksp-cnt-graph/data/GraphData';
 import { INITIAL_VISIBLE_FILES_CONFIG, FOLDER_KEYS_REGISTERED_CONFIG } from '../constants/graph.constants';
 
@@ -166,6 +167,23 @@ export interface WkpRgtTabsFilesContextState {
 }
 
 /**
+ * State & Actions for Shared Component: FilesCtxExportPanel
+ */
+export interface FilesCtxExportState {
+  exportFormat: ExportFormat;
+  maxChunk: string;
+  splitChunkByFileExtension: boolean;
+  copyAsFilesToClipboard: boolean;
+  targetFilePaths: string[];
+
+  setExportFormat: (exportFormat: ExportFormat) => void;
+  setMaxChunk: (maxChunk: string) => void;
+  setSplitChunkByFileExtension: (splitChunkByFileExtension: boolean) => void;
+  setCopyAsFilesToClipboard: (copyAsFilesToClipboard: boolean) => void;
+  setTargetFilePaths: (targetFilePaths: string[]) => void;
+}
+
+/**
  * State & Actions for Container: sidebarRight
  * Tab navigation state
  */
@@ -220,6 +238,7 @@ export interface ExplorerState
     WkpLftCodebaseTreeState,
     WkspCntGraphState,
     WkpRgtTabsFilesContextState,
+    FilesCtxExportState,
     SdbRgtPromptTabState,
     SdbRgtPromptBuilderState,
     SdbRgtLlmChatState {}
@@ -390,6 +409,21 @@ export const useExplorerStore = create<ExplorerState>((set, get) => ({
     set((state) => ({
       expandedContextGroups: typeof groups === 'function' ? groups(state.expandedContextGroups) : groups,
     })),
+
+  // Shared FilesCtxExportPanel State
+  exportFormat: 'yaml',
+  maxChunk: '0',
+  splitChunkByFileExtension: false,
+  copyAsFilesToClipboard: false,
+  targetFilePaths: [],
+
+  setExportFormat: (exportFormat) => set({ exportFormat }),
+  setMaxChunk: (maxChunk) => set({ maxChunk }),
+  setSplitChunkByFileExtension: (splitChunkByFileExtension) =>
+    set({ splitChunkByFileExtension }),
+  setCopyAsFilesToClipboard: (copyAsFilesToClipboard) =>
+    set({ copyAsFilesToClipboard }),
+  setTargetFilePaths: (targetFilePaths) => set({ targetFilePaths }),
 
   // sidebarRight: Navigation
   promptTab: 'prompt',
