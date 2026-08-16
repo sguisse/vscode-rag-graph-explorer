@@ -1,69 +1,51 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useEffect, useMemo, useCallback } from 'react';
 import { CodebaseFile } from '@/shared/services/graph-rag-explorer';
 import { filterCodebaseFiles } from '@/services/view/graph-view.service';
-import { INITIAL_VISIBLE_FILES_CONFIG, FOLDER_KEYS_REGISTERED_CONFIG } from '../constants/graph.constants';
+import { useExplorerStore } from '../store/useExplorerStore';
 
 export function useCodebaseFilter(allFiles: CodebaseFile[]) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [displayLevel, setDisplayLevel] = useState('all');
-  const [maxNodesLimit, setMaxNodesLimit] = useState(5);
-  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({
-    frontend: true,
-    backend: true,
-    config: true,
-    other: true
-  });
-  const [visibleFiles, setVisibleFiles] = useState<Record<string, boolean>>(INITIAL_VISIBLE_FILES_CONFIG);
+  const searchTerm = useExplorerStore((s) => s.searchTerm);
+  const setSearchTerm = useExplorerStore((s) => s.setSearchTerm);
+  const displayLevel = useExplorerStore((s) => s.displayLevel);
+  const setDisplayLevel = useExplorerStore((s) => s.setDisplayLevel);
+  const maxNodesLimit = useExplorerStore((s) => s.maxNodesLimit);
+  const setMaxNodesLimit = useExplorerStore((s) => s.setMaxNodesLimit);
+  const expandedFolders = useExplorerStore((s) => s.expandedFolders);
+  const visibleFiles = useExplorerStore((s) => s.visibleFiles);
+  const setVisibleFiles = useExplorerStore((s) => s.setVisibleFiles);
+  const toggleFolder = useExplorerStore((s) => s.toggleFolder);
+  const toggleFolderCheckboxStore = useExplorerStore((s) => s.toggleFolderCheckbox);
+  const toggleFileCheckbox = useExplorerStore((s) => s.toggleFileCheckbox);
+  const resetFiltersStore = useExplorerStore((s) => s.resetFilters);
 
   useEffect(() => {
-    setVisibleFiles(prev => {
+    setVisibleFiles((prev) => {
+      let changed = false;
       const updated = { ...prev };
-      allFiles.forEach(f => {
+      allFiles.forEach((f) => {
         if (updated[f.id] === undefined) {
           updated[f.id] = true;
+          changed = true;
         }
       });
-      return updated;
+      return changed ? updated : prev;
     });
-  }, [allFiles]);
+  }, [allFiles, setVisibleFiles]);
 
-  const toggleFolder = useCallback((folderName: string) => {
-    setExpandedFolders(prev => ({ ...prev, [folderName]: !prev[folderName] }));
-  }, []);
-
-  const toggleFolderCheckbox = useCallback((folderName: string) => {
-    const registeredFolders = [...FOLDER_KEYS_REGISTERED_CONFIG];
-    const folderFiles = allFiles.filter(f => {
-      if (registeredFolders.includes(folderName as any)) {
-        return f.path.startsWith(folderName);
-      }
-      return !registeredFolders.some(rf => f.path.startsWith(rf));
-    });
-    const isCurrentlyChecked = folderFiles.length > 0 && folderFiles.every(f => visibleFiles[f.id]);
-    const targetState = !isCurrentlyChecked;
-
-    setVisibleFiles(prev => {
-      const updated = { ...prev };
-      folderFiles.forEach(file => { updated[file.id] = targetState; });
-      return updated;
-    });
-  }, [allFiles, visibleFiles]);
-
-  const toggleFileCheckbox = useCallback((fileId: string) => {
-    setVisibleFiles(prev => ({ ...prev, [fileId]: !prev[fileId] }));
-  }, []);
+  const toggleFolderCheckbox = useCallback(
+    (folderName: string) => {
+      toggleFolderCheckboxStore(folderName, allFiles);
+    },
+    [allFiles, toggleFolderCheckboxStore]
+  );
 
   const searchFilteredFiles = useMemo(() => {
     return filterCodebaseFiles(allFiles, searchTerm, displayLevel, visibleFiles, maxNodesLimit);
   }, [allFiles, searchTerm, displayLevel, visibleFiles, maxNodesLimit]);
 
   const resetFilters = useCallback(() => {
-    const resetVisible: Record<string, boolean> = {};
-    allFiles.forEach(f => { resetVisible[f.id] = true; });
-    setVisibleFiles(resetVisible);
-    setSearchTerm('');
-    setDisplayLevel('all');
-  }, [allFiles]);
+    resetFiltersStore(allFiles);
+  }, [allFiles, resetFiltersStore]);
 
   return {
     searchTerm,
@@ -78,6 +60,6 @@ export function useCodebaseFilter(allFiles: CodebaseFile[]) {
     toggleFolderCheckbox,
     toggleFileCheckbox,
     searchFilteredFiles,
-    resetFilters
+    resetFilters,
   };
 }

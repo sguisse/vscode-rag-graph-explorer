@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { PromptPanel } from './prompt';
 import { LLMExplorerChat } from './LLM';
 import { ConfigurationPanel } from './configuration';
 import { SelectedEntity, CodebaseData } from '@/shared/services/graph-rag-explorer';
+import { useExplorerStore } from '../store/useExplorerStore';
 
 interface TabsPromptContainerProps {
   selectedEntity?: SelectedEntity | null;
@@ -16,7 +17,8 @@ export function TabsPromptContainer({
   initialCodebase,
   handleCopy
 }: TabsPromptContainerProps) {
-  const [activeTab, setActiveTab] = useState<'prompt' | 'llm' | 'config'>('prompt');
+  const activeTab = useExplorerStore((s) => s.promptTab);
+  const setActiveTab = useExplorerStore((s) => s.setPromptTab);
 
   return (
     <div className="flex flex-col bg-card h-full font-mono text-xs">

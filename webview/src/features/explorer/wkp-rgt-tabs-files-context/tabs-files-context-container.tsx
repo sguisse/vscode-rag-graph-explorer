@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { InspectorPanel } from './inspector-panel';
 import { FilesContextPanel } from './files-context';
 import { ContextTransformerPanel } from './context-transformer';
 import { CodebaseData, SelectedEntity } from '@/shared/services/graph-rag-explorer';
+import { useExplorerStore } from '../store/useExplorerStore';
 
 interface TabsFilesContextContainerProps {
   selectedEntity: SelectedEntity | null;
@@ -26,7 +27,8 @@ export function TabsFilesContextContainer({
   impactedSet,
   handleCopy
 }: TabsFilesContextContainerProps) {
-  const [rightPanelTab, setRightPanelTab] = useState<'inspect' | 'files_context' | 'transformer'>('files_context');
+  const rightPanelTab = useExplorerStore((s) => s.rightPanelTab);
+  const setRightPanelTab = useExplorerStore((s) => s.setRightPanelTab);
 
   return (
     <div className="flex flex-col bg-card h-full">

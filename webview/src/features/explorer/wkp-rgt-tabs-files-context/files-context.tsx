@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import { GitFork, FileText, ShieldAlert, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
@@ -6,6 +6,7 @@ import { CodebaseData, CodebaseFile, SelectedEntity } from '@/shared/services/gr
 import { calculateTransitiveImpact } from '@/services/view/graph-view.service';
 import { FilesCtxExportPanel } from '../components/files-ctx-export/files-ctx-export-panel';
 import { useFilesCtxExportStore } from '../components/files-ctx-export/use-files-ctx-export-store';
+import { useExplorerStore } from '../store/useExplorerStore';
 
 interface FilesContextPanelProps {
   initialCodebase: CodebaseData;
@@ -64,6 +65,11 @@ export function FilesContextPanel({
 }: FilesContextPanelProps) {
   const setTargetFilePaths = useFilesCtxExportStore((s) => s.setTargetFilePaths);
 
+  const selectedFiles = useExplorerStore((s) => s.selectedContextFiles);
+  const setSelectedFiles = useExplorerStore((s) => s.setSelectedContextFiles);
+  const expandedGroups = useExplorerStore((s) => s.expandedContextGroups);
+  const setExpandedGroups = useExplorerStore((s) => s.setExpandedContextGroups);
+
   const downstreamCount = useMemo(() => {
     if (!selectedEntity || !initialCodebase?.dependencies) return 0;
     const dsSet = calculateTransitiveImpact(selectedEntity, initialCodebase.dependencies, 20, 20, true, false);
@@ -76,14 +82,12 @@ export function FilesContextPanel({
     return initialCodebase.files.filter(f => usSet.has(f.id) && f.id !== selectedEntity.nodeId).length;
   }, [selectedEntity, initialCodebase]);
 
-  // Compute depth and direction groups for impacted / target files
   const depthGroups = useMemo<DepthFileGroup[]>(() => {
     if (!selectedEntity || !initialCodebase?.files) return [];
 
     const targetId = selectedEntity.nodeId;
     const deps = initialCodebase.dependencies || [];
 
-    // Downstream BFS
     const dsDepthMap = new Map<string, number>();
     const dsQueue: Array<{ id: string; depth: number }> = [{ id: targetId, depth: 0 }];
     dsDepthMap.set(targetId, 0);
@@ -102,7 +106,6 @@ export function FilesContextPanel({
       });
     }
 
-    // Upstream BFS
     const usDepthMap = new Map<string, number>();
     const usQueue: Array<{ id: string; depth: number }> = [{ id: targetId, depth: 0 }];
     usDepthMap.set(targetId, 0);
@@ -167,7 +170,6 @@ export function FilesContextPanel({
     return Array.from(groupsMap.values()).sort((a, b) => a.order - b.order);
   }, [selectedEntity, initialCodebase, impactedSet, enableUpstream, enableDownstream]);
 
-  // Distinct Theme Color Token provider per group key
   const getGroupStyle = (key: string) => {
     if (key === 'target') {
       return {
@@ -201,11 +203,6 @@ export function FilesContextPanel({
     };
   };
 
-  // Selection state for files
-  const [selectedFiles, setSelectedFiles] = useState<Record<string, boolean>>({});
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
-
-  // Sync selected files when depthGroups change
   useEffect(() => {
     const initialSelected: Record<string, boolean> = {};
     const initialExpanded: Record<string, boolean> = {};
@@ -228,7 +225,7 @@ export function FilesContextPanel({
     });
 
     setExpandedGroups((prev) => ({ ...initialExpanded, ...prev }));
-  }, [depthGroups]);
+  }, [depthGroups, setSelectedFiles, setExpandedGroups]);
 
   const toggleGroupCheckbox = (groupKey: string, groupFiles: CodebaseFile[]) => {
     const isAllChecked = groupFiles.length > 0 && groupFiles.every((f) => selectedFiles[f.id]);
@@ -273,7 +270,6 @@ export function FilesContextPanel({
       .reduce((acc, g) => acc + g.files.filter((f) => selectedFiles[f.id]).length, 0);
   }, [depthGroups, selectedFiles]);
 
-  // Build context containing ALL files in codebase
   const totalFilesContext = useMemo(() => {
     if (!initialCodebase?.files) return '';
 
@@ -282,7 +278,6 @@ export function FilesContextPanel({
       .join('\n');
   }, [initialCodebase]);
 
-  // Build final context containing ONLY selected files
   const combinedSelectedFilesContext = useMemo(() => {
     if (!initialCodebase?.files) return '';
 
@@ -298,14 +293,12 @@ export function FilesContextPanel({
       : [];
   }, [combinedSelectedFilesContext]);
 
-  // Synchronize targetFilePaths with useFilesCtxExportStore
   useEffect(() => {
     setTargetFilePaths(targetFilePaths);
   }, [targetFilePaths, setTargetFilePaths]);
 
   const topContent = (
     <div className="space-y-2 mb-2 w-full">
-      {/* Unified Files Context Preview & Meta */}
       <div className="space-y-3 bg-card p-4 border border-border rounded-lg w-full">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
@@ -316,7 +309,6 @@ export function FilesContextPanel({
           </div>
         </div>
 
-        {/* Row 1: Total Codebase Summary */}
         <div className="gap-2 grid grid-cols-4 text-center">
           <div className="bg-muted/40 p-2 border border-border/50 rounded">
             <span className="block text-[9px] text-muted-foreground truncate uppercase">Total Files</span>
@@ -337,7 +329,6 @@ export function FilesContextPanel({
         </div>
       </div>
 
-      {/* Impact Propagation */}
       <div className="space-y-2 bg-muted/30 p-3 border border-border rounded-lg w-full">
         <div className="flex justify-between items-center">
           <label className="font-mono font-bold text-[11px] text-muted-foreground uppercase">Impact Propagation</label>
@@ -345,7 +336,7 @@ export function FilesContextPanel({
         </div>
         <div className="gap-2 grid grid-cols-2">
           <Button
-            onClick={() => setEnableUpstream(prev => !prev)}
+            onClick={() => setEnableUpstream((prev) => !prev)}
             className={`flex items-center justify-center gap-1.5 py-2 px-3 font-mono text-xs font-bold rounded border transition-all h-9 cursor-pointer ${
               enableUpstream
                 ? 'bg-orange-500 border-orange-400 text-white shadow-md'
@@ -356,7 +347,7 @@ export function FilesContextPanel({
             Upstream ({upstreamCount})
           </Button>
           <Button
-            onClick={() => setEnableDownstream(prev => !prev)}
+            onClick={() => setEnableDownstream((prev) => !prev)}
             className={`flex items-center justify-center gap-1.5 py-2 px-3 font-mono text-xs font-bold rounded border transition-all h-9 cursor-pointer ${
               enableDownstream
                 ? 'bg-orange-500 border-orange-400 text-white shadow-md'
@@ -373,7 +364,6 @@ export function FilesContextPanel({
 
   const middleContent = (
     <div className="space-y-3 py-2 pr-1 w-full font-mono text-xs">
-      {/* Fluorescent Impact Plan with Collapsible Depth Groups & 3-State Checkboxes */}
       <div className="space-y-3 bg-orange-500/5 p-4 border border-orange-500/25 rounded-lg">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-1.5">
@@ -401,7 +391,6 @@ export function FilesContextPanel({
 
               return (
                 <div key={group.key} className={`border ${style.border} rounded-md bg-background/60 overflow-hidden`}>
-                  {/* Group Header */}
                   <div className={`flex items-center justify-between px-2 py-1.5 ${style.bgHeader} select-none`}>
                     <div className="flex flex-1 items-center gap-1.5 min-w-0">
                       <TriStateCheckbox
@@ -427,7 +416,6 @@ export function FilesContextPanel({
                     </span>
                   </div>
 
-                  {/* Group File Items with Filename, File Type & File Size Columns */}
                   {isExpanded && (
                     <div className="space-y-1 bg-background/40 p-1">
                       {groupFiles.map((file) => {
@@ -438,7 +426,6 @@ export function FilesContextPanel({
                             key={file.id}
                             className="flex justify-between items-center hover:bg-muted/50 px-2 py-1 rounded transition-colors"
                           >
-                            {/* Column 1: Filename & Checkbox */}
                             <div className="flex flex-1 items-center gap-1.5 min-w-0">
                               <input
                                 type="checkbox"
@@ -456,7 +443,6 @@ export function FilesContextPanel({
                               </span>
                             </div>
 
-                            {/* Column 2 & 3: File Type & File Size */}
                             <div className="flex items-center gap-1.5 ml-2 shrink-0">
                               <span className="bg-muted px-1.5 py-0.5 rounded text-[9px] text-muted-foreground">
                                 {file.language || 'unknown'}
@@ -481,7 +467,6 @@ export function FilesContextPanel({
 
   const bottomContent = (
     <div className="space-y-2 mt-2 w-full">
-      {/* Selected Files Context Preview & Meta */}
       <div className="space-y-3 bg-card p-4 border border-border rounded-lg w-full">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
@@ -492,7 +477,6 @@ export function FilesContextPanel({
           </div>
         </div>
 
-        {/* Row 1: Selected Context Summary */}
         <div className="gap-2 grid grid-cols-4 text-center">
           <div className="bg-orange-500/10 p-2 border border-orange-500/20 rounded">
             <span className="block text-[9px] text-orange-500 truncate uppercase">Selected</span>
@@ -515,7 +499,6 @@ export function FilesContextPanel({
       </div>
 
       <div className="bg-background pt-2 w-full">
-        {/* File Context Controls & Copy files ctx Button */}
         <FilesCtxExportPanel targetFilePaths={targetFilePaths} handleCopy={handleCopy} />
       </div>
     </div>

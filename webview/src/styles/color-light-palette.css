@@ -163,7 +163,7 @@
   --accent: var(--blue-0);
   --accent-foreground: var(--blue-8);
   --border: var(--gray-1);
-  --input: var(--gray-1);
+  --input: var(--white-0);
   --ring: var(--blue-5);
   --chart-1: var(--blue-5);
   --chart-2: var(--teal-4);
@@ -190,9 +190,6 @@
 
   --info: var(--blue-0);
   --info-foreground: var(--blue-7);
-
-  --user-bg: var(--blue-0);
-  --user-border: var(--blue-2);
 
   --radius: 0.625rem;
 }

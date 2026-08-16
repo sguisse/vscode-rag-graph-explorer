@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
 import { getPathsChangeImpacts } from '@/services/view/graph-view.service';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { CodebaseData } from '@/shared/services/graph-rag-explorer';
-import { initialCodebase } from '@/features/explorer/wksp-cnt-graph/components/graph/GraphData';
+import { useExplorerStore } from '../store/useExplorerStore';
 
 export interface UseImpactedPathsOptions {
   defaultCodebase?: CodebaseData;
@@ -14,27 +14,36 @@ export interface UseImpactedPathsOptions {
 
 export function useImpactedPaths(options: UseImpactedPathsOptions = {}) {
   const {
-    defaultCodebase = initialCodebase,
     onCodebaseChange,
     upstreamDepth = 2,
     downstreamDepth = 2,
   } = options;
 
-  const [currentPath, setCurrentPath] = useState('');
-  const [pathsList, setPathsList] = useState<string[]>(['']);
-  const [codebaseData, setCodebaseData] = useState<CodebaseData>(defaultCodebase);
-  const [paths, setPaths] = useState<string>('');
+  const currentPath = useExplorerStore((s) => s.currentPath);
+  const setCurrentPath = useExplorerStore((s) => s.setCurrentPath);
+  const pathsList = useExplorerStore((s) => s.pathsList);
+  const setPathsList = useExplorerStore((s) => s.setPathsList);
+  const codebaseData = useExplorerStore((s) => s.codebase);
+  const setCodebaseData = useExplorerStore((s) => s.setCodebase);
+  const paths = useExplorerStore((s) => s.paths);
+  const setPaths = useExplorerStore((s) => s.setPaths);
 
-  const [internalUpstreamDepth, setInternalUpstreamDepth] = useState<number>(upstreamDepth);
-  const [internalDownstreamDepth, setInternalDownstreamDepth] = useState<number>(downstreamDepth);
+  const internalUpstreamDepth = useExplorerStore((s) => s.upstreamDepth);
+  const setInternalUpstreamDepth = useExplorerStore((s) => s.setUpstreamDepth);
+  const internalDownstreamDepth = useExplorerStore((s) => s.downstreamDepth);
+  const setInternalDownstreamDepth = useExplorerStore((s) => s.setDownstreamDepth);
 
   useEffect(() => {
-    setInternalUpstreamDepth(upstreamDepth);
-  }, [upstreamDepth]);
+    if (upstreamDepth !== undefined && upstreamDepth !== internalUpstreamDepth) {
+      setInternalUpstreamDepth(upstreamDepth);
+    }
+  }, [upstreamDepth, internalUpstreamDepth, setInternalUpstreamDepth]);
 
   useEffect(() => {
-    setInternalDownstreamDepth(downstreamDepth);
-  }, [downstreamDepth]);
+    if (downstreamDepth !== undefined && downstreamDepth !== internalDownstreamDepth) {
+      setInternalDownstreamDepth(downstreamDepth);
+    }
+  }, [downstreamDepth, internalDownstreamDepth, setInternalDownstreamDepth]);
 
   const effectiveUpstreamDepth = upstreamDepth !== undefined ? upstreamDepth : internalUpstreamDepth;
   const effectiveDownstreamDepth = downstreamDepth !== undefined ? downstreamDepth : internalDownstreamDepth;
@@ -51,10 +60,13 @@ export function useImpactedPaths(options: UseImpactedPathsOptions = {}) {
     };
   }, [effectiveUpstreamDepth, effectiveDownstreamDepth]);
 
-  const updatePath = useCallback((newPath: string) => {
-    setCurrentPath(newPath);
-    setPathsList((prev) => (prev.includes(newPath) ? prev : [...prev, newPath]));
-  }, []);
+  const updatePath = useCallback(
+    (newPath: string) => {
+      setCurrentPath(newPath);
+      setPathsList((prev) => (prev.includes(newPath) ? prev : [...prev, newPath]));
+    },
+    [setCurrentPath, setPathsList]
+  );
 
   const fetchImpacts = useCallback(
     async (
@@ -73,7 +85,7 @@ export function useImpactedPaths(options: UseImpactedPathsOptions = {}) {
         }
       }
     },
-    [onCodebaseChange]
+    [onCodebaseChange, setCodebaseData]
   );
 
   const handlePathsChange = useCallback(
@@ -82,7 +94,7 @@ export function useImpactedPaths(options: UseImpactedPathsOptions = {}) {
       updatePath(newPaths);
       fetchImpacts(newPaths, depthRef.current.upstreamDepth, depthRef.current.downstreamDepth);
     },
-    [updatePath, fetchImpacts]
+    [setPaths, updatePath, fetchImpacts]
   );
 
   const appendOrReplacePath = useCallback(
@@ -102,7 +114,7 @@ export function useImpactedPaths(options: UseImpactedPathsOptions = {}) {
         return updated;
       });
     },
-    [updatePath, fetchImpacts]
+    [setPaths, updatePath, fetchImpacts]
   );
 
   const setUpstreamDepth = useCallback(
@@ -112,7 +124,7 @@ export function useImpactedPaths(options: UseImpactedPathsOptions = {}) {
         fetchImpacts(paths, val, depthRef.current.downstreamDepth);
       }
     },
-    [paths, fetchImpacts]
+    [paths, fetchImpacts, setInternalUpstreamDepth]
   );
 
   const setDownstreamDepth = useCallback(
@@ -122,7 +134,7 @@ export function useImpactedPaths(options: UseImpactedPathsOptions = {}) {
         fetchImpacts(paths, depthRef.current.upstreamDepth, val);
       }
     },
-    [paths, fetchImpacts]
+    [paths, fetchImpacts, setInternalDownstreamDepth]
   );
 
   const isFirstRender = useRef(true);

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 import {
   LlmProvider,
   IChatMessageDto,
@@ -135,27 +136,12 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
   const [isOpen, setIsOpen] = useState(defaultExpanded);
 
   return (
-    <div
-      style={{
-        border: '1px solid var(--border)',
-        borderRadius: '6px',
-        backgroundColor: 'var(--card)',
-        overflow: 'hidden',
-      }}
-    >
+    <Card className="bg-card border border-border rounded-md overflow-hidden">
       {/* Sub-Card Header */}
-      <div
+      <CardHeader
         onClick={() => setIsOpen(!isOpen)}
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '4px 8px',
-          backgroundColor: 'var(--secondary)',
-          cursor: 'pointer',
-          userSelect: 'none',
-          borderBottom: isOpen ? '1px solid var(--border)' : 'none',
-        }}
+        className="flex flex-row justify-between items-center space-y-0 bg-transparent p-1.5 px-2 cursor-pointer select-none"
+        style={{ borderBottom: isOpen ? '1px solid var(--border)' : 'none' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8em', fontWeight: 'bold' }}>
           <span style={{ fontSize: '0.8em' }}>{isOpen ? '▼' : '►'}</span>
@@ -177,24 +163,15 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
         </div>
 
         <CopyButton text={contentToCopy} title="Copy sub-block content" />
-      </div>
+      </CardHeader>
 
       {/* Sub-Card Body */}
       {isOpen && (
-        <div
-          style={{
-            padding: '8px 10px',
-            fontSize: '0.85em',
-            lineHeight: '1.4',
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
-            fontFamily: 'var(--font-mono)',
-          }}
-        >
+        <CardContent className="p-2 font-mono text-xs break-words leading-normal whitespace-pre-wrap">
           {children}
-        </div>
+        </CardContent>
       )}
-    </div>
+    </Card>
   );
 };
 
@@ -202,54 +179,37 @@ const UserMessageBlock: React.FC<{ msg: IChatMessageDto }> = ({ msg }) => {
   const [isBlockExpanded, setIsBlockExpanded] = useState(true);
   const { contextText, instructionText } = parseUserMessageContent(msg.content);
 
-  const userBg = 'var(--user-bg, var(--blue-0))';
-  const userBorder = 'var(--user-border, var(--blue-2))';
+  const userBg = 'color-mix(in srgb, var(--blue-1, #1e293b) 30%, var(--card))';
+  const userBorder = 'color-mix(in srgb, var(--blue-2, #38bdf8) 40%, var(--border))';
 
   return (
-    <div
+    <Card
+      className="flex flex-col self-end gap-1 shadow-sm border rounded-lg w-full max-w-[90%] overflow-hidden shrink-0"
       style={{
-        alignSelf: 'flex-end',
-        maxWidth: '90%',
-        width: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '6px',
         backgroundColor: userBg,
+        borderColor: userBorder,
         color: 'var(--foreground)',
-        padding: '8px 12px',
-        borderRadius: '8px',
-        border: `1px solid ${userBorder}`,
       }}
     >
-      {/* Sticky Header Bar */}
-      <div
+      {/* Sticky Header Bar matching Card Background */}
+      <CardHeader
         onClick={() => setIsBlockExpanded(!isBlockExpanded)}
+        className="top-0 z-10 sticky flex flex-row justify-between items-center space-y-0 p-2 px-3 cursor-pointer select-none"
         style={{
-          position: 'sticky',
-          top: 0,
           backgroundColor: userBg,
-          zIndex: 2,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          fontSize: '0.78em',
-          fontWeight: 'bold',
-          cursor: 'pointer',
-          userSelect: 'none',
-          paddingBottom: isBlockExpanded ? '4px' : '0px',
           borderBottom: isBlockExpanded ? `1px solid ${userBorder}` : 'none',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div className="flex items-center gap-1.5 font-bold text-xs">
           <span>{isBlockExpanded ? '▼' : '►'}</span>
           <span>👤 USER REQUEST</span>
         </div>
         <CopyButton text={msg.content} title="Copy entire user request" />
-      </div>
+      </CardHeader>
 
       {/* Expandable Content Body */}
       {isBlockExpanded && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+        <CardContent className="flex flex-col gap-1.5 p-2 px-3">
           {contextText && (
             <CollapsibleCard
               title="📄 Attached File Context"
@@ -268,24 +228,17 @@ const UserMessageBlock: React.FC<{ msg: IChatMessageDto }> = ({ msg }) => {
           >
             {instructionText}
           </CollapsibleCard>
-        </div>
+        </CardContent>
       )}
 
-      {/* Footer Metadata (ALWAYS visible even if block is collapsed) */}
-      <div
-        style={{
-          fontSize: '0.7em',
-          opacity: 0.75,
-          textAlign: 'right',
-          marginTop: '4px',
-          borderTop: isBlockExpanded ? '1px dashed var(--border)' : 'none',
-          paddingTop: '3px',
-          fontStyle: 'italic',
-        }}
+      {/* Footer Metadata */}
+      <CardFooter
+        className="justify-end opacity-75 p-1.5 px-3 text-[0.7em] font-italic"
+        style={{ borderTop: isBlockExpanded ? '1px dashed var(--border)' : 'none' }}
       >
         {formatDateTime(msg.timestamp)} | Context Files: {msg.fileCount ?? 0}
-      </div>
-    </div>
+      </CardFooter>
+    </Card>
   );
 };
 
@@ -295,75 +248,53 @@ const AssistantMessageBlock: React.FC<{
   fallbackModel: string;
 }> = ({ msg, fallbackProvider, fallbackModel }) => {
   const [isBlockExpanded, setIsBlockExpanded] = useState(true);
-  const bubbleBg = 'var(--card)';
-  const bubbleBorder = '1px solid var(--border)';
+
+  const assistantBg = 'color-mix(in srgb, var(--yellow-0, #451a03) 30%, var(--card))';
+  const assistantBorder = 'color-mix(in srgb, var(--yellow-1, #eab308) 40%, var(--border))';
 
   return (
-    <div
+    <Card
+      className="flex flex-col self-start gap-1 shadow-sm border rounded-lg w-full max-w-[85%] overflow-hidden shrink-0"
       style={{
-        alignSelf: 'flex-start',
-        backgroundColor: bubbleBg,
-        color: 'var(--card-foreground)',
-        padding: '8px 12px',
-        borderRadius: '8px',
-        maxWidth: '85%',
-        width: '100%',
-        whiteSpace: 'pre-wrap',
-        wordBreak: 'break-word',
-        position: 'relative',
-        border: bubbleBorder,
-        display: 'flex',
-        flexDirection: 'column',
+        backgroundColor: assistantBg,
+        borderColor: assistantBorder,
+        color: 'var(--foreground)',
       }}
     >
-      {/* Sticky Header Bar */}
-      <div
+      {/* Sticky Header Bar matching Card Background */}
+      <CardHeader
         onClick={() => setIsBlockExpanded(!isBlockExpanded)}
+        className="top-0 z-10 sticky flex flex-row justify-between items-center space-y-0 p-2 px-3 cursor-pointer select-none"
         style={{
-          position: 'sticky',
-          top: 0,
-          backgroundColor: bubbleBg,
-          zIndex: 2,
-          paddingBottom: isBlockExpanded ? '4px' : '0px',
-          marginBottom: isBlockExpanded ? '6px' : '0px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          fontSize: '0.78em',
-          fontWeight: 'bold',
-          cursor: 'pointer',
-          userSelect: 'none',
-          borderBottom: isBlockExpanded ? '1px dotted var(--border)' : 'none',
+          backgroundColor: assistantBg,
+          borderBottom: isBlockExpanded ? `1px solid ${assistantBorder}` : 'none',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div className="flex items-center gap-1.5 font-bold text-xs">
           <span>{isBlockExpanded ? '▼' : '►'}</span>
           <span>🤖 {(msg.provider || fallbackProvider).toUpperCase()} ({msg.model || fallbackModel})</span>
         </div>
         <CopyButton text={msg.content} title="Copy assistant response" />
-      </div>
+      </CardHeader>
 
       {/* Content Body */}
-      {isBlockExpanded && <div>{msg.content}</div>}
+      {isBlockExpanded && (
+        <CardContent className="p-2 px-3 font-sans text-xs break-words leading-normal whitespace-pre-wrap">
+          {msg.content}
+        </CardContent>
+      )}
 
-      {/* Footer Metadata (ALWAYS visible even if block is collapsed) */}
+      {/* Footer Metadata */}
       {(msg.promptTokens !== undefined || msg.executionTimeMs !== undefined) && (
-        <div
-          style={{
-            fontSize: '0.7em',
-            opacity: 0.65,
-            textAlign: 'right',
-            marginTop: '6px',
-            borderTop: isBlockExpanded ? '1px dashed var(--border)' : 'none',
-            paddingTop: '3px',
-            fontStyle: 'italic',
-          }}
+        <CardFooter
+          className="justify-end opacity-75 p-1.5 px-3 text-[0.7em] font-italic"
+          style={{ borderTop: isBlockExpanded ? '1px dashed var(--border)' : 'none' }}
         >
           In: {formatTokenCount(msg.promptTokens)} tokens | Out: {formatTokenCount(msg.completionTokens)} tokens | Time:{' '}
           {formatExecutionTime(msg.executionTimeMs)}
-        </div>
+        </CardFooter>
       )}
-    </div>
+    </Card>
   );
 };
 
@@ -382,10 +313,16 @@ export const LLMExplorerChat: React.FC = () => {
   const [filePathInput, setFilePathInput] = useState<string>('');
   const [isReadingFile, setIsReadingFile] = useState<boolean>(false);
 
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     logInfo('Provider selection updated. Fetching models...', { provider });
     loadModels(provider);
   }, [provider]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const loadModels = async (prov: LlmProvider) => {
     try {
@@ -530,14 +467,42 @@ export const LLMExplorerChat: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', height: '100%', gap: '12px', fontFamily: 'var(--font-sans)', color: 'var(--foreground)', backgroundColor: 'var(--background)' }}>
+    <div
+      style={{
+        padding: '16px',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        minHeight: 0,
+        overflow: 'hidden',
+        gap: '12px',
+        fontFamily: 'var(--font-sans)',
+        color: 'var(--foreground)',
+        backgroundColor: 'var(--background)',
+      }}
+    >
       {/* Header controls */}
-      <header style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
+      <header
+        style={{
+          display: 'flex',
+          gap: '8px',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          borderBottom: '1px solid var(--border)',
+          paddingBottom: '8px',
+        }}
+      >
         <label style={{ fontWeight: 'bold' }}>Provider:</label>
         <select
           value={provider}
           onChange={(e) => setProvider(e.target.value as LlmProvider)}
-          style={{ background: 'var(--input)', color: 'var(--foreground)', border: '1px solid var(--border)', padding: '4px 8px', borderRadius: '4px' }}
+          style={{
+            background: 'var(--input)',
+            color: 'var(--foreground)',
+            border: '1px solid var(--border)',
+            padding: '4px 8px',
+            borderRadius: '4px',
+          }}
         >
           <option value={LlmProvider.OLLAMA}>🦙 Ollama</option>
           <option value={LlmProvider.GEMINI}>♊ Gemini</option>
@@ -548,7 +513,13 @@ export const LLMExplorerChat: React.FC = () => {
         <select
           value={selectedModel}
           onChange={(e) => setSelectedModel(e.target.value)}
-          style={{ background: 'var(--input)', color: 'var(--foreground)', border: '1px solid var(--border)', padding: '4px 8px', borderRadius: '4px' }}
+          style={{
+            background: 'var(--input)',
+            color: 'var(--foreground)',
+            border: '1px solid var(--border)',
+            padding: '4px 8px',
+            borderRadius: '4px',
+          }}
         >
           {models.map((m) => (
             <option key={m.id} value={m.id}>
@@ -569,8 +540,18 @@ export const LLMExplorerChat: React.FC = () => {
         />
       </header>
 
-      {/* Message history */}
-      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '4px' }}>
+      {/* Scrollable Message history */}
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+          paddingRight: '4px',
+        }}
+      >
         {messages.length === 0 ? (
           <div style={{ opacity: 0.6, fontStyle: 'italic', textAlign: 'center', marginTop: '32px' }}>
             No conversation started. Attach files as context and type your instruction below.
@@ -589,11 +570,19 @@ export const LLMExplorerChat: React.FC = () => {
             )
           )
         )}
+        <div ref={messagesEndRef} />
       </div>
 
-      {/* Footer controls: File Context Bar & Prompt Input */}
-      <footer style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border)', paddingTop: '8px' }}>
-        {/* Attached file context chips */}
+      {/* Footer controls */}
+      <footer
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          borderTop: '1px solid var(--border)',
+          paddingTop: '8px',
+        }}
+      >
         {attachedFiles.length > 0 && (
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
             <span style={{ fontSize: '0.8em', fontWeight: 'bold', opacity: 0.8 }}>Context Files:</span>
@@ -632,7 +621,6 @@ export const LLMExplorerChat: React.FC = () => {
           </div>
         )}
 
-        {/* Input to attach new file path context */}
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <input
             type="text"
@@ -672,7 +660,6 @@ export const LLMExplorerChat: React.FC = () => {
           </button>
         </div>
 
-        {/* Instruction Prompt & Send Button */}
         <div style={{ display: 'flex', gap: '8px' }}>
           <textarea
             value={inputPrompt}
