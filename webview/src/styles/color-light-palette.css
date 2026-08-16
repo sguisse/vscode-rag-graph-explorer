@@ -162,8 +162,8 @@
   --muted-foreground: var(--gray-6);
   --accent: var(--blue-0);
   --accent-foreground: var(--blue-8);
-  --border: var(--gray-1);
-  --input: var(--white-0);
+  --border: var(--gray-3);
+  --input: var(--gray-3);
   --ring: var(--blue-5);
   --chart-1: var(--blue-5);
   --chart-2: var(--teal-4);
