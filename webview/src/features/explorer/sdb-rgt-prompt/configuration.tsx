@@ -4,16 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { useAppContextStore } from '@/store/useAppContextStore';
-import { useGraphRagExplorerStore } from './graph-rag-explorer-store';
+import { useConfiguration } from './use-configuration';
 
 export function ConfigurationPanel() {
-  const setNotification = useAppContextStore((s) => s.setNotification);
-  const { config, updateConfig } = useGraphRagExplorerStore();
-
-  const handleSaveConfig = () => {
-    setNotification(`✅ Configuration saved to local backend JSON: ${config.backendConfigPath}`);
-  };
+  const { config, updateConfig, handleSaveConfig } = useConfiguration();
 
   return (
     <div className="space-y-3 font-mono text-xs animate-in duration-200 fade-in">

@@ -12,12 +12,9 @@ import {
   GRAPH_LAYOUT_LIST,
   GRAPH_LAYOUT_ICON_MAP
 } from '@/shared/services/graph-rag-explorer/domain/model/types';
-import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
-import { vscodeSettings } from '@/App';
+import { useGraphPanelHeader } from './use-graph-panel-header';
 
-export interface GraphPanelHeaderLeftProps {
-
-}
+export interface GraphPanelHeaderLeftProps {}
 
 export const GraphPanelHeaderLeft: React.FC<GraphPanelHeaderLeftProps> = () => (
   <div className="flex items-center gap-2">
@@ -50,9 +47,7 @@ export const GraphPanelHeaderCenter: React.FC<GraphPanelHeaderCenterProps> = ({
   currentLayout,
   setCurrentLayout,
 }) => {
-  const displayNeo4jHandler = () => {
-    vsCodeApiService.openUrl(vscodeSettings.graphRagExplorer.neo4j.url, true);
-  };
+  const { displayNeo4jHandler } = useGraphPanelHeader();
 
   return (
     <div className="flex items-center gap-3">
@@ -153,71 +148,72 @@ export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
   setMethodsVisible,
   showSelectedOnly,
   setShowSelectedOnly,
-}) => (
-  <div className="flex items-center gap-1">
-    <ToggleButton
-      id="btn-toggle-show-selected-only"
-      isSelected={showSelectedOnly}
-      onToggle={() => setShowSelectedOnly(!showSelectedOnly)}
-      tooltipText="Display Only Selected & Connected Items"
-      icon={<Target size={12} />}
-    />
-    <ToggleButton
-      id="btn-toggle-attributes-visibility"
-      isSelected={attributesVisible}
-      onToggle={() => setAttributesVisible(!attributesVisible)}
-      tooltipText="Toggle Attributes Visibility"
-      icon={<Code2 size={12} />}
-    />
-    <ToggleButton
-      id="btn-toggle-methods-visibility"
-      isSelected={methodsVisible}
-      onToggle={() => setMethodsVisible(!methodsVisible)}
-      tooltipText="Toggle Methods Visibility"
-      icon={<SquareFunction size={12} />}
-    />
+}) => {
+  const { handleZoomIn, handleZoomOut, handleFitView } = useGraphPanelHeader(cyRef);
 
-    <ToolbarSeparator />
+  return (
+    <div className="flex items-center gap-1">
+      <ToggleButton
+        id="btn-toggle-show-selected-only"
+        isSelected={showSelectedOnly}
+        onToggle={() => setShowSelectedOnly(!showSelectedOnly)}
+        tooltipText="Display Only Selected & Connected Items"
+        icon={<Target size={12} />}
+      />
+      <ToggleButton
+        id="btn-toggle-attributes-visibility"
+        isSelected={attributesVisible}
+        onToggle={() => setAttributesVisible(!attributesVisible)}
+        tooltipText="Toggle Attributes Visibility"
+        icon={<Code2 size={12} />}
+      />
+      <ToggleButton
+        id="btn-toggle-methods-visibility"
+        isSelected={methodsVisible}
+        onToggle={() => setMethodsVisible(!methodsVisible)}
+        tooltipText="Toggle Methods Visibility"
+        icon={<SquareFunction size={12} />}
+      />
 
-    <ToggleButton
-      id="btn-toggle-grid"
-      isSelected={showGrid}
-      onToggle={() => setShowGrid(!showGrid)}
-      tooltipText="Toggle Grid"
-      icon={<Grid size={12} />}
-    />
+      <ToolbarSeparator />
 
-    <ToolbarSeparator />
+      <ToggleButton
+        id="btn-toggle-grid"
+        isSelected={showGrid}
+        onToggle={() => setShowGrid(!showGrid)}
+        tooltipText="Toggle Grid"
+        icon={<Grid size={12} />}
+      />
 
-    <Button
-      id="btn-graph-zoom-in"
-      variant="ghost"
-      size="icon"
-      className="w-5 h-5 text-muted-foreground"
-      onClick={() => cyRef.current?.zoom((cyRef.current?.zoom() || 1) * 1.2)}
-    >
-      <Plus size={12} />
-    </Button>
-    <Button
-      id="btn-graph-zoom-out"
-      variant="ghost"
-      size="icon"
-      className="w-5 h-5 text-muted-foreground"
-      onClick={() => cyRef.current?.zoom((cyRef.current?.zoom() || 1) / 1.2)}
-    >
-      <Minus size={12} />
-    </Button>
-    <Button
-      id="btn-graph-fit-view"
-      variant="ghost"
-      size="icon"
-      className="w-5 h-5 text-muted-foreground"
-      onClick={() => {
-        cyRef.current?.fit(undefined, 40);
-        cyRef.current?.center();
-      }}
-    >
-      <Focus size={12} />
-    </Button>
-  </div>
-);
+      <ToolbarSeparator />
+
+      <Button
+        id="btn-graph-zoom-in"
+        variant="ghost"
+        size="icon"
+        className="w-5 h-5 text-muted-foreground"
+        onClick={handleZoomIn}
+      >
+        <Plus size={12} />
+      </Button>
+      <Button
+        id="btn-graph-zoom-out"
+        variant="ghost"
+        size="icon"
+        className="w-5 h-5 text-muted-foreground"
+        onClick={handleZoomOut}
+      >
+        <Minus size={12} />
+      </Button>
+      <Button
+        id="btn-graph-fit-view"
+        variant="ghost"
+        size="icon"
+        className="w-5 h-5 text-muted-foreground"
+        onClick={handleFitView}
+      >
+        <Focus size={12} />
+      </Button>
+    </div>
+  );
+};

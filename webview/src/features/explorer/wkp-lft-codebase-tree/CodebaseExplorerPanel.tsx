@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { ChevronDown, ChevronRight, Folder, FileCode, Database, Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ImportAstDialog } from './import-ast-dialog';
@@ -8,7 +8,8 @@ import {
   CodebaseData,
   SelectedEntity
 } from '@/shared/services/graph-rag-explorer';
-import { FOLDER_KEYS_REGISTERED_CONFIG, FOLDER_THEME_REGISTRY_CONFIG } from '../constants/graph.constants';
+import { FOLDER_THEME_REGISTRY_CONFIG } from '../constants/graph.constants';
+import { useCodebaseExplorerPanel } from './use-codebase-explorer-panel';
 
 interface TriStateCheckboxProps {
   checked: boolean;
@@ -62,21 +63,13 @@ export function CodebaseExplorerPanel({
   onFocusNode,
   onImportCodebase
 }: CodebaseExplorerPanelProps) {
-  const [isImportOpen, setIsImportOpen] = useState(false);
-
-  const handleExportCodebase = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(codebase, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", "codebase-ast.json");
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-  };
-
-  const registeredFolders = [...FOLDER_KEYS_REGISTERED_CONFIG];
-  const hasOtherFiles = codebase.files.some((f: CodebaseFile) => !registeredFolders.some(rf => f.path.startsWith(rf)));
-  const allFolderKeys = hasOtherFiles ? [...registeredFolders, 'other'] : registeredFolders;
+  const {
+    isImportOpen,
+    setIsImportOpen,
+    handleExportCodebase,
+    registeredFolders,
+    allFolderKeys,
+  } = useCodebaseExplorerPanel(codebase);
 
   return (
     <div id="panel-codebase-explorer" className="flex flex-col bg-card h-full">
@@ -115,12 +108,12 @@ export function CodebaseExplorerPanel({
       />
 
       <div id="tree-codebase-files" className="flex-1 p-4 overflow-y-auto font-mono text-xs">
-        {allFolderKeys.map(folder => {
+        {allFolderKeys.map((folder) => {
           const theme = FOLDER_THEME_REGISTRY_CONFIG[folder] || FOLDER_THEME_REGISTRY_CONFIG.default;
           const isRegistered = registeredFolders.includes(folder as any);
           const folderFiles = (isRegistered
             ? codebase.files.filter((f: CodebaseFile) => f.path.startsWith(folder))
-            : codebase.files.filter((f: CodebaseFile) => !registeredFolders.some(rf => f.path.startsWith(rf)))
+            : codebase.files.filter((f: CodebaseFile) => !registeredFolders.some((rf) => f.path.startsWith(rf)))
           ).sort((a: CodebaseFile, b: CodebaseFile) =>
             a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
           );
@@ -182,7 +175,6 @@ export function CodebaseExplorerPanel({
         })}
       </div>
 
-      {/* Bottom Panel */}
       <div id="panel-codebase-explorer-bottom" className="bg-muted/20 p-3 border-border border-t">
         <div>
           <h3 className="flex items-center gap-2 font-mono font-bold text-muted-foreground text-xs uppercase tracking-wider">

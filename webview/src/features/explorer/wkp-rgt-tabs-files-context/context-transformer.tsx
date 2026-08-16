@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React from 'react';
 import {
   ShieldCheck,
   Plus,
@@ -12,51 +12,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { CodebaseData, CodebaseFile } from '@/shared/services/graph-rag-explorer';
-
-export interface AnonymizationRule {
-  id: string;
-  name: string;
-  pattern: string;
-  replacement: string;
-  inversePattern: string;
-  enabled: boolean;
-}
-
-const DEFAULT_ANONYMIZATION_RULES: AnonymizationRule[] = [
-  {
-    id: 'rule-secrets',
-    name: 'Secret & Password Tokens',
-    pattern: '(?i)(password|secret|key|token)\\s*[:=]\\s*[\'"][^\'"]+[\'"]',
-    replacement: '$1: "ANONYMIZED_SECRET"',
-    inversePattern: 'ANONYMIZED_SECRET',
-    enabled: true
-  },
-  {
-    id: 'rule-db-uri',
-    name: 'Database JDBC/Connection URIs',
-    pattern: 'jdbc:[a-z0-9]+://[^:\\s]+:[0-9]+/[a-zA-Z0-9_]+',
-    replacement: 'jdbc:provider://anonymized-host:5432/anon_db',
-    inversePattern: 'jdbc:provider://anonymized-host:5432/anon_db',
-    enabled: true
-  },
-  {
-    id: 'rule-ip',
-    name: 'IPv4 Addresses',
-    pattern: '\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b',
-    replacement: '127.0.0.1',
-    inversePattern: '127.0.0.1',
-    enabled: true
-  },
-  {
-    id: 'rule-db-user',
-    name: 'Database Usernames',
-    pattern: 'db_admin_prod',
-    replacement: 'db_user_anon',
-    inversePattern: 'db_user_anon',
-    enabled: true
-  }
-];
+import { CodebaseData } from '@/shared/services/graph-rag-explorer';
+import { useContextTransformer } from './use-context-transformer';
 
 interface ContextTransformerPanelProps {
   initialCodebase: CodebaseData;
@@ -67,119 +24,30 @@ export function ContextTransformerPanel({
   initialCodebase,
   handleCopy
 }: ContextTransformerPanelProps) {
-  const [rules, setRules] = useState<AnonymizationRule[]>(DEFAULT_ANONYMIZATION_RULES);
-  const [newRuleName, setNewRuleName] = useState('');
-  const [newRulePattern, setNewRulePattern] = useState('');
-  const [newRuleReplacement, setNewRuleReplacement] = useState('');
-  const [newRuleInverse, setNewRuleInverse] = useState('');
-
-  const [llmResponseInput, setLlmResponseInput] = useState('');
-  const [anonymizedResult, setAnonymizedResult] = useState<string>('');
-  const [deanonymizedResult, setDeanonymizedResult] = useState<string>('');
-  const [substitutionMap, setSubstitutionMap] = useState<Record<string, string>>({});
-
-  const rawUnifiedContext = useMemo(() => {
-    if (!initialCodebase?.files) return '';
-    return initialCodebase.files
-      .map((file: CodebaseFile) => {
-        let block = `/// --- BEGIN FILE: ${file.path} (${file.language}) ---\n`;
-        if (file.configProperties && file.configProperties.length > 0) {
-          file.configProperties.forEach((p) => {
-            block += `${p.key}=${p.value}\n`;
-          });
-        }
-        if (file.attributes && file.attributes.length > 0) {
-          file.attributes.forEach((a) => {
-            block += `property ${a.visibility} ${a.name};\n`;
-          });
-        }
-        if (file.methods && file.methods.length > 0) {
-          file.methods.forEach((m) => {
-            block += `function ${m.name} { // ${m.description} }\n`;
-          });
-        }
-        block += `/// --- END FILE: ${file.path} ---\n`;
-        return block;
-      })
-      .join('\n');
-  }, [initialCodebase]);
-
-  const toggleRule = useCallback((id: string) => {
-    setRules((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, enabled: !r.enabled } : r))
-    );
-  }, []);
-
-  const handleAddRule = useCallback(() => {
-    if (!newRulePattern || !newRuleReplacement) return;
-    const rule: AnonymizationRule = {
-      id: `rule-${Date.now()}`,
-      name: newRuleName || 'Custom Regex Rule',
-      pattern: newRulePattern,
-      replacement: newRuleReplacement,
-      inversePattern: newRuleInverse || newRuleReplacement,
-      enabled: true
-    };
-    setRules((prev) => [...prev, rule]);
-    setNewRuleName('');
-    setNewRulePattern('');
-    setNewRuleReplacement('');
-    setNewRuleInverse('');
-  }, [newRuleName, newRulePattern, newRuleReplacement, newRuleInverse]);
-
-  const handleDeleteRule = useCallback((id: string) => {
-    setRules((prev) => prev.filter((r) => r.id !== id));
-  }, []);
-
-  const handleAnonymize = useCallback(() => {
-    let transformed = rawUnifiedContext;
-    const newSubMap: Record<string, string> = {};
-
-    rules.filter((r) => r.enabled).forEach((rule) => {
-      try {
-        const regex = new RegExp(rule.pattern, 'g');
-        const matches = rawUnifiedContext.match(regex);
-        if (matches) {
-          matches.forEach((original) => {
-            const replaced = original.replace(regex, rule.replacement);
-            newSubMap[replaced] = original;
-          });
-        }
-        transformed = transformed.replace(regex, rule.replacement);
-      } catch (err) {
-        console.error(`Regex error in rule ${rule.name}:`, err);
-      }
-    });
-
-    setAnonymizedResult(transformed);
-    setSubstitutionMap(newSubMap);
-  }, [rawUnifiedContext, rules]);
-
-  const handleDeanonymize = useCallback(() => {
-    if (!llmResponseInput) return;
-    let restored = llmResponseInput;
-
-    Object.entries(substitutionMap).forEach(([anonymized, original]) => {
-      restored = restored.split(anonymized).join(original);
-    });
-
-    rules.filter((r) => r.enabled && r.inversePattern).forEach((rule) => {
-      try {
-        const regex = new RegExp(rule.inversePattern, 'g');
-        restored = restored.replace(regex, (match) => {
-          return substitutionMap[match] || match;
-        });
-      } catch (err) {
-        console.error(`Inverse regex error in rule ${rule.name}:`, err);
-      }
-    });
-
-    setDeanonymizedResult(restored);
-  }, [llmResponseInput, substitutionMap, rules]);
+  const {
+    rules,
+    newRuleName,
+    setNewRuleName,
+    newRulePattern,
+    setNewRulePattern,
+    newRuleReplacement,
+    setNewRuleReplacement,
+    newRuleInverse,
+    setNewRuleInverse,
+    llmResponseInput,
+    setLlmResponseInput,
+    anonymizedResult,
+    deanonymizedResult,
+    substitutionMap,
+    toggleRule,
+    handleAddRule,
+    handleDeleteRule,
+    handleAnonymize,
+    handleDeanonymize,
+  } = useContextTransformer(initialCodebase);
 
   return (
     <div className="space-y-4 animate-in duration-200 fade-in font-mono text-xs">
-      {/* Header */}
       <div className="bg-primary/5 p-3.5 border border-primary/20 rounded-lg">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-5 h-5 text-primary shrink-0" />
@@ -192,7 +60,6 @@ export function ContextTransformerPanel({
         </div>
       </div>
 
-      {/* Tanstack Table Config Rules */}
       <div className="space-y-2.5 bg-card p-3 border border-border rounded-lg">
         <div className="flex justify-between items-center">
           <span className="flex items-center gap-1.5 font-bold text-foreground text-xs uppercase">
@@ -246,7 +113,6 @@ export function ContextTransformerPanel({
           </table>
         </div>
 
-        {/* Add New Rule */}
         <div className="p-2.5 bg-muted/20 border border-border/50 rounded-md space-y-2">
           <span className="block font-bold text-[10px] text-muted-foreground uppercase">Add Custom Regex Rule</span>
           <div className="grid grid-cols-2 gap-2">
@@ -288,7 +154,6 @@ export function ContextTransformerPanel({
         </div>
       </div>
 
-      {/* Step 1: Anonymize */}
       <div className="space-y-3 bg-card p-3 border border-border rounded-lg">
         <div className="flex justify-between items-center">
           <span className="flex items-center gap-1.5 font-bold text-foreground text-xs uppercase">
@@ -327,7 +192,6 @@ export function ContextTransformerPanel({
         )}
       </div>
 
-      {/* Step 2: De-anonymize */}
       <div className="space-y-3 bg-card p-3 border border-border rounded-lg">
         <div className="flex justify-between items-center">
           <span className="flex items-center gap-1.5 font-bold text-foreground text-xs uppercase">

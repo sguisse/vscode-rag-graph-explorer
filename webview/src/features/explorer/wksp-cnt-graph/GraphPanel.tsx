@@ -1,8 +1,9 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Info } from 'lucide-react';
 import { FolderNode, UmlClassNode, ConfigNode, UmlClassNodeData } from './components/graph/GraphUmlShapes';
 import { SelectedEntity, CodebaseFile } from '@/shared/services/graph-rag-explorer';
 import { isMemberKeyForFileToken, extractMemberIdFromKeyToken } from '@/services/view/graph-view.service';
+import { useGraphPanel } from './use-graph-panel';
 
 interface GraphPanelProps {
   folderPositions: Record<string, { label: string }>;
@@ -39,29 +40,17 @@ export function GraphPanel({
   methodsVisible,
   showSelectedOnly = false
 }: GraphPanelProps) {
-  const effectiveFolderPositions = useMemo(() => {
-    const folderMap: Record<string, { label: string }> = { ...folderPositions };
-
-    Object.keys(graphState.nodePositions).forEach((nodeKey) => {
-      if (nodeKey.startsWith('folder__')) {
-        const folderKey = nodeKey.replace('folder__', '');
-        if (!folderMap[folderKey]) {
-          folderMap[folderKey] = {
-            label: `📂 ${folderKey.charAt(0).toUpperCase() + folderKey.slice(1)}`
-          };
-        }
-      }
-    });
-
-    return folderMap;
-  }, [folderPositions, graphState.nodePositions]);
-
-  const effectiveSearchFilteredFiles = useMemo(() => {
-    if (showSelectedOnly && selectedEntity) {
-      return searchFilteredFiles.filter(f => f.id === selectedEntity.nodeId || impactedSet.has(f.id));
-    }
-    return searchFilteredFiles;
-  }, [searchFilteredFiles, showSelectedOnly, selectedEntity, impactedSet]);
+  const {
+    effectiveFolderPositions,
+    effectiveSearchFilteredFiles,
+  } = useGraphPanel(
+    folderPositions,
+    graphState.nodePositions,
+    showSelectedOnly,
+    selectedEntity,
+    searchFilteredFiles,
+    impactedSet
+  );
 
   return (
     <div className="absolute inset-0 outline-none w-full h-full overflow-hidden">

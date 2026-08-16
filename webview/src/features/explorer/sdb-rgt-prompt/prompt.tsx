@@ -1,98 +1,32 @@
-import React, { useState } from 'react';
-import { Copy, Bot, User, Sparkles, RefreshCw } from 'lucide-react';
+import React from 'react';
+import { Copy, Bot, User, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
-import { useAppContextStore } from '@/store/useAppContextStore';
-import { useGraphRagExplorerStore } from './graph-rag-explorer-store';
 import PREDEFINED_PROMPTS from './data/predefined-prompts.yaml';
 import TEMPLATE_PROMPTS from './data/template-prompts.yaml';
 import { AGENTS_LIST } from './data/data-constants';
-import { logInfo } from '@/services/view/log-view.service.wrapper';
-import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { FilesCtxExportPanel } from '../components/files-ctx-export/files-ctx-export-panel';
+import { usePrompt } from './use-prompt';
 
 interface PromptPanelProps {
   handleCopy?: (text: string, message: string) => void;
 }
 
 export function PromptPanel({ handleCopy }: PromptPanelProps) {
-  const setNotification = useAppContextStore((s) => s.setNotification);
-  const { promptFields, config, updatePromptFields, getFullPrompt, resetPromptFields } = useGraphRagExplorerStore();
-
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(
-    TEMPLATE_PROMPTS[0]?.id || ''
-  );
-
-  const notify = (msg: string) => {
-    if (handleCopy) {
-      handleCopy('', msg);
-    } else {
-      setNotification(msg);
-    }
-  };
-
-  const handlePredefinedChange = (presetId: string) => {
-    const found = PREDEFINED_PROMPTS.find((p: any) => p.id === presetId);
-    if (found) {
-      updatePromptFields({
-        ...found.data,
-        mode: found.data.mode as 'role' | 'agent',
-        predefined: presetId,
-      });
-      notify(`Loaded predefined template: ${found.name}`);
-    } else {
-      updatePromptFields({ predefined: presetId });
-    }
-  };
-
-  const handleCopyPrompt = async () => {
-    const templateItem = TEMPLATE_PROMPTS.find((t: any) => t.id === selectedTemplateId);
-    let fullPrompt = '';
-
-    if (templateItem && templateItem.data) {
-      const roleHeader =
-        promptFields.mode === 'agent'
-          ? `[AGENT]: ${promptFields.selectedAgent} (${promptFields.roleOrAgent})`
-          : `${promptFields.roleOrAgent}`;
-
-      const replacements: Record<string, string> = {
-        '{{ ROLE_AGENT }}': roleHeader,
-        '{{ TONE }}': promptFields.tone || '',
-        '{{ GLOBAL_CONTEXT_SCOPE }}': config.systemPromptPrefix || '',
-        '{{ TASK_CONTEXT_SCOPE }}': promptFields.context || '',
-        '{{ EXPECTED_DELIVERABLES }}': promptFields.expected || '',
-        '{{ OUTPUT_FORMAT_CONSTRAINTS }}': promptFields.output || '',
-        '{{ REFERENCE_SAMPLES }}': promptFields.samples || '',
-      };
-
-      fullPrompt = templateItem.data;
-      Object.entries(replacements).forEach(([key, value]) => {
-        fullPrompt = fullPrompt.replaceAll(key, value);
-      });
-    } else {
-      fullPrompt = getFullPrompt();
-    }
-
-    logInfo(`Full prompt generated: ${fullPrompt}`);
-
-    try {
-      await vsCodeApiService.copyToClipboard(fullPrompt);
-      setNotification('✅ Full prompt copied to clipboard!');
-    } catch {
-      setNotification('❌ Failed to copy prompt to clipboard');
-    }
-  };
-
-  const handleInsertAgent = () => {
-    updatePromptFields({ roleOrAgent: `${promptFields.selectedAgent}: ${promptFields.roleOrAgent}` });
-    notify(`Inserted agent ${promptFields.selectedAgent} into field!`);
-  };
+  const {
+    promptFields,
+    updatePromptFields,
+    selectedTemplateId,
+    setSelectedTemplateId,
+    handlePredefinedChange,
+    handleCopyPrompt,
+    handleInsertAgent,
+  } = usePrompt(handleCopy);
 
   const topContent = (
     <div className="space-y-2 bg-muted/20 p-2.5 border border-border rounded-lg w-full">
-      {/* Predefined Presets Selector */}
       <div className="space-y-1 w-full">
         <label className="block font-bold text-[10px] text-muted-foreground uppercase">
           Predefined :
@@ -119,7 +53,6 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
 
   const middleContent = (
     <div className="space-y-3 py-2 pr-1 w-full font-mono text-xs">
-      {/* Role / Agent Toggle & Field */}
       <div className="space-y-2 bg-card p-2.5 border border-border rounded-lg">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -190,7 +123,6 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
         />
       </div>
 
-      {/* Tone Field */}
       <div className="space-y-1">
         <label className="block font-bold text-[10px] text-muted-foreground uppercase">🗣 tone :</label>
         <Textarea
@@ -201,7 +133,6 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
         />
       </div>
 
-      {/* Context Field */}
       <div className="space-y-1">
         <label className="block font-bold text-[10px] text-muted-foreground uppercase">🧠 context :</label>
         <Textarea
@@ -212,7 +143,6 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
         />
       </div>
 
-      {/* Expected Field */}
       <div className="space-y-1">
         <label className="block font-bold text-[10px] text-muted-foreground uppercase">🎯 Expected :</label>
         <Textarea
@@ -223,7 +153,6 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
         />
       </div>
 
-      {/* Output Field */}
       <div className="space-y-1">
         <label className="block font-bold text-[10px] text-muted-foreground uppercase">🧭 Output :</label>
         <Textarea
@@ -234,7 +163,6 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
         />
       </div>
 
-      {/* Samples Field */}
       <div className="space-y-1">
         <label className="block font-bold text-[10px] text-muted-foreground uppercase">💡 Samples :</label>
         <Textarea
@@ -249,8 +177,6 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
 
   const bottomContent = (
     <div className="space-y-2 bg-background pt-2 border-border border-t w-full">
-
-      {/* Box 2: Template Dropdown & Copy Prompt Button */}
       <div className="flex items-center gap-3 bg-card p-2.5 border border-border rounded-lg w-full">
         <div className="flex-1 space-y-1 min-w-0">
           <label className="block font-bold text-[10px] text-muted-foreground uppercase">
@@ -273,7 +199,6 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
           </Select>
         </div>
 
-        {/* Copy prompt Button */}
         <Button
           onClick={handleCopyPrompt}
           className="flex justify-center items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 shadow-sm mt-4 rounded-lg w-36 h-8 font-bold text-white text-xs whitespace-nowrap cursor-pointer shrink-0"
@@ -282,9 +207,7 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
         </Button>
       </div>
 
-      {/* Box 1: File Context Controls & Copy files ctx Button */}
       <FilesCtxExportPanel handleCopy={handleCopy} />
-
     </div>
   );
 

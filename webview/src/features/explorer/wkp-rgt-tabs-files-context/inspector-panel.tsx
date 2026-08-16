@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   FileCode,
   ShieldAlert,
@@ -14,15 +14,15 @@ import {
   Boxes,
   Box
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   CodebaseData,
-  CodebaseFile,
   SelectedEntity,
   CodebaseMethod,
   CodebaseAttribute,
   ConfigProperty,
 } from '@/shared/services/graph-rag-explorer';
+import { useInspectorPanel } from './use-inspector-panel';
 
 interface InspectorPanelProps {
   selectedEntity: SelectedEntity | null;
@@ -35,14 +35,19 @@ interface InspectorPanelProps {
   handleCopy?: (text: string, message: string) => void;
 }
 
-const VISIBILITY_ORDER = ['public', 'protected', 'package', 'private'];
-
 export function InspectorPanel({
   selectedEntity,
   initialCodebase,
 }: InspectorPanelProps) {
+  const {
+    currentFile,
+    selectedMethod,
+    selectedProp,
+    groupedAttributes,
+    sortedVisibilities,
+  } = useInspectorPanel(selectedEntity, initialCodebase);
 
-  if (!selectedEntity) {
+  if (!selectedEntity || !currentFile) {
     return (
       <div className="py-8 text-muted-foreground text-center">
         <ShieldAlert size={32} className="opacity-40 mx-auto mb-2 text-muted-foreground" />
@@ -53,9 +58,6 @@ export function InspectorPanel({
       </div>
     );
   }
-
-  const currentFile = initialCodebase.files.find((f: CodebaseFile) => f.id === selectedEntity.nodeId);
-  if (!currentFile) return null;
 
   const renderTypeIcon = (type: string) => {
     switch (type) {
@@ -68,41 +70,8 @@ export function InspectorPanel({
     }
   };
 
-  const selectedMethod = selectedEntity.type === 'member'
-    ? currentFile.methods?.find((m: CodebaseMethod) => m.id === selectedEntity.memberId)
-    : null;
-
-  const selectedProp = selectedEntity.type === 'member'
-    ? currentFile.configProperties?.find((p: ConfigProperty) => p.key === selectedEntity.memberId)
-    : null;
-
-  // Group attributes by visibility (public, protected, package, private)
-  const groupedAttributes = useMemo(() => {
-    if (!currentFile.attributes || currentFile.attributes.length === 0) return {};
-    const groups: Record<string, CodebaseAttribute[]> = {};
-    currentFile.attributes.forEach((attr) => {
-      const vis = attr.visibility || 'public';
-      if (!groups[vis]) groups[vis] = [];
-      groups[vis].push(attr);
-    });
-    return groups;
-  }, [currentFile.attributes]);
-
-  const sortedVisibilities = useMemo(() => {
-    const keys = Object.keys(groupedAttributes);
-    return keys.sort((a, b) => {
-      const idxA = VISIBILITY_ORDER.indexOf(a);
-      const idxB = VISIBILITY_ORDER.indexOf(b);
-      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-      if (idxA !== -1) return -1;
-      if (idxB !== -1) return 1;
-      return a.localeCompare(b);
-    });
-  }, [groupedAttributes]);
-
   return (
     <div className="space-y-2.5 font-mono text-xs animate-in duration-200 fade-in">
-      {/* Active Subsystem Header */}
       <div className="space-y-2 bg-primary/5 p-3 border border-primary/20 rounded-lg">
         <div className="flex justify-between items-center">
           <span className="font-mono font-bold text-[10px] text-primary uppercase tracking-wider">
@@ -135,7 +104,6 @@ export function InspectorPanel({
           </div>
         </div>
 
-        {/* Resizable and Scrollable Functional Documentation Box */}
         <div className="bg-slate-950 mt-2 p-2 border border-slate-800 rounded min-h-[60px] max-h-[250px] overflow-auto font-mono text-slate-300 text-xs resize-y">
           <div className="top-0 sticky bg-slate-950/90 backdrop-blur-xs mb-1 py-0.5 font-bold text-[9px] text-amber-400 uppercase select-none">
             Functional Documentation:
@@ -148,7 +116,6 @@ export function InspectorPanel({
         </div>
       </div>
 
-      {/* Identity Attributes */}
       <Card className="bg-card/50 shadow-xs border-border overflow-hidden">
         <CardHeader className="bg-muted/40 p-2 border-border/60 border-b">
           <div className="flex justify-between items-center">
@@ -207,7 +174,6 @@ export function InspectorPanel({
         </CardContent>
       </Card>
 
-      {/* Type-Specific Structural Details */}
       {currentFile.type === 'config' ? (
         <Card className="bg-card/50 shadow-xs border-border overflow-hidden">
           <CardHeader className="bg-muted/40 p-2 border-border/60 border-b">
@@ -243,7 +209,6 @@ export function InspectorPanel({
         </Card>
       ) : (
         <div className="space-y-2">
-          {/* Grouped Attributes Section */}
           <Card className="bg-card/50 shadow-xs border-border overflow-hidden">
             <CardHeader className="bg-muted/40 p-2 border-border/60 border-b">
               <div className="flex items-center gap-1.5">
@@ -283,7 +248,6 @@ export function InspectorPanel({
             </CardContent>
           </Card>
 
-          {/* Methods Section with Tooltip on Signature/Name */}
           <Card className="bg-card/50 shadow-xs border-border overflow-hidden">
             <CardHeader className="bg-muted/40 p-2 border-border/60 border-b">
               <div className="flex items-center gap-1.5">
