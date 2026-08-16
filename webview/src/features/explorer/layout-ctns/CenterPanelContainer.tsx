@@ -13,7 +13,7 @@ import {
 } from '../wksp-cnt-graph/GraphPanelHeader';
 import { useCodebaseFilter } from '../hooks/use-codebase-filter';
 import { useTransitiveImpact } from '../hooks/use-transitive-impact';
-import { useGraph } from '../wksp-cnt-graph/components/graph/use-graph';
+import { useGraph } from '../wksp-cnt-graph/hooks/use-graph';
 import { useExplorerStore } from '../store/useExplorerStore';
 
 export function CenterPanelContainer() {

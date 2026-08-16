@@ -22,7 +22,7 @@ import {
   CodebaseAttribute,
   ConfigProperty,
 } from '@/shared/services/graph-rag-explorer';
-import { useInspectorPanel } from './use-inspector-panel';
+import { useInspectorPanel } from './hooks/use-inspector-panel';
 
 interface InspectorPanelProps {
   selectedEntity: SelectedEntity | null;

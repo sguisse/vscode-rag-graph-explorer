@@ -8,7 +8,7 @@ import PREDEFINED_PROMPTS from './data/predefined-prompts.yaml';
 import TEMPLATE_PROMPTS from './data/template-prompts.yaml';
 import { AGENTS_LIST } from './data/data-constants';
 import { FilesCtxExportPanel } from '../components/files-ctx-export/files-ctx-export-panel';
-import { usePrompt } from './use-prompt';
+import { usePrompt } from './hooks/use-prompt';
 
 interface PromptPanelProps {
   handleCopy?: (text: string, message: string) => void;

@@ -3,7 +3,7 @@ import { Info } from 'lucide-react';
 import { FolderNode, UmlClassNode, ConfigNode, UmlClassNodeData } from './components/graph/GraphUmlShapes';
 import { SelectedEntity, CodebaseFile } from '@/shared/services/graph-rag-explorer';
 import { isMemberKeyForFileToken, extractMemberIdFromKeyToken } from '@/services/view/graph-view.service';
-import { useGraphPanel } from './use-graph-panel';
+import { useGraphPanel } from './hooks/use-graph-panel';
 
 interface GraphPanelProps {
   folderPositions: Record<string, { label: string }>;

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
 import { CodebaseData, SelectedEntity } from '@/shared/services/graph-rag-explorer';
 import { FilesCtxExportPanel } from '../components/files-ctx-export/files-ctx-export-panel';
-import { useFilesContext } from './use-files-context';
+import { useFilesContext } from './hooks/use-files-context';
 
 interface FilesContextPanelProps {
   initialCodebase: CodebaseData;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { CodebaseData } from '@/shared/services/graph-rag-explorer';
-import { useImpactedPaths } from './use-impacted-paths';
+import { useImpactedPaths } from './hooks/use-impacted-paths';
 
 interface ImpactedPathsPanelProps {
   onCodebaseChange?: (codebase: CodebaseData) => void;

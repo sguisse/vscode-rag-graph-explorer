@@ -9,7 +9,7 @@ import {
   SelectedEntity
 } from '@/shared/services/graph-rag-explorer';
 import { FOLDER_THEME_REGISTRY_CONFIG } from '../constants/graph.constants';
-import { useCodebaseExplorerPanel } from './use-codebase-explorer-panel';
+import { useCodebaseExplorerPanel } from './hooks/use-codebase-explorer-panel';
 
 interface TriStateCheckboxProps {
   checked: boolean;

@@ -1,24 +1,37 @@
 #!/usr/bin/env bash
 set -e
 
-echo "🚀 Externalizing UI state & logic into dedicated hooks and rationalizing layout containers..."
+echo "🚀 Relocating custom hooks into dedicated 'hook' subfolders and updating import paths..."
 
-# Ensure directory structure exists
-mkdir -p webview/src/features/explorer/sdb-rgt-prompt
-mkdir -p webview/src/features/explorer/wkp-btm-infos
-mkdir -p webview/src/features/explorer/wkp-lft-codebase-tree
-mkdir -p webview/src/features/explorer/wkp-rgt-tabs-files-context
-mkdir -p webview/src/features/explorer/wksp-cnt-graph
-mkdir -p webview/src/features/explorer/layout-ctns
+# Create target 'hook' directories
+mkdir -p webview/src/features/explorer/sdb-rgt-prompt/hook
+mkdir -p webview/src/features/explorer/wkp-btm-infos/hook
+mkdir -p webview/src/features/explorer/wkp-lft-codebase-tree/hook
+mkdir -p webview/src/features/explorer/wkp-rgt-tabs-files-context/hook
+mkdir -p webview/src/features/explorer/wksp-cnt-graph/hook
+
+# Clean up previously placed root hooks
+rm -f webview/src/features/explorer/sdb-rgt-prompt/use-configuration.ts
+rm -f webview/src/features/explorer/sdb-rgt-prompt/use-llm-chat.ts
+rm -f webview/src/features/explorer/sdb-rgt-prompt/use-prompt.ts
+rm -f webview/src/features/explorer/sdb-rgt-prompt/use-tabs-prompt.ts
+rm -f webview/src/features/explorer/wkp-btm-infos/use-wkp-bottom-panel.ts
+rm -f webview/src/features/explorer/wkp-lft-codebase-tree/use-codebase-explorer-panel.ts
+rm -f webview/src/features/explorer/wkp-lft-codebase-tree/use-import-ast-dialog.ts
+rm -f webview/src/features/explorer/wkp-rgt-tabs-files-context/use-context-transformer.ts
+rm -f webview/src/features/explorer/wkp-rgt-tabs-files-context/use-files-context.ts
+rm -f webview/src/features/explorer/wkp-rgt-tabs-files-context/use-inspector-panel.ts
+rm -f webview/src/features/explorer/wkp-rgt-tabs-files-context/use-tabs-files-context.ts
+rm -f webview/src/features/explorer/wksp-cnt-graph/use-graph-panel.ts
+rm -f webview/src/features/explorer/wksp-cnt-graph/use-graph-panel-header.ts
 
 # ============================================================================
-# 1. sdb-rgt-prompt hooks & components
+# 1. sdb-rgt-prompt/hook
 # ============================================================================
 
-# 1a. use-configuration.ts
-cat << 'EOF' > webview/src/features/explorer/sdb-rgt-prompt/use-configuration.ts
+cat << 'EOF' > webview/src/features/explorer/sdb-rgt-prompt/hook/use-configuration.ts
 import { useAppContextStore } from '@/store/useAppContextStore';
-import { useGraphRagExplorerStore } from './graph-rag-explorer-store';
+import { useGraphRagExplorerStore } from '../graph-rag-explorer-store';
 
 export function useConfiguration() {
   const setNotification = useAppContextStore((s) => s.setNotification);
@@ -36,7 +49,6 @@ export function useConfiguration() {
 }
 EOF
 
-# 1b. configuration.tsx
 cat << 'EOF' > webview/src/features/explorer/sdb-rgt-prompt/configuration.tsx
 import React from 'react';
 import { Save, Settings2 } from 'lucide-react';
@@ -44,7 +56,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { useConfiguration } from './use-configuration';
+import { useConfiguration } from './hook/use-configuration';
 
 export function ConfigurationPanel() {
   const { config, updateConfig, handleSaveConfig } = useConfiguration();
@@ -158,16 +170,15 @@ export function ConfigurationPanel() {
 }
 EOF
 
-# 1c. use-llm-chat.ts
-cat << 'EOF' > webview/src/features/explorer/sdb-rgt-prompt/use-llm-chat.ts
+cat << 'EOF' > webview/src/features/explorer/sdb-rgt-prompt/hook/use-llm-chat.ts
 import { useState, useEffect } from 'react';
 import {
   LlmProvider,
   IChatMessageDto,
   ILlmModelInfo,
   IFileContextDto,
-} from '../../../../../shared/services/llm-chat';
-import { llmChatApiService } from '../../../services/api/llm-chat-api.service.gen';
+} from '../../../../../../shared/services/llm-chat';
+import { llmChatApiService } from '../../../../services/api/llm-chat-api.service.gen';
 
 const logInfo = (message: string, ...meta: any[]) => {
   console.log(`[LLMExplorerChat UI] ℹ️ ${message}`, meta.length ? meta : '');
@@ -423,7 +434,6 @@ export function useLlmChat() {
 }
 EOF
 
-# 1d. LLM.tsx
 cat << 'EOF' > webview/src/features/explorer/sdb-rgt-prompt/LLM.tsx
 import React, { useState } from 'react';
 import {
@@ -436,7 +446,7 @@ import {
   formatDateTime,
   formatTokenCount,
   parseUserMessageContent,
-} from './use-llm-chat';
+} from './hook/use-llm-chat';
 
 const CopyButton: React.FC<{ text: string; title?: string }> = ({ text, title = 'Copy content' }) => {
   const [copied, setCopied] = useState(false);
@@ -924,13 +934,12 @@ export const LLMExplorerChat: React.FC = () => {
 };
 EOF
 
-# 1e. use-prompt.ts
-cat << 'EOF' > webview/src/features/explorer/sdb-rgt-prompt/use-prompt.ts
+cat << 'EOF' > webview/src/features/explorer/sdb-rgt-prompt/hook/use-prompt.ts
 import { useState } from 'react';
 import { useAppContextStore } from '@/store/useAppContextStore';
-import { useGraphRagExplorerStore } from './graph-rag-explorer-store';
-import PREDEFINED_PROMPTS from './data/predefined-prompts.yaml';
-import TEMPLATE_PROMPTS from './data/template-prompts.yaml';
+import { useGraphRagExplorerStore } from '../graph-rag-explorer-store';
+import PREDEFINED_PROMPTS from '../data/predefined-prompts.yaml';
+import TEMPLATE_PROMPTS from '../data/template-prompts.yaml';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 
@@ -1019,7 +1028,6 @@ export function usePrompt(handleCopy?: (text: string, message: string) => void) 
 }
 EOF
 
-# 1f. prompt.tsx
 cat << 'EOF' > webview/src/features/explorer/sdb-rgt-prompt/prompt.tsx
 import React from 'react';
 import { Copy, Bot, User, Sparkles } from 'lucide-react';
@@ -1031,7 +1039,7 @@ import PREDEFINED_PROMPTS from './data/predefined-prompts.yaml';
 import TEMPLATE_PROMPTS from './data/template-prompts.yaml';
 import { AGENTS_LIST } from './data/data-constants';
 import { FilesCtxExportPanel } from '../components/files-ctx-export/files-ctx-export-panel';
-import { usePrompt } from './use-prompt';
+import { usePrompt } from './hook/use-prompt';
 
 interface PromptPanelProps {
   handleCopy?: (text: string, message: string) => void;
@@ -1246,9 +1254,8 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
 }
 EOF
 
-# 1g. use-tabs-prompt.ts
-cat << 'EOF' > webview/src/features/explorer/sdb-rgt-prompt/use-tabs-prompt.ts
-import { useExplorerStore } from '../store/useExplorerStore';
+cat << 'EOF' > webview/src/features/explorer/sdb-rgt-prompt/hook/use-tabs-prompt.ts
+import { useExplorerStore } from '../../store/useExplorerStore';
 
 export function useTabsPrompt() {
   const activeTab = useExplorerStore((s) => s.promptTab);
@@ -1261,7 +1268,6 @@ export function useTabsPrompt() {
 }
 EOF
 
-# 1h. tabs-prompt-container.tsx
 cat << 'EOF' > webview/src/features/explorer/sdb-rgt-prompt/tabs-prompt-container.tsx
 import React from 'react';
 import { Button } from '@/components/ui/button';
@@ -1269,7 +1275,7 @@ import { PromptPanel } from './prompt';
 import { LLMExplorerChat } from './LLM';
 import { ConfigurationPanel } from './configuration';
 import { SelectedEntity, CodebaseData } from '@/shared/services/graph-rag-explorer';
-import { useTabsPrompt } from './use-tabs-prompt';
+import { useTabsPrompt } from './hook/use-tabs-prompt';
 
 interface TabsPromptContainerProps {
   selectedEntity?: SelectedEntity | null;
@@ -1327,11 +1333,10 @@ export function TabsPromptContainer({
 EOF
 
 # ============================================================================
-# 2. wkp-btm-infos hook & component
+# 2. wkp-btm-infos/hook
 # ============================================================================
 
-# 2a. use-wkp-bottom-panel.ts
-cat << 'EOF' > webview/src/features/explorer/wkp-btm-infos/use-wkp-bottom-panel.ts
+cat << 'EOF' > webview/src/features/explorer/wkp-btm-infos/hook/use-wkp-bottom-panel.ts
 export function useWkpBottomPanel() {
   return {
     statusText: 'AST Compilation Log: Matrix Active',
@@ -1339,10 +1344,9 @@ export function useWkpBottomPanel() {
 }
 EOF
 
-# 2b. wkp-bottom-panel.tsx
 cat << 'EOF' > webview/src/features/explorer/wkp-btm-infos/wkp-bottom-panel.tsx
 import React from 'react';
-import { useWkpBottomPanel } from './use-wkp-bottom-panel';
+import { useWkpBottomPanel } from './hook/use-wkp-bottom-panel';
 
 export function WkpBottomPanel() {
   const { statusText } = useWkpBottomPanel();
@@ -1356,14 +1360,13 @@ export function WkpBottomPanel() {
 EOF
 
 # ============================================================================
-# 3. wkp-lft-codebase-tree hooks & components
+# 3. wkp-lft-codebase-tree/hook
 # ============================================================================
 
-# 3a. use-codebase-explorer-panel.ts
-cat << 'EOF' > webview/src/features/explorer/wkp-lft-codebase-tree/use-codebase-explorer-panel.ts
+cat << 'EOF' > webview/src/features/explorer/wkp-lft-codebase-tree/hook/use-codebase-explorer-panel.ts
 import { useState, useMemo } from 'react';
 import { CodebaseData, CodebaseFile } from '@/shared/services/graph-rag-explorer';
-import { FOLDER_KEYS_REGISTERED_CONFIG } from '../constants/graph.constants';
+import { FOLDER_KEYS_REGISTERED_CONFIG } from '../../constants/graph.constants';
 
 export function useCodebaseExplorerPanel(codebase: CodebaseData) {
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -1396,7 +1399,6 @@ export function useCodebaseExplorerPanel(codebase: CodebaseData) {
 }
 EOF
 
-# 3b. CodebaseExplorerPanel.tsx
 cat << 'EOF' > webview/src/features/explorer/wkp-lft-codebase-tree/CodebaseExplorerPanel.tsx
 import React, { useRef, useEffect } from 'react';
 import { ChevronDown, ChevronRight, Folder, FileCode, Database, Download, Upload } from 'lucide-react';
@@ -1409,7 +1411,7 @@ import {
   SelectedEntity
 } from '@/shared/services/graph-rag-explorer';
 import { FOLDER_THEME_REGISTRY_CONFIG } from '../constants/graph.constants';
-import { useCodebaseExplorerPanel } from './use-codebase-explorer-panel';
+import { useCodebaseExplorerPanel } from './hook/use-codebase-explorer-panel';
 
 interface TriStateCheckboxProps {
   checked: boolean;
@@ -1590,8 +1592,7 @@ export function CodebaseExplorerPanel({
 }
 EOF
 
-# 3c. use-import-ast-dialog.ts
-cat << 'EOF' > webview/src/features/explorer/wkp-lft-codebase-tree/use-import-ast-dialog.ts
+cat << 'EOF' > webview/src/features/explorer/wkp-lft-codebase-tree/hook/use-import-ast-dialog.ts
 import { useState, useRef, useEffect } from 'react';
 import { CodebaseData } from '@/shared/services/graph-rag-explorer';
 
@@ -1731,7 +1732,6 @@ export function useImportAstDialog(
 }
 EOF
 
-# 3d. import-ast-dialog.tsx
 cat << 'EOF' > webview/src/features/explorer/wkp-lft-codebase-tree/import-ast-dialog.tsx
 import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -1739,7 +1739,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Upload, FileCode, CheckCircle2, AlertCircle, FolderOpen } from "lucide-react";
 import { CodebaseData } from "@/shared/services/graph-rag-explorer";
-import { useImportAstDialog } from "./use-import-ast-dialog";
+import { useImportAstDialog } from "./hook/use-import-ast-dialog";
 
 interface ImportAstDialogProps {
   open: boolean;
@@ -1874,11 +1874,10 @@ export function ImportAstDialog({ open, onOpenChange, onImport }: ImportAstDialo
 EOF
 
 # ============================================================================
-# 4. wkp-rgt-tabs-files-context hooks & components
+# 4. wkp-rgt-tabs-files-context/hook
 # ============================================================================
 
-# 4a. use-context-transformer.ts
-cat << 'EOF' > webview/src/features/explorer/wkp-rgt-tabs-files-context/use-context-transformer.ts
+cat << 'EOF' > webview/src/features/explorer/wkp-rgt-tabs-files-context/hook/use-context-transformer.ts
 import { useState, useMemo, useCallback } from 'react';
 import { CodebaseData, CodebaseFile } from '@/shared/services/graph-rag-explorer';
 
@@ -2061,7 +2060,6 @@ export function useContextTransformer(initialCodebase: CodebaseData) {
 }
 EOF
 
-# 4b. context-transformer.tsx
 cat << 'EOF' > webview/src/features/explorer/wkp-rgt-tabs-files-context/context-transformer.tsx
 import React from 'react';
 import {
@@ -2078,7 +2076,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { CodebaseData } from '@/shared/services/graph-rag-explorer';
-import { useContextTransformer } from './use-context-transformer';
+import { useContextTransformer } from './hook/use-context-transformer';
 
 interface ContextTransformerPanelProps {
   initialCodebase: CodebaseData;
@@ -2307,13 +2305,12 @@ export function ContextTransformerPanel({
 }
 EOF
 
-# 4c. use-files-context.ts
-cat << 'EOF' > webview/src/features/explorer/wkp-rgt-tabs-files-context/use-files-context.ts
+cat << 'EOF' > webview/src/features/explorer/wkp-rgt-tabs-files-context/hook/use-files-context.ts
 import { useMemo, useEffect } from 'react';
 import { CodebaseData, CodebaseFile, SelectedEntity } from '@/shared/services/graph-rag-explorer';
 import { calculateTransitiveImpact } from '@/services/view/graph-view.service';
-import { useFilesCtxExportStore } from '../components/files-ctx-export/use-files-ctx-export-store';
-import { useExplorerStore } from '../store/useExplorerStore';
+import { useFilesCtxExportStore } from '../../components/files-ctx-export/use-files-ctx-export-store';
+import { useExplorerStore } from '../../store/useExplorerStore';
 
 export interface DepthFileGroup {
   key: string;
@@ -2585,7 +2582,6 @@ export function useFilesContext(
 }
 EOF
 
-# 4d. files-context.tsx
 cat << 'EOF' > webview/src/features/explorer/wkp-rgt-tabs-files-context/files-context.tsx
 import React, { useEffect, useRef } from 'react';
 import { GitFork, FileText, ShieldAlert, ChevronDown, ChevronRight } from 'lucide-react';
@@ -2593,7 +2589,7 @@ import { Button } from '@/components/ui/button';
 import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
 import { CodebaseData, SelectedEntity } from '@/shared/services/graph-rag-explorer';
 import { FilesCtxExportPanel } from '../components/files-ctx-export/files-ctx-export-panel';
-import { useFilesContext } from './use-files-context';
+import { useFilesContext } from './hook/use-files-context';
 
 interface FilesContextPanelProps {
   initialCodebase: CodebaseData;
@@ -2886,8 +2882,7 @@ export function FilesContextPanel({
 }
 EOF
 
-# 4e. use-inspector-panel.ts
-cat << 'EOF' > webview/src/features/explorer/wkp-rgt-tabs-files-context/use-inspector-panel.ts
+cat << 'EOF' > webview/src/features/explorer/wkp-rgt-tabs-files-context/hook/use-inspector-panel.ts
 import { useMemo } from 'react';
 import {
   CodebaseData,
@@ -2949,7 +2944,6 @@ export function useInspectorPanel(selectedEntity: SelectedEntity | null, initial
 }
 EOF
 
-# 4f. inspector-panel.tsx
 cat << 'EOF' > webview/src/features/explorer/wkp-rgt-tabs-files-context/inspector-panel.tsx
 import React from 'react';
 import {
@@ -2975,7 +2969,7 @@ import {
   CodebaseAttribute,
   ConfigProperty,
 } from '@/shared/services/graph-rag-explorer';
-import { useInspectorPanel } from './use-inspector-panel';
+import { useInspectorPanel } from './hook/use-inspector-panel';
 
 interface InspectorPanelProps {
   selectedEntity: SelectedEntity | null;
@@ -3249,9 +3243,8 @@ export function InspectorPanel({
 }
 EOF
 
-# 4g. use-tabs-files-context.ts
-cat << 'EOF' > webview/src/features/explorer/wkp-rgt-tabs-files-context/use-tabs-files-context.ts
-import { useExplorerStore } from '../store/useExplorerStore';
+cat << 'EOF' > webview/src/features/explorer/wkp-rgt-tabs-files-context/hook/use-tabs-files-context.ts
+import { useExplorerStore } from '../../store/useExplorerStore';
 
 export function useTabsFilesContext() {
   const rightPanelTab = useExplorerStore((s) => s.rightPanelTab);
@@ -3264,7 +3257,6 @@ export function useTabsFilesContext() {
 }
 EOF
 
-# 4h. tabs-files-context-container.tsx
 cat << 'EOF' > webview/src/features/explorer/wkp-rgt-tabs-files-context/tabs-files-context-container.tsx
 import React from 'react';
 import { Button } from '@/components/ui/button';
@@ -3272,7 +3264,7 @@ import { InspectorPanel } from './inspector-panel';
 import { FilesContextPanel } from './files-context';
 import { ContextTransformerPanel } from './context-transformer';
 import { CodebaseData, SelectedEntity } from '@/shared/services/graph-rag-explorer';
-import { useTabsFilesContext } from './use-tabs-files-context';
+import { useTabsFilesContext } from './hook/use-tabs-files-context';
 
 interface TabsFilesContextContainerProps {
   selectedEntity: SelectedEntity | null;
@@ -3360,11 +3352,10 @@ export function TabsFilesContextContainer({
 EOF
 
 # ============================================================================
-# 5. wksp-cnt-graph hooks & components
+# 5. wksp-cnt-graph/hook
 # ============================================================================
 
-# 5a. use-graph-panel.ts
-cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/use-graph-panel.ts
+cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/hook/use-graph-panel.ts
 import { useMemo } from 'react';
 import { SelectedEntity, CodebaseFile } from '@/shared/services/graph-rag-explorer';
 
@@ -3407,14 +3398,13 @@ export function useGraphPanel(
 }
 EOF
 
-# 5b. GraphPanel.tsx
 cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/GraphPanel.tsx
 import React from 'react';
 import { Info } from 'lucide-react';
 import { FolderNode, UmlClassNode, ConfigNode, UmlClassNodeData } from './components/graph/GraphUmlShapes';
 import { SelectedEntity, CodebaseFile } from '@/shared/services/graph-rag-explorer';
 import { isMemberKeyForFileToken, extractMemberIdFromKeyToken } from '@/services/view/graph-view.service';
-import { useGraphPanel } from './use-graph-panel';
+import { useGraphPanel } from './hook/use-graph-panel';
 
 interface GraphPanelProps {
   folderPositions: Record<string, { label: string }>;
@@ -3571,8 +3561,7 @@ export function GraphPanel({
 }
 EOF
 
-# 5c. use-graph-panel-header.ts
-cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/use-graph-panel-header.ts
+cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/hook/use-graph-panel-header.ts
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { vscodeSettings } from '@/App';
 
@@ -3603,7 +3592,6 @@ export function useGraphPanelHeader(cyRef?: React.RefObject<any>) {
 }
 EOF
 
-# 5d. GraphPanelHeader.tsx
 cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/GraphPanelHeader.tsx
 import React from 'react';
 import { Grid, Database, User, Baby, Plus, Minus, Focus, SquareFunction, Code2, Target } from 'lucide-react';
@@ -3619,7 +3607,7 @@ import {
   GRAPH_LAYOUT_LIST,
   GRAPH_LAYOUT_ICON_MAP
 } from '@/shared/services/graph-rag-explorer/domain/model/types';
-import { useGraphPanelHeader } from './use-graph-panel-header';
+import { useGraphPanelHeader } from './hook/use-graph-panel-header';
 
 export interface GraphPanelHeaderLeftProps {}
 
@@ -3826,427 +3814,9 @@ export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
 };
 EOF
 
-# ============================================================================
-# 6. Rationalize webview/src/features/explorer/layout-ctns with new hooks
-# ============================================================================
+# Optional compilation verification step
+if [ -f "package.json" ]; then
+  npm run compile || true
+fi
 
-# 6a. TopPanelContainer.tsx
-cat << 'EOF' > webview/src/features/explorer/layout-ctns/TopPanelContainer.tsx
-import React, { useCallback } from 'react';
-import { useAppContextStore } from '@/store/useAppContextStore';
-import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
-import { ImpactedPathsPanel } from '../wkp-top-impacted-paths/impacted-paths-panel';
-import {
-  ImpactedPathsPanelHeaderLeft,
-  ImpactedPathsPanelHeaderCenter,
-  ImpactedPathsPanelHeaderRight,
-} from '../wkp-top-impacted-paths/ImpactedPathsPanelHeader';
-import { useExplorerStore } from '../store/useExplorerStore';
-import { CodebaseData } from '@/shared/services/graph-rag-explorer';
-
-export function TopPanelContainer() {
-  const upstreamDepth = useExplorerStore((s) => s.upstreamDepth);
-  const setUpstreamDepth = useExplorerStore((s) => s.setUpstreamDepth);
-  const downstreamDepth = useExplorerStore((s) => s.downstreamDepth);
-  const setDownstreamDepth = useExplorerStore((s) => s.setDownstreamDepth);
-  const setCodebase = useExplorerStore((s) => s.setCodebase);
-  const setNotification = useAppContextStore((s) => s.setNotification);
-
-  const handleImportCodebase = useCallback(
-    async (importedData: CodebaseData) => {
-      setCodebase(importedData);
-      setNotification('AST Codebase imported successfully!');
-    },
-    [setCodebase, setNotification]
-  );
-
-  return (
-    <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
-      <ContainerPanelHeader
-        path="workspace.top"
-        headerLeft={<ImpactedPathsPanelHeaderLeft />}
-        headerCenter={
-          <ImpactedPathsPanelHeaderCenter
-            upstreamDepth={upstreamDepth}
-            setUpstreamDepth={setUpstreamDepth}
-            downstreamDepth={downstreamDepth}
-            setDownstreamDepth={setDownstreamDepth}
-          />
-        }
-        headerRight={<ImpactedPathsPanelHeaderRight />}
-      />
-      <div className="flex-1 min-h-0 overflow-auto">
-        <ImpactedPathsPanel
-          onCodebaseChange={handleImportCodebase}
-          upstreamDepth={upstreamDepth}
-          downstreamDepth={downstreamDepth}
-        />
-      </div>
-    </div>
-  );
-}
-EOF
-
-# 6b. LeftPanelContainer.tsx
-cat << 'EOF' > webview/src/features/explorer/layout-ctns/LeftPanelContainer.tsx
-import React, { useCallback } from 'react';
-import { useAppContextStore } from '@/store/useAppContextStore';
-import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
-import { CodebaseExplorerPanel } from '../wkp-lft-codebase-tree/CodebaseExplorerPanel';
-import { useCodebaseFilter } from '../hooks/use-codebase-filter';
-import { useExplorerStore } from '../store/useExplorerStore';
-import { CodebaseData } from '@/shared/services/graph-rag-explorer';
-
-export function LeftPanelContainer() {
-  const codebase = useExplorerStore((s) => s.codebase);
-  const setCodebase = useExplorerStore((s) => s.setCodebase);
-  const setSelectedEntity = useExplorerStore((s) => s.setSelectedEntity);
-  const setFocusedNodeId = useExplorerStore((s) => s.setFocusedNodeId);
-  const setNotification = useAppContextStore((s) => s.setNotification);
-
-  const filter = useCodebaseFilter(codebase.files);
-
-  const handleFocusNode = useCallback(
-    (nodeId: string) => {
-      setFocusedNodeId(nodeId);
-      setTimeout(() => {
-        setFocusedNodeId((prev) => (prev === nodeId ? null : prev));
-      }, 2000);
-    },
-    [setFocusedNodeId]
-  );
-
-  const handleImportCodebase = useCallback(
-    async (importedData: CodebaseData) => {
-      setCodebase(importedData);
-      setNotification('AST Codebase imported successfully!');
-    },
-    [setCodebase, setNotification]
-  );
-
-  return (
-    <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden">
-      <ContainerPanelHeader title="Codebase Explorer" path="workspace.left" />
-      <div className="flex-1 min-h-0 overflow-auto">
-        <CodebaseExplorerPanel
-          codebase={codebase}
-          searchFilteredFiles={filter.searchFilteredFiles}
-          expandedFolders={filter.expandedFolders}
-          visibleFiles={filter.visibleFiles}
-          toggleFolder={filter.toggleFolder}
-          toggleFolderCheckbox={filter.toggleFolderCheckbox}
-          toggleFileCheckbox={filter.toggleFileCheckbox}
-          setSelectedEntity={setSelectedEntity}
-          onFocusNode={handleFocusNode}
-          onImportCodebase={handleImportCodebase}
-        />
-      </div>
-    </div>
-  );
-}
-EOF
-
-# 6c. CenterPanelContainer.tsx
-cat << 'EOF' > webview/src/features/explorer/layout-ctns/CenterPanelContainer.tsx
-import React, { useEffect, useCallback } from 'react';
-import { useLayoutStore } from '@/store/useLayoutStore';
-import { useAppContextStore } from '@/store/useAppContextStore';
-import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
-import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
-import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
-import { logInfo } from '@/services/view/log-view.service.wrapper';
-import { GraphPanel } from '../wksp-cnt-graph/GraphPanel';
-import {
-  GraphPanelHeaderLeft,
-  GraphPanelHeaderCenter,
-  GraphPanelHeaderRight,
-} from '../wksp-cnt-graph/GraphPanelHeader';
-import { useCodebaseFilter } from '../hooks/use-codebase-filter';
-import { useTransitiveImpact } from '../hooks/use-transitive-impact';
-import { useGraph } from '../wksp-cnt-graph/components/graph/use-graph';
-import { useExplorerStore } from '../store/useExplorerStore';
-
-export function CenterPanelContainer() {
-  const codebase = useExplorerStore((s) => s.codebase);
-  const folderPositions = useExplorerStore((s) => s.folderPositions);
-  const selectedEntity = useExplorerStore((s) => s.selectedEntity);
-  const setSelectedEntity = useExplorerStore((s) => s.setSelectedEntity);
-  const focusedNodeId = useExplorerStore((s) => s.focusedNodeId);
-
-  const enableDownstream = useExplorerStore((s) => s.enableDownstream);
-  const enableUpstream = useExplorerStore((s) => s.enableUpstream);
-
-  const showGrid = useExplorerStore((s) => s.showGrid);
-  const setShowGrid = useExplorerStore((s) => s.setShowGrid);
-  const callersDepth = useExplorerStore((s) => s.callersDepth);
-  const setCallersDepth = useExplorerStore((s) => s.setCallersDepth);
-  const calleesDepth = useExplorerStore((s) => s.calleesDepth);
-  const setCalleesDepth = useExplorerStore((s) => s.setCalleesDepth);
-  const currentLayout = useExplorerStore((s) => s.currentLayout);
-  const setCurrentLayout = useExplorerStore((s) => s.setCurrentLayout);
-
-  const attributesVisible = useExplorerStore((s) => s.attributesVisible);
-  const setAttributesVisible = useExplorerStore((s) => s.setAttributesVisible);
-  const methodsVisible = useExplorerStore((s) => s.methodsVisible);
-  const setMethodsVisible = useExplorerStore((s) => s.setMethodsVisible);
-  const showSelectedOnly = useExplorerStore((s) => s.showSelectedOnly);
-  const setShowSelectedOnly = useExplorerStore((s) => s.setShowSelectedOnly);
-
-  const toggleContainerMaximized = useLayoutStore((s) => s.toggleContainerMaximized);
-  const isDarkMode = useAppContextStore((s) => s.isDarkMode);
-
-  const filter = useCodebaseFilter(codebase.files);
-  const { impactedSet } = useTransitiveImpact(
-    selectedEntity,
-    codebase.dependencies,
-    callersDepth,
-    calleesDepth,
-    enableDownstream,
-    enableUpstream
-  );
-
-  const handleNodeSelect = useCallback(
-    (nodeId: string) => {
-      setSelectedEntity({ type: 'node', nodeId });
-    },
-    [setSelectedEntity]
-  );
-
-  const handleSelectMember = useCallback(
-    (nodeId: string, memberId: string) => {
-      setSelectedEntity({ type: 'member', nodeId, memberId });
-    },
-    [setSelectedEntity]
-  );
-
-  const handleNodeDoubleClick = useCallback(
-    (nodeId: string) => {
-      const targetFile = codebase.files.find((f) => f.id === nodeId);
-      if (targetFile && targetFile.path) {
-        logInfo(`Double-clicked graph item: ${nodeId}. Revealing path in VS Code Explorer: ${targetFile.path}`);
-        vsCodeApiService.revealInExplorer(targetFile.path);
-      }
-    },
-    [codebase.files]
-  );
-
-  const handleNodeCmdClick = useCallback(
-    (nodeId: string) => {
-      const targetFile = codebase.files.find((f) => f.id === nodeId);
-      const pathToAdd = targetFile?.path || nodeId;
-      logInfo(`Cmd+Clicked graph item: ${nodeId}. Appending path to context paths panel: ${pathToAdd}`);
-      vsCodeHandleMessage.emit('addPathToTop', { command: 'addPathToTop', payload: pathToAdd });
-    },
-    [codebase.files]
-  );
-
-  const { containerRef, cyRef, graphState, updateGraphTopology, isReady } = useGraph(
-    isDarkMode,
-    handleNodeSelect,
-    handleNodeDoubleClick,
-    handleNodeCmdClick
-  );
-
-  useEffect(() => {
-    if (!isReady || Object.keys(folderPositions).length === 0) return;
-    updateGraphTopology(
-      filter.searchFilteredFiles,
-      filter.visibleFiles,
-      codebase,
-      impactedSet,
-      currentLayout,
-      folderPositions,
-      attributesVisible,
-      methodsVisible,
-      selectedEntity,
-      showSelectedOnly
-    );
-  }, [
-    isReady,
-    filter.searchFilteredFiles,
-    filter.visibleFiles,
-    codebase,
-    impactedSet,
-    currentLayout,
-    folderPositions,
-    attributesVisible,
-    methodsVisible,
-    selectedEntity,
-    showSelectedOnly,
-    updateGraphTopology,
-  ]);
-
-  return (
-    <div className="relative flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
-      <ContainerPanelHeader
-        path="workspace.center"
-        isHiddable={true}
-        headerLeft={<GraphPanelHeaderLeft />}
-        headerCenter={
-          <GraphPanelHeaderCenter
-            maxNodesLimit={filter.maxNodesLimit}
-            setMaxNodesLimit={filter.setMaxNodesLimit}
-            callersDepth={callersDepth}
-            setCallersDepth={setCallersDepth}
-            calleesDepth={calleesDepth}
-            setCalleesDepth={setCalleesDepth}
-            displayLevel={filter.displayLevel}
-            setDisplayLevel={filter.setDisplayLevel}
-            currentLayout={currentLayout}
-            setCurrentLayout={setCurrentLayout}
-          />
-        }
-        headerRight={
-          <GraphPanelHeaderRight
-            cyRef={cyRef}
-            isGraphMaximized={false}
-            setIsGraphMaximized={() => toggleContainerMaximized('workspace.center')}
-            showGrid={showGrid}
-            setShowGrid={setShowGrid}
-            attributesVisible={attributesVisible}
-            setAttributesVisible={setAttributesVisible}
-            methodsVisible={methodsVisible}
-            setMethodsVisible={setMethodsVisible}
-            showSelectedOnly={showSelectedOnly}
-            setShowSelectedOnly={setShowSelectedOnly}
-          />
-        }
-      />
-      <div className="relative flex-1 w-full h-full min-h-0">
-        <GraphPanel
-          folderPositions={folderPositions}
-          containerRef={containerRef}
-          showGrid={showGrid}
-          isDarkMode={isDarkMode}
-          graphState={graphState}
-          selectedEntity={selectedEntity}
-          focusedNodeId={focusedNodeId}
-          searchFilteredFiles={filter.searchFilteredFiles}
-          impactedSet={impactedSet}
-          handleSelectMember={handleSelectMember}
-          attributesVisible={attributesVisible}
-          methodsVisible={methodsVisible}
-          showSelectedOnly={showSelectedOnly}
-        />
-      </div>
-    </div>
-  );
-}
-EOF
-
-# 6d. RightPanelContainer.tsx
-cat << 'EOF' > webview/src/features/explorer/layout-ctns/RightPanelContainer.tsx
-import React, { useCallback } from 'react';
-import { useAppContextStore } from '@/store/useAppContextStore';
-import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
-import { TabsFilesContextContainer } from '../wkp-rgt-tabs-files-context/tabs-files-context-container';
-import { useTransitiveImpact } from '../hooks/use-transitive-impact';
-import { useExplorerStore } from '../store/useExplorerStore';
-
-export function RightPanelContainer() {
-  const codebase = useExplorerStore((s) => s.codebase);
-  const selectedEntity = useExplorerStore((s) => s.selectedEntity);
-  const enableDownstream = useExplorerStore((s) => s.enableDownstream);
-  const setEnableDownstream = useExplorerStore((s) => s.setEnableDownstream);
-  const enableUpstream = useExplorerStore((s) => s.enableUpstream);
-  const setEnableUpstream = useExplorerStore((s) => s.setEnableUpstream);
-  const callersDepth = useExplorerStore((s) => s.callersDepth);
-  const calleesDepth = useExplorerStore((s) => s.calleesDepth);
-  const setNotification = useAppContextStore((s) => s.setNotification);
-
-  const { impactedSet } = useTransitiveImpact(
-    selectedEntity,
-    codebase.dependencies,
-    callersDepth,
-    calleesDepth,
-    enableDownstream,
-    enableUpstream
-  );
-
-  const handleCopy = useCallback(
-    (text: string, message: string) => {
-      if (navigator?.clipboard?.writeText) {
-        navigator.clipboard.writeText(text);
-      }
-      setNotification(message);
-    },
-    [setNotification]
-  );
-
-  return (
-    <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden">
-      <ContainerPanelHeader title="Files Context Builder" path="workspace.right" />
-      <div className="flex-1 min-h-0 overflow-auto">
-        <TabsFilesContextContainer
-          selectedEntity={selectedEntity}
-          initialCodebase={codebase}
-          enableDownstream={enableDownstream}
-          setEnableDownstream={setEnableDownstream}
-          enableUpstream={enableUpstream}
-          setEnableUpstream={setEnableUpstream}
-          impactedSet={impactedSet}
-          handleCopy={handleCopy}
-        />
-      </div>
-    </div>
-  );
-}
-EOF
-
-# 6e. BottomPanelContainer.tsx
-cat << 'EOF' > webview/src/features/explorer/layout-ctns/BottomPanelContainer.tsx
-import React from 'react';
-import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
-import { WkpBottomPanel } from '../wkp-btm-infos/wkp-bottom-panel';
-
-export function BottomPanelContainer() {
-  return (
-    <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
-      <ContainerPanelHeader title="Output & Logs" path="workspace.bottom" />
-      <div className="flex-1 min-h-0 overflow-auto">
-        <WkpBottomPanel />
-      </div>
-    </div>
-  );
-}
-EOF
-
-# 6f. SidebarRightContainer.tsx
-cat << 'EOF' > webview/src/features/explorer/layout-ctns/SidebarRightContainer.tsx
-import React, { useCallback } from 'react';
-import { useAppContextStore } from '@/store/useAppContextStore';
-import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
-import { TabsPromptContainer } from '../sdb-rgt-prompt/tabs-prompt-container';
-import { useExplorerStore } from '../store/useExplorerStore';
-
-export function SidebarRightContainer() {
-  const codebase = useExplorerStore((s) => s.codebase);
-  const selectedEntity = useExplorerStore((s) => s.selectedEntity);
-  const setNotification = useAppContextStore((s) => s.setNotification);
-
-  const handleCopy = useCallback(
-    (text: string, message: string) => {
-      if (navigator?.clipboard?.writeText) {
-        navigator.clipboard.writeText(text);
-      }
-      setNotification(message);
-    },
-    [setNotification]
-  );
-
-  return (
-    <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden">
-      <ContainerPanelHeader title="Prompt & LLM Studio" path="sidebarRight" />
-      <div className="flex-1 min-h-0 overflow-auto">
-        <TabsPromptContainer
-          selectedEntity={selectedEntity}
-          initialCodebase={codebase}
-          handleCopy={handleCopy}
-        />
-      </div>
-    </div>
-  );
-}
-EOF
-
-echo "✅ refactor: Externalized logic into conventional React hooks next to components and rationalized layout containers!"
+echo "✅ refactor: Moved all hooks into dedicated 'hook' subfolders and updated component imports!"

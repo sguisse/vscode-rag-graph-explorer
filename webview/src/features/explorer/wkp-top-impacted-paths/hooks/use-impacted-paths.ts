@@ -3,7 +3,7 @@ import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler'
 import { getPathsChangeImpacts } from '@/services/view/graph-view.service';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { CodebaseData } from '@/shared/services/graph-rag-explorer';
-import { useExplorerStore } from '../store/useExplorerStore';
+import { useExplorerStore } from '../../store/useExplorerStore';
 
 export interface UseImpactedPathsOptions {
   defaultCodebase?: CodebaseData;

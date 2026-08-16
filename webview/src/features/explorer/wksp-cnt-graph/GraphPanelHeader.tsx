@@ -12,7 +12,7 @@ import {
   GRAPH_LAYOUT_LIST,
   GRAPH_LAYOUT_ICON_MAP
 } from '@/shared/services/graph-rag-explorer/domain/model/types';
-import { useGraphPanelHeader } from './use-graph-panel-header';
+import { useGraphPanelHeader } from './hooks/use-graph-panel-header';
 
 export interface GraphPanelHeaderLeftProps {}
 

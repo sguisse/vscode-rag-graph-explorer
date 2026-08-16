@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useAppContextStore } from '@/store/useAppContextStore';
-import { useGraphRagExplorerStore } from './graph-rag-explorer-store';
-import PREDEFINED_PROMPTS from './data/predefined-prompts.yaml';
-import TEMPLATE_PROMPTS from './data/template-prompts.yaml';
+import { useGraphRagExplorerStore } from '../graph-rag-explorer-store';
+import PREDEFINED_PROMPTS from '../data/predefined-prompts.yaml';
+import TEMPLATE_PROMPTS from '../data/template-prompts.yaml';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 

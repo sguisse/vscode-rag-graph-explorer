@@ -4,7 +4,7 @@ import { PromptPanel } from './prompt';
 import { LLMExplorerChat } from './LLM';
 import { ConfigurationPanel } from './configuration';
 import { SelectedEntity, CodebaseData } from '@/shared/services/graph-rag-explorer';
-import { useTabsPrompt } from './use-tabs-prompt';
+import { useTabsPrompt } from './hooks/use-tabs-prompt';
 
 interface TabsPromptContainerProps {
   selectedEntity?: SelectedEntity | null;

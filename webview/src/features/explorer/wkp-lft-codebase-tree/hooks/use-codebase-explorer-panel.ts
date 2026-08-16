@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { CodebaseData, CodebaseFile } from '@/shared/services/graph-rag-explorer';
-import { FOLDER_KEYS_REGISTERED_CONFIG } from '../constants/graph.constants';
+import { FOLDER_KEYS_REGISTERED_CONFIG } from '../../constants/graph.constants';
 
 export function useCodebaseExplorerPanel(codebase: CodebaseData) {
   const [isImportOpen, setIsImportOpen] = useState(false);

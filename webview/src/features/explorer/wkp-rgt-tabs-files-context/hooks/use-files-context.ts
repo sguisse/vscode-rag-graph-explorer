@@ -1,8 +1,8 @@
 import { useMemo, useEffect } from 'react';
 import { CodebaseData, CodebaseFile, SelectedEntity } from '@/shared/services/graph-rag-explorer';
 import { calculateTransitiveImpact } from '@/services/view/graph-view.service';
-import { useFilesCtxExportStore } from '../components/files-ctx-export/use-files-ctx-export-store';
-import { useExplorerStore } from '../store/useExplorerStore';
+import { useFilesCtxExportStore } from '../../components/files-ctx-export/use-files-ctx-export-store';
+import { useExplorerStore } from '../../store/useExplorerStore';
 
 export interface DepthFileGroup {
   key: string;

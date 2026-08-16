@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Upload, FileCode, CheckCircle2, AlertCircle, FolderOpen } from "lucide-react";
 import { CodebaseData } from "@/shared/services/graph-rag-explorer";
-import { useImportAstDialog } from "./use-import-ast-dialog";
+import { useImportAstDialog } from "./hooks/use-import-ast-dialog";
 
 interface ImportAstDialogProps {
   open: boolean;

@@ -9,7 +9,7 @@ import {
   formatDateTime,
   formatTokenCount,
   parseUserMessageContent,
-} from './use-llm-chat';
+} from './hooks/use-llm-chat';
 
 const CopyButton: React.FC<{ text: string; title?: string }> = ({ text, title = 'Copy content' }) => {
   const [copied, setCopied] = useState(false);

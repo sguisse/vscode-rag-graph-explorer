@@ -1,5 +1,5 @@
 import { useAppContextStore } from '@/store/useAppContextStore';
-import { useGraphRagExplorerStore } from './graph-rag-explorer-store';
+import { useGraphRagExplorerStore } from '../graph-rag-explorer-store';
 
 export function useConfiguration() {
   const setNotification = useAppContextStore((s) => s.setNotification);

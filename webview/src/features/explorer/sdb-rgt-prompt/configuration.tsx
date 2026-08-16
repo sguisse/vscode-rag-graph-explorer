@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { useConfiguration } from './use-configuration';
+import { useConfiguration } from './hooks/use-configuration';
 
 export function ConfigurationPanel() {
   const { config, updateConfig, handleSaveConfig } = useConfiguration();
@@ -12,7 +12,7 @@ export function ConfigurationPanel() {
   return (
     <div className="space-y-3 font-mono text-xs animate-in duration-200 fade-in">
       {/* Header Title */}
-      <div className="bg-muted/30 p-3 border border-border rounded-lg space-y-1">
+      <div className="space-y-1 bg-muted/30 p-3 border border-border rounded-lg">
         <div className="flex items-center gap-2">
           <Settings2 size={16} className="text-primary" />
           <h4 className="font-bold text-foreground text-xs uppercase">Explorer Global Settings</h4>
@@ -25,38 +25,38 @@ export function ConfigurationPanel() {
       {/* Form Settings */}
       <div className="space-y-3 bg-card p-3 border border-border rounded-lg">
         <div className="space-y-1">
-          <label className="block text-[10px] font-bold text-muted-foreground uppercase">
+          <label className="block font-bold text-[10px] text-muted-foreground uppercase">
             Backend JSON Config File Path :
           </label>
           <Input
             value={config.backendConfigPath}
             onChange={(e) => updateConfig({ backendConfigPath: e.target.value })}
-            className="bg-background h-8 text-xs font-mono"
+            className="bg-background h-8 font-mono text-xs"
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="gap-2 grid grid-cols-2">
           <div className="space-y-1">
-            <label className="block text-[10px] font-bold text-muted-foreground uppercase">Default Client Provider :</label>
+            <label className="block font-bold text-[10px] text-muted-foreground uppercase">Default Client Provider :</label>
             <Input
               value={config.defaultClient}
               onChange={(e) => updateConfig({ defaultClient: e.target.value })}
-              className="bg-background h-8 text-xs font-semibold"
+              className="bg-background h-8 font-semibold text-xs"
             />
           </div>
           <div className="space-y-1">
-            <label className="block text-[10px] font-bold text-muted-foreground uppercase">Default Model Name :</label>
+            <label className="block font-bold text-[10px] text-muted-foreground uppercase">Default Model Name :</label>
             <Input
               value={config.defaultModel}
               onChange={(e) => updateConfig({ defaultModel: e.target.value })}
-              className="bg-background h-8 text-xs font-semibold"
+              className="bg-background h-8 font-semibold text-xs"
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="gap-2 grid grid-cols-2">
           <div className="space-y-1">
-            <label className="block text-[10px] font-bold text-muted-foreground uppercase">Max Tokens Limit :</label>
+            <label className="block font-bold text-[10px] text-muted-foreground uppercase">Max Tokens Limit :</label>
             <Input
               type="number"
               value={config.maxTokens}
@@ -65,7 +65,7 @@ export function ConfigurationPanel() {
             />
           </div>
           <div className="space-y-1">
-            <label className="block text-[10px] font-bold text-muted-foreground uppercase">Temperature :</label>
+            <label className="block font-bold text-[10px] text-muted-foreground uppercase">Temperature :</label>
             <Input
               type="number"
               step="0.1"
@@ -79,16 +79,16 @@ export function ConfigurationPanel() {
         </div>
 
         <div className="space-y-1">
-          <label className="block text-[10px] font-bold text-muted-foreground uppercase">System Prompt Prefix :</label>
+          <label className="block font-bold text-[10px] text-muted-foreground uppercase">System Prompt Prefix :</label>
           <Textarea
             value={config.systemPromptPrefix}
             onChange={(e) => updateConfig({ systemPromptPrefix: e.target.value })}
-            className="bg-background h-16 text-xs resize-none font-mono"
+            className="bg-background h-16 font-mono text-xs resize-none"
           />
         </div>
 
-        <div className="flex items-center justify-between pt-2 border-t border-border">
-          <span className="text-[11px] font-bold text-foreground">Save History Locally</span>
+        <div className="flex justify-between items-center pt-2 border-border border-t">
+          <span className="font-bold text-[11px] text-foreground">Save History Locally</span>
           <Switch
             checked={config.saveHistoryLocally}
             onCheckedChange={(checked) => updateConfig({ saveHistoryLocally: checked })}
@@ -101,7 +101,7 @@ export function ConfigurationPanel() {
         <span className="block font-bold text-[10px] text-muted-foreground uppercase">
           JSON Config Payload Mock Preview
         </span>
-        <pre className="bg-slate-950 p-2.5 rounded border border-slate-800 text-slate-300 font-mono text-[10px] max-h-36 overflow-auto">
+        <pre className="bg-slate-950 p-2.5 border border-slate-800 rounded max-h-36 overflow-auto font-mono text-[10px] text-slate-300">
           {JSON.stringify(config, null, 2)}
         </pre>
       </div>
@@ -109,7 +109,7 @@ export function ConfigurationPanel() {
       {/* Save Action */}
       <Button
         onClick={handleSaveConfig}
-        className="w-full h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 cursor-pointer shadow-sm"
+        className="gap-2 bg-emerald-600 hover:bg-emerald-700 shadow-sm w-full h-9 font-bold text-white cursor-pointer"
       >
         <Save size={14} /> Save Configuration (.token-razor/config/)
       </Button>

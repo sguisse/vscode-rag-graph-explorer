@@ -1,4 +1,4 @@
-import { useExplorerStore } from '../store/useExplorerStore';
+import { useExplorerStore } from '../../store/useExplorerStore';
 
 export function useTabsFilesContext() {
   const rightPanelTab = useExplorerStore((s) => s.rightPanelTab);

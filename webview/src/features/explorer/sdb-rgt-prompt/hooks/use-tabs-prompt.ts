@@ -1,4 +1,4 @@
-import { useExplorerStore } from '../store/useExplorerStore';
+import { useExplorerStore } from '../../store/useExplorerStore';
 
 export function useTabsPrompt() {
   const activeTab = useExplorerStore((s) => s.promptTab);

@@ -4,7 +4,7 @@ import { InspectorPanel } from './inspector-panel';
 import { FilesContextPanel } from './files-context';
 import { ContextTransformerPanel } from './context-transformer';
 import { CodebaseData, SelectedEntity } from '@/shared/services/graph-rag-explorer';
-import { useTabsFilesContext } from './use-tabs-files-context';
+import { useTabsFilesContext } from './hooks/use-tabs-files-context';
 
 interface TabsFilesContextContainerProps {
   selectedEntity: SelectedEntity | null;

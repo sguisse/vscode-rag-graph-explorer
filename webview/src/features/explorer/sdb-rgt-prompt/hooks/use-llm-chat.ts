@@ -4,8 +4,8 @@ import {
   IChatMessageDto,
   ILlmModelInfo,
   IFileContextDto,
-} from '../../../../../shared/services/llm-chat';
-import { llmChatApiService } from '../../../services/api/llm-chat-api.service.gen';
+} from '../../../../../../shared/services/llm-chat';
+import { llmChatApiService } from '../../../../services/api/llm-chat-api.service.gen';
 
 const logInfo = (message: string, ...meta: any[]) => {
   console.log(`[LLMExplorerChat UI] ℹ️ ${message}`, meta.length ? meta : '');
