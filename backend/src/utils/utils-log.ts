@@ -1,12 +1,12 @@
 import * as vscode from 'vscode';
 import { LogLevel } from '../../../shared/services/vscode/domain/model/types';
-import { getAppNameFromPackageJson, getCurrentExtensionContext } from './utils-vscode';
+import { getAppNameFromPackageJson } from './utils-vscode';
 
 export let logChannel: vscode.LogOutputChannel;
 
 function getLogChannel() {
     if (!logChannel) {
-        const appName = getAppNameFromPackageJson(getCurrentExtensionContext());
+        const appName = getAppNameFromPackageJson();
         logChannel = vscode.window.createOutputChannel(`${appName}`, { log: true });
         logChannel.show();
     }

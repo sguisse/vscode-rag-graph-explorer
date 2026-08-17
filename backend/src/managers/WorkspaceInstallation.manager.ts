@@ -35,7 +35,7 @@ export class WorkspaceInstallationManager {
     }
 
     private isCurrentVersionMatchWorkspaceVersion (context: vscode.ExtensionContext): boolean {
-        const currentVersion = getAppVersionFromPackageJson(context);
+        const currentVersion = getAppVersionFromPackageJson();
         const workspaceVersion = this.readWorkspaceExtentionVersion();
 
         const result = currentVersion === workspaceVersion;
@@ -68,7 +68,7 @@ export class WorkspaceInstallationManager {
     }
 
     public saveWorkspaceExtentionVersion(context: vscode.ExtensionContext): string {
-        const currentVersion = getAppVersionFromPackageJson(context);
+        const currentVersion = getAppVersionFromPackageJson();
         try {
             const dirPath = path.dirname(this.versionFilePath);
             if (!fs.existsSync(dirPath)) {

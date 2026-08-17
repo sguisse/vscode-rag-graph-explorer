@@ -17,8 +17,8 @@ let activeChildProcess: any = null;
 
 export function activate(extentionContext: vscode.ExtensionContext) {
     currentExtensionContext = extentionContext;
-    EXTENSION_BASE_CONFIG_NAME = getAppNormalizedNameFromPackageJson(extentionContext);
-    vsCodeSettingsManager.init(EXTENSION_BASE_CONFIG_NAME);
+    displayVsCodeExtentsionSettings();
+    EXTENSION_BASE_CONFIG_NAME = getAppNormalizedNameFromPackageJson();
     registerServices(extentionContext);
 
     workspaceInstallationManager.syncScripts(extentionContext);
@@ -42,7 +42,6 @@ function createOpenToolCommand(extentionContext: vscode.ExtensionContext) {
         }
 
         pythonScriptExecutionManager.killAll();
-        vsCodeSettingsManager.init(EXTENSION_BASE_CONFIG_NAME);
         workspaceInstallationManager.syncScripts(extentionContext);
 
         const webviewPanel: vscode.WebviewPanel = createWebviewPanel(extentionContext);
@@ -58,7 +57,7 @@ function createOpenToolCommand(extentionContext: vscode.ExtensionContext) {
         // Set custom context to TRUE when the panel is created
         vscode.commands.executeCommand('setContext', 'tokenRazor.isToolOpened', true);
 
-        //runPythonScan("deep");
+        runPythonScan("deep");
     };
 }
 
@@ -94,7 +93,7 @@ function createAddFromExplorerCommand(openTool: () => void) {
 function createWebviewPanel(context: vscode.ExtensionContext): vscode.WebviewPanel {
     const panel: vscode.WebviewPanel = vscode.window.createWebviewPanel(
         EXTENSION_BASE_CONFIG_NAME,
-        getAppDisplayNameFromPackageJson(context),
+        getAppDisplayNameFromPackageJson(),
         vscode.ViewColumn.One,
         {
             enableScripts: true,
@@ -254,7 +253,8 @@ function runPythonScan(mode: string, targetFile: string = "") {
     const child = pythonScriptExecutionManager.executeScript(
         runnerScript,
         [],
-        { cwd: workspaceRoot }
+        { cwd: workspaceRoot },
+        120_000
     );
     activeChildProcess = child;
 
@@ -288,4 +288,9 @@ function runPythonScan(mode: string, targetFile: string = "") {
     });
 
     logInfo('runPythonScan Finished !!!');
+}
+
+
+function displayVsCodeExtentsionSettings() {
+    logInfo("VsCode Settings : ", vsCodeSettingsManager.getSettings());
 }

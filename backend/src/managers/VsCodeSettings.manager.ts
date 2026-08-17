@@ -3,39 +3,31 @@ import { VsCodeSettings } from '../../../shared/services/vscode/domain/model/VsC
 
 export class VsCodeSettingsManager {
     private static instance: VsCodeSettingsManager;
-    private referenceRegex = /\${([^}]+)}/g;
-    private baseScope: string = '';
+    private static readonly SCOPE = 'tokenRazor';
 
-    private constructor(baseScope: string = '') {
-        this.init(baseScope);
-    }
+    private constructor() {}
 
-    public static getInstance(baseScope: string = ''): VsCodeSettingsManager {
+    public static getInstance(): VsCodeSettingsManager {
         if (!VsCodeSettingsManager.instance) {
-            VsCodeSettingsManager.instance = new VsCodeSettingsManager(baseScope);
+            VsCodeSettingsManager.instance = new VsCodeSettingsManager();
         }
         return VsCodeSettingsManager.instance;
     }
 
-    public init(baseScope: string): void {
-        this.baseScope = baseScope && !baseScope.endsWith('.') ? `${baseScope}.` : baseScope;
-    }
-
     /**
-     * Recursively transforms dot-notated flat keys into a nested object graph.
+     * Unflattens dot-notated keys into a nested object graph.
      */
     public unflatten(flatObj: Record<string, any>): Record<string, any> {
         const result: Record<string, any> = {};
 
         for (const key of Object.keys(flatObj)) {
-            const value = flatObj[key];
             const parts = key.split('.');
             let current = result;
 
             for (let i = 0; i < parts.length; i++) {
                 const part = parts[i];
                 if (i === parts.length - 1) {
-                    current[part] = value;
+                    current[part] = flatObj[key];
                 } else {
                     if (!current[part] || typeof current[part] !== 'object' || Array.isArray(current[part])) {
                         current[part] = {};
@@ -48,39 +40,34 @@ export class VsCodeSettingsManager {
         return result;
     }
 
-    /**
-     * Retrieves settings loaded from VS Code workspace configuration, resolves placeholders,
-     * unflattens dot keys, and injects them into a new VsCodeSettings instance.
-     */
     public getSettings(): VsCodeSettings {
         const flatMap = this.getResolvedFlatMap();
-        const nestedMap = this.unflatten(flatMap);
-        return VsCodeSettings.fromMap(nestedMap);
+        return VsCodeSettings.fromMap(this.unflatten(flatMap));
     }
 
-    /**
-     * Returns the transposed configuration object as a plain nested dictionary.
-     */
     public getMap(): Record<string, any> {
         return this.unflatten(this.getResolvedFlatMap());
     }
 
-    public get<T>(relativeKey: string, defaultValue?: T): T {
-        const absoluteKey = (this.baseScope && !relativeKey.startsWith(this.baseScope))
-            ? `${this.baseScope}${relativeKey}`
-            : relativeKey;
+    /**
+     * Get a setting by key (e.g. 'pinApplication' or 'tokenRazor.pinApplication')
+     */
+    private get<T>(key: string, defaultValue?: T, visited = new Set<string>()): T {
+        const absoluteKey = key.startsWith(`${VsCodeSettingsManager.SCOPE}.`)
+            ? key
+            : `${VsCodeSettingsManager.SCOPE}.${key}`;
 
-        return this.resolveValue(absoluteKey, new Set<string>(), defaultValue);
+        return this.resolveValue<T>(absoluteKey, visited, defaultValue);
     }
 
     private getResolvedFlatMap(): Record<string, any> {
-        const scopeClean = this.baseScope.endsWith('.') ? this.baseScope.slice(0, -1) : this.baseScope;
-        const config = vscode.workspace.getConfiguration(scopeClean);
+        const config = vscode.workspace.getConfiguration(VsCodeSettingsManager.SCOPE);
         const configMap: Record<string, any> = {};
 
         for (const key of Object.keys(config)) {
             if (typeof config[key] !== 'function') {
-                configMap[key] = this.resolveAllPlaceholders(config[key]);
+                const value = config.get(key);
+                configMap[key] = this.resolveAllPlaceholders(value);
             }
         }
 
@@ -125,7 +112,8 @@ export class VsCodeSettingsManager {
     }
 
     private interpolate(input: string, visited: Set<string>): string {
-        return input.replace(this.referenceRegex, (match, expression) => {
+        const referenceRegex = /\${([^}]+)}/g;
+        return input.replace(referenceRegex, (match, expression) => {
             const targetKey = expression.trim();
             const resolvedValue = this.resolveValue(targetKey, visited);
 
@@ -136,26 +124,9 @@ export class VsCodeSettingsManager {
         });
     }
 
-    /**
-     * Exports all configuration keys under the initialized scope into a clean,
-     * fully resolved JSON object ready to be passed to your Python backend.
-     */
     public toJson(): Record<string, any> {
-        const scopeClean = this.baseScope.endsWith('.') ? this.baseScope.slice(0, -1) : this.baseScope;
-        const config = vscode.workspace.getConfiguration(scopeClean);
-
-        const configMap: Record<string, any> = {};
-
-        // Extract plain values from the VS Code WorkspaceConfiguration proxy object
-        for (const key of Object.keys(config)) {
-            if (typeof config[key] !== 'function') {
-                configMap[key] = this.resolveAllPlaceholders(config[key]);
-            }
-        }
-
-        // Nest inside the root scope key so absolute dictionary paths are preserved in Python
-        return scopeClean ? { [scopeClean]: configMap } : configMap;
+        return { [VsCodeSettingsManager.SCOPE]: this.getResolvedFlatMap() };
     }
 }
 
-export const vsCodeSettingsManager: VsCodeSettingsManager = VsCodeSettingsManager.getInstance();
+export const vsCodeSettingsManager = VsCodeSettingsManager.getInstance();

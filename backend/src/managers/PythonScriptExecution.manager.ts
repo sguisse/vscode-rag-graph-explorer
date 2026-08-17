@@ -19,6 +19,7 @@ export class PythonScriptExecutionManager {
     private activeProcesses: Map<number, childProcess.ChildProcess> = new Map();
     private startTimes: Map<number, Date> = new Map();
     private scriptOrigins: Map<number, string> = new Map();
+    private processTimeouts: Map<number, number> = new Map();
     private finishedProcesses: Map<number, PythonScriptStatus> = new Map();
 
     // Cap finished process history to avoid unbounded memory growth
@@ -77,16 +78,17 @@ export class PythonScriptExecutionManager {
     }
 
     /**
-     * Checks all running active processes against getProcessTimeout().
+     * Checks all running active processes against custom timeout or default getProcessTimeout().
      * Kills any process that has exceeded its allowed run time.
      */
     private checkActiveProcessesTimeout(): void {
         const now = Date.now();
-        const timeoutMs = this.getProcessTimeout();
-        const timeoutSec = timeoutMs / 1000;
+        const defaultTimeoutMs = this.getProcessTimeout();
 
         for (const [pid, startTime] of this.startTimes.entries()) {
             const elapsedMs = now - startTime.getTime();
+            const timeoutMs = this.processTimeouts.get(pid) ?? defaultTimeoutMs;
+            const timeoutSec = timeoutMs / 1000;
 
             if (elapsedMs >= timeoutMs) {
                 const origin = this.scriptOrigins.get(pid) || `PythonProcess[PID:${pid}]`;
@@ -154,7 +156,11 @@ export class PythonScriptExecutionManager {
      * Registers an active process in memory, records its start time,
      * and sets up exit listeners to transition it to finishedProcesses upon completion.
      */
-    public registerProcess(child: childProcess.ChildProcess, scriptOrigin?: string): number | undefined {
+    public registerProcess(
+        child: childProcess.ChildProcess,
+        scriptOrigin?: string,
+        timeout?: number
+    ): number | undefined {
         const pid = child.pid;
         if (!pid) return undefined;
 
@@ -164,6 +170,9 @@ export class PythonScriptExecutionManager {
         this.activeProcesses.set(pid, child);
         this.startTimes.set(pid, startTime);
         this.scriptOrigins.set(pid, origin);
+        if (timeout && timeout > 0) {
+            this.processTimeouts.set(pid, timeout);
+        }
         this.ensureDirExists();
 
         try {
@@ -227,6 +236,7 @@ export class PythonScriptExecutionManager {
         this.activeProcesses.delete(pid);
         this.startTimes.delete(pid);
         this.scriptOrigins.delete(pid);
+        this.processTimeouts.delete(pid);
 
         const pidFile = this.getPidFilePath(pid);
         if (fs.existsSync(pidFile)) {
@@ -273,7 +283,8 @@ export class PythonScriptExecutionManager {
     public executeScript(
         scriptPath: string,
         args: string[] = [],
-        options: childProcess.SpawnOptions = {}
+        options: childProcess.SpawnOptions = {},
+        timeout?: number
     ): childProcess.ChildProcess {
         const isWindows = process.platform === 'win32';
         const pythonBinary = isWindows ? 'python' : 'python3';
@@ -292,20 +303,21 @@ export class PythonScriptExecutionManager {
         };
 
         logInfo(`Executing Python script: ${pythonBinary} ${fullArgs.map(arg => arg.replace(/,/g, ',\n')).join('\n')}`,
-               { scriptPath, args, options: spawnOptions });
+               { scriptPath, args, options: spawnOptions, timeout });
 
         const origin = path.basename(scriptPath);
-        return this.spawnPythonProcess(pythonBinary, fullArgs, spawnOptions, origin);
+        return this.spawnPythonProcess(pythonBinary, fullArgs, spawnOptions, origin, timeout);
     }
 
     public spawnPythonProcess(
         pythonBinary: string,
         args: string[],
         options: childProcess.SpawnOptions = {},
-        origin?: string
+        origin?: string,
+        timeout?: number
     ): childProcess.ChildProcess {
         const child = childProcess.spawn(pythonBinary, args, options);
-        this.registerProcess(child, origin);
+        this.registerProcess(child, origin, timeout);
         return child;
     }
 

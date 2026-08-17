@@ -33,23 +33,23 @@ export function getWorkspaceExtentionPath(): string {
   return path.join(getWorkspaceRoot(), vsCodeSettingsManager.getSettings().backendWorkspacePath);
 }
 
-export function getAppNameFromPackageJson(context: vscode.ExtensionContext): string {
-    const packageData = context.extension.packageJSON;
+export function getAppNameFromPackageJson(): string {
+    const packageData = getCurrentExtensionContext().extension.packageJSON;
     return packageData.name;
 }
 
-export function getAppDisplayNameFromPackageJson(context: vscode.ExtensionContext): string {
-    const packageData = context.extension.packageJSON;
+export function getAppDisplayNameFromPackageJson(): string {
+    const packageData = getCurrentExtensionContext().extension.packageJSON;
     return packageData.displayName;
 }
 
-export function getAppNormalizedNameFromPackageJson(context: vscode.ExtensionContext): string {
-    const packageData = context.extension.packageJSON;
+export function getAppNormalizedNameFromPackageJson(): string {
+    const packageData = getCurrentExtensionContext().extension.packageJSON;
     return toCamelCase(packageData.name);
 }
 
-export function getAppVersionFromPackageJson(context: vscode.ExtensionContext): string {
-    const packageData = context.extension.packageJSON;
+export function getAppVersionFromPackageJson(): string {
+    const packageData = getCurrentExtensionContext().extension.packageJSON;
     return packageData.version;
 }
 
