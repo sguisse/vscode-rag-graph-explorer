@@ -133,7 +133,7 @@ export function SidebarLeft({
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-0 border-sidebar-border border-t overflow-hidden shrink-0">
+      <SidebarFooter className="p-0 border-sidebar-border border-t h-9 overflow-hidden shrink-0">
         <Button
           id="btn-toggle-sidebar-left-mode"
           variant="ghost"

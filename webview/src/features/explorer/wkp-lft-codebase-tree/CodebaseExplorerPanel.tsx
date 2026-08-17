@@ -175,7 +175,7 @@ export function CodebaseExplorerPanel({
         })}
       </div>
 
-      <div id="panel-codebase-explorer-bottom" className="bg-muted/20 p-3 border-border border-t">
+      <div id="panel-codebase-explorer-bottom" className="bg-muted/20 p-2 border-border border-t h-9">
         <div>
           <h3 className="flex items-center gap-2 font-mono font-bold text-muted-foreground text-xs uppercase tracking-wider">
             <span>Codebase Explorer</span>
