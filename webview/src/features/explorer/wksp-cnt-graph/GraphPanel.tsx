@@ -4,6 +4,7 @@ import { FolderNode, UmlClassNode, ConfigNode, UmlClassNodeData } from './compon
 import { SelectedEntity, CodebaseFile } from '@/shared/services/graph-rag-explorer';
 import { isMemberKeyForFileToken, extractMemberIdFromKeyToken } from '@/services/view/graph-view.service';
 import { useGraphPanel } from './hooks/use-graph-panel';
+import { GraphToolbar } from './Graph-toolbar';
 
 interface GraphPanelProps {
   folderPositions: Record<string, { label: string }>;
@@ -53,7 +54,9 @@ export function GraphPanel({
   );
 
   return (
-    <div className="absolute inset-0 outline-none w-full h-full overflow-hidden">
+    <div className="relative inset-0 outline-none w-full h-full overflow-hidden">
+      <GraphToolbar />
+
       <div
         ref={containerRef}
         className="z-0 absolute inset-0 w-full h-full"

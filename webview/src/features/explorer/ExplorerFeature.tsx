@@ -44,7 +44,7 @@ export function ExplorerFeature() {
           maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
         },
         bottom: {
-          visible: true,
+          visible: false,
           container: <BottomPanelContainer />,
           isResizable: true,
           isHiddable: true,

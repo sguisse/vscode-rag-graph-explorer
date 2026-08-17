@@ -31,25 +31,25 @@ export function TabsFilesContextContainer({
 
   return (
     <div className="flex flex-col bg-card h-full">
-      <div className="flex bg-muted/40 border-border border-b overflow-x-auto shrink-0">
+      <div className="flex items-center bg-muted/40 border-border border-b h-8.25 overflow-x-auto shrink-0">
         <Button
           variant="ghost"
           onClick={() => setRightPanelTab('inspect')}
-          className={`flex-1 min-w-[70px] py-2 text-[11px] font-bold rounded-none border-b-2 ${rightPanelTab === 'inspect' ? 'border-b-primary text-primary bg-background' : 'text-muted-foreground border-transparent'}`}
+          className={`flex-1 min-w-[70px] h-8 py-0.5 text-[11px] font-bold rounded-none border-b-2 ${rightPanelTab === 'inspect' ? 'border-b-primary text-primary bg-background' : 'text-muted-foreground border-transparent'}`}
         >
           Inspector
         </Button>
         <Button
           variant="ghost"
           onClick={() => setRightPanelTab('files_context')}
-          className={`flex-1 min-w-[70px] py-2 text-[11px] font-bold rounded-none border-b-2 ${rightPanelTab === 'files_context' ? 'border-b-primary text-primary bg-background' : 'text-muted-foreground border-transparent'}`}
+          className={`flex-1 min-w-[70px] h-8 py-0.5 text-[11px] font-bold rounded-none border-b-2 ${rightPanelTab === 'files_context' ? 'border-b-primary text-primary bg-background' : 'text-muted-foreground border-transparent'}`}
         >
           Context
         </Button>
         <Button
           variant="ghost"
           onClick={() => setRightPanelTab('transformer')}
-          className={`flex-1 min-w-[80px] py-2 text-[11px] font-bold rounded-none border-b-2 ${rightPanelTab === 'transformer' ? 'border-b-primary text-primary bg-background' : 'text-muted-foreground border-transparent'}`}
+          className={`flex-1 min-w-[80px] h-8 py-0.5 text-[11px] font-bold rounded-none border-b-2 ${rightPanelTab === 'transformer' ? 'border-b-primary text-primary bg-background' : 'text-muted-foreground border-transparent'}`}
         >
           Transformer
         </Button>

@@ -21,11 +21,11 @@ export function TabsPromptContainer({
 
   return (
     <div className="flex flex-col bg-card h-full font-mono text-xs">
-      <div className="flex bg-muted/40 border-border border-b overflow-x-auto shrink-0">
+      <div className="flex bg-muted/40 border-border border-b h-8.25 overflow-x-auto shrink-0">
         <Button
           variant="ghost"
           onClick={() => setActiveTab('prompt')}
-          className={`flex-1 min-w-[90px] py-2 text-[11px] font-bold rounded-none border-b-2 transition-all cursor-pointer ${
+          className={`flex-1 min-w-[90px] h-8 py-0.5 text-[11px] font-bold rounded-none border-b-2 transition-all cursor-pointer ${
             activeTab === 'prompt' ? 'border-b-primary text-primary bg-background' : 'text-muted-foreground border-transparent'
           }`}
         >
@@ -34,7 +34,7 @@ export function TabsPromptContainer({
         <Button
           variant="ghost"
           onClick={() => setActiveTab('llm')}
-          className={`flex-1 min-w-[80px] py-2 text-[11px] font-bold rounded-none border-b-2 transition-all cursor-pointer ${
+          className={`flex-1 min-w-[80px] h-8 py-0.5 text-[11px] font-bold rounded-none border-b-2 transition-all cursor-pointer ${
             activeTab === 'llm' ? 'border-b-primary text-primary bg-background' : 'text-muted-foreground border-transparent'
           }`}
         >
@@ -43,7 +43,7 @@ export function TabsPromptContainer({
         <Button
           variant="ghost"
           onClick={() => setActiveTab('config')}
-          className={`flex-1 min-w-[70px] py-2 text-[11px] font-bold rounded-none border-b-2 transition-all cursor-pointer ${
+          className={`flex-1 min-w-[70px] h-8 py-0.5 text-[11px] font-bold rounded-none border-b-2 transition-all cursor-pointer ${
             activeTab === 'config' ? 'border-b-primary text-primary bg-background' : 'text-muted-foreground border-transparent'
           }`}
         >
