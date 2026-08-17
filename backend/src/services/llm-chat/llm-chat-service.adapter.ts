@@ -131,13 +131,14 @@ export class LlmChatServiceAdapter implements ILlmChatServicePort {
       })
     );
 
-    const allModels = results.flat();
+    const sortedAllModels = results.flat().sort((a, b) => a.name.localeCompare(b.name));
+
     log(ORIGIN, 'Found models across all providers', {
-      totalFound: allModels.length,
-      models: allModels.map((m) => ({ id: m.id, name: m.name, provider: m.provider })),
+      totalFound: sortedAllModels.length,
+      models: sortedAllModels.map((m) => ({ id: m.id, name: m.name, provider: m.provider })),
     });
 
-    return allModels;
+    return sortedAllModels;
   }
 
   public async healthCheck(

@@ -2,7 +2,7 @@ import { LlmProvider } from '../types/llm-provider.enum';
 
 export interface ILlmConfigProps {
   provider: LlmProvider;
-  model: string;
+  model?: string;
   temperature?: number;
   maxTokens?: number;
   baseUrl?: string;
@@ -55,7 +55,7 @@ export class LlmConfigVO {
       case LlmProvider.COPILOT:
         return 'mai-code-1-flash-picker';
       default:
-        return 'default';
+        return 'mai-code-1-flash-picker';
     }
   }
 

@@ -274,6 +274,7 @@
     "compile": "npm run build"
   },
   "dependencies": {
+    "@github/copilot-sdk": "^1.0.11",
     "neo4j-driver": "^6.2.0"
   },
   "devDependencies": {
@@ -281,5 +282,9 @@
     "@types/node": "^26.1.2",
     "@types/vscode": "^1.125.0",
     "typescript": "^5.3.3"
+  },
+  "allowScripts": {
+    "fsevents@2.3.3": true,
+    "koffi@3.1.5": true
   }
 }

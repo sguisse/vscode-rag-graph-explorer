@@ -1,184 +1,288 @@
 #!/usr/bin/env bash
-
-# Exit immediately if a command exits with a non-zero status
 set -e
 
-echo "🚀 Updating WorkspaceLayout to dynamically scale panel widths when center panel is hidden..."
+DELEGATE_DIR="./backend/src/services/llm-chat/delegate"
+TARGET_FILE="$DELEGATE_DIR/copilot.delegate.ts"
+OLD_FILE="$DELEGATE_DIR/copilot-provider.delegate.ts"
 
-# Ensure target directory exists
-mkdir -p webview/src/components/app/layout
+echo "🚀 Mise à jour du delegate GitHub Copilot dans $TARGET_FILE..."
 
-# Overwrite WorkspaceLayout.tsx with dynamic flex-grow rules for left, right, top, and bottom panels
-cat << 'EOF' > webview/src/components/app/layout/WorkspaceLayout.tsx
-import React from 'react';
-import { useLayoutStore } from '@/store/useLayoutStore';
-import { ResizableContainer } from '../container/resizable-container';
-import { useResizable } from '../container/hooks/use-resizable';
-import { WorkspaceContainers, LayoutContainer } from './types';
-import { DefaultContainersSize } from '@/constants/layout-constants';
+mkdir -p "$DELEGATE_DIR"
 
-interface WorkspaceLayoutProps {
-  containers?: WorkspaceContainers;
-}
+# Supprime l'ancien fichier pour éviter les conflits d'importation
+if [ -f "$OLD_FILE" ]; then
+  echo "🧹 Nettoyage de l'ancien fichier $OLD_FILE..."
+  rm -f "$OLD_FILE"
+fi
 
-export const mergeContainer = (storeC?: LayoutContainer, propC?: LayoutContainer): LayoutContainer => {
-  const isMaximized = storeC?.maximizeContainer?.isMaximized ?? propC?.maximizeContainer?.isMaximized ?? false;
-  const isMaximizable = propC?.maximizeContainer?.isMaximizable ?? storeC?.maximizeContainer?.isMaximizable ?? true;
-  const maximizeScope = propC?.maximizeContainer?.maximizeScope ?? storeC?.maximizeContainer?.maximizeScope ?? 'Main';
-  const visible = storeC?.visible ?? propC?.visible ?? true;
-  const isResizable = storeC?.isResizable ?? propC?.isResizable ?? true;
-  const isHiddable = storeC?.isHiddable ?? propC?.isHiddable ?? true;
-  const container = storeC?.container ?? propC?.container;
+cat << 'EOF' > "$TARGET_FILE"
+import { CopilotClient, approveAll } from '@github/copilot-sdk';
+import * as path from 'path';
+import * as fs from 'fs';
+import { ILlmProviderDelegate } from './llm-provider.delegate.interface';
+import {
+  LlmProvider,
+  ILlmModelInfo,
+  LlmConfigVO,
+  ChatPromptVO,
+  IChatResponseDto,
+  IChatStreamChunkDto,
+  ILlmHealthResultDto,
+} from '../../../../../shared/services/llm-chat';
 
-  return {
-    visible,
-    isResizable,
-    isHiddable,
-    container,
-    maximizeContainer: {
-      isMaximized,
-      isMaximizable,
-      maximizeScope,
-    },
-  };
-};
+export class CopilotDelegate implements ILlmProviderDelegate {
+  readonly provider = LlmProvider.COPILOT;
+  private static clientInstance: CopilotClient | null = null;
+  private static isStarted = false;
+  private static startPromise: Promise<void> | null = null;
 
-export function WorkspaceLayout({ containers: propContainers }: WorkspaceLayoutProps) {
-  const storeWorkspace = useLayoutStore((s) => s.containers.workspace);
+  public constructor() {}
 
-  const topConfig = mergeContainer(storeWorkspace?.top, propContainers?.top);
-  const leftConfig = mergeContainer(storeWorkspace?.left, propContainers?.left);
-  const centerConfig = mergeContainer(storeWorkspace?.center, propContainers?.center);
-  const rightConfig = mergeContainer(storeWorkspace?.right, propContainers?.right);
-  const bottomConfig = mergeContainer(storeWorkspace?.bottom, propContainers?.bottom);
+  /**
+   * Localise le binaire exécutable natif du CLI Copilot compatible avec l'Extension Host VS Code
+   */
+  private resolveNativeCliPath(): string | undefined {
+    if (process.env.COPILOT_CLI_PATH && fs.existsSync(process.env.COPILOT_CLI_PATH)) {
+      return process.env.COPILOT_CLI_PATH;
+    }
 
-  const mergedContainers = {
-    top: topConfig,
-    left: leftConfig,
-    center: centerConfig,
-    right: rightConfig,
-    bottom: bottomConfig,
-  };
+    const platform = process.platform;
+    const arch = process.arch;
 
-  const [topHeight, startTopResize] = useResizable(DefaultContainersSize.workspaceTopHeight, 40, 400, false, false);
-  const [leftWidth, startLeftResize] = useResizable(DefaultContainersSize.workspaceLeftWidth, 150, 1000, true, false);
-  const [rightWidth, startRightResize] = useResizable(DefaultContainersSize.workspaceRightWidth, 150, 1000, true, true);
-  const [bottomHeight, startBottomResize] = useResizable(DefaultContainersSize.workspaceBottomHeight, 40, 400, false, true);
+    let pkgName = '';
+    let binName = 'copilot';
 
-  const workspaceKeys = ['top', 'left', 'center', 'right', 'bottom'] as const;
+    if (platform === 'darwin') {
+      pkgName = arch === 'arm64' ? '@github/copilot-darwin-arm64' : '@github/copilot-darwin-x64';
+    } else if (platform === 'linux') {
+      pkgName = arch === 'arm64' ? '@github/copilot-linux-arm64' : '@github/copilot-linux-x64';
+    } else if (platform === 'win32') {
+      pkgName = arch === 'arm64' ? '@github/copilot-win32-arm64' : '@github/copilot-win32-x64';
+      binName = 'copilot.exe';
+    }
 
-  const isWorkspaceScopeMaximized = (c?: LayoutContainer) =>
-    Boolean(
-      c?.visible !== false &&
-      c?.maximizeContainer?.isMaximizable !== false &&
-      c?.maximizeContainer?.isMaximized &&
-      c?.maximizeContainer?.maximizeScope === 'Workspace'
-    );
+    if (pkgName) {
+      // 1. Résolution standard CommonJS
+      try {
+        const pkgJsonPath = require.resolve(`${pkgName}/package.json`);
+        const binPath = path.join(path.dirname(pkgJsonPath), binName);
+        if (fs.existsSync(binPath)) {
+          return binPath;
+        }
+      } catch {
+        // Fallback silencieux si 'require.resolve' échoue dans le bundle
+      }
 
-  const maximizedKey = workspaceKeys.find((key) => isWorkspaceScopeMaximized(mergedContainers[key]));
+      // 2. Fallback pour bundle VS Code (esbuild/webpack) : balayage des répertoires node_modules
+      const possibleRoots = [
+        process.cwd(),
+        path.join(__dirname, '..', '..', '..', '..', '..'),
+        path.join(__dirname, '..', '..', '..'),
+      ];
 
-  if (maximizedKey) {
-    const targetConfig = mergedContainers[maximizedKey];
+      for (const root of possibleRoots) {
+        const candidate = path.join(root, 'node_modules', pkgName, binName);
+        if (fs.existsSync(candidate)) {
+          return candidate;
+        }
+      }
+    }
 
-    return (
-      <div className="flex flex-col flex-1 bg-background p-1 w-full min-w-0 h-full min-h-0 overflow-hidden">
-        <div className="flex-1 w-full min-w-0 h-full min-h-0 overflow-auto">
-          {targetConfig?.container}
-        </div>
-      </div>
-    );
+    return undefined;
   }
 
-  const isTopVisible = topConfig?.visible !== false;
-  const isLeftVisible = leftConfig?.visible !== false;
-  const isCenterVisible = centerConfig?.visible !== false;
-  const isRightVisible = rightConfig?.visible !== false;
-  const isBottomVisible = bottomConfig?.visible !== false;
+  private get client(): CopilotClient {
+    if (!CopilotDelegate.clientInstance) {
+      const cliPath = this.resolveNativeCliPath();
+      CopilotDelegate.clientInstance = new CopilotClient(cliPath ? { cliPath } : undefined);
+    }
+    return CopilotDelegate.clientInstance;
+  }
 
-  const isMiddleRowVisible = isLeftVisible || isCenterVisible || isRightVisible;
+  private async ensureStarted(): Promise<void> {
+    if (CopilotDelegate.isStarted) {
+      return;
+    }
 
-  return (
-    <div className="flex flex-col flex-1 bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
-      {isTopVisible && (
-        <ResizableContainer
-          id="workspace-top"
-          visible
-          resizeHandle={topConfig?.isResizable !== false && isMiddleRowVisible ? 'bottom' : 'none'}
-          onResizeStart={startTopResize}
-          style={isMiddleRowVisible ? { height: `${topHeight}px` } : undefined}
-          className={
-            isMiddleRowVisible
-              ? "border-border border-b"
-              : "flex-1 h-full min-h-0 w-full border-border border-b"
+    if (!CopilotDelegate.startPromise) {
+      CopilotDelegate.startPromise = (async () => {
+        try {
+          // Guard Timeout de 10s pour éviter un blocage indéfini dans VS Code
+          const timeout = new Promise<never>((_, reject) =>
+            setTimeout(
+              () => reject(new Error('Délai dépassé lors du démarrage du CLI Copilot (10s)')),
+              10000
+            )
+          );
+
+          await Promise.race([this.client.start(), timeout]);
+          CopilotDelegate.isStarted = true;
+        } catch (error) {
+          CopilotDelegate.startPromise = null;
+          throw error;
+        }
+      })();
+    }
+
+    return CopilotDelegate.startPromise;
+  }
+
+  async listModels(config?: LlmConfigVO): Promise<ILlmModelInfo[]> {
+    await this.ensureStarted();
+    const models = await this.client.listModels();
+    return models.map((m: any) => ({
+      id: m.id || m.name,
+      name: m.name || m.id,
+      provider: this.provider,
+      contextWindow: m.contextWindow ?? 128000,
+      description: m.description || 'Modèle administré via GitHub Copilot SDK',
+    }));
+  }
+
+  async executeChat(
+    sessionId: string,
+    prompt: ChatPromptVO,
+    config: LlmConfigVO
+  ): Promise<IChatResponseDto> {
+    const startTime = Date.now();
+    const model = config?.model || 'mai-code-1-flash-picker';
+    const lastUserMsg = prompt.getLastUserMessage()?.content || '';
+
+    try {
+      await this.ensureStarted();
+      const session = await this.client.createSession({
+        sessionId,
+        model,
+        onPermissionRequest: approveAll,
+      });
+
+      let content = '';
+
+      const done = new Promise<void>((resolve, reject) => {
+        session.on('assistant.message', (event: any) => {
+          if (event?.data?.content) {
+            content = event.data.content;
           }
-        >
-          {topConfig?.container}
-        </ResizableContainer>
-      )}
+        });
 
-      {isMiddleRowVisible && (
-        <div className="flex flex-1 w-full min-h-0 overflow-hidden">
-          {isLeftVisible && (
-            <ResizableContainer
-              id="workspace-left"
-              visible
-              resizeHandle={leftConfig?.isResizable !== false && isCenterVisible ? 'right' : 'none'}
-              onResizeStart={startLeftResize}
-              style={isCenterVisible ? { width: `${leftWidth}px` } : undefined}
-              className={
-                isCenterVisible
-                  ? "border-border border-r shrink-0"
-                  : "flex-1 w-full min-w-0 h-full border-border border-r"
-              }
-            >
-              {leftConfig?.container}
-            </ResizableContainer>
-          )}
+        session.on('session.idle', () => {
+          resolve();
+        });
 
-          {isCenterVisible && (
-            <div id="workspace-center" className="flex flex-col flex-1 border-border min-w-0 h-full overflow-hidden">
-              {centerConfig?.container}
-            </div>
-          )}
+        session.on('error' as any, (err: any) => {
+          reject(err);
+        });
+      });
 
-          {isRightVisible && (
-            <ResizableContainer
-              id="workspace-right"
-              visible
-              resizeHandle={rightConfig?.isResizable !== false && isCenterVisible ? 'left' : 'none'}
-              onResizeStart={startRightResize}
-              style={isCenterVisible ? { width: `${rightWidth}px` } : undefined}
-              className={
-                isCenterVisible
-                  ? "border-border border-l shrink-0"
-                  : "flex-1 w-full min-w-0 h-full border-border border-l"
-              }
-            >
-              {rightConfig?.container}
-            </ResizableContainer>
-          )}
-        </div>
-      )}
+      await session.send({ prompt: lastUserMsg });
+      await done;
 
-      {isBottomVisible && (
-        <ResizableContainer
-          id="workspace-bottom"
-          visible
-          resizeHandle={bottomConfig?.isResizable !== false && isMiddleRowVisible ? 'top' : 'none'}
-          onResizeStart={startBottomResize}
-          style={isMiddleRowVisible ? { height: `${bottomHeight}px` } : undefined}
-          className={
-            isMiddleRowVisible
-              ? "border-border border-t"
-              : "flex-1 h-full min-h-0 w-full border-border border-t"
-          }
-        >
-          {bottomConfig?.container}
-        </ResizableContainer>
-      )}
-    </div>
-  );
+      return {
+        sessionId,
+        messageId: `msg-${Date.now()}`,
+        provider: this.provider,
+        model,
+        content,
+        done: true,
+        executionTimeMs: Date.now() - startTime,
+      };
+    } catch (error: any) {
+      return {
+        sessionId,
+        messageId: `msg-err-${Date.now()}`,
+        provider: this.provider,
+        model,
+        content: '',
+        done: true,
+        executionTimeMs: Date.now() - startTime,
+        error: error?.message || 'Erreur lors de la réponse Copilot',
+      };
+    }
+  }
+
+  async streamChat(
+    sessionId: string,
+    prompt: ChatPromptVO,
+    config: LlmConfigVO,
+    onChunk: (chunk: IChatStreamChunkDto) => void
+  ): Promise<IChatResponseDto> {
+    const startTime = Date.now();
+    const model = config?.model || 'mai-code-1-flash-picker';
+    const lastUserMsg = prompt.getLastUserMessage()?.content || '';
+
+    try {
+      await this.ensureStarted();
+      const session = await this.client.createSession({
+        sessionId,
+        model,
+        onPermissionRequest: approveAll,
+      });
+
+      let fullContent = '';
+
+      const done = new Promise<void>((resolve, reject) => {
+        session.on('assistant.message_delta', (event: any) => {
+          const delta = event?.data?.deltaContent || '';
+          fullContent += delta;
+          onChunk({ sessionId, delta, done: false });
+        });
+
+        session.on('session.idle', () => {
+          resolve();
+        });
+
+        session.on('error' as any, (err: any) => {
+          reject(err);
+        });
+      });
+
+      await session.send({ prompt: lastUserMsg });
+      await done;
+
+      onChunk({ sessionId, delta: '', done: true });
+
+      return {
+        sessionId,
+        messageId: `msg-${Date.now()}`,
+        provider: this.provider,
+        model,
+        content: fullContent,
+        done: true,
+        executionTimeMs: Date.now() - startTime,
+      };
+    } catch (error: any) {
+      const errorDetails = error?.message || 'Erreur lors du streaming Copilot';
+      onChunk({ sessionId, delta: '', done: true, error: errorDetails });
+
+      return {
+        sessionId,
+        messageId: `msg-err-${Date.now()}`,
+        provider: this.provider,
+        model,
+        content: '',
+        done: true,
+        executionTimeMs: Date.now() - startTime,
+        error: errorDetails,
+      };
+    }
+  }
+
+  async healthCheck(baseUrl?: string): Promise<ILlmHealthResultDto> {
+    try {
+      await this.ensureStarted();
+      const models = await this.listModels();
+      return {
+        status: 'ok',
+        details: `Service Copilot opérationnel (${models.length} modèles détectés)`,
+      };
+    } catch (error: any) {
+      return {
+        status: 'error',
+        details: `Erreur HealthCheck Copilot: ${error?.message}`,
+      };
+    }
+  }
 }
 EOF
 
-echo "✅ layout: Left, right, top, and bottom panels now scale dynamically to 100% space when center/middle sections are hidden!"
+echo "✅ Mise à jour terminée avec succès !"

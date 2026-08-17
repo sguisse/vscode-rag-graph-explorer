@@ -35,7 +35,7 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
           value={promptFields.predefined}
           onValueChange={(val) => val && handlePredefinedChange(val)}
         >
-          <SelectTrigger className="bg-background h-8 text-xs">
+          <SelectTrigger className="bg-background w-full h-8 font-mono text-xs">
             <SelectValue placeholder="Select a predefined prompt preset..." />
           </SelectTrigger>
           <SelectContent>

@@ -1,6 +1,4 @@
 import { CopilotClient, approveAll } from '@github/copilot-sdk';
-import * as path from 'path';
-import * as fs from 'fs';
 import { ILlmProviderDelegate } from './llm-provider.delegate.interface';
 import {
   LlmProvider,
@@ -11,87 +9,42 @@ import {
   IChatStreamChunkDto,
   ILlmHealthResultDto,
 } from '../../../../../shared/services/llm-chat';
-import { getCurrentExtensionContext } from '../../../utils/utils-vscode';
-import { logInfo } from '../../../utils/utils-log';
 
 export class CopilotDelegate implements ILlmProviderDelegate {
   readonly provider = LlmProvider.COPILOT;
-  private static clientInstance: CopilotClient | null = null;
-  private static isStarted = false;
-  private static startPromise: Promise<void> | null = null;
-  private static cliBinaryPath: string | null = null;
+  private static instance: CopilotDelegate;
+  private client: CopilotClient;
+  private isStarted = false;
 
-  public constructor() {
-    this.resolveNativeCliPath();
+  private constructor() {
+    const cliPath = process.env.COPILOT_CLI_PATH;
+    console.log(`CopilotDelegate call CopilotClient constructor with cliPath: ${cliPath}`);
+    this.client = new CopilotClient(cliPath ? { cliPath } : undefined);
   }
 
-  /**
-   * Locates the native Copilot CLI executable binary compatible with the Host VS Code Extension
-   */
-  private resolveNativeCliPath(): string | undefined {
-    if (!CopilotDelegate.cliBinaryPath) {
-    const extentionContext = getCurrentExtensionContext();
-    const isArm64 = process.arch === 'arm64';
-        const platform = process.platform;
-
-        // Guaranteed absolute path from the extension installation directory
-        const cliBinaryPath = extentionContext.asAbsolutePath(
-            path.join('node_modules', `@github/copilot-${platform}-${isArm64 ? 'arm64' : 'x64'}`, 'copilot')
-        );
-
-        CopilotDelegate.cliBinaryPath = cliBinaryPath;
-        process.env.COPILOT_CLI_PATH = cliBinaryPath;
+  public static getInstance(): CopilotDelegate {
+    if (!CopilotDelegate.instance) {
+      CopilotDelegate.instance = new CopilotDelegate();
     }
-
-    return CopilotDelegate.cliBinaryPath;
-  }
-
-  private get client(): CopilotClient {
-    if (!CopilotDelegate.clientInstance) {
-      const cliPath = this.resolveNativeCliPath();
-      CopilotDelegate.clientInstance = new CopilotClient(cliPath ? { cliPath } : undefined);
-    }
-    return CopilotDelegate.clientInstance;
+    return CopilotDelegate.instance;
   }
 
   private async ensureStarted(): Promise<void> {
-    if (CopilotDelegate.isStarted) {
-      return;
+    if (!this.isStarted) {
+      await this.client.start();
+      this.isStarted = true;
     }
-
-    if (!CopilotDelegate.startPromise) {
-      CopilotDelegate.startPromise = (async () => {
-        try {
-          // Guard Timeout de 10s pour éviter un blocage indéfini dans VS Code
-          const timeout = new Promise<never>((_, reject) =>
-            setTimeout(
-              () => reject(new Error('Délai dépassé lors du démarrage du CLI Copilot (10s)')),
-              10000
-            )
-          );
-
-          await Promise.race([this.client.start(), timeout]);
-          CopilotDelegate.isStarted = true;
-        } catch (error) {
-          CopilotDelegate.startPromise = null;
-          throw error;
-        }
-      })();
-    }
-
-    return CopilotDelegate.startPromise;
   }
 
   async listModels(config?: LlmConfigVO): Promise<ILlmModelInfo[]> {
     await this.ensureStarted();
     const models = await this.client.listModels();
-    logInfo(`CopilotDelegate.listModels totalFound: ${models.length}`, models);
     return models.map((m: any) => ({
       id: m.id || m.name,
       name: m.name || m.id,
       provider: this.provider,
       contextWindow: m.contextWindow ?? 128000,
-      description: m.description || 'Model administered via GitHub Copilot SDK',
+      description: m.description || 'Modèle administré via GitHub Copilot SDK',
     }));
   }
 
@@ -151,7 +104,7 @@ export class CopilotDelegate implements ILlmProviderDelegate {
         content: '',
         done: true,
         executionTimeMs: Date.now() - startTime,
-        error: error?.message || 'Error while receiving Copilot response',
+        error: error?.message || 'Erreur lors de la réponse Copilot',
       };
     }
   }
@@ -171,6 +124,7 @@ export class CopilotDelegate implements ILlmProviderDelegate {
       const session = await this.client.createSession({
         sessionId,
         model,
+        streaming: true,
         onPermissionRequest: approveAll,
       });
 
@@ -207,7 +161,7 @@ export class CopilotDelegate implements ILlmProviderDelegate {
         executionTimeMs: Date.now() - startTime,
       };
     } catch (error: any) {
-      const errorDetails = error?.message || 'Error while streaming Copilot';
+      const errorDetails = error?.message || 'Erreur lors du streaming Copilot';
       onChunk({ sessionId, delta: '', done: true, error: errorDetails });
 
       return {
@@ -229,12 +183,12 @@ export class CopilotDelegate implements ILlmProviderDelegate {
       const models = await this.listModels();
       return {
         status: 'ok',
-        details: `Copilot service operational (${models.length} models detected)`,
+        details: `Service Copilot opérationnel (${models.length} modèles détectés)`,
       };
     } catch (error: any) {
       return {
         status: 'error',
-        details: `Copilot HealthCheck error: ${error?.message}`,
+        details: `Erreur HealthCheck Copilot: ${error?.message}`,
       };
     }
   }

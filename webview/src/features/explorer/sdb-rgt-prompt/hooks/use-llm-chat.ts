@@ -119,7 +119,16 @@ export function useLlmChat() {
       logInfo('Models loaded for provider', { provider: prov, count: available.length });
       setModels(available);
       if (available.length > 0) {
-        const preferredModel = prov === LlmProvider.OLLAMA ? 'qwen2.5-coder:1.5b' : available[0].id;
+        let preferredModel = undefined;
+        if (prov === LlmProvider.OLLAMA) {
+          preferredModel = 'qwen2.5-coder:1.5b';
+        } else if (prov === LlmProvider.GEMINI) {
+          preferredModel = available[0].id;
+        }else if (prov === LlmProvider.COPILOT) {
+          preferredModel = 'MAI-Code-1-Flash';
+        } else {
+          preferredModel = available[0].id;
+        }
         const matchingModel = available.find(
           (m) => m.id === preferredModel || m.name === preferredModel
         );
