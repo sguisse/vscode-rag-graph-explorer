@@ -236,7 +236,7 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
               ? 'bg-primary/15 hover:bg-primary/20 ring-1 ring-inset ring-primary/40'
               : 'bg-card/50 hover:bg-muted/40'
           }`}
-          title="Click to select this model for LLM Chat"
+          data-tooltip="Click to select this model for LLM Chat"
         >
           {/* 1st Column: Provider (Fixed Sticky 1) */}
           <td
@@ -277,7 +277,7 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
                 depth > 0 && <span className="w-3.5 shrink-0" />
               )}
               {isSelectedModel && (
-                <span className="bg-primary text-primary-foreground p-0.5 rounded-full shrink-0" title="Selected Model">
+                <span className="bg-primary p-0.5 rounded-full text-primary-foreground shrink-0" data-tooltip="Selected Model">
                   <Check size={10} className="stroke-[3]" />
                 </span>
               )}

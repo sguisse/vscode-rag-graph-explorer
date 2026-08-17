@@ -7,13 +7,16 @@ import {
   Sparkles,
   Lock,
   Unlock,
-  Sliders
+  Sliders,
+  Pencil,
+  Check,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { CodebaseData } from '@/shared/services/graph-rag-explorer';
-import { useContextTransformer } from './hooks/use-context-transformer';
+import { useTransformerPanel } from './hooks/use-transformer-panel';
 
 interface ContextTransformerPanelProps {
   initialCodebase: CodebaseData;
@@ -22,10 +25,11 @@ interface ContextTransformerPanelProps {
 
 export function ContextTransformerPanel({
   initialCodebase,
-  handleCopy
+  handleCopy,
 }: ContextTransformerPanelProps) {
   const {
     rules,
+    editingRuleId,
     newRuleName,
     setNewRuleName,
     newRulePattern,
@@ -40,11 +44,13 @@ export function ContextTransformerPanel({
     deanonymizedResult,
     substitutionMap,
     toggleRule,
-    handleAddRule,
+    handleStartEditRule,
+    handleCancelEdit,
+    handleSaveRule,
     handleDeleteRule,
     handleAnonymize,
     handleDeanonymize,
-  } = useContextTransformer(initialCodebase);
+  } = useTransformerPanel(initialCodebase);
 
   return (
     <div className="space-y-4 font-mono text-xs animate-in duration-200 fade-in">
@@ -52,7 +58,9 @@ export function ContextTransformerPanel({
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-5 h-5 text-primary shrink-0" />
           <div>
-            <h4 className="font-bold text-foreground text-sm uppercase">Context Anonymizer & Transformer</h4>
+            <h4 className="font-bold text-foreground text-sm uppercase">
+              Context Anonymizer & Transformer
+            </h4>
             <p className="text-[10px] text-muted-foreground">
               Configure regex replacement rules to anonymize single-file context before sending to LLMs, and maintain inverse rules for output de-anonymization.
             </p>
@@ -79,12 +87,17 @@ export function ContextTransformerPanel({
                 <th className="p-2">Match Pattern (Regex)</th>
                 <th className="p-2">Replacement</th>
                 <th className="p-2">Inverse Pattern</th>
-                <th className="p-2 w-10 text-center">Action</th>
+                <th className="p-2 w-16 text-center">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/40">
               {rules.map((rule) => (
-                <tr key={rule.id} className="hover:bg-muted/30 transition-colors">
+                <tr
+                  key={rule.id}
+                  className={`transition-colors ${
+                    editingRuleId === rule.id ? 'bg-primary/10' : 'hover:bg-muted/30'
+                  }`}
+                >
                   <td className="p-2 text-center">
                     <input
                       type="checkbox"
@@ -93,19 +106,43 @@ export function ContextTransformerPanel({
                       className="rounded text-primary cursor-pointer shrink-0"
                     />
                   </td>
-                  <td className="p-2 max-w-[120px] font-semibold text-foreground truncate">{rule.name}</td>
-                  <td className="p-2 max-w-[150px] font-mono text-amber-500 truncate">{rule.pattern}</td>
-                  <td className="p-2 max-w-[140px] font-mono text-emerald-500 truncate">{rule.replacement}</td>
-                  <td className="p-2 max-w-[140px] font-mono text-indigo-400 truncate">{rule.inversePattern}</td>
+                  <td className="p-2 max-w-[120px] font-semibold text-foreground truncate">
+                    {rule.name}
+                  </td>
+                  <td className="p-2 max-w-[150px] font-mono text-amber-500 truncate">
+                    {rule.pattern}
+                  </td>
+                  <td className="p-2 max-w-[140px] font-mono text-emerald-500 truncate">
+                    {rule.replacement}
+                  </td>
+                  <td className="p-2 max-w-[140px] font-mono text-indigo-400 truncate">
+                    {rule.inversePattern}
+                  </td>
                   <td className="p-2 text-center">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteRule(rule.id)}
-                      className="w-6 h-6 text-destructive hover:text-destructive/80"
-                    >
-                      <Trash2 size={12} />
-                    </Button>
+                    <div className="flex justify-center items-center gap-0.5">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleStartEditRule(rule)}
+                        title="Edit Rule"
+                        className={`w-6 h-6 ${
+                          editingRuleId === rule.id
+                            ? 'text-primary font-bold'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        <Pencil size={12} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteRule(rule.id)}
+                        title="Delete Rule"
+                        className="w-6 h-6 text-destructive hover:text-destructive/80"
+                      >
+                        <Trash2 size={12} />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -114,41 +151,54 @@ export function ContextTransformerPanel({
         </div>
 
         <div className="space-y-2 bg-muted/20 p-2.5 border border-border/50 rounded-md">
-          <span className="block font-bold text-[10px] text-muted-foreground uppercase">Add Custom Regex Rule</span>
+          <span className="block font-bold text-[10px] text-muted-foreground uppercase">
+            {editingRuleId ? '✏️ Edit Regex Rule' : 'Add Custom Regex Rule'}
+          </span>
           <div className="gap-2 grid grid-cols-2">
             <Input
               placeholder="Rule Name (e.g. Domain Anonymizer)"
               value={newRuleName}
               onChange={(e) => setNewRuleName(e.target.value)}
-              className="bg-background h-7 text-xs"
+              className="bg-background h-7 font-semibold text-xs text-foreground"
             />
             <Input
               placeholder="Regex Pattern (e.g. \\bcorp\\.com)"
               value={newRulePattern}
               onChange={(e) => setNewRulePattern(e.target.value)}
-              className="bg-background h-7 font-mono text-xs"
+              className="bg-background h-7 font-mono text-xs text-amber-500"
             />
             <Input
               placeholder="Replacement (e.g. anon.org)"
               value={newRuleReplacement}
               onChange={(e) => setNewRuleReplacement(e.target.value)}
-              className="bg-background h-7 font-mono text-xs"
+              className="bg-background h-7 font-mono text-xs text-emerald-500"
             />
             <Input
               placeholder="Inverse Pattern (for de-anonymization)"
               value={newRuleInverse}
               onChange={(e) => setNewRuleInverse(e.target.value)}
-              className="bg-background h-7 font-mono text-xs"
+              className="bg-background h-7 font-mono text-xs text-indigo-400"
             />
           </div>
-          <div className="flex justify-end pt-1">
+          <div className="flex justify-end gap-2 pt-1">
+            {editingRuleId && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleCancelEdit}
+                className="flex items-center gap-1 h-7 text-xs"
+              >
+                <X size={12} /> Cancel
+              </Button>
+            )}
             <Button
               size="sm"
-              onClick={handleAddRule}
+              onClick={handleSaveRule}
               disabled={!newRulePattern || !newRuleReplacement}
               className="flex items-center gap-1 h-7 text-xs"
             >
-              <Plus size={12} /> Add Rule
+              {editingRuleId ? <Check size={12} /> : <Plus size={12} />}
+              {editingRuleId ? 'Update Rule' : 'Add Rule'}
             </Button>
           </div>
         </div>
@@ -177,7 +227,9 @@ export function ContextTransformerPanel({
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => handleCopy(anonymizedResult, "Anonymized context copied to clipboard!")}
+                onClick={() =>
+                  handleCopy(anonymizedResult, 'Anonymized context copied to clipboard!')
+                }
                 className="gap-1 h-6 text-[10px]"
               >
                 <Copy size={10} /> Copy Anonymized Context
@@ -223,7 +275,9 @@ export function ContextTransformerPanel({
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => handleCopy(deanonymizedResult, "De-anonymized output copied to clipboard!")}
+                onClick={() =>
+                  handleCopy(deanonymizedResult, 'De-anonymized output copied to clipboard!')
+                }
                 className="gap-1 h-6 text-[10px]"
               >
                 <Copy size={10} /> Copy Restored Output
@@ -240,3 +294,5 @@ export function ContextTransformerPanel({
     </div>
   );
 }
+
+export default ContextTransformerPanel;

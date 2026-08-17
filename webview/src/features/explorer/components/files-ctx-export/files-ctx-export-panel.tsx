@@ -40,7 +40,7 @@ export function FilesCtxExportPanel({
         <div className="space-y-1 shrink-0">
           <label
             className="block font-medium text-[10px] text-muted-foreground whitespace-nowrap"
-            title="Structured file format schema template applied to aggregate the files contents."
+            data-tooltip="Structured file format schema template applied to aggregate the files contents."
           >
             Output Format
           </label>
@@ -60,7 +60,7 @@ export function FilesCtxExportPanel({
         <div className="space-y-1 shrink-0">
           <label
             className="block font-medium text-[10px] text-muted-foreground whitespace-nowrap"
-            title="Maximum payload slice limit for chunk splitting in Kilobytes (0 means unlimited size)."
+            data-tooltip="Maximum payload slice limit for chunk splitting in Kilobytes (0 means unlimited size)."
           >
             Max Chunk (KB)
           </label>
@@ -76,7 +76,7 @@ export function FilesCtxExportPanel({
           <label
             htmlFor="splitChunkByFileExtension"
             className="font-medium text-[10px] text-muted-foreground whitespace-nowrap cursor-pointer"
-            title="Force the export runner to partition output chunks whenever a change of file extension occurs."
+            data-tooltip="Force the export runner to partition output chunks whenever a change of file extension occurs."
           >
             Split by Ext
           </label>
@@ -93,7 +93,7 @@ export function FilesCtxExportPanel({
           <label
             htmlFor="copyAsFilesToClipboard"
             className="font-medium text-[10px] text-muted-foreground whitespace-nowrap cursor-pointer"
-            title="Automatically copy generated export files to the OS clipboard after each successful run."
+            data-tooltip="Automatically copy generated export files to the OS clipboard after each successful run."
           >
             Copy as Files
           </label>

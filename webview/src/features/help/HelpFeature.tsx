@@ -16,11 +16,11 @@ export function HelpFeature() {
           visible: true,
           isHiddable: false,
           container: (
-            <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-background overflow-hidden">
+            <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
               <ContainerPanelHeader title="Help & Documentation" path="workspace.center" isHiddable={false} />
               <div className="p-6 font-mono text-xs">
-                <h3 className="font-bold text-sm text-foreground">Documentation & User Manual</h3>
-                <p className="text-muted-foreground mt-1">Guide on graph navigation, impact analysis, and layout controls.</p>
+                <h3 className="font-bold text-foreground text-sm">Documentation & User Manual</h3>
+                <p className="mt-1 text-muted-foreground">Guide on graph navigation, impact analysis, and layout controls.</p>
               </div>
             </div>
           ),

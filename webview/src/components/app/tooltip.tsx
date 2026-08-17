@@ -7,41 +7,60 @@ interface TooltipProps {
   delay?: number;
 }
 
-export function Tooltip({ delay = 200 }: TooltipProps) {
+export function Tooltip({ delay = 300 }: TooltipProps) {
   const [content, setContent] = useState('');
   const [visible, setVisible] = useState(false);
+
+  const [coords, setCoords] = useState<{
+    tooltipLeft: number;
+    tooltipTop: number;
+    arrowTop: number;
+    side: 'left' | 'right';
+  }>({
+    tooltipLeft: 0,
+    tooltipTop: 0,
+    arrowTop: 0,
+    side: 'right',
+  });
 
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const activeTargetRef = useRef<Element | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const latestMouseRef = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
-    const updateDomPosition = (clientX: number, clientY: number) => {
-      const el = tooltipRef.current;
-      if (!el) return;
+    const updatePosition = (clientX: number, clientY: number) => {
+      if (!tooltipRef.current) return;
 
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
 
-      const tooltipWidth = el.offsetWidth || 220;
-      const tooltipHeight = el.offsetHeight || 40;
-      const offset = 12;
+      const tooltipWidth = tooltipRef.current.offsetWidth || 200;
+      const tooltipHeight = tooltipRef.current.offsetHeight || 40;
+      const arrowSizeOffset = 12;
 
-      let left = clientX + offset;
-      if (left + tooltipWidth > viewportWidth - 8) {
-        left = clientX - tooltipWidth - offset;
+      let side: 'left' | 'right' = 'right';
+      let tooltipLeft = clientX + arrowSizeOffset;
+
+      if (tooltipLeft + tooltipWidth > viewportWidth) {
+        side = 'left';
+        tooltipLeft = clientX - tooltipWidth - arrowSizeOffset;
       }
-      left = Math.max(8, left);
+      if (tooltipLeft < 4) tooltipLeft = 4;
 
-      let top = clientY - tooltipHeight / 2;
-      top = Math.max(8, Math.min(top, viewportHeight - tooltipHeight - 8));
+      let tooltipTop = clientY - tooltipHeight / 2;
+      tooltipTop = Math.max(6, Math.min(tooltipTop, viewportHeight - tooltipHeight - 6));
 
-      el.style.left = `${left}px`;
-      el.style.top = `${top}px`;
+      const arrowRelativeY = clientY - tooltipTop;
+      const safetyPadding = 8;
+      const arrowTop = Math.max(safetyPadding, Math.min(arrowRelativeY, tooltipHeight - safetyPadding));
+
+      setCoords({ tooltipLeft, tooltipTop, arrowTop, side });
     };
 
     const handleMouseMove = (e: MouseEvent) => {
-      const target = (e.target as Element)?.closest?.('[data-tooltip]');
+      latestMouseRef.current = { x: e.clientX, y: e.clientY };
+      const target = (e.target as Element).closest('[data-tooltip]');
 
       if (target) {
         const text = target.getAttribute('data-tooltip') || '';
@@ -62,11 +81,12 @@ export function Tooltip({ delay = 200 }: TooltipProps) {
             if (activeTargetRef.current === target) {
               setContent(text);
               setVisible(true);
-              updateDomPosition(e.clientX, e.clientY);
+              updatePosition(latestMouseRef.current.x, latestMouseRef.current.y);
             }
           }, delay);
-        } else {
-          updateDomPosition(e.clientX, e.clientY);
+        } else if (visible) {
+          if (text !== content) setContent(text);
+          updatePosition(e.clientX, e.clientY);
         }
       } else {
         if (activeTargetRef.current) {
@@ -77,12 +97,12 @@ export function Tooltip({ delay = 200 }: TooltipProps) {
       }
     };
 
-    document.addEventListener('mousemove', handleMouseMove, { passive: true });
+    document.body.addEventListener('mousemove', handleMouseMove);
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
+      document.body.removeEventListener('mousemove', handleMouseMove);
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [delay]);
+  }, [delay, visible, content]);
 
   if (!content) return null;
 
@@ -90,17 +110,42 @@ export function Tooltip({ delay = 200 }: TooltipProps) {
     <div
       ref={tooltipRef}
       className={cn(
-        "fixed z-[999999] pointer-events-none select-none transition-opacity duration-100",
-        "px-3 py-2 rounded-md shadow-2xl border max-w-md font-sans text-xs leading-relaxed break-words",
-        "bg-slate-900 text-slate-50 border-slate-700",
-        "dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700",
-        visible ? "opacity-100" : "opacity-0"
+        "inline-flex z-[999999] fixed items-center shadow-md px-3 py-1.5 rounded-md max-w-xs font-sans font-medium text-xs break-words leading-normal transition-opacity duration-150 pointer-events-none select-none",
+
+        // Light Mode (Dark Background /Light Text) -Shadcn Style
+        "bg-slate-900 text-slate-50 border border-slate-800",
+
+        // Dark Mode (Light Background /Dark Text) -Shadcn Style
+        "dark:bg-slate-50 dark:text-slate-900 dark:border-slate-200",
+
+        visible ? "opacity-100 scale-100" : "opacity-0 scale-95"
       )}
-      style={{ left: '-9999px', top: '-9999px' }}
+      style={{
+        left: `${coords.tooltipLeft}px`,
+        top: `${coords.tooltipTop}px`,
+      }}
     >
-      <span
-        className="block relative z-10 whitespace-pre-wrap leading-normal"
-        dangerouslySetInnerHTML={{ __html: content }}
+      <span className="block z-10 relative"
+            dangerouslySetInnerHTML={{ __html: content }}
+      />
+
+      {/* Tooltip Arrow */}
+      <div
+        className={cn(
+          "z-0 absolute border border-transparent size-2",
+
+          // Inverted arrow background
+          "bg-slate-900 dark:bg-slate-50",
+
+          // Arrow borders according to position and theme
+          coords.side === 'right'
+            ? "-left-1 border-l-slate-800 border-b-slate-800 dark:border-l-slate-200 dark:border-b-slate-200"
+            : "-right-1 border-r-slate-800 border-t-slate-800 dark:border-r-slate-200 dark:border-t-slate-200"
+        )}
+        style={{
+          top: `${coords.arrowTop}px`,
+          transform: 'translateY(-50%) rotate(45deg)',
+        }}
       />
     </div>
   );

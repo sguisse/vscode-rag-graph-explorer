@@ -17,6 +17,50 @@ import { INITIAL_VISIBLE_FILES_CONFIG, FOLDER_KEYS_REGISTERED_CONFIG } from '../
 // Data Types & Schemas
 // ============================================================================
 
+export interface AnonymizationRule {
+  id: string;
+  name: string;
+  pattern: string;
+  replacement: string;
+  inversePattern: string;
+  enabled: boolean;
+}
+
+export const DEFAULT_ANONYMIZATION_RULES: AnonymizationRule[] = [
+  {
+    id: 'rule-secrets',
+    name: 'Secret & Password Tokens',
+    pattern: '(?i)(password|secret|key|token)\\s*[:=]\\s*[\'"][^\'"]+[\'"]',
+    replacement: '$1: "ANONYMIZED_SECRET"',
+    inversePattern: 'ANONYMIZED_SECRET',
+    enabled: true,
+  },
+  {
+    id: 'rule-db-uri',
+    name: 'Database JDBC/Connection URIs',
+    pattern: 'jdbc:[a-z0-9]+://[^:\\s]+:[0-9]+/[a-zA-Z0-9_]+',
+    replacement: 'jdbc:provider://anonymized-host:5432/anon_db',
+    inversePattern: 'jdbc:provider://anonymized-host:5432/anon_db',
+    enabled: true,
+  },
+  {
+    id: 'rule-ip',
+    name: 'IPv4 Addresses',
+    pattern: '\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b',
+    replacement: '127.0.0.1',
+    inversePattern: '127.0.0.1',
+    enabled: true,
+  },
+  {
+    id: 'rule-db-user',
+    name: 'Database Usernames',
+    pattern: 'db_admin_prod',
+    replacement: 'db_user_anon',
+    inversePattern: 'db_user_anon',
+    enabled: true,
+  },
+];
+
 export interface GraphRagExplorerConfig {
   backendConfigPath: string;
   defaultClient: string;
@@ -167,6 +211,16 @@ export interface WkpRgtTabsFilesContextState {
 }
 
 /**
+ * State & Actions for Panel: ContextTransformerPanel
+ */
+export interface ContextTransformerState {
+  transformerRules: AnonymizationRule[];
+  setTransformerRules: (
+    rules: AnonymizationRule[] | ((prev: AnonymizationRule[]) => AnonymizationRule[])
+  ) => void;
+}
+
+/**
  * State & Actions for Shared Component: FilesCtxExportPanel
  */
 export interface FilesCtxExportState {
@@ -244,6 +298,7 @@ export interface ExplorerState
     WkpLftCodebaseTreeState,
     WkspCntGraphState,
     WkpRgtTabsFilesContextState,
+    ContextTransformerState,
     FilesCtxExportState,
     SdbRgtPromptTabState,
     SdbRgtPromptBuilderState,
@@ -414,6 +469,16 @@ export const useExplorerStore = create<ExplorerState>((set, get) => ({
   setExpandedContextGroups: (groups) =>
     set((state) => ({
       expandedContextGroups: typeof groups === 'function' ? groups(state.expandedContextGroups) : groups,
+    })),
+
+  // workspace.right ContextTransformer State
+  transformerRules: DEFAULT_ANONYMIZATION_RULES,
+  setTransformerRules: (transformerRules) =>
+    set((state) => ({
+      transformerRules:
+        typeof transformerRules === 'function'
+          ? transformerRules(state.transformerRules)
+          : transformerRules,
     })),
 
   // Shared FilesCtxExportPanel State

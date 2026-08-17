@@ -51,21 +51,21 @@ export const FinderBase: React.FC<FinderBaseProps> = ({
                 {/* Modificateurs de recherche natifs VS Code */}
                 <div className="flex items-center gap-0.5 text-[var(--vscode-inputOption-foreground,#858585)]">
                     <button
-                        title="Match Case (Aa)"
+                        data-tooltip="Match Case (Aa)"
                         onClick={() => setCaseSensitive(!caseSensitive)}
                         className={`w-4 h-4 text-[10px] font-bold rounded-sm flex items-center justify-center transition-colors cursor-pointer ${caseSensitive ? 'bg-blue-500/30 text-blue-400 border border-blue-500/50 font-extrabold' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)]'}`}
                     >
                         Aa
                     </button>
                     <button
-                        title="Match Whole Word (W)"
+                        data-tooltip="Match Whole Word (W)"
                         onClick={() => setWholeWord(!wholeWord)}
                         className={`w-4 h-4 text-[10px] font-bold rounded-sm flex items-center justify-center transition-colors cursor-pointer ${wholeWord ? 'bg-blue-500/30 text-blue-400 border border-blue-500/50 font-extrabold' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)]'}`}
                     >
                         W
                     </button>
                     <button
-                        title="Use Regular Expression (.*)"
+                        data-tooltip="Use Regular Expression (.*)"
                         onClick={() => setUseRegex(!useRegex)}
                         className={`w-4 h-4 text-[11px] font-mono rounded-sm flex items-center justify-center transition-colors cursor-pointer ${useRegex ? 'bg-blue-500/30 text-blue-400 border border-blue-500/50 font-extrabold' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)]'}`}
                     >
@@ -84,18 +84,18 @@ export const FinderBase: React.FC<FinderBaseProps> = ({
                 <button
                     onClick={onPrev}
                     disabled={totalMatches === 0}
-                    title="Previous Match"
+                    data-tooltip="Previous Match"
                     className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] disabled:opacity-30 rounded w-5 h-5 text-xs cursor-pointer codicon codicon-arrow-up"
                 />
                 <button
                     onClick={onNext}
                     disabled={totalMatches === 0}
-                    title="Next Match"
+                    data-tooltip="Next Match"
                     className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] disabled:opacity-30 rounded w-5 h-5 text-xs cursor-pointer codicon codicon-arrow-down"
                 />
                 <button
                     onClick={onClose}
-                    title="Close Widget (Escape)"
+                    data-tooltip="Close Widget (Escape)"
                     className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] rounded w-5 h-5 text-xs cursor-pointer codicon codicon-close"
                 />
             </div>

@@ -18,7 +18,7 @@ export interface GraphPanelHeaderLeftProps {}
 
 export const GraphPanelHeaderLeft: React.FC<GraphPanelHeaderLeftProps> = () => (
   <div className="flex items-center gap-2">
-    <span className="font-bold text-foreground truncate uppercase tracking-wider">Dependencies</span>
+    <span className="font-bold text-foreground truncate tracking-wider">Dependencies</span>
   </div>
 );
 
@@ -52,7 +52,7 @@ export const GraphPanelHeaderCenter: React.FC<GraphPanelHeaderCenterProps> = ({
   return (
     <div className="flex items-center gap-3">
       <div className="flex items-center gap-1.5 bg-background px-2 py-0.5 border border-border rounded-sm h-6">
-        <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">Limit:</span>
+        <span className="font-medium text-[10px] text-muted-foreground tracking-wider">Limit:</span>
         <Input
           id="input-max-nodes-limit"
           type="number"

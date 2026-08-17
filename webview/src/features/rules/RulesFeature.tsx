@@ -16,11 +16,11 @@ export function RulesFeature() {
           visible: true,
           isHiddable: false,
           container: (
-            <div className="flex flex-col h-full w-full min-w-0 min-h-0 bg-background overflow-hidden">
+            <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
               <ContainerPanelHeader title="Impact Rules Engine" path="workspace.center" isHiddable={false} />
               <div className="p-6 font-mono text-xs">
-                <h3 className="font-bold text-sm text-foreground">Architectural Rules & Impact Policies</h3>
-                <p className="text-muted-foreground mt-1">Configured AST impact rules and linting metrics.</p>
+                <h3 className="font-bold text-foreground text-sm">Architectural Rules & Impact Policies</h3>
+                <p className="mt-1 text-muted-foreground">Configured AST impact rules and linting metrics.</p>
               </div>
             </div>
           ),

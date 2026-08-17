@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { InspectorPanel } from './inspector-panel';
 import { FilesContextPanel } from './files-context';
-import { ContextTransformerPanel } from './context-transformer';
+import { ContextTransformerPanel } from './transformer-panel';
 import { CodebaseData, SelectedEntity } from '@/shared/services/graph-rag-explorer';
 import { useTabsFilesContext } from './hooks/use-tabs-files-context';
 
