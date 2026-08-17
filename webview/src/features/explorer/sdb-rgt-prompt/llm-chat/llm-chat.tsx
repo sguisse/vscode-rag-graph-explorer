@@ -3,14 +3,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ChevronsDown, ChevronsUp, ArrowUp, ArrowDown, X, Plus } from 'lucide-react';
-import { ToolbarSeparator } from '@/components/app/toolbar-separator';
+import { ChevronsDown, ChevronsUp, ArrowUp, ArrowDown, X, Plus, Info } from 'lucide-react';
 import { LlmProvider } from '@/shared/services/llm-chat';
 import { useLlmChat } from '../hooks/use-llm-chat';
+import { useLlmModelsInfoModal } from '../hooks/use-llm-models-info-modal';
 import { UserMessageBlock } from './components/UserMessageBlock';
 import { AssistantMessageBlock } from './components/AssistantMessageBlock';
+import { LLMModelsInfoModal } from './llm-models-info-modal';
 
-export const LLMExplorerChat: React.FC = () => {
+export const LLMChat: React.FC = () => {
   const {
     provider,
     setProvider,
@@ -39,8 +40,10 @@ export const LLMExplorerChat: React.FC = () => {
     handleCollapseAll,
   } = useLlmChat();
 
+  const { isOpen: isModalOpen, openModal, closeModal } = useLlmModelsInfoModal();
+
   return (
-    <div className="flex flex-col gap-2.5 bg-background p-0 w-full h-full min-h-0 overflow-hidden font-sans text-foreground">
+    <div className="relative flex flex-col gap-2.5 bg-background p-0 w-full h-full min-h-0 overflow-hidden font-sans text-foreground">
       {/* Standard Panel Top Toolbar */}
       <div className="flex justify-between items-center bg-muted/20 px-1 border-border border-b font-mono text-xs shrink-0">
         <div className="flex items-center gap-1">
@@ -63,8 +66,6 @@ export const LLMExplorerChat: React.FC = () => {
             <ChevronsUp size={13} />
           </Button>
         </div>
-
-
 
         <div className="flex items-center gap-1">
           <Button
@@ -164,6 +165,19 @@ export const LLMExplorerChat: React.FC = () => {
             onChange={(e) => setTemperature(parseFloat(e.target.value))}
             className="bg-transparent p-0 border-0 w-16 h-5 cursor-pointer"
           />
+
+          {/* Tool icon for toggling model info popup */}
+          <div className="ml-auto flex items-center">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={openModal}
+              className="w-7 h-7 hover:bg-primary/10 border-border text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+              data-tooltip="View Model Capabilities & Info"
+            >
+              <Info size={14} />
+            </Button>
+          </div>
         </div>
 
         {attachedFiles.length > 0 && (
@@ -239,8 +253,15 @@ export const LLMExplorerChat: React.FC = () => {
           </Button>
         </div>
       </footer>
+
+      {/* Non-Modal Models Metadata Info Popup */}
+      <LLMModelsInfoModal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        currentProvider={provider}
+      />
     </div>
   );
 };
 
-export default LLMExplorerChat;
+export default LLMChat;

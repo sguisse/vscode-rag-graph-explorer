@@ -1,0 +1,6 @@
+/* Neutralize native CSS tooltips to prevent event interference */
+[data-tooltip]::before,
+[data-tooltip]::after {
+  display: none !important;
+  content: none !important;
+}

@@ -1,398 +1,253 @@
 #!/usr/bin/env bash
 set -e
 
-# Create required directories
-mkdir -p shared/services/llm-chat/domain/model/value-objects
+# Ensure target directories exist
+mkdir -p webview/src
+mkdir -p webview/src/components/app
+mkdir -p webview/src/features/explorer/sdb-rgt-prompt/llm-chat
 
-# 1. Create value-object for LLM Model with full Copilot metadata interfaces
-cat << 'EOF' > shared/services/llm-chat/domain/model/value-objects/llm-model.vo.ts
-import { LlmProvider } from '../types/llm-provider.enum';
-
-export interface ILlmModelVisionLimits {
-  max_prompt_image_size?: number;
-  max_prompt_images?: number;
-  supported_media_types?: string[];
-}
-
-export interface ILlmModelLimits {
-  max_context_window_tokens?: number;
-  max_non_streaming_output_tokens?: number;
-  max_output_tokens?: number;
-  max_prompt_tokens?: number;
-  vision?: ILlmModelVisionLimits;
-}
-
-export interface ILlmModelSupports {
-  adaptive_thinking?: string;
-  max_thinking_budget?: number;
-  min_thinking_budget?: number;
-  parallel_tool_calls?: boolean;
-  reasoning_effort?: string[];
-  streaming?: boolean;
-  structured_outputs?: boolean;
-  tool_calls?: boolean;
-  vision?: boolean;
-  reasoningEffort?: boolean;
-}
-
-export interface ILlmModelCapabilities {
-  family?: string;
-  limits?: ILlmModelLimits;
-  object?: string;
-  supports?: ILlmModelSupports;
-  tokenizer?: string;
-  type?: string;
-}
-
-export interface ILlmModelPolicy {
-  state?: string;
-  terms?: string;
-}
-
-export interface ILlmLongContextTokenPriceConfig {
-  inputPrice?: number;
-  outputPrice?: number;
-  cachePrice?: number;
-  cacheReadPrice?: number;
-  cacheWritePrice?: number;
-  contextMax?: number;
-  maxPromptTokens?: number;
-}
-
-export interface ILlmTokenPrices {
-  inputPrice?: number;
-  outputPrice?: number;
-  cachePrice?: number;
-  cacheReadPrice?: number;
-  cacheWritePrice?: number;
-  batchSize?: number;
-  contextMax?: number;
-  maxPromptTokens?: number;
-  longContext?: ILlmLongContextTokenPriceConfig;
-}
-
-export interface ILlmModelPromo {
-  id?: string;
-  discountPercent?: number;
-  endsAt?: string;
-  message?: string;
-}
-
-export interface ILlmModelBilling {
-  discountPercent?: number;
-  tokenPrices?: ILlmTokenPrices;
-  promo?: ILlmModelPromo;
-}
-
-export interface ILlmModelInfo {
-  id: string;
-  name: string;
-  provider: LlmProvider;
-  contextWindow?: number;
-  description?: string;
-  capabilities?: ILlmModelCapabilities;
-  policy?: ILlmModelPolicy;
-  billing?: ILlmModelBilling;
-  supportedReasoningEfforts?: string[];
-  modelPickerCategory?: string;
-  modelPickerPriceCategory?: string;
+# 1. Neutralize native CSS tooltips to prevent pseudo-element pointer interference
+cat << 'EOF' > webview/src/styles-data-tooltip.css
+/* Neutralize native CSS tooltips to prevent event interference */
+[data-tooltip]::before,
+[data-tooltip]::after {
+  display: none !important;
+  content: none !important;
 }
 EOF
 
-# 2. Update llm-provider.enum.ts to remove externalized ILlmModelInfo
-cat << 'EOF' > shared/services/llm-chat/domain/model/types/llm-provider.enum.ts
-export enum LlmProvider {
-  OLLAMA = 'ollama',
-  GEMINI = 'gemini',
-  COPILOT = 'copilot',
+# 2. Refactor Tooltip component: Direct DOM positioning without continuous React state updates
+cat << 'EOF' > webview/src/components/app/tooltip.tsx
+"use client"
+
+import React, { useState, useEffect, useRef } from 'react';
+import { cn } from "@/lib/utils";
+
+interface TooltipProps {
+  delay?: number;
 }
 
-export type LlmRole = 'system' | 'user' | 'assistant';
-EOF
+export function Tooltip({ delay = 200 }: TooltipProps) {
+  const [content, setContent] = useState('');
+  const [visible, setVisible] = useState(false);
 
-# 3. Update shared/services/llm-chat/index.ts to re-export llm-model.vo
-cat << 'EOF' > shared/services/llm-chat/index.ts
-export * from './domain/model/types/llm-provider.enum';
-export * from './domain/model/types/chat-message.type';
-export * from './domain/model/value-objects/llm-config.vo';
-export * from './domain/model/value-objects/llm-model.vo';
-export * from './domain/model/value-objects/chat-prompt.vo';
-export * from './domain/model/entities/chat-session.entity';
-export * from './domain/model/dto/chat-request.dto';
-export * from './domain/model/dto/chat-response.dto';
-export * from './domain/mapper/chat-message.mapper';
-export * from './domain/port-out/llm-chat-service.port';
-EOF
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const activeTargetRef = useRef<Element | null>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
 
-# 4. Update llm-chat-service.port.ts imports
-cat << 'EOF' > shared/services/llm-chat/domain/port-out/llm-chat-service.port.ts
-import { IChatRequestDto } from '../model/dto/chat-request.dto';
-import { IChatResponseDto, IChatStreamChunkDto, ILlmHealthResultDto } from '../model/dto/chat-response.dto';
-import { LlmProvider } from '../model/types/llm-provider.enum';
-import { ILlmModelInfo } from '../model/value-objects/llm-model.vo';
+  useEffect(() => {
+    const updateDomPosition = (clientX: number, clientY: number) => {
+      const el = tooltipRef.current;
+      if (!el) return;
 
-export interface ILlmChatServicePort {
-  executeChat(request: IChatRequestDto): Promise<IChatResponseDto>;
-  streamChat(
-    request: IChatRequestDto,
-    onChunk: (chunk: IChatStreamChunkDto) => void
-  ): Promise<IChatResponseDto>;
-  listAvailableModels(provider?: LlmProvider): Promise<ILlmModelInfo[]>;
-  healthCheck(provider: LlmProvider, baseUrl?: string): Promise<ILlmHealthResultDto>;
-  readFileContent(filePath: string): Promise<string>;
-}
-EOF
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
 
-# 5. Update copilot.delegate.ts to map extended Copilot fields
-cat << 'EOF' > backend/src/services/llm-chat/delegate/copilot.delegate.ts
-import { CopilotClient, approveAll } from '@github/copilot-sdk';
-import * as path from 'path';
-import * as fs from 'fs';
-import { ILlmProviderDelegate } from './llm-provider.delegate.interface';
-import {
-  LlmProvider,
-  ILlmModelInfo,
-  LlmConfigVO,
-  ChatPromptVO,
-  IChatResponseDto,
-  IChatStreamChunkDto,
-  ILlmHealthResultDto,
-} from '../../../../../shared/services/llm-chat';
-import { getCurrentExtensionContext } from '../../../utils/utils-vscode';
-import { logInfo } from '../../../utils/utils-log';
+      const tooltipWidth = el.offsetWidth || 220;
+      const tooltipHeight = el.offsetHeight || 40;
+      const offset = 12;
 
-export class CopilotDelegate implements ILlmProviderDelegate {
-  readonly provider = LlmProvider.COPILOT;
-  private static clientInstance: CopilotClient | null = null;
-  private static isStarted = false;
-  private static startPromise: Promise<void> | null = null;
-  private static cliBinaryPath: string | null = null;
+      let left = clientX + offset;
+      if (left + tooltipWidth > viewportWidth - 8) {
+        left = clientX - tooltipWidth - offset;
+      }
+      left = Math.max(8, left);
 
-  public constructor() {
-    this.resolveNativeCliPath();
-  }
+      let top = clientY - tooltipHeight / 2;
+      top = Math.max(8, Math.min(top, viewportHeight - tooltipHeight - 8));
 
-  /**
-   * Locates the native Copilot CLI executable binary compatible with the Host VS Code Extension
-   */
-  private resolveNativeCliPath(): string | undefined {
-    if (!CopilotDelegate.cliBinaryPath) {
-      const extentionContext = getCurrentExtensionContext();
-      const isArm64 = process.arch === 'arm64';
-      const platform = process.platform;
+      el.style.left = `${left}px`;
+      el.style.top = `${top}px`;
+    };
 
-      // Guaranteed absolute path from the extension installation directory
-      const cliBinaryPath = extentionContext.asAbsolutePath(
-        path.join('node_modules', `@github/copilot-${platform}-${isArm64 ? 'arm64' : 'x64'}`, 'copilot')
-      );
+    const handleMouseMove = (e: MouseEvent) => {
+      const target = (e.target as Element)?.closest?.('[data-tooltip]');
 
-      CopilotDelegate.cliBinaryPath = cliBinaryPath;
-      process.env.COPILOT_CLI_PATH = cliBinaryPath;
-    }
+      if (target) {
+        const text = target.getAttribute('data-tooltip') || '';
 
-    return CopilotDelegate.cliBinaryPath;
-  }
-
-  private get client(): CopilotClient {
-    if (!CopilotDelegate.clientInstance) {
-      const cliPath = this.resolveNativeCliPath();
-      CopilotDelegate.clientInstance = new CopilotClient(cliPath ? { cliPath } : undefined);
-    }
-    return CopilotDelegate.clientInstance;
-  }
-
-  private async ensureStarted(): Promise<void> {
-    if (CopilotDelegate.isStarted) {
-      return;
-    }
-
-    if (!CopilotDelegate.startPromise) {
-      CopilotDelegate.startPromise = (async () => {
-        try {
-          // Guard Timeout de 10s pour éviter un blocage indéfini dans VS Code
-          const timeout = new Promise<never>((_, reject) =>
-            setTimeout(
-              () => reject(new Error('Délai dépassé lors du démarrage du CLI Copilot (10s)')),
-              10000
-            )
-          );
-
-          await Promise.race([this.client.start(), timeout]);
-          CopilotDelegate.isStarted = true;
-        } catch (error) {
-          CopilotDelegate.startPromise = null;
-          throw error;
+        if (!text) {
+          if (timeoutRef.current) clearTimeout(timeoutRef.current);
+          setVisible(false);
+          activeTargetRef.current = null;
+          return;
         }
-      })();
-    }
 
-    return CopilotDelegate.startPromise;
-  }
+        if (activeTargetRef.current !== target) {
+          activeTargetRef.current = target;
+          if (timeoutRef.current) clearTimeout(timeoutRef.current);
+          setVisible(false);
 
-  async listModels(config?: LlmConfigVO): Promise<ILlmModelInfo[]> {
-    await this.ensureStarted();
-    const models = await this.client.listModels();
-    logInfo(`CopilotDelegate.listModels totalFound: ${models.length}`, models);
-    return models.map((m: any) => ({
-      id: m.id || m.name,
-      name: m.name || m.id,
-      provider: this.provider,
-      contextWindow: m.capabilities?.limits?.max_context_window_tokens ?? m.contextWindow ?? 128000,
-      description: m.description || 'Model administered via GitHub Copilot SDK',
-      capabilities: m.capabilities,
-      policy: m.policy,
-      billing: m.billing,
-      supportedReasoningEfforts: m.supportedReasoningEfforts,
-      modelPickerCategory: m.modelPickerCategory,
-      modelPickerPriceCategory: m.modelPickerPriceCategory,
-    }));
-  }
+          timeoutRef.current = setTimeout(() => {
+            if (activeTargetRef.current === target) {
+              setContent(text);
+              setVisible(true);
+              updateDomPosition(e.clientX, e.clientY);
+            }
+          }, delay);
+        } else {
+          updateDomPosition(e.clientX, e.clientY);
+        }
+      } else {
+        if (activeTargetRef.current) {
+          activeTargetRef.current = null;
+          if (timeoutRef.current) clearTimeout(timeoutRef.current);
+          setVisible(false);
+        }
+      }
+    };
 
-  async executeChat(
-    sessionId: string,
-    prompt: ChatPromptVO,
-    config: LlmConfigVO
-  ): Promise<IChatResponseDto> {
-    const startTime = Date.now();
-    const model = config?.model || 'mai-code-1-flash-picker';
-    const lastUserMsg = prompt.getLastUserMessage()?.content || '';
+    document.addEventListener('mousemove', handleMouseMove, { passive: true });
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [delay]);
 
-    try {
-      await this.ensureStarted();
-      const session = await this.client.createSession({
-        sessionId,
-        model,
-        onPermissionRequest: approveAll,
-      });
+  if (!content) return null;
 
-      let content = '';
-
-      const done = new Promise<void>((resolve, reject) => {
-        session.on('assistant.message', (event: any) => {
-          if (event?.data?.content) {
-            content = event.data.content;
-          }
-        });
-
-        session.on('session.idle', () => {
-          resolve();
-        });
-
-        session.on('error' as any, (err: any) => {
-          reject(err);
-        });
-      });
-
-      await session.send({ prompt: lastUserMsg });
-      await done;
-
-      return {
-        sessionId,
-        messageId: `msg-${Date.now()}`,
-        provider: this.provider,
-        model,
-        content,
-        done: true,
-        executionTimeMs: Date.now() - startTime,
-      };
-    } catch (error: any) {
-      return {
-        sessionId,
-        messageId: `msg-err-${Date.now()}`,
-        provider: this.provider,
-        model,
-        content: '',
-        done: true,
-        executionTimeMs: Date.now() - startTime,
-        error: error?.message || 'Error while receiving Copilot response',
-      };
-    }
-  }
-
-  async streamChat(
-    sessionId: string,
-    prompt: ChatPromptVO,
-    config: LlmConfigVO,
-    onChunk: (chunk: IChatStreamChunkDto) => void
-  ): Promise<IChatResponseDto> {
-    const startTime = Date.now();
-    const model = config?.model || 'mai-code-1-flash-picker';
-    const lastUserMsg = prompt.getLastUserMessage()?.content || '';
-
-    try {
-      await this.ensureStarted();
-      const session = await this.client.createSession({
-        sessionId,
-        model,
-        onPermissionRequest: approveAll,
-      });
-
-      let fullContent = '';
-
-      const done = new Promise<void>((resolve, reject) => {
-        session.on('assistant.message_delta', (event: any) => {
-          const delta = event?.data?.deltaContent || '';
-          fullContent += delta;
-          onChunk({ sessionId, delta, done: false });
-        });
-
-        session.on('session.idle', () => {
-          resolve();
-        });
-
-        session.on('error' as any, (err: any) => {
-          reject(err);
-        });
-      });
-
-      await session.send({ prompt: lastUserMsg });
-      await done;
-
-      onChunk({ sessionId, delta: '', done: true });
-
-      return {
-        sessionId,
-        messageId: `msg-${Date.now()}`,
-        provider: this.provider,
-        model,
-        content: fullContent,
-        done: true,
-        executionTimeMs: Date.now() - startTime,
-      };
-    } catch (error: any) {
-      const errorDetails = error?.message || 'Error while streaming Copilot';
-      onChunk({ sessionId, delta: '', done: true, error: errorDetails });
-
-      return {
-        sessionId,
-        messageId: `msg-err-${Date.now()}`,
-        provider: this.provider,
-        model,
-        content: '',
-        done: true,
-        executionTimeMs: Date.now() - startTime,
-        error: errorDetails,
-      };
-    }
-  }
-
-  async healthCheck(baseUrl?: string): Promise<ILlmHealthResultDto> {
-    try {
-      await this.ensureStarted();
-      const models = await this.listModels();
-      return {
-        status: 'ok',
-        details: `Copilot service operational (${models.length} models detected)`,
-      };
-    } catch (error: any) {
-      return {
-        status: 'error',
-        details: `Copilot HealthCheck error: ${error?.message}`,
-      };
-    }
-  }
+  return (
+    <div
+      ref={tooltipRef}
+      className={cn(
+        "fixed z-[999999] pointer-events-none select-none transition-opacity duration-100",
+        "px-3 py-2 rounded-md shadow-2xl border max-w-md font-sans text-xs leading-relaxed break-words",
+        "bg-slate-900 text-slate-50 border-slate-700",
+        "dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700",
+        visible ? "opacity-100" : "opacity-0"
+      )}
+      style={{ left: '-9999px', top: '-9999px' }}
+    >
+      <span
+        className="block relative z-10 whitespace-pre-wrap leading-normal"
+        dangerouslySetInnerHTML={{ __html: content }}
+      />
+    </div>
+  );
 }
 EOF
 
-echo "✅ feat: Externalized ILlmModelInfo into llm-model.vo.ts and added full Copilot metadata interfaces!"
-npm run compile || true
+# 3. Update LLMModelsInfoModal container with stable layout & z-index stacking
+cat << 'EOF' > webview/src/features/explorer/sdb-rgt-prompt/llm-chat/llm-models-info-modal.tsx
+import React from 'react';
+import { LlmProvider } from '@/shared/services/llm-chat';
+import { LLMModelsInfo } from './llm-models-info';
+import { useDraggablePopup } from '../hooks/use-llm-models-info-modal';
+import { X, Sparkles, Move, Maximize2, Minus, Square, Copy } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+interface LLMModelsInfoModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  currentProvider?: LlmProvider | 'all';
+}
+
+export const LLMModelsInfoModal: React.FC<LLMModelsInfoModalProps> = ({
+  isOpen,
+  onClose,
+  currentProvider = 'all',
+}) => {
+  const {
+    geometry,
+    isMaximized,
+    isMinimized,
+    toggleMaximize,
+    toggleMinimize,
+    startDrag,
+    startResize,
+  } = useDraggablePopup(isOpen);
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        left: `${geometry.x}px`,
+        top: `${geometry.y}px`,
+        width: `${geometry.width}px`,
+        height: `${geometry.height}px`,
+      }}
+      className={`z-40 flex flex-col bg-card border border-border shadow-2xl ${
+        isMaximized ? 'rounded-none border-none' : 'rounded-xl'
+      }`}
+    >
+      {/* Draggable Header Bar */}
+      <div
+        onMouseDown={startDrag}
+        onDoubleClick={toggleMaximize}
+        className="flex justify-between items-center bg-muted/50 px-3 py-2 border-b border-border shrink-0 cursor-move select-none rounded-t-xl"
+      >
+        <div className="flex items-center gap-2">
+          {!isMaximized && <Move className="w-3.5 h-3.5 text-muted-foreground" />}
+          <Sparkles className="w-4 h-4 text-primary" />
+          <h3 className="font-bold text-xs uppercase tracking-wide text-foreground">
+            LLM Model Capabilities & Specifications
+          </h3>
+        </div>
+
+        {/* Window Controls */}
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleMinimize();
+            }}
+            className="w-6 h-6 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full cursor-pointer"
+            title={isMinimized ? "Restore Window" : "Minimize Window"}
+          >
+            <Minus size={13} />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleMaximize();
+            }}
+            className="w-6 h-6 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full cursor-pointer"
+            title={isMaximized ? "Restore Size" : "Maximize Window"}
+          >
+            {isMaximized ? <Copy size={12} className="rotate-180" /> : <Square size={11} />}
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="w-6 h-6 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full cursor-pointer"
+            title="Close Window"
+          >
+            <X size={13} />
+          </Button>
+        </div>
+      </div>
+
+      {/* Main Content Panel */}
+      {!isMinimized && (
+        <div className="flex-1 p-2.5 min-h-0 overflow-hidden bg-background rounded-b-xl">
+          <LLMModelsInfo initialProvider={currentProvider} />
+        </div>
+      )}
+
+      {/* Resize Bottom-Right Handle */}
+      {!isMaximized && !isMinimized && (
+        <div
+          onMouseDown={startResize}
+          className="absolute right-0 bottom-0 w-4 h-4 cursor-se-resize flex items-center justify-center text-muted-foreground/60 hover:text-primary transition-colors z-20"
+          title="Resize Window"
+        >
+          <Maximize2 size={10} className="rotate-90" />
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default LLMModelsInfoModal;
+EOF
+
+# 4. Build project to verify

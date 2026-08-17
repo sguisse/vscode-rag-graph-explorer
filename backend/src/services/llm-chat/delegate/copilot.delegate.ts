@@ -25,16 +25,12 @@ export class CopilotDelegate implements ILlmProviderDelegate {
     this.resolveNativeCliPath();
   }
 
-  /**
-   * Locates the native Copilot CLI executable binary compatible with the Host VS Code Extension
-   */
   private resolveNativeCliPath(): string | undefined {
     if (!CopilotDelegate.cliBinaryPath) {
       const extentionContext = getCurrentExtensionContext();
       const isArm64 = process.arch === 'arm64';
       const platform = process.platform;
 
-      // Guaranteed absolute path from the extension installation directory
       const cliBinaryPath = extentionContext.asAbsolutePath(
         path.join('node_modules', `@github/copilot-${platform}-${isArm64 ? 'arm64' : 'x64'}`, 'copilot')
       );
@@ -62,7 +58,6 @@ export class CopilotDelegate implements ILlmProviderDelegate {
     if (!CopilotDelegate.startPromise) {
       CopilotDelegate.startPromise = (async () => {
         try {
-          // Guard Timeout de 10s pour éviter un blocage indéfini dans VS Code
           const timeout = new Promise<never>((_, reject) =>
             setTimeout(
               () => reject(new Error('Délai dépassé lors du démarrage du CLI Copilot (10s)')),

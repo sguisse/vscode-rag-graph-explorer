@@ -88,4 +88,5 @@ export interface ILlmModelInfo {
   supportedReasoningEfforts?: string[];
   modelPickerCategory?: string;
   modelPickerPriceCategory?: string;
+  subRows?: ILlmModelInfo[];
 }
