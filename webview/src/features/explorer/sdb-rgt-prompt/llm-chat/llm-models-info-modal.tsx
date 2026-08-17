@@ -9,12 +9,14 @@ interface LLMModelsInfoModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentProvider?: LlmProvider | 'all';
+  onSelectModel?: (provider: LlmProvider, modelId: string) => void;
 }
 
 export const LLMModelsInfoModal: React.FC<LLMModelsInfoModalProps> = ({
   isOpen,
   onClose,
   currentProvider = 'all',
+  onSelectModel,
 }) => {
   const {
     modalRef,
@@ -104,7 +106,15 @@ export const LLMModelsInfoModal: React.FC<LLMModelsInfoModalProps> = ({
       {/* Main Content Panel (Hidden when minimized) */}
       {!isMinimized && (
         <div className="flex-1 p-2.5 min-h-0 overflow-hidden bg-background rounded-b-xl select-text">
-          <LLMModelsInfo initialProvider={currentProvider} />
+          <LLMModelsInfo
+            initialProvider={currentProvider}
+            onSelectModel={(prov, modelId) => {
+              if (onSelectModel) {
+                onSelectModel(prov, modelId);
+              }
+              onClose();
+            }}
+          />
         </div>
       )}
 

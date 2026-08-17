@@ -259,6 +259,10 @@ export const LLMChat: React.FC = () => {
         isOpen={isModalOpen}
         onClose={closeModal}
         currentProvider={provider}
+        onSelectModel={(prov, modelId) => {
+          setProvider(prov);
+          setSelectedModel(modelId);
+        }}
       />
     </div>
   );

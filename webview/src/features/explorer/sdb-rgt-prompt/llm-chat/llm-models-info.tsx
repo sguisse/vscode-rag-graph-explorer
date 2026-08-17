@@ -1,18 +1,23 @@
 import React, { useState } from 'react';
 import { LlmProvider } from '@/shared/services/llm-chat';
 import { useLlmModelsInfo, ModelTableRow, SortField } from '../hooks/use-llm-models-info';
+import { useExplorerStore } from '../../store/useExplorerStore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Rating } from '@/components/reui/rating';
-import { ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, Layers, X, ChevronRight, ChevronDown } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, Layers, X, ChevronRight, ChevronDown, Check } from 'lucide-react';
 
 interface LLMModelsInfoProps {
   initialProvider?: LlmProvider | 'all';
+  onSelectModel?: (provider: LlmProvider, modelId: string) => void;
 }
 
-export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({ initialProvider = 'all' }) => {
+export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
+  initialProvider = 'all',
+  onSelectModel,
+}) => {
   const {
     selectedProvider,
     setSelectedProvider,
@@ -27,6 +32,10 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({ initialProvider = 
     setGlobalFilter,
     refetch,
   } = useLlmModelsInfo(initialProvider);
+
+  const setLlmProvider = useExplorerStore((s) => s.setLlmProvider);
+  const setLlmSelectedModel = useExplorerStore((s) => s.setLlmSelectedModel);
+  const currentSelectedModel = useExplorerStore((s) => s.llmSelectedModel);
 
   // Resizable column widths state
   const [colWidths, setColWidths] = useState<Record<string, number>>({
@@ -63,6 +72,17 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({ initialProvider = 
 
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
+  };
+
+  const handleModelSelect = (row: ModelTableRow) => {
+    if (row.rowType !== 'model') return;
+
+    setLlmProvider(row.provider);
+    setLlmSelectedModel(row.id);
+
+    if (onSelectModel) {
+      onSelectModel(row.provider, row.id);
+    }
   };
 
   const renderSortButton = (label: React.ReactNode, field: SortField) => {
@@ -157,6 +177,7 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({ initialProvider = 
     const isCustomFamily = row.capabilities?.family === 'custom';
     const isExpanded = Boolean(expandedRowIds[row.id]);
     const hasSubRows = Boolean(row.subRows && row.subRows.length > 0);
+    const isSelectedModel = row.rowType === 'model' && row.id === currentSelectedModel;
 
     // Detail Sub-Row: Merge Columns across remaining 13 cells
     if (row.rowType === 'detail') {
@@ -208,7 +229,15 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({ initialProvider = 
 
     return (
       <React.Fragment key={row.id}>
-        <tr className="bg-card/50 hover:bg-muted/30 transition-colors">
+        <tr
+          onClick={() => handleModelSelect(row)}
+          className={`transition-colors cursor-pointer ${
+            isSelectedModel
+              ? 'bg-primary/15 hover:bg-primary/20 ring-1 ring-inset ring-primary/40'
+              : 'bg-card/50 hover:bg-muted/40'
+          }`}
+          title="Click to select this model for LLM Chat"
+        >
           {/* 1st Column: Provider (Fixed Sticky 1) */}
           <td
             style={{ width: `${colWidths.provider}px`, minWidth: `${colWidths.provider}px` }}
@@ -231,7 +260,10 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({ initialProvider = 
             <div className="flex items-center gap-1.5" style={{ paddingLeft: `${depth * 14}px` }}>
               {hasSubRows ? (
                 <button
-                  onClick={() => toggleRowExpanded(row.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleRowExpanded(row.id);
+                  }}
                   className="hover:bg-muted p-0.5 rounded cursor-pointer shrink-0"
                   data-tooltip="Toggle Extra Specs"
                 >
@@ -243,6 +275,11 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({ initialProvider = 
                 </button>
               ) : (
                 depth > 0 && <span className="w-3.5 shrink-0" />
+              )}
+              {isSelectedModel && (
+                <span className="bg-primary text-primary-foreground p-0.5 rounded-full shrink-0" title="Selected Model">
+                  <Check size={10} className="stroke-[3]" />
+                </span>
               )}
               <span className={`font-medium truncate block ${rowTextStyle}`}>
                 {row.name}
