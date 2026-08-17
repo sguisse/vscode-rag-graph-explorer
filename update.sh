@@ -1,21 +1,150 @@
 #!/usr/bin/env bash
 set -e
 
-DELEGATE_DIR="./backend/src/services/llm-chat/delegate"
-TARGET_FILE="$DELEGATE_DIR/copilot.delegate.ts"
-OLD_FILE="$DELEGATE_DIR/copilot-provider.delegate.ts"
+# Create required directories
+mkdir -p shared/services/llm-chat/domain/model/value-objects
 
-echo "🚀 Mise à jour du delegate GitHub Copilot dans $TARGET_FILE..."
+# 1. Create value-object for LLM Model with full Copilot metadata interfaces
+cat << 'EOF' > shared/services/llm-chat/domain/model/value-objects/llm-model.vo.ts
+import { LlmProvider } from '../types/llm-provider.enum';
 
-mkdir -p "$DELEGATE_DIR"
+export interface ILlmModelVisionLimits {
+  max_prompt_image_size?: number;
+  max_prompt_images?: number;
+  supported_media_types?: string[];
+}
 
-# Supprime l'ancien fichier pour éviter les conflits d'importation
-if [ -f "$OLD_FILE" ]; then
-  echo "🧹 Nettoyage de l'ancien fichier $OLD_FILE..."
-  rm -f "$OLD_FILE"
-fi
+export interface ILlmModelLimits {
+  max_context_window_tokens?: number;
+  max_non_streaming_output_tokens?: number;
+  max_output_tokens?: number;
+  max_prompt_tokens?: number;
+  vision?: ILlmModelVisionLimits;
+}
 
-cat << 'EOF' > "$TARGET_FILE"
+export interface ILlmModelSupports {
+  adaptive_thinking?: string;
+  max_thinking_budget?: number;
+  min_thinking_budget?: number;
+  parallel_tool_calls?: boolean;
+  reasoning_effort?: string[];
+  streaming?: boolean;
+  structured_outputs?: boolean;
+  tool_calls?: boolean;
+  vision?: boolean;
+  reasoningEffort?: boolean;
+}
+
+export interface ILlmModelCapabilities {
+  family?: string;
+  limits?: ILlmModelLimits;
+  object?: string;
+  supports?: ILlmModelSupports;
+  tokenizer?: string;
+  type?: string;
+}
+
+export interface ILlmModelPolicy {
+  state?: string;
+  terms?: string;
+}
+
+export interface ILlmLongContextTokenPriceConfig {
+  inputPrice?: number;
+  outputPrice?: number;
+  cachePrice?: number;
+  cacheReadPrice?: number;
+  cacheWritePrice?: number;
+  contextMax?: number;
+  maxPromptTokens?: number;
+}
+
+export interface ILlmTokenPrices {
+  inputPrice?: number;
+  outputPrice?: number;
+  cachePrice?: number;
+  cacheReadPrice?: number;
+  cacheWritePrice?: number;
+  batchSize?: number;
+  contextMax?: number;
+  maxPromptTokens?: number;
+  longContext?: ILlmLongContextTokenPriceConfig;
+}
+
+export interface ILlmModelPromo {
+  id?: string;
+  discountPercent?: number;
+  endsAt?: string;
+  message?: string;
+}
+
+export interface ILlmModelBilling {
+  discountPercent?: number;
+  tokenPrices?: ILlmTokenPrices;
+  promo?: ILlmModelPromo;
+}
+
+export interface ILlmModelInfo {
+  id: string;
+  name: string;
+  provider: LlmProvider;
+  contextWindow?: number;
+  description?: string;
+  capabilities?: ILlmModelCapabilities;
+  policy?: ILlmModelPolicy;
+  billing?: ILlmModelBilling;
+  supportedReasoningEfforts?: string[];
+  modelPickerCategory?: string;
+  modelPickerPriceCategory?: string;
+}
+EOF
+
+# 2. Update llm-provider.enum.ts to remove externalized ILlmModelInfo
+cat << 'EOF' > shared/services/llm-chat/domain/model/types/llm-provider.enum.ts
+export enum LlmProvider {
+  OLLAMA = 'ollama',
+  GEMINI = 'gemini',
+  COPILOT = 'copilot',
+}
+
+export type LlmRole = 'system' | 'user' | 'assistant';
+EOF
+
+# 3. Update shared/services/llm-chat/index.ts to re-export llm-model.vo
+cat << 'EOF' > shared/services/llm-chat/index.ts
+export * from './domain/model/types/llm-provider.enum';
+export * from './domain/model/types/chat-message.type';
+export * from './domain/model/value-objects/llm-config.vo';
+export * from './domain/model/value-objects/llm-model.vo';
+export * from './domain/model/value-objects/chat-prompt.vo';
+export * from './domain/model/entities/chat-session.entity';
+export * from './domain/model/dto/chat-request.dto';
+export * from './domain/model/dto/chat-response.dto';
+export * from './domain/mapper/chat-message.mapper';
+export * from './domain/port-out/llm-chat-service.port';
+EOF
+
+# 4. Update llm-chat-service.port.ts imports
+cat << 'EOF' > shared/services/llm-chat/domain/port-out/llm-chat-service.port.ts
+import { IChatRequestDto } from '../model/dto/chat-request.dto';
+import { IChatResponseDto, IChatStreamChunkDto, ILlmHealthResultDto } from '../model/dto/chat-response.dto';
+import { LlmProvider } from '../model/types/llm-provider.enum';
+import { ILlmModelInfo } from '../model/value-objects/llm-model.vo';
+
+export interface ILlmChatServicePort {
+  executeChat(request: IChatRequestDto): Promise<IChatResponseDto>;
+  streamChat(
+    request: IChatRequestDto,
+    onChunk: (chunk: IChatStreamChunkDto) => void
+  ): Promise<IChatResponseDto>;
+  listAvailableModels(provider?: LlmProvider): Promise<ILlmModelInfo[]>;
+  healthCheck(provider: LlmProvider, baseUrl?: string): Promise<ILlmHealthResultDto>;
+  readFileContent(filePath: string): Promise<string>;
+}
+EOF
+
+# 5. Update copilot.delegate.ts to map extended Copilot fields
+cat << 'EOF' > backend/src/services/llm-chat/delegate/copilot.delegate.ts
 import { CopilotClient, approveAll } from '@github/copilot-sdk';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -29,66 +158,39 @@ import {
   IChatStreamChunkDto,
   ILlmHealthResultDto,
 } from '../../../../../shared/services/llm-chat';
+import { getCurrentExtensionContext } from '../../../utils/utils-vscode';
+import { logInfo } from '../../../utils/utils-log';
 
 export class CopilotDelegate implements ILlmProviderDelegate {
   readonly provider = LlmProvider.COPILOT;
   private static clientInstance: CopilotClient | null = null;
   private static isStarted = false;
   private static startPromise: Promise<void> | null = null;
+  private static cliBinaryPath: string | null = null;
 
-  public constructor() {}
+  public constructor() {
+    this.resolveNativeCliPath();
+  }
 
   /**
-   * Localise le binaire exécutable natif du CLI Copilot compatible avec l'Extension Host VS Code
+   * Locates the native Copilot CLI executable binary compatible with the Host VS Code Extension
    */
   private resolveNativeCliPath(): string | undefined {
-    if (process.env.COPILOT_CLI_PATH && fs.existsSync(process.env.COPILOT_CLI_PATH)) {
-      return process.env.COPILOT_CLI_PATH;
+    if (!CopilotDelegate.cliBinaryPath) {
+      const extentionContext = getCurrentExtensionContext();
+      const isArm64 = process.arch === 'arm64';
+      const platform = process.platform;
+
+      // Guaranteed absolute path from the extension installation directory
+      const cliBinaryPath = extentionContext.asAbsolutePath(
+        path.join('node_modules', `@github/copilot-${platform}-${isArm64 ? 'arm64' : 'x64'}`, 'copilot')
+      );
+
+      CopilotDelegate.cliBinaryPath = cliBinaryPath;
+      process.env.COPILOT_CLI_PATH = cliBinaryPath;
     }
 
-    const platform = process.platform;
-    const arch = process.arch;
-
-    let pkgName = '';
-    let binName = 'copilot';
-
-    if (platform === 'darwin') {
-      pkgName = arch === 'arm64' ? '@github/copilot-darwin-arm64' : '@github/copilot-darwin-x64';
-    } else if (platform === 'linux') {
-      pkgName = arch === 'arm64' ? '@github/copilot-linux-arm64' : '@github/copilot-linux-x64';
-    } else if (platform === 'win32') {
-      pkgName = arch === 'arm64' ? '@github/copilot-win32-arm64' : '@github/copilot-win32-x64';
-      binName = 'copilot.exe';
-    }
-
-    if (pkgName) {
-      // 1. Résolution standard CommonJS
-      try {
-        const pkgJsonPath = require.resolve(`${pkgName}/package.json`);
-        const binPath = path.join(path.dirname(pkgJsonPath), binName);
-        if (fs.existsSync(binPath)) {
-          return binPath;
-        }
-      } catch {
-        // Fallback silencieux si 'require.resolve' échoue dans le bundle
-      }
-
-      // 2. Fallback pour bundle VS Code (esbuild/webpack) : balayage des répertoires node_modules
-      const possibleRoots = [
-        process.cwd(),
-        path.join(__dirname, '..', '..', '..', '..', '..'),
-        path.join(__dirname, '..', '..', '..'),
-      ];
-
-      for (const root of possibleRoots) {
-        const candidate = path.join(root, 'node_modules', pkgName, binName);
-        if (fs.existsSync(candidate)) {
-          return candidate;
-        }
-      }
-    }
-
-    return undefined;
+    return CopilotDelegate.cliBinaryPath;
   }
 
   private get client(): CopilotClient {
@@ -130,12 +232,19 @@ export class CopilotDelegate implements ILlmProviderDelegate {
   async listModels(config?: LlmConfigVO): Promise<ILlmModelInfo[]> {
     await this.ensureStarted();
     const models = await this.client.listModels();
+    logInfo(`CopilotDelegate.listModels totalFound: ${models.length}`, models);
     return models.map((m: any) => ({
       id: m.id || m.name,
       name: m.name || m.id,
       provider: this.provider,
-      contextWindow: m.contextWindow ?? 128000,
-      description: m.description || 'Modèle administré via GitHub Copilot SDK',
+      contextWindow: m.capabilities?.limits?.max_context_window_tokens ?? m.contextWindow ?? 128000,
+      description: m.description || 'Model administered via GitHub Copilot SDK',
+      capabilities: m.capabilities,
+      policy: m.policy,
+      billing: m.billing,
+      supportedReasoningEfforts: m.supportedReasoningEfforts,
+      modelPickerCategory: m.modelPickerCategory,
+      modelPickerPriceCategory: m.modelPickerPriceCategory,
     }));
   }
 
@@ -195,7 +304,7 @@ export class CopilotDelegate implements ILlmProviderDelegate {
         content: '',
         done: true,
         executionTimeMs: Date.now() - startTime,
-        error: error?.message || 'Erreur lors de la réponse Copilot',
+        error: error?.message || 'Error while receiving Copilot response',
       };
     }
   }
@@ -251,7 +360,7 @@ export class CopilotDelegate implements ILlmProviderDelegate {
         executionTimeMs: Date.now() - startTime,
       };
     } catch (error: any) {
-      const errorDetails = error?.message || 'Erreur lors du streaming Copilot';
+      const errorDetails = error?.message || 'Error while streaming Copilot';
       onChunk({ sessionId, delta: '', done: true, error: errorDetails });
 
       return {
@@ -273,16 +382,17 @@ export class CopilotDelegate implements ILlmProviderDelegate {
       const models = await this.listModels();
       return {
         status: 'ok',
-        details: `Service Copilot opérationnel (${models.length} modèles détectés)`,
+        details: `Copilot service operational (${models.length} models detected)`,
       };
     } catch (error: any) {
       return {
         status: 'error',
-        details: `Erreur HealthCheck Copilot: ${error?.message}`,
+        details: `Copilot HealthCheck error: ${error?.message}`,
       };
     }
   }
 }
 EOF
 
-echo "✅ Mise à jour terminée avec succès !"
+echo "✅ feat: Externalized ILlmModelInfo into llm-model.vo.ts and added full Copilot metadata interfaces!"
+npm run compile || true

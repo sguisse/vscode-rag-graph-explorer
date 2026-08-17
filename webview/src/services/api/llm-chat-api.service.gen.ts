@@ -5,7 +5,8 @@ import { RpcMethodEnum } from '@/shared/config/rpc-methods.enum.gen';
 import { AbstractApiService } from './abstract-api.service';
 import { IChatRequestDto } from '@/shared/services/llm-chat/domain/model/dto/chat-request.dto';
 import { IChatResponseDto, IChatStreamChunkDto, ILlmHealthResultDto } from '@/shared/services/llm-chat/domain/model/dto/chat-response.dto';
-import { ILlmModelInfo, LlmProvider } from '@/shared/services/llm-chat/domain/model/types/llm-provider.enum';
+import { LlmProvider } from '@/shared/services/llm-chat/domain/model/types/llm-provider.enum';
+import { ILlmModelInfo } from '@/shared/services/llm-chat/domain/model/value-objects/llm-model.vo';
 import { ILlmChatServicePort } from '@/shared/services/llm-chat/domain/port-out/llm-chat-service.port';
 
 class LlmChatApiService extends AbstractApiService implements ILlmChatServicePort {

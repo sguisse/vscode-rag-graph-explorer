@@ -30,17 +30,17 @@ export class CopilotDelegate implements ILlmProviderDelegate {
    */
   private resolveNativeCliPath(): string | undefined {
     if (!CopilotDelegate.cliBinaryPath) {
-    const extentionContext = getCurrentExtensionContext();
-    const isArm64 = process.arch === 'arm64';
-        const platform = process.platform;
+      const extentionContext = getCurrentExtensionContext();
+      const isArm64 = process.arch === 'arm64';
+      const platform = process.platform;
 
-        // Guaranteed absolute path from the extension installation directory
-        const cliBinaryPath = extentionContext.asAbsolutePath(
-            path.join('node_modules', `@github/copilot-${platform}-${isArm64 ? 'arm64' : 'x64'}`, 'copilot')
-        );
+      // Guaranteed absolute path from the extension installation directory
+      const cliBinaryPath = extentionContext.asAbsolutePath(
+        path.join('node_modules', `@github/copilot-${platform}-${isArm64 ? 'arm64' : 'x64'}`, 'copilot')
+      );
 
-        CopilotDelegate.cliBinaryPath = cliBinaryPath;
-        process.env.COPILOT_CLI_PATH = cliBinaryPath;
+      CopilotDelegate.cliBinaryPath = cliBinaryPath;
+      process.env.COPILOT_CLI_PATH = cliBinaryPath;
     }
 
     return CopilotDelegate.cliBinaryPath;
@@ -90,8 +90,14 @@ export class CopilotDelegate implements ILlmProviderDelegate {
       id: m.id || m.name,
       name: m.name || m.id,
       provider: this.provider,
-      contextWindow: m.contextWindow ?? 128000,
+      contextWindow: m.capabilities?.limits?.max_context_window_tokens ?? m.contextWindow ?? 128000,
       description: m.description || 'Model administered via GitHub Copilot SDK',
+      capabilities: m.capabilities,
+      policy: m.policy,
+      billing: m.billing,
+      supportedReasoningEfforts: m.supportedReasoningEfforts,
+      modelPickerCategory: m.modelPickerCategory,
+      modelPickerPriceCategory: m.modelPickerPriceCategory,
     }));
   }
 

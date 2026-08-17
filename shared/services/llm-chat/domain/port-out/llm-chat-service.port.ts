@@ -1,6 +1,7 @@
 import { IChatRequestDto } from '../model/dto/chat-request.dto';
 import { IChatResponseDto, IChatStreamChunkDto, ILlmHealthResultDto } from '../model/dto/chat-response.dto';
-import { ILlmModelInfo, LlmProvider } from '../model/types/llm-provider.enum';
+import { LlmProvider } from '../model/types/llm-provider.enum';
+import { ILlmModelInfo } from '../model/value-objects/llm-model.vo';
 
 export interface ILlmChatServicePort {
   executeChat(request: IChatRequestDto): Promise<IChatResponseDto>;
