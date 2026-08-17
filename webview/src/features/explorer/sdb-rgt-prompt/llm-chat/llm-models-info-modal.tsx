@@ -17,7 +17,7 @@ export const LLMModelsInfoModal: React.FC<LLMModelsInfoModalProps> = ({
   currentProvider = 'all',
 }) => {
   const {
-    geometry,
+    modalRef,
     isMaximized,
     isMinimized,
     toggleMaximize,
@@ -30,18 +30,21 @@ export const LLMModelsInfoModal: React.FC<LLMModelsInfoModalProps> = ({
 
   return (
     <div
+      ref={modalRef}
       style={{
         position: 'fixed',
-        left: `${geometry.x}px`,
-        top: `${geometry.y}px`,
-        width: `${geometry.width}px`,
-        height: `${geometry.height}px`,
+        left: '16px',
+        top: '16px',
+        width: '1000px',
+        height: '800px',
+        backfaceVisibility: 'hidden',
+        transform: 'translateZ(0)',
       }}
-      className={`z-40 flex flex-col bg-card border border-border shadow-2xl ${
+      className={`z-40 flex flex-col bg-card border border-border shadow-2xl overflow-hidden ${
         isMaximized ? 'rounded-none border-none' : 'rounded-xl'
       }`}
     >
-      {/* Draggable Header Bar */}
+      {/* Draggable Header Bar (Double click to Maximize/Restore) */}
       <div
         onMouseDown={startDrag}
         onDoubleClick={toggleMaximize}
@@ -55,8 +58,9 @@ export const LLMModelsInfoModal: React.FC<LLMModelsInfoModalProps> = ({
           </h3>
         </div>
 
-        {/* Window Controls */}
+        {/* Window Control Buttons */}
         <div className="flex items-center gap-1">
+          {/* Minimize Button */}
           <Button
             variant="ghost"
             size="icon"
@@ -70,6 +74,7 @@ export const LLMModelsInfoModal: React.FC<LLMModelsInfoModalProps> = ({
             <Minus size={13} />
           </Button>
 
+          {/* Maximize / Restore Button */}
           <Button
             variant="ghost"
             size="icon"
@@ -83,6 +88,7 @@ export const LLMModelsInfoModal: React.FC<LLMModelsInfoModalProps> = ({
             {isMaximized ? <Copy size={12} className="rotate-180" /> : <Square size={11} />}
           </Button>
 
+          {/* Close Button */}
           <Button
             variant="ghost"
             size="icon"
@@ -95,14 +101,14 @@ export const LLMModelsInfoModal: React.FC<LLMModelsInfoModalProps> = ({
         </div>
       </div>
 
-      {/* Main Content Panel */}
+      {/* Main Content Panel (Hidden when minimized) */}
       {!isMinimized && (
-        <div className="flex-1 p-2.5 min-h-0 overflow-hidden bg-background rounded-b-xl">
+        <div className="flex-1 p-2.5 min-h-0 overflow-hidden bg-background rounded-b-xl select-text">
           <LLMModelsInfo initialProvider={currentProvider} />
         </div>
       )}
 
-      {/* Resize Bottom-Right Handle */}
+      {/* Resize Bottom-Right Handle (Disabled when maximized or minimized) */}
       {!isMaximized && !isMinimized && (
         <div
           onMouseDown={startResize}
