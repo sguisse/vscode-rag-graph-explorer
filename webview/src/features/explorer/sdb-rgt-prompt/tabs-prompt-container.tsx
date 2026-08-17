@@ -51,7 +51,7 @@ export function TabsPromptContainer({
         </Button>
       </div>
 
-     <div className={`flex-1 overflow-y-auto ${activeTab === 'llm' ? '' : 'p-3'}`}>
+     <div className={`flex-1 overflow-y-auto ${activeTab === 'llm' ? '' : 'p-2'}`}>
         {activeTab === 'prompt' && <PromptPanel handleCopy={handleCopy} />}
         {activeTab === 'llm' && <LLMChat />}
         {activeTab === 'config' && <ConfigurationPanel />}

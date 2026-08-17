@@ -36,7 +36,7 @@ export function FilesCtxExportPanel({
 
   return (
     <div className="flex items-center gap-3 bg-card p-2.5 border border-border rounded-lg w-full">
-      <div className="flex flex-1 items-center gap-2.5 min-w-0 overflow-x-auto">
+      <div className="flex flex-1 items-center gap-2.5 min-w-0 overflow-x-auto p-1">
         <div className="space-y-1 shrink-0">
           <label
             className="block font-medium text-[10px] text-muted-foreground whitespace-nowrap"

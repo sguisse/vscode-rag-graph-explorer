@@ -52,7 +52,7 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
   );
 
   const middleContent = (
-    <div className="space-y-3 py-2 pr-1 w-full font-mono text-xs">
+    <div className="space-y-3 px-1.5 py-2 w-full font-mono text-xs">
       <div className="space-y-2 bg-card p-2.5 border border-border rounded-lg">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -163,7 +163,7 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
         />
       </div>
 
-      <div className="space-y-1">
+      <div className="space-y-1 pb-2">
         <label className="block font-bold text-[10px] text-muted-foreground uppercase">💡 Samples :</label>
         <Textarea
           value={promptFields.samples}
