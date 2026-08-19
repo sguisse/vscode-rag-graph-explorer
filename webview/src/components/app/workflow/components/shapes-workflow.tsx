@@ -17,6 +17,22 @@ export function getWorkflowCytoscapeStyles(isDarkMode: boolean): cytoscape.Style
         'overlay-opacity': 0,
         'transition-property': 'background-color, border-color, border-width',
         'transition-duration': 0.15,
+        'width': (node: cytoscape.NodeSingular) => {
+          const w = node.data('width');
+          if (w) return `${w}px`;
+          const type = node.data('type');
+          if (type === 'decision') return '72px';
+          if (type === 'start' || type === 'end') return '32px';
+          return '95px';
+        },
+        'height': (node: cytoscape.NodeSingular) => {
+          const h = node.data('height');
+          if (h) return `${h}px`;
+          const type = node.data('type');
+          if (type === 'decision') return '72px';
+          if (type === 'start' || type === 'end') return '32px';
+          return '40px';
+        },
       },
     },
     // Standard Step Node
@@ -24,8 +40,6 @@ export function getWorkflowCytoscapeStyles(isDarkMode: boolean): cytoscape.Style
       selector: 'node.step, node[type = "step"]',
       style: {
         'shape': 'roundrectangle',
-        'width': '95px',
-        'height': '40px',
         'background-color': isDarkMode ? '#1e3a8a' : '#dbeafe',
         'border-width': '2px',
         'border-color': isDarkMode ? '#3b82f6' : '#2563eb',
@@ -37,8 +51,6 @@ export function getWorkflowCytoscapeStyles(isDarkMode: boolean): cytoscape.Style
       selector: 'node.decision, node[type = "decision"]',
       style: {
         'shape': 'diamond',
-        'width': '72px',
-        'height': '72px',
         'background-color': '#ffffff',
         'border-width': '2.5px',
         'border-color': isDarkMode ? '#818cf8' : '#6366f1',
@@ -52,8 +64,6 @@ export function getWorkflowCytoscapeStyles(isDarkMode: boolean): cytoscape.Style
       selector: 'node.start, node[type = "start"]',
       style: {
         'shape': 'ellipse',
-        'width': '32px',
-        'height': '32px',
         'background-color': '#ffffff',
         'border-width': '2.5px',
         'border-color': isDarkMode ? '#cbd5e1' : '#334155',
@@ -69,8 +79,6 @@ export function getWorkflowCytoscapeStyles(isDarkMode: boolean): cytoscape.Style
       selector: 'node.end, node[type = "end"]',
       style: {
         'shape': 'ellipse',
-        'width': '32px',
-        'height': '32px',
         'background-color': isDarkMode ? '#451a1a' : '#fef2f2',
         'border-width': '4px',
         'border-color': isDarkMode ? '#f87171' : '#dc2626',
@@ -79,6 +87,33 @@ export function getWorkflowCytoscapeStyles(isDarkMode: boolean): cytoscape.Style
         'color': isDarkMode ? '#fca5a5' : '#b91c1c',
         'font-size': '9px',
         'text-max-width': '100px',
+      },
+    },
+    // Node Icon Styling (5px padding relative to top, bottom, and left node borders)
+    {
+      selector: 'node.has-icon',
+      style: {
+        'background-image': 'data(icon)',
+        'background-fit': 'none',
+        'background-width': (node: cytoscape.NodeSingular) => {
+          const h = typeof node.data('height') === 'number'
+            ? node.data('height')
+            : (node.data('type') === 'step' ? 40 : 32);
+          return `${Math.max(8, h - 10)}px`; // 5px top + 5px bottom padding = height - 10px
+        },
+        'background-height': (node: cytoscape.NodeSingular) => {
+          const h = typeof node.data('height') === 'number'
+            ? node.data('height')
+            : (node.data('type') === 'step' ? 40 : 32);
+          return `${Math.max(8, h - 10)}px`; // 5px top + 5px bottom padding = height - 10px
+        },
+        'background-position-x': '0%',
+        'background-offset-x': 5, // 5px padding from left border
+        'background-position-y': '50%', // Centered vertically
+        'background-offset-y': 0,
+        'background-repeat': 'no-repeat',
+        'text-margin-x': 12,
+        'text-max-width': '55px',
       },
     },
     // Completed Status Highlight

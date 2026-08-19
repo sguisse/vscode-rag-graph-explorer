@@ -9,4 +9,5 @@ export interface IVsCodeServicePort {
     copyToClipboard(text: string): Promise<void>;
     saveUserPreferences(settingsKey: string, jsonPayload: Record<string, any>): Promise<void>;
     readUserPreferences(settingsKey: string): Promise<Record<string, any>>;
+    readImageAsBase64(filePathOrUrl: string): Promise<string>;
 }

@@ -39,6 +39,10 @@ class VsCodeApiService extends AbstractApiService implements IVsCodeServicePort 
     public async readUserPreferences(settingsKey: string): Promise<Record<string, any>> {
         return await this.rpc.call(RpcMethodEnum.VSCODE_READ_USER_PREFERENCES, settingsKey);
     }
+
+    public async readImageAsBase64(filePathOrUrl: string): Promise<string> {
+        return await this.rpc.call(RpcMethodEnum.VSCODE_READ_IMAGE_AS_BASE64, filePathOrUrl);
+    }
 }
 
 export const vsCodeApiService = new VsCodeApiService();

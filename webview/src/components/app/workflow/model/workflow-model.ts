@@ -7,6 +7,9 @@ export interface WorkflowNode {
   type: NodeType;
   x?: number;
   y?: number;
+  width?: number;
+  height?: number;
+  icon?: string;
   status?: NodeStatus;
   clickEnabled?: boolean;
   isCurrent?: boolean;

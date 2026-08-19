@@ -76,21 +76,27 @@
       },
       {
         "id": "gems_01",
-        "label": "Gems 01",
+        "label": "",
         "desc": "Display Gemini Gems dedicated to Extension site in browser, with files context in clipboard ready to paste in the prompt.",
         "type": "step",
         "x": 768,
         "y": 104,
+        "icon": "assets/brands/gemini.svg",
+        "width": 60,
+        "height": 60,
         "status": "pending",
         "clickEnabled": true
       },
       {
         "id": "notebookLM",
-        "label": "NotebookLM",
+        "label": "",
         "desc": "Display NotebookLM site in browser, with files context in clipboard ready to paste in the prompt.",
         "type": "step",
         "x": 883,
         "y": 104,
+        "width": 60,
+        "height": 60,
+        "icon": "assets/brands/notebooklm.svg",
         "status": "pending",
         "clickEnabled": true
       },
@@ -102,7 +108,10 @@
         "x": 768,
         "y": 179,
         "status": "pending",
-        "clickEnabled": true
+        "clickEnabled": true,
+        "icon": "file:///Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-files-exporter/assets/logo-50x50.png",
+        "width": 40,
+        "height": 40
       },
       {
         "id": "end",

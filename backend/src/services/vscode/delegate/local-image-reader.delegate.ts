@@ -1,7 +1,3 @@
-#!/usr/bin/env bash
-set -e
-
-cat << 'EOF' > backend/src/services/vscode/delegate/local-image-reader.delegate.ts
 import * as vscode from 'vscode';
 import path from 'path';
 import fs from 'fs';
@@ -25,8 +21,8 @@ interface ImageResult {
 }
 
 /**
- * Normalise les balises SVG pour garantir la présence d'attributs width/height explicites.
- * Cela permet à l'élément <canvas> d'HTML5 / Cytoscape de redimensionner correctement l'image vectorielle.
+ * Normalizes SVG tags to ensure explicit width/height attributes are present.
+ *This allows the HTML5/Cytoscape <canvas> element to correctly resize the vector image.
  */
 function normalizeSvgContent(svgString: string): string {
   const svg = svgString.trim();
@@ -85,7 +81,7 @@ function resolveLocalFilePath(filePath: string): string {
 }
 
 /**
- * Détermine le type MIME à partir de l'extension du fichier.
+ * Determines the MIME type from the file extension.
  */
 function getMimeTypeFromExtension(filePath: string): string {
   const ext = path.extname(filePath).toLowerCase();
@@ -93,12 +89,12 @@ function getMimeTypeFromExtension(filePath: string): string {
 }
 
 /**
- * Lit une image distante via HTTP/HTTPS.
+ * Reads a remote image via HTTP/HTTPS.
  */
 async function readRemoteImage(url: string): Promise<ImageResult | null> {
   const response = await fetch(url);
   if (!response.ok) {
-    logWarn(`[image-reader.delegate] Échec du téléchargement de l'image distante '${url}': statut ${response.status}`);
+    logWarn(`[image-reader.delegate] Failed to download remote image '${url}': status ${response.status}`);
     return null;
   }
 
@@ -120,7 +116,7 @@ async function readRemoteImage(url: string): Promise<ImageResult | null> {
 }
 
 /**
- * Lit une image locale sur le disque dur.
+ * Reads a local image from the hard drive.
  */
 async function readLocalImage(filePath: string): Promise<ImageResult | null> {
   const resolvedPath = resolveLocalFilePath(filePath);
@@ -142,7 +138,7 @@ async function readLocalImage(filePath: string): Promise<ImageResult | null> {
 }
 
 /**
- * Fonction déléguée principale : convertit toute référence d'image en URI Base64 normalisée.
+ * Main delegate function: Converts any image reference to a normalized Base64 URI.
  */
 export async function readImageAsBase64(filePathOrUrl: string): Promise<string> {
   if (!filePathOrUrl) {
@@ -150,11 +146,11 @@ export async function readImageAsBase64(filePathOrUrl: string): Promise<string> 
   }
 
   if (iconBase64Cache.has(filePathOrUrl)) {
-    logInfo(`[image-reader.delegate] Image base64 retournée depuis le cache pour : ${filePathOrUrl}`);
+    logInfo(`[image-reader.delegate]Base64 image returned from cache for : ${filePathOrUrl}`);
     return iconBase64Cache.get(filePathOrUrl)!;
   }
 
-  logInfo(`[image-reader.delegate] readImageAsBase64 invoqué pour : ${filePathOrUrl}`);
+  logInfo(`[image-reader.delegate] readImageAsBase64 invoked for : ${filePathOrUrl}`);
 
   try {
     const isRemote = filePathOrUrl.startsWith('http://') || filePathOrUrl.startsWith('https://');
@@ -171,10 +167,7 @@ export async function readImageAsBase64(filePathOrUrl: string): Promise<string> 
 
     return dataUri;
   } catch (err) {
-    logError(`[image-reader.delegate] Échec de la lecture de l'image en base64 pour ${filePathOrUrl}:`, err as Error);
+    logError(`[image-reader.delegate] Failed to read base64 image for ${filePathOrUrl}:`, err as Error);
     return '';
   }
 }
-EOF
-
-npm run build

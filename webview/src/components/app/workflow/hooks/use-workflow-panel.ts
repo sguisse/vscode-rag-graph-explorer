@@ -4,15 +4,40 @@ import defaultWorkflowData from '@/features/explorer/workflow/data-workflow.json
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { getWorkflowCytoscapeStyles } from '../components/shapes-workflow';
 import { logWorkflowPositionsIfChanged } from '../utils-workflow';
-import { logInfo } from '@/services/view/log-view.service.wrapper';
+import { logInfo, logError } from '@/services/view/log-view.service.wrapper';
 import { WorkflowData, WorkflowNode } from '../model/workflow-model';
 import { isCurrentStatus } from '../model/types/type-node';
+import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
+
 
 function sanitizeLabel(label: string): string {
   if (!label) return '';
   return label
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<[^>]+>/g, '');
+}
+
+/**
+ * Resolves bundled assets, http/https URLs, or local /assets/ and file:// images via backend service
+ */
+async function resolveIconUrlAsync(iconPath?: string): Promise<string> {
+  if (!iconPath) return '';
+
+  if (iconPath.startsWith('data:')) {
+    return iconPath;
+  }
+
+  // Fallback to backend service for http, https, file://, /assets paths
+  try {
+    const base64Data = await vsCodeApiService.readImageAsBase64(iconPath);
+    if (base64Data) {
+      return base64Data;
+    }
+  } catch (err) {
+    logError(`[useWorkflowPanel] Failed to read image via backend service: ${iconPath}`, err as Error);
+  }
+
+  return iconPath;
 }
 
 export function useWorkflowPanel(
@@ -26,7 +51,7 @@ export function useWorkflowPanel(
 
   const workflow = workflowData.workflow;
 
-  const initCytoscape = useCallback(() => {
+  const initCytoscape = useCallback(async () => {
     if (!containerRef.current) return;
 
     if (cyRef.current) {
@@ -35,12 +60,14 @@ export function useWorkflowPanel(
 
     const elements: cytoscape.ElementDefinition[] = [];
 
-    workflow.nodes.forEach((node: WorkflowNode) => {
+    for (const node of workflow.nodes) {
       const isCurrent = isCurrentStatus(node.status) || node.id === workflow.initialStepId;
       const clickEnabled = node.clickEnabled !== undefined ? node.clickEnabled : node.type === 'step';
+      const resolvedIcon = await resolveIconUrlAsync(node.icon);
+
       elements.push({
         group: 'nodes',
-        classes: `${node.type} ${isCurrent ? 'current' : ''}`,
+        classes: `${node.type} ${isCurrent ? 'current' : ''} ${resolvedIcon ? 'has-icon' : ''}`,
         data: {
           id: node.id,
           label: sanitizeLabel(node.label),
@@ -49,10 +76,13 @@ export function useWorkflowPanel(
           status: node.status || 'pending',
           isCurrent,
           clickEnabled,
+          icon: resolvedIcon,
+          width: node.width,
+          height: node.height,
         },
         position: { x: node.x ?? 0, y: node.y ?? 0 },
       });
-    });
+    }
 
     const defaultEdgeColor = isDarkMode ? '#475569' : '#94a3b8';
     const defaultEdgeTextColor = isDarkMode ? '#94a3b8' : '#64748b';
@@ -118,6 +148,9 @@ export function useWorkflowPanel(
         status: data.status,
         isCurrent: data.isCurrent,
         clickEnabled: data.clickEnabled,
+        icon: data.icon,
+        width: data.width,
+        height: data.height,
       });
     });
 
@@ -141,6 +174,9 @@ export function useWorkflowPanel(
         status: data.status,
         isCurrent: data.isCurrent,
         clickEnabled: data.clickEnabled,
+        icon: data.icon,
+        width: data.width,
+        height: data.height,
       });
 
       if (data.clickEnabled) {

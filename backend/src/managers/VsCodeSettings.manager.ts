@@ -98,7 +98,7 @@ export class VsCodeSettingsManager {
             return defaultValue as T;
         }
 
-        let value = vscode.workspace.getConfiguration().get<any>(absoluteKey);
+        let value = this.getValueFromVscode(absoluteKey);
         if (value === undefined || value === null) {
             return defaultValue as T;
         }
@@ -106,10 +106,69 @@ export class VsCodeSettingsManager {
         visited.add(absoluteKey);
         if (typeof value === 'string') {
             value = this.interpolate(value, visited);
+        } else if (value !== null && typeof value === 'object') {
+            value = this.resolveAllPlaceholdersInObject(value, visited);
         }
         visited.delete(absoluteKey);
 
         return value as T;
+    }
+
+    /**
+     * Attempts direct lookup from VS Code configuration, falling back to nested property path navigation.
+     */
+    private getValueFromVscode(absoluteKey: string): any {
+        // 1. Try direct lookup from root configuration
+        let val = vscode.workspace.getConfiguration().get<any>(absoluteKey);
+        if (val !== undefined && val !== null) {
+            return val;
+        }
+
+        // 2. Try direct lookup from scoped configuration
+        const relativeKey = absoluteKey.startsWith(`${VsCodeSettingsManager.SCOPE}.`)
+            ? absoluteKey.slice(VsCodeSettingsManager.SCOPE.length + 1)
+            : absoluteKey;
+
+        const config = vscode.workspace.getConfiguration(VsCodeSettingsManager.SCOPE);
+        val = config.get<any>(relativeKey);
+        if (val !== undefined && val !== null) {
+            return val;
+        }
+
+        // 3. Fallback: Navigate dot-path inside scoped configuration object graph
+        const parts = relativeKey.split('.');
+        if (parts.length > 1) {
+            let current = config.get<any>(parts[0]);
+            for (let i = 1; i < parts.length; i++) {
+                if (current !== null && typeof current === 'object' && parts[i] in current) {
+                    current = current[parts[i]];
+                } else {
+                    return undefined;
+                }
+            }
+            return current;
+        }
+
+        return undefined;
+    }
+
+    private resolveAllPlaceholdersInObject(obj: Record<string, any>, visited: Set<string>): Record<string, any> {
+        const resolvedObj: Record<string, any> = {};
+        for (const key of Object.keys(obj)) {
+            const val = obj[key];
+            if (typeof val === 'string') {
+                resolvedObj[key] = this.interpolate(val, visited);
+            } else if (Array.isArray(val)) {
+                resolvedObj[key] = val.map(item =>
+                    typeof item === 'string' ? this.interpolate(item, visited) : item
+                );
+            } else if (val !== null && typeof val === 'object') {
+                resolvedObj[key] = this.resolveAllPlaceholdersInObject(val, visited);
+            } else {
+                resolvedObj[key] = val;
+            }
+        }
+        return resolvedObj;
     }
 
     private interpolate(input: string, visited: Set<string>): string {
