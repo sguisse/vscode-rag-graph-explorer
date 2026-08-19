@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import cytoscape from 'cytoscape';
-import rawWorkflowData from '../data-workflow.json';
+import defaultWorkflowData from '@/features/explorer/workflow/data-workflow.json';
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { getWorkflowCytoscapeStyles } from '../components/shapes-workflow';
 import { logWorkflowPositionsIfChanged } from '../utils-workflow';
@@ -15,13 +15,16 @@ function sanitizeLabel(label: string): string {
     .replace(/<[^>]+>/g, '');
 }
 
-export function useWorkflowPanel(onSelectNode?: (nodeId: string) => void) {
+export function useWorkflowPanel(
+  workflowData: WorkflowData = defaultWorkflowData as WorkflowData,
+  onSelectNode?: (nodeId: string) => void
+) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const cyRef = useRef<cytoscape.Core | null>(null);
   const isDarkMode = useAppContextStore((s) => s.isDarkMode);
   const [selectedNode, setSelectedNode] = useState<WorkflowNode | null>(null);
 
-  const workflow = (rawWorkflowData as WorkflowData).workflow;
+  const workflow = workflowData.workflow;
 
   const initCytoscape = useCallback(() => {
     if (!containerRef.current) return;
@@ -101,7 +104,7 @@ export function useWorkflowPanel(onSelectNode?: (nodeId: string) => void) {
     cy.on('mouseover', 'node', (evt) => {
       const node = evt.target;
       const data = node.data();
-      if (!data.isCurrent && data.clickEnabled) {
+      if (data.clickEnabled) {
         node.addClass('hovered');
         if (containerRef.current) {
           containerRef.current.style.cursor = 'pointer';
@@ -140,7 +143,7 @@ export function useWorkflowPanel(onSelectNode?: (nodeId: string) => void) {
         clickEnabled: data.clickEnabled,
       });
 
-      if (!data.isCurrent && data.clickEnabled) {
+      if (data.clickEnabled) {
         logInfo(`[WorkflowPanel] Workflow step selected: '${data.label.replace(/\n/g, ' ')}' (ID: ${data.id})`);
         if (onSelectNode) {
           onSelectNode(data.id);
@@ -160,12 +163,12 @@ export function useWorkflowPanel(onSelectNode?: (nodeId: string) => void) {
     initCytoscape();
     return () => {
       if (cyRef.current) {
-        logWorkflowPositionsIfChanged(cyRef.current, workflow.nodes);
+        logWorkflowPositionsIfChanged(cyRef.current, workflow.nodes, workflowData);
         cyRef.current.destroy();
         cyRef.current = null;
       }
     };
-  }, [initCytoscape, workflow.nodes]);
+  }, [initCytoscape, workflow.nodes, workflowData]);
 
   const handleFitView = () => {
     if (cyRef.current) {

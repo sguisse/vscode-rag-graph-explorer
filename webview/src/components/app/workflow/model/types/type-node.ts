@@ -11,6 +11,7 @@ export type NodeStatus = (typeof NODE_STATUS_LIST)[number];
 export function isNodeStatus(value: unknown): value is NodeStatus {
   return typeof value === 'string' && NODE_STATUS_LIST.includes(value as NodeStatus);
 }
-export function isCurrentStatus(value: unknown): value is NodeStatus {
+
+export function isCurrentStatus(value: unknown): boolean {
   return value === 'current';
 }

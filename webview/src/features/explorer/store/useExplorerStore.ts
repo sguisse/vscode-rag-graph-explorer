@@ -10,6 +10,8 @@ import {
   IFileContextDto,
 } from '@/shared/services/llm-chat';
 import { ExportFormat } from '@/shared/services/codebase-exporter/domain/model/types';
+import { WorkflowData } from '@/components/app/workflow/model/workflow-model';
+import defaultWorkflowData from '../workflow/data-workflow.json';
 import { demoCodebase, FOLDER_POSITIONS } from '../wksp-cnt-graph/data/GraphData';
 import { INITIAL_VISIBLE_FILES_CONFIG, FOLDER_KEYS_REGISTERED_CONFIG } from '../constants/graph.constants';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
@@ -113,6 +115,15 @@ const INITIAL_CONFIG: GraphRagExplorerConfig = {
 // ============================================================================
 // Dedicated Container & Panel Interfaces
 // ============================================================================
+
+/**
+ * State & Actions for Explorer Workflow
+ */
+export interface WorkflowState {
+  dataWorkflow: WorkflowData;
+  setDataWorkflow: (data: WorkflowData) => void;
+  setSelectedWorkflowStep: (stepId: string) => void;
+}
 
 /**
  * State & Actions for Container: workspace.top
@@ -297,7 +308,8 @@ export interface SdbRgtLlmChatState {
 // ============================================================================
 
 export interface ExplorerState
-  extends WkpTopImpactedPathsState,
+  extends WorkflowState,
+    WkpTopImpactedPathsState,
     WkpLftCodebaseTreeState,
     WkspCntGraphState,
     WkpRgtTabsFilesContextState,
@@ -312,6 +324,33 @@ export interface ExplorerState
 // ============================================================================
 
 export const useExplorerStore = create<ExplorerState>((set, get) => ({
+  // Workflow State & Actions
+  dataWorkflow: defaultWorkflowData as WorkflowData,
+  setDataWorkflow: (dataWorkflow) => set({ dataWorkflow }),
+  setSelectedWorkflowStep: (stepId) =>
+    set((state) => {
+      const updatedNodes = state.dataWorkflow.workflow.nodes.map((node) => {
+        if (node.id === stepId) {
+          return { ...node, status: 'current' as const };
+        }
+        if (node.status === 'current') {
+          return { ...node, status: 'completed' as const };
+        }
+        return node;
+      });
+
+      return {
+        dataWorkflow: {
+          ...state.dataWorkflow,
+          workflow: {
+            ...state.dataWorkflow.workflow,
+            initialStepId: stepId,
+            nodes: updatedNodes,
+          },
+        },
+      };
+    }),
+
   // workspace.top (ImpactedPathsPanel)
   paths: '',
   currentPath: '',

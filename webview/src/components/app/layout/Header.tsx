@@ -22,9 +22,9 @@ import logoLight from '@assets/logo-light.png';
 import logoDark from '@assets/logo-dark.png';
 import { DefaultContainersSize } from '@/constants/layout-constants';
 import { ApplicationTitle } from '../ApplicationTitle';
-import { WorkflowPopup } from '@/features/explorer/workflow/workflow-popup';
+import { WorkflowPopup } from '@/components/app/workflow/workflow-popup';
+import { useExplorerWorkflow } from '@/features/explorer/workflow/hooks/use-explorer-workflow';
 import { Button } from '@/components/ui/button';
-import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 interface HeaderProps {
   activeFeature: string;
@@ -42,6 +42,7 @@ export function Header({
 }: HeaderProps) {
   const toggleContainerVisible = useLayoutStore((s) => s.toggleContainerVisible);
   const containers = useLayoutStore((s) => s.containers);
+  const { dataWorkflow, handleSelectStep } = useExplorerWorkflow();
 
   const leftContent = (
     <div id="app-logo-title" className="flex items-center gap-2">
@@ -71,14 +72,13 @@ export function Header({
         </span>
       </div>
 
-      {/* Centered Workflow Button & Popup */}
+      {/* Centered Workflow Button & Reusable Component Popup */}
       <div className="flex justify-center items-center flex-1">
         <WorkflowPopup
           side="bottom"
           align="center"
-          onSelectStep={(stepId) => {
-            logInfo(`[Header] Workflow step selected: ${stepId}`);
-          }}
+          workflowData={dataWorkflow}
+          onSelectStep={handleSelectStep}
         >
           <Button
             variant="outline"

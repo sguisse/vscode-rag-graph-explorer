@@ -2,9 +2,11 @@ import React from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { WorkflowPanel } from './workflow-panel';
 import { useWorkflowPopup } from './hooks/use-workflow-popup';
+import { WorkflowData } from './model/workflow-model';
 
 interface WorkflowPopupProps {
   children: React.ReactNode;
+  workflowData?: WorkflowData;
   onSelectStep?: (stepId: string) => void;
   side?: 'top' | 'bottom' | 'left' | 'right';
   align?: 'start' | 'center' | 'end';
@@ -12,6 +14,7 @@ interface WorkflowPopupProps {
 
 export function WorkflowPopup({
   children,
+  workflowData,
   onSelectStep,
   side = 'bottom',
   align = 'center',
@@ -44,7 +47,7 @@ export function WorkflowPopup({
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
-        <WorkflowPanel onSelectStep={handleSelectStep} />
+        <WorkflowPanel workflowData={workflowData} onSelectStep={handleSelectStep} />
       </PopoverContent>
     </Popover>
   );

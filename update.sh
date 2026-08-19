@@ -1,308 +1,136 @@
 #!/usr/bin/env bash
 set -e
 
-# Ensure workflow hooks and components directory exists
-mkdir -p webview/src/features/explorer/workflow/hooks
-mkdir -p webview/src/features/explorer/workflow
-
-# 1. Update use-workflow-popup.ts (Single Responsibility: Managing Popup visibility state, hover timer grace period, and select/close actions)
-cat << 'EOF' > webview/src/features/explorer/workflow/hooks/use-workflow-popup.ts
-import { useState, useRef, useCallback } from 'react';
-
-export function useWorkflowPopup(
-  onSelectStep?: (stepId: string) => void,
-  closeDelayMs = 200
-) {
-  const [isOpen, setIsOpen] = useState(false);
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handleMouseEnter = useCallback(() => {
-    if (closeTimerRef.current) {
-      clearTimeout(closeTimerRef.current);
-      closeTimerRef.current = null;
-    }
-    setIsOpen(true);
-  }, []);
-
-  const handleMouseLeave = useCallback(() => {
-    closeTimerRef.current = setTimeout(() => {
-      setIsOpen(false);
-    }, closeDelayMs);
-  }, [closeDelayMs]);
-
-  const handleClose = useCallback(() => {
-    if (closeTimerRef.current) {
-      clearTimeout(closeTimerRef.current);
-      closeTimerRef.current = null;
-    }
-    setIsOpen(false);
-  }, []);
-
-  const handleSelectStep = useCallback(
-    (stepId: string) => {
-      if (onSelectStep) {
-        onSelectStep(stepId);
-      }
-      handleClose();
-    },
-    [onSelectStep, handleClose]
-  );
-
-  return {
-    isOpen,
-    setIsOpen,
-    handleMouseEnter,
-    handleMouseLeave,
-    handleClose,
-    handleSelectStep,
-  };
-}
-EOF
-
-# 2. Update use-workflow-panel.ts (Single Responsibility: Managing Cytoscape diagram initialization, canvas events, selected node state, fit view, and position logging)
-cat << 'EOF' > webview/src/features/explorer/workflow/hooks/use-workflow-panel.ts
-import { useEffect, useRef, useState, useCallback } from 'react';
-import cytoscape from 'cytoscape';
-import rawWorkflowData from '../data-workflow.json';
-import { useAppContextStore } from '@/store/useAppContextStore';
-import { getWorkflowCytoscapeStyles } from '../components/shapes-workflow';
-import { logWorkflowPositionsIfChanged } from '../utils-workflow';
+# Update WorkflowPanel inspector badge styles for active step to gold/amber theme
+cat << 'EOF' > webview/src/components/app/workflow/workflow-panel.tsx
+import React from 'react';
+import { Focus, CheckCircle2, GitBranch, ArrowRight, Lock, HelpCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useWorkflowPanel } from './hooks/use-workflow-panel';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
-import { WorkflowData, WorkflowNode } from '../model/workflow-model';
-import { isCurrentStatus } from '../model/types/type-node';
+import { WorkflowData } from './model/workflow-model';
 
-function sanitizeLabel(label: string): string {
-  if (!label) return '';
-  return label
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]+>/g, '');
+interface WorkflowPanelProps {
+  workflowData?: WorkflowData;
+  onSelectStep?: (stepId: string) => void;
 }
 
-export function useWorkflowPanel(onSelectNode?: (nodeId: string) => void) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const cyRef = useRef<cytoscape.Core | null>(null);
-  const isDarkMode = useAppContextStore((s) => s.isDarkMode);
-  const [selectedNode, setSelectedNode] = useState<WorkflowNode | null>(null);
-
-  const workflow = (rawWorkflowData as WorkflowData).workflow;
-
-  const initCytoscape = useCallback(() => {
-    if (!containerRef.current) return;
-
-    if (cyRef.current) {
-      cyRef.current.destroy();
-    }
-
-    const elements: cytoscape.ElementDefinition[] = [];
-
-    workflow.nodes.forEach((node: WorkflowNode) => {
-      const isCurrent = isCurrentStatus(node.status) || node.id === workflow.initialStepId;
-      const clickEnabled = node.clickEnabled !== undefined ? node.clickEnabled : node.type === 'step';
-      elements.push({
-        group: 'nodes',
-        classes: `${node.type} ${isCurrent ? 'current' : ''}`,
-        data: {
-          id: node.id,
-          label: sanitizeLabel(node.label),
-          desc: node.desc,
-          type: node.type,
-          status: node.status || 'pending',
-          isCurrent,
-          clickEnabled,
-        },
-        position: { x: node.x ?? 0, y: node.y ?? 0 },
-      });
-    });
-
-    const defaultEdgeColor = isDarkMode ? '#475569' : '#94a3b8';
-    const defaultEdgeTextColor = isDarkMode ? '#94a3b8' : '#64748b';
-
-    workflow.edges.forEach((edge) => {
-      elements.push({
-        group: 'edges',
-        data: {
-          id: edge.id,
-          source: edge.source,
-          target: edge.target,
-          label: sanitizeLabel(edge.label),
-          lineStyle: edge.lineStyle || 'solid',
-          curveStyle: edge.curveStyle || 'bezier',
-          arrowShape: edge.arrowShape || 'triangle',
-          color: edge.color || defaultEdgeColor,
-          textColor: edge.textColor || defaultEdgeTextColor,
-        },
-      });
-    });
-
-    const cy = cytoscape({
-      container: containerRef.current,
-      elements,
-      style: getWorkflowCytoscapeStyles(isDarkMode),
-      layout: {
-        name: 'preset',
-        fit: true,
-        padding: 25,
-      },
-      userZoomingEnabled: true,
-      userPanningEnabled: true,
-      boxSelectionEnabled: false,
-      autoungrabify: false,
-    });
-
-    cyRef.current = cy;
-
-    const currentStep = workflow.nodes.find((n) => isCurrentStatus(n.status) || n.id === workflow.initialStepId);
-    if (currentStep) {
-      setSelectedNode({
-        ...currentStep,
-        label: sanitizeLabel(currentStep.label),
-        isCurrent: true,
-        clickEnabled: currentStep.clickEnabled !== undefined ? currentStep.clickEnabled : currentStep.type === 'step',
-      });
-    }
-
-    cy.on('mouseover', 'node', (evt) => {
-      const node = evt.target;
-      const data = node.data();
-      if (!data.isCurrent && data.clickEnabled) {
-        node.addClass('hovered');
-        if (containerRef.current) {
-          containerRef.current.style.cursor = 'pointer';
-        }
-      }
-      setSelectedNode({
-        id: data.id,
-        label: data.label,
-        desc: data.desc,
-        type: data.type,
-        status: data.status,
-        isCurrent: data.isCurrent,
-        clickEnabled: data.clickEnabled,
-      });
-    });
-
-    cy.on('mouseout', 'node', (evt) => {
-      const node = evt.target;
-      node.removeClass('hovered');
-      if (containerRef.current) {
-        containerRef.current.style.cursor = 'default';
-      }
-    });
-
-    cy.on('tap', 'node', (evt) => {
-      const node = evt.target;
-      const data = node.data();
-
-      setSelectedNode({
-        id: data.id,
-        label: data.label,
-        desc: data.desc,
-        type: data.type,
-        status: data.status,
-        isCurrent: data.isCurrent,
-        clickEnabled: data.clickEnabled,
-      });
-
-      if (!data.isCurrent && data.clickEnabled) {
-        logInfo(`[WorkflowPanel] Workflow step selected: '${data.label.replace(/\n/g, ' ')}' (ID: ${data.id})`);
-        if (onSelectNode) {
-          onSelectNode(data.id);
-        }
-      }
-    });
-
-    setTimeout(() => {
-      if (cyRef.current && !cyRef.current.destroyed()) {
-        cyRef.current.fit(undefined, 25);
-        cyRef.current.center();
-      }
-    }, 100);
-  }, [isDarkMode, workflow, onSelectNode]);
-
-  useEffect(() => {
-    initCytoscape();
-    return () => {
-      if (cyRef.current) {
-        logWorkflowPositionsIfChanged(cyRef.current, workflow.nodes);
-        cyRef.current.destroy();
-        cyRef.current = null;
-      }
-    };
-  }, [initCytoscape, workflow.nodes]);
-
-  const handleFitView = () => {
-    if (cyRef.current) {
-      cyRef.current.fit(undefined, 25);
-      cyRef.current.center();
-    }
-  };
-
-  return {
+export function WorkflowPanel({ workflowData, onSelectStep }: WorkflowPanelProps) {
+  const {
     containerRef,
-    workflowTitle: workflow.title,
-    workflowDescription: workflow.description,
+    workflowTitle,
+    workflowDescription,
     selectedNode,
     handleFitView,
-  };
-}
-EOF
-
-# 3. Update workflow-popup.tsx component to leverage useWorkflowPopup hook
-cat << 'EOF' > webview/src/features/explorer/workflow/workflow-popup.tsx
-import React from 'react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { WorkflowPanel } from './workflow-panel';
-import { useWorkflowPopup } from './hooks/use-workflow-popup';
-
-interface WorkflowPopupProps {
-  children: React.ReactNode;
-  onSelectStep?: (stepId: string) => void;
-  side?: 'top' | 'bottom' | 'left' | 'right';
-  align?: 'start' | 'center' | 'end';
-}
-
-export function WorkflowPopup({
-  children,
-  onSelectStep,
-  side = 'bottom',
-  align = 'center',
-}: WorkflowPopupProps) {
-  const {
-    isOpen,
-    setIsOpen,
-    handleMouseEnter,
-    handleMouseLeave,
-    handleSelectStep,
-  } = useWorkflowPopup(onSelectStep);
+  } = useWorkflowPanel(workflowData, onSelectStep);
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger>
-        <div
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
-          className="inline-block"
-        >
-          {children}
+    <div className="flex flex-col w-full font-mono text-xs">
+      {/* Panel Header */}
+      <div className="flex justify-between items-center bg-muted/50 p-3 border-border/80 border-b">
+        <div className="flex items-center gap-2 min-w-0">
+          <GitBranch size={15} className="text-primary shrink-0 animate-pulse" />
+          <div className="min-w-0">
+            <h4 className="font-bold text-foreground text-xs leading-none truncate">{workflowTitle}</h4>
+            <p className="mt-1 text-[10px] text-muted-foreground truncate">{workflowDescription}</p>
+          </div>
         </div>
-      </PopoverTrigger>
 
-      <PopoverContent
-        side={side}
-        align={align}
-        sideOffset={6}
-        className="z-[9999] bg-card/95 shadow-2xl backdrop-blur-md p-0 border-primary/20 rounded-xl w-[1200px] overflow-hidden font-mono text-xs animate-in duration-200 fade-in zoom-in-95"
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-      >
-        <WorkflowPanel onSelectStep={handleSelectStep} />
-      </PopoverContent>
-    </Popover>
+        <div className="flex items-center gap-1.5 shrink-0 ml-2">
+          <span className="flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 border border-emerald-500/30 rounded-full font-bold text-[10px] text-emerald-500">
+            <CheckCircle2 size={11} /> Step 1 Active
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="hover:bg-muted/80 w-6 h-6 text-muted-foreground hover:text-foreground cursor-pointer"
+            onClick={handleFitView}
+            data-tooltip="Fit Diagram View"
+          >
+            <Focus size={13} />
+          </Button>
+        </div>
+      </div>
+
+      {/* Cytoscape Canvas */}
+      <div className="relative bg-muted/10 w-full h-[300px] overflow-hidden">
+        <div ref={containerRef} className="absolute inset-0 w-full h-full" />
+      </div>
+
+      {/* Step Inspector Footer */}
+      <div className="bg-muted/30 p-2.5 border-border/80 border-t min-h-[58px] flex items-center justify-between">
+        {selectedNode ? (
+          <div className="flex flex-1 items-center justify-between gap-2 min-w-0">
+            <div className="space-y-0.5 min-w-0">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase shrink-0 ${
+                    selectedNode.isCurrent
+                      ? 'bg-amber-500/15 text-amber-500 border border-amber-500/30'
+                      : selectedNode.type === 'start'
+                      ? 'bg-slate-500/15 text-slate-400 border border-slate-500/30'
+                      : selectedNode.type === 'end'
+                      ? 'bg-rose-500/15 text-rose-500 border border-rose-500/30'
+                      : selectedNode.type === 'decision'
+                      ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30'
+                      : 'bg-primary/10 text-primary border border-primary/20'
+                  }`}
+                >
+                  {selectedNode.isCurrent
+                    ? 'Active Step'
+                    : selectedNode.type === 'start'
+                    ? 'BPMN Start'
+                    : selectedNode.type === 'end'
+                    ? 'BPMN End'
+                    : selectedNode.type === 'decision'
+                    ? '◆ Decision Check'
+                    : 'Process Step'}
+                </span>
+                <span className="font-bold text-foreground text-xs truncate">
+                  {selectedNode.label.replace(/\n/g, ' ')}
+                </span>
+              </div>
+              <p className="text-[10px] text-muted-foreground truncate leading-snug">{selectedNode.desc}</p>
+            </div>
+
+            <div className="shrink-0 ml-2">
+              {selectedNode.isCurrent ? (
+                <span className="flex items-center gap-1 font-bold text-[10px] text-muted-foreground opacity-60">
+                  <Lock size={10} /> Active
+                </span>
+              ) : selectedNode.clickEnabled ? (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="gap-1 h-6 font-bold text-[10px] text-primary hover:text-primary-foreground cursor-pointer"
+                  onClick={() => {
+                    logInfo(`[WorkflowPanel] Workflow step selected via inspector button: '${selectedNode.label.replace(/\n/g, ' ')}' (ID: ${selectedNode.id})`);
+                    if (onSelectStep) {
+                      onSelectStep(selectedNode.id);
+                    }
+                  }}
+                >
+                  <span>Select Step</span>
+                  <ArrowRight size={10} />
+                </Button>
+              ) : (
+                <span className="flex items-center gap-1 font-bold text-[10px] text-muted-foreground opacity-50">
+                  Info Only
+                </span>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground italic">
+            <HelpCircle size={12} />
+            <span>Hover or click any node/decision diamond to inspect step details.</span>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 EOF
 
-# 4. Rebuild workspace to ensure clean TypeScript compilation
-
-
-echo "✅ refactor(workflow): Successfully separated responsibilities following SOLID principles and eliminated code duplication between panel and popup hooks!"
+# Rebuild workspace
+npm run build

@@ -19,7 +19,7 @@ export function getWorkflowCytoscapeStyles(isDarkMode: boolean): cytoscape.Style
         'transition-duration': 0.15,
       },
     },
-    // Standard Step Node: Always defined blue background
+    // Standard Step Node
     {
       selector: 'node.step, node[type = "step"]',
       style: {
@@ -32,7 +32,7 @@ export function getWorkflowCytoscapeStyles(isDarkMode: boolean): cytoscape.Style
         'color': isDarkMode ? '#eff6ff' : '#1e3a8a',
       },
     },
-    // Decision Node (Diamond): Always pure white background
+    // Decision Node (Diamond)
     {
       selector: 'node.decision, node[type = "decision"]',
       style: {
@@ -47,7 +47,7 @@ export function getWorkflowCytoscapeStyles(isDarkMode: boolean): cytoscape.Style
         'text-max-width': '55px',
       },
     },
-    // BPMN Start Event: White background circle, label underneath
+    // BPMN Start Event
     {
       selector: 'node.start, node[type = "start"]',
       style: {
@@ -64,7 +64,7 @@ export function getWorkflowCytoscapeStyles(isDarkMode: boolean): cytoscape.Style
         'text-max-width': '120px',
       },
     },
-    // BPMN End Event: Pale red background circle, label underneath
+    // BPMN End Event
     {
       selector: 'node.end, node[type = "end"]',
       style: {
@@ -81,17 +81,9 @@ export function getWorkflowCytoscapeStyles(isDarkMode: boolean): cytoscape.Style
         'text-max-width': '100px',
       },
     },
-    // Completed Status: Light gold border (#fbbf24)
+    // Completed Status Highlight
     {
       selector: 'node[status = "completed"], node.completed',
-      style: {
-        'border-color': '#fbbf24',
-        'border-width': '3px',
-      },
-    },
-    // Current Step Highlight (Bright Emerald Green)
-    {
-      selector: 'node[?isCurrent], node.current',
       style: {
         'background-color': isDarkMode ? '#064e3b' : '#d1fae5',
         'border-color': '#10b981',
@@ -99,7 +91,15 @@ export function getWorkflowCytoscapeStyles(isDarkMode: boolean): cytoscape.Style
         'color': isDarkMode ? '#a7f3d0' : '#065f46',
       },
     },
-    // Hover State for Clickable Nodes ONLY
+    // Current Step Highlight
+    {
+      selector: 'node[?isCurrent], node.current',
+      style: {
+        'border-color': '#fbbf24',
+        'border-width': '3px',
+      },
+    },
+    // Hover State for Clickable Nodes
     {
       selector: 'node.hovered[!isCurrent]',
       style: {
@@ -117,7 +117,7 @@ export function getWorkflowCytoscapeStyles(isDarkMode: boolean): cytoscape.Style
         'border-width': '3.5px',
       },
     },
-    // Dynamic Styled Edges (Supports line color, line style, arrow shape, arrow color, text color)
+    // Dynamic Styled Edges
     {
       selector: 'edge',
       style: {
