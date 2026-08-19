@@ -7,4 +7,6 @@ export interface IVsCodeServicePort {
     openUrl(url: string, inExternalBrowser: boolean): Promise<void>;
     revealInExplorer(targetPath: string): Promise<void>;
     copyToClipboard(text: string): Promise<void>;
+    saveUserPreferences(settingsKey: string, jsonPayload: Record<string, any>): Promise<void>;
+    readUserPreferences(settingsKey: string): Promise<Record<string, any>>;
 }

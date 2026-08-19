@@ -71,7 +71,8 @@ export class VsCodeSettings {
         },
         graphify: {
             arguments: "--deep-scan"
-        }
+        },
+        userPreferences: ["{","}"]
     };
 
     /**
@@ -82,3 +83,67 @@ export class VsCodeSettings {
         return Object.assign(settings, data);
     }
 }
+
+export const VsCodeSettingsKeys = {
+    pinApplication: "tokenRazor.pinApplication",
+    tooltipDelay: "tokenRazor.tooltipDelay",
+    geminiApiKey: "tokenRazor.geminiApiKey",
+    backendWorkspacePath: "tokenRazor.backendWorkspacePath",
+    forceScriptSync: "tokenRazor.forceScriptSync",
+    logFileEnabled: "tokenRazor.logFileEnabled",
+    logFileMaxSize: "tokenRazor.logFileMaxSize",
+    logFileMaxCountRetention: "tokenRazor.logFileMaxCountRetention",
+    processTimeout: "tokenRazor.processTimeout",
+    processSoundPath: "tokenRazor.processSoundPath",
+    processSoundDelay: "tokenRazor.processSoundDelay",
+    graphRagExplorer: {
+        entitiesTypesList: "tokenRazor.graphRagExplorer.entitiesTypesList",
+        regexFilterEnabled: "tokenRazor.graphRagExplorer.regexFilterEnabled",
+        treeFilterEnabled: "tokenRazor.graphRagExplorer.treeFilterEnabled",
+        graphLegendEnabled: "tokenRazor.graphRagExplorer.graphLegendEnabled",
+        callersDepth: "tokenRazor.graphRagExplorer.callersDepth",
+        calleesDepth: "tokenRazor.graphRagExplorer.calleesDepth",
+        backendWorkspacePath: "tokenRazor.graphRagExplorer.backendWorkspacePath",
+        includePathsRegex: "tokenRazor.graphRagExplorer.includePathsRegex",
+        includeExtensionsRegex: "tokenRazor.graphRagExplorer.includeExtensionsRegex",
+        excludePathsRegex: "tokenRazor.graphRagExplorer.excludePathsRegex",
+        excludeExtensionsRegex: "tokenRazor.graphRagExplorer.excludeExtensionsRegex",
+        neo4j: {
+            version: "tokenRazor.graphRagExplorer.neo4j.version",
+            host: "tokenRazor.graphRagExplorer.neo4j.host",
+            port: {
+                bolt: "tokenRazor.graphRagExplorer.neo4j.port.bolt",
+                http: "tokenRazor.graphRagExplorer.neo4j.port.http"
+            },
+            uri: "tokenRazor.graphRagExplorer.neo4j.uri",
+            url: "tokenRazor.graphRagExplorer.neo4j.url",
+            username: "tokenRazor.graphRagExplorer.neo4j.username",
+            password: "tokenRazor.graphRagExplorer.neo4j.password"
+        },
+        jqassistant: {
+            version: "tokenRazor.graphRagExplorer.jqassistant.version",
+            downloadUrl: "tokenRazor.graphRagExplorer.jqassistant.downloadUrl",
+            graphRagLLM: {
+                downloadUrl: "tokenRazor.graphRagExplorer.jqassistant.graphRagLLM.downloadUrl",
+                model: "tokenRazor.graphRagExplorer.jqassistant.graphRagLLM.model",
+                method: {
+                    minCyclomatic: "tokenRazor.graphRagExplorer.jqassistant.graphRagLLM.method.minCyclomatic"
+                },
+                maxAnalyzerCall: "tokenRazor.graphRagExplorer.jqassistant.graphRagLLM.maxAnalyzerCall",
+                maxSummarizerCall: "tokenRazor.graphRagExplorer.jqassistant.graphRagLLM.maxSummarizerCall",
+                mcp: {
+                    host: "tokenRazor.graphRagExplorer.jqassistant.graphRagLLM.mcp.host",
+                    port: "tokenRazor.graphRagExplorer.jqassistant.graphRagLLM.mcp.port"
+                }
+            },
+            xmlReportPath: "tokenRazor.graphRagExplorer.jqassistant.xmlReportPath"
+        },
+        dependencyCruiser: {
+            configFile: "tokenRazor.graphRagExplorer.dependencyCruiser.configFile"
+        },
+        graphify: {
+            arguments: "tokenRazor.graphRagExplorer.graphify.arguments"
+        },
+        userPreferences: "tokenRazor.graphRagExplorer.userPreferences"
+    }
+} as const;

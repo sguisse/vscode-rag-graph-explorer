@@ -167,12 +167,12 @@ export const LLMChat: React.FC = () => {
           />
 
           {/* Tool icon for toggling model info popup */}
-          <div className="ml-auto flex items-center">
+          <div className="flex items-center ml-auto">
             <Button
               variant="outline"
               size="icon"
               onClick={openModal}
-              className="w-7 h-7 hover:bg-primary/10 border-border text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+              className="hover:bg-primary/10 border-border w-7 h-7 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
               data-tooltip="View Model Capabilities & Info"
             >
               <Info size={14} />
@@ -241,7 +241,7 @@ export const LLMChat: React.FC = () => {
                 handleSend();
               }
             }}
-            className="flex-1 min-h-[50px] font-mono text-xs resize-none"
+            className="flex-1 bg-background min-h-[50px] font-mono text-xs resize-y"
           />
           <Button
             variant="default"

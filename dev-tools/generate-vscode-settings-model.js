@@ -18,6 +18,7 @@ function generateModels() {
     const properties = pkg.contributes?.configuration?.properties || {};
 
     const nestedObj = {};
+    const nestedKeysObj = {};
 
     for (const [fullKey, spec] of Object.entries(properties)) {
         const relativeKey = fullKey.startsWith(SCOPE_PREFIX)
@@ -26,16 +27,22 @@ function generateModels() {
 
         const parts = relativeKey.split('.');
         let current = nestedObj;
+        let currentKeys = nestedKeysObj;
 
         for (let i = 0; i < parts.length; i++) {
             const part = parts[i];
             if (i === parts.length - 1) {
                 current[part] = spec.default !== undefined ? spec.default : null;
+                currentKeys[part] = fullKey;
             } else {
                 if (!current[part] || typeof current[part] !== 'object' || Array.isArray(current[part])) {
                     current[part] = {};
                 }
+                if (!currentKeys[part] || typeof currentKeys[part] !== 'object' || Array.isArray(currentKeys[part])) {
+                    currentKeys[part] = {};
+                }
                 current = current[part];
+                currentKeys = currentKeys[part];
             }
         }
     }
@@ -85,6 +92,10 @@ ${classBody}
         return Object.assign(settings, data);
     }
 }
+
+export const VsCodeSettingsKeys = {
+${formatObjectLiteral(nestedKeysObj, 1)}
+} as const;
 `;
 
     fs.mkdirSync(path.dirname(tsOutputPath), { recursive: true });
@@ -161,15 +172,45 @@ ${classBody}
         pyClasses.push(lines.join('\n'));
     }
 
+    function generatePyKeysClass(className, keysObj, indentLevel = 0) {
+        const indent = '    '.repeat(indentLevel);
+        let lines = [`${indent}class ${className}:`];
+        let hasEntries = false;
+
+        for (const [key, val] of Object.entries(keysObj)) {
+            if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+                hasEntries = true;
+                lines.push(...generatePyKeysClass(key, val, indentLevel + 1));
+            } else {
+                hasEntries = true;
+                lines.push(`${indent}    ${key} = ${JSON.stringify(val)}`);
+            }
+        }
+
+        if (!hasEntries) {
+            lines.push(`${indent}    pass`);
+        }
+
+        return lines;
+    }
+
     generatePyClass('VsCodeSettings', nestedObj);
+
+    const pyKeysClass = generatePyKeysClass('VsCodeSettingsKeys', nestedKeysObj).join('\n');
 
     fs.mkdirSync(path.dirname(pyOutputPath), { recursive: true });
     const pyContent = `# AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY.
 from dataclasses import dataclass, field
 from typing import List, Dict, Any
 
-` + pyClasses.join('\n')
-  + '\n\nvsCodeSettings = VsCodeSettings()';
+` + pyClasses.join('\n') + `
+
+` + pyKeysClass + `
+
+
+vsCodeSettings = VsCodeSettings()
+vsCodeSettingsKeys = VsCodeSettingsKeys()
+`;
 
     fs.writeFileSync(pyOutputPath, pyContent, 'utf-8');
     console.log(`🐍 Successfully rebuilt Python VsCodeSettings model at:\n   ${pyOutputPath}`);

@@ -31,6 +31,14 @@ class VsCodeApiService extends AbstractApiService implements IVsCodeServicePort 
     public async copyToClipboard(text: string): Promise<void> {
         return await this.rpc.call(RpcMethodEnum.VSCODE_COPY_TO_CLIPBOARD, text);
     }
+
+    public async saveUserPreferences(settingsKey: string, jsonPayload: Record<string, any>): Promise<void> {
+        return await this.rpc.call(RpcMethodEnum.VSCODE_SAVE_USER_PREFERENCES, settingsKey, jsonPayload);
+    }
+
+    public async readUserPreferences(settingsKey: string): Promise<Record<string, any>> {
+        return await this.rpc.call(RpcMethodEnum.VSCODE_READ_USER_PREFERENCES, settingsKey);
+    }
 }
 
 export const vsCodeApiService = new VsCodeApiService();

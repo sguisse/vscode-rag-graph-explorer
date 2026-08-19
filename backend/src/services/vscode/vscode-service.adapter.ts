@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { IVsCodeServicePort } from '../../../../shared/services/vscode/domain/port-out/vscode-service.port';
-import { getCurrentExtensionContext, getWorkspaceRoot } from '../../utils/utils-vscode';
+import { getAppNormalizedNameFromPackageJson, getCurrentExtensionContext, getWorkspaceRoot } from '../../utils/utils-vscode';
 import { LogLevel } from '../../../../shared/services/vscode/domain/model/types';
 import { logMessageFromRemote as logMessageDelegate} from './delegate/logger.delegate';
 import { getExtensionSettings as getExtensionSettingsDelegate} from './delegate/get-extension-settings.delegate';
@@ -9,6 +9,7 @@ import { AbstractServiceAdapter } from '../../core/AbstractServiceAdapter';
 import { logChannel, logError, logInfo, logWarn } from '../../utils/utils-log';
 import path from 'path';
 import fs from 'fs';
+import { VsCodeSettingsManager, vsCodeSettingsManager } from '../../managers/VsCodeSettings.manager';
 
 export class VsCodeServiceAdapter extends AbstractServiceAdapter implements IVsCodeServicePort, vscode.Disposable {
     constructor() {
@@ -42,7 +43,6 @@ export class VsCodeServiceAdapter extends AbstractServiceAdapter implements IVsC
                 fullPath = path.join(rootPath, fullPath);
             }
 
-            // Translate compiled .class files to source .java files
             fullPath = this.resolveSourceFilePath(fullPath);
 
             if (fs.existsSync(fullPath)) {
@@ -64,10 +64,8 @@ export class VsCodeServiceAdapter extends AbstractServiceAdapter implements IVsC
             return filePath;
         }
 
-        // 1. Remove inner class suffix ($1, $SubClass, etc.) and convert extension
         let javaPath = filePath.replace(/\$[^/]+\.class$/, '.class').replace(/\.class$/, '.java');
 
-        // 2. Map target/build output paths back to source directories
         const replacements = [
             { from: '/target/classes/', to: '/src/main/java/' },
             { from: '/target/test-classes/', to: '/src/test/java/' },
@@ -99,6 +97,43 @@ export class VsCodeServiceAdapter extends AbstractServiceAdapter implements IVsC
         } catch (err) {
             logError(`[VsCodeServiceAdapter] Failed to copy to clipboard: ${err}`);
             throw err;
+        }
+    }
+
+    public async saveUserPreferences(settingsKey: string, jsonPayload: Record<string, any>): Promise<void> {
+        logInfo(`[VsCodeServiceAdapter] saveUserPreferences invoked for key: ${settingsKey}`);
+        try {
+            const relativeKey = settingsKey.startsWith(`${VsCodeSettingsManager.SCOPE}.`)
+                ? settingsKey.slice(VsCodeSettingsManager.SCOPE.length + 1)
+                : settingsKey;
+
+            const config = vscode.workspace.getConfiguration(VsCodeSettingsManager.SCOPE);
+            const stringArray = vsCodeSettingsManager.jsonToStringArray(jsonPayload);
+            await config.update(relativeKey, stringArray, vscode.ConfigurationTarget.Workspace);
+        } catch (err) {
+            logError(`[VsCodeServiceAdapter] Failed to save user preferences for key ${settingsKey}:`, err);
+            throw err;
+        }
+    }
+
+    public async readUserPreferences(settingsKey: string): Promise<Record<string, any>> {
+        logInfo(`[VsCodeServiceAdapter] readUserPreferences invoked for key: ${settingsKey}`);
+        try {
+            const relativeKey = settingsKey.startsWith(`${VsCodeSettingsManager.SCOPE}.`)
+                ? settingsKey.slice(VsCodeSettingsManager.SCOPE.length + 1)
+                : settingsKey;
+
+            const config = vscode.workspace.getConfiguration(VsCodeSettingsManager.SCOPE);
+            const value = config.get<string[]>(relativeKey);
+
+            if (!value) {
+                return {};
+            }
+
+            return vsCodeSettingsManager.stringArrayToJson(value).data;
+        } catch (err) {
+            logError(`[VsCodeServiceAdapter] Failed to read user preferences for key ${settingsKey}:`, err);
+            return {};
         }
     }
 

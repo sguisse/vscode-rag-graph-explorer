@@ -12,6 +12,9 @@ import {
 import { ExportFormat } from '@/shared/services/codebase-exporter/domain/model/types';
 import { demoCodebase, FOLDER_POSITIONS } from '../wksp-cnt-graph/data/GraphData';
 import { INITIAL_VISIBLE_FILES_CONFIG, FOLDER_KEYS_REGISTERED_CONFIG } from '../constants/graph.constants';
+import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
+import { VsCodeSettingsKeys } from '@/shared/services/vscode/domain/model/VsCodeSettings.gen';
+import { logError, logInfo } from '@/services/view/log-view.service.wrapper';
 
 // ============================================================================
 // Data Types & Schemas
@@ -574,3 +577,60 @@ ${promptFields.samples}`;
       llmExpandedCards: typeof cards === 'function' ? cards(state.llmExpandedCards) : cards,
     })),
 }));
+
+// ============================================================================
+// Store Persistence Synchronization
+// ============================================================================
+
+let isHydrating = false;
+let saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+// 1. Read & Hydrate store from VS Code user preferences on initialization
+const hydrateStore = async () => {
+  try {
+    isHydrating = true;
+    const userPrefs: any = await vsCodeApiService.readUserPreferences(
+      VsCodeSettingsKeys.graphRagExplorer.userPreferences
+    );
+    logInfo('Read user preferences for store hydration:', userPrefs);
+
+    if (userPrefs && typeof userPrefs === 'object' && Object.keys(userPrefs).length > 0) {
+      useExplorerStore.setState(userPrefs);
+      logInfo('Zustand Store initialized with hydrated state from user preferences.');
+    }
+  } catch (error: any) {
+    logError('Failed to read user preferences for store hydration:', error);
+  } finally {
+    isHydrating = false;
+  }
+};
+
+hydrateStore();
+
+// 2. Subscribe to store changes and save updated state
+useExplorerStore.subscribe((state) => {
+  if (isHydrating) return;
+
+  if (saveDebounceTimer) {
+    clearTimeout(saveDebounceTimer);
+  }
+
+  saveDebounceTimer = setTimeout(() => {
+    const payload: Record<string, any> = {};
+
+    for (const [key, value] of Object.entries(state)) {
+      if (typeof value !== 'function') {
+        payload[key] = value;
+      }
+    }
+
+    vsCodeApiService
+      .saveUserPreferences(VsCodeSettingsKeys.graphRagExplorer.userPreferences, payload)
+      .then(() => {
+        logInfo('Saved user preferences done for store state');
+      })
+      .catch((error: any) => {
+        logError('Failed to save user preferences:', error);
+      });
+  }, 500);
+});

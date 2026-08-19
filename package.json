@@ -267,6 +267,14 @@
           "type": "string",
           "default": "--deep-scan",
           "description": "Optional runtime execution flags passed onto the background python graphify engine."
+        },
+        "tokenRazor.graphRagExplorer.userPreferences": {
+          "type": "array",
+          "default": [
+            "{",
+            "}"
+          ],
+          "description": "User preferences for the GraphRag Explorer extension in JSON format as an array of strings (one by line, for better readability)."
         }
       }
     }

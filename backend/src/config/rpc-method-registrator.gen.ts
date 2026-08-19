@@ -41,4 +41,6 @@ export function registerRpcMethods(rpc: RpcProtocol): void {
     rpc.register(RpcMethodEnum.VSCODE_OPEN_URL, vsCodeService.openUrl.bind(vsCodeService));
     rpc.register(RpcMethodEnum.VSCODE_REVEAL_IN_EXPLORER, vsCodeService.revealInExplorer.bind(vsCodeService));
     rpc.register(RpcMethodEnum.VSCODE_COPY_TO_CLIPBOARD, vsCodeService.copyToClipboard.bind(vsCodeService));
+    rpc.register(RpcMethodEnum.VSCODE_SAVE_USER_PREFERENCES, vsCodeService.saveUserPreferences.bind(vsCodeService));
+    rpc.register(RpcMethodEnum.VSCODE_READ_USER_PREFERENCES, vsCodeService.readUserPreferences.bind(vsCodeService));
 }
