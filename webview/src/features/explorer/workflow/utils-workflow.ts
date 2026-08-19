@@ -1,16 +1,9 @@
 import cytoscape from 'cytoscape';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
-import workflowData from './data-workflow.json';
+import rawWorkflowData from './data-workflow.json';
+import { WorkflowNode, WorkflowData } from './model/workflow-model';
 
-export interface WorkflowNodeConfig {
-  id: string;
-  label: string;
-  desc: string;
-  type: 'start' | 'end' | 'step' | 'decision';
-  x: number;
-  y: number;
-  status?: string;
-}
+const workflowData = rawWorkflowData as WorkflowData;
 
 /**
  * Checks if any Cytoscape node positions have changed relative to the initial workflow data.
@@ -18,7 +11,7 @@ export interface WorkflowNodeConfig {
  */
 export function logWorkflowPositionsIfChanged(
   cy: cytoscape.Core | null,
-  initialNodes: WorkflowNodeConfig[]
+  initialNodes: WorkflowNode[]
 ): boolean {
   if (!cy || cy.destroyed()) return false;
 
@@ -46,7 +39,7 @@ export function logWorkflowPositionsIfChanged(
   });
 
   if (hasChanged) {
-    const updatedWorkflowJson = {
+    const updatedWorkflowJson: WorkflowData = {
       workflow: {
         ...workflowData.workflow,
         nodes: updatedNodes,

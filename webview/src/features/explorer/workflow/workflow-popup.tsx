@@ -1,6 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { WorkflowPanel } from './workflow-panel';
+import { useWorkflowPopup } from './hooks/use-workflow-popup';
 
 interface WorkflowPopupProps {
   children: React.ReactNode;
@@ -15,22 +16,13 @@ export function WorkflowPopup({
   side = 'bottom',
   align = 'center',
 }: WorkflowPopupProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handleMouseEnter = () => {
-    if (closeTimerRef.current) {
-      clearTimeout(closeTimerRef.current);
-      closeTimerRef.current = null;
-    }
-    setIsOpen(true);
-  };
-
-  const handleMouseLeave = () => {
-    closeTimerRef.current = setTimeout(() => {
-      setIsOpen(false);
-    }, 200);
-  };
+  const {
+    isOpen,
+    setIsOpen,
+    handleMouseEnter,
+    handleMouseLeave,
+    handleSelectStep,
+  } = useWorkflowPopup(onSelectStep);
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -48,16 +40,11 @@ export function WorkflowPopup({
         side={side}
         align={align}
         sideOffset={6}
-        className="z-[9999] bg-card/95 shadow-2xl backdrop-blur-md p-0 border-primary/20 rounded-xl w-[1000px] overflow-hidden font-mono text-xs animate-in duration-200 fade-in zoom-in-95"
+        className="z-[9999] bg-card/95 shadow-2xl backdrop-blur-md p-0 border-primary/20 rounded-xl w-[1200px] overflow-hidden font-mono text-xs animate-in duration-200 fade-in zoom-in-95"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
-        <WorkflowPanel
-          onSelectStep={(stepId) => {
-            if (onSelectStep) onSelectStep(stepId);
-            setIsOpen(false);
-          }}
-        />
+        <WorkflowPanel onSelectStep={handleSelectStep} />
       </PopoverContent>
     </Popover>
   );

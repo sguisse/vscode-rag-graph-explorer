@@ -46,7 +46,7 @@ export function WorkflowPanel({ onSelectStep }: WorkflowPanelProps) {
       </div>
 
       {/* Cytoscape Canvas */}
-      <div className="relative bg-muted/10 w-full h-[230px]">
+      <div className="relative bg-muted/10 w-full h-[300px] overflow-hidden">
         <div ref={containerRef} className="absolute inset-0 w-full h-full" />
       </div>
 
@@ -79,7 +79,9 @@ export function WorkflowPanel({ onSelectStep }: WorkflowPanelProps) {
                     ? '◆ Decision Check'
                     : 'Process Step'}
                 </span>
-                <span className="font-bold text-foreground text-xs truncate">{selectedNode.label}</span>
+                <span className="font-bold text-foreground text-xs truncate">
+                  {selectedNode.label.replace(/\n/g, ' ')}
+                </span>
               </div>
               <p className="text-[10px] text-muted-foreground truncate leading-snug">{selectedNode.desc}</p>
             </div>
@@ -89,13 +91,13 @@ export function WorkflowPanel({ onSelectStep }: WorkflowPanelProps) {
                 <span className="flex items-center gap-1 font-bold text-[10px] text-muted-foreground opacity-60">
                   <Lock size={10} /> Active
                 </span>
-              ) : selectedNode.type === 'step' ? (
+              ) : selectedNode.clickEnabled ? (
                 <Button
                   size="sm"
                   variant="secondary"
                   className="gap-1 h-6 font-bold text-[10px] text-primary hover:text-primary-foreground cursor-pointer"
                   onClick={() => {
-                    logInfo(`[WorkflowPanel] Workflow step selected via inspector button: '${selectedNode.label}' (ID: ${selectedNode.id})`);
+                    logInfo(`[WorkflowPanel] Workflow step selected via inspector button: '${selectedNode.label.replace(/\n/g, ' ')}' (ID: ${selectedNode.id})`);
                     if (onSelectStep) {
                       onSelectStep(selectedNode.id);
                     }

@@ -13,13 +13,13 @@ export function getWorkflowCytoscapeStyles(isDarkMode: boolean): cytoscape.Style
         'text-halign': 'center',
         'text-wrap': 'wrap',
         'text-max-width': '80px',
-        'color': isDarkMode ? '#ffffff' : '#000000',
+        'color': isDarkMode ? '#f8fafc' : '#0f172a',
         'overlay-opacity': 0,
         'transition-property': 'background-color, border-color, border-width',
         'transition-duration': 0.15,
       },
     },
-    // Standard Step Node (Round Rectangle): Always background in defined blue
+    // Standard Step Node: Always defined blue background
     {
       selector: 'node.step, node[type = "step"]',
       style: {
@@ -32,7 +32,7 @@ export function getWorkflowCytoscapeStyles(isDarkMode: boolean): cytoscape.Style
         'color': isDarkMode ? '#eff6ff' : '#1e3a8a',
       },
     },
-    // Decision Node (Diamond): Always background in pure white
+    // Decision Node (Diamond): Always pure white background
     {
       selector: 'node.decision, node[type = "decision"]',
       style: {
@@ -44,9 +44,10 @@ export function getWorkflowCytoscapeStyles(isDarkMode: boolean): cytoscape.Style
         'border-color': isDarkMode ? '#818cf8' : '#6366f1',
         'color': '#312e81',
         'font-size': '9px',
+        'text-max-width': '55px',
       },
     },
-    // BPMN Start Event: Empty circle with white background
+    // BPMN Start Event: White background circle, label underneath
     {
       selector: 'node.start, node[type = "start"]',
       style: {
@@ -55,15 +56,15 @@ export function getWorkflowCytoscapeStyles(isDarkMode: boolean): cytoscape.Style
         'height': '32px',
         'background-color': '#ffffff',
         'border-width': '2.5px',
-        'border-color': isDarkMode? '#ffffff' : '#000000',
+        'border-color': isDarkMode ? '#cbd5e1' : '#334155',
         'text-valign': 'bottom',
         'text-margin-y': 6,
-        'color': isDarkMode ? '#ffffff' : '#000000',
+        'color': isDarkMode ? '#cbd5e1' : '#334155',
         'font-size': '9px',
         'text-max-width': '120px',
       },
     },
-    // BPMN End Event: Pale Red circle with bold red border
+    // BPMN End Event: Pale red background circle, label underneath
     {
       selector: 'node.end, node[type = "end"]',
       style: {
@@ -82,7 +83,7 @@ export function getWorkflowCytoscapeStyles(isDarkMode: boolean): cytoscape.Style
     },
     // Completed Status: Light gold border (#fbbf24)
     {
-      selector: 'node[?isCurrent], node.current',
+      selector: 'node[status = "completed"], node.completed',
       style: {
         'border-color': '#fbbf24',
         'border-width': '3px',
@@ -90,7 +91,7 @@ export function getWorkflowCytoscapeStyles(isDarkMode: boolean): cytoscape.Style
     },
     // Current Step Highlight (Bright Emerald Green)
     {
-      selector: 'node[status = "completed"], node.completed',
+      selector: 'node[?isCurrent], node.current',
       style: {
         'background-color': isDarkMode ? '#064e3b' : '#d1fae5',
         'border-color': '#10b981',
@@ -98,9 +99,9 @@ export function getWorkflowCytoscapeStyles(isDarkMode: boolean): cytoscape.Style
         'color': isDarkMode ? '#a7f3d0' : '#065f46',
       },
     },
-    // Hover State for Clickable Step Nodes ONLY
+    // Hover State for Clickable Nodes ONLY
     {
-      selector: 'node.step.hovered[!isCurrent]',
+      selector: 'node.hovered[!isCurrent]',
       style: {
         'border-color': '#2563eb',
         'border-width': '3.5px',
@@ -116,19 +117,22 @@ export function getWorkflowCytoscapeStyles(isDarkMode: boolean): cytoscape.Style
         'border-width': '3.5px',
       },
     },
-    // Smooth Bezier Edges
+    // Dynamic Styled Edges (Supports line color, line style, arrow shape, arrow color, text color)
     {
       selector: 'edge',
       style: {
         'width': 2,
-        'line-color': isDarkMode ? '#475569' : '#94a3b8',
-        'target-arrow-color': isDarkMode ? '#475569' : '#94a3b8',
-        'target-arrow-shape': 'triangle',
-        'curve-style': 'bezier',
+        'line-color': 'data(color)' as any,
+        'line-style': 'data(lineStyle)' as any,
+        'target-arrow-color': 'data(color)' as any,
+        'target-arrow-shape': 'data(arrowShape)' as any,
+        'curve-style': 'data(curveStyle)' as any,
         'label': 'data(label)',
         'font-size': '8px',
         'font-family': 'monospace, sans-serif',
-        'color': isDarkMode ? '#94a3b8' : '#64748b',
+        'color': 'data(textColor)' as any,
+        'text-wrap': 'wrap',
+        'text-max-width': '80px',
         'text-background-opacity': 1,
         'text-background-color': isDarkMode ? '#0f172a' : '#ffffff',
         'text-background-padding': '2px',
