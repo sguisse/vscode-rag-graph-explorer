@@ -64,6 +64,30 @@ export class PythonScriptExecutionManager {
     }
 
     /**
+     * Plays a target sound file cross-platform. Sound is disabled if soundPath is empty.
+     */
+    private playCompletionSound(soundPath: string): void {
+        const cleanPath = soundPath ? soundPath.trim() : '';
+        if (!cleanPath) return; // Sound disabled
+
+        try {
+            const platform = process.platform;
+            if (platform === 'darwin') {
+                const escaped = cleanPath.replace(/"/g, '\\"');
+                childProcess.exec(`afplay "${escaped}"`);
+            } else if (platform === 'win32') {
+                const escaped = cleanPath.replace(/'/g, "''");
+                childProcess.exec(`powershell -c "(New-Object Media.SoundPlayer '${escaped}').PlaySync()"`);
+            } else if (platform === 'linux') {
+                const escaped = cleanPath.replace(/"/g, '\\"');
+                childProcess.exec(`paplay "${escaped}" || aplay "${escaped}" || printf "\\a"`);
+            }
+        } catch (err) {
+            // Fail silently if playback fails
+        }
+    }
+
+    /**
      * Starts the periodic cron checker for process timeouts.
      */
     private startTimeoutChecker(): void {
@@ -306,7 +330,25 @@ export class PythonScriptExecutionManager {
                { scriptPath, args, options: spawnOptions, timeout });
 
         const origin = path.basename(scriptPath);
-        return this.spawnPythonProcess(pythonBinary, fullArgs, spawnOptions, origin, timeout);
+        const startTime = Date.now();
+
+        const child = this.spawnPythonProcess(pythonBinary, fullArgs, spawnOptions, origin, timeout);
+
+        // Play notification sound exclusively for executeScript calls exceeding processSoundDelay
+        child.once('exit', () => {
+            const settings = vsCodeSettingsManager.getSettings(); //[cite: 4]
+            const soundPath = settings.processSoundPath?.trim(); //[cite: 4]
+            const soundDelay = settings.processSoundDelay; //[cite: 4]
+
+            if (soundPath && soundDelay > 0) {
+                const elapsedMs = Date.now() - startTime;
+                if (elapsedMs >= soundDelay) {
+                    this.playCompletionSound(soundPath);
+                }
+            }
+        });
+
+        return child;
     }
 
     public spawnPythonProcess(

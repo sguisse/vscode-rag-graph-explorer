@@ -212,6 +212,8 @@ class VsCodeSettings:
     logFileMaxSize: int = 5
     logFileMaxCountRetention: int = 5
     processTimeout: int = 10000
+    processSoundPath: str = "/System/Library/Sounds/Glass.aiff"
+    processSoundDelay: int = 10000
     graphRagExplorer: "GraphRagExplorerSettings" = field(default_factory=GraphRagExplorerSettings)
 
     @classmethod
@@ -238,6 +240,10 @@ class VsCodeSettings:
             obj.logFileMaxCountRetention = data["logFileMaxCountRetention"]
         if "processTimeout" in data:
             obj.processTimeout = data["processTimeout"]
+        if "processSoundPath" in data:
+            obj.processSoundPath = data["processSoundPath"]
+        if "processSoundDelay" in data:
+            obj.processSoundDelay = data["processSoundDelay"]
         if "graphRagExplorer" in data:
             obj.graphRagExplorer = GraphRagExplorerSettings.from_dict(data["graphRagExplorer"])
         return obj

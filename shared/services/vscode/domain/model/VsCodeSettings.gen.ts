@@ -20,6 +20,10 @@ export class VsCodeSettings {
 
     processTimeout = 10000;
 
+    processSoundPath = "/System/Library/Sounds/Glass.aiff";
+
+    processSoundDelay = 10000;
+
     graphRagExplorer = {
         entitiesTypesList: ["file","class","method","document"],
         regexFilterEnabled: false,

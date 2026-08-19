@@ -95,6 +95,16 @@
           "default": 10000,
           "description": "Default external process timeout in milliseconds (python scripts, sh scripts, ...)."
         },
+        "tokenRazor.processSoundPath": {
+          "type": "string",
+          "default": "/System/Library/Sounds/Glass.aiff",
+          "description": "Path to the sound file to play upon process completion (if empty, no sound will be played). It could be on MacOS: /System/Library/Sounds/Glass.aiff or on Windows: C:\\Windows\\Media\\notify.wav or on Linux: /usr/share/sounds/freedesktop/stereo/complete.oga"
+        },
+        "tokenRazor.processSoundDelay": {
+          "type": "number",
+          "default": 10000,
+          "description": "If process takes longer than this value in milliseconds, the process completion sound will be played. If set to <=0, the sound will be disabled."
+        },
         "tokenRazor.graphRagExplorer.entitiesTypesList": {
           "type": "array",
           "description": "List of predefined entity types for the graph exploration.",
