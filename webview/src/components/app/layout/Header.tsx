@@ -12,6 +12,7 @@ import {
   PanelBottom,
   PanelLeftOpen,
   PanelRightOpen,
+  Workflow,
 } from 'lucide-react';
 import { PanelCenter } from '@/components/app/core/icons/PanelCenter';
 import { LeftCenterRightPanel } from '@/components/app/left-center-right-panel';
@@ -21,6 +22,9 @@ import logoLight from '@assets/logo-light.png';
 import logoDark from '@assets/logo-dark.png';
 import { DefaultContainersSize } from '@/constants/layout-constants';
 import { ApplicationTitle } from '../ApplicationTitle';
+import { WorkflowPopup } from '@/features/explorer/workflow/workflow-popup';
+import { Button } from '@/components/ui/button';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 interface HeaderProps {
   activeFeature: string;
@@ -51,19 +55,44 @@ export function Header({
   );
 
   const centerContent = (
-    <div className="flex flex-1 justify-left items-center gap-2">
-      <span style={{ paddingLeft: `${DefaultContainersSize.sidebarLeftWidth - headerLeftWidth}px` }}>
-        <ToggleButton
-          id="toggle-sidebar-left"
-          isSelected={!!containers.sidebarLeft?.visible}
-          onToggle={() => toggleContainerVisible('sidebarLeft')}
-          tooltipText="Toggle Sidebar Left"
-          icon={<Layers size={14} />}
-        />
-      </span>
-      <span id="active-feature" className="bg-primary/15 px-2 py-0.5 rounded font-semibold text-[10px] text-primary">
-        {activeFeature}
-      </span>
+    <div className="flex flex-1 justify-between items-center gap-2 w-full">
+      <div className="flex items-center gap-2 shrink-0">
+        <span style={{ paddingLeft: `${DefaultContainersSize.sidebarLeftWidth - headerLeftWidth}px` }}>
+          <ToggleButton
+            id="toggle-sidebar-left"
+            isSelected={!!containers.sidebarLeft?.visible}
+            onToggle={() => toggleContainerVisible('sidebarLeft')}
+            tooltipText="Toggle Sidebar Left"
+            icon={<Layers size={14} />}
+          />
+        </span>
+        <span id="active-feature" className="bg-primary/15 px-2 py-0.5 rounded font-semibold text-[10px] text-primary">
+          {activeFeature}
+        </span>
+      </div>
+
+      {/* Centered Workflow Button & Popup */}
+      <div className="flex justify-center items-center flex-1">
+        <WorkflowPopup
+          side="bottom"
+          align="center"
+          onSelectStep={(stepId) => {
+            logInfo(`[Header] Workflow step selected: ${stepId}`);
+          }}
+        >
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-1.5 hover:bg-primary/10 border-border h-6 px-2.5 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+            data-tooltip="View Pipeline Workflow"
+          >
+            <Workflow size={13} className="text-primary" />
+            <span className="font-semibold text-[11px]">Workflow</span>
+          </Button>
+        </WorkflowPopup>
+      </div>
+
+      <div className="shrink-0 w-24" />
     </div>
   );
 

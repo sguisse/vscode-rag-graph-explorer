@@ -1,0 +1,92 @@
+{
+  "workflow": {
+    "title": "Context Engineering Pipeline",
+    "description": "Interactive multi-branch document validation flow with automated decision checks.",
+    "initialStepId": "draft",
+    "nodes": [
+      {
+        "id": "start",
+        "label": "Context Engineering Pipeline",
+        "desc": "BPMN Start Event: Trigger point of the pipeline.",
+        "type": "start",
+        "x": 30,
+        "y": 110,
+        "status": "completed"
+      },
+      {
+        "id": "draft",
+        "label": "1. File Selection",
+        "desc": "Select target source files in Codebase Explorer.",
+        "type": "step",
+        "x": 160,
+        "y": 110,
+        "status": "current"
+      },
+      {
+        "id": "check_compliance",
+        "label": "2. Blast Radius",
+        "desc": "Transitive BFS traversal computes callers & callees.",
+        "type": "decision",
+        "x": 300,
+        "y": 110,
+        "status": "pending"
+      },
+      {
+        "id": "legal_review",
+        "label": "3a. Minifier",
+        "desc": "AST skeletonization strips method implementation bodies.",
+        "type": "step",
+        "x": 440,
+        "y": 50,
+        "status": "pending"
+      },
+      {
+        "id": "fast_track",
+        "label": "3b. Raw Context",
+        "desc": "Exports complete unminified source code context.",
+        "type": "step",
+        "x": 440,
+        "y": 170,
+        "status": "pending"
+      },
+      {
+        "id": "check_exec",
+        "label": "4. Anonymizer",
+        "desc": "Regex rules replace sensitive secrets & database URIs.",
+        "type": "decision",
+        "x": 580,
+        "y": 50,
+        "status": "pending"
+      },
+      {
+        "id": "published",
+        "label": "5. Prompt Export",
+        "desc": "Compiles structured XML prompt & copies payload to clipboard.",
+        "type": "step",
+        "x": 720,
+        "y": 110,
+        "status": "pending"
+      },
+      {
+        "id": "end",
+        "label": "Pipeline Completed",
+        "desc": "BPMN End Event: Context generated and ready.",
+        "type": "end",
+        "x": 840,
+        "y": 110,
+        "status": "pending"
+      }
+    ],
+    "edges": [
+      { "id": "e0", "source": "start", "target": "draft", "label": "Start" },
+      { "id": "e1", "source": "draft", "target": "check_compliance", "label": "Selected" },
+      { "id": "e2", "source": "check_compliance", "target": "legal_review", "label": "Minify" },
+      { "id": "e3", "source": "check_compliance", "target": "fast_track", "label": "Full Source" },
+      { "id": "e4", "source": "legal_review", "target": "check_exec", "label": "Transform" },
+      { "id": "e5", "source": "fast_track", "target": "published", "label": "Compile" },
+      { "id": "e6", "source": "check_exec", "target": "published", "label": "Clean" },
+      { "id": "e7", "source": "check_exec", "target": "draft", "label": "Reset" },
+      { "id": "e8", "source": "published", "target": "end", "label": "Finish" }
+    ]
+  }
+}
