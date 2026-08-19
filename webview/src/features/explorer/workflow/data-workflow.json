@@ -11,7 +11,7 @@
         "type": "start",
         "x": 30,
         "y": 110,
-        "status": "completed"
+        "status": "pending"
       },
       {
         "id": "draft",

@@ -59,7 +59,7 @@ export function getWorkflowCytoscapeStyles(isDarkMode: boolean): cytoscape.Style
         'text-valign': 'bottom',
         'text-margin-y': 6,
         'color': isDarkMode ? '#ffffff' : '#000000',
-        'font-size': '19px',
+        'font-size': '9px',
         'text-max-width': '120px',
       },
     },
@@ -93,9 +93,9 @@ export function getWorkflowCytoscapeStyles(isDarkMode: boolean): cytoscape.Style
       selector: 'node[status = "completed"], node.completed',
       style: {
         'background-color': isDarkMode ? '#064e3b' : '#d1fae5',
-        //'border-color': '#10b981',
+        'border-color': '#10b981',
         'border-width': '3.5px',
-        //'color': isDarkMode ? '#a7f3d0' : '#065f46',
+        'color': isDarkMode ? '#a7f3d0' : '#065f46',
       },
     },
     // Hover State for Clickable Step Nodes ONLY
