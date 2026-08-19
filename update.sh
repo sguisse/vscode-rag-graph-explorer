@@ -1,136 +1,684 @@
 #!/usr/bin/env bash
 set -e
 
-# Update WorkflowPanel inspector badge styles for active step to gold/amber theme
-cat << 'EOF' > webview/src/components/app/workflow/workflow-panel.tsx
-import React from 'react';
-import { Focus, CheckCircle2, GitBranch, ArrowRight, Lock, HelpCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useWorkflowPanel } from './hooks/use-workflow-panel';
-import { logInfo } from '@/services/view/log-view.service.wrapper';
-import { WorkflowData } from './model/workflow-model';
+# Update useExplorerStore.ts with selective persistence whitelist and non-blocking serialization
+cat << 'EOF' > webview/src/features/explorer/store/useExplorerStore.ts
+import { create } from 'zustand';
+import {
+  CodebaseData,
+  CodebaseFile,
+  SelectedEntity,
+} from '@/shared/services/graph-rag-explorer';
+import {
+  LlmProvider,
+  IChatMessageDto,
+  IFileContextDto,
+} from '@/shared/services/llm-chat';
+import { ExportFormat } from '@/shared/services/codebase-exporter/domain/model/types';
+import { WorkflowData } from '@/components/app/workflow/model/workflow-model';
+import defaultWorkflowData from '../workflow/data-workflow.json';
+import { demoCodebase, FOLDER_POSITIONS } from '../wksp-cnt-graph/data/GraphData';
+import { INITIAL_VISIBLE_FILES_CONFIG, FOLDER_KEYS_REGISTERED_CONFIG } from '../constants/graph.constants';
+import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
+import { VsCodeSettingsKeys } from '@/shared/services/vscode/domain/model/VsCodeSettings.gen';
+import { logError, logInfo } from '@/services/view/log-view.service.wrapper';
 
-interface WorkflowPanelProps {
-  workflowData?: WorkflowData;
-  onSelectStep?: (stepId: string) => void;
+// ============================================================================
+// Data Types & Schemas
+// ============================================================================
+
+export interface AnonymizationRule {
+  id: string;
+  name: string;
+  pattern: string;
+  replacement: string;
+  inversePattern: string;
+  enabled: boolean;
 }
 
-export function WorkflowPanel({ workflowData, onSelectStep }: WorkflowPanelProps) {
-  const {
-    containerRef,
-    workflowTitle,
-    workflowDescription,
-    selectedNode,
-    handleFitView,
-  } = useWorkflowPanel(workflowData, onSelectStep);
+export const DEFAULT_ANONYMIZATION_RULES: AnonymizationRule[] = [
+  {
+    id: 'rule-secrets',
+    name: 'Secret & Password Tokens',
+    pattern: '(?i)(password|secret|key|token)\\s*[:=]\\s*[\'"][^\'"]+[\'"]',
+    replacement: '$1: "ANONYMIZED_SECRET"',
+    inversePattern: 'ANONYMIZED_SECRET',
+    enabled: true,
+  },
+  {
+    id: 'rule-db-uri',
+    name: 'Database JDBC/Connection URIs',
+    pattern: 'jdbc:[a-z0-9]+://[^:\\s]+:[0-9]+/[a-zA-Z0-9_]+',
+    replacement: 'jdbc:provider://anonymized-host:5432/anon_db',
+    inversePattern: 'jdbc:provider://anonymized-host:5432/anon_db',
+    enabled: true,
+  },
+  {
+    id: 'rule-ip',
+    name: 'IPv4 Addresses',
+    pattern: '\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b',
+    replacement: '127.0.0.1',
+    inversePattern: '127.0.0.1',
+    enabled: true,
+  },
+  {
+    id: 'rule-db-user',
+    name: 'Database Usernames',
+    pattern: 'db_admin_prod',
+    replacement: 'db_user_anon',
+    inversePattern: 'db_user_anon',
+    enabled: true,
+  },
+];
 
-  return (
-    <div className="flex flex-col w-full font-mono text-xs">
-      {/* Panel Header */}
-      <div className="flex justify-between items-center bg-muted/50 p-3 border-border/80 border-b">
-        <div className="flex items-center gap-2 min-w-0">
-          <GitBranch size={15} className="text-primary shrink-0 animate-pulse" />
-          <div className="min-w-0">
-            <h4 className="font-bold text-foreground text-xs leading-none truncate">{workflowTitle}</h4>
-            <p className="mt-1 text-[10px] text-muted-foreground truncate">{workflowDescription}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1.5 shrink-0 ml-2">
-          <span className="flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 border border-emerald-500/30 rounded-full font-bold text-[10px] text-emerald-500">
-            <CheckCircle2 size={11} /> Step 1 Active
-          </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="hover:bg-muted/80 w-6 h-6 text-muted-foreground hover:text-foreground cursor-pointer"
-            onClick={handleFitView}
-            data-tooltip="Fit Diagram View"
-          >
-            <Focus size={13} />
-          </Button>
-        </div>
-      </div>
-
-      {/* Cytoscape Canvas */}
-      <div className="relative bg-muted/10 w-full h-[300px] overflow-hidden">
-        <div ref={containerRef} className="absolute inset-0 w-full h-full" />
-      </div>
-
-      {/* Step Inspector Footer */}
-      <div className="bg-muted/30 p-2.5 border-border/80 border-t min-h-[58px] flex items-center justify-between">
-        {selectedNode ? (
-          <div className="flex flex-1 items-center justify-between gap-2 min-w-0">
-            <div className="space-y-0.5 min-w-0">
-              <div className="flex items-center gap-2">
-                <span
-                  className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase shrink-0 ${
-                    selectedNode.isCurrent
-                      ? 'bg-amber-500/15 text-amber-500 border border-amber-500/30'
-                      : selectedNode.type === 'start'
-                      ? 'bg-slate-500/15 text-slate-400 border border-slate-500/30'
-                      : selectedNode.type === 'end'
-                      ? 'bg-rose-500/15 text-rose-500 border border-rose-500/30'
-                      : selectedNode.type === 'decision'
-                      ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30'
-                      : 'bg-primary/10 text-primary border border-primary/20'
-                  }`}
-                >
-                  {selectedNode.isCurrent
-                    ? 'Active Step'
-                    : selectedNode.type === 'start'
-                    ? 'BPMN Start'
-                    : selectedNode.type === 'end'
-                    ? 'BPMN End'
-                    : selectedNode.type === 'decision'
-                    ? '◆ Decision Check'
-                    : 'Process Step'}
-                </span>
-                <span className="font-bold text-foreground text-xs truncate">
-                  {selectedNode.label.replace(/\n/g, ' ')}
-                </span>
-              </div>
-              <p className="text-[10px] text-muted-foreground truncate leading-snug">{selectedNode.desc}</p>
-            </div>
-
-            <div className="shrink-0 ml-2">
-              {selectedNode.isCurrent ? (
-                <span className="flex items-center gap-1 font-bold text-[10px] text-muted-foreground opacity-60">
-                  <Lock size={10} /> Active
-                </span>
-              ) : selectedNode.clickEnabled ? (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="gap-1 h-6 font-bold text-[10px] text-primary hover:text-primary-foreground cursor-pointer"
-                  onClick={() => {
-                    logInfo(`[WorkflowPanel] Workflow step selected via inspector button: '${selectedNode.label.replace(/\n/g, ' ')}' (ID: ${selectedNode.id})`);
-                    if (onSelectStep) {
-                      onSelectStep(selectedNode.id);
-                    }
-                  }}
-                >
-                  <span>Select Step</span>
-                  <ArrowRight size={10} />
-                </Button>
-              ) : (
-                <span className="flex items-center gap-1 font-bold text-[10px] text-muted-foreground opacity-50">
-                  Info Only
-                </span>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground italic">
-            <HelpCircle size={12} />
-            <span>Hover or click any node/decision diamond to inspect step details.</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+export interface GraphRagExplorerConfig {
+  backendConfigPath: string;
+  defaultClient: string;
+  defaultModel: string;
+  maxTokens: number;
+  temperature: number;
+  systemPromptPrefix: string;
+  autoApplyChanges: boolean;
+  saveHistoryLocally: boolean;
 }
+
+export interface PromptFields {
+  predefined: string;
+  mode: 'role' | 'agent';
+  roleOrAgent: string;
+  selectedAgent: string;
+  tone: string;
+  context: string;
+  expected: string;
+  output: string;
+  samples: string;
+}
+
+const INITIAL_PROMPT_FIELDS: PromptFields = {
+  predefined: 'custom',
+  mode: 'role',
+  roleOrAgent: 'Senior React & TypeScript Architect',
+  selectedAgent: 'CodeRefactoringAgent',
+  tone: 'Concise, surgical, highly technical',
+  context: 'Optimizing codebase dependencies and AST context for LLM prompt engineering.',
+  expected: 'Clean, production-ready React component with Tailwind CSS styling.',
+  output: 'Single self-contained file with full implementation.',
+  samples: 'Include full imports and type declarations without truncation.',
+};
+
+const INITIAL_CONFIG: GraphRagExplorerConfig = {
+  backendConfigPath: '.token-razor/config/explorer-config.json',
+  defaultClient: 'Ollama',
+  defaultModel: 'llama3:latest',
+  maxTokens: 4096,
+  temperature: 0.2,
+  systemPromptPrefix: 'You are an expert senior software architect.',
+  autoApplyChanges: false,
+  saveHistoryLocally: true,
+};
+
+// ============================================================================
+// Dedicated Container & Panel Interfaces
+// ============================================================================
+
+export interface WorkflowState {
+  dataWorkflow: WorkflowData;
+  setDataWorkflow: (data: WorkflowData) => void;
+  setSelectedWorkflowStep: (stepId: string) => void;
+}
+
+export interface WkpTopImpactedPathsState {
+  paths: string;
+  currentPath: string;
+  pathsList: string[];
+  upstreamDepth: number;
+  downstreamDepth: number;
+
+  setPaths: (paths: string | ((prev: string) => string)) => void;
+  setCurrentPath: (path: string) => void;
+  setPathsList: (list: string[] | ((prev: string[]) => string[])) => void;
+  setUpstreamDepth: (depth: number) => void;
+  setDownstreamDepth: (depth: number) => void;
+}
+
+export interface WkpLftCodebaseTreeState {
+  searchTerm: string;
+  displayLevel: string;
+  maxNodesLimit: number;
+  expandedFolders: Record<string, boolean>;
+  visibleFiles: Record<string, boolean>;
+
+  setSearchTerm: (term: string) => void;
+  setDisplayLevel: (level: string) => void;
+  setMaxNodesLimit: (limit: number) => void;
+  setExpandedFolders: (
+    folders: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)
+  ) => void;
+  toggleFolder: (folderName: string) => void;
+  setVisibleFiles: (
+    files: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)
+  ) => void;
+  toggleFileCheckbox: (fileId: string) => void;
+  toggleFolderCheckbox: (folderName: string, allFiles: CodebaseFile[]) => void;
+  resetFilters: (allFiles: CodebaseFile[]) => void;
+}
+
+export interface WkspCntGraphState {
+  codebase: CodebaseData;
+  folderPositions: Record<string, { label: string }>;
+  selectedEntity: SelectedEntity | null;
+  focusedNodeId: string | null;
+
+  enableDownstream: boolean;
+  enableUpstream: boolean;
+  callersDepth: number;
+  calleesDepth: number;
+
+  showGrid: boolean;
+  currentLayout: string;
+  attributesVisible: boolean;
+  methodsVisible: boolean;
+  showSelectedOnly: boolean;
+
+  setCodebase: (codebase: CodebaseData | ((prev: CodebaseData) => CodebaseData)) => void;
+  setFolderPositions: (positions: Record<string, { label: string }>) => void;
+  setSelectedEntity: (entity: SelectedEntity | null) => void;
+  setFocusedNodeId: (nodeId: string | null | ((prev: string | null) => string | null)) => void;
+  setEnableDownstream: (val: boolean | ((prev: boolean) => boolean)) => void;
+  setEnableUpstream: (val: boolean | ((prev: boolean) => boolean)) => void;
+  setCallersDepth: (depth: number) => void;
+  setCalleesDepth: (depth: number) => void;
+  setShowGrid: (show: boolean | ((prev: boolean) => boolean)) => void;
+  setCurrentLayout: (layout: string) => void;
+  setAttributesVisible: (visible: boolean | ((prev: boolean) => boolean)) => void;
+  setMethodsVisible: (visible: boolean | ((prev: boolean) => boolean)) => void;
+  setShowSelectedOnly: (show: boolean | ((prev: boolean) => boolean)) => void;
+}
+
+export interface WkpRgtTabsFilesContextState {
+  rightPanelTab: 'inspect' | 'files_context' | 'transformer';
+  selectedContextFiles: Record<string, boolean>;
+  expandedContextGroups: Record<string, boolean>;
+
+  setRightPanelTab: (tab: 'inspect' | 'files_context' | 'transformer') => void;
+  setSelectedContextFiles: (
+    files: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)
+  ) => void;
+  toggleContextFileCheckbox: (fileId: string) => void;
+  setExpandedContextGroups: (
+    groups: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)
+  ) => void;
+}
+
+export interface ContextTransformerState {
+  transformerRules: AnonymizationRule[];
+  setTransformerRules: (
+    rules: AnonymizationRule[] | ((prev: AnonymizationRule[]) => AnonymizationRule[])
+  ) => void;
+}
+
+export interface FilesCtxExportState {
+  exportFormat: ExportFormat;
+  maxChunk: string;
+  splitChunkByFileExtension: boolean;
+  copyAsFilesToClipboard: boolean;
+  targetFilePaths: string[];
+
+  setExportFormat: (exportFormat: ExportFormat) => void;
+  setMaxChunk: (maxChunk: string) => void;
+  setSplitChunkByFileExtension: (splitChunkByFileExtension: boolean) => void;
+  setCopyAsFilesToClipboard: (copyAsFilesToClipboard: boolean) => void;
+  setTargetFilePaths: (targetFilePaths: string[]) => void;
+}
+
+export interface SdbRgtPromptTabState {
+  promptTab: 'prompt' | 'llm' | 'config';
+  setPromptTab: (tab: 'prompt' | 'llm' | 'config') => void;
+}
+
+export interface SdbRgtPromptBuilderState {
+  config: GraphRagExplorerConfig;
+  promptFields: PromptFields;
+  updateConfig: (partial: Partial<GraphRagExplorerConfig>) => void;
+  updatePromptFields: (partial: Partial<PromptFields>) => void;
+  resetPromptFields: () => void;
+  getFullPrompt: () => string;
+}
+
+export interface SdbRgtLlmChatState {
+  llmProvider: LlmProvider;
+  llmSelectedModel: string;
+  llmMessages: IChatMessageDto[];
+  llmInputPrompt: string;
+  llmTemperature: number;
+  llmAttachedFiles: IFileContextDto[];
+  llmFilePathInput: string;
+  llmExpandedCards: Record<string, boolean>;
+
+  setLlmProvider: (provider: LlmProvider) => void;
+  setLlmSelectedModel: (model: string) => void;
+  setLmMessages: (
+    messages: IChatMessageDto[] | ((prev: IChatMessageDto[]) => IChatMessageDto[])
+  ) => void;
+  setLlmInputPrompt: (prompt: string) => void;
+  setLlmTemperature: (temp: number) => void;
+  setLlmAttachedFiles: (
+    files: IFileContextDto[] | ((prev: IFileContextDto[]) => IFileContextDto[])
+  ) => void;
+  setLlmFilePathInput: (input: string) => void;
+  setLlmExpandedCard: (cardId: string, expanded: boolean) => void;
+  toggleLlmExpandedCard: (cardId: string) => void;
+  setLlmExpandedCards: (
+    cards: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)
+  ) => void;
+}
+
+export interface ExplorerState
+  extends WorkflowState,
+    WkpTopImpactedPathsState,
+    WkpLftCodebaseTreeState,
+    WkspCntGraphState,
+    WkpRgtTabsFilesContextState,
+    ContextTransformerState,
+    FilesCtxExportState,
+    SdbRgtPromptTabState,
+    SdbRgtPromptBuilderState,
+    SdbRgtLlmChatState {}
+
+// ============================================================================
+// Store Implementation
+// ============================================================================
+
+export const useExplorerStore = create<ExplorerState>((set, get) => ({
+  // Workflow State & Actions
+  dataWorkflow: defaultWorkflowData as WorkflowData,
+  setDataWorkflow: (dataWorkflow) => set({ dataWorkflow }),
+  setSelectedWorkflowStep: (stepId) =>
+    set((state) => {
+      const updatedNodes = state.dataWorkflow.workflow.nodes.map((node) => {
+        if (node.id === stepId) {
+          return { ...node, status: 'current' as const };
+        }
+        if (node.status === 'current') {
+          return { ...node, status: 'completed' as const };
+        }
+        return node;
+      });
+
+      return {
+        dataWorkflow: {
+          ...state.dataWorkflow,
+          workflow: {
+            ...state.dataWorkflow.workflow,
+            initialStepId: stepId,
+            nodes: updatedNodes,
+          },
+        },
+      };
+    }),
+
+  // workspace.top (ImpactedPathsPanel)
+  paths: '',
+  currentPath: '',
+  pathsList: [''],
+  upstreamDepth: 2,
+  downstreamDepth: 2,
+
+  setPaths: (paths) =>
+    set((state) => ({
+      paths: typeof paths === 'function' ? paths(state.paths) : paths,
+    })),
+  setCurrentPath: (currentPath) => set({ currentPath }),
+  setPathsList: (list) =>
+    set((state) => ({
+      pathsList: typeof list === 'function' ? list(state.pathsList) : list,
+    })),
+  setUpstreamDepth: (upstreamDepth) => set({ upstreamDepth }),
+  setDownstreamDepth: (downstreamDepth) => set({ downstreamDepth }),
+
+  // workspace.left (CodebaseExplorerPanel)
+  searchTerm: '',
+  displayLevel: 'all',
+  maxNodesLimit: 50,
+  expandedFolders: {
+    frontend: true,
+    backend: true,
+    config: true,
+    other: true,
+  },
+  visibleFiles: INITIAL_VISIBLE_FILES_CONFIG,
+
+  setSearchTerm: (searchTerm) => set({ searchTerm }),
+  setDisplayLevel: (displayLevel) => set({ displayLevel }),
+  setMaxNodesLimit: (maxNodesLimit) => set({ maxNodesLimit }),
+  setExpandedFolders: (folders) =>
+    set((state) => ({
+      expandedFolders: typeof folders === 'function' ? folders(state.expandedFolders) : folders,
+    })),
+  toggleFolder: (folderName) =>
+    set((state) => ({
+      expandedFolders: {
+        ...state.expandedFolders,
+        [folderName]: !state.expandedFolders[folderName],
+      },
+    })),
+  setVisibleFiles: (files) =>
+    set((state) => ({
+      visibleFiles: typeof files === 'function' ? files(state.visibleFiles) : files,
+    })),
+  toggleFileCheckbox: (fileId) =>
+    set((state) => ({
+      visibleFiles: {
+        ...state.visibleFiles,
+        [fileId]: !state.visibleFiles[fileId],
+      },
+    })),
+  toggleFolderCheckbox: (folderName, allFiles) =>
+    set((state) => {
+      const registeredFolders = [...FOLDER_KEYS_REGISTERED_CONFIG];
+      const folderFiles = allFiles.filter((f) => {
+        if (registeredFolders.includes(folderName as any)) {
+          return f.path.startsWith(folderName);
+        }
+        return !registeredFolders.some((rf) => f.path.startsWith(rf));
+      });
+      const isCurrentlyChecked =
+        folderFiles.length > 0 && folderFiles.every((f) => state.visibleFiles[f.id]);
+      const targetState = !isCurrentlyChecked;
+      const updated = { ...state.visibleFiles };
+      folderFiles.forEach((file) => {
+        updated[file.id] = targetState;
+      });
+      return { visibleFiles: updated };
+    }),
+  resetFilters: (allFiles) =>
+    set(() => {
+      const resetVisible: Record<string, boolean> = {};
+      allFiles.forEach((f) => {
+        resetVisible[f.id] = true;
+      });
+      return {
+        visibleFiles: resetVisible,
+        searchTerm: '',
+        displayLevel: 'all',
+      };
+    }),
+
+  // workspace.center (GraphPanel)
+  codebase: demoCodebase,
+  folderPositions: FOLDER_POSITIONS,
+  selectedEntity: null,
+  focusedNodeId: null,
+  enableDownstream: true,
+  enableUpstream: true,
+  callersDepth: 1,
+  calleesDepth: 1,
+  showGrid: false,
+  currentLayout: 'preset',
+  attributesVisible: false,
+  methodsVisible: false,
+  showSelectedOnly: false,
+
+  setCodebase: (codebase) =>
+    set((state) => ({
+      codebase: typeof codebase === 'function' ? codebase(state.codebase) : codebase,
+    })),
+  setFolderPositions: (folderPositions) => set({ folderPositions }),
+  setSelectedEntity: (selectedEntity) => set({ selectedEntity }),
+  setFocusedNodeId: (focusedNodeId) =>
+    set((state) => ({
+      focusedNodeId: typeof focusedNodeId === 'function' ? focusedNodeId(state.focusedNodeId) : focusedNodeId,
+    })),
+  setEnableDownstream: (val) =>
+    set((state) => ({
+      enableDownstream: typeof val === 'function' ? val(state.enableDownstream) : val,
+    })),
+  setEnableUpstream: (val) =>
+    set((state) => ({
+      enableUpstream: typeof val === 'function' ? val(state.enableUpstream) : val,
+    })),
+  setCallersDepth: (callersDepth) => set({ callersDepth }),
+  setCalleesDepth: (calleesDepth) => set({ calleesDepth }),
+  setShowGrid: (show) =>
+    set((state) => ({
+      showGrid: typeof show === 'function' ? show(state.showGrid) : show,
+    })),
+  setCurrentLayout: (currentLayout) => set({ currentLayout }),
+  setAttributesVisible: (visible) =>
+    set((state) => ({
+      attributesVisible: typeof visible === 'function' ? visible(state.attributesVisible) : visible,
+    })),
+  setMethodsVisible: (visible) =>
+    set((state) => ({
+      methodsVisible: typeof visible === 'function' ? visible(state.methodsVisible) : visible,
+    })),
+  setShowSelectedOnly: (show) =>
+    set((state) => ({
+      showSelectedOnly: typeof show === 'function' ? show(state.showSelectedOnly) : show,
+    })),
+
+  // workspace.right (TabsFilesContextContainer & Panels)
+  rightPanelTab: 'files_context',
+  selectedContextFiles: {},
+  expandedContextGroups: {},
+
+  setRightPanelTab: (rightPanelTab) => set({ rightPanelTab }),
+  setSelectedContextFiles: (files) =>
+    set((state) => ({
+      selectedContextFiles: typeof files === 'function' ? files(state.selectedContextFiles) : files,
+    })),
+  toggleContextFileCheckbox: (fileId) =>
+    set((state) => ({
+      selectedContextFiles: {
+        ...state.selectedContextFiles,
+        [fileId]: !state.selectedContextFiles[fileId],
+      },
+    })),
+  setExpandedContextGroups: (groups) =>
+    set((state) => ({
+      expandedContextGroups: typeof groups === 'function' ? groups(state.expandedContextGroups) : groups,
+    })),
+
+  // workspace.right ContextTransformer State
+  transformerRules: DEFAULT_ANONYMIZATION_RULES,
+  setTransformerRules: (transformerRules) =>
+    set((state) => ({
+      transformerRules:
+        typeof transformerRules === 'function'
+          ? transformerRules(state.transformerRules)
+          : transformerRules,
+    })),
+
+  // Shared FilesCtxExportPanel State
+  exportFormat: 'yaml',
+  maxChunk: '0',
+  splitChunkByFileExtension: false,
+  copyAsFilesToClipboard: false,
+  targetFilePaths: [],
+
+  setExportFormat: (exportFormat) => set({ exportFormat }),
+  setMaxChunk: (maxChunk) => set({ maxChunk }),
+  setSplitChunkByFileExtension: (splitChunkByFileExtension) =>
+    set({ splitChunkByFileExtension }),
+  setCopyAsFilesToClipboard: (copyAsFilesToClipboard) =>
+    set({ copyAsFilesToClipboard }),
+  setTargetFilePaths: (targetFilePaths) => set({ targetFilePaths }),
+
+  // sidebarRight: Navigation
+  promptTab: 'prompt',
+  setPromptTab: (promptTab) => set({ promptTab }),
+
+  // sidebarRight: Prompt Builder & Config
+  config: INITIAL_CONFIG,
+  promptFields: INITIAL_PROMPT_FIELDS,
+  updateConfig: (partial) =>
+    set((state) => ({ config: { ...state.config, ...partial } })),
+  updatePromptFields: (partial) =>
+    set((state) => ({ promptFields: { ...state.promptFields, ...partial } })),
+  resetPromptFields: () => set({ promptFields: INITIAL_PROMPT_FIELDS }),
+  getFullPrompt: () => {
+    const { promptFields, config } = get();
+    const roleHeader =
+      promptFields.mode === 'agent'
+        ? `[AGENT]: ${promptFields.selectedAgent} (${promptFields.roleOrAgent})`
+        : `[ROLE]: ${promptFields.roleOrAgent}`;
+
+    return `${config.systemPromptPrefix}
+
+${roleHeader}
+
+[TONE]
+${promptFields.tone}
+
+[CONTEXT]
+${promptFields.context}
+
+[EXPECTED]
+${promptFields.expected}
+
+[OUTPUT FORMAT]
+${promptFields.output}
+
+[SAMPLES / EXAMPLES]
+${promptFields.samples}`;
+  },
+
+  // sidebarRight: LLM Explorer Chat
+  llmProvider: LlmProvider.OLLAMA,
+  llmSelectedModel: '',
+  llmMessages: [],
+  llmInputPrompt: '',
+  llmTemperature: 0.7,
+  llmAttachedFiles: [],
+  llmFilePathInput: '',
+  llmExpandedCards: {},
+
+  setLlmProvider: (llmProvider) => set({ llmProvider }),
+  setLlmSelectedModel: (llmSelectedModel) => set({ llmSelectedModel }),
+  setLmMessages: (llmMessages) =>
+    set((state) => ({
+      llmMessages: typeof llmMessages === 'function' ? llmMessages(state.llmMessages) : llmMessages,
+    })),
+  setLlmInputPrompt: (llmInputPrompt) => set({ llmInputPrompt }),
+  setLlmTemperature: (llmTemperature) => set({ llmTemperature }),
+  setLlmAttachedFiles: (llmAttachedFiles) =>
+    set((state) => ({
+      llmAttachedFiles: typeof llmAttachedFiles === 'function' ? llmAttachedFiles(state.llmAttachedFiles) : llmAttachedFiles,
+    })),
+  setLlmFilePathInput: (llmFilePathInput) => set({ llmFilePathInput }),
+  setLlmExpandedCard: (cardId, expanded) =>
+    set((state) => ({
+      llmExpandedCards: { ...state.llmExpandedCards, [cardId]: expanded },
+    })),
+  toggleLlmExpandedCard: (cardId) =>
+    set((state) => ({
+      llmExpandedCards: {
+        ...state.llmExpandedCards,
+        [cardId]: !(state.llmExpandedCards[cardId] ?? true),
+      },
+    })),
+  setLlmExpandedCards: (cards) =>
+    set((state) => ({
+      llmExpandedCards: typeof cards === 'function' ? cards(state.llmExpandedCards) : cards,
+    })),
+}));
+
+// ============================================================================
+// Whitelisted Persistent State Keys
+// (Prevents heavy AST graph models & chat messages from blocking main thread)
+// ============================================================================
+
+const PERSISTED_KEYS: (keyof ExplorerState)[] = [
+  'dataWorkflow',
+  'config',
+  'promptFields',
+  'transformerRules',
+  'exportFormat',
+  'maxChunk',
+  'splitChunkByFileExtension',
+  'copyAsFilesToClipboard',
+  'upstreamDepth',
+  'downstreamDepth',
+  'callersDepth',
+  'calleesDepth',
+  'enableUpstream',
+  'enableDownstream',
+  'rightPanelTab',
+  'promptTab',
+  'llmProvider',
+  'llmSelectedModel',
+  'llmTemperature',
+];
+
+// ============================================================================
+// Store Persistence Synchronization (Non-blocking Async UI Execution)
+// ============================================================================
+
+let isHydrating = false;
+let saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let lastPersistedHash = '';
+
+// 1. Read & Hydrate store from VS Code user preferences asynchronously on initialization
+const hydrateStore = async () => {
+  try {
+    isHydrating = true;
+    const userPrefs: any = await vsCodeApiService.readUserPreferences(
+      VsCodeSettingsKeys.graphRagExplorer.userPreferences
+    );
+    logInfo('Read user preferences for store hydration:', userPrefs);
+
+    if (userPrefs && typeof userPrefs === 'object' && Object.keys(userPrefs).length > 0) {
+      useExplorerStore.setState(userPrefs);
+      logInfo('Zustand Store initialized with hydrated state from user preferences.');
+    }
+  } catch (error: any) {
+    logError('Failed to read user preferences for store hydration:', error);
+  } finally {
+    isHydrating = false;
+  }
+};
+
+hydrateStore();
+
+// 2. Optimized Non-blocking subscriber using Microtasks + Whitelist filtering
+useExplorerStore.subscribe((state) => {
+  if (isHydrating) return;
+
+  if (saveDebounceTimer) {
+    clearTimeout(saveDebounceTimer);
+  }
+
+  saveDebounceTimer = setTimeout(() => {
+    // Schedule state extraction and save off the synchronous UI render cycle
+    queueMicrotask(() => {
+      const payload: Record<string, any> = {};
+
+      for (const key of PERSISTED_KEYS) {
+        const val = state[key];
+        if (val !== undefined && typeof val !== 'function') {
+          payload[key] = val;
+        }
+      }
+
+      // Fast stringify check to avoid posting unchanged payloads over VS Code postMessage RPC
+      const currentHash = JSON.stringify(payload);
+      if (currentHash === lastPersistedHash) return;
+      lastPersistedHash = currentHash;
+
+      vsCodeApiService
+        .saveUserPreferences(
+          VsCodeSettingsKeys.graphRagExplorer.userPreferences,
+          payload
+        )
+        .then(() => {
+          logInfo('Saved user preferences asynchronously for key: tokenRazor.graphRagExplorer.userPreferences');
+        })
+        .catch((error: any) => {
+          logError('Failed to save user preferences asynchronously:', error);
+        });
+    });
+  }, 600);
+});
 EOF
 
-# Rebuild workspace
-npm run build
+# Rebuild workspace to verify clean TypeScript compilation

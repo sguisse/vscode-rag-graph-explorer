@@ -104,7 +104,7 @@ export function useImpactedPaths(options: UseImpactedPathsOptions = {}) {
         if (prev.trim()) {
           const existingLines = prev.split('\n').map((l) => l.trim()).filter(Boolean);
           if (!existingLines.includes(newPath.trim())) {
-            updated = `${prev.trim()}\n${newPath.trim()}`;
+            updated = `${newPath.trim()}\n${prev.trim()}`;
           } else {
             updated = prev;
           }

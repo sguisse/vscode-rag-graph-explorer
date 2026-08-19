@@ -133,7 +133,7 @@ export function GraphPanel({
 
       <div
         id="cytoscape-engine-info"
-        className="top-4 left-4 z-20 absolute bg-card/90 shadow-md backdrop-blur p-3 border border-border rounded-lg max-w-sm font-mono text-xs pointer-events-auto"
+        className="top-10 left-4 z-20 absolute bg-card/90 shadow-md backdrop-blur p-3 border border-border rounded-lg max-w-sm font-mono text-xs pointer-events-auto"
       >
         <div className="flex justify-between items-center gap-2 mb-1">
           <div className="flex items-center gap-2">

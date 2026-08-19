@@ -116,19 +116,12 @@ const INITIAL_CONFIG: GraphRagExplorerConfig = {
 // Dedicated Container & Panel Interfaces
 // ============================================================================
 
-/**
- * State & Actions for Explorer Workflow
- */
 export interface WorkflowState {
   dataWorkflow: WorkflowData;
   setDataWorkflow: (data: WorkflowData) => void;
   setSelectedWorkflowStep: (stepId: string) => void;
 }
 
-/**
- * State & Actions for Container: workspace.top
- * Panel: ImpactedPathsPanel
- */
 export interface WkpTopImpactedPathsState {
   paths: string;
   currentPath: string;
@@ -143,10 +136,6 @@ export interface WkpTopImpactedPathsState {
   setDownstreamDepth: (depth: number) => void;
 }
 
-/**
- * State & Actions for Container: workspace.left
- * Panel: CodebaseExplorerPanel
- */
 export interface WkpLftCodebaseTreeState {
   searchTerm: string;
   displayLevel: string;
@@ -169,10 +158,6 @@ export interface WkpLftCodebaseTreeState {
   resetFilters: (allFiles: CodebaseFile[]) => void;
 }
 
-/**
- * State & Actions for Container: workspace.center
- * Panel: GraphPanel
- */
 export interface WkspCntGraphState {
   codebase: CodebaseData;
   folderPositions: Record<string, { label: string }>;
@@ -205,10 +190,6 @@ export interface WkspCntGraphState {
   setShowSelectedOnly: (show: boolean | ((prev: boolean) => boolean)) => void;
 }
 
-/**
- * State & Actions for Container: workspace.right
- * Panels: TabsFilesContextContainer (FilesContextPanel, InspectorPanel, ContextTransformerPanel)
- */
 export interface WkpRgtTabsFilesContextState {
   rightPanelTab: 'inspect' | 'files_context' | 'transformer';
   selectedContextFiles: Record<string, boolean>;
@@ -224,9 +205,6 @@ export interface WkpRgtTabsFilesContextState {
   ) => void;
 }
 
-/**
- * State & Actions for Panel: ContextTransformerPanel
- */
 export interface ContextTransformerState {
   transformerRules: AnonymizationRule[];
   setTransformerRules: (
@@ -234,9 +212,6 @@ export interface ContextTransformerState {
   ) => void;
 }
 
-/**
- * State & Actions for Shared Component: FilesCtxExportPanel
- */
 export interface FilesCtxExportState {
   exportFormat: ExportFormat;
   maxChunk: string;
@@ -251,18 +226,11 @@ export interface FilesCtxExportState {
   setTargetFilePaths: (targetFilePaths: string[]) => void;
 }
 
-/**
- * State & Actions for Container: sidebarRight
- * Tab navigation state
- */
 export interface SdbRgtPromptTabState {
   promptTab: 'prompt' | 'llm' | 'config';
   setPromptTab: (tab: 'prompt' | 'llm' | 'config') => void;
 }
 
-/**
- * State & Actions for Panel: PromptPanel & ConfigurationPanel
- */
 export interface SdbRgtPromptBuilderState {
   config: GraphRagExplorerConfig;
   promptFields: PromptFields;
@@ -272,9 +240,6 @@ export interface SdbRgtPromptBuilderState {
   getFullPrompt: () => string;
 }
 
-/**
- * State & Actions for Panel: LLMExplorerChat
- */
 export interface SdbRgtLlmChatState {
   llmProvider: LlmProvider;
   llmSelectedModel: string;
@@ -302,10 +267,6 @@ export interface SdbRgtLlmChatState {
     cards: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)
   ) => void;
 }
-
-// ============================================================================
-// Consolidated Explorer Feature State Interface
-// ============================================================================
 
 export interface ExplorerState
   extends WorkflowState,
@@ -618,13 +579,41 @@ ${promptFields.samples}`;
 }));
 
 // ============================================================================
-// Store Persistence Synchronization
+// Whitelisted Persistent State Keys
+// (Prevents heavy AST graph models & chat messages from blocking main thread)
+// ============================================================================
+
+const PERSISTED_KEYS: (keyof ExplorerState)[] = [
+  'dataWorkflow',
+  'config',
+  'promptFields',
+  'transformerRules',
+  'exportFormat',
+  'maxChunk',
+  'splitChunkByFileExtension',
+  'copyAsFilesToClipboard',
+  'upstreamDepth',
+  'downstreamDepth',
+  'callersDepth',
+  'calleesDepth',
+  'enableUpstream',
+  'enableDownstream',
+  'rightPanelTab',
+  'promptTab',
+  'llmProvider',
+  'llmSelectedModel',
+  'llmTemperature',
+];
+
+// ============================================================================
+// Store Persistence Synchronization (Non-blocking Async UI Execution)
 // ============================================================================
 
 let isHydrating = false;
 let saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let lastPersistedHash = '';
 
-// 1. Read & Hydrate store from VS Code user preferences on initialization
+// 1. Read & Hydrate store from VS Code user preferences asynchronously on initialization
 const hydrateStore = async () => {
   try {
     isHydrating = true;
@@ -646,7 +635,7 @@ const hydrateStore = async () => {
 
 hydrateStore();
 
-// 2. Subscribe to store changes and save updated state
+// 2. Optimized Non-blocking subscriber using Microtasks + Whitelist filtering
 useExplorerStore.subscribe((state) => {
   if (isHydrating) return;
 
@@ -655,21 +644,33 @@ useExplorerStore.subscribe((state) => {
   }
 
   saveDebounceTimer = setTimeout(() => {
-    const payload: Record<string, any> = {};
+    // Schedule state extraction and save off the synchronous UI render cycle
+    queueMicrotask(() => {
+      const payload: Record<string, any> = {};
 
-    for (const [key, value] of Object.entries(state)) {
-      if (typeof value !== 'function') {
-        payload[key] = value;
+      for (const key of PERSISTED_KEYS) {
+        const val = state[key];
+        if (val !== undefined && typeof val !== 'function') {
+          payload[key] = val;
+        }
       }
-    }
 
-    vsCodeApiService
-      .saveUserPreferences(VsCodeSettingsKeys.graphRagExplorer.userPreferences, payload)
-      .then(() => {
-        logInfo('Saved user preferences done for store state');
-      })
-      .catch((error: any) => {
-        logError('Failed to save user preferences:', error);
-      });
-  }, 500);
+      // Fast stringify check to avoid posting unchanged payloads over VS Code postMessage RPC
+      const currentHash = JSON.stringify(payload);
+      if (currentHash === lastPersistedHash) return;
+      lastPersistedHash = currentHash;
+
+      vsCodeApiService
+        .saveUserPreferences(
+          VsCodeSettingsKeys.graphRagExplorer.userPreferences,
+          payload
+        )
+        .then(() => {
+          logInfo('Saved user preferences asynchronously for key: tokenRazor.graphRagExplorer.userPreferences');
+        })
+        .catch((error: any) => {
+          logError('Failed to save user preferences asynchronously:', error);
+        });
+    });
+  }, 600);
 });
