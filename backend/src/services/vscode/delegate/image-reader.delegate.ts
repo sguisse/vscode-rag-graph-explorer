@@ -4,6 +4,8 @@ import fs from 'fs';
 import { logError, logInfo, logWarn } from '../../../utils/utils-log';
 import { getWorkspaceRoot, getCurrentExtensionContext } from '../../../utils/utils-vscode';
 
+const IMAGE_NOT_FOUND_PATH = 'assets/image-not-found.png';
+
 const iconBase64Cache = new Map<string, string>();
 
 const MIME_TYPE_MAP: Record<string, string> = {
@@ -22,7 +24,7 @@ interface ImageResult {
 
 /**
  * Normalizes SVG tags to ensure explicit width/height attributes are present.
- *This allows the HTML5/Cytoscape <canvas> element to correctly resize the vector image.
+ * This allows the HTML5/Cytoscape <canvas> element to correctly resize the vector image.
  */
 function normalizeSvgContent(svgString: string): string {
   const svg = svgString.trim();
@@ -58,7 +60,7 @@ function normalizeSvgContent(svgString: string): string {
 }
 
 /**
- * Résout un chemin relatif, asset ou workspace vers un chemin absolu du système de fichiers.
+ * Resolves a relative, asset, or workspace path to an absolute filesystem path.
  */
 function resolveLocalFilePath(filePath: string): string {
   const cleanPath = filePath.replace(/^file:\/\//, '');
@@ -122,7 +124,7 @@ async function readLocalImage(filePath: string): Promise<ImageResult | null> {
   const resolvedPath = resolveLocalFilePath(filePath);
 
   if (!fs.existsSync(resolvedPath)) {
-    logWarn(`[image-reader.delegate] Fichier image introuvable : ${resolvedPath}`);
+    logWarn(`[image-reader.delegate] Image file not found: ${resolvedPath}`);
     return null;
   }
 
@@ -139,6 +141,7 @@ async function readLocalImage(filePath: string): Promise<ImageResult | null> {
 
 /**
  * Main delegate function: Converts any image reference to a normalized Base64 URI.
+ * Falls back to IMAGE_NOT_FOUND_PATH if image is missing or unreadable.
  */
 export async function readImageAsBase64(filePathOrUrl: string): Promise<string> {
   if (!filePathOrUrl) {
@@ -146,17 +149,23 @@ export async function readImageAsBase64(filePathOrUrl: string): Promise<string> 
   }
 
   if (iconBase64Cache.has(filePathOrUrl)) {
-    logInfo(`[image-reader.delegate]Base64 image returned from cache for : ${filePathOrUrl}`);
+    logInfo(`[image-reader.delegate] Base64 image returned from cache for: ${filePathOrUrl}`);
     return iconBase64Cache.get(filePathOrUrl)!;
   }
 
-  logInfo(`[image-reader.delegate] readImageAsBase64 invoked for : ${filePathOrUrl}`);
+  logInfo(`[image-reader.delegate] readImageAsBase64 invoked for: ${filePathOrUrl}`);
 
   try {
     const isRemote = filePathOrUrl.startsWith('http://') || filePathOrUrl.startsWith('https://');
-    const result = isRemote
+    let result = isRemote
       ? await readRemoteImage(filePathOrUrl)
       : await readLocalImage(filePathOrUrl);
+
+    // Fallback to default image if target image was not found
+    if (!result && filePathOrUrl !== IMAGE_NOT_FOUND_PATH) {
+      logWarn(`[image-reader.delegate] Image not found for '${filePathOrUrl}'. Falling back to default: ${IMAGE_NOT_FOUND_PATH}`);
+      result = await readLocalImage(IMAGE_NOT_FOUND_PATH);
+    }
 
     if (!result) {
       return '';
@@ -168,6 +177,21 @@ export async function readImageAsBase64(filePathOrUrl: string): Promise<string> 
     return dataUri;
   } catch (err) {
     logError(`[image-reader.delegate] Failed to read base64 image for ${filePathOrUrl}:`, err as Error);
+
+    // Attempt fallback in case of unexpected errors
+    if (filePathOrUrl !== IMAGE_NOT_FOUND_PATH) {
+      try {
+        const fallbackResult = await readLocalImage(IMAGE_NOT_FOUND_PATH);
+        if (fallbackResult) {
+          const dataUri = `data:${fallbackResult.mimeType};base64,${fallbackResult.buffer.toString('base64')}`;
+          iconBase64Cache.set(filePathOrUrl, dataUri);
+          return dataUri;
+        }
+      } catch {
+        // Ignore secondary fallback errors
+      }
+    }
+
     return '';
   }
 }

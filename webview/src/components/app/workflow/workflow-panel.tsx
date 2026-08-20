@@ -1,7 +1,8 @@
 import React from 'react';
-import { Focus, CheckCircle2, GitBranch, ArrowRight, Lock, HelpCircle } from 'lucide-react';
+import { Focus, CheckCircle2, GitBranch, ArrowRight, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useWorkflowPanel } from './hooks/use-workflow-panel';
+import { useAppContextStore } from '@/store/useAppContextStore';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { WorkflowData } from './model/workflow-model';
 
@@ -11,11 +12,13 @@ interface WorkflowPanelProps {
 }
 
 export function WorkflowPanel({ workflowData, onSelectStep }: WorkflowPanelProps) {
+  const isDarkMode = useAppContextStore((s) => s.isDarkMode);
   const {
     containerRef,
     workflowTitle,
     workflowDescription,
     selectedNode,
+    hoverTooltip,
     handleFitView,
   } = useWorkflowPanel(workflowData, onSelectStep);
 
@@ -47,9 +50,23 @@ export function WorkflowPanel({ workflowData, onSelectStep }: WorkflowPanelProps
         </div>
       </div>
 
-      {/* Cytoscape Canvas */}
+      {/* Cytoscape Canvas & Theme-Aware Floating Tooltip */}
       <div className="relative bg-muted/10 w-full h-[300px] overflow-hidden">
         <div ref={containerRef} className="absolute inset-0 w-full h-full" />
+
+        {hoverTooltip && (
+          <div
+            className="z-50 absolute shadow-lg px-2.5 py-1 border border-border/80 rounded-md max-w-[220px] font-mono text-[10px] truncate transition-colors -translate-x-1/2 -translate-y-full animate-in duration-150 pointer-events-none fade-in zoom-in-95"
+            style={{
+              left: `${hoverTooltip.x}px`,
+              top: `${hoverTooltip.y - 10}px`,
+              color: isDarkMode ? '#0f172a' : '#f8fafc',
+              backgroundColor: isDarkMode ? '#f8fafc' : '#0f172a',
+            }}
+          >
+            {hoverTooltip.text}
+          </div>
+        )}
       </div>
 
       {/* Step Inspector Footer */}

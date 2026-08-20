@@ -9,7 +9,6 @@ import { WorkflowData, WorkflowNode } from '../model/workflow-model';
 import { isCurrentStatus } from '../model/types/type-node';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 
-
 function sanitizeLabel(label: string): string {
   if (!label) return '';
   return label
@@ -17,9 +16,6 @@ function sanitizeLabel(label: string): string {
     .replace(/<[^>]+>/g, '');
 }
 
-/**
- * Resolves bundled assets, http/https URLs, or local /assets/ and file:// images via backend service
- */
 async function resolveIconUrlAsync(iconPath?: string): Promise<string> {
   if (!iconPath) return '';
 
@@ -27,7 +23,6 @@ async function resolveIconUrlAsync(iconPath?: string): Promise<string> {
     return iconPath;
   }
 
-  // Fallback to backend service for http, https, file://, /assets paths
   try {
     const base64Data = await vsCodeApiService.readImageAsBase64(iconPath);
     if (base64Data) {
@@ -40,6 +35,12 @@ async function resolveIconUrlAsync(iconPath?: string): Promise<string> {
   return iconPath;
 }
 
+export interface HoverTooltipState {
+  text: string;
+  x: number;
+  y: number;
+}
+
 export function useWorkflowPanel(
   workflowData: WorkflowData = defaultWorkflowData as WorkflowData,
   onSelectNode?: (nodeId: string) => void
@@ -48,6 +49,7 @@ export function useWorkflowPanel(
   const cyRef = useRef<cytoscape.Core | null>(null);
   const isDarkMode = useAppContextStore((s) => s.isDarkMode);
   const [selectedNode, setSelectedNode] = useState<WorkflowNode | null>(null);
+  const [hoverTooltip, setHoverTooltip] = useState<HoverTooltipState | null>(null);
 
   const workflow = workflowData.workflow;
 
@@ -79,6 +81,7 @@ export function useWorkflowPanel(
           icon: resolvedIcon,
           width: node.width,
           height: node.height,
+          tooltip: node.tooltip || '',
         },
         position: { x: node.x ?? 0, y: node.y ?? 0 },
       });
@@ -134,12 +137,23 @@ export function useWorkflowPanel(
     cy.on('mouseover', 'node', (evt) => {
       const node = evt.target;
       const data = node.data();
+      const pos = node.renderedPosition();
+
       if (data.clickEnabled) {
         node.addClass('hovered');
         if (containerRef.current) {
           containerRef.current.style.cursor = 'pointer';
         }
       }
+
+      if (data.tooltip) {
+        setHoverTooltip({
+          text: data.tooltip,
+          x: pos.x,
+          y: pos.y - 20,
+        });
+      }
+
       setSelectedNode({
         id: data.id,
         label: data.label,
@@ -151,15 +165,21 @@ export function useWorkflowPanel(
         icon: data.icon,
         width: data.width,
         height: data.height,
+        tooltip: data.tooltip,
       });
     });
 
     cy.on('mouseout', 'node', (evt) => {
       const node = evt.target;
       node.removeClass('hovered');
+      setHoverTooltip(null);
       if (containerRef.current) {
         containerRef.current.style.cursor = 'default';
       }
+    });
+
+    cy.on('pan zoom drag', () => {
+      setHoverTooltip(null);
     });
 
     cy.on('tap', 'node', (evt) => {
@@ -177,6 +197,7 @@ export function useWorkflowPanel(
         icon: data.icon,
         width: data.width,
         height: data.height,
+        tooltip: data.tooltip,
       });
 
       if (data.clickEnabled) {
@@ -218,6 +239,7 @@ export function useWorkflowPanel(
     workflowTitle: workflow.title,
     workflowDescription: workflow.description,
     selectedNode,
+    hoverTooltip,
     handleFitView,
   };
 }

@@ -4,7 +4,7 @@ import { getAppNormalizedNameFromPackageJson, getCurrentExtensionContext, getWor
 import { LogLevel } from '../../../../shared/services/vscode/domain/model/types';
 import { logMessageFromRemote as logMessageDelegate} from './delegate/logger.delegate';
 import { getExtensionSettings as getExtensionSettingsDelegate} from './delegate/get-extension-settings.delegate';
-import { readImageAsBase64 as readImageAsBase64Delegate } from './delegate/local-image-reader.delegate';
+import { readImageAsBase64 as readImageAsBase64Delegate } from './delegate/image-reader.delegate';
 import { VsCodeSettings } from '../../../../shared/services/vscode/domain/model/VsCodeSettings.gen';
 import { AbstractServiceAdapter } from '../../core/AbstractServiceAdapter';
 import { logChannel, logError, logInfo, logWarn } from '../../utils/utils-log';

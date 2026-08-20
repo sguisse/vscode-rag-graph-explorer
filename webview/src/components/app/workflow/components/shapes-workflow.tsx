@@ -89,7 +89,7 @@ export function getWorkflowCytoscapeStyles(isDarkMode: boolean): cytoscape.Style
         'text-max-width': '100px',
       },
     },
-    // Node Icon Styling (5px padding relative to top, bottom, and left node borders)
+    // Node Icon Styling (Centers icon if label is empty, places left with 5px padding if label exists)
     {
       selector: 'node.has-icon',
       style: {
@@ -99,21 +99,37 @@ export function getWorkflowCytoscapeStyles(isDarkMode: boolean): cytoscape.Style
           const h = typeof node.data('height') === 'number'
             ? node.data('height')
             : (node.data('type') === 'step' ? 40 : 32);
-          return `${Math.max(8, h - 10)}px`; // 5px top + 5px bottom padding = height - 10px
+          return `${Math.max(8, h - 10)}px`;
         },
         'background-height': (node: cytoscape.NodeSingular) => {
           const h = typeof node.data('height') === 'number'
             ? node.data('height')
             : (node.data('type') === 'step' ? 40 : 32);
-          return `${Math.max(8, h - 10)}px`; // 5px top + 5px bottom padding = height - 10px
+          return `${Math.max(8, h - 10)}px`;
         },
-        'background-position-x': '0%',
-        'background-offset-x': 5, // 5px padding from left border
-        'background-position-y': '50%', // Centered vertically
+        'background-position-x': (node: cytoscape.NodeSingular) => {
+          const label = node.data('label');
+          const hasText = Boolean(label && label.trim().length > 0);
+          return hasText ? '0%' : '50%';
+        },
+        'background-offset-x': (node: cytoscape.NodeSingular) => {
+          const label = node.data('label');
+          const hasText = Boolean(label && label.trim().length > 0);
+          return hasText ? 5 : 0;
+        },
+        'background-position-y': '50%',
         'background-offset-y': 0,
         'background-repeat': 'no-repeat',
-        'text-margin-x': 12,
-        'text-max-width': '55px',
+        'text-margin-x': (node: cytoscape.NodeSingular) => {
+          const label = node.data('label');
+          const hasText = Boolean(label && label.trim().length > 0);
+          return hasText ? 14 : 0;
+        },
+        'text-max-width': (node: cytoscape.NodeSingular) => {
+          const label = node.data('label');
+          const hasText = Boolean(label && label.trim().length > 0);
+          return hasText ? '55px' : '0px';
+        },
       },
     },
     // Completed Status Highlight
