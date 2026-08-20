@@ -20,7 +20,7 @@ export const DefaultContainersSize = {
   workspaceTopHeight: 100,
   workspaceLeftWidth: 280,
   workspaceRightWidth: 280,
-  workspaceBottomHeight: 40,
+  workspaceBottomHeight: 80,
 
   sidebarRightWidth: 260,
 

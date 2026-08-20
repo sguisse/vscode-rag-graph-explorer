@@ -2,17 +2,17 @@
     "workflow": {
       "title": "Context Engineering Pipeline",
       "description": "Interactive multi-branch document validation flow with automated decision checks.",
-      "initialStepId": "llm_copilot",
+      "initialStepId": "spec-kit",
       "nodes": [
         {
           "id": "start",
           "label": "Context Engineering Pipeline",
-          "desc": "BPMN Start Event: Trigger point of the pipeline.",
+          "desc": "BPMN Start Event: Trigger point of the pipeline. Reset the pipeline to start over.",
           "type": "start",
           "x": 6,
           "y": 101,
-          "status": "pending",
-          "clickEnabled": false
+          "status": "current",
+          "clickEnabled": true
         },
         {
           "id": "files_selection",
@@ -21,7 +21,7 @@
           "type": "step",
           "x": 139,
           "y": 99,
-          "status": "completed",
+          "status": "pending",
           "clickEnabled": true,
           "tooltip": "Select files in VS-Code Explorer and right-click to trigger the pipeline."
         },
@@ -50,9 +50,9 @@
           "label": "",
           "desc": "Display LLM view prefilled with files context and prompt.",
           "type": "step",
-          "x": 700,
+          "x": 704,
           "y": 34,
-          "status": "current",
+          "status": "pending",
           "clickEnabled": true,
           "icon": "assets/brands/copilot.png",
           "tooltip": "Open LLM with Copilot selected.",
@@ -64,11 +64,11 @@
           "label": "",
           "desc": "Display LLM view prefilled with files context and prompt.",
           "type": "step",
-          "x": 834,
+          "x": 829,
           "y": 35,
           "status": "pending",
           "clickEnabled": true,
-          "icon": "assets/brands/ollama-blck.svg",
+          "icon": "assets/brands/ollama-black.png",
           "width": 50,
           "height": 50
         },
@@ -102,9 +102,9 @@
           "type": "step",
           "x": 768,
           "y": 104,
-          "icon": "https://storage.googleapis.com/support-kms-prod/zY0QaDiBw6WBTWdpCduEnUxFkrkLwFvpc405",
-          "width": 70,
-          "height": 70,
+          "icon": "assets/brands/gemini-gems.png",
+          "width": 50,
+          "height": 50,
           "status": "pending",
           "clickEnabled": true
         },
@@ -122,17 +122,32 @@
           "clickEnabled": true
         },
         {
-          "id": "others",
-          "label": "Others",
-          "desc": "To be defined by customizing ...",
+          "id": "bmad",
+          "label": "",
+          "desc": "To use Specification Driven Development ...",
           "type": "step",
-          "x": 768,
-          "y": 179,
-          "status": "completed",
-          "clickEnabled": true,
-          "icon": "file:///Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-files-exporter/assets/logo-50x50.png",
-          "width": 40,
-          "height": 40
+          "x": 705,
+          "y": 178,
+          "status": "pending",
+          "clickEnabled": false,
+          "icon": "assets/brands/bmad.png",
+          "tooltip": "Not yet implemented. Coming soon.",
+          "width": 50,
+          "height": 50
+        },
+        {
+          "id": "spec-kit",
+          "label": "",
+          "desc": "To use Specification Driven Development ...",
+          "type": "step",
+          "x": 825,
+          "y": 178,
+          "status": "pending",
+          "clickEnabled": false,
+          "icon": "assets/brands/spec-kit.png",
+          "tooltip": "Not yet implemented. Coming soon.",
+          "width": 50,
+          "height": 50
         },
         {
           "id": "end",
@@ -240,8 +255,19 @@
         {
           "id": "e6",
           "source": "request_flow",
-          "target": "others",
-          "label": "???",
+          "target": "bmad",
+          "label": "SDD",
+          "lineStyle": "dashed",
+          "curveStyle": "bezier",
+          "arrowShape": "triangle",
+          "color": "#f59e0b",
+          "textColor": "#d97706"
+        },
+        {
+          "id": "e6.1",
+          "source": "bmad",
+          "target": "spec-kit",
+          "label": "Or",
           "lineStyle": "dashed",
           "curveStyle": "bezier",
           "arrowShape": "triangle",
@@ -268,7 +294,7 @@
         },
         {
           "id": "e12",
-          "source": "others",
+          "source": "spec-kit",
           "target": "end",
           "label": "Finish",
           "lineStyle": "solid",

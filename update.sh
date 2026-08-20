@@ -1,206 +1,148 @@
 #!/usr/bin/env bash
 set -e
 
-# Update local-image-reader.delegate.ts with IMAGE_NOT_FOUND_PATH fallback
-cat << 'EOF' > backend/src/services/vscode/delegate/local-image-reader.delegate.ts
-import * as vscode from 'vscode';
-import path from 'path';
-import fs from 'fs';
-import { logError, logInfo, logWarn } from '../../../utils/utils-log';
-import { getWorkspaceRoot, getCurrentExtensionContext } from '../../../utils/utils-vscode';
+# Update WorkflowPanel to apply dynamic light/dark theme colors for hover tooltips
+cat << 'EOF' > webview/src/components/app/workflow/workflow-panel.tsx
+import React from 'react';
+import { Focus, CheckCircle2, GitBranch, ArrowRight, HelpCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useWorkflowPanel } from './hooks/use-workflow-panel';
+import { useAppContextStore } from '@/store/useAppContextStore';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
+import { WorkflowData } from './model/workflow-model';
 
-const IMAGE_NOT_FOUND_PATH = 'assets/brands/image-not-found.png';
-
-const iconBase64Cache = new Map<string, string>();
-
-const MIME_TYPE_MAP: Record<string, string> = {
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.png': 'image/png',
-  '.svg': 'image/svg+xml',
-  '.gif': 'image/gif',
-  '.webp': 'image/webp',
-};
-
-interface ImageResult {
-  buffer: Buffer;
-  mimeType: string;
+interface WorkflowPanelProps {
+  workflowData?: WorkflowData;
+  onSelectStep?: (stepId: string) => void;
 }
 
-/**
- * Normalizes SVG tags to ensure explicit width/height attributes are present.
- * This allows the HTML5/Cytoscape <canvas> element to correctly resize the vector image.
- */
-function normalizeSvgContent(svgString: string): string {
-  const svg = svgString.trim();
-  const svgTagMatch = svg.match(/<svg\b[^>]*>/i);
-  if (!svgTagMatch) return svg;
+export function WorkflowPanel({ workflowData, onSelectStep }: WorkflowPanelProps) {
+  const isDarkMode = useAppContextStore((s) => s.isDarkMode);
+  const {
+    containerRef,
+    workflowTitle,
+    workflowDescription,
+    selectedNode,
+    hoverTooltip,
+    handleFitView,
+  } = useWorkflowPanel(workflowData, onSelectStep);
 
-  const svgTag = svgTagMatch[0];
-  const hasWidth = /\bwidth\s*=/i.test(svgTag);
-  const hasHeight = /\bheight\s*=/i.test(svgTag);
-  const viewBoxMatch = svgTag.match(/\bviewBox\s*=\s*["']\s*([0-9.-]+)\s+([0-9.-]+)\s+([0-9.-]+)\s+([0-9.-]+)\s*["']/i);
+  return (
+    <div className="flex flex-col w-full font-mono text-xs">
+      {/* Panel Header */}
+      <div className="flex justify-between items-center bg-muted/50 p-3 border-border/80 border-b">
+        <div className="flex items-center gap-2 min-w-0">
+          <GitBranch size={15} className="text-primary animate-pulse shrink-0" />
+          <div className="min-w-0">
+            <h4 className="font-bold text-foreground text-xs truncate leading-none">{workflowTitle}</h4>
+            <p className="mt-1 text-[10px] text-muted-foreground truncate">{workflowDescription}</p>
+          </div>
+        </div>
 
-  let widthVal = '100';
-  let heightVal = '100';
+        <div className="flex items-center gap-1.5 ml-2 shrink-0">
+          <span className="flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 border border-emerald-500/30 rounded-full font-bold text-[10px] text-emerald-500">
+            <CheckCircle2 size={11} /> All steps available
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="hover:bg-muted/80 w-6 h-6 text-muted-foreground hover:text-foreground cursor-pointer"
+            onClick={handleFitView}
+            data-tooltip="Fit Diagram View"
+          >
+            <Focus size={13} />
+          </Button>
+        </div>
+      </div>
 
-  if (viewBoxMatch) {
-    widthVal = viewBoxMatch[3];
-    heightVal = viewBoxMatch[4];
-  }
+      {/* Cytoscape Canvas & Theme-Aware Floating Tooltip */}
+      <div className="relative bg-muted/10 w-full h-[300px] overflow-hidden">
+        <div ref={containerRef} className="absolute inset-0 w-full h-full" />
 
-  let updatedSvgTag = svgTag;
+        {hoverTooltip && (
+          <div
+            className="absolute z-50 pointer-events-none border border-border/80 shadow-lg rounded-md px-2.5 py-1 text-[10px] font-mono max-w-[220px] truncate animate-in fade-in zoom-in-95 -translate-x-1/2 -translate-y-full transition-colors duration-150"
+            style={{
+              left: `${hoverTooltip.x}px`,
+              top: `${hoverTooltip.y - 10}px`,
+              color: isDarkMode ? '#f8fafc' : '#0f172a',
+              backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc',
+            }}
+          >
+            {hoverTooltip.text}
+          </div>
+        )}
+      </div>
 
-  if (!hasWidth) {
-    updatedSvgTag = updatedSvgTag.replace('>', ` width="${widthVal}">`);
-  }
-  if (!hasHeight) {
-    updatedSvgTag = updatedSvgTag.replace('>', ` height="${heightVal}">`);
-  }
-  if (!/\bpreserveAspectRatio\s*=/i.test(updatedSvgTag)) {
-    updatedSvgTag = updatedSvgTag.replace('>', ` preserveAspectRatio="xMidYMid meet">`);
-  }
+      {/* Step Inspector Footer */}
+      <div className="flex justify-between items-center bg-muted/30 p-2.5 border-border/80 border-t min-h-[58px]">
+        {selectedNode ? (
+          <div className="flex flex-1 justify-between items-center gap-2 min-w-0">
+            <div className="space-y-0.5 min-w-0">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase shrink-0 ${
+                    selectedNode.isCurrent
+                      ? 'bg-amber-500/15 text-amber-500 border border-amber-500/30'
+                      : selectedNode.type === 'start'
+                      ? 'bg-slate-500/15 text-slate-400 border border-slate-500/30'
+                      : selectedNode.type === 'end'
+                      ? 'bg-rose-500/15 text-rose-500 border border-rose-500/30'
+                      : selectedNode.type === 'decision'
+                      ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30'
+                      : 'bg-primary/10 text-primary border border-primary/20'
+                  }`}
+                >
+                  {selectedNode.isCurrent
+                    ? 'Active Step'
+                    : selectedNode.type === 'start'
+                    ? 'BPMN Start'
+                    : selectedNode.type === 'end'
+                    ? 'BPMN End'
+                    : selectedNode.type === 'decision'
+                    ? '◆ Decision Check'
+                    : 'Process Step'}
+                </span>
+                <span className="font-bold text-foreground text-xs truncate">
+                  {selectedNode.label.replace(/\n/g, ' ')}
+                </span>
+              </div>
+              <p className="text-[10px] text-muted-foreground truncate leading-snug">{selectedNode.desc}</p>
+            </div>
 
-  return svg.replace(svgTag, updatedSvgTag);
-}
-
-/**
- * Resolves a relative, asset, or workspace path to an absolute filesystem path.
- */
-function resolveLocalFilePath(filePath: string): string {
-  const cleanPath = filePath.replace(/^file:\/\//, '');
-  if (path.isAbsolute(cleanPath)) {
-    return cleanPath;
-  }
-
-  const workspaceFolders = vscode.workspace.workspaceFolders;
-  const rootPath = workspaceFolders?.[0]?.uri.fsPath || getWorkspaceRoot();
-  const extensionPath = getCurrentExtensionContext()?.extensionPath;
-
-  if ((cleanPath.startsWith('assets/') || cleanPath.startsWith('/assets/')) && extensionPath) {
-    const candidateExtensionPath = path.join(extensionPath, cleanPath.replace(/^\/?/, ''));
-    if (fs.existsSync(candidateExtensionPath)) {
-      return candidateExtensionPath;
-    }
-  }
-
-  return rootPath ? path.join(rootPath, cleanPath) : cleanPath;
-}
-
-/**
- * Determines the MIME type from the file extension.
- */
-function getMimeTypeFromExtension(filePath: string): string {
-  const ext = path.extname(filePath).toLowerCase();
-  return MIME_TYPE_MAP[ext] || 'image/png';
-}
-
-/**
- * Reads a remote image via HTTP/HTTPS.
- */
-async function readRemoteImage(url: string): Promise<ImageResult | null> {
-  const response = await fetch(url);
-  if (!response.ok) {
-    logWarn(`[image-reader.delegate] Failed to download remote image '${url}': status ${response.status}`);
-    return null;
-  }
-
-  let mimeType = 'image/png';
-  const contentType = response.headers.get('content-type');
-  if (contentType && contentType.startsWith('image/')) {
-    mimeType = contentType;
-  }
-
-  const arrayBuffer = await response.arrayBuffer();
-  let buffer = Buffer.from(arrayBuffer);
-
-  if (mimeType === 'image/svg+xml') {
-    const normalizedSvg = normalizeSvgContent(buffer.toString('utf-8'));
-    buffer = Buffer.from(normalizedSvg, 'utf-8');
-  }
-
-  return { buffer, mimeType };
-}
-
-/**
- * Reads a local image from the hard drive.
- */
-async function readLocalImage(filePath: string): Promise<ImageResult | null> {
-  const resolvedPath = resolveLocalFilePath(filePath);
-
-  if (!fs.existsSync(resolvedPath)) {
-    logWarn(`[image-reader.delegate] Image file not found: ${resolvedPath}`);
-    return null;
-  }
-
-  const mimeType = getMimeTypeFromExtension(resolvedPath);
-  let buffer = await fs.promises.readFile(resolvedPath);
-
-  if (mimeType === 'image/svg+xml') {
-    const normalizedSvg = normalizeSvgContent(buffer.toString('utf-8'));
-    buffer = Buffer.from(normalizedSvg, 'utf-8');
-  }
-
-  return { buffer, mimeType };
-}
-
-/**
- * Main delegate function: Converts any image reference to a normalized Base64 URI.
- * Falls back to IMAGE_NOT_FOUND_PATH if image is missing or unreadable.
- */
-export async function readImageAsBase64(filePathOrUrl: string): Promise<string> {
-  if (!filePathOrUrl) {
-    return '';
-  }
-
-  if (iconBase64Cache.has(filePathOrUrl)) {
-    logInfo(`[image-reader.delegate] Base64 image returned from cache for: ${filePathOrUrl}`);
-    return iconBase64Cache.get(filePathOrUrl)!;
-  }
-
-  logInfo(`[image-reader.delegate] readImageAsBase64 invoked for: ${filePathOrUrl}`);
-
-  try {
-    const isRemote = filePathOrUrl.startsWith('http://') || filePathOrUrl.startsWith('https://');
-    let result = isRemote
-      ? await readRemoteImage(filePathOrUrl)
-      : await readLocalImage(filePathOrUrl);
-
-    // Fallback to default image if target image was not found
-    if (!result && filePathOrUrl !== IMAGE_NOT_FOUND_PATH) {
-      logWarn(`[image-reader.delegate] Image not found for '${filePathOrUrl}'. Falling back to default: ${IMAGE_NOT_FOUND_PATH}`);
-      result = await readLocalImage(IMAGE_NOT_FOUND_PATH);
-    }
-
-    if (!result) {
-      return '';
-    }
-
-    const dataUri = `data:${result.mimeType};base64,${result.buffer.toString('base64')}`;
-    iconBase64Cache.set(filePathOrUrl, dataUri);
-
-    return dataUri;
-  } catch (err) {
-    logError(`[image-reader.delegate] Failed to read base64 image for ${filePathOrUrl}:`, err as Error);
-
-    // Attempt fallback in case of unexpected errors
-    if (filePathOrUrl !== IMAGE_NOT_FOUND_PATH) {
-      try {
-        const fallbackResult = await readLocalImage(IMAGE_NOT_FOUND_PATH);
-        if (fallbackResult) {
-          const dataUri = `data:${fallbackResult.mimeType};base64,${fallbackResult.buffer.toString('base64')}`;
-          iconBase64Cache.set(filePathOrUrl, dataUri);
-          return dataUri;
-        }
-      } catch {
-        // Ignore secondary fallback errors
-      }
-    }
-
-    return '';
-  }
+            <div className="ml-2 shrink-0">
+              {selectedNode.clickEnabled ? (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="gap-1 h-6 font-bold text-[10px] text-primary hover:text-primary-foreground cursor-pointer"
+                  onClick={() => {
+                    logInfo(`[WorkflowPanel] Workflow step selected via inspector button: '${selectedNode.label.replace(/\n/g, ' ')}' (ID: ${selectedNode.id})`);
+                    if (onSelectStep) {
+                      onSelectStep(selectedNode.id);
+                    }
+                  }}
+                >
+                  <span>Select Step</span>
+                  <ArrowRight size={10} />
+                </Button>
+              ) : (
+                <span className="flex items-center gap-1 opacity-50 font-bold text-[10px] text-muted-foreground">
+                  Info Only
+                </span>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground italic">
+            <HelpCircle size={12} />
+            <span>Hover or click any node/decision diamond to inspect step details.</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 EOF
 
 # Rebuild workspace
-npm run build
