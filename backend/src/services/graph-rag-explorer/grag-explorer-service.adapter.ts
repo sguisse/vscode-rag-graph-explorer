@@ -29,11 +29,13 @@ export class GraphRagExplorerAdapter extends AbstractServiceAdapter implements I
     logInfo(`Fetching change impacts for params: ${JSON.stringify(params)}`);
 
     const records: any = await this.getNeo4jService().executeCypher(`
-    // 1. Capture of all upstream and downstream paths
 // 1. Upstream and Downstream Traversal (Works for Java :SourceFile and TS :Module as both have label :File)
-CALL {
+CALL () {
   MATCH (target:File)
-  WHERE target.absolute_path = $targetPath OR target.absoluteFileName = $targetPath
+  WHERE target.absolute_path = $targetPath
+     OR target.absoluteFileName = $targetPath
+     OR target.fileName = $targetPath
+     OR $targetPath ENDS WITH replace(coalesce(target.absoluteFileName, target.fileName, target.absolute_path, ""), "./", "")
   CALL apoc.path.expandConfig(target, {
     relationshipFilter: "<DEPENDS_ON",
     labelFilter: "+File",
@@ -46,7 +48,10 @@ CALL {
   UNION
 
   MATCH (target:File)
-  WHERE target.absolute_path = $targetPath OR target.absoluteFileName = $targetPath
+  WHERE target.absolute_path = $targetPath
+     OR target.absoluteFileName = $targetPath
+     OR target.fileName = $targetPath
+     OR $targetPath ENDS WITH replace(coalesce(target.absoluteFileName, target.fileName, target.absolute_path, ""), "./", "")
   CALL apoc.path.expandConfig(target, {
     relationshipFilter: "DEPENDS_ON>",
     labelFilter: "+File",
@@ -57,40 +62,71 @@ CALL {
   RETURN path
 }
 
-// 2. Extraction and deduplication of crossed nodes and relationships
+// 2. Extraction and deduplication (Flatten relationships without dropping isolated files)
 WITH collect(path) AS allPaths
 UNWIND allPaths AS p
 UNWIND nodes(p) AS sfNode
-UNWIND relationships(p) AS relNode
 
 WITH collect(DISTINCT sfNode) AS impactedFiles,
-     collect(DISTINCT relNode) AS traversedRels
+     [pathItem IN allPaths | relationships(pathItem)] AS relArrays
 
-// 3. Aggregation of Types/Classes/Interfaces and Members (Java & TS)
+WITH impactedFiles,
+     [r IN apoc.coll.flatten(relArrays) WHERE r IS NOT NULL] AS traversedRels
+
+// 3. Aggregation of Types/Classes/Interfaces/Functions and Members (Java & TS)
 UNWIND impactedFiles AS sf
 
-// Match Java types (WITH_SOURCE -> file) OR TypeScript declarations (file -> DECLARES)
-OPTIONAL MATCH (sf)<-[:WITH_SOURCE]-(tJava:Type)
-OPTIONAL MATCH (sf)-[:DECLARES]->(tTS)
-WHERE tTS:Class OR tTS:Interface OR tTS:TypeAlias OR tTS:Enum
+// Pattern comprehensions replace OPTIONAL MATCH + collect() to eliminate null-aggregation warnings
+WITH sf, traversedRels,
+     [(sf)<-[:WITH_SOURCE|HAS_SOURCE_FILE]-(tJava:Type) WHERE NOT tJava.name CONTAINS '$' | tJava] AS javaTypes,
+     [(sf)-[:DECLARES|EXPORTS]->(tTS) WHERE (tTS:Class OR tTS:Interface OR tTS:TypeAlias OR tTS:Enum) AND NOT tTS.name CONTAINS '$' | tTS] AS tsTypes
 
-WITH sf, coalesce(tJava, tTS) AS t, traversedRels
-
-// Match Methods (Java Method or TS Method/Function) and Fields (Java Field or TS Property)
-OPTIONAL MATCH (t)-[:DECLARES]->(m) WHERE m:Method OR m:Function
-OPTIONAL MATCH (t)-[:DECLARES]->(f) WHERE f:Field OR f:Property
-
-WITH sf, t,
-     collect(DISTINCT m) AS methods,
-     collect(DISTINCT f) AS fields,
+// Pick a single primary top-level type per file (Java Type -> TS Structure -> File Node fallback)
+WITH sf,
+     coalesce(head(javaTypes), head(tsTypes), sf) AS t,
      traversedRels
+
+// Extract labels, annotations, methods/functions, and fields/properties
+WITH sf, t, traversedRels,
+     [lbl IN labels(t) WHERE NOT lbl IN ['All']] AS nodeLabels,
+     [(t)-[:ANNOTATED_BY]->()-[:OF_TYPE]->(ann:Type) WHERE ann.name IS NOT NULL | ann.name] AS annotationNames,
+
+     apoc.coll.toSet(
+       [(parent)-[:DECLARES|EXPORTS]->(m) WHERE parent IN [t, sf] AND (m:Method OR m:Function) AND NOT m.name STARTS WITH 'lambda$' | {
+         id: coalesce(m.entity_id, m.globalFqn, elementId(m)),
+         name: m.name,
+         visibility: coalesce(m.visibility, "public"),
+         signature: coalesce(m.signature, m.name),
+         summary: apoc.convert.toMap(m)['summary']
+       }]
+     ) AS methodsData,
+
+     apoc.coll.toSet(
+       [(parent)-[:DECLARES]->(f) WHERE parent IN [t, sf] AND (f:Field OR f:Property) | {
+         name: f.name,
+         visibility: coalesce(f.visibility, "public"),
+         type: coalesce(
+           HEAD([(f)-[:OF_TYPE]->(fType:Type) | coalesce(fType.fqn, fType.globalFqn, fType.name)]),
+           apoc.convert.toMap(f)['type'],
+           apoc.convert.toMap(f)['typeAnnotation'],
+           "unknown"
+         )
+       }]
+     ) AS fieldsData
+
+WITH sf, t, traversedRels, methodsData, fieldsData,
+     apoc.coll.toSet([x IN (nodeLabels + annotationNames) WHERE x IS NOT NULL AND x <> '']) AS mergedTypeLabels
+
+// Case-insensitive filter ensuring mergedTypeLabels contains "SERVICE" --> Use for dev tests only
+// WHERE ANY(lbl IN mergedTypeLabels WHERE toUpper(lbl) = 'SERVICE')
 
 // 4. Projection aligned to RawNeo4jRecord interface
 WITH sf,
-     coalesce(sf.absolute_path, sf.absoluteFileName) AS filePath,
+     coalesce(sf.absolute_path, sf.absoluteFileName, sf.fileName) AS filePath,
      t,
-     methods,
-     fields,
+     mergedTypeLabels,
+     methodsData,
+     fieldsData,
      traversedRels
 
 RETURN coalesce(sf.entity_id, sf.globalFqn, elementId(sf)) AS fileId,
@@ -101,18 +137,10 @@ RETURN coalesce(sf.entity_id, sf.globalFqn, elementId(sf)) AS fileId,
          ""
        ) AS name,
        filePath AS path,
-       labels(t) AS typeLabels,
-       coalesce(t.fqn, t.globalFqn, t.localFqn, t.name) AS fqn,
-       [m IN methods WHERE m IS NOT NULL | {
-         id: coalesce(m.entity_id, m.globalFqn, elementId(m)),
-         name: m.name,
-         signature: coalesce(m.signature, m.name),
-         summary: m.summary
-       }] AS methodsData,
-       [f IN fields WHERE f.name IS NOT NULL | {
-         name: f.name,
-         visibility: coalesce(f.visibility, "public")
-       }] AS fieldsData,
+       mergedTypeLabels AS typeLabels,
+       coalesce(t.fqn, t.globalFqn, t.localFqn, t.name, sf.fileName) AS fqn,
+       methodsData,
+       [item IN fieldsData WHERE item.name IS NOT NULL] AS fieldsData,
        [r IN traversedRels | {
          id: elementId(r),
          source: coalesce(startNode(r).entity_id, startNode(r).globalFqn, elementId(startNode(r))),

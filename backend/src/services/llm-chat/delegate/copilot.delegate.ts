@@ -45,7 +45,7 @@ export class CopilotDelegate implements ILlmProviderDelegate {
   private get client(): CopilotClient {
     if (!CopilotDelegate.clientInstance) {
       const cliPath = this.resolveNativeCliPath();
-      CopilotDelegate.clientInstance = new CopilotClient(cliPath ? { cliPath } : undefined);
+      CopilotDelegate.clientInstance = new CopilotClient(cliPath ? ({ cliPath } as any) : undefined);
     }
     return CopilotDelegate.clientInstance;
   }

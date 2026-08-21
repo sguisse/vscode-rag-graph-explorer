@@ -1,13 +1,13 @@
 {
     "workflow": {
-      "title": "Context Engineering Pipeline",
+      "title": "SDLC Pipeline",
       "description": "Interactive multi-branch document validation flow with automated decision checks.",
       "initialStepId": "spec-kit",
       "nodes": [
         {
           "id": "start",
-          "label": "Context Engineering Pipeline",
-          "desc": "BPMN Start Event: Trigger point of the pipeline. Reset the pipeline to start over.",
+          "label": "SDLC Pipeline",
+          "desc": "Start Event: Trigger point of the pipeline. Reset the pipeline to start over.",
           "type": "start",
           "x": 6,
           "y": 101,
@@ -152,7 +152,7 @@
         {
           "id": "end",
           "label": "Pipeline<br/>Completed",
-          "desc": "BPMN End Event: Context generated and ready.",
+          "desc": "End Event: Context generated and ready.",
           "type": "end",
           "x": 1070,
           "y": 95,

@@ -9,7 +9,7 @@ import {
   SelectedEntity
 } from '@/shared/services/graph-rag-explorer';
 import { FOLDER_THEME_REGISTRY_CONFIG } from '../constants/graph.constants';
-import { useCodebaseExplorerPanel } from './hooks/use-codebase-explorer-panel';
+import { useCodebaseExplorerPanel, getFileFolderKey } from './hooks/use-codebase-explorer-panel';
 
 interface TriStateCheckboxProps {
   checked: boolean;
@@ -67,7 +67,6 @@ export function CodebaseExplorerPanel({
     isImportOpen,
     setIsImportOpen,
     handleExportCodebase,
-    registeredFolders,
     allFolderKeys,
   } = useCodebaseExplorerPanel(codebase);
 
@@ -110,15 +109,13 @@ export function CodebaseExplorerPanel({
       <div id="tree-codebase-files" className="flex-1 p-4 overflow-y-auto font-mono text-xs">
         {allFolderKeys.map((folder) => {
           const theme = FOLDER_THEME_REGISTRY_CONFIG[folder] || FOLDER_THEME_REGISTRY_CONFIG.default;
-          const isRegistered = registeredFolders.includes(folder as any);
-          const folderFiles = (isRegistered
-            ? codebase.files.filter((f: CodebaseFile) => f.path.startsWith(folder))
-            : codebase.files.filter((f: CodebaseFile) => !registeredFolders.some((rf) => f.path.startsWith(rf)))
-          ).sort((a: CodebaseFile, b: CodebaseFile) =>
-            a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
-          );
+          const folderFiles = codebase.files
+            .filter((f: CodebaseFile) => getFileFolderKey(f) === folder)
+            .sort((a: CodebaseFile, b: CodebaseFile) =>
+              a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
+            );
 
-          if (folderFiles.length === 0 && !isRegistered) return null;
+          if (folderFiles.length === 0 && folder === 'other') return null;
 
           const isAllChecked = folderFiles.length > 0 && folderFiles.every((f: CodebaseFile) => visibleFiles[f.id]);
           const isSomeChecked = folderFiles.some((f: CodebaseFile) => visibleFiles[f.id]);

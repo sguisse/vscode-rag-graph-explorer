@@ -1,3 +1,5 @@
+import { log } from 'node:console';
+import { logInfo } from '../../../../../backend/src/utils/utils-log';
 import {
   CodebaseData,
   CodebaseFile,
@@ -15,12 +17,14 @@ export interface RawNeo4jRecord {
   fqn?: string;
   methodsData?: Array<{
     id: string;
+    visibility: string;
     name: string;
     signature?: string;
     summary?: string;
   }>;
   fieldsData?: Array<{
     name: string;
+    type?: string;
     visibility: string;
   }>;
   relsData?: Array<{
@@ -36,29 +40,39 @@ export function mapToCodebaseData(records: RawNeo4jRecord[]): CodebaseData {
   const dependenciesMap = new Map<string, Dependency>();
 
   for (const record of records) {
-    // 1. Identification de la langue et du type de composant
+    // 1. Identifying language and component type
     const language = inferLanguage(record.path);
     const fileType = inferFileType(record.typeLabels, record.fileName);
+    const fileScope = inferFileScope(record.typeLabels, record.fileName);
 
-    // 2. Mapping des méthodes
+    // 2. Method mapping
     const methods: CodebaseMethod[] = (record.methodsData || [])
       .filter((m) => m && m.id)
       .map((m) => ({
         id: m.id,
+        visibility: m.visibility || 'default', // By default, visibility can be set to 'default' if not provided
         name: m.name,
         signature: m.signature || undefined,
         description: m.summary || undefined,
       }));
 
-    // 3. Mapping des attributs/champs
+    // 3. Mapping attributes/fields
     const attributes: CodebaseAttribute[] = (record.fieldsData || [])
       .filter((f) => f && f.name)
       .map((f) => ({
         name: f.name,
-        visibility: f.visibility || 'private',
+        visibility: f.visibility || 'default', // By default, visibility can be set to 'default' if not provided
+        type: f.type || undefined,
       }));
 
-    // 4. Construction / Mise à jour du CodebaseFile (Dédoublonnage)
+    // 4. Mapping Tags (if any) - Assuming tags are derived from typeLabels or other properties
+    const tags: string[] = record.typeLabels || [];
+    // merge with scope
+    if (fileScope) {
+      tags.push(fileScope);
+    }
+
+    // 5. Construction / Updating the CodebaseFile (Deduplication)
     if (!filesMap.has(record.fileId)) {
       filesMap.set(record.fileId, {
         id: record.fileId || record.path,
@@ -66,13 +80,14 @@ export function mapToCodebaseData(records: RawNeo4jRecord[]): CodebaseData {
         path: record.path,
         type: fileType,
         language,
+        tags,
         methods,
         attributes,
       });
     } else {
       const existingFile = filesMap.get(record.fileId)!;
 
-      // Fusion des méthodes sans doublons
+      // Merging methods without duplicates
       const existingMethodIds = new Set(existingFile.methods?.map((m) => m.id));
       methods.forEach((m) => {
         if (!existingMethodIds.has(m.id)) {
@@ -80,7 +95,7 @@ export function mapToCodebaseData(records: RawNeo4jRecord[]): CodebaseData {
         }
       });
 
-      // Fusion des attributs
+      // Merging attributes
       const existingAttrNames = new Set(existingFile.attributes?.map((a) => a.name));
       attributes.forEach((a) => {
         if (!existingAttrNames.has(a.name)) {
@@ -89,7 +104,7 @@ export function mapToCodebaseData(records: RawNeo4jRecord[]): CodebaseData {
       });
     }
 
-    // 5. Mapping des dépendances (Relations inter-fichiers)
+    // 5. Mapping dependencies (Inter-file relations)
     if (record.relsData) {
       for (const rel of record.relsData) {
         if (rel && rel.source && rel.target && !dependenciesMap.has(rel.id)) {
@@ -109,6 +124,9 @@ export function mapToCodebaseData(records: RawNeo4jRecord[]): CodebaseData {
     }
   }
 
+  logInfo(`Mapped ${filesMap.size} unique files and ${dependenciesMap.size} unique dependencies from Neo4j records.`);
+  logInfo(`Files: ${JSON.stringify(Array.from(filesMap.values()))}`);
+
   return {
     files: Array.from(filesMap.values()),
     dependencies: Array.from(dependenciesMap.values()),
@@ -116,27 +134,63 @@ export function mapToCodebaseData(records: RawNeo4jRecord[]): CodebaseData {
 }
 
 /**
- * Déduit le type de composant à partir des labels Neo4j ou du nom de fichier
+ * Infers the component type from Neo4j labels or the file name
  */
 function inferFileType(labels?: string[], fileName?: string): string {
   if (labels) {
     if (labels.includes('Interface')) return 'interface';
     if (labels.includes('Class')) return 'class';
-    if (labels.includes('Controller') || labels.includes('RestController')) return 'component';
-    if (labels.includes('Service') || labels.includes('Repository')) return 'component';
+    if (labels.includes('Enum')) return 'enum';
+    if (labels.includes('Record')) return 'record';
   }
 
   if (fileName) {
-    if (fileName.endsWith('.properties') || fileName.endsWith('.yaml') || fileName.endsWith('.yml')) {
+    if (fileName.endsWith('.properties') || fileName.endsWith('.yaml') || fileName.endsWith('.yml') || fileName.endsWith('.json')) {
+      return 'config';
+    }
+    else if (fileName.includes('use')) {
+      return 'hook';
+    }
+    else if (fileName.includes('store')) {
+      return 'store';
+    }
+    else if (fileName.endsWith('.jsx') || fileName.endsWith('.tsx')) {
+      return 'ui-script';
+    }
+    else if (fileName.endsWith('.js') || fileName.endsWith('.ts')) {
+      return 'ui-component';
+    }
+ }
+
+  return 'file';
+}
+
+/**
+ * Define the scope of the file based on its labels or name. This is used to categorize files in the codebase.
+ */
+function inferFileScope(labels?: string[], fileName?: string): string {
+  if (labels) {
+    if (labels.includes('Java')) return 'backend';
+    if (labels.includes('TypeScript')) return 'frontend';
+  }
+
+  if (fileName) {
+    if (fileName.endsWith('.java') || fileName.endsWith('.class') || fileName.endsWith('.py') ) {
+      return 'backend';
+    }
+    else if (fileName.endsWith('.ts') || fileName.endsWith('.tsx') || fileName.endsWith('.js') || fileName.endsWith('.jsx')) {
+      return 'frontend';
+    }
+    else if (fileName.includes('config') || fileName.endsWith('.json') || fileName.endsWith('.properties') || fileName.endsWith('.yaml') || fileName.endsWith('.yml')) {
       return 'config';
     }
   }
 
-  return 'class';
+  return 'other';
 }
 
 /**
- * Déduit le langage de programmation à partir de l'extension de fichier
+ * Infers the programming language from the file extension
  */
 function inferLanguage(filePath: string): string {
   const ext = filePath.split('.').pop()?.toLowerCase();
@@ -155,6 +209,7 @@ function inferLanguage(filePath: string): string {
       return 'python';
     case 'yaml':
     case 'yml':
+    case 'json':
     case 'properties':
       return 'properties';
     default:

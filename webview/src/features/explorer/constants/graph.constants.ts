@@ -1,10 +1,11 @@
-export const FOLDER_KEYS_REGISTERED_CONFIG = ['frontend', 'backend', 'config'] as const;
+export const FOLDER_KEYS_REGISTERED_CONFIG = ['frontend', 'backend', 'config', 'other'] as const;
 export type RegisteredFolderKey = typeof FOLDER_KEYS_REGISTERED_CONFIG[number];
 
 export const FOLDER_BASE_X_POSITIONS_CONFIG: Record<RegisteredFolderKey, number> = {
   frontend: 40,
   backend: 460,
-  config: 1270
+  config: 1270,
+  other: 1600
 };
 
 export const INITIAL_VISIBLE_FILES_CONFIG: Record<string, boolean> = {

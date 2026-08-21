@@ -1,10 +1,13 @@
+import { FileType } from "./types";
+
 export interface CodebaseAttribute {
-  name: string;
   visibility: string;
+  name: string;
 }
 
 export interface CodebaseMethod {
   id: string;
+  visibility: string;
   name: string;
   signature?: string;
   description?: string;
@@ -18,11 +21,12 @@ export interface ConfigProperty {
 export interface CodebaseFile {
   id: string;
   name: string;
-  type: 'class' | 'interface' | 'component' | 'module' | 'config' | string;
+  type: FileType;
   path: string;
   language: string;
   size?: number;
   complexity?: number;
+  tags?: string[];
   attributes?: CodebaseAttribute[];
   methods?: CodebaseMethod[];
   configProperties?: ConfigProperty[];

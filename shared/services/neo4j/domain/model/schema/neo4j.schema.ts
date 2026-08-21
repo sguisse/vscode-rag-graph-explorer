@@ -62,11 +62,12 @@ export class CodebaseSchema {
               complexity: this.numberProp(),
               attributes: this.arrayOfObjects({
                 name: this.stringProp(),
-                visibility: this.stringProp(['private', 'public', 'protected']),
+                visibility: this.stringProp(['', 'private', 'public', 'protected']),
               }),
               methods: this.arrayOfObjects({
                 id: this.stringProp(),
                 name: this.stringProp(),
+                visibility: this.stringProp(['', 'private', 'public', 'protected']),
                 description: this.stringProp(),
               }),
               configProperties: this.arrayOfObjects({

@@ -254,7 +254,7 @@ function runPythonScan(mode: string, targetFile: string = "") {
         runnerScript,
         [],
         { cwd: workspaceRoot },
-        120_000
+        500_000
     );
     activeChildProcess = child;
 
