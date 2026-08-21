@@ -54,7 +54,7 @@ export function TabsFilesContextContainer({
           Transformer
         </Button>
       </div>
-      <div className="flex-1 p-4 overflow-y-auto text-xs">
+      <div className="flex-1 p-2 overflow-y-auto text-xs">
         {rightPanelTab === 'files_context' && (
           <FilesContextPanel
             initialCodebase={initialCodebase}

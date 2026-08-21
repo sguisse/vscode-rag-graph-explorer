@@ -79,63 +79,63 @@ export function FilesContextPanel({
   );
 
   const topContent = (
-    <div className="space-y-2 mb-2 w-full">
-      <div className="space-y-3 bg-card p-4 border border-border rounded-lg w-full">
+    <div className="space-y-1.5 mb-1 w-full">
+      <div className="space-y-1 bg-card p-1.5 border border-border rounded-lg w-full">
         <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <FileText size={16} className="text-primary" />
+          <div className="flex items-center gap-1.5">
+            <FileText size={14} className="text-primary" />
             <h4 className="font-mono font-bold text-foreground text-xs uppercase tracking-wider">
               Unified Files Context
             </h4>
           </div>
         </div>
 
-        <div className="gap-2 grid grid-cols-4 text-center">
-          <div className="bg-muted/40 p-2 border border-border/50 rounded">
-            <span className="block text-[9px] text-muted-foreground truncate uppercase">Total Files</span>
+        <div className="gap-1.5 grid grid-cols-4 text-center">
+          <div className="bg-muted/40 p-1 border border-border/50 rounded">
+            <span className="block text-[9px] text-muted-foreground truncate uppercase">Total</span>
             <span className="font-bold text-foreground text-xs">{initialCodebase?.files?.length || 0}</span>
           </div>
-          <div className="bg-indigo-500/10 p-2 border border-indigo-500/20 rounded">
+          <div className="bg-indigo-500/10 p-1 border border-indigo-500/20 rounded">
             <span className="block text-[9px] text-indigo-500 truncate uppercase">Upstream</span>
             <span className="font-bold text-indigo-500 text-xs">{upstreamCount}</span>
           </div>
-          <div className="bg-blue-500/10 p-2 border border-blue-500/20 rounded">
+          <div className="bg-blue-500/10 p-1 border border-blue-500/20 rounded">
             <span className="block text-[9px] text-blue-500 truncate uppercase">Downstream</span>
             <span className="font-bold text-blue-500 text-xs">{downstreamCount}</span>
           </div>
-          <div className="bg-yellow-500/10 p-2 border border-yellow-500/30 rounded">
+          <div className="bg-yellow-500/10 p-1 border border-yellow-500/30 rounded">
             <span className="block text-[9px] text-yellow-600 dark:text-yellow-400 truncate uppercase">Token Size</span>
-            <span className="font-bold text-yellow-600 dark:text-yellow-400 text-xs">{(totalFilesContext.length / 1024).toFixed(1)} KB</span>
+            <span className="font-bold text-yellow-600 dark:text-yellow-400 text-xs">{(totalFilesContext.length / 1024).toFixed(1)}&nbsp;KB</span>
           </div>
         </div>
       </div>
 
-      <div className="space-y-2 bg-muted/30 p-3 border border-border rounded-lg w-full">
+      <div className="space-y-1.5 bg-muted/30 p-1.5 border border-border rounded-lg w-full">
         <div className="flex justify-between items-center">
-          <label className="font-mono font-bold text-[11px] text-muted-foreground uppercase">Impact Propagation</label>
-          <span className="bg-amber-500/10 px-2 py-0.5 border border-amber-500/30 rounded font-mono text-[10px] text-amber-500">Transitive BFS</span>
+          <label className="font-mono font-bold text-[10px] text-muted-foreground uppercase">Impact Propagation</label>
+          <span className="bg-amber-500/10 px-1.5 py-0.2 border border-amber-500/30 rounded font-mono text-[9px] text-amber-500">Transitive BFS</span>
         </div>
-        <div className="gap-2 grid grid-cols-2">
+        <div className="gap-1.5 grid grid-cols-2">
           <Button
             onClick={() => setEnableUpstream((prev) => !prev)}
-            className={`flex items-center justify-center gap-1.5 py-2 px-3 font-mono text-xs font-bold rounded border transition-all h-9 cursor-pointer ${
+            className={`flex items-center justify-center gap-1.5 py-1 px-2 font-mono text-xs font-bold rounded border transition-all h-7.5 cursor-pointer ${
               enableUpstream
-                ? 'bg-orange-500 border-orange-400 text-white shadow-md'
+                ? 'bg-orange-500 border-orange-400 text-white shadow-xs'
                 : 'bg-muted border-border text-foreground hover:bg-muted/80'
             }`}
           >
-            <GitFork size={13} />
+            <GitFork size={12} />
             Upstream ({upstreamCount})
           </Button>
           <Button
             onClick={() => setEnableDownstream((prev) => !prev)}
-            className={`flex items-center justify-center gap-1.5 py-2 px-3 font-mono text-xs font-bold rounded border transition-all h-9 cursor-pointer ${
+            className={`flex items-center justify-center gap-1.5 py-1 px-2 font-mono text-xs font-bold rounded border transition-all h-7.5 cursor-pointer ${
               enableDownstream
-                ? 'bg-orange-500 border-orange-400 text-white shadow-md'
+                ? 'bg-orange-500 border-orange-400 text-white shadow-xs'
                 : 'bg-muted border-border text-foreground hover:bg-muted/80'
             }`}
           >
-            <GitFork size={13} className="rotate-180" />
+            <GitFork size={12} className="rotate-180" />
             Downstream ({downstreamCount})
           </Button>
         </div>
@@ -144,19 +144,19 @@ export function FilesContextPanel({
   );
 
   const middleContent = (
-    <div className="flex flex-col h-full py-2 pr-1 w-full font-mono text-xs">
-      <div className="flex flex-col flex-1 space-y-3 bg-orange-500/5 p-4 border border-orange-500/25 rounded-lg min-h-0 h-full">
+    <div className="flex flex-col py-1 pr-0 w-full h-full font-mono text-xs">
+      <div className="flex flex-col flex-1 space-y-2 bg-orange-500/5 p-2 border border-orange-500/25 rounded-lg h-full min-h-0">
         <div className="flex justify-between items-center shrink-0">
           <div className="flex items-center gap-1.5">
             <ShieldAlert size={14} className="text-orange-500" />
             <h5 className="font-mono font-bold text-orange-500 text-xs">Fluorescent Impact Plan</h5>
           </div>
-          <span className="bg-orange-500/10 px-2 py-0.5 border border-orange-500/20 rounded font-mono font-bold text-[10px] text-orange-500">
+          <span className="bg-orange-500/10 px-1.5 py-0.2 border border-orange-500/20 rounded font-mono font-bold text-[10px] text-orange-500">
             {selectedCount} Selected
           </span>
         </div>
 
-        <div className="flex-1 space-y-2 pr-1 min-h-0 overflow-y-auto">
+        <div className="flex-1 space-y-1.5 pr-1 min-h-0 overflow-y-auto">
           {depthGroups.length === 0 ? (
             <div className="py-2 text-[11px] text-muted-foreground text-center italic">
               No impacted files or selected target entity.
@@ -172,7 +172,7 @@ export function FilesContextPanel({
 
               return (
                 <div key={group.key} className={`border ${style.border} rounded-md bg-background/60 overflow-hidden`}>
-                  <div className={`flex items-center justify-between px-2 py-1.5 ${style.bgHeader} select-none`}>
+                  <div className={`flex items-center justify-between px-1.5 py-1 ${style.bgHeader} select-none`}>
                     <div className="flex flex-1 items-center gap-1.5 min-w-0">
                       <TriStateCheckbox
                         checked={isAllChecked}
@@ -192,20 +192,20 @@ export function FilesContextPanel({
                         <span className={`text-[11px] truncate ${style.text}`}>{group.label}</span>
                       </div>
                     </div>
-                    <span className="bg-muted ml-2 px-1.5 py-0.5 rounded font-mono text-[9px] text-muted-foreground">
+                    <span className="bg-muted ml-2 px-1.5 py-0.2 rounded font-mono text-[9px] text-muted-foreground">
                       {groupFiles.filter((f) => selectedFiles[f.id]).length}/{groupFiles.length}
                     </span>
                   </div>
 
                   {isExpanded && (
-                    <div className="space-y-1 bg-background/40 p-1">
+                    <div className="space-y-0.5 bg-background/40 p-1">
                       {groupFiles.map((file) => {
                         const fileSizeKb = (((file as any).size || (file as any).content?.length || 0) / 1024).toFixed(1);
 
                         return (
                           <div
                             key={file.id}
-                            className="flex justify-between items-center hover:bg-muted/50 px-2 py-1 rounded transition-colors"
+                            className="flex justify-between items-center hover:bg-muted/50 px-1.5 py-0.5 rounded transition-colors"
                           >
                             <div className="flex flex-1 items-center gap-1.5 min-w-0">
                               <input
@@ -225,11 +225,11 @@ export function FilesContextPanel({
                             </div>
 
                             <div className="flex items-center gap-1.5 ml-2 shrink-0">
-                              <span className="bg-muted px-1.5 py-0.5 rounded text-[9px] text-muted-foreground">
+                              <span className="bg-muted px-1.5 py-0.2 rounded text-[9px] text-muted-foreground">
                                 {file.language || 'unknown'}
                               </span>
-                              <span className="bg-muted px-1.5 py-0.5 rounded font-mono text-[9px] text-muted-foreground">
-                                {fileSizeKb} KB
+                              <span className="bg-muted px-1.5 py-0.2 rounded font-mono text-[9px] text-muted-foreground">
+                                {fileSizeKb}&nbsp;KB
                               </span>
                             </div>
                           </div>
@@ -247,39 +247,39 @@ export function FilesContextPanel({
   );
 
   const bottomContent = (
-    <div className="space-y-2 mt-2 w-full">
-      <div className="space-y-3 bg-card p-4 border border-border rounded-lg w-full">
+    <div className="space-y-1.5 mt-1 w-full">
+      <div className="space-y-1 bg-card p-1.5 border border-border rounded-lg w-full">
         <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <FileText size={16} className="text-primary" />
+          <div className="flex items-center gap-1.5">
+            <FileText size={14} className="text-primary" />
             <h4 className="font-mono font-bold text-foreground text-xs uppercase tracking-wider">
               Selected Files Context
             </h4>
           </div>
         </div>
 
-        <div className="gap-2 grid grid-cols-4 text-center">
-          <div className="bg-orange-500/10 p-2 border border-orange-500/20 rounded">
+        <div className="gap-1.5 grid grid-cols-4 text-center">
+          <div className="bg-orange-500/10 p-1 border border-orange-500/20 rounded">
             <span className="block text-[9px] text-orange-500 truncate uppercase">Selected</span>
             <span className="font-bold text-orange-500 text-xs">{selectedCount}</span>
           </div>
-          <div className="bg-indigo-500/10 p-2 border border-indigo-500/20 rounded">
+          <div className="bg-indigo-500/10 p-1 border border-indigo-500/20 rounded">
             <span className="block text-[9px] text-indigo-500 truncate uppercase">Upstream</span>
             <span className="font-bold text-indigo-500 text-xs">{selectedUpstreamCount}</span>
           </div>
-          <div className="bg-blue-500/10 p-2 border border-blue-500/20 rounded">
+          <div className="bg-blue-500/10 p-1 border border-blue-500/20 rounded">
             <span className="block text-[9px] text-blue-500 truncate uppercase">Downstream</span>
             <span className="font-bold text-blue-500 text-xs">{selectedDownstreamCount}</span>
           </div>
 
-          <div className="bg-emerald-500/10 p-2 border border-emerald-500/20 rounded">
+          <div className="bg-emerald-500/10 p-1 border border-emerald-500/20 rounded">
             <span className="block text-[9px] text-emerald-500 truncate uppercase">Token Size</span>
             <span className="font-bold text-emerald-500 text-xs">{(combinedSelectedFilesContext.length / 1024).toFixed(1)} KB</span>
           </div>
         </div>
       </div>
 
-      <div className="bg-background pt-2 w-full">
+      <div className="bg-background pt-1 w-full">
         <FilesCtxExportPanel targetFilePaths={targetFilePaths} handleCopy={handleCopy} />
       </div>
     </div>

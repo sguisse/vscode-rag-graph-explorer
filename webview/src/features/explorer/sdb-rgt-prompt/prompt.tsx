@@ -177,10 +177,10 @@ export function PromptPanel({ handleCopy }: PromptPanelProps) {
 
   const bottomContent = (
     <div className="space-y-2 bg-background pt-2 border-border border-t w-full">
-      <div className="flex items-center gap-3 bg-card p-2.5 border border-border rounded-lg w-full">
+      <div className="flex items-center gap-3 bg-card p-2 border border-border rounded-lg w-full">
         <div className="flex-1 space-y-1 min-w-0">
-          <label className="block font-bold text-[10px] text-muted-foreground uppercase">
-            TEMPLATE
+          <label className="block font-bold text-[10px] text-muted-foreground">
+            Template
           </label>
           <Select
             value={selectedTemplateId}

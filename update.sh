@@ -1,445 +1,308 @@
 #!/usr/bin/env bash
 set -e
 
-echo "📦 Fixing path stripping and compacting common root package chains into a single compressed node..."
+echo "🎨 Compacting block padding and margins in FilesContextPanel..."
 
-mkdir -p webview/src/features/explorer/wkp-lft-codebase-tree/hooks
+mkdir -p webview/src/features/explorer/wkp-rgt-tabs-files-context
 
-cat << 'EOF' > webview/src/features/explorer/wkp-lft-codebase-tree/hooks/use-codebase-explorer-panel.ts
-import { useState, useMemo } from 'react';
-import { CodebaseData, CodebaseFile } from '@/shared/services/graph-rag-explorer';
-import { FOLDER_KEYS_REGISTERED_CONFIG } from '../../constants/graph.constants';
+cat << 'EOF' > webview/src/features/explorer/wkp-rgt-tabs-files-context/files-context.tsx
+import React, { useEffect, useRef } from 'react';
+import { GitFork, FileText, ShieldAlert, ChevronDown, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
+import { CodebaseData, SelectedEntity } from '@/shared/services/graph-rag-explorer';
+import { FilesCtxExportPanel } from '../components/files-ctx-export/files-ctx-export-panel';
+import { useFilesContext } from './hooks/use-files-context';
 
-export type ViewMode = 'scope' | 'folder' | 'tags' | 'package' | 'typology';
-
-export const ALLOWED_TAGS = [
-  'frontend', 'backend', 'config', 'api', 'database', 'ui', 'core', 'model',
-  'Service', 'Controller', 'Repository', 'Component', 'RestController', 'Config',
-  'Model / Entity', 'DTO', 'Utility', 'Helper', 'Test', 'Integration', 'UnitTest',
-  'FunctionalTest', 'PerformanceTest', 'SecurityTest', 'AcceptanceTest', 'EndToEndTest',
-  'Mock', 'Stub', 'Adapter', 'Decorator', 'Factory', 'Builder', 'Singleton',
-  'Observer', 'Strategy', 'Command', 'Mediator', 'Proxy', 'Visitor'
-];
-export const PACKAGE_GROUPS = ["domain.model", "application", "infrastructure", "domain"];
-export const TYPOLOGY_GROUPS = [
-  "Front-Component",
-  "Component",
-  "Service",
-  "RestController",
-  "Controller",
-  "Repository",
-  "Config",
-  "Model / Entity"
-];
-
-export interface FolderTreeNode {
-  id: string;
-  name: string;
-  folderPath: string;
-  files: CodebaseFile[];
-  children: FolderTreeNode[];
+interface FilesContextPanelProps {
+  initialCodebase: CodebaseData;
+  selectedEntity: SelectedEntity | null;
+  enableDownstream: boolean;
+  setEnableDownstream: React.Dispatch<React.SetStateAction<boolean>>;
+  enableUpstream: boolean;
+  setEnableUpstream: React.Dispatch<React.SetStateAction<boolean>>;
+  impactedSet: Set<string>;
+  handleCopy: (text: string, message: string) => void;
 }
 
-export interface SubFolderGroup {
-  key: string;
-  label: string;
-  folderPath: string;
-  files: CodebaseFile[];
+interface TriStateCheckboxProps {
+  checked: boolean;
+  indeterminate: boolean;
+  onChange: () => void;
+  className?: string;
 }
 
-export interface ScopeGroup {
-  key: string;
-  label: string;
-  folderPath: string;
-  files: CodebaseFile[];
-  rootFiles?: CodebaseFile[];
-  subFolders?: SubFolderGroup[];
-  folderTree?: FolderTreeNode[];
-}
+function TriStateCheckbox({ checked, indeterminate, onChange, className }: TriStateCheckboxProps) {
+  const checkboxRef = useRef<HTMLInputElement>(null);
 
-export function getCommonFolderPath(files: CodebaseFile[]): string {
-  if (!files || files.length === 0) return '';
-
-  const fileDirPaths = files
-    .map((f) => {
-      const p = f.path || '';
-      const lastSlash = p.lastIndexOf('/');
-      return lastSlash >= 0 ? p.substring(0, lastSlash) : '';
-    })
-    .filter(Boolean);
-
-  if (fileDirPaths.length === 0) return '';
-
-  const splitDirs = fileDirPaths.map((d) => d.split('/'));
-  let commonParts: string[] = [...splitDirs[0]];
-
-  for (let i = 1; i < splitDirs.length; i++) {
-    const current = splitDirs[i];
-    let j = 0;
-    while (j < commonParts.length && j < current.length && commonParts[j] === current[j]) {
-      j++;
+  useEffect(() => {
+    if (checkboxRef.current) {
+      checkboxRef.current.indeterminate = indeterminate;
     }
-    commonParts = commonParts.slice(0, j);
-    if (commonParts.length === 0) break;
-  }
+  }, [indeterminate]);
 
-  return commonParts.join('/');
+  return (
+    <input
+      ref={checkboxRef}
+      type="checkbox"
+      checked={checked}
+      onChange={onChange}
+      className={className}
+    />
+  );
 }
 
-export function resolvePhysicalFolderPath(file: CodebaseFile, partName: string, fallbackScope: string): string {
-  if (!file || !file.path) return fallbackScope;
+export function FilesContextPanel({
+  initialCodebase,
+  selectedEntity,
+  enableDownstream,
+  setEnableDownstream,
+  enableUpstream,
+  setEnableUpstream,
+  impactedSet,
+  handleCopy
+}: FilesContextPanelProps) {
+  const {
+    downstreamCount,
+    upstreamCount,
+    depthGroups,
+    getGroupStyle,
+    selectedFiles,
+    expandedGroups,
+    toggleGroupCheckbox,
+    toggleFileCheckbox,
+    toggleGroupExpand,
+    selectedCount,
+    selectedUpstreamCount,
+    selectedDownstreamCount,
+    totalFilesContext,
+    combinedSelectedFilesContext,
+    targetFilePaths,
+  } = useFilesContext(
+    initialCodebase,
+    selectedEntity,
+    enableDownstream,
+    enableUpstream,
+    impactedSet
+  );
 
-  const lastSlash = file.path.lastIndexOf('/');
-  const fileDir = lastSlash >= 0 ? file.path.substring(0, lastSlash) : file.path;
+  const topContent = (
+    <div className="space-y-1.5 mb-1 w-full">
+      <div className="space-y-1 bg-card p-1.5 border border-border rounded-lg w-full">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-1.5">
+            <FileText size={14} className="text-primary" />
+            <h4 className="font-mono font-bold text-foreground text-xs uppercase tracking-wider">
+              Unified Files Context
+            </h4>
+          </div>
+        </div>
 
-  if (!partName || partName === fallbackScope) {
-    return fileDir.startsWith(fallbackScope) ? fallbackScope : fileDir;
-  }
+        <div className="gap-1.5 grid grid-cols-4 text-center">
+          <div className="bg-muted/40 p-1 border border-border/50 rounded">
+            <span className="block text-[9px] text-muted-foreground truncate uppercase">Total Files</span>
+            <span className="font-bold text-foreground text-xs">{initialCodebase?.files?.length || 0}</span>
+          </div>
+          <div className="bg-indigo-500/10 p-1 border border-indigo-500/20 rounded">
+            <span className="block text-[9px] text-indigo-500 truncate uppercase">Upstream</span>
+            <span className="font-bold text-indigo-500 text-xs">{upstreamCount}</span>
+          </div>
+          <div className="bg-blue-500/10 p-1 border border-blue-500/20 rounded">
+            <span className="block text-[9px] text-blue-500 truncate uppercase">Downstream</span>
+            <span className="font-bold text-blue-500 text-xs">{downstreamCount}</span>
+          </div>
+          <div className="bg-yellow-500/10 p-1 border border-yellow-500/30 rounded">
+            <span className="block text-[9px] text-yellow-600 dark:text-yellow-400 truncate uppercase">Token Size</span>
+            <span className="font-bold text-yellow-600 dark:text-yellow-400 text-xs">{(totalFilesContext.length / 1024).toFixed(1)} KB</span>
+          </div>
+        </div>
+      </div>
 
-  const slashPart = partName.replace(/\./g, '/');
+      <div className="space-y-1.5 bg-muted/30 p-1.5 border border-border rounded-lg w-full">
+        <div className="flex justify-between items-center">
+          <label className="font-mono font-bold text-[10px] text-muted-foreground uppercase">Impact Propagation</label>
+          <span className="bg-amber-500/10 px-1.5 py-0.2 border border-amber-500/30 rounded font-mono text-[9px] text-amber-500">Transitive BFS</span>
+        </div>
+        <div className="gap-1.5 grid grid-cols-2">
+          <Button
+            onClick={() => setEnableUpstream((prev) => !prev)}
+            className={`flex items-center justify-center gap-1.5 py-1 px-2 font-mono text-xs font-bold rounded border transition-all h-7.5 cursor-pointer ${
+              enableUpstream
+                ? 'bg-orange-500 border-orange-400 text-white shadow-xs'
+                : 'bg-muted border-border text-foreground hover:bg-muted/80'
+            }`}
+          >
+            <GitFork size={12} />
+            Upstream ({upstreamCount})
+          </Button>
+          <Button
+            onClick={() => setEnableDownstream((prev) => !prev)}
+            className={`flex items-center justify-center gap-1.5 py-1 px-2 font-mono text-xs font-bold rounded border transition-all h-7.5 cursor-pointer ${
+              enableDownstream
+                ? 'bg-orange-500 border-orange-400 text-white shadow-xs'
+                : 'bg-muted border-border text-foreground hover:bg-muted/80'
+            }`}
+          >
+            <GitFork size={12} className="rotate-180" />
+            Downstream ({downstreamCount})
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
 
-  const idx = fileDir.indexOf(slashPart);
-  if (idx !== -1) {
-    return fileDir.substring(0, idx + slashPart.length);
-  }
+  const middleContent = (
+    <div className="flex flex-col py-1 pr-1 w-full h-full font-mono text-xs">
+      <div className="flex flex-col flex-1 space-y-2 bg-orange-500/5 p-2 border border-orange-500/25 rounded-lg h-full min-h-0">
+        <div className="flex justify-between items-center shrink-0">
+          <div className="flex items-center gap-1.5">
+            <ShieldAlert size={14} className="text-orange-500" />
+            <h5 className="font-mono font-bold text-orange-500 text-xs">Fluorescent Impact Plan</h5>
+          </div>
+          <span className="bg-orange-500/10 px-1.5 py-0.2 border border-orange-500/20 rounded font-mono font-bold text-[10px] text-orange-500">
+            {selectedCount} Selected
+          </span>
+        </div>
 
-  const lastSegmentIdx = fileDir.lastIndexOf('/' + partName);
-  if (lastSegmentIdx !== -1) {
-    return fileDir.substring(0, lastSegmentIdx + partName.length + 1);
-  }
+        <div className="flex-1 space-y-1.5 pr-1 min-h-0 overflow-y-auto">
+          {depthGroups.length === 0 ? (
+            <div className="py-2 text-[11px] text-muted-foreground text-center italic">
+              No impacted files or selected target entity.
+            </div>
+          ) : (
+            depthGroups.map((group) => {
+              const groupFiles = group.files;
+              const isAllChecked = groupFiles.length > 0 && groupFiles.every((f) => selectedFiles[f.id]);
+              const isSomeChecked = groupFiles.some((f) => selectedFiles[f.id]);
+              const isIndeterminate = isSomeChecked && !isAllChecked;
+              const isExpanded = expandedGroups[group.key] ?? true;
+              const style = getGroupStyle(group.key);
 
-  return fileDir;
-}
+              return (
+                <div key={group.key} className={`border ${style.border} rounded-md bg-background/60 overflow-hidden`}>
+                  <div className={`flex items-center justify-between px-1.5 py-1 ${style.bgHeader} select-none`}>
+                    <div className="flex flex-1 items-center gap-1.5 min-w-0">
+                      <TriStateCheckbox
+                        checked={isAllChecked}
+                        indeterminate={isIndeterminate}
+                        onChange={() => toggleGroupCheckbox(group.key, groupFiles)}
+                        className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
+                      />
+                      <div
+                        className="flex flex-1 items-center gap-1 min-w-0 cursor-pointer"
+                        onClick={() => toggleGroupExpand(group.key)}
+                      >
+                        {isExpanded ? (
+                          <ChevronDown size={14} className={`${style.icon} shrink-0`} />
+                        ) : (
+                          <ChevronRight size={14} className={`${style.icon} shrink-0`} />
+                        )}
+                        <span className={`text-[11px] truncate ${style.text}`}>{group.label}</span>
+                      </div>
+                    </div>
+                    <span className="bg-muted ml-2 px-1.5 py-0.2 rounded font-mono text-[9px] text-muted-foreground">
+                      {groupFiles.filter((f) => selectedFiles[f.id]).length}/{groupFiles.length}
+                    </span>
+                  </div>
 
-export function getFileFolderKey(file: CodebaseFile): string {
-  const tags = file.tags as any;
-  if (Array.isArray(tags)) {
-    if (tags.includes('frontend')) return 'frontend';
-    if (tags.includes('backend')) return 'backend';
-    if (tags.includes('config')) return 'config';
-  } else if (typeof tags === 'string') {
-    if (tags.includes('frontend')) return 'frontend';
-    if (tags.includes('backend')) return 'backend';
-    if (tags.includes('config')) return 'config';
-  }
-  if (file.path?.startsWith('frontend')) return 'frontend';
-  if (file.path?.startsWith('backend')) return 'backend';
-  if (file.path?.startsWith('config')) return 'config';
-  return 'other';
-}
+                  {isExpanded && (
+                    <div className="space-y-0.5 bg-background/40 p-1">
+                      {groupFiles.map((file) => {
+                        const fileSizeKb = (((file as any).size || (file as any).content?.length || 0) / 1024).toFixed(1);
 
-export function cleanRelativeFilePath(file: CodebaseFile): string {
-  const filePath = file.path || '';
-  if (!filePath) return '';
+                        return (
+                          <div
+                            key={file.id}
+                            className="flex justify-between items-center hover:bg-muted/50 px-1.5 py-0.5 rounded transition-colors"
+                          >
+                            <div className="flex flex-1 items-center gap-1.5 min-w-0">
+                              <input
+                                type="checkbox"
+                                checked={!!selectedFiles[file.id]}
+                                onChange={() => toggleFileCheckbox(file.id)}
+                                className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
+                              />
+                              <span
+                                className={`truncate text-[11px] cursor-pointer ${
+                                  selectedFiles[file.id] ? 'font-semibold text-foreground' : 'text-muted-foreground line-through'
+                                }`}
+                                onClick={() => toggleFileCheckbox(file.id)}
+                              >
+                                {file.name}
+                              </span>
+                            </div>
 
-  let relative = filePath;
+                            <div className="flex items-center gap-1.5 ml-2 shrink-0">
+                              <span className="bg-muted px-1.5 py-0.2 rounded text-[9px] text-muted-foreground">
+                                {file.language || 'unknown'}
+                              </span>
+                              <span className="bg-muted px-1.5 py-0.2 rounded font-mono text-[9px] text-muted-foreground">
+                                {fileSizeKb} KB
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
 
-  // 1. Check for standard source folder markers
-  const srcMarkers = [
-    '/src/main/java/', 'src/main/java/',
-    '/src/test/java/', 'src/test/java/',
-    '/src/main/kotlin/', 'src/main/kotlin/',
-    '/src/test/kotlin/', 'src/test/kotlin/',
-    '/src/main/resources/', 'src/main/resources/',
-    '/src/test/resources/', 'src/test/resources/',
-    '/src/', 'src/'
-  ];
+  const bottomContent = (
+    <div className="space-y-1.5 mt-1 w-full">
+      <div className="space-y-1 bg-card p-1.5 border border-border rounded-lg w-full">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-1.5">
+            <FileText size={14} className="text-primary" />
+            <h4 className="font-mono font-bold text-foreground text-xs uppercase tracking-wider">
+              Selected Files Context
+            </h4>
+          </div>
+        </div>
 
-  let found = false;
-  for (const marker of srcMarkers) {
-    const idx = relative.indexOf(marker);
-    if (idx !== -1) {
-      relative = relative.substring(idx + marker.length);
-      found = true;
-      break;
-    }
-  }
+        <div className="gap-1.5 grid grid-cols-4 text-center">
+          <div className="bg-orange-500/10 p-1 border border-orange-500/20 rounded">
+            <span className="block text-[9px] text-orange-500 truncate uppercase">Selected</span>
+            <span className="font-bold text-orange-500 text-xs">{selectedCount}</span>
+          </div>
+          <div className="bg-indigo-500/10 p-1 border border-indigo-500/20 rounded">
+            <span className="block text-[9px] text-indigo-500 truncate uppercase">Upstream</span>
+            <span className="font-bold text-indigo-500 text-xs">{selectedUpstreamCount}</span>
+          </div>
+          <div className="bg-blue-500/10 p-1 border border-blue-500/20 rounded">
+            <span className="block text-[9px] text-blue-500 truncate uppercase">Downstream</span>
+            <span className="font-bold text-blue-500 text-xs">{selectedDownstreamCount}</span>
+          </div>
 
-  // 2. If no src marker found, strip absolute path prefixes by locating common Java root package prefixes
-  if (!found) {
-    const pkgMarkers = ['/com/', 'com/', '/org/', 'org/', '/net/', 'net/', '/io/', 'io/', '/fr/', 'fr/', '/de/', 'de/'];
-    for (const marker of pkgMarkers) {
-      const idx = relative.indexOf(marker);
-      if (idx !== -1) {
-        const cleanMarker = marker.startsWith('/') ? marker.substring(1) : marker;
-        relative = cleanMarker + relative.substring(idx + marker.length);
-        found = true;
-        break;
-      }
-    }
-  }
+          <div className="bg-emerald-500/10 p-1 border border-emerald-500/20 rounded">
+            <span className="block text-[9px] text-emerald-500 truncate uppercase">Token Size</span>
+            <span className="font-bold text-emerald-500 text-xs">{(combinedSelectedFilesContext.length / 1024).toFixed(1)} KB</span>
+          </div>
+        </div>
+      </div>
 
-  // 3. Fallback: check scope markers
-  if (!found) {
-    const scopeMarkers = ['/frontend/', 'frontend/', '/backend/', 'backend/', '/config/', 'config/'];
-    for (const marker of scopeMarkers) {
-      const idx = relative.indexOf(marker);
-      if (idx !== -1) {
-        relative = relative.substring(idx + marker.length);
-        found = true;
-        break;
-      }
-    }
-  }
+      <div className="bg-background pt-1 w-full">
+        <FilesCtxExportPanel targetFilePaths={targetFilePaths} handleCopy={handleCopy} />
+      </div>
+    </div>
+  );
 
-  relative = relative.replace(/^\/+|\/+$/g, '').trim();
-  return relative;
-}
-
-export function getFileTypology(f: CodebaseFile): string {
-  const name = f.name.toLowerCase();
-  const path = f.path.toLowerCase();
-  const type = (f.type || '').toLowerCase();
-
-  if (type === 'config' || path.includes('config') || name.endsWith('.yml') || name.endsWith('.yaml') || name.endsWith('.json') || name.endsWith('.properties')) {
-    return 'Config';
-  }
-  if (name.includes('restcontroller')) {
-    return 'RestController';
-  }
-  if (name.includes('controller') || path.includes('controller')) {
-    return 'Controller';
-  }
-  if (name.includes('repository') || path.includes('repository') || name.includes('repo')) {
-    return 'Repository';
-  }
-  if (name.includes('service') || name.includes('api') || path.includes('service')) {
-    return 'Service';
-  }
-  const isFront = path.startsWith('frontend') || name.endsWith('.tsx') || name.endsWith('.jsx') || name.endsWith('.vue');
-  if (isFront && (type === 'component' || path.includes('component'))) {
-    return 'Front-Component';
-  }
-  if (type === 'component') {
-    return 'Component';
-  }
-  if (type === 'class' && (path.includes('model') || path.includes('domain') || path.includes('entity'))) {
-    return 'Model / Entity';
-  }
-  return 'Other';
-}
-
-function compactFolderTree(nodes: FolderTreeNode[]): FolderTreeNode[] {
-  return nodes.map((node) => {
-    let compactedChildren = compactFolderTree(node.children);
-    let currentNode: FolderTreeNode = {
-      ...node,
-      children: compactedChildren,
-    };
-
-    while (currentNode.files.length === 0 && currentNode.children.length === 1) {
-      const singleChild = currentNode.children[0];
-      currentNode = {
-        id: singleChild.id,
-        name: `${currentNode.name}.${singleChild.name}`,
-        folderPath: singleChild.folderPath || currentNode.folderPath,
-        files: singleChild.files,
-        children: singleChild.children,
-      };
-    }
-
-    return currentNode;
-  });
-}
-
-function buildFolderTreeForScope(scopeKey: string, scopeFiles: CodebaseFile[]): { rootFiles: CodebaseFile[]; folderTree: FolderTreeNode[] } {
-  interface TempNode {
-    id: string;
-    name: string;
-    folderPath: string;
-    files: CodebaseFile[];
-    childrenMap: Map<string, TempNode>;
-  }
-
-  const rootChildrenMap = new Map<string, TempNode>();
-  const rootFiles: CodebaseFile[] = [];
-
-  scopeFiles.forEach((file) => {
-    const relPath = cleanRelativeFilePath(file);
-    const lastSlash = relPath.lastIndexOf('/');
-    const dirPath = lastSlash >= 0 ? relPath.substring(0, lastSlash) : '';
-    const parts = dirPath ? dirPath.split('/').filter(Boolean) : [];
-
-    if (parts.length === 0) {
-      rootFiles.push(file);
-    } else {
-      let currentMap = rootChildrenMap;
-      let currentPath = scopeKey;
-
-      parts.forEach((part, idx) => {
-        currentPath += `/${part}`;
-        if (!currentMap.has(part)) {
-          const physicalPath = resolvePhysicalFolderPath(file, part, scopeKey);
-          currentMap.set(part, {
-            id: currentPath,
-            name: part,
-            folderPath: physicalPath,
-            files: [],
-            childrenMap: new Map(),
-          });
-        }
-        const node = currentMap.get(part)!;
-        if (idx === parts.length - 1) {
-          node.files.push(file);
-        } else {
-          currentMap = node.childrenMap;
-        }
-      });
-    }
-  });
-
-  function convertMapToArray(map: Map<string, TempNode>): FolderTreeNode[] {
-    const result: FolderTreeNode[] = [];
-    map.forEach((node) => {
-      result.push({
-        id: node.id,
-        name: node.name,
-        folderPath: node.folderPath,
-        files: node.files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })),
-        children: convertMapToArray(node.childrenMap),
-      });
-    });
-    return result.sort((a, b) => a.name.localeCompare(b.name));
-  }
-
-  const uncompressedTree = convertMapToArray(rootChildrenMap);
-  const compactedTree = compactFolderTree(uncompressedTree);
-
-  return {
-    rootFiles: rootFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })),
-    folderTree: compactedTree,
-  };
-}
-
-export function useCodebaseExplorerPanel(codebase: CodebaseData) {
-  const [isImportOpen, setIsImportOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>('scope');
-
-  const handleExportCodebase = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(codebase, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", "codebase-ast.json");
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-  };
-
-  const { groupedScopes, duplicateFileIds } = useMemo(() => {
-    const duplicates = new Set<string>();
-    const scopesList: ScopeGroup[] = [];
-    const scopeKeys = [...FOLDER_KEYS_REGISTERED_CONFIG];
-
-    scopeKeys.forEach((scopeKey) => {
-      const scopeFiles = codebase.files.filter((f) => getFileFolderKey(f) === scopeKey);
-      if (scopeFiles.length === 0) return;
-
-      const scopeFolderPath = getCommonFolderPath(scopeFiles) || scopeKey;
-
-      if (viewMode === 'scope') {
-        scopesList.push({
-          key: scopeKey,
-          label: scopeKey,
-          folderPath: scopeFolderPath,
-          files: scopeFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })),
-        });
-      } else if (viewMode === 'folder') {
-        const { rootFiles, folderTree } = buildFolderTreeForScope(scopeKey, scopeFiles);
-        scopesList.push({
-          key: scopeKey,
-          label: scopeKey,
-          folderPath: scopeFolderPath,
-          files: scopeFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })),
-          rootFiles,
-          folderTree,
-        });
-      } else {
-        const subMap = new Map<string, CodebaseFile[]>();
-
-        if (viewMode === 'tags') {
-          ALLOWED_TAGS.forEach((t) => subMap.set(t, []));
-          subMap.set('untagged', []);
-
-          const fileTagCounts = new Map<string, number>();
-
-          scopeFiles.forEach((f) => {
-            const tags = f.tags as any;
-            let matchedTags = 0;
-            const checkAndAdd = (t: string) => {
-              if (Array.isArray(tags) ? tags.includes(t) : (typeof tags === 'string' && tags.includes(t))) {
-                subMap.get(t)!.push(f);
-                matchedTags++;
-                fileTagCounts.set(f.id, (fileTagCounts.get(f.id) || 0) + 1);
-              }
-            };
-            ALLOWED_TAGS.forEach(checkAndAdd);
-            if (matchedTags === 0) {
-              subMap.get('untagged')!.push(f);
-            }
-          });
-
-          fileTagCounts.forEach((count, id) => {
-            if (count > 1) duplicates.add(id);
-          });
-        } else if (viewMode === 'package') {
-          PACKAGE_GROUPS.forEach((p) => subMap.set(p, []));
-          subMap.set('other', []);
-          scopeFiles.forEach((f) => {
-            const matchedPkg = PACKAGE_GROUPS.find((p) => f.path.includes(p) || f.name.includes(p));
-            if (matchedPkg) {
-              subMap.get(matchedPkg)!.push(f);
-            } else {
-              subMap.get('other')!.push(f);
-            }
-          });
-        } else if (viewMode === 'typology') {
-          TYPOLOGY_GROUPS.forEach((t) => subMap.set(t, []));
-          subMap.set('Other', []);
-          scopeFiles.forEach((f) => {
-            const typo = getFileTypology(f);
-            if (!subMap.has(typo)) subMap.set(typo, []);
-            subMap.get(typo)!.push(f);
-          });
-        }
-
-        const subFolders: SubFolderGroup[] = [];
-        subMap.forEach((files, subKey) => {
-          if (files.length > 0) {
-            const subFolderPath = getCommonFolderPath(files) || scopeKey;
-            subFolders.push({
-              key: `${scopeKey}__${subKey}`,
-              label: subKey,
-              folderPath: subFolderPath,
-              files: files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })),
-            });
-          }
-        });
-
-        subFolders.sort((a, b) => a.label.localeCompare(b.label));
-
-        scopesList.push({
-          key: scopeKey,
-          label: scopeKey,
-          folderPath: scopeFolderPath,
-          files: scopeFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })),
-          subFolders,
-        });
-      }
-    });
-
-    return { groupedScopes: scopesList, duplicateFileIds: duplicates };
-  }, [codebase.files, viewMode]);
-
-  return {
-    isImportOpen,
-    setIsImportOpen,
-    handleExportCodebase,
-    viewMode,
-    setViewMode,
-    groupedScopes,
-    duplicateFileIds,
-  };
+  return (
+    <TopMiddleBottomPanel
+      id="files-context-panel"
+      top={topContent}
+      middle={middleContent}
+      bottom={bottomContent}
+      className="h-full font-mono text-xs animate-in duration-200 fade-in"
+    />
+  );
 }
 EOF
 
-echo "✅ fix: Common base package chains (e.g. com.dkt.smartassessment.assessmentservice) are now dynamically compacted into a single root folder node!"
+echo "✅ style: Reduced block extra padding and margins in FilesContextPanel to match compact layout!"
