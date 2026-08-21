@@ -106,17 +106,18 @@ export function resolvePhysicalFolderPath(file: CodebaseFile, partName: string, 
 export function getFileFolderKey(file: CodebaseFile): string {
   const tags = file.tags as any;
   if (Array.isArray(tags)) {
-    if (tags.includes('frontend')) return 'frontend';
-    if (tags.includes('backend')) return 'backend';
-    if (tags.includes('config')) return 'config';
+    if (tags.some((t: any) => String(t).toLowerCase() === 'frontend')) return 'frontend';
+    if (tags.some((t: any) => String(t).toLowerCase() === 'backend')) return 'backend';
+    if (tags.some((t: any) => String(t).toLowerCase() === 'config')) return 'config';
   } else if (typeof tags === 'string') {
-    if (tags.includes('frontend')) return 'frontend';
-    if (tags.includes('backend')) return 'backend';
-    if (tags.includes('config')) return 'config';
+    const lower = tags.toLowerCase();
+    if (lower.includes('frontend')) return 'frontend';
+    if (lower.includes('backend')) return 'backend';
+    if (lower.includes('config')) return 'config';
   }
-  if (file.path?.startsWith('frontend')) return 'frontend';
-  if (file.path?.startsWith('backend')) return 'backend';
-  if (file.path?.startsWith('config')) return 'config';
+  if (file.path?.toLowerCase().startsWith('frontend')) return 'frontend';
+  if (file.path?.toLowerCase().startsWith('backend')) return 'backend';
+  if (file.path?.toLowerCase().startsWith('config')) return 'config';
   return 'other';
 }
 
@@ -126,7 +127,6 @@ export function cleanRelativeFilePath(file: CodebaseFile): string {
 
   let relative = filePath;
 
-  // 1. Check for standard source folder markers
   const srcMarkers = [
     '/src/main/java/', 'src/main/java/',
     '/src/test/java/', 'src/test/java/',
@@ -147,7 +147,6 @@ export function cleanRelativeFilePath(file: CodebaseFile): string {
     }
   }
 
-  // 2. If no src marker found, strip absolute path prefixes by locating common Java root package prefixes
   if (!found) {
     const pkgMarkers = ['/com/', 'com/', '/org/', 'org/', '/net/', 'net/', '/io/', 'io/', '/fr/', 'fr/', '/de/', 'de/'];
     for (const marker of pkgMarkers) {
@@ -161,7 +160,6 @@ export function cleanRelativeFilePath(file: CodebaseFile): string {
     }
   }
 
-  // 3. Fallback: check scope markers
   if (!found) {
     const scopeMarkers = ['/frontend/', 'frontend/', '/backend/', 'backend/', '/config/', 'config/'];
     for (const marker of scopeMarkers) {
@@ -182,33 +180,42 @@ export function getFileTypology(f: CodebaseFile): string {
   const name = f.name.toLowerCase();
   const path = f.path.toLowerCase();
   const type = (f.type || '').toLowerCase();
+  const tags = Array.isArray(f.tags)
+    ? f.tags.map((t: any) => String(t).toLowerCase())
+    : (typeof f.tags === 'string' ? [f.tags.toLowerCase()] : []);
 
-  if (type === 'config' || path.includes('config') || name.endsWith('.yml') || name.endsWith('.yaml') || name.endsWith('.json') || name.endsWith('.properties')) {
+  if (type === 'config' || path.includes('config') || tags.includes('config') || name.endsWith('.yml') || name.endsWith('.yaml') || name.endsWith('.json') || name.endsWith('.properties')) {
     return 'Config';
   }
-  if (name.includes('restcontroller')) {
+  if (name.includes('restcontroller') || tags.includes('restcontroller')) {
     return 'RestController';
   }
-  if (name.includes('controller') || path.includes('controller')) {
+  if (name.includes('controller') || path.includes('controller') || tags.includes('controller')) {
     return 'Controller';
   }
-  if (name.includes('repository') || path.includes('repository') || name.includes('repo')) {
+  if (name.includes('repository') || path.includes('repository') || name.includes('repo') || tags.includes('repository')) {
     return 'Repository';
   }
-  if (name.includes('service') || name.includes('api') || path.includes('service')) {
+  if (name.includes('service') || name.includes('api') || path.includes('service') || tags.includes('service')) {
     return 'Service';
   }
-  const isFront = path.startsWith('frontend') || name.endsWith('.tsx') || name.endsWith('.jsx') || name.endsWith('.vue');
-  if (isFront && (type === 'component' || path.includes('component'))) {
+  const isFront = path.startsWith('frontend') || tags.includes('frontend') || name.endsWith('.tsx') || name.endsWith('.jsx') || name.endsWith('.vue');
+  if (isFront && (type === 'component' || path.includes('component') || tags.includes('component'))) {
     return 'Front-Component';
   }
-  if (type === 'component') {
+  if (type === 'component' || tags.includes('component')) {
     return 'Component';
   }
-  if (type === 'class' && (path.includes('model') || path.includes('domain') || path.includes('entity'))) {
+  if ((type === 'class' || type === 'model' || type === 'entity') && (path.includes('model') || path.includes('domain') || path.includes('entity') || tags.includes('model') || tags.includes('entity'))) {
     return 'Model / Entity';
   }
-  return 'Other';
+
+  const matchedGroup = TYPOLOGY_GROUPS.find((group) => {
+    const gLower = group.toLowerCase();
+    return name.includes(gLower) || path.includes(gLower) || type === gLower || tags.includes(gLower);
+  });
+
+  return matchedGroup || 'Other';
 }
 
 function compactFolderTree(nodes: FolderTreeNode[]): FolderTreeNode[] {
@@ -349,23 +356,60 @@ export function useCodebaseExplorerPanel(codebase: CodebaseData) {
         const subMap = new Map<string, CodebaseFile[]>();
 
         if (viewMode === 'tags') {
-          ALLOWED_TAGS.forEach((t) => subMap.set(t, []));
+          // Dynamically collect ALL tags from codebase files in addition to ALLOWED_TAGS
+          const dynamicTagsMap = new Map<string, string>(); // lowerCase -> displayTag
+          ALLOWED_TAGS.forEach((t) => dynamicTagsMap.set(t.toLowerCase(), t));
+
+          codebase.files.forEach((f) => {
+            const tags = f.tags as any;
+            if (Array.isArray(tags)) {
+              tags.forEach((t) => {
+                if (typeof t === 'string' && t.trim()) {
+                  const raw = t.trim();
+                  if (!dynamicTagsMap.has(raw.toLowerCase())) {
+                    dynamicTagsMap.set(raw.toLowerCase(), raw);
+                  }
+                }
+              });
+            } else if (typeof tags === 'string' && tags.trim()) {
+              const raw = tags.trim();
+              if (!dynamicTagsMap.has(raw.toLowerCase())) {
+                dynamicTagsMap.set(raw.toLowerCase(), raw);
+              }
+            }
+          });
+
+          dynamicTagsMap.forEach((displayTag) => subMap.set(displayTag, []));
           subMap.set('untagged', []);
 
           const fileTagCounts = new Map<string, number>();
 
           scopeFiles.forEach((f) => {
             const tags = f.tags as any;
-            let matchedTags = 0;
-            const checkAndAdd = (t: string) => {
-              if (Array.isArray(tags) ? tags.includes(t) : (typeof tags === 'string' && tags.includes(t))) {
-                subMap.get(t)!.push(f);
-                matchedTags++;
-                fileTagCounts.set(f.id, (fileTagCounts.get(f.id) || 0) + 1);
+            const fileTagsList: string[] = Array.isArray(tags)
+              ? tags.map((t) => String(t).trim())
+              : typeof tags === 'string' && tags.trim()
+              ? [tags.trim()]
+              : [];
+
+            let matchedCount = 0;
+            const matchedDisplayTags = new Set<string>();
+
+            fileTagsList.forEach((rawTag) => {
+              const lower = rawTag.toLowerCase();
+              if (dynamicTagsMap.has(lower)) {
+                const displayTag = dynamicTagsMap.get(lower)!;
+                if (!matchedDisplayTags.has(displayTag)) {
+                  matchedDisplayTags.add(displayTag);
+                  subMap.get(displayTag)!.push(f);
+                  matchedCount++;
+                }
               }
-            };
-            ALLOWED_TAGS.forEach(checkAndAdd);
-            if (matchedTags === 0) {
+            });
+
+            if (matchedCount > 0) {
+              fileTagCounts.set(f.id, (fileTagCounts.get(f.id) || 0) + matchedCount);
+            } else {
               subMap.get('untagged')!.push(f);
             }
           });
@@ -377,7 +421,12 @@ export function useCodebaseExplorerPanel(codebase: CodebaseData) {
           LAYER_GROUPS.forEach((p) => subMap.set(p, []));
           subMap.set('other', []);
           scopeFiles.forEach((f) => {
-            const matchedPkg = LAYER_GROUPS.find((p) => f.path.includes(p) || f.name.includes(p));
+            const pathLower = f.path.toLowerCase();
+            const nameLower = f.name.toLowerCase();
+            const matchedPkg = LAYER_GROUPS.find((p) => {
+              const pLower = p.toLowerCase();
+              return pathLower.includes(pLower) || nameLower.includes(pLower);
+            });
             if (matchedPkg) {
               subMap.get(matchedPkg)!.push(f);
             } else {
