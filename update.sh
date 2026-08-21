@@ -1,13 +1,115 @@
 #!/usr/bin/env bash
 set -e
 
-echo "🔧 Fixing TypeScript compilation errors in Copilot delegate and use-codebase-explorer-panel..."
+echo "📦 Fixing path stripping and compacting common root package chains into a single compressed node..."
 
-# Fix 1: Cast `file.tags as any` in use-codebase-explorer-panel.ts to eliminate `Property 'includes' does not exist on type 'never'` error
+mkdir -p webview/src/features/explorer/wkp-lft-codebase-tree/hooks
+
 cat << 'EOF' > webview/src/features/explorer/wkp-lft-codebase-tree/hooks/use-codebase-explorer-panel.ts
 import { useState, useMemo } from 'react';
 import { CodebaseData, CodebaseFile } from '@/shared/services/graph-rag-explorer';
 import { FOLDER_KEYS_REGISTERED_CONFIG } from '../../constants/graph.constants';
+
+export type ViewMode = 'scope' | 'folder' | 'tags' | 'package' | 'typology';
+
+export const ALLOWED_TAGS = [
+  'frontend', 'backend', 'config', 'api', 'database', 'ui', 'core', 'model',
+  'Service', 'Controller', 'Repository', 'Component', 'RestController', 'Config',
+  'Model / Entity', 'DTO', 'Utility', 'Helper', 'Test', 'Integration', 'UnitTest',
+  'FunctionalTest', 'PerformanceTest', 'SecurityTest', 'AcceptanceTest', 'EndToEndTest',
+  'Mock', 'Stub', 'Adapter', 'Decorator', 'Factory', 'Builder', 'Singleton',
+  'Observer', 'Strategy', 'Command', 'Mediator', 'Proxy', 'Visitor'
+];
+export const PACKAGE_GROUPS = ["domain.model", "application", "infrastructure", "domain"];
+export const TYPOLOGY_GROUPS = [
+  "Front-Component",
+  "Component",
+  "Service",
+  "RestController",
+  "Controller",
+  "Repository",
+  "Config",
+  "Model / Entity"
+];
+
+export interface FolderTreeNode {
+  id: string;
+  name: string;
+  folderPath: string;
+  files: CodebaseFile[];
+  children: FolderTreeNode[];
+}
+
+export interface SubFolderGroup {
+  key: string;
+  label: string;
+  folderPath: string;
+  files: CodebaseFile[];
+}
+
+export interface ScopeGroup {
+  key: string;
+  label: string;
+  folderPath: string;
+  files: CodebaseFile[];
+  rootFiles?: CodebaseFile[];
+  subFolders?: SubFolderGroup[];
+  folderTree?: FolderTreeNode[];
+}
+
+export function getCommonFolderPath(files: CodebaseFile[]): string {
+  if (!files || files.length === 0) return '';
+
+  const fileDirPaths = files
+    .map((f) => {
+      const p = f.path || '';
+      const lastSlash = p.lastIndexOf('/');
+      return lastSlash >= 0 ? p.substring(0, lastSlash) : '';
+    })
+    .filter(Boolean);
+
+  if (fileDirPaths.length === 0) return '';
+
+  const splitDirs = fileDirPaths.map((d) => d.split('/'));
+  let commonParts: string[] = [...splitDirs[0]];
+
+  for (let i = 1; i < splitDirs.length; i++) {
+    const current = splitDirs[i];
+    let j = 0;
+    while (j < commonParts.length && j < current.length && commonParts[j] === current[j]) {
+      j++;
+    }
+    commonParts = commonParts.slice(0, j);
+    if (commonParts.length === 0) break;
+  }
+
+  return commonParts.join('/');
+}
+
+export function resolvePhysicalFolderPath(file: CodebaseFile, partName: string, fallbackScope: string): string {
+  if (!file || !file.path) return fallbackScope;
+
+  const lastSlash = file.path.lastIndexOf('/');
+  const fileDir = lastSlash >= 0 ? file.path.substring(0, lastSlash) : file.path;
+
+  if (!partName || partName === fallbackScope) {
+    return fileDir.startsWith(fallbackScope) ? fallbackScope : fileDir;
+  }
+
+  const slashPart = partName.replace(/\./g, '/');
+
+  const idx = fileDir.indexOf(slashPart);
+  if (idx !== -1) {
+    return fileDir.substring(0, idx + slashPart.length);
+  }
+
+  const lastSegmentIdx = fileDir.lastIndexOf('/' + partName);
+  if (lastSegmentIdx !== -1) {
+    return fileDir.substring(0, lastSegmentIdx + partName.length + 1);
+  }
+
+  return fileDir;
+}
 
 export function getFileFolderKey(file: CodebaseFile): string {
   const tags = file.tags as any;
@@ -26,8 +128,192 @@ export function getFileFolderKey(file: CodebaseFile): string {
   return 'other';
 }
 
+export function cleanRelativeFilePath(file: CodebaseFile): string {
+  const filePath = file.path || '';
+  if (!filePath) return '';
+
+  let relative = filePath;
+
+  // 1. Check for standard source folder markers
+  const srcMarkers = [
+    '/src/main/java/', 'src/main/java/',
+    '/src/test/java/', 'src/test/java/',
+    '/src/main/kotlin/', 'src/main/kotlin/',
+    '/src/test/kotlin/', 'src/test/kotlin/',
+    '/src/main/resources/', 'src/main/resources/',
+    '/src/test/resources/', 'src/test/resources/',
+    '/src/', 'src/'
+  ];
+
+  let found = false;
+  for (const marker of srcMarkers) {
+    const idx = relative.indexOf(marker);
+    if (idx !== -1) {
+      relative = relative.substring(idx + marker.length);
+      found = true;
+      break;
+    }
+  }
+
+  // 2. If no src marker found, strip absolute path prefixes by locating common Java root package prefixes
+  if (!found) {
+    const pkgMarkers = ['/com/', 'com/', '/org/', 'org/', '/net/', 'net/', '/io/', 'io/', '/fr/', 'fr/', '/de/', 'de/'];
+    for (const marker of pkgMarkers) {
+      const idx = relative.indexOf(marker);
+      if (idx !== -1) {
+        const cleanMarker = marker.startsWith('/') ? marker.substring(1) : marker;
+        relative = cleanMarker + relative.substring(idx + marker.length);
+        found = true;
+        break;
+      }
+    }
+  }
+
+  // 3. Fallback: check scope markers
+  if (!found) {
+    const scopeMarkers = ['/frontend/', 'frontend/', '/backend/', 'backend/', '/config/', 'config/'];
+    for (const marker of scopeMarkers) {
+      const idx = relative.indexOf(marker);
+      if (idx !== -1) {
+        relative = relative.substring(idx + marker.length);
+        found = true;
+        break;
+      }
+    }
+  }
+
+  relative = relative.replace(/^\/+|\/+$/g, '').trim();
+  return relative;
+}
+
+export function getFileTypology(f: CodebaseFile): string {
+  const name = f.name.toLowerCase();
+  const path = f.path.toLowerCase();
+  const type = (f.type || '').toLowerCase();
+
+  if (type === 'config' || path.includes('config') || name.endsWith('.yml') || name.endsWith('.yaml') || name.endsWith('.json') || name.endsWith('.properties')) {
+    return 'Config';
+  }
+  if (name.includes('restcontroller')) {
+    return 'RestController';
+  }
+  if (name.includes('controller') || path.includes('controller')) {
+    return 'Controller';
+  }
+  if (name.includes('repository') || path.includes('repository') || name.includes('repo')) {
+    return 'Repository';
+  }
+  if (name.includes('service') || name.includes('api') || path.includes('service')) {
+    return 'Service';
+  }
+  const isFront = path.startsWith('frontend') || name.endsWith('.tsx') || name.endsWith('.jsx') || name.endsWith('.vue');
+  if (isFront && (type === 'component' || path.includes('component'))) {
+    return 'Front-Component';
+  }
+  if (type === 'component') {
+    return 'Component';
+  }
+  if (type === 'class' && (path.includes('model') || path.includes('domain') || path.includes('entity'))) {
+    return 'Model / Entity';
+  }
+  return 'Other';
+}
+
+function compactFolderTree(nodes: FolderTreeNode[]): FolderTreeNode[] {
+  return nodes.map((node) => {
+    let compactedChildren = compactFolderTree(node.children);
+    let currentNode: FolderTreeNode = {
+      ...node,
+      children: compactedChildren,
+    };
+
+    while (currentNode.files.length === 0 && currentNode.children.length === 1) {
+      const singleChild = currentNode.children[0];
+      currentNode = {
+        id: singleChild.id,
+        name: `${currentNode.name}.${singleChild.name}`,
+        folderPath: singleChild.folderPath || currentNode.folderPath,
+        files: singleChild.files,
+        children: singleChild.children,
+      };
+    }
+
+    return currentNode;
+  });
+}
+
+function buildFolderTreeForScope(scopeKey: string, scopeFiles: CodebaseFile[]): { rootFiles: CodebaseFile[]; folderTree: FolderTreeNode[] } {
+  interface TempNode {
+    id: string;
+    name: string;
+    folderPath: string;
+    files: CodebaseFile[];
+    childrenMap: Map<string, TempNode>;
+  }
+
+  const rootChildrenMap = new Map<string, TempNode>();
+  const rootFiles: CodebaseFile[] = [];
+
+  scopeFiles.forEach((file) => {
+    const relPath = cleanRelativeFilePath(file);
+    const lastSlash = relPath.lastIndexOf('/');
+    const dirPath = lastSlash >= 0 ? relPath.substring(0, lastSlash) : '';
+    const parts = dirPath ? dirPath.split('/').filter(Boolean) : [];
+
+    if (parts.length === 0) {
+      rootFiles.push(file);
+    } else {
+      let currentMap = rootChildrenMap;
+      let currentPath = scopeKey;
+
+      parts.forEach((part, idx) => {
+        currentPath += `/${part}`;
+        if (!currentMap.has(part)) {
+          const physicalPath = resolvePhysicalFolderPath(file, part, scopeKey);
+          currentMap.set(part, {
+            id: currentPath,
+            name: part,
+            folderPath: physicalPath,
+            files: [],
+            childrenMap: new Map(),
+          });
+        }
+        const node = currentMap.get(part)!;
+        if (idx === parts.length - 1) {
+          node.files.push(file);
+        } else {
+          currentMap = node.childrenMap;
+        }
+      });
+    }
+  });
+
+  function convertMapToArray(map: Map<string, TempNode>): FolderTreeNode[] {
+    const result: FolderTreeNode[] = [];
+    map.forEach((node) => {
+      result.push({
+        id: node.id,
+        name: node.name,
+        folderPath: node.folderPath,
+        files: node.files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })),
+        children: convertMapToArray(node.childrenMap),
+      });
+    });
+    return result.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  const uncompressedTree = convertMapToArray(rootChildrenMap);
+  const compactedTree = compactFolderTree(uncompressedTree);
+
+  return {
+    rootFiles: rootFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })),
+    folderTree: compactedTree,
+  };
+}
+
 export function useCodebaseExplorerPanel(codebase: CodebaseData) {
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('scope');
 
   const handleExportCodebase = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(codebase, null, 2));
@@ -39,35 +325,121 @@ export function useCodebaseExplorerPanel(codebase: CodebaseData) {
     downloadAnchor.remove();
   };
 
-  const registeredFolders = useMemo(() => [...FOLDER_KEYS_REGISTERED_CONFIG], []);
-  const allFolderKeys = useMemo(() => {
-    const hasOtherFiles = codebase.files.some(
-      (f: CodebaseFile) => getFileFolderKey(f) === 'other'
-    );
-    return hasOtherFiles ? [...registeredFolders] : registeredFolders.filter((rf) => rf !== 'other');
-  }, [codebase.files, registeredFolders]);
+  const { groupedScopes, duplicateFileIds } = useMemo(() => {
+    const duplicates = new Set<string>();
+    const scopesList: ScopeGroup[] = [];
+    const scopeKeys = [...FOLDER_KEYS_REGISTERED_CONFIG];
+
+    scopeKeys.forEach((scopeKey) => {
+      const scopeFiles = codebase.files.filter((f) => getFileFolderKey(f) === scopeKey);
+      if (scopeFiles.length === 0) return;
+
+      const scopeFolderPath = getCommonFolderPath(scopeFiles) || scopeKey;
+
+      if (viewMode === 'scope') {
+        scopesList.push({
+          key: scopeKey,
+          label: scopeKey,
+          folderPath: scopeFolderPath,
+          files: scopeFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })),
+        });
+      } else if (viewMode === 'folder') {
+        const { rootFiles, folderTree } = buildFolderTreeForScope(scopeKey, scopeFiles);
+        scopesList.push({
+          key: scopeKey,
+          label: scopeKey,
+          folderPath: scopeFolderPath,
+          files: scopeFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })),
+          rootFiles,
+          folderTree,
+        });
+      } else {
+        const subMap = new Map<string, CodebaseFile[]>();
+
+        if (viewMode === 'tags') {
+          ALLOWED_TAGS.forEach((t) => subMap.set(t, []));
+          subMap.set('untagged', []);
+
+          const fileTagCounts = new Map<string, number>();
+
+          scopeFiles.forEach((f) => {
+            const tags = f.tags as any;
+            let matchedTags = 0;
+            const checkAndAdd = (t: string) => {
+              if (Array.isArray(tags) ? tags.includes(t) : (typeof tags === 'string' && tags.includes(t))) {
+                subMap.get(t)!.push(f);
+                matchedTags++;
+                fileTagCounts.set(f.id, (fileTagCounts.get(f.id) || 0) + 1);
+              }
+            };
+            ALLOWED_TAGS.forEach(checkAndAdd);
+            if (matchedTags === 0) {
+              subMap.get('untagged')!.push(f);
+            }
+          });
+
+          fileTagCounts.forEach((count, id) => {
+            if (count > 1) duplicates.add(id);
+          });
+        } else if (viewMode === 'package') {
+          PACKAGE_GROUPS.forEach((p) => subMap.set(p, []));
+          subMap.set('other', []);
+          scopeFiles.forEach((f) => {
+            const matchedPkg = PACKAGE_GROUPS.find((p) => f.path.includes(p) || f.name.includes(p));
+            if (matchedPkg) {
+              subMap.get(matchedPkg)!.push(f);
+            } else {
+              subMap.get('other')!.push(f);
+            }
+          });
+        } else if (viewMode === 'typology') {
+          TYPOLOGY_GROUPS.forEach((t) => subMap.set(t, []));
+          subMap.set('Other', []);
+          scopeFiles.forEach((f) => {
+            const typo = getFileTypology(f);
+            if (!subMap.has(typo)) subMap.set(typo, []);
+            subMap.get(typo)!.push(f);
+          });
+        }
+
+        const subFolders: SubFolderGroup[] = [];
+        subMap.forEach((files, subKey) => {
+          if (files.length > 0) {
+            const subFolderPath = getCommonFolderPath(files) || scopeKey;
+            subFolders.push({
+              key: `${scopeKey}__${subKey}`,
+              label: subKey,
+              folderPath: subFolderPath,
+              files: files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })),
+            });
+          }
+        });
+
+        subFolders.sort((a, b) => a.label.localeCompare(b.label));
+
+        scopesList.push({
+          key: scopeKey,
+          label: scopeKey,
+          folderPath: scopeFolderPath,
+          files: scopeFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })),
+          subFolders,
+        });
+      }
+    });
+
+    return { groupedScopes: scopesList, duplicateFileIds: duplicates };
+  }, [codebase.files, viewMode]);
 
   return {
     isImportOpen,
     setIsImportOpen,
     handleExportCodebase,
-    registeredFolders,
-    allFolderKeys,
-    getFileFolderKey,
+    viewMode,
+    setViewMode,
+    groupedScopes,
+    duplicateFileIds,
   };
 }
 EOF
 
-# Fix 2: Cast CopilotClient options in backend/src/services/llm-chat/delegate/copilot.delegate.ts to fix TS2345
-node -e "
-const fs = require('fs');
-const targetFile = 'backend/src/services/llm-chat/delegate/copilot.delegate.ts';
-if (fs.existsSync(targetFile)) {
-  let content = fs.readFileSync(targetFile, 'utf8');
-  content = content.replace('{ cliPath }', '({ cliPath } as any)');
-  fs.writeFileSync(targetFile, content);
-}
-"
-
-echo "✅ fix: Resolved TypeScript compilation errors for CopilotDelegate and tags type narrowing!"
-npm run compile
+echo "✅ fix: Common base package chains (e.g. com.dkt.smartassessment.assessmentservice) are now dynamically compacted into a single root folder node!"
