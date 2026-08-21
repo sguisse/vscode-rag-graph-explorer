@@ -80,36 +80,6 @@ export function FilesContextPanel({
 
   const topContent = (
     <div className="space-y-1.5 mb-1 w-full">
-      <div className="space-y-1 bg-card p-1.5 border border-border rounded-lg w-full">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-1.5">
-            <FileText size={14} className="text-primary" />
-            <h4 className="font-mono font-bold text-foreground text-xs uppercase tracking-wider">
-              Unified Files Context
-            </h4>
-          </div>
-        </div>
-
-        <div className="gap-1.5 grid grid-cols-4 text-center">
-          <div className="bg-muted/40 p-1 border border-border/50 rounded">
-            <span className="block text-[9px] text-muted-foreground truncate uppercase">Total</span>
-            <span className="font-bold text-foreground text-xs">{initialCodebase?.files?.length || 0}</span>
-          </div>
-          <div className="bg-indigo-500/10 p-1 border border-indigo-500/20 rounded">
-            <span className="block text-[9px] text-indigo-500 truncate uppercase">Upstream</span>
-            <span className="font-bold text-indigo-500 text-xs">{upstreamCount}</span>
-          </div>
-          <div className="bg-blue-500/10 p-1 border border-blue-500/20 rounded">
-            <span className="block text-[9px] text-blue-500 truncate uppercase">Downstream</span>
-            <span className="font-bold text-blue-500 text-xs">{downstreamCount}</span>
-          </div>
-          <div className="bg-yellow-500/10 p-1 border border-yellow-500/30 rounded">
-            <span className="block text-[9px] text-yellow-600 dark:text-yellow-400 truncate uppercase">Token Size</span>
-            <span className="font-bold text-yellow-600 dark:text-yellow-400 text-xs">{(totalFilesContext.length / 1024).toFixed(1)}&nbsp;KB</span>
-          </div>
-        </div>
-      </div>
-
       <div className="space-y-1.5 bg-muted/30 p-1.5 border border-border rounded-lg w-full">
         <div className="flex justify-between items-center">
           <label className="font-mono font-bold text-[10px] text-muted-foreground uppercase">Impact Propagation</label>
@@ -149,7 +119,7 @@ export function FilesContextPanel({
         <div className="flex justify-between items-center shrink-0">
           <div className="flex items-center gap-1.5">
             <ShieldAlert size={14} className="text-orange-500" />
-            <h5 className="font-mono font-bold text-orange-500 text-xs">Fluorescent Impact Plan</h5>
+            <h5 className="font-mono font-bold text-orange-500 text-xs">Adjust Impact Plan</h5>
           </div>
           <span className="bg-orange-500/10 px-1.5 py-0.2 border border-orange-500/20 rounded font-mono font-bold text-[10px] text-orange-500">
             {selectedCount} Selected
@@ -258,23 +228,25 @@ export function FilesContextPanel({
           </div>
         </div>
 
-        <div className="gap-1.5 grid grid-cols-4 text-center">
-          <div className="bg-orange-500/10 p-1 border border-orange-500/20 rounded">
+        <div className="gap-1.5 grid grid-cols-10 text-center">
+          <div className="col-span-2 bg-orange-500/10 p-1 border border-orange-500/20 rounded">
             <span className="block text-[9px] text-orange-500 truncate uppercase">Selected</span>
-            <span className="font-bold text-orange-500 text-xs">{selectedCount}</span>
+            <span className="font-bold text-orange-500 text-xs">{selectedCount} / {initialCodebase?.files?.length || 0}</span>
           </div>
-          <div className="bg-indigo-500/10 p-1 border border-indigo-500/20 rounded">
+          <div className="col-span-2 bg-indigo-500/10 p-1 border border-indigo-500/20 rounded">
             <span className="block text-[9px] text-indigo-500 truncate uppercase">Upstream</span>
-            <span className="font-bold text-indigo-500 text-xs">{selectedUpstreamCount}</span>
+            <span className="font-bold text-indigo-500 text-xs">{selectedUpstreamCount} / {upstreamCount}</span>
           </div>
-          <div className="bg-blue-500/10 p-1 border border-blue-500/20 rounded">
+          <div className="col-span-2 bg-blue-500/10 p-1 border border-blue-500/20 rounded">
             <span className="block text-[9px] text-blue-500 truncate uppercase">Downstream</span>
-            <span className="font-bold text-blue-500 text-xs">{selectedDownstreamCount}</span>
+            <span className="font-bold text-blue-500 text-xs">{selectedDownstreamCount} / {downstreamCount}</span>
           </div>
 
-          <div className="bg-emerald-500/10 p-1 border border-emerald-500/20 rounded">
+          <div className="col-span-4 bg-emerald-500/10 p-1 border border-emerald-500/20 rounded">
             <span className="block text-[9px] text-emerald-500 truncate uppercase">Token Size</span>
-            <span className="font-bold text-emerald-500 text-xs">{(combinedSelectedFilesContext.length / 1024).toFixed(1)} KB</span>
+            <span className="font-bold text-emerald-500 text-xs">
+              {(combinedSelectedFilesContext.length / 1024).toFixed(1)} / {(totalFilesContext.length / 1024).toFixed(1)} KB
+            </span>
           </div>
         </div>
       </div>
