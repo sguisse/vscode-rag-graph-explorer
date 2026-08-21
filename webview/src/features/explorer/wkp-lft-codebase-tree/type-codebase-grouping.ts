@@ -1,11 +1,12 @@
-export const CODEBASE_GROUPING_LIST: readonly string[] = ["scope", "folder", "tags", "package", "typology"];
+export const CODEBASE_GROUPING_LIST: readonly string[] = ["scope", "folder", "layer", "typology", "tags"];
 
 export const CODEBASE_GROUPING_ICON_MAP: { [K in (typeof CODEBASE_GROUPING_LIST)[number]]: any } = {
   scope: { icon: "📄", label: "By Scope" },
   folder: { icon: "📁", label: "By Folder" },
-  tags: { icon: "🏷️", label: "By Tags" },
-  package: { icon: "📦", label: "By Package" },
+  layer: { icon: "🏗️", label: "By Layer" },
   typology: { icon: "🧩", label: "By Typology" },
+  tags: { icon: "🏷️", label: "By Tags" },
+
 } as const;
 
 export type CodebaseGrouping = (typeof CODEBASE_GROUPING_LIST)[number];

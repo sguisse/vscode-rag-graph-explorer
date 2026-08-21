@@ -2,17 +2,17 @@ import { useState, useMemo } from 'react';
 import { CodebaseData, CodebaseFile } from '@/shared/services/graph-rag-explorer';
 import { FOLDER_KEYS_REGISTERED_CONFIG } from '../../constants/graph.constants';
 
-export type ViewMode = 'scope' | 'folder' | 'tags' | 'package' | 'typology';
+export type ViewMode = 'scope' | 'folder' | 'tags' | 'layer' | 'typology';
 
 export const ALLOWED_TAGS = [
-  'frontend', 'backend', 'config', 'api', 'database', 'ui', 'core', 'model',
+  'config', 'api', 'database', 'ui', 'core', 'model',
   'Service', 'Controller', 'Repository', 'Component', 'RestController', 'Config',
   'Model / Entity', 'DTO', 'Utility', 'Helper', 'Test', 'Integration', 'UnitTest',
   'FunctionalTest', 'PerformanceTest', 'SecurityTest', 'AcceptanceTest', 'EndToEndTest',
   'Mock', 'Stub', 'Adapter', 'Decorator', 'Factory', 'Builder', 'Singleton',
   'Observer', 'Strategy', 'Command', 'Mediator', 'Proxy', 'Visitor'
 ];
-export const PACKAGE_GROUPS = ["domain.model", "application", "infrastructure", "domain"];
+export const LAYER_GROUPS = ["domain.model", "application", "infrastructure", "domain"];
 export const TYPOLOGY_GROUPS = [
   "Front-Component",
   "Component",
@@ -373,11 +373,11 @@ export function useCodebaseExplorerPanel(codebase: CodebaseData) {
           fileTagCounts.forEach((count, id) => {
             if (count > 1) duplicates.add(id);
           });
-        } else if (viewMode === 'package') {
-          PACKAGE_GROUPS.forEach((p) => subMap.set(p, []));
+        } else if (viewMode === 'layer') {
+          LAYER_GROUPS.forEach((p) => subMap.set(p, []));
           subMap.set('other', []);
           scopeFiles.forEach((f) => {
-            const matchedPkg = PACKAGE_GROUPS.find((p) => f.path.includes(p) || f.name.includes(p));
+            const matchedPkg = LAYER_GROUPS.find((p) => f.path.includes(p) || f.name.includes(p));
             if (matchedPkg) {
               subMap.get(matchedPkg)!.push(f);
             } else {
