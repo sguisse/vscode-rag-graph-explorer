@@ -1,7 +1,9 @@
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useCallback } from 'react';
 import { CodebaseData, CodebaseFile, SelectedEntity } from '@/shared/services/graph-rag-explorer';
 import { calculateTransitiveImpact } from '@/services/view/graph-view.service';
 import { useExplorerStore } from '../../store/useExplorerStore';
+import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 export interface DepthFileGroup {
   key: string;
@@ -23,6 +25,23 @@ export function useFilesContext(
   const setSelectedFiles = useExplorerStore((s) => s.setSelectedContextFiles);
   const expandedGroups = useExplorerStore((s) => s.expandedContextGroups);
   const setExpandedGroups = useExplorerStore((s) => s.setExpandedContextGroups);
+
+  const handleFileClick = useCallback((file: CodebaseFile) => {
+    if (file.path) {
+      logInfo(`FilesContext file single-clicked: ${file.id} (${file.path}). Revealing in VS Code Explorer and copying to clipboard...`);
+      vsCodeApiService.revealInExplorer(file.path);
+      vsCodeApiService.copyToClipboard(file.path);
+    }
+  }, []);
+
+  const handleFileDoubleClick = useCallback((file: CodebaseFile, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (file.path) {
+      logInfo(`FilesContext file double-clicked: ${file.id} (${file.path}). Opening in VS Code...`);
+      vsCodeApiService.revealInExplorer(file.path);
+      vsCodeApiService.openFile(file.path);
+    }
+  }, []);
 
   const downstreamCount = useMemo(() => {
     if (!selectedEntity || !initialCodebase?.dependencies) return 0;
@@ -269,5 +288,7 @@ export function useFilesContext(
     totalFilesContext,
     combinedSelectedFilesContext,
     targetFilePaths,
+    handleFileClick,
+    handleFileDoubleClick,
   };
 }

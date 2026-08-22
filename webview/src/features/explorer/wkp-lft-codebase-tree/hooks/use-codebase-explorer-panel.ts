@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { CodebaseData, CodebaseFile } from '@/shared/services/graph-rag-explorer';
 import { FOLDER_KEYS_REGISTERED_CONFIG } from '../../constants/graph.constants';
 
@@ -523,18 +523,20 @@ export function useCodebaseExplorerPanel(
 
   const handleCollapseAll = (
     customToggleFolder?: (folder: string) => void,
-    customExpandedFolders?: Record<string, boolean>
+    customExpandedFolders?: Record<string, boolean>,
+    overrideViewMode?: ViewMode
   ) => {
     const tf = customToggleFolder || toggleFolder;
     const ef = customExpandedFolders || expandedFolders || {};
     if (!tf) return;
 
+    const mode = overrideViewMode || viewMode;
     const keysWithDepth = collectFolderKeysWithDepth(groupedScopes);
     let targetCollapseLevel = 2;
 
-    if (viewMode === 'folder') {
+    if (mode === 'folder') {
       targetCollapseLevel = 3;
-    } else if (viewMode === 'scope') {
+    } else if (mode === 'scope') {
       targetCollapseLevel = 1;
     }
 
@@ -550,6 +552,11 @@ export function useCodebaseExplorerPanel(
       }
     });
   };
+
+  useEffect(() => {
+    if (!toggleFolder) return;
+    handleCollapseAll(undefined, undefined, viewMode);
+  }, [viewMode, groupedScopes]);
 
   return {
     isImportOpen,

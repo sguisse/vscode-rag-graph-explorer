@@ -70,6 +70,8 @@ export function FilesContextPanel({
     totalFilesContext,
     combinedSelectedFilesContext,
     targetFilePaths,
+    handleFileClick,
+    handleFileDoubleClick,
   } = useFilesContext(
     initialCodebase,
     selectedEntity,
@@ -188,7 +190,8 @@ export function FilesContextPanel({
                                 className={`truncate text-[11px] cursor-pointer ${
                                   selectedFiles[file.id] ? 'font-semibold text-foreground' : 'text-muted-foreground line-through'
                                 }`}
-                                onClick={() => toggleFileCheckbox(file.id)}
+                                onClick={() => handleFileClick(file)}
+                                onDoubleClick={(e) => handleFileDoubleClick(file, e)}
                               >
                                 {file.name}
                               </span>
@@ -267,3 +270,5 @@ export function FilesContextPanel({
     />
   );
 }
+
+export const FilesContextTab = FilesContextPanel;

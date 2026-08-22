@@ -81,6 +81,8 @@ interface RecursiveFolderNodeProps {
   toggleFileListCheckbox: (files: CodebaseFile[]) => void;
   handleFileDoubleClick: (file: CodebaseFile, e?: React.MouseEvent) => void;
   handleFolderDoubleClick: (folderPath: string, files?: CodebaseFile[], e?: React.MouseEvent) => void;
+  handleFileClick: (file: CodebaseFile) => void;
+  handleFolderClick: (folderKey: string, folderPath?: string) => void;
 }
 
 function RecursiveFolderNode({
@@ -96,6 +98,8 @@ function RecursiveFolderNode({
   toggleFileListCheckbox,
   handleFileDoubleClick,
   handleFolderDoubleClick,
+  handleFileClick,
+  handleFolderClick,
 }: RecursiveFolderNodeProps) {
   const isExpanded = expandedFolders[node.id] ?? true;
   const allNodeFiles = getAllFilesFromNode(node);
@@ -115,7 +119,7 @@ function RecursiveFolderNode({
         />
         <div
           className="flex flex-1 items-center gap-1.5 min-w-0 cursor-pointer"
-          onClick={() => toggleFolder(node.id)}
+          onClick={() => handleFolderClick(node.id, node.folderPath)}
           onDoubleClick={(e) => handleFolderDoubleClick(node.folderPath, allNodeFiles, e)}
         >
           {isExpanded ? (
@@ -144,13 +148,7 @@ function RecursiveFolderNode({
                 className={`flex items-center gap-1.5 truncate cursor-pointer flex-1 min-w-0 ${
                   visibleFiles[file.id] ? 'text-foreground font-medium' : 'text-muted-foreground line-through'
                 }`}
-                onClick={() => {
-                  if (onFocusNode) {
-                    onFocusNode(file.id);
-                  } else {
-                    setSelectedEntity({ type: 'node', nodeId: file.id });
-                  }
-                }}
+                onClick={() => handleFileClick(file)}
                 onDoubleClick={(e) => handleFileDoubleClick(file, e)}
               >
                 {file.type === 'config' ? (
@@ -185,6 +183,8 @@ function RecursiveFolderNode({
               toggleFileListCheckbox={toggleFileListCheckbox}
               handleFileDoubleClick={handleFileDoubleClick}
               handleFolderDoubleClick={handleFolderDoubleClick}
+              handleFileClick={handleFileClick}
+              handleFolderClick={handleFolderClick}
             />
           ))}
         </div>
@@ -230,20 +230,39 @@ export function CodebaseExplorerPanel({
     handleCollapseAll,
   } = useCodebaseExplorerPanel(codebase, expandedFolders, toggleFolder);
 
-  const handleToggleFolder = (folderKey: string) => {
+  const handleToggleFolder = (folderKey: string, folderPath?: string) => {
     if (expandedFolders[folderKey] === undefined) {
       toggleFolder(folderKey);
       toggleFolder(folderKey);
     } else {
       toggleFolder(folderKey);
     }
+    if (folderPath) {
+      logInfo(`Folder single-clicked: ${folderPath}. Revealing in VS Code Explorer and copying to clipboard...`);
+      vsCodeApiService.revealInExplorer(folderPath);
+      vsCodeApiService.copyToClipboard(folderPath);
+    }
+  };
+
+  const handleFileClick = (file: CodebaseFile) => {
+    if (file.path) {
+      logInfo(`File single-clicked: ${file.path}. Revealing in VS Code Explorer and copying to clipboard...`);
+      vsCodeApiService.revealInExplorer(file.path);
+      vsCodeApiService.copyToClipboard(file.path);
+    }
+    if (onFocusNode) {
+      onFocusNode(file.id);
+    } else {
+      setSelectedEntity({ type: 'node', nodeId: file.id });
+    }
   };
 
   const handleFileDoubleClick = (file: CodebaseFile, e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (file?.path) {
-      logInfo(`Double-clicked file item: ${file.id}. Revealing in VS Code Explorer: ${file.path}`);
+      logInfo(`Double-clicked file item: ${file.id}. Opening in VS Code: ${file.path}`);
       vsCodeApiService.revealInExplorer(file.path);
+      vsCodeApiService.openFile(file.path);
     }
   };
 
@@ -361,7 +380,7 @@ export function CodebaseExplorerPanel({
                 />
                 <div
                   className="flex flex-1 items-center gap-1.5 min-w-0 cursor-pointer"
-                  onClick={() => handleToggleFolder(scope.key)}
+                  onClick={() => handleToggleFolder(scope.key, scope.folderPath)}
                   onDoubleClick={(e) => handleFolderDoubleClick(scope.folderPath, allScopeFiles, e)}
                 >
                   {isScopeExpanded ? (
@@ -392,13 +411,7 @@ export function CodebaseExplorerPanel({
                           className={`flex items-center gap-1.5 truncate cursor-pointer flex-1 min-w-0 ${
                             visibleFiles[file.id] ? 'text-foreground font-medium' : 'text-muted-foreground line-through'
                           }`}
-                          onClick={() => {
-                            if (onFocusNode) {
-                              onFocusNode(file.id);
-                            } else {
-                              setSelectedEntity({ type: 'node', nodeId: file.id });
-                            }
-                          }}
+                          onClick={() => handleFileClick(file)}
                           onDoubleClick={(e) => handleFileDoubleClick(file, e)}
                         >
                           {scope.key === 'config' ? (
@@ -438,13 +451,7 @@ export function CodebaseExplorerPanel({
                               className={`flex items-center gap-1.5 truncate cursor-pointer flex-1 min-w-0 ${
                                 visibleFiles[file.id] ? 'text-foreground font-medium' : 'text-muted-foreground line-through'
                               }`}
-                              onClick={() => {
-                                if (onFocusNode) {
-                                  onFocusNode(file.id);
-                                } else {
-                                  setSelectedEntity({ type: 'node', nodeId: file.id });
-                                }
-                              }}
+                              onClick={() => handleFileClick(file)}
                               onDoubleClick={(e) => handleFileDoubleClick(file, e)}
                             >
                               <FileCode size={13} className="text-slate-400 shrink-0" />
@@ -468,6 +475,8 @@ export function CodebaseExplorerPanel({
                           toggleFileListCheckbox={toggleFileListCheckbox}
                           handleFileDoubleClick={handleFileDoubleClick}
                           handleFolderDoubleClick={handleFolderDoubleClick}
+                          handleFileClick={handleFileClick}
+                          handleFolderClick={handleToggleFolder}
                         />
                       ))}
                     </>
@@ -496,7 +505,7 @@ export function CodebaseExplorerPanel({
                             />
                             <div
                               className="flex flex-1 items-center gap-1.5 min-w-0 cursor-pointer"
-                              onClick={() => handleToggleFolder(sub.key)}
+                              onClick={() => handleToggleFolder(sub.key, sub.folderPath)}
                               onDoubleClick={(e) => handleFolderDoubleClick(sub.folderPath, sub.files, e)}
                             >
                               {isSubExpanded ? (
@@ -534,13 +543,7 @@ export function CodebaseExplorerPanel({
                                     />
                                     <span
                                       className={`flex items-center gap-1.5 truncate cursor-pointer flex-1 min-w-0 ${textStyle}`}
-                                      onClick={() => {
-                                        if (onFocusNode) {
-                                          onFocusNode(file.id);
-                                        } else {
-                                          setSelectedEntity({ type: 'node', nodeId: file.id });
-                                        }
-                                      }}
+                                      onClick={() => handleFileClick(file)}
                                       onDoubleClick={(e) => handleFileDoubleClick(file, e)}
                                     >
                                       {file.type === 'config' ? (

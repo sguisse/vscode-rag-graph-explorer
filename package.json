@@ -55,6 +55,11 @@
           "default": true,
           "description": "Automatically pin the Application UI tab when opened."
         },
+        "tokenRazor.codebaseScanEachTimeAppIsDisplayed": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically start code scan each time the application UI is displayed."
+        },
         "tokenRazor.tooltipDelay": {
           "type": "number",
           "default": 2000,

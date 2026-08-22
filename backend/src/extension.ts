@@ -57,7 +57,9 @@ function createOpenToolCommand(extentionContext: vscode.ExtensionContext) {
         // Set custom context to TRUE when the panel is created
         vscode.commands.executeCommand('setContext', 'tokenRazor.isToolOpened', true);
 
-        runPythonScan("deep");
+        if (vsCodeSettingsManager.getSettings().codebaseScanEachTimeAppIsDisplayed) {
+            runPythonScan("deep");
+        }
     };
 }
 

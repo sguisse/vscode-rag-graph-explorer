@@ -207,6 +207,7 @@ class GraphRagExplorerSettings:
 class VsCodeSettings:
     workspaceRoot: str = ""
     pinApplication: bool = True
+    codebaseScanEachTimeAppIsDisplayed: bool = False
     tooltipDelay: int = 2000
     geminiApiKey: str = ""
     backendWorkspacePath: str = ".token-razor"
@@ -227,6 +228,8 @@ class VsCodeSettings:
             obj.workspaceRoot = data["workspaceRoot"]
         if "pinApplication" in data:
             obj.pinApplication = data["pinApplication"]
+        if "codebaseScanEachTimeAppIsDisplayed" in data:
+            obj.codebaseScanEachTimeAppIsDisplayed = data["codebaseScanEachTimeAppIsDisplayed"]
         if "tooltipDelay" in data:
             obj.tooltipDelay = data["tooltipDelay"]
         if "geminiApiKey" in data:
@@ -261,6 +264,7 @@ class VsCodeSettings:
 
 class VsCodeSettingsKeys:
     pinApplication = "tokenRazor.pinApplication"
+    codebaseScanEachTimeAppIsDisplayed = "tokenRazor.codebaseScanEachTimeAppIsDisplayed"
     tooltipDelay = "tokenRazor.tooltipDelay"
     geminiApiKey = "tokenRazor.geminiApiKey"
     backendWorkspacePath = "tokenRazor.backendWorkspacePath"

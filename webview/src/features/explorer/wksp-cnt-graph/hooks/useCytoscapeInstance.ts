@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import cytoscape from 'cytoscape';
+import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 export interface GraphState {
   zoom: number;
@@ -62,22 +64,37 @@ export function useCytoscapeInstance(
 
     cyRef.current = cy;
 
-    // Single / Cmd + Click: Handle node selection or Cmd+Click path addition
+    // Single / Cmd + Click: Handle node selection, reveal in VS Code Explorer, and copy path to clipboard
     cy.on('tap', 'node', (evt) => {
-      if (!evt.target.hasClass('folder')) {
+      const node = evt.target;
+      if (!node.hasClass('folder')) {
+        const nodeId = node.id();
+        const nodePath = node.data('path') || node.data('absolutePath') || node.data('filePath') || nodeId;
+        if (nodePath) {
+          logInfo(`Cytoscape node single-clicked: ${nodeId} (${nodePath}). Revealing in VS Code Explorer & copying...`);
+          vsCodeApiService.revealInExplorer(nodePath);
+          vsCodeApiService.copyToClipboard(nodePath);
+        }
         const origEvt = evt.originalEvent as MouseEvent | undefined;
         if (origEvt && (origEvt.metaKey || origEvt.ctrlKey)) {
-          onNodeCmdClickRef.current?.(evt.target.id());
+          onNodeCmdClickRef.current?.(nodeId);
         } else {
-          onNodeSelectRef.current(evt.target.id());
+          onNodeSelectRef.current(nodeId);
         }
       }
     });
 
-    // Double Click: Open and reveal in VS Code Explorer
+    // Double Click: Open file and reveal in VS Code Explorer
     cy.on('dbltap', 'node', (evt) => {
       if (!evt.target.hasClass('folder')) {
-        onNodeDoubleClickRef.current?.(evt.target.id());
+        const nodeId = evt.target.id();
+        const nodePath = evt.target.data('path') || evt.target.data('absolutePath') || evt.target.data('filePath') || nodeId;
+        if (nodePath) {
+          logInfo(`Cytoscape node double-clicked: ${nodeId} (${nodePath}). Opening in VS Code...`);
+          vsCodeApiService.revealInExplorer(nodePath);
+          vsCodeApiService.openFile(nodePath);
+        }
+        onNodeDoubleClickRef.current?.(nodeId);
       }
     });
 

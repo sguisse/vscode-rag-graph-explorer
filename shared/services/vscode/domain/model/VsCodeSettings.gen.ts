@@ -4,6 +4,8 @@
 export class VsCodeSettings {
     pinApplication = true;
 
+    codebaseScanEachTimeAppIsDisplayed = false;
+
     tooltipDelay = 2000;
 
     geminiApiKey = "";
@@ -86,6 +88,7 @@ export class VsCodeSettings {
 
 export const VsCodeSettingsKeys = {
     pinApplication: "tokenRazor.pinApplication",
+    codebaseScanEachTimeAppIsDisplayed: "tokenRazor.codebaseScanEachTimeAppIsDisplayed",
     tooltipDelay: "tokenRazor.tooltipDelay",
     geminiApiKey: "tokenRazor.geminiApiKey",
     backendWorkspacePath: "tokenRazor.backendWorkspacePath",

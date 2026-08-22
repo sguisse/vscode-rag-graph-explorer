@@ -1,0 +1,4 @@
+/Users/mac-SGUISS21/90-temp/smart-supply-back/commons/smart-supply-common/src/main/java/com/decathlon/smart/supply/common/application/service/AbstractNetworkService.java
+/Users/mac-SGUISS21/90-temp/smart-supply-back/commons/smart-supply-common/src/main/java/com/decathlon/smart/supply/common/application/service/SharingBusinessService.java
+/Users/mac-SGUISS21/90-temp/smart-supply-back/commons/smart-supply-common/src/main/java/com/decathlon/smart/supply/common/infrastructure/secondary/database/service/MegaProcessService.java
+/Users/mac-SGUISS21/90-temp/smart-supply-back/commons/smart-supply-common/src/main/java/com/decathlon/smart/supply/common/domain/models/DefaultIdentificationObject.java

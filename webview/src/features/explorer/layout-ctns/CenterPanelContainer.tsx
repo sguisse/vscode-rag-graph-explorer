@@ -58,23 +58,36 @@ export function CenterPanelContainer() {
   const handleNodeSelect = useCallback(
     (nodeId: string) => {
       setSelectedEntity({ type: 'node', nodeId });
+      const targetFile = codebase.files.find((f) => f.id === nodeId);
+      if (targetFile && targetFile.path) {
+        logInfo(`Single-clicked graph item: ${nodeId}. Revealing path & copying to clipboard: ${targetFile.path}`);
+        vsCodeApiService.revealInExplorer(targetFile.path);
+        vsCodeApiService.copyToClipboard(targetFile.path);
+      }
     },
-    [setSelectedEntity]
+    [codebase.files, setSelectedEntity]
   );
 
   const handleSelectMember = useCallback(
     (nodeId: string, memberId: string) => {
       setSelectedEntity({ type: 'member', nodeId, memberId });
+      const targetFile = codebase.files.find((f) => f.id === nodeId);
+      if (targetFile && targetFile.path) {
+        logInfo(`Single-clicked member item: ${memberId} in ${nodeId}. Revealing path & copying to clipboard: ${targetFile.path}`);
+        vsCodeApiService.revealInExplorer(targetFile.path);
+        vsCodeApiService.copyToClipboard(targetFile.path);
+      }
     },
-    [setSelectedEntity]
+    [codebase.files, setSelectedEntity]
   );
 
   const handleNodeDoubleClick = useCallback(
     (nodeId: string) => {
       const targetFile = codebase.files.find((f) => f.id === nodeId);
       if (targetFile && targetFile.path) {
-        logInfo(`Double-clicked graph item: ${nodeId}. Revealing path in VS Code Explorer: ${targetFile.path}`);
+        logInfo(`Double-clicked graph item: ${nodeId}. Opening file in VS Code: ${targetFile.path}`);
         vsCodeApiService.revealInExplorer(targetFile.path);
+        vsCodeApiService.openFile(targetFile.path);
       }
     },
     [codebase.files]
