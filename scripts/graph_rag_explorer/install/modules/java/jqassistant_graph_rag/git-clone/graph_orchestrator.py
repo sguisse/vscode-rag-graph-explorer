@@ -67,6 +67,7 @@ class GraphOrchestrator:
         # Now that the graph is normalized and linked, build the clean
         # hierarchical overlay for the project.
         self.project_path = tree_builder.create_project_node(repo_root=self.repo_root)
+        tree_builder.build_maven_project_structure()
         tree_builder.establish_source_hierarchy()
 
         # --- Phase 4: Artifact & Package Data Normalization ---

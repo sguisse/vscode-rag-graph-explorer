@@ -127,14 +127,17 @@ class SourceFileLinker:
 
     def link_source_file_dependencies(self):
         """
-        Crée des relations directes [:DEPENDS_ON] entre les nœuds :SourceFile
-        en se basant sur les dépendances de leurs :Type contenus.
+        Creates direct relationships [:DEPENDS_ON] between :SourceFile nodes
+        based on the dependencies of their :Type contents, resolving directly by FQN.
         """
         logger.info("--- Starting Pass: Link SourceFile Dependencies ---")
-        query = """
-        MATCH (sf1:SourceFile)<-[:WITH_SOURCE]-(t1:Type)-[:DEPENDS_ON]->(t2:Type)-[:WITH_SOURCE]->(sf2:SourceFile)
-        WHERE sf1 <> sf2
-        WITH DISTINCT sf1, sf2
+        query = r"""
+        MATCH (sf1:SourceFile)<-[:WITH_SOURCE|HAS_SOURCE_FILE]-(t1:Type)-[:DEPENDS_ON]->(t2:Type)
+        WHERE t2.fqn IS NOT NULL
+        WITH DISTINCT sf1, replace(split(t2.fqn, '$')[0], '.', '/') + '.java' AS targetFqnPath
+        MATCH (sf2:SourceFile)
+        WHERE replace(coalesce(sf2.absolute_path, sf2.absoluteFileName, sf2.fileName, sf2.relativePath, sf2.name, ""), '\\', '/') ENDS WITH targetFqnPath
+          AND sf1 <> sf2
         MERGE (sf1)-[r:DEPENDS_ON]->(sf2)
         RETURN count(r) AS relationshipsCreated
         """

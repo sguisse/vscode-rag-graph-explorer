@@ -431,25 +431,35 @@
 
     <concept id="{{PROJECT_NAME}}:LinkClassToAbsoluteSourceFile">
         <description>
-            Links every Java :Class node to its corresponding physical .java :File node (absolute path)
-            by matching FQN with the file path, handling cross-platform separators and inner classes.
+            Links every Java :Type node (Classes, Interfaces, Enums, Records, including cross-module stubs)
+            to its corresponding physical .java :SourceFile node.
         </description>
         <cypher><![CDATA[
-            MATCH (c:Class)
-            // 1. Gérer les classes internes (on ne garde que la classe maîtresse avant le '$')
-            WITH c, split(c.fqn, '$')[0] AS baseFqn
+            MATCH (t:Type)
+            WHERE t.fqn IS NOT NULL AND NOT (t)-[:HAS_SOURCE_FILE]->(:SourceFile)
+            WITH t, replace(split(t.fqn, '$')[0], '.', '/') + '.java' AS fqnPath
+            MATCH (f:SourceFile)
+            WHERE replace(coalesce(f.absolute_path, f.absoluteFileName, f.fileName, f.relativePath, f.name, ""), '\\', '/') ENDS WITH fqnPath
+            MERGE (t)-[:HAS_SOURCE_FILE]->(f)
+            RETURN count(t) AS LinkedTypes
+        ]]></cypher>
+    </concept>
 
-            // 2. Transformer le FQN en format de chemin de fichier (points -> slashs)
-            WITH c, replace(baseFqn, '.', '/') + '.java' AS expectedPathPattern
-
-            // 3. Matcher avec le fichier physique
-            MATCH (f:File)
-            WHERE f.fileName ENDS WITH expectedPathPattern
-            OR replace(f.fileName, '\\', '/') ENDS WITH expectedPathPattern // Sécurisation Windows
-
-            // 4. Créer la relation explicite dans le graphe
-            MERGE (c)-[:HAS_SOURCE_FILE]->(f)
-            RETURN count(c) AS LinkedClasses
+    <concept id="{{PROJECT_NAME}}:PropagateTypeDependenciesToFile">
+        <description>
+            Directly propagates bytecode DEPENDS_ON to physical SourceFile nodes cross-modules without requiring stub type linking.
+        </description>
+        <cypher><![CDATA[
+            MATCH (f1:File)
+            MATCH (t1:Type)-[:WITH_SOURCE|HAS_SOURCE_FILE]->(f1)
+            MATCH (t1)-[:DEPENDS_ON]->(t2:Type)
+            WHERE t2.fqn IS NOT NULL
+            WITH DISTINCT f1, replace(split(t2.fqn, '$')[0], '.', '/') + '.java' AS targetFqnPath
+            MATCH (f2:File)
+            WHERE replace(coalesce(f2.absolute_path, f2.absoluteFileName, f2.fileName, f2.relativePath, f2.name, ""), '\\', '/') ENDS WITH targetFqnPath
+              AND f1 <> f2
+            MERGE (f1)-[:DEPENDS_ON]->(f2)
+            RETURN count(DISTINCT f1) AS FilesWithUpdatedDependencies
         ]]></cypher>
     </concept>
 
@@ -501,7 +511,7 @@
             SET c:DeadCodeCandidate
             RETURN count(c) AS DeadCodeCandidates
         ]]></cypher>
-</concept>
+    </concept>
 
     <concept id="{{PROJECT_NAME}}:LinkExceptionToHandlers">
         <description>Links methods throwing custom exceptions to their respective Spring @ExceptionHandler.</description>
@@ -540,8 +550,6 @@
     </concept>
 
     <group id="{{PROJECT_NAME}}:Default">
-        <includeConcept refId="java:MethodOverrides"/>
-
         <includeConcept refId="{{PROJECT_NAME}}:MarkSpringController"/>
         <includeConcept refId="{{PROJECT_NAME}}:MarkSpringRestController"/>
         <includeConcept refId="{{PROJECT_NAME}}:MarkSpringService"/>
@@ -590,6 +598,7 @@
         <includeConcept refId="{{PROJECT_NAME}}:PatternOutbox"/>
 
         <includeConcept refId="{{PROJECT_NAME}}:LinkClassToAbsoluteSourceFile"/>
+        <includeConcept refId="{{PROJECT_NAME}}:PropagateTypeDependenciesToFile"/>
         <includeConcept refId="{{PROJECT_NAME}}:LinkTestsToCode"/>
         <includeConcept refId="{{PROJECT_NAME}}:LinkSpringValueProperties"/>
         <includeConcept refId="{{PROJECT_NAME}}:MarkDeadCodeCandidates"/>

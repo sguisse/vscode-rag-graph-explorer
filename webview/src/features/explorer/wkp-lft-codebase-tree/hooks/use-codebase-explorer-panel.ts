@@ -180,9 +180,10 @@ export function getFileTypology(f: CodebaseFile): string {
   const name = f.name.toLowerCase();
   const path = f.path.toLowerCase();
   const type = (f.type || '').toLowerCase();
-  const tags = Array.isArray(f.tags)
-    ? f.tags.map((t: any) => String(t).toLowerCase())
-    : (typeof f.tags === 'string' ? [f.tags.toLowerCase()] : []);
+  const tags = typeof f.tags === 'string'
+  ? [(f.tags as string).toLowerCase()]
+  : [];
+
 
   if (type === 'config' || path.includes('config') || tags.includes('config') || name.endsWith('.yml') || name.endsWith('.yaml') || name.endsWith('.json') || name.endsWith('.properties')) {
     return 'Config';

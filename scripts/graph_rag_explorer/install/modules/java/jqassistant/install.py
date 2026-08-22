@@ -94,19 +94,32 @@ class JavaJQAssistantInstaller(BaseInstallModule):
 
         jqa_src_yaml = "\n".join(yaml_lines)
 
+        #---------------
+        # Search for the root pom.xml and all child pom.xml files in the workspace
+        pom_xml_yaml_list = []
+        for root, dirs, files in os.walk(self.context.workspace_root):
+            if "pom.xml" in files:
+                # If path not contains "target", add it to the list
+                if "target" not in root:
+                    pom_xml_yaml_list.extend([f"        - '{os.path.join(root, 'pom.xml')}'"])
+        jqa_pom_yaml = "\n".join(pom_xml_yaml_list)
+
         neo4j_uri = vsCodeSettings.graphRagExplorer.neo4j.uri
         neo4j_user = vsCodeSettings.graphRagExplorer.neo4j.username
         neo4j_pass = vsCodeSettings.graphRagExplorer.neo4j.password
         project_name = os.path.basename(self.context.workspace_root)
 
+        content = re.sub(r'[ \t]*\{\{JQA_POM_FILES_YAML_LIST\}\}', '{{JQA_POM_FILES_YAML_LIST}}', content)
         content = re.sub(r'[ \t]*\{\{JQA_SRC_DIRS_YAML_LIST\}\}', '{{JQA_SRC_DIRS_YAML_LIST}}', content)
 
         content = content.replace("{{JQA_BOLT_URL}}", neo4j_uri)\
                          .replace("{{JQA_BOLT_USERNAME}}", neo4j_user)\
                          .replace("{{JQA_BOLT_PASSWORD}}", neo4j_pass)\
+                         .replace("{{JQA_POM_FILES_YAML_LIST}}", jqa_pom_yaml)\
                          .replace("{{JQA_SRC_DIRS_YAML_LIST}}", jqa_src_yaml)\
                          .replace("{{PROJECT_NAME}}", project_name)\
-                         .replace("{{JQA_RULES_DIRECTORY}}", self.jqa.rules_dir.replace("\\", "/"))
+                         .replace("{{JQA_RULES_DIRECTORY}}", self.jqa.rules_dir.replace("\\", "/"))\
+
 
         # Centrally deposit configuration file inside tools sandbox config resource route
         with open(self.jqa.custom_config_path, "w", encoding="utf-8") as f:

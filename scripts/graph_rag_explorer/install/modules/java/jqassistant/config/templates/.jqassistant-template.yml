@@ -79,6 +79,9 @@ jqassistant:
       files:
       # TODO: Adjust the following to your project structure if needed (after a fresh installation).
       # ! If you do a new fresh installation, manual modifications to this file will be overwritten. Instead, adjust the source discovery logic in scripts/core/sources_discovery.py and re-run the installation.
+        # Scanning the root POM and all child POMs. Ignored if not found.
+  {{JQA_POM_FILES_YAML_LIST}}
+        # Scanning the source directories of all modules. Ignored if not found.
   {{JQA_SRC_DIRS_YAML_LIST}}
     properties:
       file.exclude:

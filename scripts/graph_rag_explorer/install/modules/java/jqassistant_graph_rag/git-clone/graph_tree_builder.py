@@ -1,5 +1,6 @@
 import logging
 import os
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from collections import defaultdict
 from neo4j_manager import Neo4jManager
@@ -10,7 +11,7 @@ logger = logging.getLogger(__name__)
 class GraphTreeBuilder:
     """
     Handles the third phase of graph normalization: establishing a clean,
-    hierarchical tree structure for the project.
+    hierarchical tree structure for the project and Maven modules.
     """
 
     def __init__(self, neo4j_manager: Neo4jManager):
@@ -95,6 +96,86 @@ class GraphTreeBuilder:
         )
         logger.info("--- Finished Pass: Create Project Node ---")
         return self.project_path
+
+    def build_maven_project_structure(self):
+        """
+        Parses pom.xml files directly from workspace disk to build :Maven:Project nodes,
+        link :SourceFile nodes via [:BELONGS_TO], and project inter-module [:DEPENDS_ON].
+        """
+        logger.info("--- Starting Pass: Build Maven Project Nodes from POMs ---")
+        if not self.project_path:
+            logger.warning("Project path not set. Skipping Maven Project creation.")
+            return
+
+        pom_files = list(Path(self.project_path).rglob("pom.xml"))
+        modules_data = []
+
+        for pom_path in pom_files:
+            try:
+                tree = ET.parse(pom_path)
+                root = tree.getroot()
+                ns = {'m': root.tag.split('}')[0].strip('{')} if '}' in root.tag else {}
+
+                artifact_id = root.findtext('m:artifactId', namespaces=ns) or root.findtext('artifactId')
+                group_id = root.findtext('m:groupId', namespaces=ns) or root.findtext('groupId')
+                version = root.findtext('m:version', namespaces=ns) or root.findtext('version')
+
+                parent = root.find('m:parent', namespaces=ns) or root.find('parent')
+                if parent is not None:
+                    if not group_id:
+                        group_id = parent.findtext('m:groupId', namespaces=ns) or parent.findtext('groupId')
+                    if not version:
+                        version = parent.findtext('m:version', namespaces=ns) or parent.findtext('version')
+
+                if artifact_id:
+                    modules_data.append({
+                        "artifactId": artifact_id,
+                        "groupId": group_id or "unknown",
+                        "version": version or "unknown",
+                        "path": str(pom_path.parent.resolve())
+                    })
+            except Exception as e:
+                logger.warning(f"Could not parse POM file at {pom_path}: {e}")
+
+        if not modules_data:
+            logger.warning("No valid POM files parsed for Maven Project creation.")
+            return
+
+        create_modules_cypher = """
+        UNWIND $modules AS mod
+        MERGE (m:Maven:Project {artifactId: mod.artifactId})
+        SET m.groupId = mod.groupId,
+            m.version = mod.version,
+            m.absolute_path = mod.path,
+            m.name = mod.artifactId
+        WITH m, mod
+        MATCH (sf:SourceFile)
+        WHERE sf.absolute_path STARTS WITH mod.path
+        MERGE (sf)-[:BELONGS_TO]->(m)
+        """
+        self.neo4j_manager.execute_write_query(create_modules_cypher, params={"modules": modules_data})
+
+        link_root_cypher = """
+        MATCH (p:Project {absolute_path: $projectPath})
+        MATCH (m:Maven:Project)
+        MERGE (p)-[:CONTAINS_MODULE]->(m)
+        """
+        self.neo4j_manager.execute_write_query(link_root_cypher, params={"projectPath": str(self.project_path)})
+
+        link_deps_cypher = r"""
+        MATCH (m1:Maven:Project)<-[:BELONGS_TO]-(sf1:SourceFile)<-[:WITH_SOURCE|HAS_SOURCE_FILE]-(t1:Type)
+        MATCH (t1)-[:DEPENDS_ON]->(t2:Type)
+        WHERE t2.fqn IS NOT NULL
+        WITH DISTINCT m1, replace(split(t2.fqn, '$')[0], '.', '/') + '.java' AS targetFqnPath
+        MATCH (sf2:SourceFile)-[:BELONGS_TO]->(m2:Maven:Project)
+        WHERE replace(coalesce(sf2.absolute_path, sf2.absoluteFileName, sf2.fileName, sf2.relativePath, sf2.name, ""), '\\', '/') ENDS WITH targetFqnPath
+          AND m1 <> m2
+        MERGE (m1)-[r:DEPENDS_ON]->(m2)
+        """
+        self.neo4j_manager.execute_write_query(link_deps_cypher)
+
+        logger.info(f"Successfully created {len(modules_data)} :Maven:Project nodes and inter-module dependencies.")
+        logger.info("--- Finished Pass: Build Maven Project Nodes from POMs ---")
 
     def establish_source_hierarchy(self):
         """
