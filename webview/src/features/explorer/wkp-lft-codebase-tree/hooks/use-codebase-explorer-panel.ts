@@ -49,6 +49,11 @@ export interface ScopeGroup {
   folderTree?: FolderTreeNode[];
 }
 
+export interface FolderKeyWithDepth {
+  key: string;
+  level: number;
+}
+
 export function getCommonFolderPath(files: CodebaseFile[]): string {
   if (!files || files.length === 0) return '';
 
@@ -181,9 +186,8 @@ export function getFileTypology(f: CodebaseFile): string {
   const path = f.path.toLowerCase();
   const type = (f.type || '').toLowerCase();
   const tags = typeof f.tags === 'string'
-  ? [(f.tags as string).toLowerCase()]
-  : [];
-
+    ? [(f.tags as string).toLowerCase()]
+    : [];
 
   if (type === 'config' || path.includes('config') || tags.includes('config') || name.endsWith('.yml') || name.endsWith('.yaml') || name.endsWith('.json') || name.endsWith('.properties')) {
     return 'Config';
@@ -311,7 +315,38 @@ function buildFolderTreeForScope(scopeKey: string, scopeFiles: CodebaseFile[]): 
   };
 }
 
-export function useCodebaseExplorerPanel(codebase: CodebaseData) {
+export function collectFolderKeysWithDepth(scopes: ScopeGroup[]): FolderKeyWithDepth[] {
+  const result: FolderKeyWithDepth[] = [];
+
+  function traverseTree(nodes: FolderTreeNode[], currentLevel: number) {
+    nodes.forEach((node) => {
+      result.push({ key: node.id, level: currentLevel });
+      if (node.children && node.children.length > 0) {
+        traverseTree(node.children, currentLevel + 1);
+      }
+    });
+  }
+
+  scopes.forEach((scope) => {
+    result.push({ key: scope.key, level: 1 });
+    if (scope.folderTree) {
+      traverseTree(scope.folderTree, 2);
+    }
+    if (scope.subFolders) {
+      scope.subFolders.forEach((sub) => {
+        result.push({ key: sub.key, level: 2 });
+      });
+    }
+  });
+
+  return result;
+}
+
+export function useCodebaseExplorerPanel(
+  codebase: CodebaseData,
+  expandedFolders?: Record<string, boolean>,
+  toggleFolder?: (folder: string) => void
+) {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('scope');
 
@@ -357,8 +392,7 @@ export function useCodebaseExplorerPanel(codebase: CodebaseData) {
         const subMap = new Map<string, CodebaseFile[]>();
 
         if (viewMode === 'tags') {
-          // Dynamically collect ALL tags from codebase files in addition to ALLOWED_TAGS
-          const dynamicTagsMap = new Map<string, string>(); // lowerCase -> displayTag
+          const dynamicTagsMap = new Map<string, string>();
           ALLOWED_TAGS.forEach((t) => dynamicTagsMap.set(t.toLowerCase(), t));
 
           codebase.files.forEach((f) => {
@@ -472,6 +506,51 @@ export function useCodebaseExplorerPanel(codebase: CodebaseData) {
     return { groupedScopes: scopesList, duplicateFileIds: duplicates };
   }, [codebase.files, viewMode]);
 
+  const handleExpandAll = (
+    customToggleFolder?: (folder: string) => void,
+    customExpandedFolders?: Record<string, boolean>
+  ) => {
+    const tf = customToggleFolder || toggleFolder;
+    const ef = customExpandedFolders || expandedFolders || {};
+    if (!tf) return;
+    const keysWithDepth = collectFolderKeysWithDepth(groupedScopes);
+    keysWithDepth.forEach(({ key }) => {
+      if (ef[key] === false) {
+        tf(key);
+      }
+    });
+  };
+
+  const handleCollapseAll = (
+    customToggleFolder?: (folder: string) => void,
+    customExpandedFolders?: Record<string, boolean>
+  ) => {
+    const tf = customToggleFolder || toggleFolder;
+    const ef = customExpandedFolders || expandedFolders || {};
+    if (!tf) return;
+
+    const keysWithDepth = collectFolderKeysWithDepth(groupedScopes);
+    let targetCollapseLevel = 2;
+
+    if (viewMode === 'folder') {
+      targetCollapseLevel = 3;
+    } else if (viewMode === 'scope') {
+      targetCollapseLevel = 1;
+    }
+
+    keysWithDepth.forEach(({ key, level }) => {
+      if (level >= targetCollapseLevel) {
+        if (ef[key] !== false) {
+          tf(key);
+        }
+      } else {
+        if (ef[key] === false) {
+          tf(key);
+        }
+      }
+    });
+  };
+
   return {
     isImportOpen,
     setIsImportOpen,
@@ -480,5 +559,7 @@ export function useCodebaseExplorerPanel(codebase: CodebaseData) {
     setViewMode,
     groupedScopes,
     duplicateFileIds,
+    handleExpandAll,
+    handleCollapseAll,
   };
 }

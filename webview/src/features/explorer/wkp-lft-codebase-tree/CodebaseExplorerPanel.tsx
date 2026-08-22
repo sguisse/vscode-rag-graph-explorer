@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { ChevronDown, ChevronRight, Folder, FileCode, Database, Download, Upload, LayoutList } from 'lucide-react';
+import { ChevronDown, ChevronRight, Folder, FileCode, Database, Download, Upload, LayoutList, ChevronsDown, ChevronsUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ImportAstDialog } from './import-ast-dialog';
 import { ToolbarSeparator } from '@/components/app/toolbar-separator';
@@ -226,7 +226,9 @@ export function CodebaseExplorerPanel({
     setViewMode,
     groupedScopes,
     duplicateFileIds,
-  } = useCodebaseExplorerPanel(codebase);
+    handleExpandAll,
+    handleCollapseAll,
+  } = useCodebaseExplorerPanel(codebase, expandedFolders, toggleFolder);
 
   const handleToggleFolder = (folderKey: string) => {
     if (expandedFolders[folderKey] === undefined) {
@@ -284,6 +286,27 @@ export function CodebaseExplorerPanel({
         </div>
 
         <div className="flex items-center gap-0.5 pr-1 shrink-0">
+          <Button
+            id="btn-collapse-all"
+            className="hover:bg-muted rounded w-7 h-7 text-muted-foreground hover:text-foreground transition-colors"
+            variant="ghost"
+            size="icon"
+            onClick={() => handleCollapseAll()}
+            data-tooltip="Collapse All"
+          >
+            <ChevronsUp size={12} />
+          </Button>
+          <Button
+            id="btn-expand-all"
+            className="hover:bg-muted rounded w-7 h-7 text-muted-foreground hover:text-foreground transition-colors"
+            variant="ghost"
+            size="icon"
+            onClick={() => handleExpandAll()}
+            data-tooltip="Expand All"
+          >
+            <ChevronsDown size={12} />
+          </Button>
+
           <ToolbarSeparator />
           <Button
             id="btn-open-import-ast-dialog"

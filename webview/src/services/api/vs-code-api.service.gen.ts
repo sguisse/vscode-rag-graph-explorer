@@ -24,6 +24,10 @@ class VsCodeApiService extends AbstractApiService implements IVsCodeServicePort 
         return await this.rpc.call(RpcMethodEnum.VSCODE_OPEN_URL, url, inExternalBrowser);
     }
 
+    public async openFile(targetPath: string): Promise<void> {
+        return await this.rpc.call(RpcMethodEnum.VSCODE_OPEN_FILE, targetPath);
+    }
+
     public async revealInExplorer(targetPath: string): Promise<void> {
         return await this.rpc.call(RpcMethodEnum.VSCODE_REVEAL_IN_EXPLORER, targetPath);
     }

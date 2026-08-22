@@ -33,6 +33,41 @@ export class VsCodeServiceAdapter extends AbstractServiceAdapter implements IVsC
         }
     }
 
+    public async openFile(targetPath: string): Promise<void> {
+        logInfo(`[VsCodeServiceAdapter] openFile invoked with path: ${targetPath}`);
+        try {
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            const rootPath = workspaceFolders && workspaceFolders.length > 0 ? workspaceFolders[0].uri.fsPath : getWorkspaceRoot();
+            let fullPath = targetPath;
+
+            if (!path.isAbsolute(fullPath) && rootPath) {
+                fullPath = path.join(rootPath, fullPath);
+            }
+
+            fullPath = this.resolveSourceFilePath(fullPath);
+
+            if (fs.existsSync(fullPath)) {
+                const stat = fs.statSync(fullPath);
+
+                if (stat.isDirectory()) {
+                    logInfo(`[VsCodeServiceAdapter] Target path is a directory, redirecting to revealInExplorer: ${fullPath}`);
+                    await this.revealInExplorer(fullPath);
+                    return;
+                }
+
+                logInfo(`[VsCodeServiceAdapter] Opening file in editor: ${fullPath}`);
+                const uri = vscode.Uri.file(fullPath);
+                const doc = await vscode.workspace.openTextDocument(uri);
+                await vscode.window.showTextDocument(doc, { preview: true, preserveFocus: false });
+            } else {
+                logWarn(`[VsCodeServiceAdapter] Resolved file path does not exist: ${fullPath}`);
+            }
+        } catch (err) {
+            logError(`[VsCodeServiceAdapter] Failed to open file: ${err}`);
+        }
+    }
+
+
     public async revealInExplorer(targetPath: string): Promise<void> {
         logInfo(`[VsCodeServiceAdapter] revealInExplorer invoked with path: ${targetPath}`);
         try {
@@ -50,8 +85,6 @@ export class VsCodeServiceAdapter extends AbstractServiceAdapter implements IVsC
                 logInfo(`[VsCodeServiceAdapter] Revealing file in VS Code Explorer: ${fullPath}`);
                 const uri = vscode.Uri.file(fullPath);
                 await vscode.commands.executeCommand('revealInExplorer', uri);
-                const doc = await vscode.workspace.openTextDocument(uri);
-                await vscode.window.showTextDocument(doc, { preview: true, preserveFocus: true });
             } else {
                 logWarn(`[VsCodeServiceAdapter] Resolved file path does not exist: ${fullPath}`);
             }
@@ -59,6 +92,7 @@ export class VsCodeServiceAdapter extends AbstractServiceAdapter implements IVsC
             logError(`[VsCodeServiceAdapter] Failed to reveal file in explorer: ${err}`);
         }
     }
+
 
     private resolveSourceFilePath(filePath: string): string {
         if (!filePath.endsWith('.class')) {
