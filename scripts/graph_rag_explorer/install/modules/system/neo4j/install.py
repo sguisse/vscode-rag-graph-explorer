@@ -72,7 +72,10 @@ class SystemNeo4jInstaller(BaseInstallModule):
         # Enforce configuration alignment rules on every execution lifecycle
         self.configure_neo4j_settings(self.neo4j_ctx.target_folder)
 
-        # 2. Boot database process
+        # Deploy service.py from to-copy/ folder into sandbox_root
+        self.deploy_service_script()
+
+        # 2. Boot database process using deployed service script
         if installStatus.get("neo4j_db_running", {}).get("status") != "✅":
             self.boot_neo4j_process(self.neo4j_ctx.neo4j_cmd)
 
@@ -81,6 +84,22 @@ class SystemNeo4jInstaller(BaseInstallModule):
             self.initialize_remote_database_token(self.neo4j_ctx.cypher_shell_cmd)
 
         success(f"Neo4j instance initialized smoothly. Browser UI: {self.neo4j_ctx.http_url} | Bolt profile: {self.neo4j_ctx.bolt_uri} [User: {self.neo4j_ctx.user} | Pass: {self.neo4j_ctx.password}]", component=self.name)
+
+    def deploy_service_script(self) -> None:
+        """Copies service.py from to-copy/ subfolder into sandbox_root for standalone process control."""
+        source_script = os.path.join(os.path.dirname(__file__), "to-copy", "service.py")
+        target_script = os.path.join(self.neo4j_ctx.sandbox_root, "service.py")
+
+        if os.path.exists(source_script):
+            shutil.copy2(source_script, target_script)
+            if not self.context.is_windows:
+                try:
+                    os.chmod(target_script, 0o755)
+                except OSError:
+                    pass
+            info(f"Deployed Neo4j service control script to: {target_script}", component=self.name)
+        else:
+            warn(f"Source service script missing at expected location: {source_script}", component=self.name)
 
     def _discover_and_apply_java21(self):
         """Active installation lifecycle remediation method to locate and register Java 21 runtime."""
@@ -253,28 +272,31 @@ class SystemNeo4jInstaller(BaseInstallModule):
         except subprocess.CalledProcessError:
             pass
 
-    def boot_neo4j_process(self, neo4j_cmd):
+    def boot_neo4j_process(self, neo4j_cmd: str) -> None:
+        """Delegates Neo4j process startup to service.py inside sandbox_root."""
         info("Spinning up native standalone data cluster mapping engine operations...", component=self.name)
-        os.makedirs(self.context.pids_dir, exist_ok=True)
 
-        if self.context.is_windows:
-            proc = subprocess.Popen([neo4j_cmd, "console"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 512))
-            with open(os.path.join(self.context.pids_dir, f"neo4j_instance_{proc.pid}.pid"), "w", encoding="utf-8") as f:
-                f.write(str(proc.pid))
-            time.sleep(12)
-        else:
-            proc = subprocess.Popen([neo4j_cmd, "start"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, preexec_fn=os.setsid)
-            stdout, stderr = proc.communicate()
+        service_script = os.path.join(self.neo4j_ctx.sandbox_root, "service.py")
 
-            if proc.returncode != 0:
-                error_output = stderr.decode('utf-8', errors='ignore').strip()
-                error(f"Neo4j failed to daemonize (Exit Code {proc.returncode}): {error_output}", component=self.name)
-                raise RuntimeError(f"Neo4j startup script aborted: {error_output}")
-            else:
-                boot_message = stdout.decode('utf-8', errors='ignore').strip()
-                info(f"Neo4j process manager acknowledged: {boot_message}", component=self.name)
-                with open(os.path.join(self.context.pids_dir, f"neo4j_instance_{proc.pid}.pid"), "w", encoding="utf-8") as f:
-                    f.write(str(proc.pid))
+        if not os.path.exists(service_script):
+            error(f"Service script missing at expected path: {service_script}", component=self.name)
+            raise FileNotFoundError(f"Service script not found at {service_script}")
+
+        try:
+            res = subprocess.run(
+                [sys.executable, service_script, "start"],
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            info(f"Service manager response:\n{res.stdout.strip()}", component=self.name)
+            success("Neo4j database started successfully via service script.", component=self.name)
+
+        except subprocess.CalledProcessError as err:
+            error_output = err.stderr.strip() if err.stderr else str(err)
+            error(f"Failed to start Neo4j via service script: {error_output}", component=self.name)
+            raise RuntimeError(f"Neo4j startup via service.py aborted: {error_output}")
 
     def initialize_remote_database_token(self, shell_cmd):
         host = self.neo4j_ctx.host

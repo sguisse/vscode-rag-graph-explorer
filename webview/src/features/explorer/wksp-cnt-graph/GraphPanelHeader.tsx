@@ -1,35 +1,62 @@
 import React from 'react';
-import { Grid, Database, Plus, Minus, Focus, SquareFunction, Code2, Target, ListTree } from 'lucide-react';
+import { Grid, Database, Plus, Minus, Focus, SquareFunction, Target, ListTree } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
 import { ToggleButton } from '@/components/app/toggle-button';
 import { ToolbarSeparator } from '@/components/app/toolbar-separator';
-import { useExplorerStore } from '@/features/explorer/store/useExplorerStore';
 
 import {
   GRAPH_LAYOUT_LIST,
   GRAPH_LAYOUT_ICON_MAP
 } from '@/shared/services/graph-rag-explorer/domain/model/types';
+import {
+  GRAPH_RENDERING_LIST,
+  GRAPH_RENDERING_ICON_MAP,
+  GraphRendering
+} from '@/shared/services/graph-rag-explorer/domain/model/types/type-graph-rendering';
 import { useGraphPanelHeader } from './hooks/use-graph-panel-header';
 
 export interface GraphPanelHeaderLeftProps {
   currentLayout?: string;
   setCurrentLayout?: (val: string) => void;
+  currentRendering?: GraphRendering;
+  setCurrentRendering?: (val: GraphRendering) => void;
 }
 
 export const GraphPanelHeaderLeft: React.FC<GraphPanelHeaderLeftProps> = ({
   currentLayout: propCurrentLayout,
   setCurrentLayout: propSetCurrentLayout,
+  currentRendering: propCurrentRendering,
+  setCurrentRendering: propSetCurrentRendering,
 }) => {
-  const storeCurrentLayout = useExplorerStore((s) => s.currentLayout);
-  const storeSetCurrentLayout = useExplorerStore((s) => s.setCurrentLayout);
+  const {
+    currentLayout: storeLayout,
+    setCurrentLayout: storeSetLayout,
+    currentRendering: storeRendering,
+    setCurrentRendering: storeSetRendering
+  } = useGraphPanelHeader();
 
-  const currentLayout = propCurrentLayout || storeCurrentLayout || 'preset';
-  const setCurrentLayout = propSetCurrentLayout || storeSetCurrentLayout;
+  const currentLayout = propCurrentLayout || storeLayout || 'preset';
+  const setCurrentLayout = propSetCurrentLayout || storeSetLayout;
+
+  const currentRendering = propCurrentRendering || storeRendering || 'uml';
+  const setCurrentRendering = propSetCurrentRendering || storeSetRendering;
 
   return (
     <div className="flex items-center gap-2">
       <span className="font-bold text-foreground truncate tracking-wider">Dependencies</span>
+      <SelectFromTypeBuilder
+        id="select-graph-rendering"
+        value={currentRendering}
+        onChange={(val) => setCurrentRendering((val as GraphRendering) || 'uml')}
+        className="py-0"
+        triggerClassName="!h-6 min-h-0 py-0 px-2 text-xs border-border rounded-sm font-mono"
+        options={GRAPH_RENDERING_LIST.map((key) => ({
+          value: key,
+          icon: GRAPH_RENDERING_ICON_MAP[key]?.icon,
+          label: GRAPH_RENDERING_ICON_MAP[key]?.label || key,
+        }))}
+      />
       <SelectFromTypeBuilder
         id="select-graph-layout"
         value={currentLayout}

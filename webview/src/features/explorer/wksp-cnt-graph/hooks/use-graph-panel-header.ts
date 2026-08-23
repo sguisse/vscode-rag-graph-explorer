@@ -1,7 +1,21 @@
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { vscodeSettings } from '@/App';
+import { useExplorerStore } from '@/features/explorer/store/useExplorerStore';
+import { GraphRendering } from '@/shared/services/graph-rag-explorer/domain/model/types/type-graph-rendering';
 
 export function useGraphPanelHeader(cyRef?: React.RefObject<any>) {
+  const currentLayout = useExplorerStore((s) => s.currentLayout);
+  const setCurrentLayout = useExplorerStore((s) => s.setCurrentLayout);
+
+  const currentRendering = useExplorerStore((s) => s.graphRendering) || 'uml';
+  const setGraphRendering = useExplorerStore((s) => s.setGraphRendering);
+
+  const setCurrentRendering = (val: GraphRendering) => {
+    if (setGraphRendering) {
+      setGraphRendering(val);
+    }
+  };
+
   const displayNeo4jHandler = () => {
     vsCodeApiService.openUrl(vscodeSettings.graphRagExplorer.neo4j.url, true);
   };
@@ -20,6 +34,10 @@ export function useGraphPanelHeader(cyRef?: React.RefObject<any>) {
   };
 
   return {
+    currentLayout,
+    setCurrentLayout,
+    currentRendering,
+    setCurrentRendering,
     displayNeo4jHandler,
     handleZoomIn,
     handleZoomOut,

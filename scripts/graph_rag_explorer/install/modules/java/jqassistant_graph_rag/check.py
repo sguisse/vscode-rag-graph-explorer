@@ -18,6 +18,34 @@ class JQAssistantGraphRagChecker(BaseCheckModule):
     @property
     def name(self) -> str: return "java_jqassistant_graph_rag"
 
+    def check_git_lfs_availability(self):
+        self.steps_count += 1
+        lfs_path = shutil.which("git-lfs")
+
+        if not lfs_path:
+            for candidate in ["/opt/homebrew/bin/git-lfs", "/usr/local/bin/git-lfs"]:
+                if os.path.exists(candidate):
+                    lfs_path = candidate
+                    break
+
+        is_functional = False
+        if lfs_path:
+            try:
+                res = subprocess.run([lfs_path, "help"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
+                if res.returncode == 0:
+                    is_functional = True
+            except Exception:
+                is_functional = False
+
+        if is_functional:
+            self.status["git_lfs_availability"] = {"status": "✅", "path": lfs_path}
+        else:
+            self.status["git_lfs_availability"] = {
+                "status": "❌",
+                "message": "git-lfs is missing or not functional/accessible in non-interactive process PATH."
+            }
+            self.ko_count += 1
+
     def check_jqassistant_graph_rag_tool_availability(self):
         self.steps_count += 1
         tool_path = self.jqa_gr.tools_git_clone
@@ -97,6 +125,7 @@ class JQAssistantGraphRagChecker(BaseCheckModule):
         self.steps_count = 0
         self.ko_count = 0
         self.status = {}
+        self.check_git_lfs_availability()
         self.check_jqassistant_graph_rag_tool_availability()
         self.check_jqassistant_graph_rag_llm_model_availability()
         self.check_workspace_mcp_config()

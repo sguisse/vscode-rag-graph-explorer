@@ -34,6 +34,7 @@ export function CenterPanelContainer() {
   const setCalleesDepth = useExplorerStore((s) => s.setCalleesDepth);
   const currentLayout = useExplorerStore((s) => s.currentLayout);
   const setCurrentLayout = useExplorerStore((s) => s.setCurrentLayout);
+  const graphRendering = useExplorerStore((s) => s.graphRendering) || 'uml';
 
   const attributesVisible = useExplorerStore((s) => s.attributesVisible);
   const setAttributesVisible = useExplorerStore((s) => s.setAttributesVisible);
@@ -122,7 +123,8 @@ export function CenterPanelContainer() {
       attributesVisible,
       methodsVisible,
       selectedEntity,
-      showSelectedOnly
+      showSelectedOnly,
+      graphRendering
     );
   }, [
     isReady,
@@ -136,6 +138,7 @@ export function CenterPanelContainer() {
     methodsVisible,
     selectedEntity,
     showSelectedOnly,
+    graphRendering,
     updateGraphTopology,
   ]);
 

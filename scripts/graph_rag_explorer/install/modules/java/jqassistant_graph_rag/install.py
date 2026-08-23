@@ -42,6 +42,35 @@ class JQAssistantGraphRagInstaller(BaseInstallModule):
     @property
     def name(self) -> str: return "java_jqassistant_graph_rag"
 
+    def ensure_git_lfs(self):
+        """Verifies git-lfs presence and applies symlink remediation or prompts installation."""
+        lfs_path = shutil.which("git-lfs")
+
+        if not lfs_path:
+            for candidate in ["/opt/homebrew/bin/git-lfs", "/usr/local/bin/git-lfs"]:
+                if os.path.exists(candidate):
+                    lfs_path = candidate
+                    break
+
+        if not lfs_path:
+            warn("git-lfs is not installed on the system.", component=self.name)
+            error(
+                "git-lfs is required. Please install it using the following commands:\n"
+                "  brew install git-lfs\n"
+                "  git lfs install",
+                component=self.name
+            )
+            raise RuntimeError("git-lfs installation required.")
+        else:
+            info(f"git-lfs detected at '{lfs_path}'. Creating symlink in /usr/local/bin/git-lfs...", component=self.name)
+            try:
+                cmd = f"sudo ln -sf {lfs_path} /usr/local/bin/git-lfs"
+                subprocess.run(cmd, shell=True, check=True)
+                success("Successfully created symlink for git-lfs at /usr/local/bin/git-lfs", component=self.name)
+            except Exception as e:
+                error(f"Failed to execute symlink command: {e}", component=self.name)
+                warn(f"Please run manually in your terminal: sudo ln -sf {lfs_path} /usr/local/bin/git-lfs", component=self.name)
+
     def install_jqassistant_graph_rag_tool(self):
         source_path = Path(self.jqa_gr.git_clone_dir)
         target_path = Path(self.jqa_gr.tools_git_clone)
@@ -222,10 +251,13 @@ class JQAssistantGraphRagInstaller(BaseInstallModule):
         return False
 
     def execute_all_installations(self, installStatus: Optional[dict] = None) -> None:
-        """Selectively runs configurations. """
+        """Selectively runs configurations."""
         checker = JQAssistantGraphRagChecker(self.context)
         if installStatus is None:
             installStatus = checker.execute_all_checks()
+
+        if installStatus.get("git_lfs_availability", {}).get("status") != "✅":
+            self.ensure_git_lfs()
 
         if installStatus.get("jqassistant_graph_rag_tool", {}).get("status") != "✅":
             self.install_jqassistant_graph_rag_tool()

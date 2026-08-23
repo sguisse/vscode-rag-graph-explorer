@@ -1,3 +1,4 @@
+import { GraphRendering } from '@/shared/services/graph-rag-explorer/domain/model/types/type-graph-rendering';
 import { create } from 'zustand';
 import {
   CodebaseData,
@@ -171,6 +172,7 @@ export interface WkspCntGraphState {
 
   showGrid: boolean;
   currentLayout: string;
+  graphRendering: string;
   attributesVisible: boolean;
   methodsVisible: boolean;
   showSelectedOnly: boolean;
@@ -185,6 +187,7 @@ export interface WkspCntGraphState {
   setCalleesDepth: (depth: number) => void;
   setShowGrid: (show: boolean | ((prev: boolean) => boolean)) => void;
   setCurrentLayout: (layout: string) => void;
+  setGraphRendering: (graphRendering: string) => void;
   setAttributesVisible: (visible: boolean | ((prev: boolean) => boolean)) => void;
   setMethodsVisible: (visible: boolean | ((prev: boolean) => boolean)) => void;
   setShowSelectedOnly: (show: boolean | ((prev: boolean) => boolean)) => void;
@@ -410,6 +413,7 @@ export const useExplorerStore = create<ExplorerState>((set, get) => ({
   calleesDepth: 1,
   showGrid: false,
   currentLayout: 'preset',
+  graphRendering: 'uml',
   attributesVisible: false,
   methodsVisible: false,
   showSelectedOnly: false,
@@ -439,6 +443,7 @@ export const useExplorerStore = create<ExplorerState>((set, get) => ({
       showGrid: typeof show === 'function' ? show(state.showGrid) : show,
     })),
   setCurrentLayout: (currentLayout) => set({ currentLayout }),
+  setGraphRendering: (graphRendering) => set({ graphRendering }),
   setAttributesVisible: (visible) =>
     set((state) => ({
       attributesVisible: typeof visible === 'function' ? visible(state.attributesVisible) : visible,

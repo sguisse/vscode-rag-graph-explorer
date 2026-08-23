@@ -1,5 +1,6 @@
 import shutil
 import os
+import sys
 import subprocess
 import socket
 from install.base import BaseCheckModule
@@ -20,7 +21,6 @@ class SystemNeo4jChecker(BaseCheckModule):
     def check_java_version_compliance(self):
         self.steps_count += 1
 
-        # Passive check only: reads current system configuration
         if self._is_java_version_compliant():
             java_executable = shutil.which("java")
             self.status["java_runtime_executable"] = {
@@ -36,7 +36,6 @@ class SystemNeo4jChecker(BaseCheckModule):
             self.ko_count += 1
 
     def _is_java_version_compliant(self) -> bool:
-        """Passive validation of the currently accessible Java runtime version boundary."""
         try:
             java_cmd = "java"
             if "JAVA_HOME" in os.environ:
@@ -57,44 +56,76 @@ class SystemNeo4jChecker(BaseCheckModule):
         self.steps_count += 1
         host = self.neo4j_ctx.host
         port = int(self.neo4j_ctx.bolt_port)
+        service_script = os.path.join(self.neo4j_ctx.sandbox_root, "service.py")
 
-        neo4j_running = False
+        # 1. Socket Connectivity Check
+        socket_running = False
         try:
             with socket.create_connection((host, port), timeout=2):
-                neo4j_running = True
+                socket_running = True
         except (socket.timeout, ConnectionRefusedError):
-            neo4j_running = False
+            socket_running = False
 
-        if neo4j_running:
-            info("Neo4j database is already running.", component=self.name)
-            self.status["neo4j_db_running"] = {"status": "✅", "message": f"Neo4j database is running on Bolt port {port}."}
+        # 2. Service Script PID Status Check
+        service_running = False
+        if os.path.exists(service_script):
+            try:
+                res = subprocess.run(
+                    [sys.executable, service_script, "status"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    timeout=5
+                )
+                service_running = (res.returncode == 0)
+            except Exception:
+                service_running = False
+
+        if socket_running or service_running:
+            info("Neo4j database process and network port verified active.", component=self.name)
+            self.status["neo4j_db_running"] = {
+                "status": "✅",
+                "message": f"Neo4j database is running and reachable on Bolt port {port}."
+            }
         else:
             self.status["neo4j_db_running"] = {
                 "status": "❌",
-                "message": f"Neo4j database is not reachable on port {port}."
+                "message": f"Neo4j database service/process is not running or reachable on port {port}."
             }
             self.ko_count += 1
 
     def check_local_sandboxed_binaries(self):
         self.steps_count += 1
+        service_script = os.path.join(self.neo4j_ctx.sandbox_root, "service.py")
+
         if os.path.exists(self.neo4j_ctx.admin_cmd):
             self.status["neo4j_local_installation"] = {"status": "✅", "location": self.neo4j_ctx.target_folder}
             self.steps_count += 1
+
             has_apoc = any("apoc" in file and file.endswith(".jar") for file in os.listdir(self.neo4j_ctx.plugins_dir)) if os.path.exists(self.neo4j_ctx.plugins_dir) else False
             has_gds = any("graph-data-science" in file and file.endswith(".jar") for file in os.listdir(self.neo4j_ctx.plugins_dir)) if os.path.exists(self.neo4j_ctx.plugins_dir) else False
+            has_service_script = os.path.exists(service_script)
 
-            if has_apoc and has_gds:
-                self.status["neo4j_plugins_compliance"] = {"status": "✅", "message": "APOC Core and GDS extensions detected inside sandbox context."}
+            if has_apoc and has_gds and has_service_script:
+                self.status["neo4j_plugins_compliance"] = {
+                    "status": "✅",
+                    "message": "APOC Core, GDS extensions, and service.py controller detected inside sandbox context."
+                }
             else:
+                missing = []
+                if not has_apoc: missing.append("APOC jar")
+                if not has_gds: missing.append("GDS jar")
+                if not has_service_script: missing.append("service.py controller")
+
                 self.status["neo4j_plugins_compliance"] = {
                     "status": "❌",
-                    "message": "Missing necessary procedure plugins jars (apoc or graph-data-science) inside runtime subfolder."
+                    "message": f"Missing required components inside runtime subfolder: {', '.join(missing)}."
                 }
                 self.ko_count += 1
         else:
             self.status["neo4j_local_installation"] = {
                 "status": "❌",
-                "message": "Local database engine binaric package missing inside dedicated tools route."
+                "message": "Local database engine binary package missing inside dedicated tools route."
             }
             self.ko_count += 1
 

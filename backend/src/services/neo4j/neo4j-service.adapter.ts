@@ -93,6 +93,22 @@ export class Neo4jAdapter extends AbstractServiceAdapter implements INeo4jServic
     return value;
   }
 
+  public async startNeo4jDatabase(): Promise<boolean> {
+
+    return false;
+  }
+
+  public async stopNeo4jDatabase(): Promise<boolean> {
+
+    return false;
+  }
+
+  public async restartNeo4jDatabase(): Promise<boolean> {
+
+    return false;
+  }
+
+
 
 
   public dispose() {

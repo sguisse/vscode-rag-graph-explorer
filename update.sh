@@ -2,442 +2,1123 @@
 set -euo pipefail
 
 # Ensure target directories exist
-mkdir -p webview/src/features/explorer/wkp-top-impacted-paths/hooks
-mkdir -p webview/src/features/explorer/wkp-top-impacted-paths
+mkdir -p webview/src/features/explorer/wksp-cnt-graph/components
+mkdir -p webview/src/features/explorer/wksp-cnt-graph/hooks
 mkdir -p webview/src/features/explorer/layout-ctns
 
-# 1. Update use-impacted-paths.ts to fix depth resetting and build Default Cypher query params from store
-cat << 'EOF' > webview/src/features/explorer/wkp-top-impacted-paths/hooks/use-impacted-paths.ts
-// webview/src/features/explorer/wkp-top-impacted-paths/hooks/use-impacted-paths.ts
-import { useEffect, useCallback, useRef } from 'react';
-import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
-import { getPathsChangeImpacts } from '@/services/view/graph-view.service';
-import { logInfo } from '@/services/view/log-view.service.wrapper';
+# Create temporary Python patcher script to safely modify useExplorerStore.ts without bash quote escaping conflicts
+cat << 'EOF' > patch_store.py
+import re, sys, os
+
+store_path = "webview/src/features/explorer/store/useExplorerStore.ts"
+if not os.path.exists(store_path):
+    print(f"⚠️ {store_path} not found!", file=sys.stderr)
+    sys.exit(0)
+
+with open(store_path, "r", encoding="utf-8") as f:
+    code = f.read()
+
+changed = False
+
+if "type-graph-rendering" not in code:
+    code = "import { GraphRendering } from '@/shared/services/graph-rag-explorer/domain/model/types/type-graph-rendering';\n" + code
+    changed = True
+
+if "graphRendering:" not in code:
+    if "ExplorerState" in code:
+        code = re.sub(
+            r"(interface\s+ExplorerState\s*\{)",
+            r"\1\n  graphRendering: GraphRendering;\n  setGraphRendering: (graphRendering: GraphRendering) => void;",
+            code
+        )
+        changed = True
+
+if "setGraphRendering" not in code:
+    if "currentLayout:" in code:
+        code = re.sub(
+            r"(currentLayout:[^,\n]+,)",
+            r"\1\n  graphRendering: 'uml',\n  setGraphRendering: (graphRendering) => set({ graphRendering }),",
+            code
+        )
+        changed = True
+    elif "create<ExplorerState>" in code:
+        code = re.sub(
+            r"(create<ExplorerState>\(\s*(?:\([^\)]*\)|[a-zA-Z0-9_$]+)\s*=>\s*\{)",
+            r"\1\n  graphRendering: 'uml',\n  setGraphRendering: (graphRendering) => set({ graphRendering }),",
+            code
+        )
+        changed = True
+
+if changed:
+    with open(store_path, "w", encoding="utf-8") as f:
+        f.write(code)
+    print("✅ Successfully patched useExplorerStore.ts with graphRendering state")
+else:
+    print("ℹ️ useExplorerStore.ts already contains graphRendering state")
+EOF
+
+python3 patch_store.py
+rm -f patch_store.py
+
+# 1. Create Condensed Shapes component
+cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/components/GraphCondensedShapes.tsx
+import React from 'react';
+import { FileCode, Settings } from 'lucide-react';
+import { UmlClassNodeData, NODE_STYLE_REGISTRY } from './GraphUmlShapes';
+
+export const CondensedClassNode: React.FC<{ id: string; data: UmlClassNodeData }> = ({ id, data }) => {
+  const style = NODE_STYLE_REGISTRY[data.type] || NODE_STYLE_REGISTRY.default;
+
+  let borderClass = style.border;
+  let headerBg = `${style.bg} text-white`;
+  let iconColor = style.iconColor;
+
+  if (data.isFocused) {
+    borderClass = 'border-amber-400 dark:border-amber-400 ring-4 ring-amber-400/80 ring-offset-2 ring-offset-background animate-pulse scale-105 shadow-2xl shadow-amber-500/50';
+    headerBg = 'bg-amber-500/40 dark:bg-amber-500/45 text-foreground';
+    iconColor = 'text-amber-400';
+  } else if (data.isOrigin) {
+    borderClass = 'border-red-500 dark:border-red-500 ring-2 ring-red-500/60 shadow-lg shadow-red-500/20';
+    headerBg = 'bg-red-500/30 dark:bg-red-500/35 text-foreground';
+    iconColor = 'text-red-500 dark:text-red-400';
+  } else if (data.isDependency) {
+    borderClass = 'border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/50 shadow-lg shadow-amber-500/10';
+    headerBg = 'bg-amber-500/30 dark:bg-amber-500/35 text-foreground';
+    iconColor = 'text-amber-500 dark:text-amber-400';
+  }
+
+  const methodCount = data.methods?.length || 0;
+  const attrCount = data.attributes?.length || 0;
+
+  return (
+    <div className={`w-56 bg-card rounded-md shadow-md border-2 ${borderClass} relative transition-all duration-200 opacity-100 overflow-hidden`}>
+      <div className={`${headerBg} p-2 flex items-center justify-between gap-1.5`}>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <FileCode size={14} className={`${iconColor} shrink-0`} />
+          <h4 className="font-mono font-bold text-xs truncate" title={data.name}>{data.name}</h4>
+        </div>
+        <span className="bg-black/30 px-1.5 py-0.5 rounded font-mono text-[9px] uppercase tracking-wider shrink-0">
+          {data.type}
+        </span>
+      </div>
+      <div className="p-1.5 flex items-center justify-between font-mono text-[10px] text-muted-foreground bg-muted/20">
+        <span>Attr: <strong className="text-foreground">{attrCount}</strong></span>
+        <span>Methods: <strong className="text-foreground">{methodCount}</strong></span>
+        <span>LOC: <strong className="text-foreground">{data.size || 0}</strong></span>
+      </div>
+    </div>
+  );
+};
+
+export const CondensedConfigNode: React.FC<{ id: string; data: UmlClassNodeData }> = ({ id, data }) => {
+  let borderClass = 'border-amber-500';
+  let headerBg = 'bg-amber-500 text-white';
+  let iconColor = 'text-amber-100';
+
+  if (data.isFocused) {
+    borderClass = 'border-amber-400 dark:border-amber-400 ring-4 ring-amber-400/80 ring-offset-2 ring-offset-background animate-pulse scale-105 shadow-2xl shadow-amber-500/50';
+    headerBg = 'bg-amber-500/40 dark:bg-amber-500/45 text-foreground';
+    iconColor = 'text-amber-400';
+  } else if (data.isOrigin) {
+    borderClass = 'border-red-500 dark:border-red-500 ring-2 ring-red-500/60 shadow-lg shadow-red-500/20';
+    headerBg = 'bg-red-500/30 dark:bg-red-500/35 text-foreground';
+    iconColor = 'text-red-500 dark:text-red-400';
+  } else if (data.isDependency) {
+    borderClass = 'border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/50 shadow-lg shadow-amber-500/10';
+    headerBg = 'bg-amber-500/30 dark:bg-amber-500/35 text-foreground';
+    iconColor = 'text-amber-500';
+  }
+
+  const propCount = data.configProperties?.length || 0;
+
+  return (
+    <div className={`w-60 bg-card rounded-md shadow-md border-2 ${borderClass} relative transition-all duration-200 opacity-100 overflow-hidden`}>
+      <div className={`flex justify-between items-center ${headerBg} p-2`}>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <Settings size={14} className={`${iconColor} shrink-0`} />
+          <h4 className="font-mono font-bold text-xs truncate" title={data.name}>{data.name}</h4>
+        </div>
+        <span className="bg-black/20 px-1.5 py-0.5 rounded font-mono text-[9px] uppercase tracking-widest shrink-0">
+          {propCount} Keys
+        </span>
+      </div>
+    </div>
+  );
+};
+EOF
+
+# 2. Externalize header state handler hook (SOLID)
+cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/hooks/use-graph-panel-header.ts
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
-import { CodebaseData } from '@/shared/services/graph-rag-explorer';
-import { useExplorerStore } from '../../store/useExplorerStore';
+import { vscodeSettings } from '@/App';
+import { useExplorerStore } from '@/features/explorer/store/useExplorerStore';
+import { GraphRendering } from '@/shared/services/graph-rag-explorer/domain/model/types/type-graph-rendering';
 
-export interface UseImpactedPathsOptions {
-  defaultCodebase?: CodebaseData;
-  onCodebaseChange?: (codebase: CodebaseData) => void;
-  upstreamDepth?: number;
-  downstreamDepth?: number;
-}
+export function useGraphPanelHeader(cyRef?: React.RefObject<any>) {
+  const currentLayout = useExplorerStore((s) => s.currentLayout);
+  const setCurrentLayout = useExplorerStore((s) => s.setCurrentLayout);
 
-export function useImpactedPaths(options: UseImpactedPathsOptions = {}) {
-  const {
-    onCodebaseChange,
-    upstreamDepth: propUpstreamDepth,
-    downstreamDepth: propDownstreamDepth,
-  } = options;
+  const currentRendering = useExplorerStore((s) => s.graphRendering) || 'uml';
+  const setGraphRendering = useExplorerStore((s) => s.setGraphRendering);
 
-  const currentPath = useExplorerStore((s) => s.currentPath);
-  const setCurrentPath = useExplorerStore((s) => s.setCurrentPath);
-  const pathsList = useExplorerStore((s) => s.pathsList);
-  const setPathsList = useExplorerStore((s) => s.setPathsList);
-  const codebaseData = useExplorerStore((s) => s.codebase);
-  const setCodebaseData = useExplorerStore((s) => s.setCodebase);
-  const paths = useExplorerStore((s) => s.paths);
-  const setPaths = useExplorerStore((s) => s.setPaths);
-
-  const internalUpstreamDepth = useExplorerStore((s) => s.upstreamDepth);
-  const setInternalUpstreamDepth = useExplorerStore((s) => s.setUpstreamDepth);
-  const internalDownstreamDepth = useExplorerStore((s) => s.downstreamDepth);
-  const setInternalDownstreamDepth = useExplorerStore((s) => s.setDownstreamDepth);
-
-  // Sync prop changes ONLY if prop is explicitly defined and differs from internal store
-  useEffect(() => {
-    if (propUpstreamDepth !== undefined && propUpstreamDepth !== internalUpstreamDepth) {
-      setInternalUpstreamDepth(propUpstreamDepth);
+  const setCurrentRendering = (val: GraphRendering) => {
+    if (setGraphRendering) {
+      setGraphRendering(val);
     }
-  }, [propUpstreamDepth, internalUpstreamDepth, setInternalUpstreamDepth]);
+  };
 
-  useEffect(() => {
-    if (propDownstreamDepth !== undefined && propDownstreamDepth !== internalDownstreamDepth) {
-      setInternalDownstreamDepth(propDownstreamDepth);
-    }
-  }, [propDownstreamDepth, internalDownstreamDepth, setInternalDownstreamDepth]);
+  const displayNeo4jHandler = () => {
+    vsCodeApiService.openUrl(vscodeSettings.graphRagExplorer.neo4j.url, true);
+  };
 
-  const effectiveUpstreamDepth = propUpstreamDepth !== undefined ? propUpstreamDepth : internalUpstreamDepth;
-  const effectiveDownstreamDepth = propDownstreamDepth !== undefined ? propDownstreamDepth : internalDownstreamDepth;
+  const handleZoomIn = () => {
+    cyRef?.current?.zoom((cyRef.current?.zoom() || 1) * 1.2);
+  };
 
-  const depthRef = useRef({
-    upstreamDepth: effectiveUpstreamDepth,
-    downstreamDepth: effectiveDownstreamDepth,
-  });
+  const handleZoomOut = () => {
+    cyRef?.current?.zoom((cyRef.current?.zoom() || 1) / 1.2);
+  };
 
-  useEffect(() => {
-    depthRef.current = {
-      upstreamDepth: effectiveUpstreamDepth,
-      downstreamDepth: effectiveDownstreamDepth,
-    };
-  }, [effectiveUpstreamDepth, effectiveDownstreamDepth]);
-
-  const updatePath = useCallback(
-    (newPath: string) => {
-      setCurrentPath(newPath);
-      setPathsList((prev) => (prev.includes(newPath) ? prev : [...prev, newPath]));
-    },
-    [setCurrentPath, setPathsList]
-  );
-
-  const fetchImpacts = useCallback(
-    async (
-      targetPaths: string,
-      up = depthRef.current.upstreamDepth,
-      down = depthRef.current.downstreamDepth
-    ) => {
-      if (!targetPaths.trim()) return;
-      logInfo(`[useImpactedPaths] Fetching impacts for paths with upstreamDepth=${up}, downstreamDepth=${down}`);
-      const realCodebaseData = await getPathsChangeImpacts(targetPaths, up, down);
-
-      if (realCodebaseData) {
-        setCodebaseData(realCodebaseData);
-        if (onCodebaseChange) {
-          onCodebaseChange(realCodebaseData);
-        }
-      }
-    },
-    [onCodebaseChange, setCodebaseData]
-  );
-
-  const handlePathsChange = useCallback(
-    (newPaths: string) => {
-      setPaths(newPaths);
-      updatePath(newPaths);
-      fetchImpacts(newPaths, depthRef.current.upstreamDepth, depthRef.current.downstreamDepth);
-    },
-    [setPaths, updatePath, fetchImpacts]
-  );
-
-  const buildDefaultCypherQueryParameters = useCallback(async () => {
-    const currentStoreState = useExplorerStore.getState();
-    const activePaths = currentStoreState.paths || '';
-    const activeUpstream = currentStoreState.upstreamDepth;
-    const activeDownstream = currentStoreState.downstreamDepth;
-
-    const formattedTargetPath = activePaths.trim()
-      ? activePaths.split('\n').map((l) => l.trim()).filter(Boolean).join('\n')
-      : '???';
-
-    const cypherParams = `:param {
-  targetPath: "${formattedTargetPath}",
-  upstreamDepth: "${activeUpstream}",
-  downstreamDepth: "${activeDownstream}"
-}`;
-
-    logInfo(`[useImpactedPaths] Cypher parameters generated:\n${cypherParams}`);
-    await vsCodeApiService.copyToClipboard(cypherParams);
-  }, []);
-
-  const appendOrReplacePath = useCallback(
-    (newPath: string) => {
-      setPaths((prev) => {
-        let updated = newPath.trim();
-        if (prev.trim()) {
-          const existingLines = prev.split('\n').map((l) => l.trim()).filter(Boolean);
-          if (!existingLines.includes(newPath.trim())) {
-            updated = `${newPath.trim()}\n${prev.trim()}`;
-          } else {
-            updated = prev;
-          }
-        }
-        updatePath(updated);
-        fetchImpacts(updated, depthRef.current.upstreamDepth, depthRef.current.downstreamDepth);
-        return updated;
-      });
-    },
-    [setPaths, updatePath, fetchImpacts]
-  );
-
-  const setUpstreamDepth = useCallback(
-    (val: number) => {
-      setInternalUpstreamDepth(val);
-      if (paths.trim()) {
-        fetchImpacts(paths, val, depthRef.current.downstreamDepth);
-      }
-    },
-    [paths, fetchImpacts, setInternalUpstreamDepth]
-  );
-
-  const setDownstreamDepth = useCallback(
-    (val: number) => {
-      setInternalDownstreamDepth(val);
-      if (paths.trim()) {
-        fetchImpacts(paths, depthRef.current.upstreamDepth, val);
-      }
-    },
-    [paths, fetchImpacts, setInternalDownstreamDepth]
-  );
-
-  const isFirstRender = useRef(true);
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-    if (paths.trim()) {
-      fetchImpacts(paths, effectiveUpstreamDepth, effectiveDownstreamDepth);
-    }
-  }, [effectiveUpstreamDepth, effectiveDownstreamDepth, fetchImpacts, paths]);
-
-  useEffect(() => {
-    const unsubscribeStatus = vsCodeHandleMessage.on('selectedPath', (message) => {
-      logInfo(`[useImpactedPaths] selectedPath event received: ${message.payload}`);
-      if (message.payload) {
-        handlePathsChange(message.payload);
-      }
-    });
-
-    const unsubscribeAddPath = vsCodeHandleMessage.on('addPathToTop', (message) => {
-      logInfo(`[useImpactedPaths] addPathToTop event received: ${message.payload}`);
-      if (message.payload) {
-        appendOrReplacePath(message.payload);
-      }
-    });
-
-    return () => {
-      unsubscribeStatus();
-      unsubscribeAddPath();
-    };
-  }, [handlePathsChange, appendOrReplacePath]);
-
-  const handleTextareaChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      handlePathsChange(e.target.value);
-    },
-    [handlePathsChange]
-  );
+  const handleFitView = () => {
+    cyRef?.current?.fit(undefined, 40);
+    cyRef?.current?.center();
+  };
 
   return {
-    paths,
-    currentPath,
-    pathsList,
-    codebaseData,
-    upstreamDepth: effectiveUpstreamDepth,
-    downstreamDepth: effectiveDownstreamDepth,
-    setUpstreamDepth,
-    setDownstreamDepth,
-    updatePath,
-    setCodebaseData,
-    handleTextareaChange,
-    handlePathsChange,
-    appendOrReplacePath,
-    fetchImpacts,
-    buildDefaultCypherQueryParameters,
+    currentLayout,
+    setCurrentLayout,
+    currentRendering,
+    setCurrentRendering,
+    displayNeo4jHandler,
+    handleZoomIn,
+    handleZoomOut,
+    handleFitView,
   };
 }
 EOF
 
-# 2. Update ImpactedPathsPanelHeader.tsx to handle numeric input changes without state loss
-cat << 'EOF' > webview/src/features/explorer/wkp-top-impacted-paths/ImpactedPathsPanelHeader.tsx
-// webview/src/features/explorer/wkp-top-impacted-paths/ImpactedPathsPanelHeader.tsx
+# 3. Update GraphPanelHeader.tsx
+cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/GraphPanelHeader.tsx
 import React from 'react';
-import { ArrowUp, ArrowDown, Database } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Grid, Database, Plus, Minus, Focus, SquareFunction, Target, ListTree } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
+import { ToggleButton } from '@/components/app/toggle-button';
+import { ToolbarSeparator } from '@/components/app/toolbar-separator';
 
-export interface ImpactedPathsPanelHeaderLeftProps {
-  title?: string;
+import {
+  GRAPH_LAYOUT_LIST,
+  GRAPH_LAYOUT_ICON_MAP
+} from '@/shared/services/graph-rag-explorer/domain/model/types';
+import {
+  GRAPH_RENDERING_LIST,
+  GRAPH_RENDERING_ICON_MAP,
+  GraphRendering
+} from '@/shared/services/graph-rag-explorer/domain/model/types/type-graph-rendering';
+import { useGraphPanelHeader } from './hooks/use-graph-panel-header';
+
+export interface GraphPanelHeaderLeftProps {
+  currentLayout?: string;
+  setCurrentLayout?: (val: string) => void;
+  currentRendering?: GraphRendering;
+  setCurrentRendering?: (val: GraphRendering) => void;
 }
 
-export const ImpactedPathsPanelHeaderLeft: React.FC<ImpactedPathsPanelHeaderLeftProps> = ({
-  title = 'Impacted Paths to analyze',
-}) => (
-  <div className="flex items-center gap-2">
-    <span className="font-bold text-foreground truncate uppercase tracking-wider">
-      {title}
-    </span>
-  </div>
-);
-
-export interface ImpactedPathsPanelHeaderCenterProps {
-  upstreamDepth: number;
-  setUpstreamDepth: (val: number) => void;
-  downstreamDepth: number;
-  setDownstreamDepth: (val: number) => void;
-}
-
-export const ImpactedPathsPanelHeaderCenter: React.FC<ImpactedPathsPanelHeaderCenterProps> = ({
-  upstreamDepth,
-  setUpstreamDepth,
-  downstreamDepth,
-  setDownstreamDepth,
+export const GraphPanelHeaderLeft: React.FC<GraphPanelHeaderLeftProps> = ({
+  currentLayout: propCurrentLayout,
+  setCurrentLayout: propSetCurrentLayout,
+  currentRendering: propCurrentRendering,
+  setCurrentRendering: propSetCurrentRendering,
 }) => {
+  const {
+    currentLayout: storeLayout,
+    setCurrentLayout: storeSetLayout,
+    currentRendering: storeRendering,
+    setCurrentRendering: storeSetRendering
+  } = useGraphPanelHeader();
+
+  const currentLayout = propCurrentLayout || storeLayout || 'preset';
+  const setCurrentLayout = propSetCurrentLayout || storeSetLayout;
+
+  const currentRendering = propCurrentRendering || storeRendering || 'uml';
+  const setCurrentRendering = propSetCurrentRendering || storeSetRendering;
+
   return (
-    <div className="flex items-center gap-3 font-mono text-xs">
-      <div className="flex items-center gap-1.5 bg-background px-2 py-0.5 border border-border rounded-sm">
-        <ArrowUp size={12} className="text-muted-foreground" />
-        <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">
-          Upstream Depth:
-        </span>
-        <Input
-          id="input-upstream-depth"
-          type="number"
-          min={0}
-          max={20}
-          className="bg-transparent shadow-none p-0 border-0 focus-visible:ring-0 focus:ring-0 w-8 h-5 font-bold text-foreground text-xs text-center"
-          value={upstreamDepth}
-          onChange={(e) => {
-            const parsed = parseInt(e.target.value, 10);
-            setUpstreamDepth(isNaN(parsed) ? 0 : Math.max(0, Math.min(20, parsed)));
-          }}
-        />
-      </div>
-      <div className="flex items-center gap-1.5 bg-background px-2 py-0.5 border border-border rounded-sm">
-        <ArrowDown size={12} className="text-muted-foreground" />
-        <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">
-          Downstream Depth:
-        </span>
-        <Input
-          id="input-downstream-depth"
-          type="number"
-          min={0}
-          max={20}
-          className="bg-transparent shadow-none p-0 border-0 focus-visible:ring-0 focus:ring-0 w-8 h-5 font-bold text-foreground text-xs text-center"
-          value={downstreamDepth}
-          onChange={(e) => {
-            const parsed = parseInt(e.target.value, 10);
-            setDownstreamDepth(isNaN(parsed) ? 0 : Math.max(0, Math.min(20, parsed)));
-          }}
-        />
-      </div>
-    </div>
-  );
-};
-
-export interface ImpactedPathsPanelHeaderRightProps {
-  onBuildDefaultQueryParameters?: () => void;
-}
-
-export const ImpactedPathsPanelHeaderRight: React.FC<ImpactedPathsPanelHeaderRightProps> = ({
-  onBuildDefaultQueryParameters,
-}) => {
-  return (
-    <div className="flex items-center">
-      <button
-        type="button"
-        onClick={onBuildDefaultQueryParameters}
-        className="hover:bg-muted/50 p-1 rounded-sm text-orange-500 hover:text-orange-600 transition-colors cursor-pointer"
-        title="Build default Cypher query"
-      >
-        <Database size={16} />
-      </button>
-    </div>
-  );
-};
-
-export interface ImpactedPathsPanelHeaderProps extends ImpactedPathsPanelHeaderCenterProps {
-  title?: string;
-  onBuildDefaultQueryParameters?: () => void;
-}
-
-export const ImpactedPathsPanelHeader: React.FC<ImpactedPathsPanelHeaderProps> = ({
-  title,
-  upstreamDepth,
-  setUpstreamDepth,
-  downstreamDepth,
-  setDownstreamDepth,
-  onBuildDefaultQueryParameters,
-}) => {
-  return (
-    <div className="flex justify-between items-center px-2 py-1 w-full">
-      <ImpactedPathsPanelHeaderLeft title={title} />
-      <ImpactedPathsPanelHeaderCenter
-        upstreamDepth={upstreamDepth}
-        setUpstreamDepth={setUpstreamDepth}
-        downstreamDepth={downstreamDepth}
-        setDownstreamDepth={setDownstreamDepth}
+    <div className="flex items-center gap-2">
+      <span className="font-bold text-foreground truncate tracking-wider">Dependencies</span>
+      <SelectFromTypeBuilder
+        id="select-graph-rendering"
+        value={currentRendering}
+        onChange={(val) => setCurrentRendering((val as GraphRendering) || 'uml')}
+        className="py-0"
+        triggerClassName="!h-6 min-h-0 py-0 px-2 text-xs border-border rounded-sm font-mono"
+        options={GRAPH_RENDERING_LIST.map((key) => ({
+          value: key,
+          icon: GRAPH_RENDERING_ICON_MAP[key]?.icon,
+          label: GRAPH_RENDERING_ICON_MAP[key]?.label || key,
+        }))}
       />
-      <ImpactedPathsPanelHeaderRight onBuildDefaultQueryParameters={onBuildDefaultQueryParameters} />
+      <SelectFromTypeBuilder
+        id="select-graph-layout"
+        value={currentLayout}
+        onChange={(val) => setCurrentLayout(val || 'preset')}
+        className="py-0"
+        triggerClassName="!h-6 min-h-0 py-0 px-2 text-xs border-border rounded-sm font-mono"
+        options={GRAPH_LAYOUT_LIST.map((key) => ({
+          value: key,
+          icon: GRAPH_LAYOUT_ICON_MAP[key]?.icon,
+          label: GRAPH_LAYOUT_ICON_MAP[key]?.label || key,
+        }))}
+      />
     </div>
   );
 };
 
-export default ImpactedPathsPanelHeader;
+export interface GraphPanelHeaderCenterProps {
+  currentLayout?: string;
+  setCurrentLayout?: (val: string) => void;
+  maxNodesLimit?: number;
+  setMaxNodesLimit?: (val: number) => void;
+  callersDepth?: number;
+  setCallersDepth?: (val: number) => void;
+  calleesDepth?: number;
+  setCalleesDepth?: (val: number) => void;
+  displayLevel?: string;
+  setDisplayLevel?: (val: string) => void;
+}
+
+export const GraphPanelHeaderCenter: React.FC<GraphPanelHeaderCenterProps> = () => {
+  const { displayNeo4jHandler } = useGraphPanelHeader();
+
+  return (
+    <div className="flex items-center gap-3">
+      <Button
+        id="btn-neo4j-connect"
+        className="flex items-center gap-1.5 bg-gradient-to-r from-orange-600 to-orange-500 shadow-sm px-2.5 border border-orange-700 rounded-md h-6 font-bold text-[10px] text-white uppercase tracking-wider"
+        onClick={displayNeo4jHandler}
+      >
+        <Database size={11} /> Neo4j
+      </Button>
+    </div>
+  );
+};
+
+export interface GraphPanelHeaderRightProps {
+  cyRef: React.RefObject<any>;
+  isGraphMaximized: boolean;
+  setIsGraphMaximized: (maximized: boolean) => void;
+  showGrid: boolean;
+  setShowGrid: (show: boolean) => void;
+  attributesVisible: boolean;
+  setAttributesVisible: (val: boolean) => void;
+  methodsVisible: boolean;
+  setMethodsVisible: (val: boolean) => void;
+  showSelectedOnly: boolean;
+  setShowSelectedOnly: (val: boolean) => void;
+}
+
+export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
+  cyRef,
+  isGraphMaximized,
+  setIsGraphMaximized,
+  showGrid,
+  setShowGrid,
+  attributesVisible,
+  setAttributesVisible,
+  methodsVisible,
+  setMethodsVisible,
+  showSelectedOnly,
+  setShowSelectedOnly,
+}) => {
+  const { handleZoomIn, handleZoomOut, handleFitView } = useGraphPanelHeader(cyRef);
+
+  return (
+    <div className="flex items-center gap-1">
+      <ToggleButton
+        id="btn-toggle-show-selected-only"
+        isSelected={showSelectedOnly}
+        onToggle={() => setShowSelectedOnly(!showSelectedOnly)}
+        tooltipText="Display Only Selected & Connected Items"
+        icon={<Target size={12} />}
+      />
+      <ToggleButton
+        id="btn-toggle-attributes-visibility"
+        isSelected={attributesVisible}
+        onToggle={() => setAttributesVisible(!attributesVisible)}
+        tooltipText="Toggle Attributes Visibility"
+        icon={<ListTree size={12} />}
+      />
+      <ToggleButton
+        id="btn-toggle-methods-visibility"
+        isSelected={methodsVisible}
+        onToggle={() => setMethodsVisible(!methodsVisible)}
+        tooltipText="Toggle Methods Visibility"
+        icon={<SquareFunction size={12} />}
+      />
+
+      <ToolbarSeparator />
+
+      <ToggleButton
+        id="btn-toggle-grid"
+        isSelected={showGrid}
+        onToggle={() => setShowGrid(!showGrid)}
+        tooltipText="Toggle Grid"
+        icon={<Grid size={12} />}
+      />
+
+      <ToolbarSeparator />
+
+      <Button
+        id="btn-graph-zoom-in"
+        variant="ghost"
+        size="icon"
+        className="w-5 h-5 text-muted-foreground"
+        onClick={handleZoomIn}
+      >
+        <Plus size={12} />
+      </Button>
+      <Button
+        id="btn-graph-zoom-out"
+        variant="ghost"
+        size="icon"
+        className="w-5 h-5 text-muted-foreground"
+        onClick={handleZoomOut}
+      >
+        <Minus size={12} />
+      </Button>
+      <Button
+        id="btn-graph-fit-view"
+        variant="ghost"
+        size="icon"
+        className="w-5 h-5 text-muted-foreground"
+        onClick={handleFitView}
+      >
+        <Focus size={12} />
+      </Button>
+    </div>
+  );
+};
 EOF
 
-# 3. Update TopPanelContainer.tsx to ensure Cypher params copy exact active paths and depth
-cat << 'EOF' > webview/src/features/explorer/layout-ctns/TopPanelContainer.tsx
-// webview/src/features/explorer/layout-ctns/TopPanelContainer.tsx
-import React, { useCallback } from 'react';
-import { useAppContextStore } from '@/store/useAppContextStore';
-import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
-import { ImpactedPathsPanel } from '../wkp-top-impacted-paths/impacted-paths-panel';
+# 4. Update useGraphTopology.ts
+cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/hooks/useGraphTopology.ts
+import { useCallback, useRef } from 'react';
+import cytoscape from 'cytoscape';
 import {
-  ImpactedPathsPanelHeaderLeft,
-  ImpactedPathsPanelHeaderCenter,
-  ImpactedPathsPanelHeaderRight,
-} from '../wkp-top-impacted-paths/ImpactedPathsPanelHeader';
+  CodebaseData,
+  CodebaseFile,
+  Dependency,
+  SelectedEntity,
+} from '@/shared/services/graph-rag-explorer';
+import { buildMemberKeyToken } from '@/services/view/graph-view.service';
+import { FOLDER_BASE_X_POSITIONS_CONFIG } from '@/features/explorer/constants/graph.constants';
+import { GraphRendering } from '@/shared/services/graph-rag-explorer/domain/model/types/type-graph-rendering';
+
+function getNodeDimensions(
+  file: CodebaseFile,
+  attributesVisible: boolean,
+  methodsVisible: boolean,
+  graphRendering: GraphRendering = 'uml'
+): { width: number; height: number } {
+  if (graphRendering === 'condensed') {
+    if (file.type === 'config') {
+      return { width: 240, height: 42 };
+    }
+    return { width: 224, height: 68 };
+  }
+
+  if (file.type === 'config') {
+    return { width: 320, height: 240 };
+  }
+
+  const baseHeaderHeight = 76;
+
+  let attrHeight = 0;
+  if (attributesVisible) {
+    const attrCount = file.attributes?.length || 0;
+    attrHeight = attrCount > 0 ? 28 + attrCount * 18 : 36;
+  }
+
+  let methodHeight = 0;
+  if (methodsVisible) {
+    const methodCount = file.methods?.length || 0;
+    methodHeight = methodCount > 0 ? 28 + methodCount * 32 : 36;
+  }
+
+  const totalHeight = baseHeaderHeight + attrHeight + methodHeight;
+  return { width: 288, height: totalHeight };
+}
+
+function applyCustomHierarchicalLayout(
+  cy: cytoscape.Core,
+  effectiveFiles: CodebaseFile[],
+  codebase: CodebaseData,
+  attributesVisible: boolean,
+  methodsVisible: boolean,
+  graphRendering: GraphRendering
+) {
+  if (effectiveFiles.length === 0) return;
+
+  const inDegree = new Map<string, number>();
+  const adj = new Map<string, string[]>();
+
+  effectiveFiles.forEach(f => {
+    inDegree.set(f.id, 0);
+    adj.set(f.id, []);
+  });
+
+  codebase.dependencies.forEach(dep => {
+    const src = dep.sourceNode || dep.source;
+    const tgt = dep.targetNode || dep.target;
+    if (src && tgt && inDegree.has(src) && inDegree.has(tgt) && src !== tgt) {
+      adj.get(src)!.push(tgt);
+      inDegree.set(tgt, (inDegree.get(tgt) || 0) + 1);
+    }
+  });
+
+  const levelMap = new Map<string, number>();
+  const queue: string[] = [];
+
+  effectiveFiles.forEach(f => {
+    if ((inDegree.get(f.id) || 0) === 0) {
+      levelMap.set(f.id, 0);
+      queue.push(f.id);
+    }
+  });
+
+  if (queue.length === 0 && effectiveFiles.length > 0) {
+    levelMap.set(effectiveFiles[0].id, 0);
+    queue.push(effectiveFiles[0].id);
+  }
+
+  while (queue.length > 0) {
+    const curr = queue.shift()!;
+    const currLevel = levelMap.get(curr) || 0;
+
+    const neighbors = adj.get(curr) || [];
+    neighbors.forEach(nbr => {
+      const nextLevel = currLevel + 1;
+      if (!levelMap.has(nbr) || levelMap.get(nbr)! < nextLevel) {
+        levelMap.set(nbr, nextLevel);
+        queue.push(nbr);
+      }
+    });
+  }
+
+  effectiveFiles.forEach(f => {
+    if (!levelMap.has(f.id)) {
+      levelMap.set(f.id, 0);
+    }
+  });
+
+  const maxLevel = Math.max(...Array.from(levelMap.values()), 0);
+  const levels: CodebaseFile[][] = Array.from({ length: maxLevel + 1 }, () => []);
+
+  effectiveFiles.forEach(f => {
+    const lvl = levelMap.get(f.id) || 0;
+    levels[lvl].push(f);
+  });
+
+  const edgeLabelLengths = new Map<string, number>();
+  codebase.dependencies.forEach(dep => {
+    const src = dep.sourceNode || dep.source;
+    const tgt = dep.targetNode || dep.target;
+    const label = dep.label || '';
+    if (src && tgt && label) {
+      const key1 = `${src}__${tgt}`;
+      const key2 = `${tgt}__${src}`;
+      edgeLabelLengths.set(key1, Math.max(edgeLabelLengths.get(key1) || 0, label.length));
+      edgeLabelLengths.set(key2, Math.max(edgeLabelLengths.get(key2) || 0, label.length));
+    }
+  });
+
+  let currentY = 80;
+
+  levels.forEach((levelFiles) => {
+    if (levelFiles.length === 0) return;
+
+    const levelHeights = levelFiles.map(f => getNodeDimensions(f, attributesVisible, methodsVisible, graphRendering).height);
+    const maxLevelHeight = Math.max(...levelHeights, 42);
+    const dimsList = levelFiles.map(f => getNodeDimensions(f, attributesVisible, methodsVisible, graphRendering));
+
+    const gaps: number[] = [];
+    for (let i = 0; i < levelFiles.length - 1; i++) {
+      const f1 = levelFiles[i].id;
+      const f2 = levelFiles[i + 1].id;
+      const labelLen = Math.max(
+        edgeLabelLengths.get(`${f1}__${f2}`) || 0,
+        edgeLabelLengths.get(`${f2}__${f1}`) || 0
+      );
+      const gapX = labelLen > 0 ? Math.round(labelLen * 7) + 20 : 10;
+      gaps.push(gapX);
+    }
+
+    const totalLevelWidth = dimsList.reduce((acc, d) => acc + d.width, 0) + gaps.reduce((acc, g) => acc + g, 0);
+    let currentX = 600 - totalLevelWidth / 2;
+
+    levelFiles.forEach((file, idx) => {
+      const cyNode = cy.getElementById(file.id);
+      const dims = dimsList[idx];
+
+      if (cyNode && cyNode.length > 0) {
+        cyNode.position({
+          x: currentX + dims.width / 2,
+          y: currentY + maxLevelHeight / 2
+        });
+      }
+
+      currentX += dims.width + (gaps[idx] || 10);
+    });
+
+    currentY += maxLevelHeight + 50;
+  });
+}
+
+export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) {
+  const lastStructureKeyRef = useRef<string>('');
+
+  const updateGraphTopology = useCallback((
+    searchFilteredFiles: CodebaseFile[],
+    visibleFiles: Record<string, boolean>,
+    codebase: CodebaseData,
+    impactedSet: Set<string>,
+    currentLayout: string,
+    folderPositions: Record<string, { label: string }>,
+    attributesVisible: boolean = false,
+    methodsVisible: boolean = true,
+    selectedEntity: SelectedEntity | null = null,
+    showSelectedOnly: boolean = false,
+    graphRendering: GraphRendering = 'uml'
+  ) => {
+    if (!cyRef.current) return;
+    const cy = cyRef.current;
+
+    const effectiveFiles = (showSelectedOnly && selectedEntity)
+      ? searchFilteredFiles.filter(f => f.id === selectedEntity.nodeId || impactedSet.has(f.id))
+      : searchFilteredFiles;
+
+    const structureKey = JSON.stringify({
+      files: effectiveFiles.map(f => f.id),
+      visible: visibleFiles,
+      layout: currentLayout,
+      attributesVisible,
+      methodsVisible,
+      graphRendering,
+      deps: codebase.dependencies.map(d => d.id)
+    });
+
+    const isStructureChanged = lastStructureKeyRef.current !== structureKey;
+
+    if (isStructureChanged) {
+      lastStructureKeyRef.current = structureKey;
+
+      cy.elements().remove();
+
+      const filesByFolder: Record<string, CodebaseFile[]> = {};
+      effectiveFiles.forEach(file => {
+        const folderKey = file.path.split('/')[0] || 'other';
+        if (!filesByFolder[folderKey]) filesByFolder[folderKey] = [];
+        filesByFolder[folderKey].push(file);
+      });
+
+      const allFolderKeys = Array.from(
+        new Set([...Object.keys(folderPositions), ...Object.keys(filesByFolder)])
+      );
+
+      let maxLabelLength = 0;
+      codebase.dependencies.forEach(dep => {
+        if (dep.label) {
+          maxLabelLength = Math.max(maxLabelLength, dep.label.length);
+        }
+      });
+      const dynamicGapX = maxLabelLength > 0 ? Math.round(maxLabelLength * 7) + 20 : 10;
+      const gapY = 50;
+
+      allFolderKeys.forEach(folderKey => {
+        if ((filesByFolder[folderKey] || []).length > 0) {
+          const label = folderPositions[folderKey]?.label || `📂 ${folderKey.charAt(0).toUpperCase() + folderKey.slice(1)}`;
+          cy.add({ data: { id: `folder__${folderKey}`, label }, classes: 'folder' });
+        }
+      });
+
+      allFolderKeys.forEach((folderKey, folderIdx) => {
+        const folderFiles = filesByFolder[folderKey] || [];
+        if (folderFiles.length === 0) return;
+
+        const baseX = FOLDER_BASE_X_POSITIONS_CONFIG[folderKey as keyof typeof FOLDER_BASE_X_POSITIONS_CONFIG] || (40 + folderIdx * 450);
+
+        const numCols = 2;
+        let currentY = 80;
+        const rowCount = Math.ceil(folderFiles.length / numCols);
+
+        for (let r = 0; r < rowCount; r++) {
+          const rowFiles = folderFiles.slice(r * numCols, (r + 1) * numCols);
+          const rowHeights = rowFiles.map(f => getNodeDimensions(f, attributesVisible, methodsVisible, graphRendering).height);
+          const maxRowHeight = Math.max(...rowHeights, 42);
+
+          rowFiles.forEach((file, c) => {
+            const dims = getNodeDimensions(file, attributesVisible, methodsVisible, graphRendering);
+            const absX = baseX + 30 + c * (dims.width + dynamicGapX) + dims.width / 2;
+            const absY = currentY + dims.height / 2;
+
+            cy.add({
+              data: {
+                id: file.id,
+                parent: `folder__${folderKey}`,
+                width: dims.width,
+                height: dims.height
+              },
+              position: { x: absX, y: absY }
+            });
+          });
+
+          currentY += maxRowHeight + gapY;
+        }
+      });
+
+      codebase.dependencies.forEach((dep: Dependency) => {
+        const sourceNodeId = dep.sourceNode || dep.source;
+        const targetNodeId = dep.targetNode || dep.target;
+
+        if (
+          sourceNodeId &&
+          targetNodeId &&
+          visibleFiles[sourceNodeId] &&
+          visibleFiles[targetNodeId] &&
+          cy.getElementById(sourceNodeId).length > 0 &&
+          cy.getElementById(targetNodeId).length > 0
+        ) {
+          cy.add({
+            data: { id: dep.id, source: sourceNodeId, target: targetNodeId, label: dep.label }
+          });
+        }
+      });
+
+      if (currentLayout === 'hierarchical' || currentLayout === 'breadthfirst' || currentLayout === 'dagre') {
+        applyCustomHierarchicalLayout(cy, effectiveFiles, codebase, attributesVisible, methodsVisible, graphRendering);
+      } else if (currentLayout !== 'preset') {
+        cy.layout({
+          name: currentLayout,
+          animate: false,
+          fit: true,
+          padding: 30,
+        } as cytoscape.LayoutOptions).run();
+      }
+
+      cy.fit(undefined, 30);
+      if (cy.zoom() > 1) {
+        cy.zoom(1);
+      }
+      cy.center();
+    }
+
+    codebase.dependencies.forEach((dep: Dependency) => {
+      const edge = cy.getElementById(dep.id);
+      if (edge && edge.length > 0) {
+        const sourceNodeId = dep.sourceNode || dep.source;
+        const targetNodeId = dep.targetNode || dep.target;
+        const sourceHandle = dep.sourceHandle || 'header';
+        const targetHandle = dep.targetHandle || 'header';
+
+        if (sourceNodeId && targetNodeId) {
+          const sourceKeyMember = buildMemberKeyToken(sourceNodeId, sourceHandle);
+          const targetKeyMember = buildMemberKeyToken(targetNodeId, targetHandle);
+
+          const isEdgeImpacted =
+            (impactedSet.has(sourceNodeId) || impactedSet.has(sourceKeyMember)) &&
+            (impactedSet.has(targetNodeId) || impactedSet.has(targetKeyMember));
+
+          if (isEdgeImpacted) {
+            edge.addClass('impacted');
+          } else {
+            edge.removeClass('impacted');
+          }
+        }
+      }
+    });
+
+  }, [cyRef]);
+
+  return { updateGraphTopology };
+}
+EOF
+
+# 5. Update GraphPanel.tsx
+cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/GraphPanel.tsx
+import React from 'react';
+import { Info } from 'lucide-react';
+import { FolderNode, UmlClassNode, ConfigNode, UmlClassNodeData } from './components/GraphUmlShapes';
+import { CondensedClassNode, CondensedConfigNode } from './components/GraphCondensedShapes';
+import { SelectedEntity, CodebaseFile } from '@/shared/services/graph-rag-explorer';
+import { isMemberKeyForFileToken, extractMemberIdFromKeyToken } from '@/services/view/graph-view.service';
+import { useGraphPanel } from './hooks/use-graph-panel';
+import { GraphToolbar } from './Graph-toolbar';
 import { useExplorerStore } from '../store/useExplorerStore';
-import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
-import { logInfo } from '@/services/view/log-view.service.wrapper';
-import { CodebaseData } from '@/shared/services/graph-rag-explorer';
 
-export function TopPanelContainer() {
-  const upstreamDepth = useExplorerStore((s) => s.upstreamDepth);
-  const setUpstreamDepth = useExplorerStore((s) => s.setUpstreamDepth);
-  const downstreamDepth = useExplorerStore((s) => s.downstreamDepth);
-  const setDownstreamDepth = useExplorerStore((s) => s.setDownstreamDepth);
-  const setCodebase = useExplorerStore((s) => s.setCodebase);
-  const setNotification = useAppContextStore((s) => s.setNotification);
+interface GraphPanelProps {
+  folderPositions: Record<string, { label: string }>;
+  containerRef: (node: HTMLDivElement | null) => void;
+  showGrid: boolean;
+  isDarkMode: boolean;
+  graphState: {
+    zoom: number;
+    pan: { x: number; y: number };
+    nodePositions: Record<string, { x: number; y: number; w: number; h: number }>;
+  };
+  selectedEntity: SelectedEntity | null;
+  focusedNodeId?: string | null;
+  searchFilteredFiles: CodebaseFile[];
+  impactedSet: Set<string>;
+  handleSelectMember: (nodeId: string, memberId: string) => void;
+  attributesVisible: boolean;
+  methodsVisible: boolean;
+  showSelectedOnly?: boolean;
+}
 
-  const handleImportCodebase = useCallback(
-    async (importedData: CodebaseData) => {
-      setCodebase(importedData);
-      setNotification('AST Codebase imported successfully!');
-    },
-    [setCodebase, setNotification]
+export function GraphPanel({
+  folderPositions,
+  containerRef,
+  showGrid,
+  isDarkMode,
+  graphState,
+  selectedEntity,
+  focusedNodeId,
+  searchFilteredFiles,
+  impactedSet,
+  handleSelectMember,
+  attributesVisible,
+  methodsVisible,
+  showSelectedOnly = false
+}: GraphPanelProps) {
+  const graphRendering = useExplorerStore((s) => s.graphRendering) || 'uml';
+
+  const {
+    effectiveFolderPositions,
+    effectiveSearchFilteredFiles,
+  } = useGraphPanel(
+    folderPositions,
+    graphState.nodePositions,
+    showSelectedOnly,
+    selectedEntity,
+    searchFilteredFiles,
+    impactedSet
   );
 
-  const handleBuildDefaultQueryParameters = useCallback(async () => {
-    const currentStoreState = useExplorerStore.getState();
-    const activePaths = currentStoreState.paths || '';
-    const activeUpstream = currentStoreState.upstreamDepth;
-    const activeDownstream = currentStoreState.downstreamDepth;
+  return (
+    <div className="relative inset-0 outline-none w-full h-full overflow-hidden">
+      <GraphToolbar />
 
-    const formattedTargetPath = activePaths.trim()
-      ? activePaths
-          .split('\n')
-          .map((line) => line.trim())
-          .filter(Boolean)
-          .join('\n')
-      : '???';
+      <div
+        ref={containerRef}
+        className="z-0 absolute inset-0 w-full h-full"
+        style={showGrid ? {
+          backgroundImage: isDarkMode
+            ? 'radial-gradient(#334155 1.2px, transparent 1.2px)'
+            : 'radial-gradient(#cbd5e1 1.2px, transparent 1.2px)',
+          backgroundSize: `${16 * graphState.zoom}px ${16 * graphState.zoom}px`,
+          backgroundPosition: `${graphState.pan.x}px ${graphState.pan.y}px`
+        } : undefined}
+      />
 
-    const cypherParams = `:param {
-  targetPath: "${formattedTargetPath}",
-  upstreamDepth: "${activeUpstream}",
-  downstreamDepth: "${activeDownstream}"
-}`;
+      <div
+        className="z-10 absolute inset-0 origin-top-left pointer-events-none select-none"
+        style={{ transform: `translate(${graphState.pan.x}px, ${graphState.pan.y}px) scale(${graphState.zoom})` }}
+      >
+        {Object.entries(effectiveFolderPositions).map(([folderKey, initialPos]) => {
+          const bounds = graphState.nodePositions[`folder__${folderKey}`];
+          if (!bounds) return null;
+          const isSelected = selectedEntity?.nodeId === `folder__${folderKey}`;
+          return (
+            <div
+              key={`folder-box-${folderKey}`}
+              className="z-10 absolute transition-all duration-75 ease-out"
+              style={{ left: bounds.x, top: bounds.y, width: bounds.w, height: bounds.h }}
+            >
+              <FolderNode data={{ label: initialPos.label }} isSelected={isSelected} />
+            </div>
+          );
+        })}
 
-    logInfo(`[TopPanelContainer] Cypher parameters generated:\n${cypherParams}`);
-    await vsCodeApiService.copyToClipboard(cypherParams);
-    setNotification('Default Cypher parameters copied to clipboard!');
-  }, [setNotification]);
+        {effectiveSearchFilteredFiles.map((file: CodebaseFile) => {
+          const bounds = graphState.nodePositions[file.id];
+          if (!bounds) return null;
+
+          const impactedMembers: string[] = [];
+          impactedSet.forEach(item => {
+            if (isMemberKeyForFileToken(item, file.id)) {
+              impactedMembers.push(extractMemberIdFromKeyToken(item));
+            }
+          });
+
+          const isOrigin = selectedEntity?.nodeId === file.id;
+          const isDependency = impactedSet.has(file.id) && !isOrigin;
+          const isFocused = focusedNodeId === file.id;
+
+          const nodeData: UmlClassNodeData = {
+            ...file,
+            isOrigin,
+            isDependency,
+            isFocused,
+            impactedMembers,
+            selectedMember: selectedEntity?.nodeId === file.id ? selectedEntity?.memberId : undefined,
+            onSelectMember: handleSelectMember,
+            attributesVisible,
+            methodsVisible
+          };
+
+          return (
+            <div
+              key={file.id}
+              className={`absolute transition-all duration-75 ease-out pointer-events-none ${isFocused ? 'z-30' : 'z-20'}`}
+              style={{ left: bounds.x, top: bounds.y, width: bounds.w, height: bounds.h }}
+            >
+              {file.type === 'config' ? (
+                graphRendering === 'condensed' ? (
+                  <CondensedConfigNode id={file.id} data={nodeData} />
+                ) : (
+                  <ConfigNode id={file.id} data={nodeData} />
+                )
+              ) : (
+                graphRendering === 'condensed' ? (
+                  <CondensedClassNode id={file.id} data={nodeData} />
+                ) : (
+                  <UmlClassNode id={file.id} data={nodeData} />
+                )
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div
+        id="cytoscape-engine-info"
+        className="top-10 left-4 z-20 absolute bg-card/90 shadow-md backdrop-blur p-3 border border-border rounded-lg max-w-sm font-mono text-xs pointer-events-auto"
+      >
+        <div className="flex justify-between items-center gap-2 mb-1">
+          <div className="flex items-center gap-2">
+            <Info size={14} className="text-primary" />
+            <span className="font-bold">Surgical Analysis (Cytoscape Engine)</span>
+          </div>
+          <button
+            onClick={() => {
+              const infoDiv = document.getElementById('cytoscape-engine-info');
+              if (infoDiv) infoDiv.style.display = 'none';
+            }}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Close info"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <p className="text-[10px] text-muted-foreground">
+          Drag-and-drop on headers and wheel zoom use Cytoscape's responsive architecture.
+        </p>
+      </div>
+    </div>
+  );
+}
+EOF
+
+# 6. Update CenterPanelContainer.tsx
+cat << 'EOF' > webview/src/features/explorer/layout-ctns/CenterPanelContainer.tsx
+import React, { useEffect, useCallback } from 'react';
+import { useLayoutStore } from '@/store/useLayoutStore';
+import { useAppContextStore } from '@/store/useAppContextStore';
+import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
+import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
+import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
+import { GraphPanel } from '../wksp-cnt-graph/GraphPanel';
+import {
+  GraphPanelHeaderLeft,
+  GraphPanelHeaderCenter,
+  GraphPanelHeaderRight,
+} from '../wksp-cnt-graph/GraphPanelHeader';
+import { useCodebaseFilter } from '../hooks/use-codebase-filter';
+import { useTransitiveImpact } from '../hooks/use-transitive-impact';
+import { useGraph } from '../wksp-cnt-graph/hooks/use-graph';
+import { useExplorerStore } from '../store/useExplorerStore';
+
+export function CenterPanelContainer() {
+  const codebase = useExplorerStore((s) => s.codebase);
+  const folderPositions = useExplorerStore((s) => s.folderPositions);
+  const selectedEntity = useExplorerStore((s) => s.selectedEntity);
+  const setSelectedEntity = useExplorerStore((s) => s.setSelectedEntity);
+  const focusedNodeId = useExplorerStore((s) => s.focusedNodeId);
+
+  const enableDownstream = useExplorerStore((s) => s.enableDownstream);
+  const enableUpstream = useExplorerStore((s) => s.enableUpstream);
+
+  const showGrid = useExplorerStore((s) => s.showGrid);
+  const setShowGrid = useExplorerStore((s) => s.setShowGrid);
+  const callersDepth = useExplorerStore((s) => s.callersDepth);
+  const setCallersDepth = useExplorerStore((s) => s.setCallersDepth);
+  const calleesDepth = useExplorerStore((s) => s.calleesDepth);
+  const setCalleesDepth = useExplorerStore((s) => s.setCalleesDepth);
+  const currentLayout = useExplorerStore((s) => s.currentLayout);
+  const setCurrentLayout = useExplorerStore((s) => s.setCurrentLayout);
+  const graphRendering = useExplorerStore((s) => s.graphRendering) || 'uml';
+
+  const attributesVisible = useExplorerStore((s) => s.attributesVisible);
+  const setAttributesVisible = useExplorerStore((s) => s.setAttributesVisible);
+  const methodsVisible = useExplorerStore((s) => s.methodsVisible);
+  const setMethodsVisible = useExplorerStore((s) => s.setMethodsVisible);
+  const showSelectedOnly = useExplorerStore((s) => s.showSelectedOnly);
+  const setShowSelectedOnly = useExplorerStore((s) => s.setShowSelectedOnly);
+
+  const toggleContainerMaximized = useLayoutStore((s) => s.toggleContainerMaximized);
+  const isDarkMode = useAppContextStore((s) => s.isDarkMode);
+
+  const filter = useCodebaseFilter(codebase.files);
+  const { impactedSet } = useTransitiveImpact(
+    selectedEntity,
+    codebase.dependencies,
+    callersDepth,
+    calleesDepth,
+    enableDownstream,
+    enableUpstream
+  );
+
+  const handleNodeSelect = useCallback(
+    (nodeId: string) => {
+      setSelectedEntity({ type: 'node', nodeId });
+      const targetFile = codebase.files.find((f) => f.id === nodeId);
+      if (targetFile && targetFile.path) {
+        logInfo(`Single-clicked graph item: ${nodeId}. Revealing path & copying to clipboard: ${targetFile.path}`);
+        vsCodeApiService.revealInExplorer(targetFile.path);
+        vsCodeApiService.copyToClipboard(targetFile.path);
+      }
+    },
+    [codebase.files, setSelectedEntity]
+  );
+
+  const handleSelectMember = useCallback(
+    (nodeId: string, memberId: string) => {
+      setSelectedEntity({ type: 'member', nodeId, memberId });
+      const targetFile = codebase.files.find((f) => f.id === nodeId);
+      if (targetFile && targetFile.path) {
+        logInfo(`Single-clicked member item: ${memberId} in ${nodeId}. Revealing path & copying to clipboard: ${targetFile.path}`);
+        vsCodeApiService.revealInExplorer(targetFile.path);
+        vsCodeApiService.copyToClipboard(targetFile.path);
+      }
+    },
+    [codebase.files, setSelectedEntity]
+  );
+
+  const handleNodeDoubleClick = useCallback(
+    (nodeId: string) => {
+      const targetFile = codebase.files.find((f) => f.id === nodeId);
+      if (targetFile && targetFile.path) {
+        logInfo(`Double-clicked graph item: ${nodeId}. Opening file in VS Code: ${targetFile.path}`);
+        vsCodeApiService.revealInExplorer(targetFile.path);
+        vsCodeApiService.openFile(targetFile.path);
+      }
+    },
+    [codebase.files]
+  );
+
+  const handleNodeCmdClick = useCallback(
+    (nodeId: string) => {
+      const targetFile = codebase.files.find((f) => f.id === nodeId);
+      const pathToAdd = targetFile?.path || nodeId;
+      logInfo(`Cmd+Clicked graph item: ${nodeId}. Appending path to context paths panel: ${pathToAdd}`);
+      vsCodeHandleMessage.emit('addPathToTop', { command: 'addPathToTop', payload: pathToAdd });
+    },
+    [codebase.files]
+  );
+
+  const { containerRef, cyRef, graphState, updateGraphTopology, isReady } = useGraph(
+    isDarkMode,
+    handleNodeSelect,
+    handleNodeDoubleClick,
+    handleNodeCmdClick
+  );
+
+  useEffect(() => {
+    if (!isReady || Object.keys(folderPositions).length === 0) return;
+    updateGraphTopology(
+      filter.searchFilteredFiles,
+      filter.visibleFiles,
+      codebase,
+      impactedSet,
+      currentLayout,
+      folderPositions,
+      attributesVisible,
+      methodsVisible,
+      selectedEntity,
+      showSelectedOnly,
+      graphRendering
+    );
+  }, [
+    isReady,
+    filter.searchFilteredFiles,
+    filter.visibleFiles,
+    codebase,
+    impactedSet,
+    currentLayout,
+    folderPositions,
+    attributesVisible,
+    methodsVisible,
+    selectedEntity,
+    showSelectedOnly,
+    graphRendering,
+    updateGraphTopology,
+  ]);
 
   return (
-    <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
+    <div className="relative flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
       <ContainerPanelHeader
-        path="workspace.top"
-        headerLeft={<ImpactedPathsPanelHeaderLeft />}
+        path="workspace.center"
+        isHiddable={true}
+        headerLeft={<GraphPanelHeaderLeft />}
         headerCenter={
-          <ImpactedPathsPanelHeaderCenter
-            upstreamDepth={upstreamDepth}
-            setUpstreamDepth={setUpstreamDepth}
-            downstreamDepth={downstreamDepth}
-            setDownstreamDepth={setDownstreamDepth}
+          <GraphPanelHeaderCenter
+            maxNodesLimit={filter.maxNodesLimit}
+            setMaxNodesLimit={filter.setMaxNodesLimit}
+            callersDepth={callersDepth}
+            setCallersDepth={setCallersDepth}
+            calleesDepth={calleesDepth}
+            setCalleesDepth={setCalleesDepth}
+            displayLevel={filter.displayLevel}
+            setDisplayLevel={filter.setDisplayLevel}
+            currentLayout={currentLayout}
+            setCurrentLayout={setCurrentLayout}
           />
         }
         headerRight={
-          <ImpactedPathsPanelHeaderRight
-            onBuildDefaultQueryParameters={handleBuildDefaultQueryParameters}
+          <GraphPanelHeaderRight
+            cyRef={cyRef}
+            isGraphMaximized={false}
+            setIsGraphMaximized={() => toggleContainerMaximized('workspace.center')}
+            showGrid={showGrid}
+            setShowGrid={setShowGrid}
+            attributesVisible={attributesVisible}
+            setAttributesVisible={setAttributesVisible}
+            methodsVisible={methodsVisible}
+            setMethodsVisible={setMethodsVisible}
+            showSelectedOnly={showSelectedOnly}
+            setShowSelectedOnly={setShowSelectedOnly}
           />
         }
       />
-      <div className="flex-1 min-h-0 overflow-auto">
-        <ImpactedPathsPanel
-          onCodebaseChange={handleImportCodebase}
-          upstreamDepth={upstreamDepth}
-          downstreamDepth={downstreamDepth}
+      <div className="relative flex-1 w-full h-full min-h-0">
+        <GraphPanel
+          folderPositions={folderPositions}
+          containerRef={containerRef}
+          showGrid={showGrid}
+          isDarkMode={isDarkMode}
+          graphState={graphState}
+          selectedEntity={selectedEntity}
+          focusedNodeId={focusedNodeId}
+          searchFilteredFiles={filter.searchFilteredFiles}
+          impactedSet={impactedSet}
+          handleSelectMember={handleSelectMember}
+          attributesVisible={attributesVisible}
+          methodsVisible={methodsVisible}
+          showSelectedOnly={showSelectedOnly}
         />
       </div>
     </div>
@@ -445,4 +1126,4 @@ export function TopPanelContainer() {
 }
 EOF
 
-echo "✅ fix: Resolved depth input state resets and ensured targetPath parameter includes active textArea content!"
+echo "✅ feat/fix: Fixed useExplorerStore patching and enabled reactive switching to Condensed graph rendering mode!"

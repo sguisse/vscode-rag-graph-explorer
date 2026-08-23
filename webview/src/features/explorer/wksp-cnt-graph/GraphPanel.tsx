@@ -1,10 +1,12 @@
 import React from 'react';
 import { Info } from 'lucide-react';
 import { FolderNode, UmlClassNode, ConfigNode, UmlClassNodeData } from './components/GraphUmlShapes';
+import { CondensedClassNode, CondensedConfigNode } from './components/GraphCondensedShapes';
 import { SelectedEntity, CodebaseFile } from '@/shared/services/graph-rag-explorer';
 import { isMemberKeyForFileToken, extractMemberIdFromKeyToken } from '@/services/view/graph-view.service';
 import { useGraphPanel } from './hooks/use-graph-panel';
 import { GraphToolbar } from './Graph-toolbar';
+import { useExplorerStore } from '../store/useExplorerStore';
 
 interface GraphPanelProps {
   folderPositions: Record<string, { label: string }>;
@@ -41,6 +43,8 @@ export function GraphPanel({
   methodsVisible,
   showSelectedOnly = false
 }: GraphPanelProps) {
+  const graphRendering = useExplorerStore((s) => s.graphRendering) || 'uml';
+
   const {
     effectiveFolderPositions,
     effectiveSearchFilteredFiles,
@@ -122,9 +126,17 @@ export function GraphPanel({
               style={{ left: bounds.x, top: bounds.y, width: bounds.w, height: bounds.h }}
             >
               {file.type === 'config' ? (
-                <ConfigNode id={file.id} data={nodeData} />
+                graphRendering === 'condensed' ? (
+                  <CondensedConfigNode id={file.id} data={nodeData} />
+                ) : (
+                  <ConfigNode id={file.id} data={nodeData} />
+                )
               ) : (
-                <UmlClassNode id={file.id} data={nodeData} />
+                graphRendering === 'condensed' ? (
+                  <CondensedClassNode id={file.id} data={nodeData} />
+                ) : (
+                  <UmlClassNode id={file.id} data={nodeData} />
+                )
               )}
             </div>
           );

@@ -2,10 +2,7 @@ import React from 'react';
 import {
   FileCode,
   ShieldAlert,
-  Fingerprint,
   Tag,
-  Code2,
-  Layers,
   Hash,
   Settings,
   ListTree,
@@ -17,14 +14,12 @@ import {
   Database,
   SquareFunction
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CollapsibleCard } from '@/components/app/collapsible-card';
 import {
   CodebaseData,
   SelectedEntity,
   CodebaseMethod,
   CodebaseAttribute,
-  ConfigProperty,
 } from '@/shared/services/graph-rag-explorer';
 import { useInspectorPanel } from './hooks/use-inspector-panel';
 
@@ -39,15 +34,56 @@ interface InspectorPanelProps {
   handleCopy?: (text: string, message: string) => void;
 }
 
+const TAG_CATEGORIES: Record<string, string[]> = {
+  'Domain & Architecture': [
+    'DomainLayer', 'DomainObject', 'Entity', 'PortIn', 'PortOut', 'Service', 'Component', 'backend'
+  ],
+  'OOP & Structures': [
+    'Class', 'Interface', 'Enum', 'Type', 'HasSubType', 'HasSuperType', 'AssociatedElement', 'Java', 'File'
+  ],
+  'Patterns & Frameworks': [
+    'Builder', 'Mapper', 'StrategyPatternContext', 'StrategyPatternInterface', 'NoArgsConstructor', 'Slf4j'
+  ],
+  'Traceability & Analysis': [
+    'AnnotationImpactTraceable', 'HierarchyImpactTraceable', 'DeadCodeCandidate', 'ByteCode', 'Throwable'
+  ],
+};
+
+const groupTagsByCategory = (tags: string[] = []) => {
+  const grouped: Record<string, string[]> = {
+    'Domain & Architecture': [],
+    'OOP & Structures': [],
+    'Patterns & Frameworks': [],
+    'Traceability & Analysis': [],
+    'Others': [],
+  };
+
+  tags.forEach((rawTag) => {
+    const cleanTag = rawTag.replace(/\/$/, '').trim();
+    let isMatched = false;
+
+    for (const [category, knownTags] of Object.entries(TAG_CATEGORIES)) {
+      if (knownTags.some((kt) => kt.toLowerCase() === cleanTag.toLowerCase())) {
+        grouped[category].push(cleanTag);
+        isMatched = true;
+        break;
+      }
+    }
+
+    if (!isMatched) {
+      grouped['Others'].push(cleanTag);
+    }
+  });
+
+  return grouped;
+};
+
 export function InspectorPanel({
   selectedEntity,
   initialCodebase,
-  handleCopy,
 }: InspectorPanelProps) {
   const {
     currentFile,
-    selectedMethod,
-    selectedProp,
     groupedAttributes,
     sortedVisibilities,
     handleCopyFileCypherQuery,
@@ -80,6 +116,14 @@ export function InspectorPanel({
   const attributesCopyText = (currentFile.attributes || [])
     .map((a) => `${a.visibility || 'public'} ${a.name}`)
     .join('\n');
+
+  const methodsCopyText = (currentFile.methods || [])
+    .map((m) => `${m.visibility || 'public'} ${m.name}`)
+    .join('\n');
+
+  const tagsCopyText = (currentFile.tags || []).join('\n');
+
+  const groupedTags = groupTagsByCategory(currentFile.tags);
 
   return (
     <div className="flex flex-col space-y-1.5 h-full font-mono text-xs animate-in duration-200 fade-in">
@@ -152,7 +196,7 @@ export function InspectorPanel({
         </div>
       </div>
 
-      <div className="flex flex-col flex-1 space-y-1.5 min-h-0">
+      <div className="flex flex-col flex-1 space-y-1.5 min-h-0 overflow-y-auto">
         <CollapsibleCard
           cardId="card-inspector-attributes"
           defaultExpanded={false}
@@ -176,94 +220,138 @@ export function InspectorPanel({
                 <div key={vis} className="space-y-0">
                   <div className="space-y-0">
                     {groupedAttributes[vis].map((attr: CodebaseAttribute, idx: number) => (
-                        <div
+                      <div
                         key={idx}
                         className="flex justify-between items-center gap-1.5 bg-muted/20 px-1 py-0.5 border-border/30 rounded text-[11px]"
-                        >
-                        {/* Left side: Visibility badge & Attribute Name */}
+                      >
                         <div className="flex flex-1 items-center gap-1.5 min-w-0">
-                            <span className="bg-primary/10 px-1 py-0.2 rounded font-bold text-[9px] text-primary uppercase shrink-0">
+                          <span className="bg-primary/10 px-1 py-0.2 rounded font-bold text-[9px] text-primary uppercase shrink-0">
                             {attr.visibility}
-                            </span>
-                            <span className="font-semibold text-foreground truncate">{attr.name}</span>
+                          </span>
+                          <span className="font-semibold text-foreground truncate">{attr.name}</span>
                         </div>
 
-                        {/* Right side: Right-aligned Colon & Type */}
                         {attr.type && (
-                            <div className="flex items-center gap-1 ml-auto font-mono text-[10px] text-muted-foreground shrink-0">
-                                <span></span>
-                                <span
-                                    className="max-w-[200px] font-medium text-foreground/90 text-left truncate [direction:rtl]"
-                                    data-tooltip={attr.type ? attr.type.match(/.{1,15}/g)?.join('\n') : undefined}
-                                    >
-                                    <bdi>{attr.type}</bdi>
-                                </span>
-                            </div>
+                          <div className="flex items-center gap-1 ml-auto font-mono text-[10px] text-muted-foreground shrink-0">
+                            <span></span>
+                            <span
+                              className="max-w-[200px] font-medium text-foreground/90 text-left truncate [direction:rtl]"
+                              data-tooltip={attr.type ? attr.type.match(/.{1,15}/g)?.join('\n') : undefined}
+                            >
+                              <bdi>{attr.type}</bdi>
+                            </span>
+                          </div>
                         )}
-                        </div>
+                      </div>
                     ))}
-                    </div>
-
+                  </div>
                 </div>
               ))}
             </div>
           )}
         </CollapsibleCard>
 
-        <Card className="flex flex-col flex-1 bg-card/50 shadow-xs border-border min-h-0 overflow-hidden">
-          <CardHeader className="bg-muted/40 p-1.5 px-2 border-border/60 border-b shrink-0">
+        <CollapsibleCard
+          cardId="card-inspector-methods"
+          defaultExpanded={true}
+          title={
             <div className="flex items-center gap-1.5">
               <SquareFunction className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-              <CardTitle className="font-mono font-bold text-[11px] text-foreground uppercase tracking-wider">
+              <span className="font-mono font-bold text-[11px] text-foreground uppercase tracking-wider">
                 Methods / Exports ({currentFile.methods?.length || 0})
-              </CardTitle>
+              </span>
             </div>
-          </CardHeader>
-          <CardContent className="flex-1 p-1 min-h-0 overflow-y-auto">
-            {(!currentFile.methods || currentFile.methods.length === 0) ? (
-              <span className="px-2 text-[12px] text-muted-foreground text-xs italic">No methods declared</span>
-            ) : (
-              <div className="space-y-1">
-                {currentFile.methods.map((m: CodebaseMethod) => {
-                  const isSelected = selectedEntity.memberId === m.id;
-                  return (
-                    <div
-                      key={m.id}
-                      className={`p-1 rounded border text-[11px] ${
-                        isSelected ? 'border-indigo-500 bg-indigo-500/10 font-bold' : 'border-border/30 bg-muted/20'
-                      }`}
-                    >
-                      <div className="flex justify-between items-center gap-1.5 min-w-0">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <span className="bg-primary/10 px-1 py-0.2 rounded font-bold text-[9px] text-primary uppercase shrink-0">
-                            {m.visibility}
-                          </span>
-                          <span
-                            className="min-w-0 font-semibold text-foreground truncate cursor-help"
-                            data-tooltip={m.signature || ''}
-                          >
-                            {m.name}
-                          </span>
-                        </div>
-                        <Database
-                          className="w-3.5 h-3.5 text-amber-400 hover:text-amber-300 transition-colors cursor-pointer shrink-0"
-                          onClick={(e) => handleCopyMethodCypherQuery(m, e)}
-                          data-tooltip={`Copy Neo4j Cypher query for method ${m.name}`}
-                        />
-                      </div>
-
-                      {m.description && (
-                        <span className="block mt-0.5 text-[10px] text-muted-foreground leading-snug">
-                          {m.description}
+          }
+          contentToCopy={methodsCopyText}
+          className="bg-card/50 shadow-xs border-border overflow-hidden shrink-0"
+          headerClassName="bg-muted/40 p-1.5 px-2 border-border/60 border-b"
+        >
+          {(!currentFile.methods || currentFile.methods.length === 0) ? (
+            <span className="text-[12px] text-muted-foreground text-xs italic">No methods declared</span>
+          ) : (
+            <div className="space-y-1 max-h-48 overflow-y-auto">
+              {currentFile.methods.map((m: CodebaseMethod) => {
+                const isSelected = selectedEntity.memberId === m.id;
+                return (
+                  <div
+                    key={m.id}
+                    className={`p-1 rounded border text-[11px] ${
+                      isSelected ? 'border-indigo-500 bg-indigo-500/10 font-bold' : 'border-border/30 bg-muted/20'
+                    }`}
+                  >
+                    <div className="flex justify-between items-center gap-1.5 min-w-0">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="bg-primary/10 px-1 py-0.2 rounded font-bold text-[9px] text-primary uppercase shrink-0">
+                          {m.visibility}
                         </span>
-                      )}
+                        <span
+                          className="min-w-0 font-semibold text-foreground truncate cursor-help"
+                          data-tooltip={m.signature || ''}
+                        >
+                          {m.name}
+                        </span>
+                      </div>
+                      <Database
+                        className="w-3.5 h-3.5 text-amber-400 hover:text-amber-300 transition-colors cursor-pointer shrink-0"
+                        onClick={(e) => handleCopyMethodCypherQuery(m, e)}
+                        data-tooltip={`Copy Neo4j Cypher query for method ${m.name}`}
+                      />
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+
+                    {m.description && (
+                      <span className="block mt-0.5 text-[10px] text-muted-foreground leading-snug">
+                        {m.description}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CollapsibleCard>
+
+        <CollapsibleCard
+          cardId="card-inspector-tags"
+          defaultExpanded={false}
+          title={
+            <div className="flex items-center gap-1.5">
+              <Tag className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span className="font-mono font-bold text-[11px] text-foreground uppercase tracking-wider">
+                Codebase Tags ({currentFile.tags?.length || 0})
+              </span>
+            </div>
+          }
+          contentToCopy={tagsCopyText}
+          className="bg-card/50 shadow-xs border-border overflow-hidden shrink-0"
+          headerClassName="bg-muted/40 p-1.5 px-2 border-border/60 border-b"
+        >
+          {(!currentFile.tags || currentFile.tags.length === 0) ? (
+            <span className="text-[12px] text-muted-foreground text-xs italic">No tags assigned</span>
+          ) : (
+            <div className="space-y-2 p-1 max-h-48 overflow-y-auto">
+              {Object.entries(groupedTags).map(([category, tags]) => {
+                if (tags.length === 0) return null;
+                return (
+                  <div key={category} className="space-y-1">
+                    <span className="block font-mono font-bold text-[9px] text-muted-foreground uppercase tracking-tight">
+                      {category}
+                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="inline-flex items-center bg-primary/10 px-1.5 py-0.5 border border-primary/20 rounded font-mono font-semibold text-[10px] text-primary"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CollapsibleCard>
       </div>
     </div>
   );
