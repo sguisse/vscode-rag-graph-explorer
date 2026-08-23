@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import {
   CodebaseData,
   CodebaseFile,
@@ -7,10 +7,16 @@ import {
   CodebaseAttribute,
   ConfigProperty,
 } from '@/shared/services/graph-rag-explorer';
+import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 const VISIBILITY_ORDER = ['public', 'protected', 'package', 'private'];
 
-export function useInspectorPanel(selectedEntity: SelectedEntity | null, initialCodebase: CodebaseData) {
+export function useInspectorPanel(
+  selectedEntity: SelectedEntity | null,
+  initialCodebase: CodebaseData,
+  handleCopy?: (text: string, message: string) => void
+) {
   const currentFile = useMemo(() => {
     if (!selectedEntity) return null;
     return initialCodebase.files.find((f: CodebaseFile) => f.id === selectedEntity.nodeId) || null;
@@ -49,11 +55,68 @@ export function useInspectorPanel(selectedEntity: SelectedEntity | null, initial
     });
   }, [groupedAttributes]);
 
+  const handleCopyFileCypherQuery = useCallback((e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!selectedEntity) return;
+
+    const nodeId = selectedEntity.nodeId;
+    const memberId = selectedEntity.memberId;
+    const simpleName = currentFile?.name
+      ? currentFile.name.replace(/\.[^/.]+$/, '')
+      : (nodeId.split('.').pop() || nodeId);
+
+    let cypherQuery = '';
+
+
+      cypherQuery = `MATCH (t:Type)
+                    WHERE t.name = '${simpleName}'
+                    OPTIONAL MATCH (t)-[:WITH_SOURCE]->(f:File)
+                    OPTIONAL MATCH (t)-[:DECLARES]->(m:Member)
+                    OPTIONAL MATCH (t)-[r:DEPENDS_ON]->(dep:Type)
+                    RETURN t, f, m, r, dep;`;
+
+    vsCodeApiService.copyToClipboard(cypherQuery);
+    if (handleCopy) {
+      handleCopy(cypherQuery, `Cypher query for '${simpleName}' copied to clipboard!`);
+    } else {
+      logInfo(`Cypher query copied to clipboard:\n${cypherQuery}`);
+    }
+  }, [selectedEntity, currentFile, handleCopy]);
+
+  const handleCopyMethodCypherQuery = useCallback((method: CodebaseMethod, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!selectedEntity) return;
+
+    const nodeId = selectedEntity.nodeId;
+    const simpleName = currentFile?.name
+      ? currentFile.name.replace(/\.[^/.]+$/, '')
+      : (nodeId.split('.').pop() || nodeId);
+
+    const methodCleanName = method.name.replace(/\(\)$/, '').replace(/\(.*\)$/, '');
+
+    const cypherQuery = `MATCH (t:Type)-[:DECLARES]->(m:Member)
+                        WHERE (t.name = '${simpleName}')
+                        AND (m.name = '${methodCleanName}')
+                        OPTIONAL MATCH (m)-[r:INVOKES]->(callee:Method)
+                        OPTIONAL MATCH (caller:Method)-[inR:INVOKES]->(m)
+                        OPTIONAL MATCH (t)-[:WITH_SOURCE]->(f:File)
+                        RETURN t, m, r, callee, inR, caller, f;`;
+
+    vsCodeApiService.copyToClipboard(cypherQuery);
+    if (handleCopy) {
+      handleCopy(cypherQuery, `Cypher query for method '${method.name}' in '${simpleName}' copied to clipboard!`);
+    } else {
+      logInfo(`Method Cypher query copied to clipboard:\n${cypherQuery}`);
+    }
+  }, [selectedEntity, currentFile, handleCopy]);
+
   return {
     currentFile,
     selectedMethod,
     selectedProp,
     groupedAttributes,
     sortedVisibilities,
+    handleCopyFileCypherQuery,
+    handleCopyMethodCypherQuery,
   };
 }

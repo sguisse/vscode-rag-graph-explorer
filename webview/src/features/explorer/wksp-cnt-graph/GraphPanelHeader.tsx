@@ -1,5 +1,5 @@
 import React from 'react';
-import { Grid, Database, Plus, Minus, Focus, SquareFunction, Code2, Target } from 'lucide-react';
+import { Grid, Database, Plus, Minus, Focus, SquareFunction, Code2, Target, ListTree } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
 import { ToggleButton } from '@/components/app/toggle-button';
@@ -118,7 +118,7 @@ export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
         isSelected={attributesVisible}
         onToggle={() => setAttributesVisible(!attributesVisible)}
         tooltipText="Toggle Attributes Visibility"
-        icon={<Code2 size={12} />}
+        icon={<ListTree size={12} />}
       />
       <ToggleButton
         id="btn-toggle-methods-visibility"

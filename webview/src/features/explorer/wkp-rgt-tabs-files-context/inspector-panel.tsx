@@ -12,7 +12,10 @@ import {
   Braces,
   Puzzle,
   Boxes,
-  Box
+  Box,
+  Folder,
+  Database,
+  SquareFunction
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -38,6 +41,7 @@ interface InspectorPanelProps {
 export function InspectorPanel({
   selectedEntity,
   initialCodebase,
+  handleCopy,
 }: InspectorPanelProps) {
   const {
     currentFile,
@@ -45,6 +49,8 @@ export function InspectorPanel({
     selectedProp,
     groupedAttributes,
     sortedVisibilities,
+    handleCopyFileCypherQuery,
+    handleCopyMethodCypherQuery,
   } = useInspectorPanel(selectedEntity, initialCodebase);
 
   if (!selectedEntity || !currentFile) {
@@ -71,29 +77,54 @@ export function InspectorPanel({
   };
 
   return (
-    <div className="space-y-2.5 font-mono text-xs animate-in duration-200 fade-in">
-      <div className="space-y-2 bg-primary/5 p-3 border border-primary/20 rounded-lg">
-        <div className="flex justify-between items-center">
-          <span className="font-mono font-bold text-[10px] text-primary uppercase tracking-wider">
-            ACTIVE SUBSYSTEM
-          </span>
-          <span className="bg-primary/10 px-2 py-0.5 rounded font-mono font-bold text-[11px] text-primary">
-            {currentFile.language}
-          </span>
-        </div>
-        <div className="flex items-start gap-2 mt-2">
+    <div className="space-y-1.5 font-mono text-xs animate-in duration-200 fade-in">
+      <div className="space-y-1 bg-primary/5 p-2 border border-primary/20 rounded-lg">
+        <div className="flex items-start gap-2 mt-0">
           {renderTypeIcon(currentFile.type)}
-          <div className="overflow-hidden">
-            <h4 className="font-mono font-bold text-foreground text-xs truncate">
-              {selectedEntity.type === 'member' ? `${currentFile.name} ➔ ${selectedEntity.memberId}` : currentFile.name}
-            </h4>
-            <span className="block mt-0.5 font-mono text-[10px] text-muted-foreground truncate">
-              {currentFile.path}
-            </span>
+          <div className="flex-1 w-full min-w-0">
+            <div className="flex justify-between items-center gap-2">
+              <h4 className="font-mono font-bold text-foreground text-xs truncate">
+                {`${currentFile.name}`}
+              </h4>
+
+              <span className="bg-primary/10 px-2 py-0.5 rounded font-mono font-bold text-[11px] text-primary shrink-0">
+                {currentFile.language}
+              </span>
+            </div>
           </div>
         </div>
 
-        <div className="gap-2 grid grid-cols-2 pt-2 border-border border-t">
+        <div className="flex items-center gap-1 mt-0.5 min-w-0 font-mono text-[10px] text-muted-foreground">
+          <Hash className="w-3 h-3 text-primary shrink-0" />
+          <span className="truncate">{selectedEntity.nodeId}</span>
+          <Database
+            className="ms-auto w-3.5 h-3.5 text-amber-400 hover:text-amber-300 transition-colors cursor-pointer shrink-0"
+            onClick={handleCopyFileCypherQuery}
+            data-tooltip="Copy Neo4j Cypher query for this file/type"
+          />
+        </div>
+
+        <div className="flex items-center gap-1 mt-0.5 min-w-0 font-mono text-[10px] text-muted-foreground">
+          <Folder className="w-3 h-3 text-primary shrink-0" />
+          <span
+            className="block w-full text-left truncate"
+            style={{ direction: 'rtl', textAlign: 'left' }}
+            title={currentFile.path}
+          >
+            <bdi>{currentFile.path?.replace(/[/\\]+$/, '')}</bdi>
+          </span>
+        </div>
+
+        <div className="gap-2 grid grid-cols-3 pt-2 border-border border-t">
+          <div className="bg-background p-1.5 border border-border rounded">
+            <span className="block flex items-center gap-1 text-[9px] text-muted-foreground uppercase">
+              <Tag className="w-3 h-3 text-amber-500" /> Entity Type
+            </span>
+            <span className="block mt-0.5 font-bold text-[11px] text-foreground uppercase">
+              {currentFile.type}
+            </span>
+          </div>
+
           <div className="bg-background p-1.5 border border-border rounded">
             <span className="block font-mono text-[9px] text-muted-foreground uppercase">Volume of Code</span>
             <span className="font-mono font-bold text-[11px] text-foreground">{currentFile.size || 0} LOC</span>
@@ -116,90 +147,90 @@ export function InspectorPanel({
         </div>
       </div>
 
-      <Card className="bg-card/50 shadow-xs border-border overflow-hidden">
-        <CardHeader className="bg-muted/40 p-2 border-border/60 border-b">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-1.5">
-              <Fingerprint className="w-3.5 h-3.5 text-primary shrink-0" />
-              <CardTitle className="font-mono font-bold text-[11px] text-foreground uppercase tracking-wider">
-                Identity Attributes
-              </CardTitle>
-            </div>
-            <span className="bg-primary/10 px-1.5 py-0.5 rounded-full font-mono font-semibold text-[9px] text-primary uppercase">
-              {selectedEntity.type}
-            </span>
-          </div>
-        </CardHeader>
-
-        <CardContent className="space-y-1.5 p-2 font-mono text-[11px]">
-          <div className="space-y-1 bg-muted/30 p-1.5 border border-border/40 rounded-md">
-            <div className="flex items-center gap-1 font-semibold text-[9px] text-muted-foreground uppercase">
-              <Hash className="w-3 h-3 text-primary" /> FQN Identifier
-            </div>
-            <div className="bg-background/80 p-1 border border-border/30 rounded font-medium text-[11px] text-foreground break-all">
-              {selectedEntity.nodeId}
-            </div>
-          </div>
-
-          <div className="gap-1.5 grid grid-cols-2">
-            <div className="bg-muted/20 p-1.5 border border-border/30 rounded">
-              <span className="block flex items-center gap-1 text-[9px] text-muted-foreground uppercase">
-                <Tag className="w-3 h-3 text-amber-500" /> Entity Type
-              </span>
-              <span className="block mt-0.5 font-bold text-[11px] text-foreground uppercase">
-                {currentFile.type}
-              </span>
-            </div>
-
-            <div className="bg-muted/20 p-1.5 border border-border/30 rounded">
-              <span className="block flex items-center gap-1 text-[9px] text-muted-foreground uppercase">
-                <Layers className="w-3 h-3 text-indigo-500" /> Target Member
-              </span>
-              <span className="block mt-0.5 font-bold text-[11px] text-foreground truncate">
-                {selectedEntity.memberId ? `${selectedEntity.memberId}` : 'N/A'}
-              </span>
-            </div>
-          </div>
-
-          {selectedEntity.edgeId && (
-            <div className="bg-muted/20 p-1.5 border border-border/30 rounded">
-              <span className="block flex items-center gap-1 text-[9px] text-muted-foreground uppercase">
-                <Code2 className="w-3 h-3 text-emerald-500" /> Edge ID
-              </span>
-              <span className="block mt-0.5 font-bold text-[11px] text-foreground break-all">
-                {selectedEntity.edgeId}
-              </span>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {currentFile.type === 'config' ? (
+      <div className="space-y-2">
         <Card className="bg-card/50 shadow-xs border-border overflow-hidden">
           <CardHeader className="bg-muted/40 p-2 border-border/60 border-b">
             <div className="flex items-center gap-1.5">
-              <Settings className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+              <ListTree className="w-3.5 h-3.5 text-primary shrink-0" />
               <CardTitle className="font-mono font-bold text-[11px] text-foreground uppercase tracking-wider">
-                Config Properties ({currentFile.configProperties?.length || 0})
+                Attributes / Fields ({currentFile.attributes?.length || 0})
               </CardTitle>
             </div>
           </CardHeader>
-          <CardContent className="p-2">
-            {(!currentFile.configProperties || currentFile.configProperties.length === 0) ? (
-              <span className="text-muted-foreground text-xs italic">No properties mapped</span>
+          <CardContent className="p-0.5">
+            {sortedVisibilities.length === 0 ? (
+              <span className="px-2 text-muted-foreground text-xs italic">No attributes declared</span>
             ) : (
-              <div className="space-y-1 max-h-40 overflow-y-auto">
-                {currentFile.configProperties.map((prop: ConfigProperty, idx: number) => {
-                  const isSelected = selectedEntity.memberId === prop.key;
+              <div className="space-y-0 max-h-36 overflow-y-auto">
+                {sortedVisibilities.map((vis) => (
+                  <div key={vis} className="space-y-0">
+                    <div className="space-y-0">
+                      {groupedAttributes[vis].map((attr: CodebaseAttribute, idx: number) => (
+                        <div
+                          key={idx}
+                          className="flex items-center gap-1.5 bg-muted/20 px-1.5 py-0.5 border-border/30 rounded text-[11px]"
+                        >
+                          <span className="bg-primary/10 px-1 py-0.2 rounded font-bold text-[9px] text-primary uppercase shrink-0">
+                            {attr.visibility}
+                          </span>
+                          <span className="font-semibold text-foreground truncate">{attr.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card/50 shadow-xs border-border overflow-hidden">
+          <CardHeader className="bg-muted/40 p-2 border-border/60 border-b">
+            <div className="flex items-center gap-1.5">
+              <SquareFunction className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+              <CardTitle className="font-mono font-bold text-[11px] text-foreground uppercase tracking-wider">
+                Methods / Exports ({currentFile.methods?.length || 0})
+              </CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="p-1">
+            {(!currentFile.methods || currentFile.methods.length === 0) ? (
+              <span className="text-muted-foreground text-xs italic">No methods declared</span>
+            ) : (
+              <div className="space-y-1 max-h-44 overflow-y-auto">
+                {currentFile.methods.map((m: CodebaseMethod) => {
+                  const isSelected = selectedEntity.memberId === m.id;
                   return (
                     <div
-                      key={idx}
-                      className={`p-1.5 rounded border font-mono text-[11px] ${
-                        isSelected ? 'border-amber-500 bg-amber-500/10 font-bold' : 'border-border/40 bg-muted/20'
+                      key={m.id}
+                      className={`p-1 rounded border text-[11px] ${
+                        isSelected ? 'border-indigo-500 bg-indigo-500/10 font-bold' : 'border-border/30 bg-muted/20'
                       }`}
                     >
-                      <span className="block font-semibold text-amber-500">{prop.key}</span>
-                      <span className="block text-muted-foreground truncate">{prop.value}</span>
+                      <div className="flex justify-between items-center gap-1.5 min-w-0">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="bg-primary/10 px-1 py-0.2 rounded font-bold text-[9px] text-primary uppercase shrink-0">
+                            {m.visibility}
+                          </span>
+                          <span
+                            className="min-w-0 font-semibold text-foreground truncate cursor-help"
+                            data-tooltip={m.signature || ''}
+                          >
+                            {m.name}
+                          </span>
+                        </div>
+                        <Database
+                          className="w-3.5 h-3.5 text-amber-400 hover:text-amber-300 transition-colors cursor-pointer shrink-0"
+                          onClick={(e) => handleCopyMethodCypherQuery(m, e)}
+                          data-tooltip={`Copy Neo4j Cypher query for method ${m.name}`}
+                        />
+                      </div>
+
+                      {m.description && (
+                        <span className="block mt-0.5 text-[10px] text-muted-foreground leading-snug">
+                          {m.description}
+                        </span>
+                      )}
                     </div>
                   );
                 })}
@@ -207,90 +238,7 @@ export function InspectorPanel({
             )}
           </CardContent>
         </Card>
-      ) : (
-        <div className="space-y-2">
-          <Card className="bg-card/50 shadow-xs border-border overflow-hidden">
-            <CardHeader className="bg-muted/40 p-2 border-border/60 border-b">
-              <div className="flex items-center gap-1.5">
-                <ListTree className="w-3.5 h-3.5 text-primary shrink-0" />
-                <CardTitle className="font-mono font-bold text-[11px] text-foreground uppercase tracking-wider">
-                  Attributes / Fields ({currentFile.attributes?.length || 0})
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="p-2">
-              {sortedVisibilities.length === 0 ? (
-                <span className="text-muted-foreground text-xs italic">No attributes declared</span>
-              ) : (
-                <div className="space-y-1.5 max-h-36 overflow-y-auto">
-                  {sortedVisibilities.map((vis) => (
-                    <div key={vis} className="space-y-0.5">
-                      <div className="px-0.5 font-bold text-[9px] text-muted-foreground uppercase tracking-wider">
-                        {vis}
-                      </div>
-                      <div className="space-y-0.5">
-                        {groupedAttributes[vis].map((attr: CodebaseAttribute, idx: number) => (
-                          <div
-                            key={idx}
-                            className="flex items-center gap-1.5 bg-muted/20 px-1.5 py-0.5 border border-border/30 rounded text-[11px]"
-                          >
-                            <span className="bg-primary/10 px-1 py-0.2 rounded font-bold text-[9px] text-primary uppercase shrink-0">
-                              {attr.visibility}
-                            </span>
-                            <span className="font-semibold text-foreground truncate">{attr.name}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card/50 shadow-xs border-border overflow-hidden">
-            <CardHeader className="bg-muted/40 p-2 border-border/60 border-b">
-              <div className="flex items-center gap-1.5">
-                <Code2 className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                <CardTitle className="font-mono font-bold text-[11px] text-foreground uppercase tracking-wider">
-                  Methods / Exports ({currentFile.methods?.length || 0})
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="p-2">
-              {(!currentFile.methods || currentFile.methods.length === 0) ? (
-                <span className="text-muted-foreground text-xs italic">No methods declared</span>
-              ) : (
-                <div className="space-y-1 max-h-44 overflow-y-auto">
-                  {currentFile.methods.map((m: CodebaseMethod) => {
-                    const isSelected = selectedEntity.memberId === m.id;
-                    return (
-                      <div
-                        key={m.id}
-                        className={`p-1 rounded border text-[11px] ${
-                          isSelected ? 'border-indigo-500 bg-indigo-500/10 font-bold' : 'border-border/30 bg-muted/20'
-                        }`}
-                      >
-                        <span
-                          className="block font-semibold text-foreground truncate cursor-help"
-                          data-tooltip={m.signature || ''}
-                        >
-                          + {m.name}
-                        </span>
-                        {m.description && (
-                          <span className="block mt-0.5 text-[10px] text-muted-foreground leading-snug">
-                            {m.description}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -11,6 +11,8 @@ export interface CodebaseMethod {
   name: string;
   signature?: string;
   description?: string;
+  loc?: number;
+  complexity?: number;
 }
 
 export interface ConfigProperty {
@@ -25,11 +27,13 @@ export interface CodebaseFile {
   path: string;
   language: string;
   size?: number;
-  complexity?: number;
   tags?: string[];
   attributes?: CodebaseAttribute[];
   methods?: CodebaseMethod[];
   configProperties?: ConfigProperty[];
+  description?: string;
+  loc?: number;
+  complexity?: number;
 }
 
 export interface Dependency {
