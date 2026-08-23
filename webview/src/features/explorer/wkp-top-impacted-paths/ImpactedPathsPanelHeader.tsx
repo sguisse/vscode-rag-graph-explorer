@@ -44,7 +44,10 @@ export const ImpactedPathsPanelHeaderCenter: React.FC<ImpactedPathsPanelHeaderCe
           max={20}
           className="bg-transparent shadow-none p-0 border-0 focus-visible:ring-0 focus:ring-0 w-8 h-5 font-bold text-foreground text-xs text-center"
           value={upstreamDepth}
-          onChange={(e) => setUpstreamDepth(Number(e.target.value) || 0)}
+          onChange={(e) => {
+            const parsed = parseInt(e.target.value, 10);
+            setUpstreamDepth(isNaN(parsed) ? 0 : Math.max(0, Math.min(20, parsed)));
+          }}
         />
       </div>
       <div className="flex items-center gap-1.5 bg-background px-2 py-0.5 border border-border rounded-sm">
@@ -59,7 +62,10 @@ export const ImpactedPathsPanelHeaderCenter: React.FC<ImpactedPathsPanelHeaderCe
           max={20}
           className="bg-transparent shadow-none p-0 border-0 focus-visible:ring-0 focus:ring-0 w-8 h-5 font-bold text-foreground text-xs text-center"
           value={downstreamDepth}
-          onChange={(e) => setDownstreamDepth(Number(e.target.value) || 0)}
+          onChange={(e) => {
+            const parsed = parseInt(e.target.value, 10);
+            setDownstreamDepth(isNaN(parsed) ? 0 : Math.max(0, Math.min(20, parsed)));
+          }}
         />
       </div>
     </div>

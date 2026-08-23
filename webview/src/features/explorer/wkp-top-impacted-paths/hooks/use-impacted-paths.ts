@@ -17,8 +17,8 @@ export interface UseImpactedPathsOptions {
 export function useImpactedPaths(options: UseImpactedPathsOptions = {}) {
   const {
     onCodebaseChange,
-    upstreamDepth = 2,
-    downstreamDepth = 2,
+    upstreamDepth: propUpstreamDepth,
+    downstreamDepth: propDownstreamDepth,
   } = options;
 
   const currentPath = useExplorerStore((s) => s.currentPath);
@@ -35,20 +35,21 @@ export function useImpactedPaths(options: UseImpactedPathsOptions = {}) {
   const internalDownstreamDepth = useExplorerStore((s) => s.downstreamDepth);
   const setInternalDownstreamDepth = useExplorerStore((s) => s.setDownstreamDepth);
 
+  // Sync prop changes ONLY if prop is explicitly defined and differs from internal store
   useEffect(() => {
-    if (upstreamDepth !== undefined && upstreamDepth !== internalUpstreamDepth) {
-      setInternalUpstreamDepth(upstreamDepth);
+    if (propUpstreamDepth !== undefined && propUpstreamDepth !== internalUpstreamDepth) {
+      setInternalUpstreamDepth(propUpstreamDepth);
     }
-  }, [upstreamDepth, internalUpstreamDepth, setInternalUpstreamDepth]);
+  }, [propUpstreamDepth, internalUpstreamDepth, setInternalUpstreamDepth]);
 
   useEffect(() => {
-    if (downstreamDepth !== undefined && downstreamDepth !== internalDownstreamDepth) {
-      setInternalDownstreamDepth(downstreamDepth);
+    if (propDownstreamDepth !== undefined && propDownstreamDepth !== internalDownstreamDepth) {
+      setInternalDownstreamDepth(propDownstreamDepth);
     }
-  }, [downstreamDepth, internalDownstreamDepth, setInternalDownstreamDepth]);
+  }, [propDownstreamDepth, internalDownstreamDepth, setInternalDownstreamDepth]);
 
-  const effectiveUpstreamDepth = upstreamDepth !== undefined ? upstreamDepth : internalUpstreamDepth;
-  const effectiveDownstreamDepth = downstreamDepth !== undefined ? downstreamDepth : internalDownstreamDepth;
+  const effectiveUpstreamDepth = propUpstreamDepth !== undefined ? propUpstreamDepth : internalUpstreamDepth;
+  const effectiveDownstreamDepth = propDownstreamDepth !== undefined ? propDownstreamDepth : internalDownstreamDepth;
 
   const depthRef = useRef({
     upstreamDepth: effectiveUpstreamDepth,
@@ -100,17 +101,24 @@ export function useImpactedPaths(options: UseImpactedPathsOptions = {}) {
   );
 
   const buildDefaultCypherQueryParameters = useCallback(async () => {
-    const cypherParams = `
-:param {
-  targetPath: "${paths || '???'}",
-  upstreamDepth: "${depthRef.current.upstreamDepth}",
-  downstreamDepth: "${depthRef.current.downstreamDepth}"
+    const currentStoreState = useExplorerStore.getState();
+    const activePaths = currentStoreState.paths || '';
+    const activeUpstream = currentStoreState.upstreamDepth;
+    const activeDownstream = currentStoreState.downstreamDepth;
+
+    const formattedTargetPath = activePaths.trim()
+      ? activePaths.split('\n').map((l) => l.trim()).filter(Boolean).join('\n')
+      : '???';
+
+    const cypherParams = `:param {
+  targetPath: "${formattedTargetPath}",
+  upstreamDepth: "${activeUpstream}",
+  downstreamDepth: "${activeDownstream}"
 }`;
 
     logInfo(`[useImpactedPaths] Cypher parameters generated:\n${cypherParams}`);
     await vsCodeApiService.copyToClipboard(cypherParams);
-    //handlePathsChange(cypherParams);
-  }, [handlePathsChange]);
+  }, []);
 
   const appendOrReplacePath = useCallback(
     (newPath: string) => {

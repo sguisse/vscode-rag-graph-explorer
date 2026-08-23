@@ -9,7 +9,8 @@ import {
   ImpactedPathsPanelHeaderRight,
 } from '../wkp-top-impacted-paths/ImpactedPathsPanelHeader';
 import { useExplorerStore } from '../store/useExplorerStore';
-import { useImpactedPaths } from '../wkp-top-impacted-paths/hooks/use-impacted-paths';
+import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { CodebaseData } from '@/shared/services/graph-rag-explorer';
 
 export function TopPanelContainer() {
@@ -20,8 +21,6 @@ export function TopPanelContainer() {
   const setCodebase = useExplorerStore((s) => s.setCodebase);
   const setNotification = useAppContextStore((s) => s.setNotification);
 
-  const { buildDefaultCypherQueryParameters } = useImpactedPaths();
-
   const handleImportCodebase = useCallback(
     async (importedData: CodebaseData) => {
       setCodebase(importedData);
@@ -29,6 +28,31 @@ export function TopPanelContainer() {
     },
     [setCodebase, setNotification]
   );
+
+  const handleBuildDefaultQueryParameters = useCallback(async () => {
+    const currentStoreState = useExplorerStore.getState();
+    const activePaths = currentStoreState.paths || '';
+    const activeUpstream = currentStoreState.upstreamDepth;
+    const activeDownstream = currentStoreState.downstreamDepth;
+
+    const formattedTargetPath = activePaths.trim()
+      ? activePaths
+          .split('\n')
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .join('\n')
+      : '???';
+
+    const cypherParams = `:param {
+  targetPath: "${formattedTargetPath}",
+  upstreamDepth: "${activeUpstream}",
+  downstreamDepth: "${activeDownstream}"
+}`;
+
+    logInfo(`[TopPanelContainer] Cypher parameters generated:\n${cypherParams}`);
+    await vsCodeApiService.copyToClipboard(cypherParams);
+    setNotification('Default Cypher parameters copied to clipboard!');
+  }, [setNotification]);
 
   return (
     <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
@@ -45,7 +69,7 @@ export function TopPanelContainer() {
         }
         headerRight={
           <ImpactedPathsPanelHeaderRight
-            onBuildDefaultQueryParameters={buildDefaultCypherQueryParameters}
+            onBuildDefaultQueryParameters={handleBuildDefaultQueryParameters}
           />
         }
       />
