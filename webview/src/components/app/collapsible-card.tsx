@@ -128,7 +128,7 @@ export const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
       </CardHeader>
 
       {isOpen && children && (
-        <CardContent className="p-2.5 font-mono text-[11px] break-words leading-relaxed whitespace-pre-wrap">
+        <CardContent className="p-1 font-mono text-[11px] break-words leading-relaxed whitespace-pre-wrap">
           {children}
         </CardContent>
       )}

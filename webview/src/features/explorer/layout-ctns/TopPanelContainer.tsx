@@ -1,3 +1,4 @@
+// webview/src/features/explorer/layout-ctns/TopPanelContainer.tsx
 import React, { useCallback } from 'react';
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
@@ -8,6 +9,7 @@ import {
   ImpactedPathsPanelHeaderRight,
 } from '../wkp-top-impacted-paths/ImpactedPathsPanelHeader';
 import { useExplorerStore } from '../store/useExplorerStore';
+import { useImpactedPaths } from '../wkp-top-impacted-paths/hooks/use-impacted-paths';
 import { CodebaseData } from '@/shared/services/graph-rag-explorer';
 
 export function TopPanelContainer() {
@@ -17,6 +19,8 @@ export function TopPanelContainer() {
   const setDownstreamDepth = useExplorerStore((s) => s.setDownstreamDepth);
   const setCodebase = useExplorerStore((s) => s.setCodebase);
   const setNotification = useAppContextStore((s) => s.setNotification);
+
+  const { buildDefaultCypherQueryParameters } = useImpactedPaths();
 
   const handleImportCodebase = useCallback(
     async (importedData: CodebaseData) => {
@@ -39,7 +43,11 @@ export function TopPanelContainer() {
             setDownstreamDepth={setDownstreamDepth}
           />
         }
-        headerRight={<ImpactedPathsPanelHeaderRight />}
+        headerRight={
+          <ImpactedPathsPanelHeaderRight
+            onBuildDefaultQueryParameters={buildDefaultCypherQueryParameters}
+          />
+        }
       />
       <div className="flex-1 min-h-0 overflow-auto">
         <ImpactedPathsPanel

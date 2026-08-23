@@ -3,6 +3,7 @@ import { FileType } from "./types";
 export interface CodebaseAttribute {
   visibility: string;
   name: string;
+  type?: string;
 }
 
 export interface CodebaseMethod {
@@ -11,8 +12,10 @@ export interface CodebaseMethod {
   name: string;
   signature?: string;
   description?: string;
-  loc?: number;
-  complexity?: number;
+  codeAnalysis?: string;
+  lastLineNumber?: number;
+  effectiveLineCount?: number;
+  cyclomaticComplexity?: number;
 }
 
 export interface ConfigProperty {

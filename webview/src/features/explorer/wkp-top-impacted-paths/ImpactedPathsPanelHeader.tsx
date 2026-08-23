@@ -1,5 +1,6 @@
+// webview/src/features/explorer/wkp-top-impacted-paths/ImpactedPathsPanelHeader.tsx
 import React from 'react';
-import { ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowUp, ArrowDown, Database } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
 export interface ImpactedPathsPanelHeaderLeftProps {
@@ -65,12 +66,30 @@ export const ImpactedPathsPanelHeaderCenter: React.FC<ImpactedPathsPanelHeaderCe
   );
 };
 
-export interface ImpactedPathsPanelHeaderRightProps {}
+export interface ImpactedPathsPanelHeaderRightProps {
+  onBuildDefaultQueryParameters?: () => void;
+}
 
-export const ImpactedPathsPanelHeaderRight: React.FC<ImpactedPathsPanelHeaderRightProps> = () => null;
+export const ImpactedPathsPanelHeaderRight: React.FC<ImpactedPathsPanelHeaderRightProps> = ({
+  onBuildDefaultQueryParameters,
+}) => {
+  return (
+    <div className="flex items-center">
+      <button
+        type="button"
+        onClick={onBuildDefaultQueryParameters}
+        className="hover:bg-muted/50 p-1 rounded-sm text-orange-500 hover:text-orange-600 transition-colors cursor-pointer"
+        title="Build default Cypher query"
+      >
+        <Database size={16} />
+      </button>
+    </div>
+  );
+};
 
 export interface ImpactedPathsPanelHeaderProps extends ImpactedPathsPanelHeaderCenterProps {
   title?: string;
+  onBuildDefaultQueryParameters?: () => void;
 }
 
 export const ImpactedPathsPanelHeader: React.FC<ImpactedPathsPanelHeaderProps> = ({
@@ -79,6 +98,7 @@ export const ImpactedPathsPanelHeader: React.FC<ImpactedPathsPanelHeaderProps> =
   setUpstreamDepth,
   downstreamDepth,
   setDownstreamDepth,
+  onBuildDefaultQueryParameters,
 }) => {
   return (
     <div className="flex justify-between items-center px-2 py-1 w-full">
@@ -89,7 +109,7 @@ export const ImpactedPathsPanelHeader: React.FC<ImpactedPathsPanelHeaderProps> =
         downstreamDepth={downstreamDepth}
         setDownstreamDepth={setDownstreamDepth}
       />
-      <ImpactedPathsPanelHeaderRight />
+      <ImpactedPathsPanelHeaderRight onBuildDefaultQueryParameters={onBuildDefaultQueryParameters} />
     </div>
   );
 };

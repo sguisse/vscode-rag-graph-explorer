@@ -100,11 +100,6 @@ class BaseSummarizer(ABC):
     def _process_item(self, item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Prepares the item and computes its raw processor result.
-
-        Cache updates are intentionally NOT applied here: applying them in the
-        worker thread would make the batch behavior order-dependent and
-        nondeterministic because sibling items could observe partial cache
-        updates from other in-flight items.
         """
         prepared_item = self._prepare_item(item)
         return self._get_processor_result(prepared_item)
@@ -114,11 +109,12 @@ class BaseSummarizer(ABC):
         Processes a given list of items in parallel using the template method.
         """
         if not items_to_process:
+            logger.info(f"🔍 [{self.__class__.__name__}] Empty batch passed to process_batch.")
             return 0
 
         class_name = self.__class__.__name__
         logger.info(
-            f"Processing batch of {len(items_to_process)} items for {class_name}."
+            f"🔍 [{class_name}] Processing batch of {len(items_to_process)} items."
         )
 
         updates = []
@@ -135,7 +131,11 @@ class BaseSummarizer(ABC):
                 desc=f"Processing {class_name} batch",
             ):
                 try:
-                    raw_results.append(future.result())
+                    res = future.result()
+                    raw_results.append(res)
+                    if res is None:
+                        item = futures[future]
+                        logger.debug(f"🔍 [{class_name}] Worker returned None for item id: {item.get('id')}")
                 except Exception as e:
                     item = futures[future]
                     logger.error(
@@ -143,26 +143,27 @@ class BaseSummarizer(ABC):
                         exc_info=True,
                     )
 
-        # Apply cache/runtime updates ONLY after the full batch has completed so
-        # every item in the batch saw the same pre-batch cache state.
         for raw_result in raw_results:
             update_data = self._handle_result(raw_result)
             if update_data:
                 updates.append(update_data)
 
+        logger.info(f"🔍 [{class_name}] Batch results summary: {len(raw_results)} total items evaluated, {len(updates)} database updates formatted.")
+
         if not updates:
-            logger.info(
-                f"No database updates needed for this batch in {class_name} (all items up-to-date)."
+            logger.warning(
+                f"⚠️ [{class_name}] No database updates generated for this batch (all items up-to-date, skipped, or missing entity_id)."
             )
             return 0
 
         update_query = self._get_update_query()
+        logger.info(f"🔍 [{class_name}] Executing write query to update {len(updates)} nodes in Neo4j...")
         summary_counters = self.neo4j_manager.execute_write_query(
             update_query, params={"updates": updates}
         )
 
         properties_set = summary_counters.properties_set if summary_counters else 0
         logger.info(
-            f"Batch complete for {class_name}. Updated {properties_set} properties."
+            f"✅ [{class_name}] Batch complete. Cypher updated {properties_set} properties in database."
         )
         return properties_set

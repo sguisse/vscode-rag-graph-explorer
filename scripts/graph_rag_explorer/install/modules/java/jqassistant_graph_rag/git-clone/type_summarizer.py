@@ -32,19 +32,20 @@ class TypeSummarizer(BaseSummarizer):
 
         types_by_level = self._get_types_by_inheritance_level()
         if not types_by_level:
-            logger.info("No source-linked types found to process.")
+            logger.warning("⚠️ [TypeSummarizer] No source-linked types found to process.")
             return 0
 
         total_updated_count = 0
         for level in sorted(types_by_level.keys()):
             level_ids = types_by_level[level]
             logger.info(
-                f"Processing {len(level_ids)} types at inheritance level {level}."
+                f"🔍 [TypeSummarizer] Processing {len(level_ids)} types at inheritance level {level}."
             )
 
             # Fetch the full context for all types at the current level
             items_to_process = self._get_context_for_ids(level_ids)
             if not items_to_process:
+                logger.warning(f"⚠️ [TypeSummarizer] No context items retrieved for level {level} IDs.")
                 continue
 
             updated_count = self.process_batch(items_to_process)
@@ -63,18 +64,31 @@ class TypeSummarizer(BaseSummarizer):
         Returns:
             A dictionary mapping level number to a list of element IDs.
         """
-        # 1. Get all types that are defined in the project's source files
         query_all = """
         MATCH (t:Type)-[:WITH_SOURCE]->(:SourceFile)
         WHERE t:Class OR t:Interface OR t:Enum OR 'Record' IN labels(t)
-        RETURN t.entity_id AS id
+        RETURN t.entity_id AS id, t.fqn AS fqn
         """
         result = self.neo4j_manager.execute_read_query(query_all)
-        all_source_type_ids = {r["id"] for r in result}
+        logger.info(f"🔍 [TypeSummarizer] Query matched {len(result)} total source-linked :Type nodes.")
+
+        all_source_type_ids = {r["id"] for r in result if r.get("id") is not None}
+        null_id_count = sum(1 for r in result if r.get("id") is None)
+
+        logger.info(
+            f"🔍 [TypeSummarizer] Valid entity_ids: {len(all_source_type_ids)} | NULL entity_ids: {null_id_count}."
+        )
+
+        if null_id_count > 0:
+            logger.error(
+                f"❌ [TypeSummarizer] {null_id_count} source-linked :Type nodes lack an 'entity_id'. "
+                "Make sure GraphEntitySetter ran successfully during graph enrichment!"
+            )
+
         if not all_source_type_ids:
+            logger.warning("⚠️ [TypeSummarizer] all_source_type_ids set is empty!")
             return {}
 
-        # 2. Find Level 0: Types that do not inherit from any other source type
         query_level_0 = """
         MATCH (t:Type)
         WHERE t.entity_id IN $ids
@@ -89,28 +103,25 @@ class TypeSummarizer(BaseSummarizer):
         visited_ids = set()
 
         if result:
-            level_0_ids = [r["id"] for r in result]
+            level_0_ids = [r["id"] for r in result if r.get("id") is not None]
             types_by_level[0] = level_0_ids
             visited_ids.update(level_0_ids)
+            logger.info(f"🔍 [TypeSummarizer] Found {len(level_0_ids)} types at inheritance level 0.")
 
-        # 3. Iteratively find subsequent levels
         current_level = 0
         while True:
             level_nodes = types_by_level.get(current_level, [])
             if not level_nodes:
-                break  # No more nodes to process
+                break
 
             current_level += 1
             query_next_level = """
             MATCH (t:Type)
             WHERE t.entity_id IN $all_ids AND NOT t.entity_id IN $visited_ids
-            // Get all source-linked parents
             WITH t, [
                 (t)-[:EXTENDS|IMPLEMENTS]->(p:Type)
                 WHERE p.entity_id IN $all_ids | p
             ] AS parents
-            // A type is in the next level if all its source-linked parents
-            // have already been visited (i.e., are in previous levels).
             WHERE size(parents) > 0 AND all(p IN parents WHERE p.entity_id IN $visited_ids)
             RETURN t.entity_id AS id
             """
@@ -123,13 +134,22 @@ class TypeSummarizer(BaseSummarizer):
             )
 
             if result:
-                next_level_ids = [r["id"] for r in result]
+                next_level_ids = [r["id"] for r in result if r.get("id") is not None]
                 if not next_level_ids:
-                    break  # No new nodes found
+                    break
                 types_by_level[current_level] = next_level_ids
                 visited_ids.update(next_level_ids)
+                logger.info(f"🔍 [TypeSummarizer] Found {len(next_level_ids)} types at inheritance level {current_level}.")
             else:
                 break
+
+        unvisited_count = len(all_source_type_ids) - len(visited_ids)
+        if unvisited_count > 0:
+            logger.warning(
+                f"⚠️ [TypeSummarizer] {unvisited_count} types were unvisited (possibly due to circular references). Forcing them into highest level."
+            )
+            unvisited_ids = list(all_source_type_ids - visited_ids)
+            types_by_level[current_level + 1] = unvisited_ids
 
         return dict(types_by_level)
 
@@ -154,7 +174,9 @@ class TypeSummarizer(BaseSummarizer):
             parent_ids,
             member_ids
         """
-        return self.neo4j_manager.execute_read_query(query, params={"ids": ids})
+        res = self.neo4j_manager.execute_read_query(query, params={"ids": ids})
+        logger.info(f"🔍 [TypeSummarizer] Context query returned {len(res)} items for {len(ids)} requested IDs.")
+        return res
 
     def _get_update_query(self) -> str:
         return """

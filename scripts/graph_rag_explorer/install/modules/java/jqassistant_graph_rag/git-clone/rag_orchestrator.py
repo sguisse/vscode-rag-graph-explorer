@@ -4,7 +4,8 @@ import re
 from collections import defaultdict
 from copy import deepcopy
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Union
+from pathlib import Path
 
 from neo4j_manager import Neo4jManager
 from method_analyzer import MethodAnalyzer
@@ -29,7 +30,6 @@ from llm_client import (
 )
 from summary_cache_manager import SummaryCacheManager
 from node_summary_processor import NodeSummaryProcessor
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +41,6 @@ class _CounterPlan:
 
 
 class _PlanningLlmClient(LlmClient):
-    """Silent fake LLM used to simulate the run and count exact LLM calls."""
-
     def __init__(self):
         self._fake = FakeLlmClient()
         self.global_total = 0
@@ -92,19 +90,26 @@ class RagOrchestrator:
     def __init__(
         self,
         neo4j_manager: Neo4jManager,
-        project_path: Path,
+        project_path: Union[Path, str, None],
         llm_api: str,
         min_cyclomatic: int = 0,
     ):
         self.neo4j_manager = neo4j_manager
-        self.project_path = project_path
+        if project_path is None:
+            self.project_path = Path.cwd().resolve()
+        elif isinstance(project_path, str):
+            self.project_path = Path(project_path).resolve()
+        else:
+            self.project_path = project_path.resolve()
+
         self.project_name = self.project_path.name
         self.llm_api = llm_api
-        # Minimum cyclomatic complexity filter applied to MethodAnalyzer.
-        # A value <= 0 disables filtering.
         self.min_cyclomatic = int(min_cyclomatic or 0)
 
-        # Initialize core components
+        logger.info(
+            f"Initialized RagOrchestrator for project: '{self.project_name}' (path: {self.project_path}) with LLM API: '{self.llm_api}'"
+        )
+
         self.llm_client: LlmClient = get_llm_client(self.llm_api)
         self.embedding_client: EmbeddingClient = get_embedding_client(
             "sentence-transformer"
@@ -114,12 +119,9 @@ class RagOrchestrator:
             self.llm_client, self.cache_manager
         )
 
-        # Initialize all pass handlers with the necessary components
         self.method_analyzer = MethodAnalyzer(
             neo4j_manager, self.node_summary_processor
         )
-        # Ensure the analyzer respects the orchestrator-level threshold
-        # (command-line arg or env var overrides may apply).
         try:
             self.method_analyzer.min_cyclomatic = int(self.min_cyclomatic)
         except Exception:
@@ -144,35 +146,39 @@ class RagOrchestrator:
         )
         self.entity_embedder = EntityEmbedder(neo4j_manager, self.embedding_client)
 
-        logger.info(
-            f"Initialized RagOrchestrator for project: {self.project_name} with LLM API: {self.llm_api}"
-        )
-
     def run_rag_passes(self):
         """
         Executes the full sequence of RAG generation passes with caching.
         """
-        # Pre-flight: skip all passes if the graph has no Java type nodes.
-        # Without a prior jqassistant:scan, labels like :Method, :Class and
-        # relationships like :WITH_SOURCE and :INVOKES do not exist in the schema.
-        # Running any RAG pass would produce dozens of confusing "unknown label /
-        # relationship / property" DBMS notifications and zero useful output.
-        type_check = self.neo4j_manager.execute_read_query(
+        logger.info("🔍 [RAG Pre-flight] Running pre-flight checks on Neo4j schema...")
+        type_check_java = self.neo4j_manager.execute_read_query(
             "MATCH (t:Java:Type) RETURN count(t) AS n LIMIT 1"
         )
-        type_count = type_check[0]["n"] if type_check else 0
-        if type_count == 0:
+        type_count_java = type_check_java[0]["n"] if type_check_java else 0
+
+        type_check_any = self.neo4j_manager.execute_read_query(
+            "MATCH (t:Type) RETURN count(t) AS n LIMIT 1"
+        )
+        type_count_any = type_check_any[0]["n"] if type_check_any else 0
+
+        logger.info(
+            f"🔍 [RAG Pre-flight] Count of :Java:Type nodes = {type_count_java} | Count of :Type nodes = {type_count_any}"
+        )
+
+        if type_count_any == 0:
             logger.warning(
-                "RAG SKIPPED: No Java type nodes (:Java:Type) found in the graph. "
-                "Summarization passes require a prior jqassistant scan to produce results. "
-                "Run 'B4 — jqassistant scan + analyze' from the manager first."
+                "RAG SKIPPED: No :Type nodes found in the graph. "
+                "Summarization passes require a prior jqassistant scan to produce results."
             )
             return
 
+        if type_count_java == 0 and type_count_any > 0:
+            logger.info(
+                "ℹ️ [RAG Pre-flight] Notice: :Type nodes exist without the explicit :Java label. Proceeding with :Type matching."
+            )
+
         self.cache_manager.load()
         progress_plan: Optional[_CounterPlan] = None
-        # Build an exact progress plan by simulating the run with a silent fake
-        # LLM and a cloned in-memory cache state.
         try:
             reset_global_llm_progress()
             reset_label_call_counts()
@@ -189,33 +195,47 @@ class RagOrchestrator:
             logger.exception(
                 "Failed to build exact progress plan; continuing without a global denominator."
             )
+
         try:
             logger.info(
                 f"--- Starting All RAG Generation Passes for project: {self.project_name} ---"
             )
 
-            # The sequence of passes remains the same
             self._initialize_pass_progress(progress_plan, "MethodAnalyzer")
+            logger.info("▶ Running pass: MethodAnalyzer")
             self.method_analyzer.run()
+
             self._initialize_pass_progress(progress_plan, "MethodSummarizer")
+            logger.info("▶ Running pass: MethodSummarizer")
             self.method_summarizer.run()
+
             self._initialize_pass_progress(progress_plan, "TypeSummarizer")
+            logger.info("▶ Running pass: TypeSummarizer")
             self.type_summarizer.run()
+
             self._initialize_pass_progress(progress_plan, "SourceFileSummarizer")
+            logger.info("▶ Running pass: SourceFileSummarizer")
             self.source_file_summarizer.run()
+
             self._initialize_pass_progress(progress_plan, "DirectorySummarizer")
+            logger.info("▶ Running pass: DirectorySummarizer")
             self.directory_summarizer.run()
+
             self._initialize_pass_progress(progress_plan, "PackageSummarizer")
+            logger.info("▶ Running pass: PackageSummarizer")
             self.package_summarizer.run()
+
             self._initialize_pass_progress(progress_plan, "ProjectSummarizer")
+            logger.info("▶ Running pass: ProjectSummarizer")
             self.project_summarizer.run()
+
+            logger.info("▶ Running pass: EntityEmbedder")
             self.entity_embedder.add_entity_labels_and_embeddings()
 
             logger.info(
                 f"--- All RAG Generation Passes for project: {self.project_name} Complete ---"
             )
         finally:
-            # Ensure the cache is saved even if an error occurs
             self.cache_manager.save()
 
     @staticmethod
@@ -279,16 +299,12 @@ class RagOrchestrator:
         planning_llm = _PlanningLlmClient()
         planning_processor = NodeSummaryProcessor(planning_llm, planning_cache)
 
-        # Pass 1: MethodAnalyzer
         analyzer_items = self.neo4j_manager.execute_read_query(
             self.method_analyzer._get_items_query(),
             params={
                 "analysisProperty": "code_analysis",
                 "hashProperty": "code_hash",
                 "minCyclomatic": self.min_cyclomatic,
-                # Match the property keys used by MethodAnalyzer to avoid
-                # introducing literal property names in queries which can
-                # trigger UnknownPropertyKeyWarning when a key doesn't exist.
                 "cyclo1": "cyclomaticComplexity",
                 "cyclo2": "cyclomatic_complexity",
                 "cyclo3": "mcc",
@@ -301,9 +317,6 @@ class RagOrchestrator:
             prepare_fn=self.method_analyzer._prepare_item,
         )
 
-        # Pass 2: MethodSummarizer — planning query intentionally does not rely
-        # on db code_analysis because the simulation cache now contains the
-        # results of the planned analyzer pass.
         method_items = self.neo4j_manager.execute_read_query(
             """
             MATCH (m:Method)
@@ -323,7 +336,6 @@ class RagOrchestrator:
             planning_cache,
         )
 
-        # Pass 3: TypeSummarizer — process inheritance levels exactly like the real pass.
         types_by_level = self.type_summarizer._get_types_by_inheritance_level()
         for level in sorted(types_by_level.keys()):
             items_to_process = self.type_summarizer._get_context_for_ids(
@@ -336,8 +348,6 @@ class RagOrchestrator:
                 prepare_fn=self.type_summarizer._prepare_item,
             )
 
-        # Pass 4: SourceFileSummarizer — planning query collects all linked types;
-        # the simulated cache decides whether child summaries are available.
         source_file_items = self.neo4j_manager.execute_read_query(
             """
             MATCH (sf:SourceFile)
@@ -356,7 +366,6 @@ class RagOrchestrator:
             planning_cache,
         )
 
-        # Pass 5: DirectorySummarizer — preserve real bottom-up depth ordering.
         directories_by_depth: dict[int, list[dict[str, Any]]] = defaultdict(list)
         for item in self.directory_summarizer._get_directories_ordered_by_depth():
             directories_by_depth[item["depth"]].append(item)
@@ -369,7 +378,6 @@ class RagOrchestrator:
                 planning_cache,
             )
 
-        # Pass 6a: PackageSummarizer internal packages.
         package_items = self.neo4j_manager.execute_read_query(
             """
             MATCH (a:Artifact)-[:CONTAINS_CLASS*]->(p:Package)
@@ -398,7 +406,6 @@ class RagOrchestrator:
                 planning_cache,
             )
 
-        # Pass 6b: PackageSummarizer artifact roots.
         artifact_items = self.neo4j_manager.execute_read_query(
             """
             MATCH (a:Artifact)
@@ -418,7 +425,6 @@ class RagOrchestrator:
             planning_cache,
         )
 
-        # Pass 7: ProjectSummarizer.
         self._simulate_batch(
             self.project_summarizer._get_project_with_context(),
             planning_processor.get_project_summary,
@@ -429,101 +435,3 @@ class RagOrchestrator:
             global_total=planning_llm.global_total,
             per_label_totals=dict(planning_llm.per_label_totals),
         )
-
-    def _compute_estimated_prompt_total(self) -> int:
-        """Estimate the total number of LLM prompts that will be issued during
-        the run by querying Neo4j for counts of the main node types that are
-        summarized. This is an approximation (some nodes may produce multiple
-        iterative prompts), but it gives a useful global total for progress.
-        """
-        total = 0
-
-        def _count(query: str, params: dict | None = None) -> int:
-            try:
-                res = self.neo4j_manager.execute_read_query(query, params=params or {})
-                if res and isinstance(res, list) and len(res) > 0:
-                    return int(res[0].get("n", 0))
-            except Exception:
-                logger.debug("Count query failed", exc_info=True)
-            return 0
-
-        # ── Pass 1: MethodAnalyzer (code_analysis) ───────────────────────────
-        # Mirrors MethodAnalyzer._get_items_query(): methods with source lines.
-        # Only methods with code_analysis IS NULL need LLM regeneration.
-        total += _count(
-                        """MATCH (m:Method)-[:WITH_SOURCE]->(:SourceFile)
-                             WHERE m.entity_id IS NOT NULL
-                                 AND m.firstLineNumber IS NOT NULL
-                                 AND m.lastLineNumber IS NOT NULL
-                                 AND m.code_analysis IS NULL
-                                 AND (
-                                            $minCyclomatic IS NULL OR $minCyclomatic <= 0 OR
-                                            coalesce(m[$cyclo1], m[$cyclo2], m[$cyclo3], 0) > $minCyclomatic
-                                 )
-                             RETURN count(m) AS n""",
-                        params={
-                            "minCyclomatic": self.min_cyclomatic,
-                            "cyclo1": "cyclomaticComplexity",
-                            "cyclo2": "cyclomatic_complexity",
-                            "cyclo3": "mcc",
-                        },
-        )
-
-        # ── Pass 2: MethodSummarizer ──────────────────────────────────────────
-        # Mirrors MethodSummarizer._get_items_query(): all methods with entity_id.
-        # Only methods with summary IS NULL need LLM regeneration.
-        total += _count(
-            """MATCH (m:Method)
-               WHERE m.entity_id IS NOT NULL
-                 AND m.summary IS NULL
-               RETURN count(m) AS n"""
-        )
-
-        # ── Pass 3: TypeSummarizer ────────────────────────────────────────────
-        # Mirrors TypeSummarizer._get_source_linked_items_query().
-        total += _count(
-            """MATCH (t:Type)-[:WITH_SOURCE]->(:SourceFile)
-               WHERE t.summary IS NULL
-               RETURN count(DISTINCT t) AS n"""
-        )
-
-        # ── Pass 4: SourceFileSummarizer ──────────────────────────────────────
-        # Mirrors SourceFileSummarizer._get_items_query().
-        total += _count(
-            "MATCH (sf:SourceFile) WHERE sf.summary IS NULL RETURN count(sf) AS n"
-        )
-
-        # ── Pass 5: DirectorySummarizer ───────────────────────────────────────
-        # Mirrors DirectorySummarizer._get_all_directories_query().
-        total += _count(
-            """MATCH (d:Directory)
-               WHERE d.absolute_path IS NOT NULL
-                 AND d.entity_id IS NOT NULL
-                 AND d.summary IS NULL
-               RETURN count(d) AS n"""
-        )
-
-        # ── Pass 6a: PackageSummarizer (packages) ──────────────────────────────
-        # The real query already filters p.summary IS NULL.
-        total += _count(
-            """MATCH (a:Artifact)-[:CONTAINS_CLASS*]->(p:Package)
-               WHERE p.fqn IS NOT NULL
-                 AND p.summary IS NULL
-               RETURN count(DISTINCT p) AS n"""
-        )
-
-        # ── Pass 6b: PackageSummarizer (artifacts) ────────────────────────────
-        # The real query already filters a.summary IS NULL.
-        total += _count(
-            "MATCH (a:Artifact) WHERE a.summary IS NULL RETURN count(a) AS n"
-        )
-
-        # ── Pass 7: ProjectSummarizer ─────────────────────────────────────────
-        total += _count(
-            """MATCH (p:Project)
-               WHERE p.entity_id IS NOT NULL
-                 AND p.summary IS NULL
-               RETURN count(p) AS n"""
-        )
-
-        return total

@@ -139,6 +139,7 @@ class JQAssistantGraphRagAnalyzer(BaseAnalyser):
             f"Invoking graph-rag enrichment script in '{git_clone_dir}' with python binary '{python_bin}' (LLM API: '{llm_api}')",
             component=self.name,
         )
+        info(f"Command: {' '.join(cmd_args)}", component=self.name)
 
         return_code = execute_tracked_command(
             cmd_args=cmd_args,

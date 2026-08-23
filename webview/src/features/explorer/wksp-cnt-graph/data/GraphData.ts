@@ -28,7 +28,7 @@ export const demoCodebase = {
       id: 'Order.java', name: 'Order.java', type: 'class', path: 'backend/models/Order.java', language: 'Java', size: 320, complexity: 9,
       attributes: [{ name: 'id: UUID', visibility: 'private' }, { name: 'items: List<Item>', visibility: 'private' }, { name: 'totalPrice: BigDecimal', visibility: 'private' }],
       methods: [
-        { id: 'addItem', name: 'addItem(item)', visibility: 'public', description: "Appends target item structures onto internal sequence and forces sum evaluation." },
+        { id: 'addItem', name: 'addItem(item)', visibility: 'private', description: "Appends target item structures onto internal sequence and forces sum evaluation." },
         { id: 'calculateTotal', name: 'calculateTotal()', visibility: 'public', description: "Processes array streams using precise bigdecimal scale resolution configurations." }
       ]
     },

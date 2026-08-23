@@ -1,4 +1,3 @@
-import { log } from 'node:console';
 import { logInfo } from '../../../../../backend/src/utils/utils-log';
 import {
   CodebaseData,
@@ -15,12 +14,18 @@ export interface RawNeo4jRecord {
   path: string;
   typeLabels?: string[];
   fqn?: string;
+  fileSummary?: string;
+  typeSummary?: string;
   methodsData?: Array<{
     id: string;
     visibility: string;
     name: string;
     signature?: string;
     summary?: string;
+    code_analysis?: string;
+    lastLineNumber?: number;
+    effectiveLineCount?: number;
+    cyclomaticComplexity?: number;
   }>;
   fieldsData?: Array<{
     name: string;
@@ -54,6 +59,10 @@ export function mapToCodebaseData(records: RawNeo4jRecord[]): CodebaseData {
         name: m.name,
         signature: m.signature || undefined,
         description: m.summary || undefined,
+        code_analysis: m.code_analysis || undefined,
+        lastLineNumber: m.lastLineNumber || undefined,
+        effectiveLineCount: m.effectiveLineCount || undefined,
+        cyclomaticComplexity: m.cyclomaticComplexity || undefined
       }));
 
     // 3. Mapping attributes/fields
@@ -83,6 +92,7 @@ export function mapToCodebaseData(records: RawNeo4jRecord[]): CodebaseData {
         tags,
         methods,
         attributes,
+        description: record.fileSummary || record.typeSummary || 'undefined',
       });
     } else {
       const existingFile = filesMap.get(record.fileId)!;

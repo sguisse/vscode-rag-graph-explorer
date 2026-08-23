@@ -1,7 +1,9 @@
+// webview/src/features/explorer/wkp-top-impacted-paths/hooks/use-impacted-paths.ts
 import { useEffect, useCallback, useRef } from 'react';
 import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
 import { getPathsChangeImpacts } from '@/services/view/graph-view.service';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
+import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { CodebaseData } from '@/shared/services/graph-rag-explorer';
 import { useExplorerStore } from '../../store/useExplorerStore';
 
@@ -97,6 +99,19 @@ export function useImpactedPaths(options: UseImpactedPathsOptions = {}) {
     [setPaths, updatePath, fetchImpacts]
   );
 
+  const buildDefaultCypherQueryParameters = useCallback(async () => {
+    const cypherParams = `
+:param {
+  targetPath: "${paths || '???'}",
+  upstreamDepth: "${depthRef.current.upstreamDepth}",
+  downstreamDepth: "${depthRef.current.downstreamDepth}"
+}`;
+
+    logInfo(`[useImpactedPaths] Cypher parameters generated:\n${cypherParams}`);
+    await vsCodeApiService.copyToClipboard(cypherParams);
+    //handlePathsChange(cypherParams);
+  }, [handlePathsChange]);
+
   const appendOrReplacePath = useCallback(
     (newPath: string) => {
       setPaths((prev) => {
@@ -191,5 +206,6 @@ export function useImpactedPaths(options: UseImpactedPathsOptions = {}) {
     handlePathsChange,
     appendOrReplacePath,
     fetchImpacts,
+    buildDefaultCypherQueryParameters,
   };
 }
