@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { CodebaseData, CodebaseFile } from '@/shared/services/graph-rag-explorer';
 import { FOLDER_KEYS_REGISTERED_CONFIG } from '../../constants/graph.constants';
+import { useExplorerStore } from '../../store/useExplorerStore';
 
 export type ViewMode = 'scope' | 'folder' | 'tags' | 'layer' | 'typology';
 
@@ -342,6 +343,24 @@ export function collectFolderKeysWithDepth(scopes: ScopeGroup[]): FolderKeyWithD
   return result;
 }
 
+export function calculateCollapseState(scopes: ScopeGroup[], mode: ViewMode): Record<string, boolean> {
+  const keysWithDepth = collectFolderKeysWithDepth(scopes);
+  let targetCollapseLevel = 2;
+
+  if (mode === 'folder') {
+    targetCollapseLevel = 3;
+  } else if (mode === 'scope') {
+    targetCollapseLevel = 1;
+  }
+
+  const newExpanded: Record<string, boolean> = {};
+  keysWithDepth.forEach(({ key, level }) => {
+    newExpanded[key] = level < targetCollapseLevel;
+  });
+
+  return newExpanded;
+}
+
 export function useCodebaseExplorerPanel(
   codebase: CodebaseData,
   expandedFolders?: Record<string, boolean>,
@@ -506,56 +525,34 @@ export function useCodebaseExplorerPanel(
     return { groupedScopes: scopesList, duplicateFileIds: duplicates };
   }, [codebase.files, viewMode]);
 
-  const handleExpandAll = (
-    customToggleFolder?: (folder: string) => void,
-    customExpandedFolders?: Record<string, boolean>
-  ) => {
-    const tf = customToggleFolder || toggleFolder;
-    const ef = customExpandedFolders || expandedFolders || {};
-    if (!tf) return;
+  const handleExpandAll = () => {
     const keysWithDepth = collectFolderKeysWithDepth(groupedScopes);
+    const newExpanded: Record<string, boolean> = {};
     keysWithDepth.forEach(({ key }) => {
-      if (ef[key] === false) {
-        tf(key);
-      }
+      newExpanded[key] = true;
     });
+    useExplorerStore.setState((s) => ({
+      expandedFolders: {
+        ...s.expandedFolders,
+        ...newExpanded,
+      },
+    }));
   };
 
-  const handleCollapseAll = (
-    customToggleFolder?: (folder: string) => void,
-    customExpandedFolders?: Record<string, boolean>,
-    overrideViewMode?: ViewMode
-  ) => {
-    const tf = customToggleFolder || toggleFolder;
-    const ef = customExpandedFolders || expandedFolders || {};
-    if (!tf) return;
-
-    const mode = overrideViewMode || viewMode;
-    const keysWithDepth = collectFolderKeysWithDepth(groupedScopes);
-    let targetCollapseLevel = 2;
-
-    if (mode === 'folder') {
-      targetCollapseLevel = 3;
-    } else if (mode === 'scope') {
-      targetCollapseLevel = 1;
-    }
-
-    keysWithDepth.forEach(({ key, level }) => {
-      if (level >= targetCollapseLevel) {
-        if (ef[key] !== false) {
-          tf(key);
-        }
-      } else {
-        if (ef[key] === false) {
-          tf(key);
-        }
-      }
-    });
+  const handleCollapseAll = (overrideMode?: ViewMode) => {
+    const mode = overrideMode || viewMode;
+    const newExpanded = calculateCollapseState(groupedScopes, mode);
+    useExplorerStore.setState((s) => ({
+      expandedFolders: {
+        ...s.expandedFolders,
+        ...newExpanded,
+      },
+    }));
   };
 
+  // Directly collapse folders whenever ViewMode or groupedScopes change
   useEffect(() => {
-    if (!toggleFolder) return;
-    handleCollapseAll(undefined, undefined, viewMode);
+    handleCollapseAll(viewMode);
   }, [viewMode, groupedScopes]);
 
   return {

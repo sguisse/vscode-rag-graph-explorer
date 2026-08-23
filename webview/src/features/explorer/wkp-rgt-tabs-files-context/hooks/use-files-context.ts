@@ -28,7 +28,7 @@ export function useFilesContext(
 
   const handleFileClick = useCallback((file: CodebaseFile) => {
     if (file.path) {
-      logInfo(`FilesContext file single-clicked: ${file.id} (${file.path}). Revealing in VS Code Explorer and copying to clipboard...`);
+      logInfo(`FilesContext file single-clicked: ${file.id} (${file.path}). Revealing in VS Code Explorer and copying path to clipboard...`);
       vsCodeApiService.revealInExplorer(file.path);
       vsCodeApiService.copyToClipboard(file.path);
     }
