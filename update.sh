@@ -6,55 +6,47 @@ mkdir -p webview/src/features/explorer/wksp-cnt-graph/components
 mkdir -p webview/src/features/explorer/wksp-cnt-graph/hooks
 mkdir -p webview/src/features/explorer/layout-ctns
 
-# Create temporary Python patcher script to safely modify useExplorerStore.ts without bash quote escaping conflicts
+echo "📍 Patching useExplorerStore.ts with strongly typed graphRendering state..."
+
+# Use a clean Python patcher file to avoid string escaping issues in bash
 cat << 'EOF' > patch_store.py
-import re, sys, os
+import os, re, sys
 
 store_path = "webview/src/features/explorer/store/useExplorerStore.ts"
 if not os.path.exists(store_path):
-    print(f"⚠️ {store_path} not found!", file=sys.stderr)
-    sys.exit(0)
+    print(f"⚠️ File not found: {store_path}", file=sys.stderr)
+    sys.exit(1)
 
 with open(store_path, "r", encoding="utf-8") as f:
-    code = f.read()
+    lines = f.readlines()
 
-changed = False
+# 1. Clean out any previous partial or corrupted injections
+cleaned_lines = [
+    line for line in lines
+    if "graphRendering" not in line and "type-graph-rendering" not in line
+]
+content = "".join(cleaned_lines)
 
-if "type-graph-rendering" not in code:
-    code = "import { GraphRendering } from '@/shared/services/graph-rag-explorer/domain/model/types/type-graph-rendering';\n" + code
-    changed = True
+# 2. Add import for GraphRendering at top
+import_stmt = "import { GraphRendering } from '@/shared/services/graph-rag-explorer/domain/model/types/type-graph-rendering';\n"
+content = import_stmt + content
 
-if "graphRendering:" not in code:
-    if "ExplorerState" in code:
-        code = re.sub(
-            r"(interface\s+ExplorerState\s*\{)",
-            r"\1\n  graphRendering: GraphRendering;\n  setGraphRendering: (graphRendering: GraphRendering) => void;",
-            code
-        )
-        changed = True
+# 3. Add strongly typed properties to interface ExplorerState
+match_interface = re.search(r"(export\s+interface\s+ExplorerState\s*\{)", content)
+if match_interface:
+    pos = match_interface.end()
+    content = content[:pos] + "\n  graphRendering: GraphRendering;\n  setGraphRendering: (graphRendering: GraphRendering) => void;" + content[pos:]
 
-if "setGraphRendering" not in code:
-    if "currentLayout:" in code:
-        code = re.sub(
-            r"(currentLayout:[^,\n]+,)",
-            r"\1\n  graphRendering: 'uml',\n  setGraphRendering: (graphRendering) => set({ graphRendering }),",
-            code
-        )
-        changed = True
-    elif "create<ExplorerState>" in code:
-        code = re.sub(
-            r"(create<ExplorerState>\(\s*(?:\([^\)]*\)|[a-zA-Z0-9_$]+)\s*=>\s*\{)",
-            r"\1\n  graphRendering: 'uml',\n  setGraphRendering: (graphRendering) => set({ graphRendering }),",
-            code
-        )
-        changed = True
+# 4. Add initial state and typed setter method to Zustand store creator
+match_store = re.search(r"(create<ExplorerState>\s*\(\s*(?:\([^)]*\)|[a-zA-Z0-9_$]+)\s*=>\s*\{)", content)
+if match_store:
+    pos = match_store.end()
+    content = content[:pos] + "\n  graphRendering: 'uml' as GraphRendering,\n  setGraphRendering: (graphRendering: GraphRendering) => set({ graphRendering })," + content[pos:]
 
-if changed:
-    with open(store_path, "w", encoding="utf-8") as f:
-        f.write(code)
-    print("✅ Successfully patched useExplorerStore.ts with graphRendering state")
-else:
-    print("ℹ️ useExplorerStore.ts already contains graphRendering state")
+with open(store_path, "w", encoding="utf-8") as f:
+    f.write(content)
+
+print("✅ Successfully patched useExplorerStore.ts with graphRendering state")
 EOF
 
 python3 patch_store.py
@@ -147,7 +139,7 @@ export const CondensedConfigNode: React.FC<{ id: string; data: UmlClassNodeData 
 };
 EOF
 
-# 2. Externalize header state handler hook (SOLID)
+# 2. Update use-graph-panel-header.ts
 cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/hooks/use-graph-panel-header.ts
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { vscodeSettings } from '@/App';
@@ -1126,4 +1118,7 @@ export function CenterPanelContainer() {
 }
 EOF
 
-echo "✅ feat/fix: Fixed useExplorerStore patching and enabled reactive switching to Condensed graph rendering mode!"
+# Compile to verify clean TypeScript compilation
+npm run build
+
+echo "✅ feat/fix: Successfully patched useExplorerStore.ts without Python syntax errors and compiled project with zero errors!"

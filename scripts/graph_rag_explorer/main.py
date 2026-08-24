@@ -10,6 +10,7 @@ sys.path.insert(0, script_dir)
 from core.VsCodeSettings_gen import vsCodeSettings
 from core.utils import info, success, error, configure_logger, cleanup_orphan_pids
 from core.neo4j_extractor import UIExtractor, run_ui_extractor_pipeline
+from core.clean_target import clean_target_workspace
 from install.runner import run_installation_pipeline
 from initialization.runner import run_initialization_pipeline
 from analyser.runner import run_analysis_pipeline
@@ -21,6 +22,9 @@ def main():
 
     info("⚡ Activating Master Workbench Ingestion Lifecycles...", component="Main")
 
+    # Clean target workspace while keeping heavy installed tools and Python virtualenvs
+    clean_target_workspace()
+
     # Clear lingering process tracking metrics
     cleanup_orphan_pids()
 
@@ -28,7 +32,7 @@ def main():
         # PHASE 1: Prerequisite compilation packages setup check
         run_installation_pipeline()
 
-        # PHASE 2: NEW BLOCK - Initialization Phase (Discovery Manifest + Early Database Ignite)
+        # PHASE 2: Initialization Phase (Discovery Manifest + Early Database Ignite)
         run_initialization_pipeline()
 
         # PHASE 3: Parallelized ETL Ingestion to Neo4j
