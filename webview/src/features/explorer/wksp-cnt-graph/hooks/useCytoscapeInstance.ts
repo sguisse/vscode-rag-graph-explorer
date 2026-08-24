@@ -57,12 +57,53 @@ export function useCytoscapeInstance(
         { selector: 'edge', style: { 'width': 2, 'line-color': isDarkMode ? '#475569' : '#cbd5e1', 'target-arrow-color': isDarkMode ? '#475569' : '#cbd5e1', 'target-arrow-shape': 'triangle', 'curve-style': 'bezier', 'label': 'data(label)', 'font-size': '9px', 'font-family': 'monospace', 'color': isDarkMode ? '#94a3b8' : '#475569', 'text-background-opacity': 1, 'text-background-color': isDarkMode ? '#18181b' : '#ffffff', 'text-background-padding': '3px', 'text-background-shape': 'roundrectangle' } },
         { selector: 'edge.impacted', style: { 'line-color': '#eab308', 'target-arrow-color': '#eab308', 'width': 3.5, 'color': isDarkMode ? '#fef08a' : '#854d0e', 'text-background-color': isDarkMode ? '#422006' : '#fef9c3', 'text-background-opacity': 1 } }
       ],
-      userZoomingEnabled: true,
+      userZoomingEnabled: false,
       userPanningEnabled: true,
       boxSelectionEnabled: false
     });
 
     cyRef.current = cy;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+
+      if (!cyRef.current || cyRef.current.destroyed()) return;
+      const currentCy = cyRef.current;
+
+      const isCmdOrCtrl = e.metaKey || e.ctrlKey;
+
+      if (isCmdOrCtrl) {
+        // Cmd / Ctrl + Wheel: Zoom in / out relative to pointer position
+        const zoomFactor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+        const currentZoom = currentCy.zoom();
+        const minZoom = currentCy.minZoom();
+        const maxZoom = currentCy.maxZoom();
+        let newZoom = currentZoom * zoomFactor;
+        if (newZoom < minZoom) newZoom = minZoom;
+        if (newZoom > maxZoom) newZoom = maxZoom;
+
+        const rect = containerNode.getBoundingClientRect();
+        const renderedPosition = {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+        };
+
+        currentCy.zoom({
+          level: newZoom,
+          renderedPosition: renderedPosition,
+        });
+      } else {
+        // Standard Wheel: Pan graph up/down & left/right
+        const pan = currentCy.pan();
+        currentCy.pan({
+          x: pan.x - e.deltaX,
+          y: pan.y - e.deltaY,
+        });
+      }
+    };
+
+    containerNode.addEventListener('wheel', handleWheel, { capture: true, passive: false });
 
     // Single / Cmd + Click: Handle node selection, reveal in VS Code Explorer, and copy path to clipboard
     cy.on('tap', 'node', (evt) => {
@@ -157,6 +198,7 @@ export function useCytoscapeInstance(
     });
 
     return () => {
+      containerNode.removeEventListener('wheel', handleWheel, { capture: true });
       if (rafIdRef.current !== null) {
         cancelAnimationFrame(rafIdRef.current);
       }
