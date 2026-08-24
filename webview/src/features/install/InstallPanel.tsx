@@ -183,7 +183,7 @@ export function InstallPanel() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative flex-1 sm:w-64">
+          <div className="relative flex-1 sm:w-130">
             <Search size={14} className="top-2 left-2.5 absolute text-muted-foreground" />
             <input
               type="text"
