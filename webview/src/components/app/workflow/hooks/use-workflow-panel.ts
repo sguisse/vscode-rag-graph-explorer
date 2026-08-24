@@ -8,6 +8,7 @@ import { logInfo, logError } from '@/services/view/log-view.service.wrapper';
 import { WorkflowData, WorkflowNode } from '../model/workflow-model';
 import { isCurrentStatus } from '../model/types/type-node';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
+import { resolveIconUrlAsync } from '@/lib/utils-image';
 
 function sanitizeLabel(label: string): string {
   if (!label) return '';
@@ -16,24 +17,7 @@ function sanitizeLabel(label: string): string {
     .replace(/<[^>]+>/g, '');
 }
 
-async function resolveIconUrlAsync(iconPath?: string): Promise<string> {
-  if (!iconPath) return '';
 
-  if (iconPath.startsWith('data:')) {
-    return iconPath;
-  }
-
-  try {
-    const base64Data = await vsCodeApiService.readImageAsBase64(iconPath);
-    if (base64Data) {
-      return base64Data;
-    }
-  } catch (err) {
-    logError(`[useWorkflowPanel] Failed to read image via backend service: ${iconPath}`, err as Error);
-  }
-
-  return iconPath;
-}
 
 export interface HoverTooltipState {
   text: string;

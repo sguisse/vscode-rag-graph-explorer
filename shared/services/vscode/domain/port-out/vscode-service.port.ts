@@ -6,6 +6,7 @@ export interface IVsCodeServicePort {
     getExtensionSettings(): Promise<VsCodeSettings>;
     openUrl(url: string, inExternalBrowser: boolean): Promise<void>;
     openFile(targetPath: string): Promise<void>;
+    readFile(filePath: string): Promise<string | undefined>;
     revealInExplorer(targetPath: string): Promise<void>;
     copyToClipboard(text: string): Promise<void>;
     saveUserPreferences(settingsKey: string, jsonPayload: Record<string, any>): Promise<void>;

@@ -33,6 +33,15 @@ export class VsCodeServiceAdapter extends AbstractServiceAdapter implements IVsC
         }
     }
 
+    public async readFile(filePath: string): Promise<string | undefined> {
+        if (fs.existsSync(filePath)) {
+            return fs.readFileSync(filePath, 'utf-8');
+        } else {
+            logWarn(`[VsCodeServiceAdapter] File does not exist: ${filePath}`);
+            return undefined;
+        }
+    }
+
     public async openFile(targetPath: string): Promise<void> {
         logInfo(`[VsCodeServiceAdapter] openFile invoked with path: ${targetPath}`);
         try {

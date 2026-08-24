@@ -24,6 +24,7 @@ export enum RpcMethodEnum {
     VSCODE_GET_EXTENSION_SETTINGS = 'getExtensionSettings',
     VSCODE_OPEN_URL = 'openUrl',
     VSCODE_OPEN_FILE = 'openFile',
+    VSCODE_READ_FILE = 'readFile',
     VSCODE_REVEAL_IN_EXPLORER = 'revealInExplorer',
     VSCODE_COPY_TO_CLIPBOARD = 'copyToClipboard',
     VSCODE_SAVE_USER_PREFERENCES = 'saveUserPreferences',
