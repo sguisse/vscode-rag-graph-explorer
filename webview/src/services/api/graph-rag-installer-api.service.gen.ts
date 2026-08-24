@@ -3,6 +3,7 @@
 
 import { RpcMethodEnum } from '@/shared/config/rpc-methods.enum.gen';
 import { AbstractApiService } from './abstract-api.service';
+import { FinalInstallStatusReport } from '@/shared/services/graph-rag-explorer/domain/model/install-result.model';
 import { IGraphRagInstallerServicePort } from '@/shared/services/graph-rag-explorer/domain/port-out/grag-installer-service.port';
 
 class GraphRagInstallerApiService extends AbstractApiService implements IGraphRagInstallerServicePort {
@@ -10,8 +11,8 @@ class GraphRagInstallerApiService extends AbstractApiService implements IGraphRa
         super();
     }
 
-    public async checkInstallationStatus(): Promise<void> {
-        return await this.rpc.call(RpcMethodEnum.GRAGINSTALLER_CHECK_INSTALLATION_STATUS);
+    public async readInstallationReport(): Promise<FinalInstallStatusReport> {
+        return await this.rpc.call(RpcMethodEnum.GRAGINSTALLER_READ_INSTALLATION_REPORT);
     }
 
     public async uninstallAll(): Promise<void> {

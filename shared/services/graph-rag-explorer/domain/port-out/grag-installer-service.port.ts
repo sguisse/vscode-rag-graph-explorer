@@ -1,6 +1,7 @@
+import { FinalInstallStatusReport } from "../model/install-result.model";
 
 export interface IGraphRagInstallerServicePort {
-    checkInstallationStatus(): Promise<void>;
+    readInstallationReport(): Promise<FinalInstallStatusReport>;
 
     uninstallAll(): Promise<void>;
 

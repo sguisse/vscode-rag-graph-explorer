@@ -9,7 +9,7 @@ export enum RpcMethodEnum {
     CODEBASEEXPORTER_READ_EXPORTED_FILES_CONTENT = 'readExportedFilesContent',
     CODEBASEEXPORTER_STORE_EXPORTED_FILES_IN_CLIPBOARD = 'storeExportedFilesInClipboard',
     GRAGEXPLORER_GET_PATHS_CHANGE_IMPACTS = 'getPathsChangeImpacts',
-    GRAGINSTALLER_CHECK_INSTALLATION_STATUS = 'checkInstallationStatus',
+    GRAGINSTALLER_READ_INSTALLATION_REPORT = 'readInstallationReport',
     GRAGINSTALLER_UNINSTALL_ALL = 'uninstallAll',
     LLMCHAT_EXECUTE_CHAT = 'executeChat',
     LLMCHAT_STREAM_CHAT = 'streamChat',

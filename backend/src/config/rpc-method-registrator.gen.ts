@@ -22,7 +22,7 @@ export function registerRpcMethods(rpc: RpcProtocol): void {
     rpc.register(RpcMethodEnum.GRAGEXPLORER_GET_PATHS_CHANGE_IMPACTS, graphRagExplorerService.getPathsChangeImpacts.bind(graphRagExplorerService));
 
     const graphRagInstallerService = serviceRegistry.get(ServiceEnum.GRAPH_RAG_INSTALLER);
-    rpc.register(RpcMethodEnum.GRAGINSTALLER_CHECK_INSTALLATION_STATUS, graphRagInstallerService.checkInstallationStatus.bind(graphRagInstallerService));
+    rpc.register(RpcMethodEnum.GRAGINSTALLER_READ_INSTALLATION_REPORT, graphRagInstallerService.readInstallationReport.bind(graphRagInstallerService));
     rpc.register(RpcMethodEnum.GRAGINSTALLER_UNINSTALL_ALL, graphRagInstallerService.uninstallAll.bind(graphRagInstallerService));
 
     const llmChatService = serviceRegistry.get(ServiceEnum.LLM_CHAT);
