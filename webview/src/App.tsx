@@ -3,6 +3,7 @@ import { useAppContextStore } from '@/store/useAppContextStore';
 import { useLayoutStore } from '@/store/useLayoutStore';
 import { AppLayout } from '@/components/app/layout/AppLayout';
 import { HomeFeature } from '@/features/home/HomeFeature';
+import { InstallFeature } from '@/features/install/InstallFeature';
 import { LayoutDemoFeature } from '@/features/layout-demo/LayoutDemoFeature';
 import { ExplorerFeature } from '@/features/explorer/ExplorerFeature';
 import { RulesFeature } from '@/features/rules/RulesFeature';
@@ -53,6 +54,7 @@ export default function App() {
   return (
     <>
       {(activeFeature === 'feature-home') && HomeFeature && <HomeFeature />}
+      {(activeFeature === 'feature-install') && InstallFeature && <InstallFeature />}
       {(activeFeature === 'feature-graph-rag-explorer') && ExplorerFeature && <ExplorerFeature />}
       {(activeFeature === 'feature-layout-demo') && LayoutDemoFeature && <LayoutDemoFeature />}
       {(activeFeature === 'feature-rules') && RulesFeature && <RulesFeature />}
