@@ -1,25 +1,45 @@
-# Token Razor SDLC - User Guide
+# Token Razor SDLC — Comprehensive User Guide
 
-## Navigating the Application
-The primary way to navigate the Token Razor extension is via the **Left Sidebar**.
+## 1. Navigating the Extension
+Navigation is managed through the **Left Sidebar Menu** (`SdlcSidebarMenu`).
 
-### 1. SDLC Workflow Steps
-Expand the **SDLC Workflow** menu in the sidebar to move through your coding task:
-* **Codebase Context:** Start here. Use the tree or graph to find the files you want to modify. Check the boxes to include them in your context.
-* **Instructions:** Switch to this tab to tell the LLM what to do. Choose between *Vibe* (quick chat), *BMad* (agent-based), or *SpecKit* (strict specification) panels.
-* **LLM Chat:** Review the final payload and send it to your chosen AI model.
-* **Results Manager:** View your past and current task executions.
+### A. SDLC Workflow Menu Group
+1. **1. Codebase Context:** Select target files or classes from the tree or Neo4j dependency graph. Configure callers (upstream) and callees (downstream) search depth.
+2. **2. Instructions:** Define the execution instructions using one of three tabs:
+   * **Vibe Coding:** Plain text description of the desired change.
+   * **BMad Agent:** Select an AI Agent role (e.g., `SecurityAuditAgent`) from the dropdown.
+   * **SpecKit:** Paste formal Markdown or Gherkin specifications.
+3. **3. LLM Chat:** Select the model provider (Ollama, Gemini, Copilot) and model name. Click **Send** to stream the response.
+4. **4. Results Manager:** View execution history, status badges, and error diagnostics.
 
-### 2. Handling Errors & Iterating
-If an AI-generated script fails to build:
-1. Go to **Results Manager** via the sidebar.
-2. Find the failed session in the table (it will have an Error status).
+### B. Configuration Menu Group
+* **App Configuration:** Adjust global parameters, default models, temperature, jQAssistant parser settings, and regex anonymization rules.
+
+---
+
+## 2. Step-by-Step Workflows
+
+### Scenario 1: Refactoring a Java Service with Impact Analysis
+1. Open **Codebase Context**.
+2. Locate `FundTransferServiceImpl.java` in the tree or graph.
+3. Set **Upstream Depth** to `2` and **Downstream Depth** to `2`.
+4. Click **Fetch Impacts**. Token Razor highlights all dependent controllers and repositories.
+5. Switch to **Instructions**, choose **BMad Agent**, and select `CodeRefactoringAgent`.
+6. Switch to **LLM Chat**, select `Copilot` / `gpt-4o`, and click **Execute**.
+
+### Scenario 2: Recovering from a Failed Script Execution
+1. If an AI-generated script fails during execution, open **Results Manager**.
+2. Locate the failed session (marked with a red warning badge).
 3. Click **Reload Session**.
-4. The app will automatically switch you to the **LLM Chat**, restoring your exact files and prompt.
-5. Ask the LLM to fix the specific build error shown in the chat history.
+4. The application automatically reloads your context pointers and prompt, transitioning you back to **LLM Chat**.
+5. Paste the build error into the chat and ask the LLM to patch the issue.
 
-### 3. Configuration
-Expand the **Configuration** menu in the sidebar to adjust how the extension behaves:
-* **Global:** Set your API keys and default models.
-* **Codebase Parsers:** Tweak how the app reads your Neo4j graph.
-* **Policies:** Define regex rules to hide sensitive data (like passwords) before it ever leaves your machine.
+---
+
+## 3. Privacy & Security Policies
+To protect sensitive credentials:
+1. Go to **Configuration > Policies & Security**.
+2. Enable default anonymization rules or click **Add Rule**.
+3. Define a regex pattern (e.g., `(?i)(password|secret)\s*=\s*['"][^'"]+['"]`).
+4. Set the replacement token (e.g., `ANONYMIZED_SECRET`).
+5. All matching credentials will be masked automatically before context is sent to external LLMs.
