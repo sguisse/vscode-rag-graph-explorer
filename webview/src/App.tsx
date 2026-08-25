@@ -5,15 +5,16 @@ import { AppLayout } from '@/components/app/layout/AppLayout';
 import { HomeFeature } from '@/features/home/HomeFeature';
 import { InstallFeature } from '@/features/install/InstallFeature';
 import { LayoutDemoFeature } from '@/features/layout-demo/LayoutDemoFeature';
-import { ExplorerFeature } from '@/features/explorer/ExplorerFeature';
 import { WorkflowBuilderFeature } from '@/features/ai-workflow-builder/WorkflowBuilderFeature';
 import { ExporterFeature } from '@/features/exporter/ExporterFeature';
 import { RulesFeature } from '@/features/rules/RulesFeature';
 import { HelpFeature } from '@/features/help/HelpFeature';
+import { SdlcLayoutOrchestrator } from '@/features/sdlc/SdlcLayoutOrchestrator';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { vsCodeApiService } from "@/services/api/vs-code-api.service.gen";
 import { VsCodeSettings } from '@/shared/services/vscode/domain/model/VsCodeSettings.gen';
 import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
+import { initSessionPersistence } from '@/features/sdlc/core/vscode-sync/session-persistence.manager';
 
 export let vscodeSettings: VsCodeSettings = new VsCodeSettings();
 
@@ -36,6 +37,9 @@ export default function App() {
     vsCodeApiService.getExtensionSettings().then((settings: VsCodeSettings) => {
         vscodeSettings = settings;
     });
+
+    // Initialize SDLC session persistence sync
+    initSessionPersistence();
   }, []);
 
   useEffect(() => {
@@ -57,12 +61,14 @@ export default function App() {
     <>
       {(activeFeature === 'feature-home') && HomeFeature && <HomeFeature />}
       {(activeFeature === 'feature-install') && InstallFeature && <InstallFeature />}
-      {(activeFeature === 'feature-graph-rag-explorer') && ExplorerFeature && <ExplorerFeature />}
       {(activeFeature === 'feature-ai-workflow-builder') && WorkflowBuilderFeature && <WorkflowBuilderFeature />}
       {(activeFeature === 'feature-codebase-exporter' || activeFeature === 'feature-exporter') && ExporterFeature && <ExporterFeature />}
       {(activeFeature === 'feature-layout-demo') && LayoutDemoFeature && <LayoutDemoFeature />}
       {(activeFeature === 'feature-rules') && RulesFeature && <RulesFeature />}
       {(activeFeature === 'feature-help') && HelpFeature && <HelpFeature />}
+
+      {/* Replaced monolithic ExplorerFeature with the new SDLC Orchestrator */}
+      {(activeFeature === 'feature-graph-rag-explorer' || activeFeature === 'feature-sdlc') && <SdlcLayoutOrchestrator />}
 
       {AppLayout && (
         <AppLayout

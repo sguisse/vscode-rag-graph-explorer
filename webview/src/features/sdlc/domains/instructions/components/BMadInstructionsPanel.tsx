@@ -1,13 +1,3 @@
-#!/bin/bash
-
-# ==============================================================================
-# Token Razor SDLC Refactoring - Hotfix 5.4
-# Fixes TypeScript parameter type mismatch on Base UI Select onValueChange.
-# ==============================================================================
-
-echo "🩹 Applying Hotfix 5.4..."
-
-cat << 'EOF' > webview/src/features/sdlc/domains/instructions/components/BMadInstructionsPanel.tsx
 import React from 'react';
 import { Bot } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
@@ -71,7 +61,3 @@ export function BMadInstructionsPanel() {
     </div>
   );
 }
-EOF
-
-echo "✅ fix: Corrected handleAgentSelect type signature to (val: string | null)."
-echo "▶️ NEXT STEP: Re-run 'npm run build' to verify compilation."
