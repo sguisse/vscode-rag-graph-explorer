@@ -1,7 +1,18 @@
 import React from 'react';
-import { Info } from 'lucide-react';
-import { FolderNode, UmlClassNode, ConfigNode, UmlClassNodeData } from './components/GraphUmlShapes';
-import { CondensedClassNode, CondensedConfigNode } from './components/GraphCondensedShapes';
+import { FolderNode, UmlClassNode, ConfigNode } from './components/GraphUmlShapes';
+import { UmlClassNodeData } from './components/graph-common-shapes';
+import {
+  CondensedClassNode,
+  CondensedConfigNode
+} from './components/GraphCondensedShapes';
+import {
+  RoundClassNode,
+  RoundConfigNode
+} from './components/GraphRoundedShapes';
+import {
+  MinimizedClassNode,
+  MinimizedConfigNode
+} from './components/GraphMinizedShapes';
 import { SelectedEntity, CodebaseFile } from '@/shared/services/graph-rag-explorer';
 import { isMemberKeyForFileToken, extractMemberIdFromKeyToken } from '@/services/view/graph-view.service';
 import { useGraphPanel } from './hooks/use-graph-panel';
@@ -126,13 +137,21 @@ export function GraphPanel({
               style={{ left: bounds.x, top: bounds.y, width: bounds.w, height: bounds.h }}
             >
               {file.type === 'config' ? (
-                graphRendering === 'condensed' ? (
+                graphRendering === 'rounded' ? (
+                  <RoundConfigNode id={file.id} data={nodeData} />
+                ) : graphRendering === 'minized' ? (
+                  <MinimizedConfigNode id={file.id} data={nodeData} />
+                ) : graphRendering === 'condensed' ? (
                   <CondensedConfigNode id={file.id} data={nodeData} />
                 ) : (
                   <ConfigNode id={file.id} data={nodeData} />
                 )
               ) : (
-                graphRendering === 'condensed' ? (
+                graphRendering === 'rounded' ? (
+                  <RoundClassNode id={file.id} data={nodeData} />
+                ) : graphRendering === 'minized' ? (
+                  <MinimizedClassNode id={file.id} data={nodeData} />
+                ) : graphRendering === 'condensed' ? (
                   <CondensedClassNode id={file.id} data={nodeData} />
                 ) : (
                   <UmlClassNode id={file.id} data={nodeData} />

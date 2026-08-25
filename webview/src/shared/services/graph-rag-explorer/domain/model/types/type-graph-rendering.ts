@@ -1,4 +1,4 @@
-export const GRAPH_RENDERING_LIST: readonly string[] = [ "uml", "condensed", "minized", "rounded"];
+export const GRAPH_RENDERING_LIST: readonly string[] = ["uml", "condensed", "minized", "rounded"];
 
 export const GRAPH_RENDERING_ICON_MAP: { [K in (typeof GRAPH_RENDERING_LIST)[number]]: any } = {
   uml: { icon: "📐", label: "UML" },

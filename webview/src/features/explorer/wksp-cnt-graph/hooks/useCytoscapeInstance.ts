@@ -52,7 +52,7 @@ export function useCytoscapeInstance(
     const cy = cytoscape({
       container: containerNode,
       style: [
-        { selector: 'node[width][height]', style: { 'shape': 'rectangle', 'opacity': 0.0, 'width': 'data(width)', 'height': 'data(height)' } },
+        { selector: 'node[width][height]', style: { 'shape': 'data(shape)' as any, 'opacity': 0.0, 'width': 'data(width)', 'height': 'data(height)' } },
         { selector: 'node.folder', style: { 'shape': 'rectangle', 'opacity': 1.0, 'label': 'data(label)', 'text-valign': 'top', 'text-halign': 'center', 'text-margin-y': -12, 'font-size': '12px', 'font-family': 'monospace', 'font-weight': 'bold', 'color': isDarkMode ? '#94a3b8' : '#475569', 'background-opacity': 0.02, 'background-color': isDarkMode ? '#475569' : '#94a3b8', 'border-width': '2px', 'border-color': isDarkMode ? '#334155' : '#cbd5e1', 'border-style': 'dashed', 'padding': '40' } },
         { selector: 'edge', style: { 'width': 2, 'line-color': isDarkMode ? '#475569' : '#cbd5e1', 'target-arrow-color': isDarkMode ? '#475569' : '#cbd5e1', 'target-arrow-shape': 'triangle', 'curve-style': 'bezier', 'label': 'data(label)', 'font-size': '9px', 'font-family': 'monospace', 'color': isDarkMode ? '#94a3b8' : '#475569', 'text-background-opacity': 1, 'text-background-color': isDarkMode ? '#18181b' : '#ffffff', 'text-background-padding': '3px', 'text-background-shape': 'roundrectangle' } },
         { selector: 'edge.impacted', style: { 'line-color': '#eab308', 'target-arrow-color': '#eab308', 'width': 3.5, 'color': isDarkMode ? '#fef08a' : '#854d0e', 'text-background-color': isDarkMode ? '#422006' : '#fef9c3', 'text-background-opacity': 1 } }
@@ -74,7 +74,6 @@ export function useCytoscapeInstance(
       const isCmdOrCtrl = e.metaKey || e.ctrlKey;
 
       if (isCmdOrCtrl) {
-        // Cmd / Ctrl + Wheel: Zoom in / out relative to pointer position
         const zoomFactor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
         const currentZoom = currentCy.zoom();
         const minZoom = currentCy.minZoom();
@@ -94,7 +93,6 @@ export function useCytoscapeInstance(
           renderedPosition: renderedPosition,
         });
       } else {
-        // Standard Wheel: Pan graph up/down & left/right
         const pan = currentCy.pan();
         currentCy.pan({
           x: pan.x - e.deltaX,
@@ -105,7 +103,28 @@ export function useCytoscapeInstance(
 
     containerNode.addEventListener('wheel', handleWheel, { capture: true, passive: false });
 
-    // Single / Cmd + Click: Handle node selection, reveal in VS Code Explorer, and copy path to clipboard
+    // Node Cursor & data-tooltip Attribute Handlers for the global Tooltip component
+    cy.on('mouseover', 'node', (evt) => {
+      const node = evt.target;
+      if (!node.hasClass('folder') && containerNode) {
+        containerNode.style.cursor = 'pointer';
+        const name = node.data('name') || node.id();
+        const path = node.data('path') || '';
+        const tooltipText = path ? `${name}` : name;
+        if (tooltipText) {
+          containerNode.setAttribute('data-tooltip', tooltipText);
+        }
+      }
+    });
+
+    cy.on('mouseout', 'node', () => {
+      if (containerNode) {
+        containerNode.style.cursor = 'default';
+        containerNode.removeAttribute('data-tooltip');
+      }
+    });
+
+    // Single / Cmd + Click
     cy.on('tap', 'node', (evt) => {
       const node = evt.target;
       if (!node.hasClass('folder')) {
@@ -125,7 +144,7 @@ export function useCytoscapeInstance(
       }
     });
 
-    // Double Click: Open file and reveal in VS Code Explorer
+    // Double Click
     cy.on('dbltap', 'node', (evt) => {
       if (!evt.target.hasClass('folder')) {
         const nodeId = evt.target.id();
@@ -199,6 +218,9 @@ export function useCytoscapeInstance(
 
     return () => {
       containerNode.removeEventListener('wheel', handleWheel, { capture: true });
+      if (containerNode) {
+        containerNode.removeAttribute('data-tooltip');
+      }
       if (rafIdRef.current !== null) {
         cancelAnimationFrame(rafIdRef.current);
       }

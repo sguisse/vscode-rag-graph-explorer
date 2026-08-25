@@ -1,398 +1,10 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -e
 
-# Ensure target directories exist
-mkdir -p webview/src/features/explorer/wksp-cnt-graph/components
 mkdir -p webview/src/features/explorer/wksp-cnt-graph/hooks
-mkdir -p webview/src/features/explorer/layout-ctns
+mkdir -p webview/src/features/explorer/wksp-cnt-graph/components
 
-echo "📍 Patching useExplorerStore.ts with strongly typed graphRendering state..."
-
-# Use a clean Python patcher file to avoid string escaping issues in bash
-cat << 'EOF' > patch_store.py
-import os, re, sys
-
-store_path = "webview/src/features/explorer/store/useExplorerStore.ts"
-if not os.path.exists(store_path):
-    print(f"⚠️ File not found: {store_path}", file=sys.stderr)
-    sys.exit(1)
-
-with open(store_path, "r", encoding="utf-8") as f:
-    lines = f.readlines()
-
-# 1. Clean out any previous partial or corrupted injections
-cleaned_lines = [
-    line for line in lines
-    if "graphRendering" not in line and "type-graph-rendering" not in line
-]
-content = "".join(cleaned_lines)
-
-# 2. Add import for GraphRendering at top
-import_stmt = "import { GraphRendering } from '@/shared/services/graph-rag-explorer/domain/model/types/type-graph-rendering';\n"
-content = import_stmt + content
-
-# 3. Add strongly typed properties to interface ExplorerState
-match_interface = re.search(r"(export\s+interface\s+ExplorerState\s*\{)", content)
-if match_interface:
-    pos = match_interface.end()
-    content = content[:pos] + "\n  graphRendering: GraphRendering;\n  setGraphRendering: (graphRendering: GraphRendering) => void;" + content[pos:]
-
-# 4. Add initial state and typed setter method to Zustand store creator
-match_store = re.search(r"(create<ExplorerState>\s*\(\s*(?:\([^)]*\)|[a-zA-Z0-9_$]+)\s*=>\s*\{)", content)
-if match_store:
-    pos = match_store.end()
-    content = content[:pos] + "\n  graphRendering: 'uml' as GraphRendering,\n  setGraphRendering: (graphRendering: GraphRendering) => set({ graphRendering })," + content[pos:]
-
-with open(store_path, "w", encoding="utf-8") as f:
-    f.write(content)
-
-print("✅ Successfully patched useExplorerStore.ts with graphRendering state")
-EOF
-
-python3 patch_store.py
-rm -f patch_store.py
-
-# 1. Create Condensed Shapes component
-cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/components/GraphCondensedShapes.tsx
-import React from 'react';
-import { FileCode, Settings } from 'lucide-react';
-import { UmlClassNodeData, NODE_STYLE_REGISTRY } from './GraphUmlShapes';
-
-export const CondensedClassNode: React.FC<{ id: string; data: UmlClassNodeData }> = ({ id, data }) => {
-  const style = NODE_STYLE_REGISTRY[data.type] || NODE_STYLE_REGISTRY.default;
-
-  let borderClass = style.border;
-  let headerBg = `${style.bg} text-white`;
-  let iconColor = style.iconColor;
-
-  if (data.isFocused) {
-    borderClass = 'border-amber-400 dark:border-amber-400 ring-4 ring-amber-400/80 ring-offset-2 ring-offset-background animate-pulse scale-105 shadow-2xl shadow-amber-500/50';
-    headerBg = 'bg-amber-500/40 dark:bg-amber-500/45 text-foreground';
-    iconColor = 'text-amber-400';
-  } else if (data.isOrigin) {
-    borderClass = 'border-red-500 dark:border-red-500 ring-2 ring-red-500/60 shadow-lg shadow-red-500/20';
-    headerBg = 'bg-red-500/30 dark:bg-red-500/35 text-foreground';
-    iconColor = 'text-red-500 dark:text-red-400';
-  } else if (data.isDependency) {
-    borderClass = 'border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/50 shadow-lg shadow-amber-500/10';
-    headerBg = 'bg-amber-500/30 dark:bg-amber-500/35 text-foreground';
-    iconColor = 'text-amber-500 dark:text-amber-400';
-  }
-
-  const methodCount = data.methods?.length || 0;
-  const attrCount = data.attributes?.length || 0;
-
-  return (
-    <div className={`w-56 bg-card rounded-md shadow-md border-2 ${borderClass} relative transition-all duration-200 opacity-100 overflow-hidden`}>
-      <div className={`${headerBg} p-2 flex items-center justify-between gap-1.5`}>
-        <div className="flex items-center gap-1.5 min-w-0">
-          <FileCode size={14} className={`${iconColor} shrink-0`} />
-          <h4 className="font-mono font-bold text-xs truncate" title={data.name}>{data.name}</h4>
-        </div>
-        <span className="bg-black/30 px-1.5 py-0.5 rounded font-mono text-[9px] uppercase tracking-wider shrink-0">
-          {data.type}
-        </span>
-      </div>
-      <div className="p-1.5 flex items-center justify-between font-mono text-[10px] text-muted-foreground bg-muted/20">
-        <span>Attr: <strong className="text-foreground">{attrCount}</strong></span>
-        <span>Methods: <strong className="text-foreground">{methodCount}</strong></span>
-        <span>LOC: <strong className="text-foreground">{data.size || 0}</strong></span>
-      </div>
-    </div>
-  );
-};
-
-export const CondensedConfigNode: React.FC<{ id: string; data: UmlClassNodeData }> = ({ id, data }) => {
-  let borderClass = 'border-amber-500';
-  let headerBg = 'bg-amber-500 text-white';
-  let iconColor = 'text-amber-100';
-
-  if (data.isFocused) {
-    borderClass = 'border-amber-400 dark:border-amber-400 ring-4 ring-amber-400/80 ring-offset-2 ring-offset-background animate-pulse scale-105 shadow-2xl shadow-amber-500/50';
-    headerBg = 'bg-amber-500/40 dark:bg-amber-500/45 text-foreground';
-    iconColor = 'text-amber-400';
-  } else if (data.isOrigin) {
-    borderClass = 'border-red-500 dark:border-red-500 ring-2 ring-red-500/60 shadow-lg shadow-red-500/20';
-    headerBg = 'bg-red-500/30 dark:bg-red-500/35 text-foreground';
-    iconColor = 'text-red-500 dark:text-red-400';
-  } else if (data.isDependency) {
-    borderClass = 'border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/50 shadow-lg shadow-amber-500/10';
-    headerBg = 'bg-amber-500/30 dark:bg-amber-500/35 text-foreground';
-    iconColor = 'text-amber-500';
-  }
-
-  const propCount = data.configProperties?.length || 0;
-
-  return (
-    <div className={`w-60 bg-card rounded-md shadow-md border-2 ${borderClass} relative transition-all duration-200 opacity-100 overflow-hidden`}>
-      <div className={`flex justify-between items-center ${headerBg} p-2`}>
-        <div className="flex items-center gap-1.5 min-w-0">
-          <Settings size={14} className={`${iconColor} shrink-0`} />
-          <h4 className="font-mono font-bold text-xs truncate" title={data.name}>{data.name}</h4>
-        </div>
-        <span className="bg-black/20 px-1.5 py-0.5 rounded font-mono text-[9px] uppercase tracking-widest shrink-0">
-          {propCount} Keys
-        </span>
-      </div>
-    </div>
-  );
-};
-EOF
-
-# 2. Update use-graph-panel-header.ts
-cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/hooks/use-graph-panel-header.ts
-import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
-import { vscodeSettings } from '@/App';
-import { useExplorerStore } from '@/features/explorer/store/useExplorerStore';
-import { GraphRendering } from '@/shared/services/graph-rag-explorer/domain/model/types/type-graph-rendering';
-
-export function useGraphPanelHeader(cyRef?: React.RefObject<any>) {
-  const currentLayout = useExplorerStore((s) => s.currentLayout);
-  const setCurrentLayout = useExplorerStore((s) => s.setCurrentLayout);
-
-  const currentRendering = useExplorerStore((s) => s.graphRendering) || 'uml';
-  const setGraphRendering = useExplorerStore((s) => s.setGraphRendering);
-
-  const setCurrentRendering = (val: GraphRendering) => {
-    if (setGraphRendering) {
-      setGraphRendering(val);
-    }
-  };
-
-  const displayNeo4jHandler = () => {
-    vsCodeApiService.openUrl(vscodeSettings.graphRagExplorer.neo4j.url, true);
-  };
-
-  const handleZoomIn = () => {
-    cyRef?.current?.zoom((cyRef.current?.zoom() || 1) * 1.2);
-  };
-
-  const handleZoomOut = () => {
-    cyRef?.current?.zoom((cyRef.current?.zoom() || 1) / 1.2);
-  };
-
-  const handleFitView = () => {
-    cyRef?.current?.fit(undefined, 40);
-    cyRef?.current?.center();
-  };
-
-  return {
-    currentLayout,
-    setCurrentLayout,
-    currentRendering,
-    setCurrentRendering,
-    displayNeo4jHandler,
-    handleZoomIn,
-    handleZoomOut,
-    handleFitView,
-  };
-}
-EOF
-
-# 3. Update GraphPanelHeader.tsx
-cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/GraphPanelHeader.tsx
-import React from 'react';
-import { Grid, Database, Plus, Minus, Focus, SquareFunction, Target, ListTree } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
-import { ToggleButton } from '@/components/app/toggle-button';
-import { ToolbarSeparator } from '@/components/app/toolbar-separator';
-
-import {
-  GRAPH_LAYOUT_LIST,
-  GRAPH_LAYOUT_ICON_MAP
-} from '@/shared/services/graph-rag-explorer/domain/model/types';
-import {
-  GRAPH_RENDERING_LIST,
-  GRAPH_RENDERING_ICON_MAP,
-  GraphRendering
-} from '@/shared/services/graph-rag-explorer/domain/model/types/type-graph-rendering';
-import { useGraphPanelHeader } from './hooks/use-graph-panel-header';
-
-export interface GraphPanelHeaderLeftProps {
-  currentLayout?: string;
-  setCurrentLayout?: (val: string) => void;
-  currentRendering?: GraphRendering;
-  setCurrentRendering?: (val: GraphRendering) => void;
-}
-
-export const GraphPanelHeaderLeft: React.FC<GraphPanelHeaderLeftProps> = ({
-  currentLayout: propCurrentLayout,
-  setCurrentLayout: propSetCurrentLayout,
-  currentRendering: propCurrentRendering,
-  setCurrentRendering: propSetCurrentRendering,
-}) => {
-  const {
-    currentLayout: storeLayout,
-    setCurrentLayout: storeSetLayout,
-    currentRendering: storeRendering,
-    setCurrentRendering: storeSetRendering
-  } = useGraphPanelHeader();
-
-  const currentLayout = propCurrentLayout || storeLayout || 'preset';
-  const setCurrentLayout = propSetCurrentLayout || storeSetLayout;
-
-  const currentRendering = propCurrentRendering || storeRendering || 'uml';
-  const setCurrentRendering = propSetCurrentRendering || storeSetRendering;
-
-  return (
-    <div className="flex items-center gap-2">
-      <span className="font-bold text-foreground truncate tracking-wider">Dependencies</span>
-      <SelectFromTypeBuilder
-        id="select-graph-rendering"
-        value={currentRendering}
-        onChange={(val) => setCurrentRendering((val as GraphRendering) || 'uml')}
-        className="py-0"
-        triggerClassName="!h-6 min-h-0 py-0 px-2 text-xs border-border rounded-sm font-mono"
-        options={GRAPH_RENDERING_LIST.map((key) => ({
-          value: key,
-          icon: GRAPH_RENDERING_ICON_MAP[key]?.icon,
-          label: GRAPH_RENDERING_ICON_MAP[key]?.label || key,
-        }))}
-      />
-      <SelectFromTypeBuilder
-        id="select-graph-layout"
-        value={currentLayout}
-        onChange={(val) => setCurrentLayout(val || 'preset')}
-        className="py-0"
-        triggerClassName="!h-6 min-h-0 py-0 px-2 text-xs border-border rounded-sm font-mono"
-        options={GRAPH_LAYOUT_LIST.map((key) => ({
-          value: key,
-          icon: GRAPH_LAYOUT_ICON_MAP[key]?.icon,
-          label: GRAPH_LAYOUT_ICON_MAP[key]?.label || key,
-        }))}
-      />
-    </div>
-  );
-};
-
-export interface GraphPanelHeaderCenterProps {
-  currentLayout?: string;
-  setCurrentLayout?: (val: string) => void;
-  maxNodesLimit?: number;
-  setMaxNodesLimit?: (val: number) => void;
-  callersDepth?: number;
-  setCallersDepth?: (val: number) => void;
-  calleesDepth?: number;
-  setCalleesDepth?: (val: number) => void;
-  displayLevel?: string;
-  setDisplayLevel?: (val: string) => void;
-}
-
-export const GraphPanelHeaderCenter: React.FC<GraphPanelHeaderCenterProps> = () => {
-  const { displayNeo4jHandler } = useGraphPanelHeader();
-
-  return (
-    <div className="flex items-center gap-3">
-      <Button
-        id="btn-neo4j-connect"
-        className="flex items-center gap-1.5 bg-gradient-to-r from-orange-600 to-orange-500 shadow-sm px-2.5 border border-orange-700 rounded-md h-6 font-bold text-[10px] text-white uppercase tracking-wider"
-        onClick={displayNeo4jHandler}
-      >
-        <Database size={11} /> Neo4j
-      </Button>
-    </div>
-  );
-};
-
-export interface GraphPanelHeaderRightProps {
-  cyRef: React.RefObject<any>;
-  isGraphMaximized: boolean;
-  setIsGraphMaximized: (maximized: boolean) => void;
-  showGrid: boolean;
-  setShowGrid: (show: boolean) => void;
-  attributesVisible: boolean;
-  setAttributesVisible: (val: boolean) => void;
-  methodsVisible: boolean;
-  setMethodsVisible: (val: boolean) => void;
-  showSelectedOnly: boolean;
-  setShowSelectedOnly: (val: boolean) => void;
-}
-
-export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
-  cyRef,
-  isGraphMaximized,
-  setIsGraphMaximized,
-  showGrid,
-  setShowGrid,
-  attributesVisible,
-  setAttributesVisible,
-  methodsVisible,
-  setMethodsVisible,
-  showSelectedOnly,
-  setShowSelectedOnly,
-}) => {
-  const { handleZoomIn, handleZoomOut, handleFitView } = useGraphPanelHeader(cyRef);
-
-  return (
-    <div className="flex items-center gap-1">
-      <ToggleButton
-        id="btn-toggle-show-selected-only"
-        isSelected={showSelectedOnly}
-        onToggle={() => setShowSelectedOnly(!showSelectedOnly)}
-        tooltipText="Display Only Selected & Connected Items"
-        icon={<Target size={12} />}
-      />
-      <ToggleButton
-        id="btn-toggle-attributes-visibility"
-        isSelected={attributesVisible}
-        onToggle={() => setAttributesVisible(!attributesVisible)}
-        tooltipText="Toggle Attributes Visibility"
-        icon={<ListTree size={12} />}
-      />
-      <ToggleButton
-        id="btn-toggle-methods-visibility"
-        isSelected={methodsVisible}
-        onToggle={() => setMethodsVisible(!methodsVisible)}
-        tooltipText="Toggle Methods Visibility"
-        icon={<SquareFunction size={12} />}
-      />
-
-      <ToolbarSeparator />
-
-      <ToggleButton
-        id="btn-toggle-grid"
-        isSelected={showGrid}
-        onToggle={() => setShowGrid(!showGrid)}
-        tooltipText="Toggle Grid"
-        icon={<Grid size={12} />}
-      />
-
-      <ToolbarSeparator />
-
-      <Button
-        id="btn-graph-zoom-in"
-        variant="ghost"
-        size="icon"
-        className="w-5 h-5 text-muted-foreground"
-        onClick={handleZoomIn}
-      >
-        <Plus size={12} />
-      </Button>
-      <Button
-        id="btn-graph-zoom-out"
-        variant="ghost"
-        size="icon"
-        className="w-5 h-5 text-muted-foreground"
-        onClick={handleZoomOut}
-      >
-        <Minus size={12} />
-      </Button>
-      <Button
-        id="btn-graph-fit-view"
-        variant="ghost"
-        size="icon"
-        className="w-5 h-5 text-muted-foreground"
-        onClick={handleFitView}
-      >
-        <Focus size={12} />
-      </Button>
-    </div>
-  );
-};
-EOF
-
-# 4. Update useGraphTopology.ts
+# 1. Update useGraphTopology.ts to include name and path in Cytoscape node data
 cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/hooks/useGraphTopology.ts
 import { useCallback, useRef } from 'react';
 import cytoscape from 'cytoscape';
@@ -412,11 +24,19 @@ function getNodeDimensions(
   methodsVisible: boolean,
   graphRendering: GraphRendering = 'uml'
 ): { width: number; height: number } {
+  if (graphRendering === 'rounded') {
+    return { width: 64, height: 64 };
+  }
+
+  if (graphRendering === 'minized') {
+    return { width: 150, height: 32 };
+  }
+
   if (graphRendering === 'condensed') {
     if (file.type === 'config') {
-      return { width: 240, height: 42 };
+      return { width: 175, height: 42 };
     }
-    return { width: 224, height: 68 };
+    return { width: 175, height: 68 };
   }
 
   if (file.type === 'config') {
@@ -656,9 +276,12 @@ export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) 
             cy.add({
               data: {
                 id: file.id,
+                name: file.name,
+                path: file.path || file.id,
                 parent: `folder__${folderKey}`,
                 width: dims.width,
-                height: dims.height
+                height: dims.height,
+                shape: graphRendering === 'rounded' ? 'ellipse' : 'rectangle'
               },
               position: { x: absX, y: absY }
             });
@@ -735,390 +358,241 @@ export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) 
 }
 EOF
 
-# 5. Update GraphPanel.tsx
-cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/GraphPanel.tsx
-import React from 'react';
-import { Info } from 'lucide-react';
-import { FolderNode, UmlClassNode, ConfigNode, UmlClassNodeData } from './components/GraphUmlShapes';
-import { CondensedClassNode, CondensedConfigNode } from './components/GraphCondensedShapes';
-import { SelectedEntity, CodebaseFile } from '@/shared/services/graph-rag-explorer';
-import { isMemberKeyForFileToken, extractMemberIdFromKeyToken } from '@/services/view/graph-view.service';
-import { useGraphPanel } from './hooks/use-graph-panel';
-import { GraphToolbar } from './Graph-toolbar';
-import { useExplorerStore } from '../store/useExplorerStore';
-
-interface GraphPanelProps {
-  folderPositions: Record<string, { label: string }>;
-  containerRef: (node: HTMLDivElement | null) => void;
-  showGrid: boolean;
-  isDarkMode: boolean;
-  graphState: {
-    zoom: number;
-    pan: { x: number; y: number };
-    nodePositions: Record<string, { x: number; y: number; w: number; h: number }>;
-  };
-  selectedEntity: SelectedEntity | null;
-  focusedNodeId?: string | null;
-  searchFilteredFiles: CodebaseFile[];
-  impactedSet: Set<string>;
-  handleSelectMember: (nodeId: string, memberId: string) => void;
-  attributesVisible: boolean;
-  methodsVisible: boolean;
-  showSelectedOnly?: boolean;
-}
-
-export function GraphPanel({
-  folderPositions,
-  containerRef,
-  showGrid,
-  isDarkMode,
-  graphState,
-  selectedEntity,
-  focusedNodeId,
-  searchFilteredFiles,
-  impactedSet,
-  handleSelectMember,
-  attributesVisible,
-  methodsVisible,
-  showSelectedOnly = false
-}: GraphPanelProps) {
-  const graphRendering = useExplorerStore((s) => s.graphRendering) || 'uml';
-
-  const {
-    effectiveFolderPositions,
-    effectiveSearchFilteredFiles,
-  } = useGraphPanel(
-    folderPositions,
-    graphState.nodePositions,
-    showSelectedOnly,
-    selectedEntity,
-    searchFilteredFiles,
-    impactedSet
-  );
-
-  return (
-    <div className="relative inset-0 outline-none w-full h-full overflow-hidden">
-      <GraphToolbar />
-
-      <div
-        ref={containerRef}
-        className="z-0 absolute inset-0 w-full h-full"
-        style={showGrid ? {
-          backgroundImage: isDarkMode
-            ? 'radial-gradient(#334155 1.2px, transparent 1.2px)'
-            : 'radial-gradient(#cbd5e1 1.2px, transparent 1.2px)',
-          backgroundSize: `${16 * graphState.zoom}px ${16 * graphState.zoom}px`,
-          backgroundPosition: `${graphState.pan.x}px ${graphState.pan.y}px`
-        } : undefined}
-      />
-
-      <div
-        className="z-10 absolute inset-0 origin-top-left pointer-events-none select-none"
-        style={{ transform: `translate(${graphState.pan.x}px, ${graphState.pan.y}px) scale(${graphState.zoom})` }}
-      >
-        {Object.entries(effectiveFolderPositions).map(([folderKey, initialPos]) => {
-          const bounds = graphState.nodePositions[`folder__${folderKey}`];
-          if (!bounds) return null;
-          const isSelected = selectedEntity?.nodeId === `folder__${folderKey}`;
-          return (
-            <div
-              key={`folder-box-${folderKey}`}
-              className="z-10 absolute transition-all duration-75 ease-out"
-              style={{ left: bounds.x, top: bounds.y, width: bounds.w, height: bounds.h }}
-            >
-              <FolderNode data={{ label: initialPos.label }} isSelected={isSelected} />
-            </div>
-          );
-        })}
-
-        {effectiveSearchFilteredFiles.map((file: CodebaseFile) => {
-          const bounds = graphState.nodePositions[file.id];
-          if (!bounds) return null;
-
-          const impactedMembers: string[] = [];
-          impactedSet.forEach(item => {
-            if (isMemberKeyForFileToken(item, file.id)) {
-              impactedMembers.push(extractMemberIdFromKeyToken(item));
-            }
-          });
-
-          const isOrigin = selectedEntity?.nodeId === file.id;
-          const isDependency = impactedSet.has(file.id) && !isOrigin;
-          const isFocused = focusedNodeId === file.id;
-
-          const nodeData: UmlClassNodeData = {
-            ...file,
-            isOrigin,
-            isDependency,
-            isFocused,
-            impactedMembers,
-            selectedMember: selectedEntity?.nodeId === file.id ? selectedEntity?.memberId : undefined,
-            onSelectMember: handleSelectMember,
-            attributesVisible,
-            methodsVisible
-          };
-
-          return (
-            <div
-              key={file.id}
-              className={`absolute transition-all duration-75 ease-out pointer-events-none ${isFocused ? 'z-30' : 'z-20'}`}
-              style={{ left: bounds.x, top: bounds.y, width: bounds.w, height: bounds.h }}
-            >
-              {file.type === 'config' ? (
-                graphRendering === 'condensed' ? (
-                  <CondensedConfigNode id={file.id} data={nodeData} />
-                ) : (
-                  <ConfigNode id={file.id} data={nodeData} />
-                )
-              ) : (
-                graphRendering === 'condensed' ? (
-                  <CondensedClassNode id={file.id} data={nodeData} />
-                ) : (
-                  <UmlClassNode id={file.id} data={nodeData} />
-                )
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      <div
-        id="cytoscape-engine-info"
-        className="top-10 left-4 z-20 absolute bg-card/90 shadow-md backdrop-blur p-3 border border-border rounded-lg max-w-sm font-mono text-xs pointer-events-auto"
-      >
-        <div className="flex justify-between items-center gap-2 mb-1">
-          <div className="flex items-center gap-2">
-            <Info size={14} className="text-primary" />
-            <span className="font-bold">Surgical Analysis (Cytoscape Engine)</span>
-          </div>
-          <button
-            onClick={() => {
-              const infoDiv = document.getElementById('cytoscape-engine-info');
-              if (infoDiv) infoDiv.style.display = 'none';
-            }}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Close info"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
-        <p className="text-[10px] text-muted-foreground">
-          Drag-and-drop on headers and wheel zoom use Cytoscape's responsive architecture.
-        </p>
-      </div>
-    </div>
-  );
-}
-EOF
-
-# 6. Update CenterPanelContainer.tsx
-cat << 'EOF' > webview/src/features/explorer/layout-ctns/CenterPanelContainer.tsx
-import React, { useEffect, useCallback } from 'react';
-import { useLayoutStore } from '@/store/useLayoutStore';
-import { useAppContextStore } from '@/store/useAppContextStore';
-import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
+# 2. Update useCytoscapeInstance.ts to dynamically set/remove 'data-tooltip' on containerNode for the global Tooltip component
+cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/hooks/useCytoscapeInstance.ts
+import { useEffect, useRef, useState, useCallback } from 'react';
+import cytoscape from 'cytoscape';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
-import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
-import { GraphPanel } from '../wksp-cnt-graph/GraphPanel';
-import {
-  GraphPanelHeaderLeft,
-  GraphPanelHeaderCenter,
-  GraphPanelHeaderRight,
-} from '../wksp-cnt-graph/GraphPanelHeader';
-import { useCodebaseFilter } from '../hooks/use-codebase-filter';
-import { useTransitiveImpact } from '../hooks/use-transitive-impact';
-import { useGraph } from '../wksp-cnt-graph/hooks/use-graph';
-import { useExplorerStore } from '../store/useExplorerStore';
 
-export function CenterPanelContainer() {
-  const codebase = useExplorerStore((s) => s.codebase);
-  const folderPositions = useExplorerStore((s) => s.folderPositions);
-  const selectedEntity = useExplorerStore((s) => s.selectedEntity);
-  const setSelectedEntity = useExplorerStore((s) => s.setSelectedEntity);
-  const focusedNodeId = useExplorerStore((s) => s.focusedNodeId);
+export interface GraphState {
+  zoom: number;
+  pan: { x: number; y: number };
+  nodePositions: Record<string, { x: number; y: number; w: number; h: number }>;
+}
 
-  const enableDownstream = useExplorerStore((s) => s.enableDownstream);
-  const enableUpstream = useExplorerStore((s) => s.enableUpstream);
+export function useCytoscapeInstance(
+  isDarkMode: boolean,
+  onNodeSelect: (nodeId: string) => void,
+  onNodeDoubleClick?: (nodeId: string) => void,
+  onNodeCmdClick?: (nodeId: string) => void
+) {
+  const [containerNode, setContainerNode] = useState<HTMLDivElement | null>(null);
+  const cyRef = useRef<cytoscape.Core | null>(null);
+  const rafIdRef = useRef<number | null>(null);
 
-  const showGrid = useExplorerStore((s) => s.showGrid);
-  const setShowGrid = useExplorerStore((s) => s.setShowGrid);
-  const callersDepth = useExplorerStore((s) => s.callersDepth);
-  const setCallersDepth = useExplorerStore((s) => s.setCallersDepth);
-  const calleesDepth = useExplorerStore((s) => s.calleesDepth);
-  const setCalleesDepth = useExplorerStore((s) => s.setCalleesDepth);
-  const currentLayout = useExplorerStore((s) => s.currentLayout);
-  const setCurrentLayout = useExplorerStore((s) => s.setCurrentLayout);
-  const graphRendering = useExplorerStore((s) => s.graphRendering) || 'uml';
+  const onNodeSelectRef = useRef(onNodeSelect);
+  useEffect(() => {
+    onNodeSelectRef.current = onNodeSelect;
+  }, [onNodeSelect]);
 
-  const attributesVisible = useExplorerStore((s) => s.attributesVisible);
-  const setAttributesVisible = useExplorerStore((s) => s.setAttributesVisible);
-  const methodsVisible = useExplorerStore((s) => s.methodsVisible);
-  const setMethodsVisible = useExplorerStore((s) => s.setMethodsVisible);
-  const showSelectedOnly = useExplorerStore((s) => s.showSelectedOnly);
-  const setShowSelectedOnly = useExplorerStore((s) => s.setShowSelectedOnly);
+  const onNodeDoubleClickRef = useRef(onNodeDoubleClick);
+  useEffect(() => {
+    onNodeDoubleClickRef.current = onNodeDoubleClick;
+  }, [onNodeDoubleClick]);
 
-  const toggleContainerMaximized = useLayoutStore((s) => s.toggleContainerMaximized);
-  const isDarkMode = useAppContextStore((s) => s.isDarkMode);
+  const onNodeCmdClickRef = useRef(onNodeCmdClick);
+  useEffect(() => {
+    onNodeCmdClickRef.current = onNodeCmdClick;
+  }, [onNodeCmdClick]);
 
-  const filter = useCodebaseFilter(codebase.files);
-  const { impactedSet } = useTransitiveImpact(
-    selectedEntity,
-    codebase.dependencies,
-    callersDepth,
-    calleesDepth,
-    enableDownstream,
-    enableUpstream
-  );
+  const [graphState, setGraphState] = useState<GraphState>({
+    zoom: 1,
+    pan: { x: 0, y: 0 },
+    nodePositions: {}
+  });
 
-  const handleNodeSelect = useCallback(
-    (nodeId: string) => {
-      setSelectedEntity({ type: 'node', nodeId });
-      const targetFile = codebase.files.find((f) => f.id === nodeId);
-      if (targetFile && targetFile.path) {
-        logInfo(`Single-clicked graph item: ${nodeId}. Revealing path & copying to clipboard: ${targetFile.path}`);
-        vsCodeApiService.revealInExplorer(targetFile.path);
-        vsCodeApiService.copyToClipboard(targetFile.path);
-      }
-    },
-    [codebase.files, setSelectedEntity]
-  );
-
-  const handleSelectMember = useCallback(
-    (nodeId: string, memberId: string) => {
-      setSelectedEntity({ type: 'member', nodeId, memberId });
-      const targetFile = codebase.files.find((f) => f.id === nodeId);
-      if (targetFile && targetFile.path) {
-        logInfo(`Single-clicked member item: ${memberId} in ${nodeId}. Revealing path & copying to clipboard: ${targetFile.path}`);
-        vsCodeApiService.revealInExplorer(targetFile.path);
-        vsCodeApiService.copyToClipboard(targetFile.path);
-      }
-    },
-    [codebase.files, setSelectedEntity]
-  );
-
-  const handleNodeDoubleClick = useCallback(
-    (nodeId: string) => {
-      const targetFile = codebase.files.find((f) => f.id === nodeId);
-      if (targetFile && targetFile.path) {
-        logInfo(`Double-clicked graph item: ${nodeId}. Opening file in VS Code: ${targetFile.path}`);
-        vsCodeApiService.revealInExplorer(targetFile.path);
-        vsCodeApiService.openFile(targetFile.path);
-      }
-    },
-    [codebase.files]
-  );
-
-  const handleNodeCmdClick = useCallback(
-    (nodeId: string) => {
-      const targetFile = codebase.files.find((f) => f.id === nodeId);
-      const pathToAdd = targetFile?.path || nodeId;
-      logInfo(`Cmd+Clicked graph item: ${nodeId}. Appending path to context paths panel: ${pathToAdd}`);
-      vsCodeHandleMessage.emit('addPathToTop', { command: 'addPathToTop', payload: pathToAdd });
-    },
-    [codebase.files]
-  );
-
-  const { containerRef, cyRef, graphState, updateGraphTopology, isReady } = useGraph(
-    isDarkMode,
-    handleNodeSelect,
-    handleNodeDoubleClick,
-    handleNodeCmdClick
-  );
+  const containerRef = useCallback((node: HTMLDivElement | null) => {
+    if (node !== null) {
+      setContainerNode(node);
+    }
+  }, []);
 
   useEffect(() => {
-    if (!isReady || Object.keys(folderPositions).length === 0) return;
-    updateGraphTopology(
-      filter.searchFilteredFiles,
-      filter.visibleFiles,
-      codebase,
-      impactedSet,
-      currentLayout,
-      folderPositions,
-      attributesVisible,
-      methodsVisible,
-      selectedEntity,
-      showSelectedOnly,
-      graphRendering
-    );
-  }, [
-    isReady,
-    filter.searchFilteredFiles,
-    filter.visibleFiles,
-    codebase,
-    impactedSet,
-    currentLayout,
-    folderPositions,
-    attributesVisible,
-    methodsVisible,
-    selectedEntity,
-    showSelectedOnly,
-    graphRendering,
-    updateGraphTopology,
-  ]);
+    if (!containerNode) return;
 
-  return (
-    <div className="relative flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
-      <ContainerPanelHeader
-        path="workspace.center"
-        isHiddable={true}
-        headerLeft={<GraphPanelHeaderLeft />}
-        headerCenter={
-          <GraphPanelHeaderCenter
-            maxNodesLimit={filter.maxNodesLimit}
-            setMaxNodesLimit={filter.setMaxNodesLimit}
-            callersDepth={callersDepth}
-            setCallersDepth={setCallersDepth}
-            calleesDepth={calleesDepth}
-            setCalleesDepth={setCalleesDepth}
-            displayLevel={filter.displayLevel}
-            setDisplayLevel={filter.setDisplayLevel}
-            currentLayout={currentLayout}
-            setCurrentLayout={setCurrentLayout}
-          />
+    const cy = cytoscape({
+      container: containerNode,
+      style: [
+        { selector: 'node[width][height]', style: { 'shape': 'data(shape)' as any, 'opacity': 0.0, 'width': 'data(width)', 'height': 'data(height)' } },
+        { selector: 'node.folder', style: { 'shape': 'rectangle', 'opacity': 1.0, 'label': 'data(label)', 'text-valign': 'top', 'text-halign': 'center', 'text-margin-y': -12, 'font-size': '12px', 'font-family': 'monospace', 'font-weight': 'bold', 'color': isDarkMode ? '#94a3b8' : '#475569', 'background-opacity': 0.02, 'background-color': isDarkMode ? '#475569' : '#94a3b8', 'border-width': '2px', 'border-color': isDarkMode ? '#334155' : '#cbd5e1', 'border-style': 'dashed', 'padding': '40' } },
+        { selector: 'edge', style: { 'width': 2, 'line-color': isDarkMode ? '#475569' : '#cbd5e1', 'target-arrow-color': isDarkMode ? '#475569' : '#cbd5e1', 'target-arrow-shape': 'triangle', 'curve-style': 'bezier', 'label': 'data(label)', 'font-size': '9px', 'font-family': 'monospace', 'color': isDarkMode ? '#94a3b8' : '#475569', 'text-background-opacity': 1, 'text-background-color': isDarkMode ? '#18181b' : '#ffffff', 'text-background-padding': '3px', 'text-background-shape': 'roundrectangle' } },
+        { selector: 'edge.impacted', style: { 'line-color': '#eab308', 'target-arrow-color': '#eab308', 'width': 3.5, 'color': isDarkMode ? '#fef08a' : '#854d0e', 'text-background-color': isDarkMode ? '#422006' : '#fef9c3', 'text-background-opacity': 1 } }
+      ],
+      userZoomingEnabled: false,
+      userPanningEnabled: true,
+      boxSelectionEnabled: false
+    });
+
+    cyRef.current = cy;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+
+      if (!cyRef.current || cyRef.current.destroyed()) return;
+      const currentCy = cyRef.current;
+
+      const isCmdOrCtrl = e.metaKey || e.ctrlKey;
+
+      if (isCmdOrCtrl) {
+        const zoomFactor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+        const currentZoom = currentCy.zoom();
+        const minZoom = currentCy.minZoom();
+        const maxZoom = currentCy.maxZoom();
+        let newZoom = currentZoom * zoomFactor;
+        if (newZoom < minZoom) newZoom = minZoom;
+        if (newZoom > maxZoom) newZoom = maxZoom;
+
+        const rect = containerNode.getBoundingClientRect();
+        const renderedPosition = {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+        };
+
+        currentCy.zoom({
+          level: newZoom,
+          renderedPosition: renderedPosition,
+        });
+      } else {
+        const pan = currentCy.pan();
+        currentCy.pan({
+          x: pan.x - e.deltaX,
+          y: pan.y - e.deltaY,
+        });
+      }
+    };
+
+    containerNode.addEventListener('wheel', handleWheel, { capture: true, passive: false });
+
+    // Node Cursor & data-tooltip Attribute Handlers for the global Tooltip component
+    cy.on('mouseover', 'node', (evt) => {
+      const node = evt.target;
+      if (!node.hasClass('folder') && containerNode) {
+        containerNode.style.cursor = 'pointer';
+        const name = node.data('name') || node.id();
+        const path = node.data('path') || '';
+        const tooltipText = path ? `${name} (${path})` : name;
+        if (tooltipText) {
+          containerNode.setAttribute('data-tooltip', tooltipText);
         }
-        headerRight={
-          <GraphPanelHeaderRight
-            cyRef={cyRef}
-            isGraphMaximized={false}
-            setIsGraphMaximized={() => toggleContainerMaximized('workspace.center')}
-            showGrid={showGrid}
-            setShowGrid={setShowGrid}
-            attributesVisible={attributesVisible}
-            setAttributesVisible={setAttributesVisible}
-            methodsVisible={methodsVisible}
-            setMethodsVisible={setMethodsVisible}
-            showSelectedOnly={showSelectedOnly}
-            setShowSelectedOnly={setShowSelectedOnly}
-          />
+      }
+    });
+
+    cy.on('mouseout', 'node', () => {
+      if (containerNode) {
+        containerNode.style.cursor = 'default';
+        containerNode.removeAttribute('data-tooltip');
+      }
+    });
+
+    // Single / Cmd + Click
+    cy.on('tap', 'node', (evt) => {
+      const node = evt.target;
+      if (!node.hasClass('folder')) {
+        const nodeId = node.id();
+        const nodePath = node.data('path') || node.data('absolutePath') || node.data('filePath') || nodeId;
+        if (nodePath) {
+          logInfo(`Cytoscape node single-clicked: ${nodeId} (${nodePath}). Revealing in VS Code Explorer & copying...`);
+          vsCodeApiService.revealInExplorer(nodePath);
+          vsCodeApiService.copyToClipboard(nodePath);
         }
-      />
-      <div className="relative flex-1 w-full h-full min-h-0">
-        <GraphPanel
-          folderPositions={folderPositions}
-          containerRef={containerRef}
-          showGrid={showGrid}
-          isDarkMode={isDarkMode}
-          graphState={graphState}
-          selectedEntity={selectedEntity}
-          focusedNodeId={focusedNodeId}
-          searchFilteredFiles={filter.searchFilteredFiles}
-          impactedSet={impactedSet}
-          handleSelectMember={handleSelectMember}
-          attributesVisible={attributesVisible}
-          methodsVisible={methodsVisible}
-          showSelectedOnly={showSelectedOnly}
-        />
-      </div>
-    </div>
-  );
+        const origEvt = evt.originalEvent as MouseEvent | undefined;
+        if (origEvt && (origEvt.metaKey || origEvt.ctrlKey)) {
+          onNodeCmdClickRef.current?.(nodeId);
+        } else {
+          onNodeSelectRef.current(nodeId);
+        }
+      }
+    });
+
+    // Double Click
+    cy.on('dbltap', 'node', (evt) => {
+      if (!evt.target.hasClass('folder')) {
+        const nodeId = evt.target.id();
+        const nodePath = evt.target.data('path') || evt.target.data('absolutePath') || evt.target.data('filePath') || nodeId;
+        if (nodePath) {
+          logInfo(`Cytoscape node double-clicked: ${nodeId} (${nodePath}). Opening in VS Code...`);
+          vsCodeApiService.revealInExplorer(nodePath);
+          vsCodeApiService.openFile(nodePath);
+        }
+        onNodeDoubleClickRef.current?.(nodeId);
+      }
+    });
+
+    const syncGraph = () => {
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+
+      rafIdRef.current = requestAnimationFrame(() => {
+        if (!cyRef.current || cyRef.current.destroyed()) return;
+
+        const currentCy = cyRef.current;
+        const zoom = currentCy.zoom();
+        const pan = currentCy.pan();
+        const positions: Record<string, { x: number; y: number; w: number; h: number }> = {};
+
+        currentCy.nodes().forEach(node => {
+          if (node.hasClass('folder')) return;
+          const bb = node.boundingBox({ includeLabels: false, includeEdges: false });
+          positions[node.id()] = {
+            x: Math.round(bb.x1),
+            y: Math.round(bb.y1),
+            w: Math.round(bb.w),
+            h: Math.round(bb.h)
+          };
+        });
+
+        setGraphState(prev => {
+          const zoomDiff = Math.abs(prev.zoom - zoom);
+          const panXDiff = Math.abs(prev.pan.x - pan.x);
+          const panYDiff = Math.abs(prev.pan.y - pan.y);
+
+          let positionsChanged = Object.keys(prev.nodePositions).length !== Object.keys(positions).length;
+          if (!positionsChanged) {
+            for (const key of Object.keys(positions)) {
+              const p1 = prev.nodePositions[key];
+              const p2 = positions[key];
+              if (!p1 || Math.abs(p1.x - p2.x) > 1 || Math.abs(p1.y - p2.y) > 1 || Math.abs(p1.w - p2.w) > 1 || Math.abs(p1.h - p2.h) > 1) {
+                positionsChanged = true;
+                break;
+              }
+            }
+          }
+
+          if (zoomDiff < 0.001 && panXDiff < 0.5 && panYDiff < 0.5 && !positionsChanged) {
+            return prev;
+          }
+
+          return { zoom, pan: { x: pan.x, y: pan.y }, nodePositions: positions };
+        });
+      });
+    };
+
+    cy.on('dragfree pan zoom layoutstop', syncGraph);
+
+    requestAnimationFrame(() => {
+      if (cyRef.current && !cyRef.current.destroyed()) {
+        cyRef.current.resize();
+      }
+    });
+
+    return () => {
+      containerNode.removeEventListener('wheel', handleWheel, { capture: true });
+      if (containerNode) {
+        containerNode.removeAttribute('data-tooltip');
+      }
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+      cy.destroy();
+      cyRef.current = null;
+    };
+  }, [containerNode, isDarkMode]);
+
+  return { containerRef, cyRef, graphState, isReady: !!containerNode };
 }
 EOF
 
-# Compile to verify clean TypeScript compilation
-npm run build
-
-echo "✅ feat/fix: Successfully patched useExplorerStore.ts without Python syntax errors and compiled project with zero errors!"
+echo "✅ feat/fix: Integrated Cytoscape hover events with global data-tooltip component while keeping mouse drag, pan, zoom and cursor selection active!"

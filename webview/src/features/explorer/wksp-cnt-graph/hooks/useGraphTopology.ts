@@ -16,6 +16,14 @@ function getNodeDimensions(
   methodsVisible: boolean,
   graphRendering: GraphRendering = 'uml'
 ): { width: number; height: number } {
+  if (graphRendering === 'rounded') {
+    return { width: 64, height: 64 };
+  }
+
+  if (graphRendering === 'minized') {
+    return { width: 150, height: 32 };
+  }
+
   if (graphRendering === 'condensed') {
     if (file.type === 'config') {
       return { width: 175, height: 42 };
@@ -260,9 +268,12 @@ export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) 
             cy.add({
               data: {
                 id: file.id,
+                name: file.name,
+                path: file.path || file.id,
                 parent: `folder__${folderKey}`,
                 width: dims.width,
-                height: dims.height
+                height: dims.height,
+                shape: graphRendering === 'rounded' ? 'ellipse' : 'rectangle'
               },
               position: { x: absX, y: absY }
             });
