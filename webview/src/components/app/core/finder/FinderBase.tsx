@@ -46,7 +46,6 @@ export const FinderBase: React.FC<FinderBaseProps> = ({
 }) => {
     const inputRef = useRef<HTMLInputElement>(null);
 
-    // Auto-focus input and select existing text when opened or re-triggered by Cmd+F
     useEffect(() => {
         if (inputRef.current) {
             inputRef.current.focus();
@@ -60,7 +59,6 @@ export const FinderBase: React.FC<FinderBaseProps> = ({
 
     return (
         <div className={`flex items-center gap-2 bg-popover text-popover-foreground animate-fadeIn select-none font-sans text-xs ${containerStyleClass}`}>
-            {/* Input Container using Shadcn Input */}
             <div className="relative flex items-center bg-muted/40 px-2 border border-input focus-within:border-ring rounded flex-1 min-w-0 h-6 transition-colors">
                 <Search size={13} className="text-muted-foreground shrink-0 mr-1.5 pointer-events-none" />
                 <Input
@@ -73,7 +71,6 @@ export const FinderBase: React.FC<FinderBaseProps> = ({
                     spellCheck={false}
                 />
 
-                {/* Modifiers using Shadcn Buttons */}
                 <div className="flex items-center gap-0.5 text-muted-foreground shrink-0 ml-1">
                     <Button
                         type="button"
@@ -133,15 +130,12 @@ export const FinderBase: React.FC<FinderBaseProps> = ({
                 </div>
             </div>
 
-            {/* Custom Finder Actions */}
             {extraActions}
 
-            {/* Match Counter */}
             <div className="px-1 min-w-[55px] font-sans font-medium text-[11px] text-muted-foreground text-center shrink-0">
                 {totalMatches > 0 ? `${currentMatchIndex + 1} of ${totalMatches}` : 'No results'}
             </div>
 
-            {/* Navigation Buttons using Shadcn Button */}
             <div className="flex items-center gap-0.5 pl-1 border-border border-l text-foreground shrink-0">
                 <Button
                     type="button"
