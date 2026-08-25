@@ -1,0 +1,155 @@
+import { WorkflowSchema } from '../model-ui';
+
+export const DEFAULT_WORKFLOW_SCHEMA: WorkflowSchema = {
+  nodes: [
+    {
+      id: 'node-annotation-1',
+      type: 'annotation',
+      position: { x: 380, y: -20 },
+      data: {
+        label: 'AI Agent Setup',
+        type: 'annotation',
+        description: 'Annotation setup notes with dashed connection link',
+        annotationTitle: 'AI agent setup',
+        annotationSteps: [
+          'Choose a model',
+          'Set token budget',
+          'Connect prompt & skill',
+          'Add agent tools',
+          'Run & view result',
+        ],
+        annotationTip: 'Tip: Runs with mock data by default — add your Anthropic or OpenAI API key to use a real LLM.',
+        ports: [
+          { id: 'note', name: 'annotation link', type: 'note', direction: 'output', color: 'bg-sky-400' },
+        ],
+      },
+      width: 280,
+      height: 240,
+    },
+    {
+      id: 'node-markdown-1',
+      type: 'markdownFile',
+      position: { x: 80, y: 60 },
+      data: {
+        label: 'Markdown File',
+        type: 'markdownFile',
+        description: 'A Markdown instruction file for the flow',
+        markdownFile: 'agent-skill.md',
+        instructionText: 'You are a senior React analyst. Summarise the findings as a clean Markdown table.',
+        ports: [
+          { id: 'skill', name: 'skill', type: 'skill', direction: 'output', color: 'bg-amber-500' },
+        ],
+      },
+      width: 240,
+      height: 220,
+    },
+    {
+      id: 'node-text-1',
+      type: 'textInput',
+      position: { x: 80, y: 310 },
+      data: {
+        label: 'Text Input',
+        type: 'textInput',
+        description: 'The starting prompt for the flow',
+        promptText: 'Give me the most trending topics in the React community on Reddit.',
+        ports: [
+          { id: 'text', name: 'text', type: 'text', direction: 'output', color: 'bg-rose-400' },
+        ],
+      },
+      width: 240,
+      height: 180,
+    },
+    {
+      id: 'node-agent-1',
+      type: 'aiAgent',
+      position: { x: 420, y: 260 },
+      data: {
+        label: 'AI Agent',
+        type: 'aiAgent',
+        description: 'Runs an LLM with tool calling',
+        model: 'Mock - Offline',
+        tokenBudget: 1000,
+        ports: [
+          { id: 'prompt', name: 'prompt', type: 'prompt', direction: 'input', color: 'bg-amber-400' },
+          { id: 'skill', name: 'skill', type: 'skill', direction: 'input', color: 'bg-amber-500' },
+          { id: 'agent_tools', name: 'agent tools', type: 'tool', direction: 'input', color: 'bg-rose-400' },
+          { id: 'result', name: 'result', type: 'result', direction: 'output', color: 'bg-emerald-400' },
+        ],
+      },
+      width: 260,
+      height: 240,
+    },
+    {
+      id: 'node-search-1',
+      type: 'searchTool',
+      position: { x: 400, y: 540 },
+      data: {
+        label: 'Search Reddit',
+        type: 'searchTool',
+        description: 'Finds trending posts in a subreddit',
+        subreddit: 'reactjs',
+        topicLimit: 10,
+        ports: [
+          { id: 'tool', name: 'tool', type: 'tool', direction: 'output', color: 'bg-rose-500' },
+        ],
+      },
+      width: 240,
+      height: 190,
+    },
+    {
+      id: 'node-output-1',
+      type: 'formattedOutput',
+      position: { x: 780, y: 200 },
+      data: {
+        label: 'Formatted Output',
+        type: 'formattedOutput',
+        description: 'Renders the result as Markdown',
+        outputText: 'Run the flow to see the output...',
+        ports: [
+          { id: 'result', name: 'result', type: 'result', direction: 'input', color: 'bg-emerald-400' },
+        ],
+      },
+      width: 260,
+      height: 200,
+    },
+  ],
+  edges: [
+    {
+      id: 'edge-annotation-link',
+      source: 'node-annotation-1',
+      sourcePort: 'note',
+      target: 'node-agent-1',
+      targetPort: 'prompt',
+      label: 'Setup Guide',
+    },
+    {
+      id: 'edge-1',
+      source: 'node-markdown-1',
+      sourcePort: 'skill',
+      target: 'node-agent-1',
+      targetPort: 'skill',
+    },
+    {
+      id: 'edge-2',
+      source: 'node-text-1',
+      sourcePort: 'text',
+      target: 'node-agent-1',
+      targetPort: 'prompt',
+    },
+    {
+      id: 'edge-3',
+      source: 'node-search-1',
+      sourcePort: 'tool',
+      target: 'node-agent-1',
+      targetPort: 'agent_tools',
+    },
+    {
+      id: 'edge-4',
+      source: 'node-agent-1',
+      sourcePort: 'result',
+      target: 'node-output-1',
+      targetPort: 'result',
+      label: 'Tokens used: 3',
+    },
+  ],
+};

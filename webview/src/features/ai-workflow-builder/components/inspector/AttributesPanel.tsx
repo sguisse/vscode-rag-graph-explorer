@@ -1,12 +1,3 @@
-#!/usr/bin/env bash
-set -e
-
-FEATURE_DIR="webview/src/features/ai-workflow-builder"
-INSPECTOR_FILE="${FEATURE_DIR}/components/inspector/AttributesPanel.tsx"
-
-mkdir -p "${FEATURE_DIR}/components/inspector"
-
-cat << 'EOF' > "${INSPECTOR_FILE}"
 import React, { useState, useEffect, useRef } from 'react';
 import { Sliders, Terminal, Trash2 } from 'lucide-react';
 import { useWorkflowStore } from '../../hooks/use-workflow-store';
@@ -120,6 +111,3 @@ export function AttributesPanel() {
     </div>
   );
 }
-EOF
-
-echo "✅ feat: Made Execution Telemetry section resizable from its top edge in AttributesPanel!"

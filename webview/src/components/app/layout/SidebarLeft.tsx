@@ -15,6 +15,7 @@ import {
   Layout,
   VectorSquare,
   FolderDown,
+  Bot,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -49,6 +50,7 @@ export const SIDEBAR_MENU_ITEMS: NavItem[] = [
   { id: 'feature-home', icon: Home, label: 'Home' },
   { id: 'feature-install', icon: PackageCheck, label: 'Install' },
   { id: 'feature-graph-rag-explorer', icon: VectorSquare, label: 'Graph RAG Explorer', badge: 'New' },
+  { id: 'feature-ai-workflow-builder', icon: Bot, label: 'AI Workflow Builder', badge: 'AI' },
   { id: 'feature-codebase-exporter', icon: FolderDown, label: 'Codebase Exporter', badge: 'Upd' },
   { id: 'feature-rules', icon: Scale, label: 'Cypher Rules' },
 

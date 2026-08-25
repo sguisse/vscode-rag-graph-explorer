@@ -6,6 +6,7 @@ import { HomeFeature } from '@/features/home/HomeFeature';
 import { InstallFeature } from '@/features/install/InstallFeature';
 import { LayoutDemoFeature } from '@/features/layout-demo/LayoutDemoFeature';
 import { ExplorerFeature } from '@/features/explorer/ExplorerFeature';
+import { WorkflowBuilderFeature } from '@/features/ai-workflow-builder/WorkflowBuilderFeature';
 import { RulesFeature } from '@/features/rules/RulesFeature';
 import { HelpFeature } from '@/features/help/HelpFeature';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
@@ -56,6 +57,7 @@ export default function App() {
       {(activeFeature === 'feature-home') && HomeFeature && <HomeFeature />}
       {(activeFeature === 'feature-install') && InstallFeature && <InstallFeature />}
       {(activeFeature === 'feature-graph-rag-explorer') && ExplorerFeature && <ExplorerFeature />}
+      {(activeFeature === 'feature-ai-workflow-builder') && WorkflowBuilderFeature && <WorkflowBuilderFeature />}
       {(activeFeature === 'feature-layout-demo') && LayoutDemoFeature && <LayoutDemoFeature />}
       {(activeFeature === 'feature-rules') && RulesFeature && <RulesFeature />}
       {(activeFeature === 'feature-help') && HelpFeature && <HelpFeature />}
