@@ -16,7 +16,7 @@ export function AnnotationNodeView({ node }: { node: WorkflowNode }) {
 
   return (
     <BaseNodeContainer node={node} icon={Info} headerBg="bg-sky-500/15">
-      <div className="space-y-2 bg-sky-500/10 p-2.5 border border-sky-500/20 rounded-lg h-full font-mono text-xs">
+      <div className="space-y-2 bg-sky-500/10 p-2 border border-sky-500/20 rounded-md h-full font-mono text-xs">
         <div className="flex items-center gap-1.5 font-bold text-sky-500 text-xs">
           <Info size={15} className="shrink-0" />
           <span>{title}</span>

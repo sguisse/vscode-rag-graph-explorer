@@ -60,15 +60,15 @@ export function BaseNodeContainer({ node, children, icon: IconComp, headerBg = '
         color: customText,
         borderColor: customBorder,
       }}
-      className={`relative flex flex-col shadow-sm border rounded-2xl w-full h-full transition-all select-none overflow-hidden ${fontStyle} ${
+      className={`relative flex flex-col shadow-xs border rounded-md w-full h-full transition-all select-none overflow-hidden ${fontStyle} ${
         !customFill ? 'bg-card' : ''
       } ${!customBorder ? 'border-border' : ''} ${
-        isSelected ? 'ring-2 ring-primary border-primary shadow-md' : 'hover:border-primary/50'
+        isSelected ? 'ring-2 ring-primary border-primary shadow-sm' : 'hover:border-primary/50'
       }`}
     >
       {/* Node Header */}
       <div
-        className={`flex justify-between items-center px-3 py-2 border-border/60 border-b shrink-0 ${headerBg}`}
+        className={`flex justify-between items-center px-3 py-1.5 border-border/60 border-b shrink-0 ${headerBg}`}
       >
         <div className="flex items-center gap-1.5 min-w-0">
           <IconComp size={14} className="text-primary shrink-0" />
@@ -94,7 +94,7 @@ export function BaseNodeContainer({ node, children, icon: IconComp, headerBg = '
       </div>
 
       {/* Node Body Content */}
-      <div className="flex-1 p-3 overflow-hidden text-xs">{children}</div>
+      <div className="flex-1 p-2.5 overflow-hidden text-xs">{children}</div>
 
       {/* Entry Ports (Left Edge Input Points) */}
       <div className="top-1/2 left-0 absolute -translate-x-1/2 -translate-y-1/2 flex flex-col justify-center gap-3 z-20">

@@ -4,15 +4,21 @@ import { Button } from '@/components/ui/button';
 import { useWorkflowStore } from '../../hooks/use-workflow-store';
 import { useWorkflowExecution } from '../../hooks/use-workflow-execution';
 import { useCytoscapeGraph } from '../../hooks/use-cytoscape-graph';
-import { exportCanvasToImage } from '../../utils/canvas-export.utils';
+import { generateCanvasImage, RenderedCanvasImageResult } from '../../utils/canvas-export.utils';
 import { ApiKeyDialog } from './ApiKeyDialog';
 import { HeaderTemplateSelector } from './HeaderTemplateSelector';
+import { ExportImageModal } from './ExportImageModal';
 
 export function WorkflowHeader() {
   const { isRunning, resetWorkflow, nodes, edges, loadWorkflow, addLog } = useWorkflowStore();
   const { runWorkflow } = useWorkflowExecution();
   const { rearrangeLayout, zoomToFit } = useCytoscapeGraph();
   const [isKeyOpen, setIsKeyOpen] = useState(false);
+
+  // PNG Export State
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [imageData, setImageData] = useState<RenderedCanvasImageResult | null>(null);
 
   const handleExportJson = () => {
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify({ nodes, edges }, null, 2));
@@ -24,9 +30,23 @@ export function WorkflowHeader() {
     addLog('💾 Exported workflow schema to JSON.');
   };
 
-  const handleExportPng = () => {
-    exportCanvasToImage('workflow-canvas-container', 'ai-workflow-diagram.png');
-    addLog('🖼️ Exported workflow diagram to PNG image.');
+  const handleOpenExportPngModal = async () => {
+    setIsExporting(true);
+    addLog('🖼️ Rendering canvas PNG image...');
+    try {
+      const result = await generateCanvasImage('workflow-canvas-container');
+      if (result) {
+        setImageData(result);
+        setExportModalOpen(true);
+        addLog('✅ Canvas PNG diagram generated.');
+      } else {
+        addLog('❌ Failed to render canvas PNG image.');
+      }
+    } catch (err) {
+      addLog('❌ Error during canvas PNG image generation.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -107,11 +127,17 @@ export function WorkflowHeader() {
         <Button
           size="sm"
           variant="ghost"
-          onClick={handleExportPng}
-          className="h-7 text-xs gap-1"
+          disabled={isExporting}
+          onClick={handleOpenExportPngModal}
+          className="h-7 text-xs gap-1 cursor-pointer"
           data-tooltip="Export Canvas PNG Image"
         >
-          <ImageIcon size={13} className="text-emerald-500" /> PNG
+          {isExporting ? (
+            <Loader2 size={13} className="text-emerald-500 animate-spin" />
+          ) : (
+            <ImageIcon size={13} className="text-emerald-500" />
+          )}
+          PNG
         </Button>
 
         <Button
@@ -136,6 +162,7 @@ export function WorkflowHeader() {
       </div>
 
       <ApiKeyDialog open={isKeyOpen} onOpenChange={setIsKeyOpen} />
+      <ExportImageModal open={exportModalOpen} onOpenChange={setExportModalOpen} imageData={imageData} />
     </div>
   );
 }

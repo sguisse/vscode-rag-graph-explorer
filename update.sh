@@ -2,124 +2,244 @@
 set -e
 
 FEATURE_DIR="webview/src/features/ai-workflow-builder"
-INSPECTOR_FILE="${FEATURE_DIR}/components/inspector/AttributesPanel.tsx"
+EXPORT_UTIL_FILE="${FEATURE_DIR}/utils/canvas-export.utils.ts"
 
-mkdir -p "${FEATURE_DIR}/components/inspector"
+mkdir -p "${FEATURE_DIR}/utils"
 
-cat << 'EOF' > "${INSPECTOR_FILE}"
-import React, { useState, useEffect, useRef } from 'react';
-import { Sliders, Terminal, Trash2 } from 'lucide-react';
-import { useWorkflowStore } from '../../hooks/use-workflow-store';
-import { NodeConfigForm } from './NodeConfigForm';
-import { EdgeConfigForm } from './EdgeConfigForm';
-import { Button } from '@/components/ui/button';
+cat << 'EOF' > "${EXPORT_UTIL_FILE}"
+function inlineElementStyles(source: Element, target: HTMLElement) {
+  const computed = window.getComputedStyle(source);
+  const properties = [
+    'background-color',
+    'color',
+    'border-color',
+    'border-width',
+    'border-style',
+    'border-radius',
+    'font-family',
+    'font-size',
+    'font-weight',
+    'padding',
+    'padding-top',
+    'padding-right',
+    'padding-bottom',
+    'padding-left',
+    'margin',
+    'display',
+    'flex-direction',
+    'align-items',
+    'justify-content',
+    'gap',
+    'box-shadow',
+    'position',
+    'left',
+    'top',
+    'width',
+    'height',
+    'min-width',
+    'min-height',
+    'max-width',
+    'max-height',
+    'overflow',
+    'text-align',
+    'line-height',
+    'white-space',
+    'opacity',
+    'visibility',
+  ];
 
-export function AttributesPanel() {
-  const { nodes, edges, selectedNodeId, selectedEdgeId, removeNode, logs, clearLogs } = useWorkflowStore();
-  const selectedNode = nodes.find((n) => n.id === selectedNodeId);
-  const selectedEdge = edges.find((e) => e.id === selectedEdgeId);
+  let cssText = '';
+  for (const prop of properties) {
+    const val = computed.getPropertyValue(prop);
+    if (val) {
+      cssText += `${prop}:${val};`;
+    }
+  }
 
-  // Height state for Execution Telemetry section
-  const [telemetryHeight, setTelemetryHeight] = useState(200);
-  const [isResizing, setIsResizing] = useState(false);
-  const resizeStartY = useRef<number>(0);
-  const resizeStartHeight = useRef<number>(200);
+  target.setAttribute('style', (target.getAttribute('style') || '') + ';' + cssText);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizing(true);
-    resizeStartY.current = e.clientY;
-    resizeStartHeight.current = telemetryHeight;
-  };
+  const sourceChildren = source.children;
+  const targetChildren = target.children;
+  for (let i = 0; i < sourceChildren.length; i++) {
+    if (targetChildren[i]) {
+      inlineElementStyles(sourceChildren[i], targetChildren[i] as HTMLElement);
+    }
+  }
+}
 
-  useEffect(() => {
-    if (!isResizing) return;
+export interface RenderedCanvasImageResult {
+  blob: Blob;
+  dataUrl: string;
+  width: number;
+  height: number;
+}
 
-    const handleMouseMove = (e: MouseEvent) => {
-      // Dragging upward increases height, dragging downward decreases height
-      const deltaY = resizeStartY.current - e.clientY;
-      const newHeight = Math.max(80, Math.min(550, resizeStartHeight.current + deltaY));
-      setTelemetryHeight(newHeight);
-    };
+export async function generateCanvasImage(containerId: string): Promise<RenderedCanvasImageResult | null> {
+  const container = document.getElementById(containerId);
+  if (!container) return null;
 
-    const handleMouseUp = () => {
-      setIsResizing(false);
-    };
+  const svgElement = container.querySelector('svg');
+  if (!svgElement) return null;
 
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+  const nodeElements = Array.from(container.querySelectorAll('[data-node-wrapper="true"]')) as HTMLElement[];
+  if (nodeElements.length === 0) return null;
 
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isResizing]);
+  const nodesWrapper = nodeElements[0].parentElement;
+  if (!nodesWrapper) return null;
 
-  return (
-    <div className="flex flex-col bg-card w-full h-full min-h-0 font-mono text-xs border-border border-l select-none">
-      {/* Header */}
-      <div className="flex justify-between items-center p-2 border-border border-b shrink-0">
-        <span className="flex items-center gap-1.5 font-bold text-foreground">
-          <Sliders size={14} className="text-primary" /> Inspector
-        </span>
-        {selectedNode && (
-          <Button
-            size="icon"
-            variant="ghost"
-            className="w-6 h-6 text-destructive cursor-pointer"
-            onClick={() => removeNode(selectedNode.id)}
-            title="Delete Node"
-          >
-            <Trash2 size={13} />
-          </Button>
-        )}
-      </div>
+  // 1. Calculate bounding box around all node cards
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
 
-      {/* Configuration Form (Node or Edge) - Flexible remaining area */}
-      <div className="flex-1 min-h-0 p-3 overflow-y-auto">
-        {selectedNode ? (
-          <NodeConfigForm node={selectedNode} />
-        ) : selectedEdge ? (
-          <EdgeConfigForm edge={selectedEdge} />
-        ) : (
-          <div className="py-6 text-center text-muted-foreground text-xs">
-            Select a node or edge connector on the canvas to inspect parameters.
-          </div>
-        )}
-      </div>
+  nodeElements.forEach((el) => {
+    const left = parseFloat(el.style.left) || 0;
+    const top = parseFloat(el.style.top) || 0;
+    const width = parseFloat(el.style.width) || 240;
+    const height = parseFloat(el.style.height) || 200;
 
-      {/* Top Resize Bar for Execution Telemetry */}
-      <div
-        onMouseDown={handleMouseDown}
-        className="group relative flex items-center justify-center h-2 bg-border/40 hover:bg-primary/50 cursor-ns-resize shrink-0 transition-colors z-10"
-        title="Drag up or down to resize Execution Telemetry panel"
-      >
-        <div className="w-8 h-1 bg-muted-foreground/30 group-hover:bg-primary-foreground rounded-full transition-colors" />
-      </div>
+    minX = Math.min(minX, left);
+    minY = Math.min(minY, top);
+    maxX = Math.max(maxX, left + width);
+    maxY = Math.max(maxY, top + height);
+  });
 
-      {/* Execution Telemetry Log - Resizable Height */}
-      <div
-        style={{ height: `${telemetryHeight}px` }}
-        className="flex flex-col shrink-0 min-h-0 overflow-hidden border-border border-t"
-      >
-        <div className="flex justify-between items-center p-2 border-border border-b shrink-0 bg-muted/20">
-          <span className="flex items-center gap-1.5 font-bold text-foreground text-[11px]">
-            <Terminal size={13} className="text-emerald-500" /> Execution Telemetry
-          </span>
-          <button onClick={clearLogs} className="text-[10px] text-muted-foreground hover:text-foreground cursor-pointer">
-            Clear
-          </button>
+  const padding = 60;
+  minX -= padding;
+  minY -= padding;
+  maxX += padding;
+  maxY += padding;
+
+  const exportWidth = Math.max(Math.round(maxX - minX), 400);
+  const exportHeight = Math.max(Math.round(maxY - minY), 300);
+
+  // 2. Clone node tree and preserve user inputs
+  const clonedNodesWrapper = nodesWrapper.cloneNode(true) as HTMLElement;
+  const origInputs = Array.from(nodesWrapper.querySelectorAll('input, textarea, select')) as (HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement)[];
+  const cloneInputs = Array.from(clonedNodesWrapper.querySelectorAll('input, textarea, select')) as (HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement)[];
+
+  origInputs.forEach((orig, idx) => {
+    const clone = cloneInputs[idx];
+    if (!clone) return;
+
+    const tag = orig.tagName.toLowerCase();
+    if (tag === 'textarea') {
+      clone.textContent = orig.value;
+    } else if (tag === 'input') {
+      clone.setAttribute('value', orig.value);
+    } else if (tag === 'select') {
+      const val = orig.value;
+      const opts = clone.querySelectorAll('option');
+      opts.forEach((opt) => {
+        if ((opt as HTMLOptionElement).value === val) {
+          opt.setAttribute('selected', 'selected');
+        }
+      });
+    }
+  });
+
+  inlineElementStyles(nodesWrapper, clonedNodesWrapper);
+
+  clonedNodesWrapper.style.transform = `translate(${-minX}px, ${-minY}px)`;
+  clonedNodesWrapper.style.position = 'absolute';
+  clonedNodesWrapper.style.top = '0';
+  clonedNodesWrapper.style.left = '0';
+  clonedNodesWrapper.style.width = `${exportWidth}px`;
+  clonedNodesWrapper.style.height = `${exportHeight}px`;
+
+  // 3. Clone SVG Edges Layer
+  const clonedSvg = svgElement.cloneNode(true) as SVGElement;
+  clonedSvg.style.transform = `translate(${-minX}px, ${-minY}px)`;
+  clonedSvg.setAttribute('width', `${exportWidth}`);
+  clonedSvg.setAttribute('height', `${exportHeight}`);
+
+  const origSvgEls = Array.from(svgElement.querySelectorAll('path, text, rect, g'));
+  const cloneSvgEls = Array.from(clonedSvg.querySelectorAll('path, text, rect, g'));
+
+  origSvgEls.forEach((orig, idx) => {
+    if (cloneSvgEls[idx]) {
+      const computed = window.getComputedStyle(orig);
+      const targetStyle = (cloneSvgEls[idx] as HTMLElement).style;
+      targetStyle.fill = computed.fill;
+      targetStyle.stroke = computed.stroke;
+      targetStyle.strokeWidth = computed.strokeWidth;
+      targetStyle.strokeDasharray = computed.strokeDasharray;
+      targetStyle.fontFamily = computed.fontFamily;
+      targetStyle.fontSize = computed.fontSize;
+      targetStyle.fontWeight = computed.fontWeight;
+    }
+  });
+
+  const xmlSerializer = new XMLSerializer();
+  const svgEdgesString = xmlSerializer.serializeToString(clonedSvg);
+  const nodesXhtmlString = xmlSerializer.serializeToString(clonedNodesWrapper);
+
+  const computedBody = window.getComputedStyle(document.body);
+  const bgColor = computedBody.getPropertyValue('background-color') || '#0f172a';
+
+  // 4. Create combined SVG document string
+  const combinedSvg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${exportWidth}" height="${exportHeight}">
+      <rect width="100%" height="100%" fill="${bgColor}" />
+      <g>
+        ${svgEdgesString}
+      </g>
+      <foreignObject width="${exportWidth}" height="${exportHeight}">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="width:${exportWidth}px; height:${exportHeight}px; position:relative;">
+          ${nodesXhtmlString}
         </div>
+      </foreignObject>
+    </svg>
+  `;
 
-        <div className="flex-1 p-2 bg-background overflow-y-auto font-mono text-[10px] text-foreground space-y-1">
-          {logs.map((log, idx) => (
-            <div key={idx} className="leading-tight">{log}</div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+  // 5. Convert SVG string to UTF-8 Base64 Data URL to prevent canvas tainting SecurityError
+  const utf8Bytes = new TextEncoder().encode(combinedSvg);
+  let binary = '';
+  for (let i = 0; i < utf8Bytes.length; i++) {
+    binary += String.fromCharCode(utf8Bytes[i]);
+  }
+  const svgBase64DataUrl = `data:image/svg+xml;base64,${window.btoa(binary)}`;
+
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => {
+      const scaleFactor = 2; // High DPI 2x canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = exportWidth * scaleFactor;
+      canvas.height = exportHeight * scaleFactor;
+
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.scale(scaleFactor, scaleFactor);
+        ctx.drawImage(image, 0, 0);
+
+        canvas.toBlob((pngBlob) => {
+          if (!pngBlob) {
+            resolve(null);
+            return;
+          }
+          const dataUrl = canvas.toDataURL('image/png');
+          resolve({
+            blob: pngBlob,
+            dataUrl,
+            width: exportWidth,
+            height: exportHeight,
+          });
+        }, 'image/png');
+      } else {
+        resolve(null);
+      }
+    };
+
+    image.onerror = (err) => {
+      console.error('Failed to load SVG Base64 image:', err);
+      resolve(null);
+    };
+
+    image.src = svgBase64DataUrl;
+  });
 }
 EOF
 
-echo "✅ feat: Made Execution Telemetry section resizable from its top edge in AttributesPanel!"
+echo "✅ fix: Resolved canvas tainting SecurityError! Encoded SVG into a UTF-8 Base64 data URL to allow clean canvas export in Webview environments."
