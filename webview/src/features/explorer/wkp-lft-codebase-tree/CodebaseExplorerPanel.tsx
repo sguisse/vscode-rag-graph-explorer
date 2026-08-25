@@ -15,6 +15,7 @@ import { CODEBASE_GROUPING_LIST, CODEBASE_GROUPING_ICON_MAP } from './type-codeb
 import { TriStateCheckbox } from './components/TriStateCheckbox';
 import { RecursiveFolderNode } from './components/RecursiveFolderNode';
 import { DYNAMIC_COLORS } from './constants/codebase-explorer.constants';
+import { scopeHasMatches } from './utils/codebase-tree.utils';
 import {
   CodebaseExplorerPanelProps,
   ViewMode,
@@ -205,16 +206,18 @@ export function CodebaseExplorerPanel({
     <div className="w-full p-4 font-mono text-xs">
       {groupedScopes.map((scope: ScopeGroup) => {
         const scopeTheme = FOLDER_THEME_REGISTRY_CONFIG[scope.key] || FOLDER_THEME_REGISTRY_CONFIG.default;
-        const isScopeExpanded = expandedFolders[scope.key] ?? true;
+        const isFilterActiveWithQuery = finderState.isFilterActive && Boolean(finderState.searchQuery.trim());
 
-        const allScopeFiles = scope.files;
-        const displayScopeFiles = finderState.isFilterActive && finderState.searchQuery
-          ? scope.files.filter((f) => finderState.matchingFileIds.has(f.id))
-          : scope.files;
-
-        if (finderState.isFilterActive && finderState.searchQuery && displayScopeFiles.length === 0 && !scope.folderTree && !scope.subFolders) {
+        if (isFilterActiveWithQuery && !scopeHasMatches(scope, viewMode, finderState.matchingFileIds)) {
           return null;
         }
+
+        const isScopeExpanded = isFilterActiveWithQuery ? true : (expandedFolders[scope.key] ?? true);
+
+        const allScopeFiles = scope.files;
+        const displayScopeFiles = isFilterActiveWithQuery
+          ? scope.files.filter((f) => finderState.matchingFileIds.has(f.id))
+          : scope.files;
 
         const isScopeAllChecked = allScopeFiles.length > 0 && allScopeFiles.every((f) => visibleFiles[f.id]);
         const isScopeSomeChecked = allScopeFiles.some((f) => visibleFiles[f.id]);
@@ -259,6 +262,7 @@ export function CodebaseExplorerPanel({
 
             {isScopeExpanded && (
               <div className="space-y-1 mt-1 ml-2.5 pl-3 border-border border-l">
+                {/* ViewMode: Scope -> direct files list */}
                 {viewMode === 'scope' &&
                   displayScopeFiles.map((file) => {
                     const matchIndex = finderState.matchingFileIndexMap.get(file.id) ?? -1;
@@ -316,10 +320,11 @@ export function CodebaseExplorerPanel({
                     );
                   })}
 
+                {/* ViewMode: Folder -> Recursive VS Code-style tree */}
                 {viewMode === 'folder' && scope.folderTree && (
                   <>
                     {scope.rootFiles &&
-                      (finderState.isFilterActive && finderState.searchQuery
+                      (isFilterActiveWithQuery
                         ? scope.rootFiles.filter((f) => finderState.matchingFileIds.has(f.id))
                         : scope.rootFiles
                       ).map((file) => {
@@ -386,20 +391,21 @@ export function CodebaseExplorerPanel({
                   </>
                 )}
 
+                {/* ViewMode: Tags / Layer / Typology -> flat subfolders */}
                 {viewMode !== 'scope' &&
                   viewMode !== 'folder' &&
                   scope.subFolders &&
                   scope.subFolders.map((sub: SubFolderGroup, subIdx: number) => {
-                    const isSubExpanded = expandedFolders[sub.key] ?? true;
-                    const subTheme = DYNAMIC_COLORS[subIdx % DYNAMIC_COLORS.length];
-
-                    const displaySubFiles = finderState.isFilterActive && finderState.searchQuery
+                    const displaySubFiles = isFilterActiveWithQuery
                       ? sub.files.filter((f) => finderState.matchingFileIds.has(f.id))
                       : sub.files;
 
-                    if (finderState.isFilterActive && finderState.searchQuery && displaySubFiles.length === 0) {
+                    if (isFilterActiveWithQuery && displaySubFiles.length === 0) {
                       return null;
                     }
+
+                    const isSubExpanded = isFilterActiveWithQuery ? true : (expandedFolders[sub.key] ?? true);
+                    const subTheme = DYNAMIC_COLORS[subIdx % DYNAMIC_COLORS.length];
 
                     const isSubAllChecked = sub.files.length > 0 && sub.files.every((f) => visibleFiles[f.id]);
                     const isSubSomeChecked = sub.files.some((f) => visibleFiles[f.id]);

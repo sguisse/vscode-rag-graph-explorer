@@ -31,7 +31,6 @@ import {
   calculateCollapseState
 } from '../utils/codebase-tree.utils';
 
-// Re-export custom types & utils for backward compatibility
 export type { ViewMode, FolderTreeNode, SubFolderGroup, ScopeGroup, FolderKeyWithDepth };
 export {
   ALLOWED_TAGS,
@@ -241,7 +240,6 @@ export function useCodebaseExplorerPanel(
     }));
   }, [groupedScopes, viewMode]);
 
-  // Exported UI action handlers
   const handleToggleFolder = useCallback((folderKey: string, folderPath?: string) => {
     if (toggleFolder) {
       if (expandedFolders && expandedFolders[folderKey] === undefined) {
@@ -300,7 +298,6 @@ export function useCodebaseExplorerPanel(
     });
   }, [toggleFileCheckbox, visibleFiles]);
 
-  // Directly collapse folders whenever ViewMode or groupedScopes change
   useEffect(() => {
     handleCollapseAll(viewMode);
   }, [viewMode, groupedScopes, handleCollapseAll]);

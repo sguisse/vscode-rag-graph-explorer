@@ -6,6 +6,7 @@ import {
   FolderTreeNode,
   ViewMode
 } from '../model-ui';
+import { cleanRelativeFilePath } from '../utils/codebase-tree.utils';
 import { useFinderBase } from '@/components/app/core/finder/useFinderBase';
 
 export function useTreeviewFinder(
@@ -40,9 +41,13 @@ export function useTreeviewFinder(
 
     try {
       const regex = new RegExp(pattern, caseSensitive ? 'g' : 'gi');
+      const hasSlash = searchQuery.includes('/') || searchQuery.includes('\\');
       return allSearchableFiles.filter((f) => {
         regex.lastIndex = 0;
-        return regex.test(f.name) || regex.test(f.path || '');
+        if (hasSlash) {
+          return regex.test(cleanRelativeFilePath(f)) || regex.test(f.name);
+        }
+        return regex.test(f.name);
       });
     } catch (e) {
       return [];
@@ -152,7 +157,6 @@ export function useTreeviewFinder(
       }));
     }
 
-    // Safely scroll ONLY inside the middle container without moving outer window/layout
     setTimeout(() => {
       const container = document.getElementById('tree-codebase-files');
       const element = document.getElementById(`tree-file-node-${activeMatch.id}`);

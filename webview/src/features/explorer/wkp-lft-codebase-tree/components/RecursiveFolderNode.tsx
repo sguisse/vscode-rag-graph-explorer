@@ -24,16 +24,18 @@ export function RecursiveFolderNode({
   handleFolderClick,
   finderState,
 }: RecursiveFolderNodeProps) {
-  const isExpanded = expandedFolders[node.id] ?? true;
-  const allNodeFiles = getAllFilesFromNode(node);
+  const isFilterActiveWithQuery = finderState.isFilterActive && Boolean(finderState.searchQuery.trim());
 
-  const displayFiles = finderState.isFilterActive && finderState.searchQuery
-    ? node.files.filter((f) => finderState.matchingFileIds.has(f.id))
-    : node.files;
-
-  if (finderState.isFilterActive && finderState.searchQuery && !nodeHasMatches(node, finderState.matchingFileIds)) {
+  if (isFilterActiveWithQuery && !nodeHasMatches(node, finderState.matchingFileIds)) {
     return null;
   }
+
+  const isExpanded = isFilterActiveWithQuery ? true : (expandedFolders[node.id] ?? true);
+  const allNodeFiles = getAllFilesFromNode(node);
+
+  const displayFiles = isFilterActiveWithQuery
+    ? node.files.filter((f) => finderState.matchingFileIds.has(f.id))
+    : node.files;
 
   const isAllChecked = allNodeFiles.length > 0 && allNodeFiles.every((f) => visibleFiles[f.id]);
   const isSomeChecked = allNodeFiles.some((f) => visibleFiles[f.id]);

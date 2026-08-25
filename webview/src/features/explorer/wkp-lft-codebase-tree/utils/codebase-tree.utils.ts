@@ -15,6 +15,22 @@ export function nodeHasMatches(node: FolderTreeNode, matchingFileIds: Set<string
   return node.children.some((child) => nodeHasMatches(child, matchingFileIds));
 }
 
+export function scopeHasMatches(
+  scope: ScopeGroup,
+  viewMode: ViewMode,
+  matchingFileIds: Set<string>
+): boolean {
+  if (viewMode === 'scope') {
+    return scope.files.some((f) => matchingFileIds.has(f.id));
+  }
+  if (viewMode === 'folder') {
+    const hasRootMatch = scope.rootFiles?.some((f) => matchingFileIds.has(f.id)) ?? false;
+    const hasTreeMatch = scope.folderTree?.some((node) => nodeHasMatches(node, matchingFileIds)) ?? false;
+    return hasRootMatch || hasTreeMatch;
+  }
+  return scope.subFolders?.some((sub) => sub.files.some((f) => matchingFileIds.has(f.id))) ?? false;
+}
+
 export function getCommonFolderPath(files: CodebaseFile[]): string {
   if (!files || files.length === 0) return '';
 
