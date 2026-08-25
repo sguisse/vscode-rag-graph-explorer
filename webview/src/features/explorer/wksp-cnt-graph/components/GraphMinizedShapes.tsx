@@ -25,8 +25,10 @@ export const MinimizedClassNode: React.FC<{ id: string; data: UmlClassNodeData }
       className={`w-[150px] h-[32px] bg-card rounded shadow-md border-2 ${borderClass} relative transition-all duration-200 opacity-100 overflow-hidden flex items-center px-2 py-1 select-none pointer-events-none`}
       title={data.name}
     >
-      <div className="flex items-center gap-1.5 w-full min-w-0 pointer-events-none">
+      <div className="flex justify-center items-center gap-1.5 w-full min-w-0 pointer-events-none">
+        {/*
         <FileCode size={14} className={`${iconColor} shrink-0 pointer-events-none`} />
+        */}
         <h4 className="font-mono font-bold text-foreground text-xs truncate pointer-events-none" title={data.name}>{displayName}</h4>
       </div>
     </div>

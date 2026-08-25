@@ -16,7 +16,7 @@ import {
 import { SelectedEntity, CodebaseFile } from '@/shared/services/graph-rag-explorer';
 import { isMemberKeyForFileToken, extractMemberIdFromKeyToken } from '@/services/view/graph-view.service';
 import { useGraphPanel } from './hooks/use-graph-panel';
-import { GraphToolbar } from './Graph-toolbar';
+import { GraphToolbar } from './GraphToolbar';
 import { useExplorerStore } from '../store/useExplorerStore';
 
 interface GraphPanelProps {
@@ -54,7 +54,7 @@ export function GraphPanel({
   methodsVisible,
   showSelectedOnly = false
 }: GraphPanelProps) {
-  const graphRendering = useExplorerStore((s) => s.graphRendering) || 'uml';
+  const graphRendering = useExplorerStore((s) => s.graphRendering) || 'rounded';
 
   const {
     effectiveFolderPositions,
