@@ -10,12 +10,14 @@ import { GraphRagExplorerAdapter } from '../services/graph-rag-explorer/grag-exp
 import { GraphRagInstallerAdapter } from '../services/graph-rag-explorer/grag-installer-service.adapter';
 import { LlmChatServiceAdapter } from '../services/llm-chat/llm-chat-service.adapter';
 import { Neo4jAdapter } from '../services/neo4j/neo4j-service.adapter';
+import { SdlcSessionAdapter } from '../services/sdlc-session/sdlc-session-service.adapter';
 import { VsCodeServiceAdapter } from '../services/vscode/vscode-service.adapter';
 import { ICodebaseExporterServicePort } from '../../../shared/services/codebase-exporter/domain/port-out/codebase-exporter-service.port';
 import { IGraphRagExplorerServicePort } from '../../../shared/services/graph-rag-explorer/domain/port-out/grag-explorer-service.port';
 import { IGraphRagInstallerServicePort } from '../../../shared/services/graph-rag-explorer/domain/port-out/grag-installer-service.port';
 import { ILlmChatServicePort } from '../../../shared/services/llm-chat/domain/port-out/llm-chat-service.port';
 import { INeo4jServicePort } from '../../../shared/services/neo4j/domain/port-out/neo4j-service.port';
+import { ISdlcSessionServicePort } from '../../../shared/services/sdlc-session/domain/port-out/sdlc-session-service.port';
 import { IVsCodeServicePort } from '../../../shared/services/vscode/domain/port-out/vscode-service.port';
 
 export interface BackendServicesMap {
@@ -24,6 +26,7 @@ export interface BackendServicesMap {
     [ServiceEnum.GRAPH_RAG_INSTALLER]: IGraphRagInstallerServicePort;
     [ServiceEnum.LLM_CHAT]: ILlmChatServicePort;
     [ServiceEnum.NEO4J]: INeo4jServicePort;
+    [ServiceEnum.SDLC_SESSION]: ISdlcSessionServicePort;
     [ServiceEnum.VS_CODE]: IVsCodeServicePort;
 }
 
@@ -49,6 +52,10 @@ export function registerServices(context: vscode.ExtensionContext): void {
     const neo4jService = new Neo4jAdapter();
     serviceRegistry.register(ServiceEnum.NEO4J, neo4jService);
     context.subscriptions.push(neo4jService);
+
+    const sdlcSessionService = new SdlcSessionAdapter();
+    serviceRegistry.register(ServiceEnum.SDLC_SESSION, sdlcSessionService);
+    context.subscriptions.push(sdlcSessionService);
 
     const vsCodeService = new VsCodeServiceAdapter();
     serviceRegistry.register(ServiceEnum.VS_CODE, vsCodeService);

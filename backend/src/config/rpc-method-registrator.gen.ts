@@ -38,6 +38,11 @@ export function registerRpcMethods(rpc: RpcProtocol): void {
     rpc.register(RpcMethodEnum.NEO4J_STOP_NEO4J_DATABASE, neo4jService.stopNeo4jDatabase.bind(neo4jService));
     rpc.register(RpcMethodEnum.NEO4J_RESTART_NEO4J_DATABASE, neo4jService.restartNeo4jDatabase.bind(neo4jService));
 
+    const sdlcSessionService = serviceRegistry.get(ServiceEnum.SDLC_SESSION);
+    rpc.register(RpcMethodEnum.SDLCSESSION_SAVE_SESSION, sdlcSessionService.saveSession.bind(sdlcSessionService));
+    rpc.register(RpcMethodEnum.SDLCSESSION_LOAD_ALL_SESSIONS, sdlcSessionService.loadAllSessions.bind(sdlcSessionService));
+    rpc.register(RpcMethodEnum.SDLCSESSION_DELETE_SESSION, sdlcSessionService.deleteSession.bind(sdlcSessionService));
+
     const vsCodeService = serviceRegistry.get(ServiceEnum.VS_CODE);
     rpc.register(RpcMethodEnum.VSCODE_LOG_MESSAGE, vsCodeService.logMessage.bind(vsCodeService));
     rpc.register(RpcMethodEnum.VSCODE_GET_EXTENSION_SETTINGS, vsCodeService.getExtensionSettings.bind(vsCodeService));

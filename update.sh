@@ -1,323 +1,423 @@
-#!/usr/bin/env bash
-set -e
+#!/bin/bash
 
-# Target directories
-EXPORTER_DIR="webview/src/features/exporter"
-LAYOUT_DIR="webview/src/components/app/layout"
-SRC_DIR="webview/src"
+# ==============================================================================
+# Token Razor SDLC Refactoring - Batch 1: Core Foundation
+# Generates Shared Models, RPC Ports, Backend Adapters, and Zustand Stores.
+# ==============================================================================
 
-mkdir -p "${EXPORTER_DIR}"
-mkdir -p "${LAYOUT_DIR}"
+echo "🚀 Starting Batch 1 Code Generation..."
 
-# 1. Create ExporterPanel.tsx
-cat << 'EOF' > "${EXPORTER_DIR}/ExporterPanel.tsx"
-import React from 'react';
-import { Card } from '@/components/ui/card';
-import { FolderDown, Sparkles, Clock } from 'lucide-react';
+# 1. Create necessary directories
+mkdir -p shared/services/sdlc-session/domain/model
+mkdir -p shared/services/sdlc-session/domain/port-out
+mkdir -p backend/src/services/sdlc-session
+mkdir -p webview/src/features/sdlc/core/{store,workflow,vscode-sync}
 
-export function ExporterPanel() {
-  return (
-    <div className="flex-1 space-y-4 bg-background p-4 md:p-6 min-h-0 overflow-y-auto text-foreground flex items-center justify-center">
-      <Card className="max-w-md w-full bg-card/80 border border-primary/20 p-8 shadow-lg text-center flex flex-col items-center gap-4">
-        <div className="bg-primary/10 p-4 rounded-full text-primary">
-          <FolderDown size={32} />
-        </div>
-        <div className="space-y-2">
-          <h2 className="font-bold text-lg text-foreground flex items-center justify-center gap-2">
-            <Sparkles size={18} className="text-primary animate-pulse" />
-            Codebase Exporter
-          </h2>
-          <p className="text-muted-foreground text-xs leading-relaxed">
-            Actual Exporter extension to migrate in this feature coming soon.
-          </p>
-        </div>
-        <div className="inline-flex items-center gap-2 bg-muted px-3 py-1 rounded-full text-[11px] font-mono text-muted-foreground">
-          <Clock size={12} />
-          <span>Under Active Migration</span>
-        </div>
-      </Card>
-    </div>
-  );
+# ------------------------------------------------------------------------------
+# SHARED DOMAIN LAYER
+# ------------------------------------------------------------------------------
+
+echo "📦 Generating Shared Domain Models & Ports..."
+
+cat << 'EOF' > shared/services/sdlc-session/domain/model/sdlc-session.model.ts
+import { IChatMessageDto, LlmProvider } from '../../../llm-chat';
+
+export type SdlcSessionStatus = 'draft' | 'running' | 'error' | 'success';
+
+export interface CodebaseContextPointers {
+    selectedEntityId: string | null;
+    impactedNodeIds: string[];
+    callersDepth: number;
+    calleesDepth: number;
 }
 
-export default ExporterPanel;
+export interface InstructionsPayload {
+    strategy: 'vibe' | 'bmad' | 'speckit';
+    promptText: string;
+}
+
+export interface LlmChatPayload {
+    provider: LlmProvider;
+    selectedModel: string;
+    temperature: number;
+    messages: IChatMessageDto[];
+}
+
+export interface SdlcSession {
+    sessionId: string;
+    createdAt: number;
+    updatedAt: number;
+    status: SdlcSessionStatus;
+    errorMessage?: string;
+    activeStepId: string;
+    contextPointers: CodebaseContextPointers;
+    instructionsPayload: InstructionsPayload;
+    llmChat: LlmChatPayload;
+}
 EOF
 
-# 2. Create ExporterFeature.tsx
-cat << 'EOF' > "${EXPORTER_DIR}/ExporterFeature.tsx"
-import React, { useEffect } from 'react';
-import { useLayoutStore } from '@/store/useLayoutStore';
-import { ExporterPanel } from './ExporterPanel';
+cat << 'EOF' > shared/services/sdlc-session/domain/port-out/sdlc-session-service.port.ts
+import { SdlcSession } from '../model/sdlc-session.model';
 
-export function ExporterFeature() {
-  const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
-
-  useEffect(() => {
-    setLayoutContainers({
-      header: { visible: true, isResizable: false, isHiddable: false },
-      sidebarLeft: { visible: true, isResizable: true, isHiddable: true },
-      workspace: {
-        top: { visible: false },
-        left: { visible: false },
-        center: {
-          visible: true,
-          container: <ExporterPanel />,
-          isHiddable: false,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
-        },
-        right: { visible: false },
-        bottom: { visible: false },
-      },
-      sidebarRight: { visible: false },
-      footer: { visible: true, isResizable: false, isHiddable: false },
-    });
-  }, [setLayoutContainers]);
-
-  return null;
+export interface ISdlcSessionServicePort {
+    saveSession(session: SdlcSession): Promise<void>;
+    loadAllSessions(): Promise<SdlcSession[]>;
+    deleteSession(sessionId: string): Promise<void>;
 }
-
-export default ExporterFeature;
 EOF
 
-# 3. Update SidebarLeft.tsx to ensure menu link is present
-cat << 'EOF' > "${LAYOUT_DIR}/SidebarLeft.tsx"
-import React, { useState } from 'react';
-import {
-  ChevronLeft,
-  ChevronRight,
-  FolderTree,
-  Scale,
-  PackageCheck,
-  Terminal,
-  History,
-  Settings,
-  HelpCircle,
-  FileJson,
-  LayoutGrid,
-  Home,
-  Layout,
-  VectorSquare,
-  FolderDown,
-  Bot,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarMenuBadge,
-  SidebarFooter,
-} from '@/components/ui/sidebar';
-import { DefaultContainersSize } from '@/constants/layout-constants';
+cat << 'EOF' > shared/services/sdlc-session/index.ts
+export * from './domain/model/sdlc-session.model';
+export * from './domain/port-out/sdlc-session-service.port';
+EOF
 
-export interface NavItem {
-  id: string;
-  label: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
-  badge?: string;
-  bottom?: boolean;
+# ------------------------------------------------------------------------------
+# BACKEND ADAPTER LAYER
+# ------------------------------------------------------------------------------
+
+echo "⚙️ Generating Backend SdlcSessionAdapter..."
+
+cat << 'EOF' > backend/src/services/sdlc-session/sdlc-session-service.adapter.ts
+import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
+import { AbstractServiceAdapter } from '../../core/AbstractServiceAdapter';
+import { ISdlcSessionServicePort } from '../../../../shared/services/sdlc-session/domain/port-out/sdlc-session-service.port';
+import { SdlcSession } from '../../../../shared/services/sdlc-session/domain/model/sdlc-session.model';
+import { getWorkspaceExtentionPath } from '../../utils/utils-vscode';
+import { logInfo, logError } from '../../utils/utils-log';
+
+export class SdlcSessionAdapter extends AbstractServiceAdapter implements ISdlcSessionServicePort, vscode.Disposable {
+    private sessionsDir: string;
+
+    constructor() {
+        super();
+        this.sessionsDir = path.join(getWorkspaceExtentionPath(), 'sessions');
+        this.ensureDirExists();
+    }
+
+    private ensureDirExists() {
+        if (!fs.existsSync(this.sessionsDir)) {
+            fs.mkdirSync(this.sessionsDir, { recursive: true });
+        }
+    }
+
+    public async saveSession(session: SdlcSession): Promise<void> {
+        try {
+            this.ensureDirExists();
+            const filePath = path.join(this.sessionsDir, `${session.sessionId}.json`);
+            await fs.promises.writeFile(filePath, JSON.stringify(session, null, 2), 'utf-8');
+            logInfo(`[SdlcSessionAdapter] Session saved: ${session.sessionId}`);
+        } catch (error) {
+            logError(`[SdlcSessionAdapter] Failed to save session ${session.sessionId}`, error);
+            throw error;
+        }
+    }
+
+    public async loadAllSessions(): Promise<SdlcSession[]> {
+        try {
+            this.ensureDirExists();
+            const files = await fs.promises.readdir(this.sessionsDir);
+            const sessions: SdlcSession[] = [];
+
+            for (const file of files) {
+                if (file.endsWith('.json')) {
+                    const content = await fs.promises.readFile(path.join(this.sessionsDir, file), 'utf-8');
+                    sessions.push(JSON.parse(content) as SdlcSession);
+                }
+            }
+            logInfo(`[SdlcSessionAdapter] Loaded ${sessions.length} sessions from disk.`);
+            return sessions.sort((a, b) => b.updatedAt - a.updatedAt);
+        } catch (error) {
+            logError(`[SdlcSessionAdapter] Failed to load sessions`, error);
+            return [];
+        }
+    }
+
+    public async deleteSession(sessionId: string): Promise<void> {
+        try {
+            const filePath = path.join(this.sessionsDir, `${sessionId}.json`);
+            if (fs.existsSync(filePath)) {
+                await fs.promises.unlink(filePath);
+                logInfo(`[SdlcSessionAdapter] Session deleted: ${sessionId}`);
+            }
+        } catch (error) {
+            logError(`[SdlcSessionAdapter] Failed to delete session ${sessionId}`, error);
+            throw error;
+        }
+    }
+
+    public dispose() {
+        // Cleanup if necessary
+    }
+}
+EOF
+
+# ------------------------------------------------------------------------------
+# FRONTEND CORE STATE (ZUSTAND)
+# ------------------------------------------------------------------------------
+
+echo "🧠 Generating Zustand Stores & Workflow Machine..."
+
+cat << 'EOF' > webview/src/features/sdlc/core/store/useSdlcSessionStore.ts
+import { create } from 'zustand';
+import { SdlcSession, SdlcSessionStatus } from '@/shared/services/sdlc-session';
+import { LlmProvider } from '@/shared/services/llm-chat';
+
+export interface SdlcSessionStoreState {
+    sessions: Record<string, SdlcSession>;
+    activeSessionId: string | null;
+
+    // Actions
+    createSession: () => string;
+    setActiveSession: (sessionId: string) => void;
+    deleteSession: (sessionId: string) => void;
+    updateActiveSession: (updater: (draft: SdlcSession) => void) => void;
+    setAllSessions: (sessions: SdlcSession[]) => void;
 }
 
-interface SidebarLeftProps {
-  activeFeature: string;
-  setActiveFeature: (feature: string) => void;
-  sidebarLeftMode?: 'normal' | 'minimal';
-  setSidebarLeftMode?: React.Dispatch<React.SetStateAction<'normal' | 'minimal'>>;
-  sidebarLeftWidth?: number;
+const createDefaultSession = (id: string): SdlcSession => ({
+    sessionId: id,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    status: 'draft',
+    activeStepId: 'CODEBASE_CONTEXT',
+    contextPointers: {
+        selectedEntityId: null,
+        impactedNodeIds: [],
+        callersDepth: 1,
+        calleesDepth: 1,
+    },
+    instructionsPayload: {
+        strategy: 'vibe',
+        promptText: '',
+    },
+    llmChat: {
+        provider: LlmProvider.OLLAMA,
+        selectedModel: '',
+        temperature: 0.2,
+        messages: [],
+    }
+});
+
+export const useSdlcSessionStore = create<SdlcSessionStoreState>((set) => ({
+    sessions: {},
+    activeSessionId: null,
+
+    createSession: () => {
+        const newId = `session-${Date.now()}`;
+        set((state) => ({
+            sessions: { ...state.sessions, [newId]: createDefaultSession(newId) },
+            activeSessionId: newId,
+        }));
+        return newId;
+    },
+
+    setActiveSession: (sessionId) => set({ activeSessionId: sessionId }),
+
+    deleteSession: (sessionId) => set((state) => {
+        const newSessions = { ...state.sessions };
+        delete newSessions[sessionId];
+        return {
+            sessions: newSessions,
+            activeSessionId: state.activeSessionId === sessionId ? null : state.activeSessionId
+        };
+    }),
+
+    updateActiveSession: (updater) => set((state) => {
+        if (!state.activeSessionId) return state;
+        const session = state.sessions[state.activeSessionId];
+        if (!session) return state;
+
+        // Shallow clone for immutability without full deep copy overhead
+        const draft = JSON.parse(JSON.stringify(session)) as SdlcSession;
+        updater(draft);
+        draft.updatedAt = Date.now();
+
+        return {
+            sessions: { ...state.sessions, [state.activeSessionId]: draft }
+        };
+    }),
+
+    setAllSessions: (sessionsList) => set(() => {
+        const map: Record<string, SdlcSession> = {};
+        sessionsList.forEach(s => { map[s.sessionId] = s; });
+        return { sessions: map };
+    })
+}));
+EOF
+
+cat << 'EOF' > webview/src/features/sdlc/core/store/useCodebaseCache.ts
+import { create } from 'zustand';
+import { CodebaseData } from '@/shared/services/graph-rag-explorer';
+
+export interface CodebaseCacheState {
+    currentAst: CodebaseData | null;
+    lastUpdated: number;
+    setAst: (data: CodebaseData) => void;
+    clearAst: () => void;
 }
 
-export const SIDEBAR_MENU_ITEMS: NavItem[] = [
-  { id: 'feature-home', icon: Home, label: 'Home' },
-  { id: 'feature-install', icon: PackageCheck, label: 'Install' },
-  { id: 'feature-graph-rag-explorer', icon: VectorSquare, label: 'Graph RAG Explorer', badge: 'New' },
-  { id: 'feature-ai-workflow-builder', icon: Bot, label: 'AI Workflow Builder', badge: 'AI' },
-  { id: 'feature-codebase-exporter', icon: FolderDown, label: 'Codebase Exporter', badge: 'Upd' },
-  { id: 'feature-rules', icon: Scale, label: 'Cypher Rules' },
+/**
+ * Singleton Heavy AST Cache.
+ * Prevents VS Code Webview Out-Of-Memory (OOM) crashes by keeping
+ * the giant CodebaseData object out of the multi-session store.
+ */
+export const useCodebaseCache = create<CodebaseCacheState>((set) => ({
+    currentAst: null,
+    lastUpdated: 0,
 
-  { id: 'feature-configuration', icon: Settings, label: 'Configuration', bottom: true },
-  { id: 'feature-help', icon: HelpCircle, label: 'Help & Shortcuts', bottom: true },
-  { id: 'feature-layout-demo', icon: Layout, label: 'Layout Demo', bottom: true },
+    setAst: (data) => set({ currentAst: data, lastUpdated: Date.now() }),
+    clearAst: () => set({ currentAst: null, lastUpdated: 0 })
+}));
+EOF
+
+cat << 'EOF' > webview/src/features/sdlc/core/store/useGlobalConfigStore.ts
+import { create } from 'zustand';
+
+export interface AnonymizationRule {
+    id: string;
+    name: string;
+    pattern: string;
+    replacement: string;
+    inversePattern: string;
+    enabled: boolean;
+}
+
+export interface GraphRagExplorerConfig {
+    backendConfigPath: string;
+    defaultClient: string;
+    defaultModel: string;
+    maxTokens: number;
+    temperature: number;
+    systemPromptPrefix: string;
+    autoApplyChanges: boolean;
+    saveHistoryLocally: boolean;
+}
+
+export const DEFAULT_ANONYMIZATION_RULES: AnonymizationRule[] = [
+    {
+        id: 'rule-secrets',
+        name: 'Secret & Password Tokens',
+        pattern: '(?i)(password|secret|key|token)\\s*[:=]\\s*[\'"][^\'"]+[\'"]',
+        replacement: '$1: "ANONYMIZED_SECRET"',
+        inversePattern: 'ANONYMIZED_SECRET',
+        enabled: true,
+    }
 ];
 
-export function renderSidebarMenuItem(
-  item: NavItem,
-  activeFeature: string,
-  setActiveFeature: (feature: string) => void,
-  sidebarLeftMode: 'normal' | 'minimal' = 'normal'
-) {
-  const isActive = activeFeature === item.id || (item.id === 'feature-home' && activeFeature === 'home');
-  const isMinimal = sidebarLeftMode === 'minimal';
+const INITIAL_CONFIG: GraphRagExplorerConfig = {
+    backendConfigPath: '.token-razor/config/explorer-config.json',
+    defaultClient: 'Ollama',
+    defaultModel: 'llama3:latest',
+    maxTokens: 4096,
+    temperature: 0.2,
+    systemPromptPrefix: 'You are an expert senior software architect.',
+    autoApplyChanges: false,
+    saveHistoryLocally: true,
+};
 
-  return (
-    <SidebarMenuItem key={item.id}>
-      <SidebarMenuButton
-        id={`btn-menu-${item.id}`}
-        isActive={isActive}
-        onClick={() => setActiveFeature(item.id)}
-        className="relative overflow-hidden cursor-pointer"
-        data-tooltip={isMinimal ? item.label : undefined}
-      >
-        <item.icon size={18} className={sidebarLeftMode === 'normal' ? 'mr-2.5 shrink-0' : 'shrink-0'} />
-        {sidebarLeftMode === 'normal' ? (
-          <>
-            <span className="text-[12px] truncate">{item.label}</span>
-            {item.badge && <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>}
-          </>
-        ) : (
-          item.badge && (
-            <span className="top-0 right-0 absolute bg-primary shadow-2xs px-1 py-0.5 rounded-full font-mono font-bold text-[8px] text-primary-foreground leading-none scale-85 origin-top-right select-none">
-              {item.badge}
-            </span>
-          )
-        )}
-      </SidebarMenuButton>
-    </SidebarMenuItem>
-  );
+export interface GlobalConfigState {
+    globalConfig: GraphRagExplorerConfig;
+    anonymizationRules: AnonymizationRule[];
+
+    updateGlobalConfig: (partial: Partial<GraphRagExplorerConfig>) => void;
+    updateAnonymizationRules: (rules: AnonymizationRule[]) => void;
 }
 
-export function SidebarLeft({
-  activeFeature,
-  setActiveFeature,
-  sidebarLeftMode: modeProp,
-  setSidebarLeftMode: setModeProp,
-  sidebarLeftWidth = DefaultContainersSize.sidebarLeftWidth,
-}: SidebarLeftProps) {
-  const [internalMode, setInternalMode] = useState<'normal' | 'minimal'>('normal');
+export const useGlobalConfigStore = create<GlobalConfigState>((set) => ({
+    globalConfig: INITIAL_CONFIG,
+    anonymizationRules: DEFAULT_ANONYMIZATION_RULES,
 
-  const sidebarLeftMode = modeProp ?? internalMode;
-  const setSidebarLeftMode = setModeProp ?? setInternalMode;
+    updateGlobalConfig: (partial) => set((state) => ({
+        globalConfig: { ...state.globalConfig, ...partial }
+    })),
 
-  const effectiveWidth = sidebarLeftMode === 'minimal' ? `${DefaultContainersSize.sidebarLeftMinimizedWidth}px` : '100%';
-
-  return (
-    <Sidebar
-      id="ctn-sidebar-left"
-      style={{
-        width: effectiveWidth,
-        '--sidebar-width': sidebarLeftMode === 'minimal' ? `${DefaultContainersSize.sidebarLeftMinimizedWidth}px` : `${sidebarLeftWidth}px`,
-      } as React.CSSProperties}
-      className="flex flex-col justify-between border-r-0 w-full h-full min-h-0 overflow-x-hidden transition-all duration-200"
-    >
-      <SidebarContent className="flex-1 min-h-0 overflow-x-hidden overflow-y-auto">
-        <SidebarGroup>
-          <SidebarMenu>
-            {SIDEBAR_MENU_ITEMS.filter((item) => !item.bottom).map((item) =>
-              renderSidebarMenuItem(item, activeFeature, setActiveFeature, sidebarLeftMode)
-            )}
-          </SidebarMenu>
-        </SidebarGroup>
-        <SidebarGroup className="mt-auto pt-2 border-sidebar-border border-t">
-          <SidebarMenu>
-            {SIDEBAR_MENU_ITEMS.filter((item) => item.bottom).map((item) =>
-              renderSidebarMenuItem(item, activeFeature, setActiveFeature, sidebarLeftMode)
-            )}
-          </SidebarMenu>
-        </SidebarGroup>
-      </SidebarContent>
-
-      <SidebarFooter className="p-0 border-sidebar-border border-t h-9 overflow-hidden shrink-0">
-        <Button
-          id="btn-toggle-sidebar-left-mode"
-          variant="ghost"
-          size="sm"
-          onClick={() => setSidebarLeftMode((m) => (m === 'normal' ? 'minimal' : 'normal'))}
-          className={`w-full text-muted-foreground hover:text-foreground mt-0 rounded-none h-9 cursor-pointer ${
-            sidebarLeftMode === 'normal' ? 'justify-end px-3' : 'justify-center px-0'
-          }`}
-          data-tooltip="Toggle sidebar drawer size"
-        >
-          {sidebarLeftMode === 'normal' ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
-        </Button>
-      </SidebarFooter>
-    </Sidebar>
-  );
-}
+    updateAnonymizationRules: (rules) => set({ anonymizationRules: rules })
+}));
 EOF
 
-# 4. Update App.tsx to register ExporterFeature route
-cat << 'EOF' > "${SRC_DIR}/App.tsx"
-import React, { useEffect } from 'react';
-import { useAppContextStore } from '@/store/useAppContextStore';
-import { useLayoutStore } from '@/store/useLayoutStore';
-import { AppLayout } from '@/components/app/layout/AppLayout';
-import { HomeFeature } from '@/features/home/HomeFeature';
-import { InstallFeature } from '@/features/install/InstallFeature';
-import { LayoutDemoFeature } from '@/features/layout-demo/LayoutDemoFeature';
-import { ExplorerFeature } from '@/features/explorer/ExplorerFeature';
-import { WorkflowBuilderFeature } from '@/features/ai-workflow-builder/WorkflowBuilderFeature';
-import { ExporterFeature } from '@/features/exporter/ExporterFeature';
-import { RulesFeature } from '@/features/rules/RulesFeature';
-import { HelpFeature } from '@/features/help/HelpFeature';
-import { logInfo } from '@/services/view/log-view.service.wrapper';
-import { vsCodeApiService } from "@/services/api/vs-code-api.service.gen";
-import { VsCodeSettings } from '@/shared/services/vscode/domain/model/VsCodeSettings.gen';
-import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
+cat << 'EOF' > webview/src/features/sdlc/core/workflow/useSdlcWorkflowMachine.ts
+import { create } from 'zustand';
 
-export let vscodeSettings: VsCodeSettings = new VsCodeSettings();
+export type SdlcStep =
+    | 'CODEBASE_CONTEXT'
+    | 'INSTRUCTIONS'
+    | 'LLM_CHAT'
+    | 'RESULTS_MANAGER'
+    | 'CONFIGURATION';
 
-export default function App() {
+export interface SdlcWorkflowMachineState {
+    currentStep: SdlcStep;
+    transitionTo: (step: SdlcStep) => void;
+}
 
-  const contextStore = typeof useAppContextStore === 'function' ? useAppContextStore() : ({} as any);
-  const layoutStore = typeof useLayoutStore === 'function' ? useLayoutStore() : ({} as any);
+/**
+ * Headless state machine controlling the active view.
+ * SdlcLayoutOrchestrator listens to this to map domains to UI containers.
+ */
+export const useSdlcWorkflowMachine = create<SdlcWorkflowMachineState>((set) => ({
+    currentStep: 'CODEBASE_CONTEXT',
+    transitionTo: (step) => set({ currentStep: step })
+}));
+EOF
 
-  const activeFeature = contextStore.activeFeature || 'feature-home';
-  const setActiveFeature = contextStore.setActiveFeature;
-  const setStatus = useAppContextStore((state) => state.setStatus);
-  const isDarkMode = contextStore.isDarkMode;
-  const setIsDarkMode = contextStore.setIsDarkMode;
-  const notification = contextStore.notification;
-  const containers = layoutStore.containers || [];
+cat << 'EOF' > webview/src/features/sdlc/core/vscode-sync/session-persistence.manager.ts
+import { useSdlcSessionStore } from '../store/useSdlcSessionStore';
+// @ts-ignore - Will be generated via npm run generate:code
+import { sdlcSessionApiService } from '@/services/api/sdlc-session-api.service.gen';
+import { logInfo, logError } from '@/services/view/log-view.service.wrapper';
 
-  // Trigger remote API log on mount
-  useEffect(() => {
-    logInfo(`SGU App component mounted. Active feature: ${activeFeature}`);
-    vsCodeApiService.getExtensionSettings().then((settings: VsCodeSettings) => {
-        vscodeSettings = settings;
-    });
-  }, []);
+let saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-  useEffect(() => {
-        // Register listener for 'setStatus'
-        const unsubscribeStatus = vsCodeHandleMessage.on('updateStatus', (message) => {
-            console.info(`Status received from extension: ${message.payload}`);
-            if (message.payload) {
-                setStatus(message.payload);
+/**
+ * Subscribes to the SdlcSessionStore and syncs the active session to disk via RPC.
+ */
+export function initSessionPersistence() {
+    // 1. Initial Load
+    sdlcSessionApiService.loadAllSessions()
+        .then((sessions) => {
+            useSdlcSessionStore.getState().setAllSessions(sessions);
+            if (sessions.length > 0 && !useSdlcSessionStore.getState().activeSessionId) {
+                // Auto-load most recent session
+                useSdlcSessionStore.getState().setActiveSession(sessions[0].sessionId);
+            } else if (sessions.length === 0) {
+                useSdlcSessionStore.getState().createSession();
             }
-        });
+        })
+        .catch(err => logError('Failed to load initial SDLC sessions', err));
 
-        // Cleanup event listeners on unmount
-        return () => {
-            unsubscribeStatus();
-        };
-    }, []);
+    // 2. Debounced Save Subscription
+    useSdlcSessionStore.subscribe((state) => {
+        if (!state.activeSessionId) return;
+        const activeSession = state.sessions[state.activeSessionId];
+        if (!activeSession) return;
 
-  return (
-    <>
-      {(activeFeature === 'feature-home') && HomeFeature && <HomeFeature />}
-      {(activeFeature === 'feature-install') && InstallFeature && <InstallFeature />}
-      {(activeFeature === 'feature-graph-rag-explorer') && ExplorerFeature && <ExplorerFeature />}
-      {(activeFeature === 'feature-ai-workflow-builder') && WorkflowBuilderFeature && <WorkflowBuilderFeature />}
-      {(activeFeature === 'feature-codebase-exporter' || activeFeature === 'feature-exporter') && ExporterFeature && <ExporterFeature />}
-      {(activeFeature === 'feature-layout-demo') && LayoutDemoFeature && <LayoutDemoFeature />}
-      {(activeFeature === 'feature-rules') && RulesFeature && <RulesFeature />}
-      {(activeFeature === 'feature-help') && HelpFeature && <HelpFeature />}
+        if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
 
-      {AppLayout && (
-        <AppLayout
-          activeFeature={activeFeature}
-          setActiveFeature={setActiveFeature}
-          isDarkMode={isDarkMode}
-          setIsDarkMode={setIsDarkMode}
-          notification={notification}
-          layoutContainers={containers}
-        />
-      )}
-    </>
-  );
+        saveDebounceTimer = setTimeout(() => {
+            queueMicrotask(() => {
+                sdlcSessionApiService.saveSession(activeSession)
+                    .then(() => logInfo(`Session ${activeSession.sessionId} synced to disk.`))
+                    .catch((err) => logError(`Failed to sync session to disk`, err));
+            });
+        }, 1000);
+    });
 }
 EOF
 
-echo "✅ feat: Created ExporterFeature & ExporterPanel, connected to SidebarLeft navigation and App.tsx!"
+# ------------------------------------------------------------------------------
+# AUTOMATED RPC & API GENERATION
+# ------------------------------------------------------------------------------
+
+echo "🔨 Triggering dev-tools generators to wire up the new RPC Interfaces..."
+# This executes the existing node.js scripts to generate ServiceEnum, RpcMethodEnum,
+# service-registrator, rpc-registrator, and webview-api-services.
+npm run generate:code
+
+echo ""
+echo "✅ feat: Generated SDLC Core Foundation (Zustand Stores, Workflow Machine, RPC Interfaces, Backend Adapters)."
+echo "   - Created ISdlcSessionServicePort and SdlcSessionAdapter."
+echo "   - Generated useSdlcSessionStore (Lightweight) & useCodebaseCache (Heavy)."
+echo "   - Ran dev-tools generators to expose sdlcSessionApiService to the Webview."
+echo "▶️  NEXT STEP: Awaiting 'Proceed' to generate Batch 2 (UI Common Perimeter & CodebaseContext Domain)."

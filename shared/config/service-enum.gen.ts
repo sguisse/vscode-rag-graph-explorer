@@ -7,5 +7,6 @@ export enum ServiceEnum {
     GRAPH_RAG_INSTALLER = 'GraphRagInstallerService',
     LLM_CHAT = 'LlmChatService',
     NEO4J = 'Neo4jService',
+    SDLC_SESSION = 'SdlcSessionService',
     VS_CODE = 'VsCodeService'
 }
