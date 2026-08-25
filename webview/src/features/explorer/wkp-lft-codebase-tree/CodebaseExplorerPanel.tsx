@@ -90,9 +90,9 @@ export function CodebaseExplorerPanel({
     return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [finderState.openAndFocusFinder]);
 
-  // 1. TOP SECTION: Toolbar Header + Search Finder Bar
+  // 1. TOP SECTION: Fixed Header Toolbar + Search Finder Bar
   const topContent = (
-    <div className="flex flex-col w-full">
+    <div className="flex flex-col w-full shrink-0">
       <div className="flex justify-between items-center bg-muted/20 p-0.5 border-border border-b shrink-0">
         <div className="flex items-center gap-1.5 pl-2 w-full">
           <LayoutList size={14} className="text-muted-foreground shrink-0" />
@@ -101,7 +101,7 @@ export function CodebaseExplorerPanel({
             value={viewMode}
             onChange={(val) => setViewMode(val as ViewMode)}
             className="py-0"
-            triggerClassName="!h-6 min-h-0 py-0 px-2 text-xs border-border rounded-sm font-mono"
+            triggerClassName="!h-6 min-h-0 py-0 px-2 text-xs border-border rounded-sm font-mono bg-background"
             options={CODEBASE_GROUPING_LIST.map((key) => ({
               value: key,
               icon: CODEBASE_GROUPING_ICON_MAP[key].icon,
@@ -173,7 +173,7 @@ export function CodebaseExplorerPanel({
       </div>
 
       {finderState.isFinderOpen && (
-        <div id="container-treeview-finder" className="bg-muted/15 p-0 shrink-0">
+        <div id="container-treeview-finder" className="p-0 bg-background border-b border-border shrink-0">
           <FinderTree
             styleView="toolbar"
             focusTrigger={finderState.focusTrigger}
@@ -202,7 +202,7 @@ export function CodebaseExplorerPanel({
 
   // 2. MIDDLE SECTION: Scrollable Codebase Tree View
   const middleContent = (
-    <div className="p-4 w-full font-mono text-xs">
+    <div className="w-full p-4 font-mono text-xs">
       {groupedScopes.map((scope: ScopeGroup) => {
         const scopeTheme = FOLDER_THEME_REGISTRY_CONFIG[scope.key] || FOLDER_THEME_REGISTRY_CONFIG.default;
         const isScopeExpanded = expandedFolders[scope.key] ?? true;
@@ -515,7 +515,7 @@ export function CodebaseExplorerPanel({
 
   // 3. BOTTOM SECTION: Info Explorer Status Bar
   const bottomContent = (
-    <div className="flex justify-between items-center bg-muted/20 p-2 border-border border-t w-full h-9 shrink-0">
+    <div className="w-full bg-muted/20 p-2 border-border border-t h-9 shrink-0 flex items-center justify-between">
       <div>
         <h3 className="flex items-center gap-2 font-mono font-bold text-muted-foreground text-xs uppercase tracking-wider">
           <span>Explorer</span>
@@ -531,14 +531,14 @@ export function CodebaseExplorerPanel({
     <div
       ref={panelRef}
       tabIndex={-1}
-      className="flex flex-col outline-none w-full h-full min-h-0 overflow-hidden"
+      className="flex flex-col w-full h-full min-h-0 overflow-hidden outline-none"
     >
       <TopMiddleBottomPanel
         id="panel-codebase-explorer"
         topId="panel-codebase-explorer-top"
         middleId="tree-codebase-files"
         bottomId="panel-codebase-explorer-bottom"
-        className="bg-card w-full h-full min-h-0"
+        className="bg-card w-full h-full min-h-0 overflow-hidden"
         top={topContent}
         middle={middleContent}
         bottom={bottomContent}

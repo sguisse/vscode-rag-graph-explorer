@@ -152,10 +152,16 @@ export function useTreeviewFinder(
       }));
     }
 
+    // Safely scroll ONLY inside the middle container without moving outer window/layout
     setTimeout(() => {
+      const container = document.getElementById('tree-codebase-files');
       const element = document.getElementById(`tree-file-node-${activeMatch.id}`);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (container && element) {
+        const containerRect = container.getBoundingClientRect();
+        const elementRect = element.getBoundingClientRect();
+        const relativeTop = elementRect.top - containerRect.top + container.scrollTop;
+        const targetScrollTop = relativeTop - containerRect.height / 2 + elementRect.height / 2;
+        container.scrollTo({ top: Math.max(0, targetScrollTop), behavior: 'smooth' });
       }
     }, 120);
   }, [

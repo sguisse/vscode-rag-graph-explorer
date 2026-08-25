@@ -59,7 +59,7 @@ export const FinderBase: React.FC<FinderBaseProps> = ({
 
     return (
         <div className={`flex items-center gap-2 bg-muted/20 text-popover-foreground animate-fadeIn select-none font-sans text-xs ${containerStyleClass}`}>
-            <div className="relative flex flex-1 items-center px-2 border border-input focus-within:border-ring rounded min-w-0 h-6 transition-colors">
+            <div className="relative flex flex-1 items-center bg-background px-2 border border-input focus-within:border-ring rounded min-w-0 h-6 transition-colors">
                 <Search size={13} className="mr-1.5 text-muted-foreground pointer-events-none shrink-0" />
                 <Input
                     ref={inputRef}
@@ -67,7 +67,7 @@ export const FinderBase: React.FC<FinderBaseProps> = ({
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder={placeholder}
-                    className="flex-1 bg-background shadow-none p-0 border-0 focus-visible:outline-none focus-visible:ring-0 min-w-0 h-full font-sans text-[12px] text-foreground md:text-[12px] placeholder:text-[12px] placeholder:text-muted-foreground"
+                    className="flex-1 shadow-none p-0 border-0 focus-visible:outline-none focus-visible:ring-0 min-w-0 h-full font-sans text-[12px] text-foreground md:text-[12px] placeholder:text-[12px] placeholder:text-muted-foreground"
                     spellCheck={false}
                 />
 

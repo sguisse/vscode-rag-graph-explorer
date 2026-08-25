@@ -23,10 +23,10 @@ export function TopMiddleBottomPanel({
   ...props
 }: TopMiddleBottomPanelProps) {
   return (
-    <div id={id} className={cn("flex flex-col w-full h-full min-h-0 overflow-hidden", className)} {...props}>
-      <div id={topId ?? `${id}-top`} className="empty:hidden shrink-0 w-full">{top}</div>
-      <div id={middleId ?? `${id}-middle`} className="empty:hidden flex-1 min-h-0 overflow-auto w-full">{middle}</div>
-      <div id={bottomId ?? `${id}-bottom`} className="empty:hidden shrink-0 w-full">{bottom}</div>
+    <div id={id} className={cn("flex flex-col w-full h-full min-h-0 overflow-hidden select-none", className)} {...props}>
+      <div id={topId ?? `${id}-top`} className="empty:hidden shrink-0 w-full flex flex-col">{top}</div>
+      <div id={middleId ?? `${id}-middle`} className="empty:hidden flex-1 min-h-0 overflow-y-auto w-full">{middle}</div>
+      <div id={bottomId ?? `${id}-bottom`} className="empty:hidden shrink-0 w-full flex flex-col">{bottom}</div>
     </div>
   );
 }
