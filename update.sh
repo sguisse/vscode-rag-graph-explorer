@@ -1,47 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
-# File Paths
-PANEL_UTIL="webview/src/components/app/top-middle-bottom-panel.tsx"
 EXPLORER_PANEL="webview/src/features/explorer/wkp-lft-codebase-tree/CodebaseExplorerPanel.tsx"
 
-# 1. Update top-middle-bottom-panel.tsx with robust flexbox constraints
-cat << 'EOF' > "${PANEL_UTIL}"
-import React from "react";
-import { cn } from "../../lib/utils";
-
-export interface TopMiddleBottomPanelProps extends React.HTMLAttributes<HTMLDivElement> {
-  id: string;
-  top?: React.ReactNode;
-  middle?: React.ReactNode;
-  bottom?: React.ReactNode;
-  topId?: string;
-  middleId?: string;
-  bottomId?: string;
-}
-
-export function TopMiddleBottomPanel({
-  id,
-  top,
-  middle,
-  bottom,
-  topId,
-  middleId,
-  bottomId,
-  className,
-  ...props
-}: TopMiddleBottomPanelProps) {
-  return (
-    <div id={id} className={cn("flex flex-col w-full h-full min-h-0 overflow-hidden", className)} {...props}>
-      <div id={topId ?? `${id}-top`} className="empty:hidden shrink-0 w-full">{top}</div>
-      <div id={middleId ?? `${id}-middle`} className="empty:hidden flex-1 min-h-0 overflow-auto w-full">{middle}</div>
-      <div id={bottomId ?? `${id}-bottom`} className="empty:hidden shrink-0 w-full">{bottom}</div>
-    </div>
-  );
-}
-EOF
-
-# 2. Update CodebaseExplorerPanel.tsx to correctly bind top, middle, and bottom slots
 cat << 'EOF' > "${EXPLORER_PANEL}"
 import React, { useRef, useEffect, useMemo } from 'react';
 import { ChevronDown, ChevronRight, Folder, FileCode, Database, Download, Upload, LayoutList, ChevronsDown, ChevronsUp, Search } from 'lucide-react';
@@ -135,7 +96,7 @@ export function CodebaseExplorerPanel({
     return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [finderState.openAndFocusFinder]);
 
-  // 1. TOP SECTION: Toolbar Header + Search Finder Bar
+  // 1. TOP SECTION: Toolbar Header + Search Finder Bar with uniform input background
   const topContent = (
     <div className="flex flex-col w-full">
       <div className="flex justify-between items-center bg-muted/20 p-0.5 border-border border-b shrink-0">
@@ -146,7 +107,7 @@ export function CodebaseExplorerPanel({
             value={viewMode}
             onChange={(val) => setViewMode(val as ViewMode)}
             className="py-0"
-            triggerClassName="!h-6 min-h-0 py-0 px-2 text-xs border-border rounded-sm font-mono"
+            triggerClassName="!h-6 min-h-0 py-0 px-2 text-xs border-border rounded-sm font-mono bg-background"
             options={CODEBASE_GROUPING_LIST.map((key) => ({
               value: key,
               icon: CODEBASE_GROUPING_ICON_MAP[key].icon,
@@ -218,7 +179,7 @@ export function CodebaseExplorerPanel({
       </div>
 
       {finderState.isFinderOpen && (
-        <div id="container-treeview-finder" className="p-0 bg-muted/15 shrink-0">
+        <div id="container-treeview-finder" className="p-0 bg-background border-b border-border shrink-0">
           <FinderTree
             styleView="toolbar"
             focusTrigger={finderState.focusTrigger}
@@ -600,4 +561,4 @@ export function CodebaseExplorerPanel({
 }
 EOF
 
-echo "✅ fix: Resolved tree layout displacement and extra footer space by applying flex-shrink and min-h-0 bounds in TopMiddleBottomPanel!"
+echo "✅ style: Set search bar and view selection trigger backgrounds to bg-background!"

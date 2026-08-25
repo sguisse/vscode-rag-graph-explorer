@@ -58,20 +58,20 @@ export const FinderBase: React.FC<FinderBaseProps> = ({
         : 'p-1.5 border border-border shadow-md rounded-md';
 
     return (
-        <div className={`flex items-center gap-2 bg-popover text-popover-foreground animate-fadeIn select-none font-sans text-xs ${containerStyleClass}`}>
-            <div className="relative flex items-center bg-muted/40 px-2 border border-input focus-within:border-ring rounded flex-1 min-w-0 h-6 transition-colors">
-                <Search size={13} className="text-muted-foreground shrink-0 mr-1.5 pointer-events-none" />
+        <div className={`flex items-center gap-2 bg-muted/20 text-popover-foreground animate-fadeIn select-none font-sans text-xs ${containerStyleClass}`}>
+            <div className="relative flex flex-1 items-center px-2 border border-input focus-within:border-ring rounded min-w-0 h-6 transition-colors">
+                <Search size={13} className="mr-1.5 text-muted-foreground pointer-events-none shrink-0" />
                 <Input
                     ref={inputRef}
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder={placeholder}
-                    className="bg-transparent shadow-none p-0 border-0 focus-visible:ring-0 focus-visible:outline-none flex-1 min-w-0 h-full font-sans text-foreground text-xs placeholder:text-muted-foreground"
+                    className="flex-1 bg-background shadow-none p-0 border-0 focus-visible:outline-none focus-visible:ring-0 min-w-0 h-full font-sans text-[12px] text-foreground md:text-[12px] placeholder:text-[12px] placeholder:text-muted-foreground"
                     spellCheck={false}
                 />
 
-                <div className="flex items-center gap-0.5 text-muted-foreground shrink-0 ml-1">
+                <div className="flex items-center gap-0.5 ml-1 text-muted-foreground shrink-0">
                     <Button
                         type="button"
                         variant="ghost"
@@ -122,7 +122,7 @@ export const FinderBase: React.FC<FinderBaseProps> = ({
                             size="icon"
                             data-tooltip="Clear Input"
                             onClick={() => setSearchQuery('')}
-                            className="w-4 h-4 p-0 rounded-sm flex items-center justify-center transition-colors cursor-pointer text-muted-foreground hover:bg-muted hover:text-foreground ml-0.5"
+                            className="flex justify-center items-center hover:bg-muted ml-0.5 p-0 rounded-sm w-4 h-4 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                         >
                             <X size={12} />
                         </Button>
@@ -144,7 +144,7 @@ export const FinderBase: React.FC<FinderBaseProps> = ({
                     onClick={onPrev}
                     disabled={totalMatches === 0}
                     data-tooltip="Previous Match"
-                    className="flex justify-center items-center hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-30 rounded w-5 h-5 text-xs cursor-pointer transition-colors"
+                    className="flex justify-center items-center hover:bg-muted disabled:opacity-30 rounded w-5 h-5 text-muted-foreground hover:text-foreground text-xs transition-colors cursor-pointer"
                 >
                     <ChevronUp size={12} />
                 </Button>
@@ -155,7 +155,7 @@ export const FinderBase: React.FC<FinderBaseProps> = ({
                     onClick={onNext}
                     disabled={totalMatches === 0}
                     data-tooltip="Next Match"
-                    className="flex justify-center items-center hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-30 rounded w-5 h-5 text-xs cursor-pointer transition-colors"
+                    className="flex justify-center items-center hover:bg-muted disabled:opacity-30 rounded w-5 h-5 text-muted-foreground hover:text-foreground text-xs transition-colors cursor-pointer"
                 >
                     <ChevronDown size={12} />
                 </Button>
@@ -165,7 +165,7 @@ export const FinderBase: React.FC<FinderBaseProps> = ({
                     size="icon"
                     onClick={onClose}
                     data-tooltip="Close Widget (Escape)"
-                    className="flex justify-center items-center hover:bg-muted text-muted-foreground hover:text-foreground rounded w-5 h-5 text-xs cursor-pointer transition-colors"
+                    className="flex justify-center items-center hover:bg-muted rounded w-5 h-5 text-muted-foreground hover:text-foreground text-xs transition-colors cursor-pointer"
                 >
                     <X size={12} />
                 </Button>
