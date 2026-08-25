@@ -36,7 +36,7 @@ export function LeftPanelContainer() {
   return (
     <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden">
       <ContainerPanelHeader title="Codebase Explorer" path="workspace.left" />
-      <div className="flex-1 min-h-0 overflow-auto">
+      <div className="flex-1 min-h-0 overflow-hidden">
         <CodebaseExplorerPanel
           codebase={codebase}
           searchFilteredFiles={filter.searchFilteredFiles}

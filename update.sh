@@ -1,598 +1,813 @@
 #!/usr/bin/env bash
 set -e
 
-mkdir -p webview/src/features/explorer/wksp-cnt-graph/hooks
-mkdir -p webview/src/features/explorer/wksp-cnt-graph/components
+# Ensure target directory exists
+mkdir -p webview/src/features/explorer/wkp-lft-codebase-tree
 
-# 1. Update useGraphTopology.ts to include name and path in Cytoscape node data
-cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/hooks/useGraphTopology.ts
-import { useCallback, useRef } from 'react';
-import cytoscape from 'cytoscape';
+# Replace CodebaseExplorerPanel.tsx with a clean flex layout that guarantees toolbar visibility and single scrollbar
+cat << 'EOF' > webview/src/features/explorer/wkp-lft-codebase-tree/CodebaseExplorerPanel.tsx
+import React, { useRef, useEffect } from 'react';
+import { ChevronDown, ChevronRight, Folder, FileCode, Database, Download, Upload, LayoutList, ChevronsDown, ChevronsUp, Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ImportAstDialog } from './import-ast-dialog';
+import { ToolbarSeparator } from '@/components/app/toolbar-separator';
+import { FinderTree } from '@/components/app/core/finder/FinderTree';
+import { FinderHtml } from '@/components/app/core/finder/FinderHtml';
 import {
-  CodebaseData,
   CodebaseFile,
-  Dependency,
-  SelectedEntity,
+  CodebaseData,
+  SelectedEntity
 } from '@/shared/services/graph-rag-explorer';
-import { buildMemberKeyToken } from '@/services/view/graph-view.service';
-import { FOLDER_BASE_X_POSITIONS_CONFIG } from '@/features/explorer/constants/graph.constants';
-import { GraphRendering } from '@/shared/services/graph-rag-explorer/domain/model/types/type-graph-rendering';
-
-function getNodeDimensions(
-  file: CodebaseFile,
-  attributesVisible: boolean,
-  methodsVisible: boolean,
-  graphRendering: GraphRendering = 'uml'
-): { width: number; height: number } {
-  if (graphRendering === 'rounded') {
-    return { width: 64, height: 64 };
-  }
-
-  if (graphRendering === 'minized') {
-    return { width: 150, height: 32 };
-  }
-
-  if (graphRendering === 'condensed') {
-    if (file.type === 'config') {
-      return { width: 175, height: 42 };
-    }
-    return { width: 175, height: 68 };
-  }
-
-  if (file.type === 'config') {
-    return { width: 320, height: 240 };
-  }
-
-  const baseHeaderHeight = 76;
-
-  let attrHeight = 0;
-  if (attributesVisible) {
-    const attrCount = file.attributes?.length || 0;
-    attrHeight = attrCount > 0 ? 28 + attrCount * 18 : 36;
-  }
-
-  let methodHeight = 0;
-  if (methodsVisible) {
-    const methodCount = file.methods?.length || 0;
-    methodHeight = methodCount > 0 ? 28 + methodCount * 32 : 36;
-  }
-
-  const totalHeight = baseHeaderHeight + attrHeight + methodHeight;
-  return { width: 288, height: totalHeight };
-}
-
-function applyCustomHierarchicalLayout(
-  cy: cytoscape.Core,
-  effectiveFiles: CodebaseFile[],
-  codebase: CodebaseData,
-  attributesVisible: boolean,
-  methodsVisible: boolean,
-  graphRendering: GraphRendering
-) {
-  if (effectiveFiles.length === 0) return;
-
-  const inDegree = new Map<string, number>();
-  const adj = new Map<string, string[]>();
-
-  effectiveFiles.forEach(f => {
-    inDegree.set(f.id, 0);
-    adj.set(f.id, []);
-  });
-
-  codebase.dependencies.forEach(dep => {
-    const src = dep.sourceNode || dep.source;
-    const tgt = dep.targetNode || dep.target;
-    if (src && tgt && inDegree.has(src) && inDegree.has(tgt) && src !== tgt) {
-      adj.get(src)!.push(tgt);
-      inDegree.set(tgt, (inDegree.get(tgt) || 0) + 1);
-    }
-  });
-
-  const levelMap = new Map<string, number>();
-  const queue: string[] = [];
-
-  effectiveFiles.forEach(f => {
-    if ((inDegree.get(f.id) || 0) === 0) {
-      levelMap.set(f.id, 0);
-      queue.push(f.id);
-    }
-  });
-
-  if (queue.length === 0 && effectiveFiles.length > 0) {
-    levelMap.set(effectiveFiles[0].id, 0);
-    queue.push(effectiveFiles[0].id);
-  }
-
-  while (queue.length > 0) {
-    const curr = queue.shift()!;
-    const currLevel = levelMap.get(curr) || 0;
-
-    const neighbors = adj.get(curr) || [];
-    neighbors.forEach(nbr => {
-      const nextLevel = currLevel + 1;
-      if (!levelMap.has(nbr) || levelMap.get(nbr)! < nextLevel) {
-        levelMap.set(nbr, nextLevel);
-        queue.push(nbr);
-      }
-    });
-  }
-
-  effectiveFiles.forEach(f => {
-    if (!levelMap.has(f.id)) {
-      levelMap.set(f.id, 0);
-    }
-  });
-
-  const maxLevel = Math.max(...Array.from(levelMap.values()), 0);
-  const levels: CodebaseFile[][] = Array.from({ length: maxLevel + 1 }, () => []);
-
-  effectiveFiles.forEach(f => {
-    const lvl = levelMap.get(f.id) || 0;
-    levels[lvl].push(f);
-  });
-
-  const edgeLabelLengths = new Map<string, number>();
-  codebase.dependencies.forEach(dep => {
-    const src = dep.sourceNode || dep.source;
-    const tgt = dep.targetNode || dep.target;
-    const label = dep.label || '';
-    if (src && tgt && label) {
-      const key1 = `${src}__${tgt}`;
-      const key2 = `${tgt}__${src}`;
-      edgeLabelLengths.set(key1, Math.max(edgeLabelLengths.get(key1) || 0, label.length));
-      edgeLabelLengths.set(key2, Math.max(edgeLabelLengths.get(key2) || 0, label.length));
-    }
-  });
-
-  let currentY = 80;
-
-  levels.forEach((levelFiles) => {
-    if (levelFiles.length === 0) return;
-
-    const levelHeights = levelFiles.map(f => getNodeDimensions(f, attributesVisible, methodsVisible, graphRendering).height);
-    const maxLevelHeight = Math.max(...levelHeights, 42);
-    const dimsList = levelFiles.map(f => getNodeDimensions(f, attributesVisible, methodsVisible, graphRendering));
-
-    const gaps: number[] = [];
-    for (let i = 0; i < levelFiles.length - 1; i++) {
-      const f1 = levelFiles[i].id;
-      const f2 = levelFiles[i + 1].id;
-      const labelLen = Math.max(
-        edgeLabelLengths.get(`${f1}__${f2}`) || 0,
-        edgeLabelLengths.get(`${f2}__${f1}`) || 0
-      );
-      const gapX = labelLen > 0 ? Math.round(labelLen * 7) + 20 : 10;
-      gaps.push(gapX);
-    }
-
-    const totalLevelWidth = dimsList.reduce((acc, d) => acc + d.width, 0) + gaps.reduce((acc, g) => acc + g, 0);
-    let currentX = 600 - totalLevelWidth / 2;
-
-    levelFiles.forEach((file, idx) => {
-      const cyNode = cy.getElementById(file.id);
-      const dims = dimsList[idx];
-
-      if (cyNode && cyNode.length > 0) {
-        cyNode.position({
-          x: currentX + dims.width / 2,
-          y: currentY + maxLevelHeight / 2
-        });
-      }
-
-      currentX += dims.width + (gaps[idx] || 10);
-    });
-
-    currentY += maxLevelHeight + 50;
-  });
-}
-
-export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) {
-  const lastStructureKeyRef = useRef<string>('');
-
-  const updateGraphTopology = useCallback((
-    searchFilteredFiles: CodebaseFile[],
-    visibleFiles: Record<string, boolean>,
-    codebase: CodebaseData,
-    impactedSet: Set<string>,
-    currentLayout: string,
-    folderPositions: Record<string, { label: string }>,
-    attributesVisible: boolean = false,
-    methodsVisible: boolean = true,
-    selectedEntity: SelectedEntity | null = null,
-    showSelectedOnly: boolean = false,
-    graphRendering: GraphRendering = 'uml'
-  ) => {
-    if (!cyRef.current) return;
-    const cy = cyRef.current;
-
-    const effectiveFiles = (showSelectedOnly && selectedEntity)
-      ? searchFilteredFiles.filter(f => f.id === selectedEntity.nodeId || impactedSet.has(f.id))
-      : searchFilteredFiles;
-
-    const structureKey = JSON.stringify({
-      files: effectiveFiles.map(f => f.id),
-      visible: visibleFiles,
-      layout: currentLayout,
-      attributesVisible,
-      methodsVisible,
-      graphRendering,
-      deps: codebase.dependencies.map(d => d.id)
-    });
-
-    const isStructureChanged = lastStructureKeyRef.current !== structureKey;
-
-    if (isStructureChanged) {
-      lastStructureKeyRef.current = structureKey;
-
-      cy.elements().remove();
-
-      const filesByFolder: Record<string, CodebaseFile[]> = {};
-      effectiveFiles.forEach(file => {
-        const folderKey = file.path.split('/')[0] || 'other';
-        if (!filesByFolder[folderKey]) filesByFolder[folderKey] = [];
-        filesByFolder[folderKey].push(file);
-      });
-
-      const allFolderKeys = Array.from(
-        new Set([...Object.keys(folderPositions), ...Object.keys(filesByFolder)])
-      );
-
-      let maxLabelLength = 0;
-      codebase.dependencies.forEach(dep => {
-        if (dep.label) {
-          maxLabelLength = Math.max(maxLabelLength, dep.label.length);
-        }
-      });
-      const dynamicGapX = maxLabelLength > 0 ? Math.round(maxLabelLength * 7) + 20 : 10;
-      const gapY = 50;
-
-      allFolderKeys.forEach(folderKey => {
-        if ((filesByFolder[folderKey] || []).length > 0) {
-          const label = folderPositions[folderKey]?.label || `📂 ${folderKey.charAt(0).toUpperCase() + folderKey.slice(1)}`;
-          cy.add({ data: { id: `folder__${folderKey}`, label }, classes: 'folder' });
-        }
-      });
-
-      allFolderKeys.forEach((folderKey, folderIdx) => {
-        const folderFiles = filesByFolder[folderKey] || [];
-        if (folderFiles.length === 0) return;
-
-        const baseX = FOLDER_BASE_X_POSITIONS_CONFIG[folderKey as keyof typeof FOLDER_BASE_X_POSITIONS_CONFIG] || (40 + folderIdx * 450);
-
-        const numCols = 2;
-        let currentY = 80;
-        const rowCount = Math.ceil(folderFiles.length / numCols);
-
-        for (let r = 0; r < rowCount; r++) {
-          const rowFiles = folderFiles.slice(r * numCols, (r + 1) * numCols);
-          const rowHeights = rowFiles.map(f => getNodeDimensions(f, attributesVisible, methodsVisible, graphRendering).height);
-          const maxRowHeight = Math.max(...rowHeights, 42);
-
-          rowFiles.forEach((file, c) => {
-            const dims = getNodeDimensions(file, attributesVisible, methodsVisible, graphRendering);
-            const absX = baseX + 30 + c * (dims.width + dynamicGapX) + dims.width / 2;
-            const absY = currentY + dims.height / 2;
-
-            cy.add({
-              data: {
-                id: file.id,
-                name: file.name,
-                path: file.path || file.id,
-                parent: `folder__${folderKey}`,
-                width: dims.width,
-                height: dims.height,
-                shape: graphRendering === 'rounded' ? 'ellipse' : 'rectangle'
-              },
-              position: { x: absX, y: absY }
-            });
-          });
-
-          currentY += maxRowHeight + gapY;
-        }
-      });
-
-      codebase.dependencies.forEach((dep: Dependency) => {
-        const sourceNodeId = dep.sourceNode || dep.source;
-        const targetNodeId = dep.targetNode || dep.target;
-
-        if (
-          sourceNodeId &&
-          targetNodeId &&
-          visibleFiles[sourceNodeId] &&
-          visibleFiles[targetNodeId] &&
-          cy.getElementById(sourceNodeId).length > 0 &&
-          cy.getElementById(targetNodeId).length > 0
-        ) {
-          cy.add({
-            data: { id: dep.id, source: sourceNodeId, target: targetNodeId, label: dep.label }
-          });
-        }
-      });
-
-      if (currentLayout === 'hierarchical' || currentLayout === 'breadthfirst' || currentLayout === 'dagre') {
-        applyCustomHierarchicalLayout(cy, effectiveFiles, codebase, attributesVisible, methodsVisible, graphRendering);
-      } else if (currentLayout !== 'preset') {
-        cy.layout({
-          name: currentLayout,
-          animate: false,
-          fit: true,
-          padding: 30,
-        } as cytoscape.LayoutOptions).run();
-      }
-
-      cy.fit(undefined, 30);
-      if (cy.zoom() > 1) {
-        cy.zoom(1);
-      }
-      cy.center();
-    }
-
-    codebase.dependencies.forEach((dep: Dependency) => {
-      const edge = cy.getElementById(dep.id);
-      if (edge && edge.length > 0) {
-        const sourceNodeId = dep.sourceNode || dep.source;
-        const targetNodeId = dep.targetNode || dep.target;
-        const sourceHandle = dep.sourceHandle || 'header';
-        const targetHandle = dep.targetHandle || 'header';
-
-        if (sourceNodeId && targetNodeId) {
-          const sourceKeyMember = buildMemberKeyToken(sourceNodeId, sourceHandle);
-          const targetKeyMember = buildMemberKeyToken(targetNodeId, targetHandle);
-
-          const isEdgeImpacted =
-            (impactedSet.has(sourceNodeId) || impactedSet.has(sourceKeyMember)) &&
-            (impactedSet.has(targetNodeId) || impactedSet.has(targetKeyMember));
-
-          if (isEdgeImpacted) {
-            edge.addClass('impacted');
-          } else {
-            edge.removeClass('impacted');
-          }
-        }
-      }
-    });
-
-  }, [cyRef]);
-
-  return { updateGraphTopology };
-}
-EOF
-
-# 2. Update useCytoscapeInstance.ts to dynamically set/remove 'data-tooltip' on containerNode for the global Tooltip component
-cat << 'EOF' > webview/src/features/explorer/wksp-cnt-graph/hooks/useCytoscapeInstance.ts
-import { useEffect, useRef, useState, useCallback } from 'react';
-import cytoscape from 'cytoscape';
+import { FOLDER_THEME_REGISTRY_CONFIG } from '../constants/graph.constants';
+import {
+  useCodebaseExplorerPanel,
+  ViewMode,
+  ScopeGroup,
+  SubFolderGroup,
+  FolderTreeNode,
+  getCommonFolderPath
+} from './hooks/use-codebase-explorer-panel';
+import { useTreeviewFinder } from './hooks/use-treeview-finder';
+import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
+import { CODEBASE_GROUPING_LIST, CODEBASE_GROUPING_ICON_MAP } from './type-codebase-grouping';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 
-export interface GraphState {
-  zoom: number;
-  pan: { x: number; y: number };
-  nodePositions: Record<string, { x: number; y: number; w: number; h: number }>;
+interface TriStateCheckboxProps {
+  checked: boolean;
+  indeterminate: boolean;
+  onChange: () => void;
+  className?: string;
 }
 
-export function useCytoscapeInstance(
-  isDarkMode: boolean,
-  onNodeSelect: (nodeId: string) => void,
-  onNodeDoubleClick?: (nodeId: string) => void,
-  onNodeCmdClick?: (nodeId: string) => void
-) {
-  const [containerNode, setContainerNode] = useState<HTMLDivElement | null>(null);
-  const cyRef = useRef<cytoscape.Core | null>(null);
-  const rafIdRef = useRef<number | null>(null);
+function TriStateCheckbox({ checked, indeterminate, onChange, className }: TriStateCheckboxProps) {
+  const checkboxRef = useRef<HTMLInputElement>(null);
 
-  const onNodeSelectRef = useRef(onNodeSelect);
   useEffect(() => {
-    onNodeSelectRef.current = onNodeSelect;
-  }, [onNodeSelect]);
-
-  const onNodeDoubleClickRef = useRef(onNodeDoubleClick);
-  useEffect(() => {
-    onNodeDoubleClickRef.current = onNodeDoubleClick;
-  }, [onNodeDoubleClick]);
-
-  const onNodeCmdClickRef = useRef(onNodeCmdClick);
-  useEffect(() => {
-    onNodeCmdClickRef.current = onNodeCmdClick;
-  }, [onNodeCmdClick]);
-
-  const [graphState, setGraphState] = useState<GraphState>({
-    zoom: 1,
-    pan: { x: 0, y: 0 },
-    nodePositions: {}
-  });
-
-  const containerRef = useCallback((node: HTMLDivElement | null) => {
-    if (node !== null) {
-      setContainerNode(node);
+    if (checkboxRef.current) {
+      checkboxRef.current.indeterminate = indeterminate;
     }
-  }, []);
+  }, [indeterminate]);
 
+  return (
+    <input
+      ref={checkboxRef}
+      type="checkbox"
+      checked={checked}
+      onChange={onChange}
+      className={`rounded w-3.5 h-3.5 border-border bg-background text-primary cursor-pointer shrink-0 accent-primary ${className || ''}`}
+    />
+  );
+}
+
+const DYNAMIC_COLORS = [
+  { fill: 'fill-blue-500/20', text: 'text-blue-500', iconColor: 'text-blue-500' },
+  { fill: 'fill-emerald-500/20', text: 'text-emerald-500', iconColor: 'text-emerald-500' },
+  { fill: 'fill-amber-500/20', text: 'text-amber-500', iconColor: 'text-amber-500' },
+  { fill: 'fill-purple-500/20', text: 'text-purple-500', iconColor: 'text-purple-500' },
+  { fill: 'fill-pink-500/20', text: 'text-pink-500', iconColor: 'text-pink-500' },
+  { fill: 'fill-indigo-500/20', text: 'text-indigo-500', iconColor: 'text-indigo-500' },
+  { fill: 'fill-rose-500/20', text: 'text-rose-500', iconColor: 'text-rose-500' },
+  { fill: 'fill-cyan-500/20', text: 'text-cyan-500', iconColor: 'text-cyan-500' },
+];
+
+function getAllFilesFromNode(node: FolderTreeNode): CodebaseFile[] {
+  let files = [...node.files];
+  node.children.forEach((child) => {
+    files = files.concat(getAllFilesFromNode(child));
+  });
+  return files;
+}
+
+interface RecursiveFolderNodeProps {
+  node: FolderTreeNode;
+  depth: number;
+  expandedFolders: Record<string, boolean>;
+  visibleFiles: Record<string, boolean>;
+  toggleFolder: (folder: string) => void;
+  toggleFileCheckbox: (id: string) => void;
+  setSelectedEntity: (entity: SelectedEntity) => void;
+  onFocusNode?: (nodeId: string) => void;
+  theme: any;
+  toggleFileListCheckbox: (files: CodebaseFile[]) => void;
+  handleFileDoubleClick: (file: CodebaseFile, e?: React.MouseEvent) => void;
+  handleFolderDoubleClick: (folderPath: string, files?: CodebaseFile[], e?: React.MouseEvent) => void;
+  handleFileClick: (file: CodebaseFile) => void;
+  handleFolderClick: (folderKey: string, folderPath?: string) => void;
+  finderState: {
+    isFinderOpen: boolean;
+    searchQuery: string;
+    caseSensitive: boolean;
+    wholeWord: boolean;
+    useRegex: boolean;
+    isFilterActive: boolean;
+    currentMatchIndex: number;
+    matchingFileIds: Set<string>;
+  };
+}
+
+function RecursiveFolderNode({
+  node,
+  depth,
+  expandedFolders,
+  visibleFiles,
+  toggleFolder,
+  toggleFileCheckbox,
+  setSelectedEntity,
+  onFocusNode,
+  theme,
+  toggleFileListCheckbox,
+  handleFileDoubleClick,
+  handleFolderDoubleClick,
+  handleFileClick,
+  handleFolderClick,
+  finderState,
+}: RecursiveFolderNodeProps) {
+  const isExpanded = expandedFolders[node.id] ?? true;
+  const allNodeFiles = getAllFilesFromNode(node);
+
+  const displayFiles = finderState.isFilterActive && finderState.searchQuery
+    ? node.files.filter((f) => finderState.matchingFileIds.has(f.id))
+    : node.files;
+
+  if (finderState.isFilterActive && finderState.searchQuery && displayFiles.length === 0 && node.children.length === 0) {
+    return null;
+  }
+
+  const isAllChecked = allNodeFiles.length > 0 && allNodeFiles.every((f) => visibleFiles[f.id]);
+  const isSomeChecked = allNodeFiles.some((f) => visibleFiles[f.id]);
+  const isIndeterminate = isSomeChecked && !isAllChecked;
+
+  return (
+    <div key={node.id} className="mb-1">
+      <div className="group flex items-center gap-1.5 hover:bg-muted/50 px-1 py-1 rounded">
+        <TriStateCheckbox
+          checked={isAllChecked}
+          indeterminate={isIndeterminate}
+          onChange={() => toggleFileListCheckbox(allNodeFiles)}
+        />
+        <div
+          className="flex flex-1 items-center gap-1.5 min-w-0 cursor-pointer"
+          onClick={() => handleFolderClick(node.id, node.folderPath)}
+          onDoubleClick={(e) => handleFolderDoubleClick(node.folderPath, allNodeFiles, e)}
+        >
+          {isExpanded ? (
+            <ChevronDown size={14} className="shrink-0" />
+          ) : (
+            <ChevronRight size={14} className="shrink-0" />
+          )}
+          <Folder size={14} className={`${theme.fill} ${theme.text} shrink-0`} />
+          <span className="font-semibold text-foreground/90 truncate" title={node.name}>
+            {finderState.isFinderOpen && finderState.searchQuery ? (
+              <FinderHtml
+                text={`${node.name}/`}
+                searchQuery={finderState.searchQuery}
+                caseSensitive={finderState.caseSensitive}
+                wholeWord={finderState.wholeWord}
+                useRegex={finderState.useRegex}
+                currentMatchIndex={finderState.currentMatchIndex}
+                matchStartIndex={0}
+              />
+            ) : (
+              `${node.name}/`
+            )}
+          </span>
+        </div>
+      </div>
+
+      {isExpanded && (
+        <div className="space-y-1 mt-1 ml-2.5 pl-3 border-border border-l">
+          {displayFiles.map((file) => (
+            <div
+              key={file.id}
+              id={`tree-file-node-${file.id}`}
+              className="group flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded transition-colors"
+            >
+              <Checkbox
+                checked={!!visibleFiles[file.id]}
+                onCheckedChange={() => toggleFileCheckbox(file.id)}
+                className="w-3.5 h-3.5 shrink-0"
+              />
+              <span
+                className={`flex items-center gap-1.5 truncate cursor-pointer flex-1 min-w-0 ${
+                  visibleFiles[file.id] ? 'text-foreground font-medium' : 'text-muted-foreground line-through'
+                }`}
+                onClick={() => handleFileClick(file)}
+                onDoubleClick={(e) => handleFileDoubleClick(file, e)}
+              >
+                {file.type === 'config' ? (
+                  <Database size={13} className="text-amber-500 shrink-0" />
+                ) : (
+                  <FileCode
+                    size={13}
+                    className={
+                      file.type === 'interface'
+                        ? 'text-indigo-400 shrink-0'
+                        : theme.iconColor || 'text-slate-400'
+                    }
+                  />
+                )}
+                <span className="truncate">
+                  {finderState.isFinderOpen && finderState.searchQuery ? (
+                    <FinderHtml
+                      text={file.name}
+                      searchQuery={finderState.searchQuery}
+                      caseSensitive={finderState.caseSensitive}
+                      wholeWord={finderState.wholeWord}
+                      useRegex={finderState.useRegex}
+                      currentMatchIndex={finderState.currentMatchIndex}
+                      matchStartIndex={0}
+                    />
+                  ) : (
+                    file.name
+                  )}
+                </span>
+              </span>
+            </div>
+          ))}
+
+          {node.children.map((childNode, childIdx) => (
+            <RecursiveFolderNode
+              key={childNode.id}
+              node={childNode}
+              depth={depth + 1}
+              expandedFolders={expandedFolders}
+              visibleFiles={visibleFiles}
+              toggleFolder={toggleFolder}
+              toggleFileCheckbox={toggleFileCheckbox}
+              setSelectedEntity={setSelectedEntity}
+              onFocusNode={onFocusNode}
+              theme={DYNAMIC_COLORS[(depth + childIdx) % DYNAMIC_COLORS.length]}
+              toggleFileListCheckbox={toggleFileListCheckbox}
+              handleFileDoubleClick={handleFileDoubleClick}
+              handleFolderDoubleClick={handleFolderDoubleClick}
+              handleFileClick={handleFileClick}
+              handleFolderClick={handleFolderClick}
+              finderState={finderState}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface CodebaseExplorerPanelProps {
+  codebase: CodebaseData;
+  searchFilteredFiles: CodebaseFile[];
+  expandedFolders: Record<string, boolean>;
+  visibleFiles: Record<string, boolean>;
+  toggleFolder: (folder: string) => void;
+  toggleFolderCheckbox: (folder: string) => void;
+  toggleFileCheckbox: (id: string) => void;
+  setSelectedEntity: (entity: SelectedEntity) => void;
+  onFocusNode?: (nodeId: string) => void;
+  onImportCodebase?: (importedData: CodebaseData) => void;
+}
+
+export function CodebaseExplorerPanel({
+  codebase,
+  searchFilteredFiles,
+  expandedFolders,
+  visibleFiles,
+  toggleFolder,
+  toggleFolderCheckbox,
+  toggleFileCheckbox,
+  setSelectedEntity,
+  onFocusNode,
+  onImportCodebase
+}: CodebaseExplorerPanelProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  const {
+    isImportOpen,
+    setIsImportOpen,
+    handleExportCodebase,
+    viewMode,
+    setViewMode,
+    groupedScopes,
+    duplicateFileIds,
+    handleExpandAll,
+    handleCollapseAll,
+  } = useCodebaseExplorerPanel(codebase, expandedFolders, toggleFolder);
+
+  const finderState = useTreeviewFinder(codebase, onFocusNode);
+
+  // Keyboard shortcut listener (Cmd+F / Ctrl+F) inside Explorer Panel
   useEffect(() => {
-    if (!containerNode) return;
-
-    const cy = cytoscape({
-      container: containerNode,
-      style: [
-        { selector: 'node[width][height]', style: { 'shape': 'data(shape)' as any, 'opacity': 0.0, 'width': 'data(width)', 'height': 'data(height)' } },
-        { selector: 'node.folder', style: { 'shape': 'rectangle', 'opacity': 1.0, 'label': 'data(label)', 'text-valign': 'top', 'text-halign': 'center', 'text-margin-y': -12, 'font-size': '12px', 'font-family': 'monospace', 'font-weight': 'bold', 'color': isDarkMode ? '#94a3b8' : '#475569', 'background-opacity': 0.02, 'background-color': isDarkMode ? '#475569' : '#94a3b8', 'border-width': '2px', 'border-color': isDarkMode ? '#334155' : '#cbd5e1', 'border-style': 'dashed', 'padding': '40' } },
-        { selector: 'edge', style: { 'width': 2, 'line-color': isDarkMode ? '#475569' : '#cbd5e1', 'target-arrow-color': isDarkMode ? '#475569' : '#cbd5e1', 'target-arrow-shape': 'triangle', 'curve-style': 'bezier', 'label': 'data(label)', 'font-size': '9px', 'font-family': 'monospace', 'color': isDarkMode ? '#94a3b8' : '#475569', 'text-background-opacity': 1, 'text-background-color': isDarkMode ? '#18181b' : '#ffffff', 'text-background-padding': '3px', 'text-background-shape': 'roundrectangle' } },
-        { selector: 'edge.impacted', style: { 'line-color': '#eab308', 'target-arrow-color': '#eab308', 'width': 3.5, 'color': isDarkMode ? '#fef08a' : '#854d0e', 'text-background-color': isDarkMode ? '#422006' : '#fef9c3', 'text-background-opacity': 1 } }
-      ],
-      userZoomingEnabled: false,
-      userPanningEnabled: true,
-      boxSelectionEnabled: false
-    });
-
-    cyRef.current = cy;
-
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      e.stopImmediatePropagation();
-
-      if (!cyRef.current || cyRef.current.destroyed()) return;
-      const currentCy = cyRef.current;
-
-      const isCmdOrCtrl = e.metaKey || e.ctrlKey;
-
-      if (isCmdOrCtrl) {
-        const zoomFactor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
-        const currentZoom = currentCy.zoom();
-        const minZoom = currentCy.minZoom();
-        const maxZoom = currentCy.maxZoom();
-        let newZoom = currentZoom * zoomFactor;
-        if (newZoom < minZoom) newZoom = minZoom;
-        if (newZoom > maxZoom) newZoom = maxZoom;
-
-        const rect = containerNode.getBoundingClientRect();
-        const renderedPosition = {
-          x: e.clientX - rect.left,
-          y: e.clientY - rect.top,
-        };
-
-        currentCy.zoom({
-          level: newZoom,
-          renderedPosition: renderedPosition,
-        });
-      } else {
-        const pan = currentCy.pan();
-        currentCy.pan({
-          x: pan.x - e.deltaX,
-          y: pan.y - e.deltaY,
-        });
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
+        if (panelRef.current && (panelRef.current.contains(document.activeElement) || panelRef.current.contains(e.target as Node))) {
+          e.preventDefault();
+          e.stopPropagation();
+          finderState.openAndFocusFinder();
+        }
       }
     };
 
-    containerNode.addEventListener('wheel', handleWheel, { capture: true, passive: false });
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [finderState.openAndFocusFinder]);
 
-    // Node Cursor & data-tooltip Attribute Handlers for the global Tooltip component
-    cy.on('mouseover', 'node', (evt) => {
-      const node = evt.target;
-      if (!node.hasClass('folder') && containerNode) {
-        containerNode.style.cursor = 'pointer';
-        const name = node.data('name') || node.id();
-        const path = node.data('path') || '';
-        const tooltipText = path ? `${name} (${path})` : name;
-        if (tooltipText) {
-          containerNode.setAttribute('data-tooltip', tooltipText);
-        }
+  const handleToggleFolder = (folderKey: string, folderPath?: string) => {
+    if (expandedFolders[folderKey] === undefined) {
+      toggleFolder(folderKey);
+      toggleFolder(folderKey);
+    } else {
+      toggleFolder(folderKey);
+    }
+    if (folderPath) {
+      logInfo(`Folder single-clicked: ${folderPath}. Revealing in VS Code Explorer and copying to clipboard...`);
+      vsCodeApiService.revealInExplorer(folderPath);
+      vsCodeApiService.copyToClipboard(folderPath);
+    }
+  };
+
+  const handleFileClick = (file: CodebaseFile) => {
+    if (file.path) {
+      logInfo(`File single-clicked: ${file.path}. Revealing in VS Code Explorer and copying to clipboard...`);
+      vsCodeApiService.revealInExplorer(file.path);
+      vsCodeApiService.copyToClipboard(file.path);
+    }
+    if (onFocusNode) {
+      onFocusNode(file.id);
+    } else {
+      setSelectedEntity({ type: 'node', nodeId: file.id });
+    }
+  };
+
+  const handleFileDoubleClick = (file: CodebaseFile, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (file?.path) {
+      logInfo(`Double-clicked file item: ${file.id}. Opening in VS Code: ${file.path}`);
+      vsCodeApiService.revealInExplorer(file.path);
+      vsCodeApiService.openFile(file.path);
+    }
+  };
+
+  const handleFolderDoubleClick = (folderPath: string, files?: CodebaseFile[], e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    const targetPath = folderPath || getCommonFolderPath(files || []);
+    if (targetPath) {
+      logInfo(`Double-clicked folder item. Revealing directory in VS Code Explorer: ${targetPath}`);
+      vsCodeApiService.revealInExplorer(targetPath);
+    }
+  };
+
+  const toggleFileListCheckbox = (files: CodebaseFile[]) => {
+    const isAllChecked = files.length > 0 && files.every((f) => visibleFiles[f.id]);
+    const targetState = !isAllChecked;
+    files.forEach((f) => {
+      if (!!visibleFiles[f.id] !== targetState) {
+        toggleFileCheckbox(f.id);
       }
     });
+  };
 
-    cy.on('mouseout', 'node', () => {
-      if (containerNode) {
-        containerNode.style.cursor = 'default';
-        containerNode.removeAttribute('data-tooltip');
-      }
-    });
+  return (
+    <div
+      ref={panelRef}
+      id="panel-codebase-explorer"
+      tabIndex={-1}
+      className="flex flex-col bg-card w-full h-full min-h-0 overflow-hidden outline-none"
+    >
+      {/* 1. Header Toolbar - Fixed Height */}
+      <div className="flex justify-between items-center bg-muted/20 p-0.5 border-border border-b shrink-0">
+        <div className="flex items-center gap-1.5 pl-2 w-full">
+          <LayoutList size={14} className="text-muted-foreground shrink-0" />
+          <SelectFromTypeBuilder
+            id="select-display-level"
+            value={viewMode}
+            onChange={(val) => setViewMode(val as ViewMode)}
+            className="py-0"
+            triggerClassName="!h-6 min-h-0 py-0 px-2 text-xs border-border rounded-sm font-mono"
+            options={CODEBASE_GROUPING_LIST.map((key) => ({
+              value: key,
+              icon: CODEBASE_GROUPING_ICON_MAP[key].icon,
+              label: CODEBASE_GROUPING_ICON_MAP[key].label,
+            }))}
+          />
+        </div>
 
-    // Single / Cmd + Click
-    cy.on('tap', 'node', (evt) => {
-      const node = evt.target;
-      if (!node.hasClass('folder')) {
-        const nodeId = node.id();
-        const nodePath = node.data('path') || node.data('absolutePath') || node.data('filePath') || nodeId;
-        if (nodePath) {
-          logInfo(`Cytoscape node single-clicked: ${nodeId} (${nodePath}). Revealing in VS Code Explorer & copying...`);
-          vsCodeApiService.revealInExplorer(nodePath);
-          vsCodeApiService.copyToClipboard(nodePath);
-        }
-        const origEvt = evt.originalEvent as MouseEvent | undefined;
-        if (origEvt && (origEvt.metaKey || origEvt.ctrlKey)) {
-          onNodeCmdClickRef.current?.(nodeId);
-        } else {
-          onNodeSelectRef.current(nodeId);
-        }
-      }
-    });
+        <div className="flex items-center gap-0.5 pr-1 shrink-0">
+          <Button
+            id="btn-toggle-treeview-finder"
+            className={`hover:bg-muted rounded w-7 h-7 transition-colors ${
+              finderState.isFinderOpen ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
+            }`}
+            variant="ghost"
+            size="icon"
+            onClick={finderState.toggleFinder}
+            data-tooltip="Toggle Treeview Finder (Loupe)"
+          >
+            <Search size={12} />
+          </Button>
 
-    // Double Click
-    cy.on('dbltap', 'node', (evt) => {
-      if (!evt.target.hasClass('folder')) {
-        const nodeId = evt.target.id();
-        const nodePath = evt.target.data('path') || evt.target.data('absolutePath') || evt.target.data('filePath') || nodeId;
-        if (nodePath) {
-          logInfo(`Cytoscape node double-clicked: ${nodeId} (${nodePath}). Opening in VS Code...`);
-          vsCodeApiService.revealInExplorer(nodePath);
-          vsCodeApiService.openFile(nodePath);
-        }
-        onNodeDoubleClickRef.current?.(nodeId);
-      }
-    });
+          <ToolbarSeparator />
 
-    const syncGraph = () => {
-      if (rafIdRef.current !== null) {
-        cancelAnimationFrame(rafIdRef.current);
-      }
+          <Button
+            id="btn-collapse-all"
+            className="hover:bg-muted rounded w-7 h-7 text-muted-foreground hover:text-foreground transition-colors"
+            variant="ghost"
+            size="icon"
+            onClick={() => handleCollapseAll()}
+            data-tooltip="Collapse All"
+          >
+            <ChevronsUp size={12} />
+          </Button>
+          <Button
+            id="btn-expand-all"
+            className="hover:bg-muted rounded w-7 h-7 text-muted-foreground hover:text-foreground transition-colors"
+            variant="ghost"
+            size="icon"
+            onClick={() => handleExpandAll()}
+            data-tooltip="Expand All"
+          >
+            <ChevronsDown size={12} />
+          </Button>
 
-      rafIdRef.current = requestAnimationFrame(() => {
-        if (!cyRef.current || cyRef.current.destroyed()) return;
+          <ToolbarSeparator />
+          <Button
+            id="btn-open-import-ast-dialog"
+            className="hover:bg-muted rounded w-7 h-7 text-muted-foreground hover:text-foreground transition-colors"
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsImportOpen(true)}
+            data-tooltip="Open AST Codebase import dialog"
+          >
+            <Upload size={12} />
+          </Button>
 
-        const currentCy = cyRef.current;
-        const zoom = currentCy.zoom();
-        const pan = currentCy.pan();
-        const positions: Record<string, { x: number; y: number; w: number; h: number }> = {};
+          <Button
+            id="btn-export-ast-json"
+            className="hover:bg-muted rounded w-7 h-7 text-muted-foreground hover:text-foreground transition-colors"
+            variant="ghost"
+            size="icon"
+            onClick={handleExportCodebase}
+            data-tooltip="Export current session structure as AST Codebase to JSON file"
+          >
+            <Download size={12} />
+          </Button>
+        </div>
+      </div>
 
-        currentCy.nodes().forEach(node => {
-          if (node.hasClass('folder')) return;
-          const bb = node.boundingBox({ includeLabels: false, includeEdges: false });
-          positions[node.id()] = {
-            x: Math.round(bb.x1),
-            y: Math.round(bb.y1),
-            w: Math.round(bb.w),
-            h: Math.round(bb.h)
-          };
-        });
+      {/* 2. Finder Bar (Conditional) - Fixed Height */}
+      {finderState.isFinderOpen && (
+        <div id="container-treeview-finder" className="p-0 bg-muted/15 shrink-0">
+          <FinderTree
+            styleView="toolbar"
+            focusTrigger={finderState.focusTrigger}
+            searchQuery={finderState.searchQuery}
+            setSearchQuery={finderState.setSearchQuery}
+            caseSensitive={finderState.caseSensitive}
+            setCaseSensitive={finderState.setCaseSensitive}
+            wholeWord={finderState.wholeWord}
+            setWholeWord={finderState.setWholeWord}
+            useRegex={finderState.useRegex}
+            setUseRegex={finderState.setUseRegex}
+            isFilterActive={finderState.isFilterActive}
+            setIsFilterActive={finderState.setIsFilterActive}
+            collapseNodeSearchNotCompliantEnabled={finderState.collapseNodeSearchNotCompliantEnabled}
+            setCollapseNodeSearchNotCompliantEnabled={finderState.setCollapseNodeSearchNotCompliantEnabled}
+            currentMatchIndex={finderState.currentMatchIndex}
+            totalMatches={finderState.totalMatches}
+            onNext={finderState.handleNextMatch}
+            onPrev={finderState.handlePrevMatch}
+            onClose={() => finderState.setIsFinderOpen(false)}
+          />
+        </div>
+      )}
 
-        setGraphState(prev => {
-          const zoomDiff = Math.abs(prev.zoom - zoom);
-          const panXDiff = Math.abs(prev.pan.x - pan.x);
-          const panYDiff = Math.abs(prev.pan.y - pan.y);
+      <ImportAstDialog
+        open={isImportOpen}
+        onOpenChange={setIsImportOpen}
+        onImport={(data) => {
+          if (onImportCodebase) onImportCodebase(data);
+        }}
+      />
 
-          let positionsChanged = Object.keys(prev.nodePositions).length !== Object.keys(positions).length;
-          if (!positionsChanged) {
-            for (const key of Object.keys(positions)) {
-              const p1 = prev.nodePositions[key];
-              const p2 = positions[key];
-              if (!p1 || Math.abs(p1.x - p2.x) > 1 || Math.abs(p1.y - p2.y) > 1 || Math.abs(p1.w - p2.w) > 1 || Math.abs(p1.h - p2.h) > 1) {
-                positionsChanged = true;
-                break;
-              }
-            }
+      {/* 3. Tree Area - Takes all remaining vertical space, ONLY scrollbar here */}
+      <div id="tree-codebase-files" className="flex-1 min-h-0 p-4 overflow-y-auto font-mono text-xs">
+        {groupedScopes.map((scope: ScopeGroup) => {
+          const scopeTheme = FOLDER_THEME_REGISTRY_CONFIG[scope.key] || FOLDER_THEME_REGISTRY_CONFIG.default;
+          const isScopeExpanded = expandedFolders[scope.key] ?? true;
+
+          const allScopeFiles = scope.files;
+          const displayScopeFiles = finderState.isFilterActive && finderState.searchQuery
+            ? scope.files.filter((f) => finderState.matchingFileIds.has(f.id))
+            : scope.files;
+
+          if (finderState.isFilterActive && finderState.searchQuery && displayScopeFiles.length === 0 && !scope.folderTree && !scope.subFolders) {
+            return null;
           }
 
-          if (zoomDiff < 0.001 && panXDiff < 0.5 && panYDiff < 0.5 && !positionsChanged) {
-            return prev;
-          }
+          const isScopeAllChecked = allScopeFiles.length > 0 && allScopeFiles.every((f) => visibleFiles[f.id]);
+          const isScopeSomeChecked = allScopeFiles.some((f) => visibleFiles[f.id]);
+          const isScopeIndeterminate = isScopeSomeChecked && !isScopeAllChecked;
 
-          return { zoom, pan: { x: pan.x, y: pan.y }, nodePositions: positions };
-        });
-      });
-    };
+          return (
+            <div key={scope.key} className="mb-4">
+              <div className="group flex items-center gap-1.5 hover:bg-muted/50 px-1 py-1 rounded">
+                <TriStateCheckbox
+                  checked={isScopeAllChecked}
+                  indeterminate={isScopeIndeterminate}
+                  onChange={() => toggleFileListCheckbox(allScopeFiles)}
+                />
+                <div
+                  className="flex flex-1 items-center gap-1.5 min-w-0 cursor-pointer"
+                  onClick={() => handleToggleFolder(scope.key, scope.folderPath)}
+                  onDoubleClick={(e) => handleFolderDoubleClick(scope.folderPath, allScopeFiles, e)}
+                >
+                  {isScopeExpanded ? (
+                    <ChevronDown size={14} className="shrink-0" />
+                  ) : (
+                    <ChevronRight size={14} className="shrink-0" />
+                  )}
+                  <Folder size={15} className={`${scopeTheme.fill} ${scopeTheme.text} shrink-0`} />
+                  <span className="font-bold truncate" title={scope.label}>
+                    {finderState.isFinderOpen && finderState.searchQuery ? (
+                      <FinderHtml
+                        text={`${scope.label}/`}
+                        searchQuery={finderState.searchQuery}
+                        caseSensitive={finderState.caseSensitive}
+                        wholeWord={finderState.wholeWord}
+                        useRegex={finderState.useRegex}
+                        currentMatchIndex={finderState.currentMatchIndex}
+                        matchStartIndex={0}
+                      />
+                    ) : (
+                      `${scope.label}/`
+                    )}
+                  </span>
+                </div>
+              </div>
 
-    cy.on('dragfree pan zoom layoutstop', syncGraph);
+              {isScopeExpanded && (
+                <div className="space-y-1 mt-1 ml-2.5 pl-3 border-border border-l">
+                  {/* ViewMode: Scope -> direct files list */}
+                  {viewMode === 'scope' &&
+                    displayScopeFiles.map((file) => (
+                      <div
+                        key={file.id}
+                        id={`tree-file-node-${file.id}`}
+                        className="group flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded transition-colors"
+                      >
+                        <Checkbox
+                          checked={!!visibleFiles[file.id]}
+                          onCheckedChange={() => toggleFileCheckbox(file.id)}
+                          className="w-3.5 h-3.5 shrink-0"
+                        />
+                        <span
+                          className={`flex items-center gap-1.5 truncate cursor-pointer flex-1 min-w-0 ${
+                            visibleFiles[file.id] ? 'text-foreground font-medium' : 'text-muted-foreground line-through'
+                          }`}
+                          onClick={() => handleFileClick(file)}
+                          onDoubleClick={(e) => handleFileDoubleClick(file, e)}
+                        >
+                          {scope.key === 'config' ? (
+                            <Database size={13} className="text-amber-500 shrink-0" />
+                          ) : (
+                            <FileCode
+                              size={13}
+                              className={
+                                file.type === 'interface'
+                                  ? 'text-indigo-400 shrink-0'
+                                  : scope.key === 'frontend'
+                                  ? 'text-emerald-500 shrink-0'
+                                  : scope.key === 'backend'
+                                  ? 'text-blue-500 shrink-0'
+                                  : 'text-slate-400 shrink-0'
+                              }
+                            />
+                          )}
+                          <span className="truncate">
+                            {finderState.isFinderOpen && finderState.searchQuery ? (
+                              <FinderHtml
+                                text={file.name}
+                                searchQuery={finderState.searchQuery}
+                                caseSensitive={finderState.caseSensitive}
+                                wholeWord={finderState.wholeWord}
+                                useRegex={finderState.useRegex}
+                                currentMatchIndex={finderState.currentMatchIndex}
+                                matchStartIndex={0}
+                              />
+                            ) : (
+                              file.name
+                            )}
+                          </span>
+                        </span>
+                      </div>
+                    ))}
 
-    requestAnimationFrame(() => {
-      if (cyRef.current && !cyRef.current.destroyed()) {
-        cyRef.current.resize();
-      }
-    });
+                  {/* ViewMode: Folder -> Recursive VS Code-style tree */}
+                  {viewMode === 'folder' && scope.folderTree && (
+                    <>
+                      {scope.rootFiles &&
+                        (finderState.isFilterActive && finderState.searchQuery
+                          ? scope.rootFiles.filter((f) => finderState.matchingFileIds.has(f.id))
+                          : scope.rootFiles
+                        ).map((file) => (
+                          <div
+                            key={file.id}
+                            id={`tree-file-node-${file.id}`}
+                            className="group flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded transition-colors"
+                          >
+                            <Checkbox
+                              checked={!!visibleFiles[file.id]}
+                              onCheckedChange={() => toggleFileCheckbox(file.id)}
+                              className="w-3.5 h-3.5 shrink-0"
+                            />
+                            <span
+                              className={`flex items-center gap-1.5 truncate cursor-pointer flex-1 min-w-0 ${
+                                visibleFiles[file.id] ? 'text-foreground font-medium' : 'text-muted-foreground line-through'
+                              }`}
+                              onClick={() => handleFileClick(file)}
+                              onDoubleClick={(e) => handleFileDoubleClick(file, e)}
+                            >
+                              <FileCode size={13} className="text-slate-400 shrink-0" />
+                              <span className="truncate">
+                                {finderState.isFinderOpen && finderState.searchQuery ? (
+                                  <FinderHtml
+                                    text={file.name}
+                                    searchQuery={finderState.searchQuery}
+                                    caseSensitive={finderState.caseSensitive}
+                                    wholeWord={finderState.wholeWord}
+                                    useRegex={finderState.useRegex}
+                                    currentMatchIndex={finderState.currentMatchIndex}
+                                    matchStartIndex={0}
+                                  />
+                                ) : (
+                                  file.name
+                                )}
+                              </span>
+                            </span>
+                          </div>
+                        ))}
 
-    return () => {
-      containerNode.removeEventListener('wheel', handleWheel, { capture: true });
-      if (containerNode) {
-        containerNode.removeAttribute('data-tooltip');
-      }
-      if (rafIdRef.current !== null) {
-        cancelAnimationFrame(rafIdRef.current);
-      }
-      cy.destroy();
-      cyRef.current = null;
-    };
-  }, [containerNode, isDarkMode]);
+                      {scope.folderTree.map((rootNode, rootIdx) => (
+                        <RecursiveFolderNode
+                          key={rootNode.id}
+                          node={rootNode}
+                          depth={1}
+                          expandedFolders={expandedFolders}
+                          visibleFiles={visibleFiles}
+                          toggleFolder={handleToggleFolder}
+                          toggleFileCheckbox={toggleFileCheckbox}
+                          setSelectedEntity={setSelectedEntity}
+                          onFocusNode={onFocusNode}
+                          theme={DYNAMIC_COLORS[rootIdx % DYNAMIC_COLORS.length]}
+                          toggleFileListCheckbox={toggleFileListCheckbox}
+                          handleFileDoubleClick={handleFileDoubleClick}
+                          handleFolderDoubleClick={handleFolderDoubleClick}
+                          handleFileClick={handleFileClick}
+                          handleFolderClick={handleToggleFolder}
+                          finderState={finderState}
+                        />
+                      ))}
+                    </>
+                  )}
 
-  return { containerRef, cyRef, graphState, isReady: !!containerNode };
+                  {/* ViewMode: Tags / Package / Typology -> flat subfolders */}
+                  {viewMode !== 'scope' &&
+                    viewMode !== 'folder' &&
+                    scope.subFolders &&
+                    scope.subFolders.map((sub: SubFolderGroup, subIdx: number) => {
+                      const isSubExpanded = expandedFolders[sub.key] ?? true;
+                      const subTheme = DYNAMIC_COLORS[subIdx % DYNAMIC_COLORS.length];
+
+                      const displaySubFiles = finderState.isFilterActive && finderState.searchQuery
+                        ? sub.files.filter((f) => finderState.matchingFileIds.has(f.id))
+                        : sub.files;
+
+                      if (finderState.isFilterActive && finderState.searchQuery && displaySubFiles.length === 0) {
+                        return null;
+                      }
+
+                      const isSubAllChecked = sub.files.length > 0 && sub.files.every((f) => visibleFiles[f.id]);
+                      const isSubSomeChecked = sub.files.some((f) => visibleFiles[f.id]);
+                      const isSubIndeterminate = isSubSomeChecked && !isSubAllChecked;
+
+                      return (
+                        <div key={sub.key} className="mb-2">
+                          <div className="group flex items-center gap-1.5 hover:bg-muted/50 px-1 py-1 rounded">
+                            <TriStateCheckbox
+                              checked={isSubAllChecked}
+                              indeterminate={isSubIndeterminate}
+                              onChange={() => toggleFileListCheckbox(sub.files)}
+                            />
+                            <div
+                              className="flex flex-1 items-center gap-1.5 min-w-0 cursor-pointer"
+                              onClick={() => handleToggleFolder(sub.key, sub.folderPath)}
+                              onDoubleClick={(e) => handleFolderDoubleClick(sub.folderPath, sub.files, e)}
+                            >
+                              {isSubExpanded ? (
+                                <ChevronDown size={14} className="shrink-0" />
+                              ) : (
+                                <ChevronRight size={14} className="shrink-0" />
+                              )}
+                              <Folder size={14} className={`${subTheme.fill} ${subTheme.text} shrink-0`} />
+                              <span className="font-semibold text-foreground/90 truncate" title={sub.label}>
+                                {finderState.isFinderOpen && finderState.searchQuery ? (
+                                  <FinderHtml
+                                    text={`${sub.label}/`}
+                                    searchQuery={finderState.searchQuery}
+                                    caseSensitive={finderState.caseSensitive}
+                                    wholeWord={finderState.wholeWord}
+                                    useRegex={finderState.useRegex}
+                                    currentMatchIndex={finderState.currentMatchIndex}
+                                    matchStartIndex={0}
+                                  />
+                                ) : (
+                                  `${sub.label}/`
+                                )}
+                              </span>
+                            </div>
+                          </div>
+
+                          {isSubExpanded && (
+                            <div className="space-y-1 mt-1 ml-2.5 pl-3 border-border border-l">
+                              {displaySubFiles.map((file) => {
+                                const isDuplicate = viewMode === 'tags' && duplicateFileIds.has(file.id);
+                                const textStyle = isDuplicate
+                                  ? 'text-orange-500 font-bold'
+                                  : visibleFiles[file.id]
+                                  ? 'text-foreground font-medium'
+                                  : 'text-muted-foreground line-through';
+
+                                return (
+                                  <div
+                                    key={file.id}
+                                    id={`tree-file-node-${file.id}`}
+                                    className="group flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded transition-colors"
+                                  >
+                                    <Checkbox
+                                      checked={!!visibleFiles[file.id]}
+                                      onCheckedChange={() => toggleFileCheckbox(file.id)}
+                                      className="w-3.5 h-3.5 shrink-0"
+                                    />
+                                    <span
+                                      className={`flex items-center gap-1.5 truncate cursor-pointer flex-1 min-w-0 ${textStyle}`}
+                                      onClick={() => handleFileClick(file)}
+                                      onDoubleClick={(e) => handleFileDoubleClick(file, e)}
+                                    >
+                                      {file.type === 'config' ? (
+                                        <Database size={13} className="text-amber-500 shrink-0" />
+                                      ) : (
+                                        <FileCode
+                                          size={13}
+                                          className={
+                                            file.type === 'interface'
+                                              ? 'text-indigo-400 shrink-0'
+                                              : subTheme.iconColor || 'text-slate-400'
+                                          }
+                                        />
+                                      )}
+                                      <span className="truncate">
+                                        {finderState.isFinderOpen && finderState.searchQuery ? (
+                                          <FinderHtml
+                                            text={file.name}
+                                            searchQuery={finderState.searchQuery}
+                                            caseSensitive={finderState.caseSensitive}
+                                            wholeWord={finderState.wholeWord}
+                                            useRegex={finderState.useRegex}
+                                            currentMatchIndex={finderState.currentMatchIndex}
+                                            matchStartIndex={0}
+                                          />
+                                        ) : (
+                                          file.name
+                                        )}
+                                      </span>
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 4. Bottom Explorer Bar - Fixed Height */}
+      <div id="panel-codebase-explorer-bottom" className="bg-muted/20 p-2 border-border border-t h-9 shrink-0">
+        <div>
+          <h3 className="flex items-center gap-2 font-mono font-bold text-muted-foreground text-xs uppercase tracking-wider">
+            <span>Explorer</span>
+            <span id="badge-file-count" className="bg-muted px-2 py-0.5 rounded text-[10px] text-foreground">
+              {searchFilteredFiles.length}/{codebase.files.length}
+            </span>
+          </h3>
+        </div>
+      </div>
+    </div>
+  );
 }
 EOF
 
-echo "✅ feat/fix: Integrated Cytoscape hover events with global data-tooltip component while keeping mouse drag, pan, zoom and cursor selection active!"
+echo "✅ fix: Restored toolbar visibility and ensured exact single scrollbar behavior in CodebaseExplorerPanel!"

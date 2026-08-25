@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
+import { ChevronUp, ChevronDown, X, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
-/**
- * Equivalent to the find/search functionality in VS Code with cmd+F in files
- */
+export type FinderStyleView = 'bubble' | 'toolbar';
 
-interface FinderBaseProps {
+export interface FinderBaseProps {
     searchQuery: string;
     setSearchQuery: (val: string) => void;
     caseSensitive: boolean;
@@ -13,11 +14,15 @@ interface FinderBaseProps {
     setWholeWord: (val: boolean) => void;
     useRegex: boolean;
     setUseRegex: (val: boolean) => void;
+    styleView?: FinderStyleView;
+    focusTrigger?: number;
     currentMatchIndex: number;
     totalMatches: number;
     onNext: () => void;
     onPrev: () => void;
     onClose: () => void;
+    placeholder?: string;
+    extraActions?: React.ReactNode;
 }
 
 export const FinderBase: React.FC<FinderBaseProps> = ({
@@ -29,75 +34,147 @@ export const FinderBase: React.FC<FinderBaseProps> = ({
     setWholeWord,
     useRegex,
     setUseRegex,
+    styleView = 'bubble',
+    focusTrigger = 0,
     currentMatchIndex,
     totalMatches,
     onNext,
     onPrev,
-    onClose
+    onClose,
+    placeholder = "Find (Cmd+F)",
+    extraActions
 }) => {
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    // Auto-focus input and select existing text when opened or re-triggered by Cmd+F
+    useEffect(() => {
+        if (inputRef.current) {
+            inputRef.current.focus();
+            inputRef.current.select();
+        }
+    }, [focusTrigger]);
+
+    const containerStyleClass = styleView === 'toolbar'
+        ? 'p-1 px-2 border-b border-border shadow-none rounded-none w-full'
+        : 'p-1.5 border border-border shadow-md rounded-md';
+
     return (
-        <div className="flex items-center gap-2 bg-[var(--vscode-editorWidget-background)] shadow-lg p-1.5 border border-[var(--vscode-widget-border,#454545)] rounded text-[var(--vscode-editorWidget-foreground)] animate-fadeIn select-none">
-            {/* Zone de saisie */}
-            <div className="relative flex items-center bg-[var(--vscode-input-background)] px-1.5 border border-[var(--vscode-input-border,#454545)] focus-within:border-blue-500 rounded w-64 h-6">
-                <input
+        <div className={`flex items-center gap-2 bg-popover text-popover-foreground animate-fadeIn select-none font-sans text-xs ${containerStyleClass}`}>
+            {/* Input Container using Shadcn Input */}
+            <div className="relative flex items-center bg-muted/40 px-2 border border-input focus-within:border-ring rounded flex-1 min-w-0 h-6 transition-colors">
+                <Search size={13} className="text-muted-foreground shrink-0 mr-1.5 pointer-events-none" />
+                <Input
+                    ref={inputRef}
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Find"
-                    className="bg-transparent pr-1 outline-none w-44 h-full font-sans text-[var(--vscode-input-foreground)] text-xs"
+                    placeholder={placeholder}
+                    className="bg-transparent shadow-none p-0 border-0 focus-visible:ring-0 focus-visible:outline-none flex-1 min-w-0 h-full font-sans text-foreground text-xs placeholder:text-muted-foreground"
                     spellCheck={false}
                 />
 
-                {/* Modificateurs de recherche natifs VS Code */}
-                <div className="flex items-center gap-0.5 text-[var(--vscode-inputOption-foreground,#858585)]">
-                    <button
+                {/* Modifiers using Shadcn Buttons */}
+                <div className="flex items-center gap-0.5 text-muted-foreground shrink-0 ml-1">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
                         data-tooltip="Match Case (Aa)"
                         onClick={() => setCaseSensitive(!caseSensitive)}
-                        className={`w-4 h-4 text-[10px] font-bold rounded-sm flex items-center justify-center transition-colors cursor-pointer ${caseSensitive ? 'bg-blue-500/30 text-blue-400 border border-blue-500/50 font-extrabold' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)]'}`}
+                        className={`w-4 h-4 p-0 text-[10px] font-bold rounded-sm flex items-center justify-center transition-colors cursor-pointer ${
+                            caseSensitive
+                                ? 'bg-primary/20 text-primary border border-primary/40 font-extrabold'
+                                : 'hover:bg-muted hover:text-foreground'
+                        }`}
                     >
                         Aa
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
                         data-tooltip="Match Whole Word (W)"
                         onClick={() => setWholeWord(!wholeWord)}
-                        className={`w-4 h-4 text-[10px] font-bold rounded-sm flex items-center justify-center transition-colors cursor-pointer ${wholeWord ? 'bg-blue-500/30 text-blue-400 border border-blue-500/50 font-extrabold' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)]'}`}
+                        className={`w-4 h-4 p-0 text-[10px] font-bold rounded-sm flex items-center justify-center transition-colors cursor-pointer ${
+                            wholeWord
+                                ? 'bg-primary/20 text-primary border border-primary/40 font-extrabold'
+                                : 'hover:bg-muted hover:text-foreground'
+                        }`}
                     >
                         W
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
                         data-tooltip="Use Regular Expression (.*)"
                         onClick={() => setUseRegex(!useRegex)}
-                        className={`w-4 h-4 text-[11px] font-mono rounded-sm flex items-center justify-center transition-colors cursor-pointer ${useRegex ? 'bg-blue-500/30 text-blue-400 border border-blue-500/50 font-extrabold' : 'hover:bg-[var(--vscode-toolbar-hoverBackground)]'}`}
+                        className={`w-4 h-4 p-0 text-[11px] font-mono rounded-sm flex items-center justify-center transition-colors cursor-pointer ${
+                            useRegex
+                                ? 'bg-primary/20 text-primary border border-primary/40 font-extrabold'
+                                : 'hover:bg-muted hover:text-foreground'
+                        }`}
                     >
                         .*
-                    </button>
+                    </Button>
+
+                    {searchQuery && (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            data-tooltip="Clear Input"
+                            onClick={() => setSearchQuery('')}
+                            className="w-4 h-4 p-0 rounded-sm flex items-center justify-center transition-colors cursor-pointer text-muted-foreground hover:bg-muted hover:text-foreground ml-0.5"
+                        >
+                            <X size={12} />
+                        </Button>
+                    )}
                 </div>
             </div>
 
-            {/* Compteur d'occurrences */}
-            <div className="px-1 min-w-[55px] font-sans font-medium text-[11px] text-[var(--vscode-descriptionForeground)] text-center">
+            {/* Custom Finder Actions */}
+            {extraActions}
+
+            {/* Match Counter */}
+            <div className="px-1 min-w-[55px] font-sans font-medium text-[11px] text-muted-foreground text-center shrink-0">
                 {totalMatches > 0 ? `${currentMatchIndex + 1} of ${totalMatches}` : 'No results'}
             </div>
 
-            {/* Boutons de navigation */}
-            <div className="flex items-center gap-0.5 pl-1 border-[var(--vscode-panel-border)] border-l text-[var(--vscode-foreground)]">
-                <button
+            {/* Navigation Buttons using Shadcn Button */}
+            <div className="flex items-center gap-0.5 pl-1 border-border border-l text-foreground shrink-0">
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
                     onClick={onPrev}
                     disabled={totalMatches === 0}
                     data-tooltip="Previous Match"
-                    className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] disabled:opacity-30 rounded w-5 h-5 text-xs cursor-pointer codicon codicon-arrow-up"
-                />
-                <button
+                    className="flex justify-center items-center hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-30 rounded w-5 h-5 text-xs cursor-pointer transition-colors"
+                >
+                    <ChevronUp size={12} />
+                </Button>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
                     onClick={onNext}
                     disabled={totalMatches === 0}
                     data-tooltip="Next Match"
-                    className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] disabled:opacity-30 rounded w-5 h-5 text-xs cursor-pointer codicon codicon-arrow-down"
-                />
-                <button
+                    className="flex justify-center items-center hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-30 rounded w-5 h-5 text-xs cursor-pointer transition-colors"
+                >
+                    <ChevronDown size={12} />
+                </Button>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
                     onClick={onClose}
                     data-tooltip="Close Widget (Escape)"
-                    className="flex justify-center items-center hover:bg-[var(--vscode-toolbar-hoverBackground)] rounded w-5 h-5 text-xs cursor-pointer codicon codicon-close"
-                />
+                    className="flex justify-center items-center hover:bg-muted text-muted-foreground hover:text-foreground rounded w-5 h-5 text-xs cursor-pointer transition-colors"
+                >
+                    <X size={12} />
+                </Button>
             </div>
         </div>
     );

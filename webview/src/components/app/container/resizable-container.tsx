@@ -47,7 +47,7 @@ export function ResizableContainer({
     >
       <div
         id={`${id}-content`}
-        className="relative flex-1 flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-x-hidden overflow-y-auto scrollbar-hide"
+        className="relative flex flex-col flex-1 bg-background w-full min-w-0 h-full min-h-0 overflow-hidden"
       >
         {childrenWithParentId}
       </div>

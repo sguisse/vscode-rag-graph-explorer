@@ -1,8 +1,11 @@
 import React, { useRef, useEffect } from 'react';
-import { ChevronDown, ChevronRight, Folder, FileCode, Database, Download, Upload, LayoutList, ChevronsDown, ChevronsUp } from 'lucide-react';
+import { ChevronDown, ChevronRight, Folder, FileCode, Database, Download, Upload, LayoutList, ChevronsDown, ChevronsUp, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ImportAstDialog } from './import-ast-dialog';
 import { ToolbarSeparator } from '@/components/app/toolbar-separator';
+import { FinderTree } from '@/components/app/core/finder/FinderTree';
+import { FinderHtml } from '@/components/app/core/finder/FinderHtml';
 import {
   CodebaseFile,
   CodebaseData,
@@ -17,6 +20,7 @@ import {
   FolderTreeNode,
   getCommonFolderPath
 } from './hooks/use-codebase-explorer-panel';
+import { useTreeviewFinder } from './hooks/use-treeview-finder';
 import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
 import { CODEBASE_GROUPING_LIST, CODEBASE_GROUPING_ICON_MAP } from './type-codebase-grouping';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
@@ -44,7 +48,7 @@ function TriStateCheckbox({ checked, indeterminate, onChange, className }: TriSt
       type="checkbox"
       checked={checked}
       onChange={onChange}
-      className={className}
+      className={`rounded w-3.5 h-3.5 border-border bg-background text-primary cursor-pointer shrink-0 accent-primary ${className || ''}`}
     />
   );
 }
@@ -83,6 +87,16 @@ interface RecursiveFolderNodeProps {
   handleFolderDoubleClick: (folderPath: string, files?: CodebaseFile[], e?: React.MouseEvent) => void;
   handleFileClick: (file: CodebaseFile) => void;
   handleFolderClick: (folderKey: string, folderPath?: string) => void;
+  finderState: {
+    isFinderOpen: boolean;
+    searchQuery: string;
+    caseSensitive: boolean;
+    wholeWord: boolean;
+    useRegex: boolean;
+    isFilterActive: boolean;
+    currentMatchIndex: number;
+    matchingFileIds: Set<string>;
+  };
 }
 
 function RecursiveFolderNode({
@@ -100,9 +114,18 @@ function RecursiveFolderNode({
   handleFolderDoubleClick,
   handleFileClick,
   handleFolderClick,
+  finderState,
 }: RecursiveFolderNodeProps) {
   const isExpanded = expandedFolders[node.id] ?? true;
   const allNodeFiles = getAllFilesFromNode(node);
+
+  const displayFiles = finderState.isFilterActive && finderState.searchQuery
+    ? node.files.filter((f) => finderState.matchingFileIds.has(f.id))
+    : node.files;
+
+  if (finderState.isFilterActive && finderState.searchQuery && displayFiles.length === 0 && node.children.length === 0) {
+    return null;
+  }
 
   const isAllChecked = allNodeFiles.length > 0 && allNodeFiles.every((f) => visibleFiles[f.id]);
   const isSomeChecked = allNodeFiles.some((f) => visibleFiles[f.id]);
@@ -115,7 +138,6 @@ function RecursiveFolderNode({
           checked={isAllChecked}
           indeterminate={isIndeterminate}
           onChange={() => toggleFileListCheckbox(allNodeFiles)}
-          className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
         />
         <div
           className="flex flex-1 items-center gap-1.5 min-w-0 cursor-pointer"
@@ -129,20 +151,35 @@ function RecursiveFolderNode({
           )}
           <Folder size={14} className={`${theme.fill} ${theme.text} shrink-0`} />
           <span className="font-semibold text-foreground/90 truncate" title={node.name}>
-            {node.name}/
+            {finderState.isFinderOpen && finderState.searchQuery ? (
+              <FinderHtml
+                text={`${node.name}/`}
+                searchQuery={finderState.searchQuery}
+                caseSensitive={finderState.caseSensitive}
+                wholeWord={finderState.wholeWord}
+                useRegex={finderState.useRegex}
+                currentMatchIndex={finderState.currentMatchIndex}
+                matchStartIndex={0}
+              />
+            ) : (
+              `${node.name}/`
+            )}
           </span>
         </div>
       </div>
 
       {isExpanded && (
         <div className="space-y-1 mt-1 ml-2.5 pl-3 border-border border-l">
-          {node.files.map((file) => (
-            <div key={file.id} className="group flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded">
-              <input
-                type="checkbox"
+          {displayFiles.map((file) => (
+            <div
+              key={file.id}
+              id={`tree-file-node-${file.id}`}
+              className="group flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded transition-colors"
+            >
+              <Checkbox
                 checked={!!visibleFiles[file.id]}
-                onChange={() => toggleFileCheckbox(file.id)}
-                className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
+                onCheckedChange={() => toggleFileCheckbox(file.id)}
+                className="w-3.5 h-3.5 shrink-0"
               />
               <span
                 className={`flex items-center gap-1.5 truncate cursor-pointer flex-1 min-w-0 ${
@@ -163,7 +200,21 @@ function RecursiveFolderNode({
                     }
                   />
                 )}
-                <span className="truncate">{file.name}</span>
+                <span className="truncate">
+                  {finderState.isFinderOpen && finderState.searchQuery ? (
+                    <FinderHtml
+                      text={file.name}
+                      searchQuery={finderState.searchQuery}
+                      caseSensitive={finderState.caseSensitive}
+                      wholeWord={finderState.wholeWord}
+                      useRegex={finderState.useRegex}
+                      currentMatchIndex={finderState.currentMatchIndex}
+                      matchStartIndex={0}
+                    />
+                  ) : (
+                    file.name
+                  )}
+                </span>
               </span>
             </div>
           ))}
@@ -185,6 +236,7 @@ function RecursiveFolderNode({
               handleFolderDoubleClick={handleFolderDoubleClick}
               handleFileClick={handleFileClick}
               handleFolderClick={handleFolderClick}
+              finderState={finderState}
             />
           ))}
         </div>
@@ -218,6 +270,8 @@ export function CodebaseExplorerPanel({
   onFocusNode,
   onImportCodebase
 }: CodebaseExplorerPanelProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
   const {
     isImportOpen,
     setIsImportOpen,
@@ -229,6 +283,24 @@ export function CodebaseExplorerPanel({
     handleExpandAll,
     handleCollapseAll,
   } = useCodebaseExplorerPanel(codebase, expandedFolders, toggleFolder);
+
+  const finderState = useTreeviewFinder(codebase, onFocusNode);
+
+  // Keyboard shortcut listener (Cmd+F / Ctrl+F) inside Explorer Panel
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
+        if (panelRef.current && (panelRef.current.contains(document.activeElement) || panelRef.current.contains(e.target as Node))) {
+          e.preventDefault();
+          e.stopPropagation();
+          finderState.openAndFocusFinder();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [finderState.openAndFocusFinder]);
 
   const handleToggleFolder = (folderKey: string, folderPath?: string) => {
     if (expandedFolders[folderKey] === undefined) {
@@ -286,8 +358,14 @@ export function CodebaseExplorerPanel({
   };
 
   return (
-    <div id="panel-codebase-explorer" className="flex flex-col bg-card h-full">
-      <div className="flex justify-between items-center bg-muted/20 p-0.5 border-border border-b">
+    <div
+      ref={panelRef}
+      id="panel-codebase-explorer"
+      tabIndex={-1}
+      className="flex flex-col bg-card w-full h-full min-h-0 overflow-hidden outline-none"
+    >
+      {/* 1. Header Toolbar - Fixed Height */}
+      <div className="flex justify-between items-center bg-muted/20 p-0.5 border-border border-b shrink-0">
         <div className="flex items-center gap-1.5 pl-2 w-full">
           <LayoutList size={14} className="text-muted-foreground shrink-0" />
           <SelectFromTypeBuilder
@@ -305,6 +383,21 @@ export function CodebaseExplorerPanel({
         </div>
 
         <div className="flex items-center gap-0.5 pr-1 shrink-0">
+          <Button
+            id="btn-toggle-treeview-finder"
+            className={`hover:bg-muted rounded w-7 h-7 transition-colors ${
+              finderState.isFinderOpen ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
+            }`}
+            variant="ghost"
+            size="icon"
+            onClick={finderState.toggleFinder}
+            data-tooltip="Toggle Treeview Finder (Loupe)"
+          >
+            <Search size={12} />
+          </Button>
+
+          <ToolbarSeparator />
+
           <Button
             id="btn-collapse-all"
             className="hover:bg-muted rounded w-7 h-7 text-muted-foreground hover:text-foreground transition-colors"
@@ -351,6 +444,33 @@ export function CodebaseExplorerPanel({
         </div>
       </div>
 
+      {/* 2. Finder Bar (Conditional) - Fixed Height */}
+      {finderState.isFinderOpen && (
+        <div id="container-treeview-finder" className="p-0 bg-muted/15 shrink-0">
+          <FinderTree
+            styleView="toolbar"
+            focusTrigger={finderState.focusTrigger}
+            searchQuery={finderState.searchQuery}
+            setSearchQuery={finderState.setSearchQuery}
+            caseSensitive={finderState.caseSensitive}
+            setCaseSensitive={finderState.setCaseSensitive}
+            wholeWord={finderState.wholeWord}
+            setWholeWord={finderState.setWholeWord}
+            useRegex={finderState.useRegex}
+            setUseRegex={finderState.setUseRegex}
+            isFilterActive={finderState.isFilterActive}
+            setIsFilterActive={finderState.setIsFilterActive}
+            collapseNodeSearchNotCompliantEnabled={finderState.collapseNodeSearchNotCompliantEnabled}
+            setCollapseNodeSearchNotCompliantEnabled={finderState.setCollapseNodeSearchNotCompliantEnabled}
+            currentMatchIndex={finderState.currentMatchIndex}
+            totalMatches={finderState.totalMatches}
+            onNext={finderState.handleNextMatch}
+            onPrev={finderState.handlePrevMatch}
+            onClose={() => finderState.setIsFinderOpen(false)}
+          />
+        </div>
+      )}
+
       <ImportAstDialog
         open={isImportOpen}
         onOpenChange={setIsImportOpen}
@@ -359,12 +479,21 @@ export function CodebaseExplorerPanel({
         }}
       />
 
-      <div id="tree-codebase-files" className="flex-1 p-4 overflow-y-auto font-mono text-xs">
+      {/* 3. Tree Area - Takes all remaining vertical space, ONLY scrollbar here */}
+      <div id="tree-codebase-files" className="flex-1 min-h-0 p-4 overflow-y-auto font-mono text-xs">
         {groupedScopes.map((scope: ScopeGroup) => {
           const scopeTheme = FOLDER_THEME_REGISTRY_CONFIG[scope.key] || FOLDER_THEME_REGISTRY_CONFIG.default;
           const isScopeExpanded = expandedFolders[scope.key] ?? true;
 
           const allScopeFiles = scope.files;
+          const displayScopeFiles = finderState.isFilterActive && finderState.searchQuery
+            ? scope.files.filter((f) => finderState.matchingFileIds.has(f.id))
+            : scope.files;
+
+          if (finderState.isFilterActive && finderState.searchQuery && displayScopeFiles.length === 0 && !scope.folderTree && !scope.subFolders) {
+            return null;
+          }
+
           const isScopeAllChecked = allScopeFiles.length > 0 && allScopeFiles.every((f) => visibleFiles[f.id]);
           const isScopeSomeChecked = allScopeFiles.some((f) => visibleFiles[f.id]);
           const isScopeIndeterminate = isScopeSomeChecked && !isScopeAllChecked;
@@ -376,7 +505,6 @@ export function CodebaseExplorerPanel({
                   checked={isScopeAllChecked}
                   indeterminate={isScopeIndeterminate}
                   onChange={() => toggleFileListCheckbox(allScopeFiles)}
-                  className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
                 />
                 <div
                   className="flex flex-1 items-center gap-1.5 min-w-0 cursor-pointer"
@@ -390,7 +518,19 @@ export function CodebaseExplorerPanel({
                   )}
                   <Folder size={15} className={`${scopeTheme.fill} ${scopeTheme.text} shrink-0`} />
                   <span className="font-bold truncate" title={scope.label}>
-                    {scope.label}/
+                    {finderState.isFinderOpen && finderState.searchQuery ? (
+                      <FinderHtml
+                        text={`${scope.label}/`}
+                        searchQuery={finderState.searchQuery}
+                        caseSensitive={finderState.caseSensitive}
+                        wholeWord={finderState.wholeWord}
+                        useRegex={finderState.useRegex}
+                        currentMatchIndex={finderState.currentMatchIndex}
+                        matchStartIndex={0}
+                      />
+                    ) : (
+                      `${scope.label}/`
+                    )}
                   </span>
                 </div>
               </div>
@@ -399,13 +539,16 @@ export function CodebaseExplorerPanel({
                 <div className="space-y-1 mt-1 ml-2.5 pl-3 border-border border-l">
                   {/* ViewMode: Scope -> direct files list */}
                   {viewMode === 'scope' &&
-                    scope.files.map((file) => (
-                      <div key={file.id} className="group flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded">
-                        <input
-                          type="checkbox"
+                    displayScopeFiles.map((file) => (
+                      <div
+                        key={file.id}
+                        id={`tree-file-node-${file.id}`}
+                        className="group flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded transition-colors"
+                      >
+                        <Checkbox
                           checked={!!visibleFiles[file.id]}
-                          onChange={() => toggleFileCheckbox(file.id)}
-                          className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
+                          onCheckedChange={() => toggleFileCheckbox(file.id)}
+                          className="w-3.5 h-3.5 shrink-0"
                         />
                         <span
                           className={`flex items-center gap-1.5 truncate cursor-pointer flex-1 min-w-0 ${
@@ -430,7 +573,21 @@ export function CodebaseExplorerPanel({
                               }
                             />
                           )}
-                          <span className="truncate">{file.name}</span>
+                          <span className="truncate">
+                            {finderState.isFinderOpen && finderState.searchQuery ? (
+                              <FinderHtml
+                                text={file.name}
+                                searchQuery={finderState.searchQuery}
+                                caseSensitive={finderState.caseSensitive}
+                                wholeWord={finderState.wholeWord}
+                                useRegex={finderState.useRegex}
+                                currentMatchIndex={finderState.currentMatchIndex}
+                                matchStartIndex={0}
+                              />
+                            ) : (
+                              file.name
+                            )}
+                          </span>
                         </span>
                       </div>
                     ))}
@@ -439,13 +596,19 @@ export function CodebaseExplorerPanel({
                   {viewMode === 'folder' && scope.folderTree && (
                     <>
                       {scope.rootFiles &&
-                        scope.rootFiles.map((file) => (
-                          <div key={file.id} className="group flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded">
-                            <input
-                              type="checkbox"
+                        (finderState.isFilterActive && finderState.searchQuery
+                          ? scope.rootFiles.filter((f) => finderState.matchingFileIds.has(f.id))
+                          : scope.rootFiles
+                        ).map((file) => (
+                          <div
+                            key={file.id}
+                            id={`tree-file-node-${file.id}`}
+                            className="group flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded transition-colors"
+                          >
+                            <Checkbox
                               checked={!!visibleFiles[file.id]}
-                              onChange={() => toggleFileCheckbox(file.id)}
-                              className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
+                              onCheckedChange={() => toggleFileCheckbox(file.id)}
+                              className="w-3.5 h-3.5 shrink-0"
                             />
                             <span
                               className={`flex items-center gap-1.5 truncate cursor-pointer flex-1 min-w-0 ${
@@ -455,7 +618,21 @@ export function CodebaseExplorerPanel({
                               onDoubleClick={(e) => handleFileDoubleClick(file, e)}
                             >
                               <FileCode size={13} className="text-slate-400 shrink-0" />
-                              <span className="truncate">{file.name}</span>
+                              <span className="truncate">
+                                {finderState.isFinderOpen && finderState.searchQuery ? (
+                                  <FinderHtml
+                                    text={file.name}
+                                    searchQuery={finderState.searchQuery}
+                                    caseSensitive={finderState.caseSensitive}
+                                    wholeWord={finderState.wholeWord}
+                                    useRegex={finderState.useRegex}
+                                    currentMatchIndex={finderState.currentMatchIndex}
+                                    matchStartIndex={0}
+                                  />
+                                ) : (
+                                  file.name
+                                )}
+                              </span>
                             </span>
                           </div>
                         ))}
@@ -477,6 +654,7 @@ export function CodebaseExplorerPanel({
                           handleFolderDoubleClick={handleFolderDoubleClick}
                           handleFileClick={handleFileClick}
                           handleFolderClick={handleToggleFolder}
+                          finderState={finderState}
                         />
                       ))}
                     </>
@@ -490,6 +668,14 @@ export function CodebaseExplorerPanel({
                       const isSubExpanded = expandedFolders[sub.key] ?? true;
                       const subTheme = DYNAMIC_COLORS[subIdx % DYNAMIC_COLORS.length];
 
+                      const displaySubFiles = finderState.isFilterActive && finderState.searchQuery
+                        ? sub.files.filter((f) => finderState.matchingFileIds.has(f.id))
+                        : sub.files;
+
+                      if (finderState.isFilterActive && finderState.searchQuery && displaySubFiles.length === 0) {
+                        return null;
+                      }
+
                       const isSubAllChecked = sub.files.length > 0 && sub.files.every((f) => visibleFiles[f.id]);
                       const isSubSomeChecked = sub.files.some((f) => visibleFiles[f.id]);
                       const isSubIndeterminate = isSubSomeChecked && !isSubAllChecked;
@@ -501,7 +687,6 @@ export function CodebaseExplorerPanel({
                               checked={isSubAllChecked}
                               indeterminate={isSubIndeterminate}
                               onChange={() => toggleFileListCheckbox(sub.files)}
-                              className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
                             />
                             <div
                               className="flex flex-1 items-center gap-1.5 min-w-0 cursor-pointer"
@@ -515,14 +700,26 @@ export function CodebaseExplorerPanel({
                               )}
                               <Folder size={14} className={`${subTheme.fill} ${subTheme.text} shrink-0`} />
                               <span className="font-semibold text-foreground/90 truncate" title={sub.label}>
-                                {sub.label}/
+                                {finderState.isFinderOpen && finderState.searchQuery ? (
+                                  <FinderHtml
+                                    text={`${sub.label}/`}
+                                    searchQuery={finderState.searchQuery}
+                                    caseSensitive={finderState.caseSensitive}
+                                    wholeWord={finderState.wholeWord}
+                                    useRegex={finderState.useRegex}
+                                    currentMatchIndex={finderState.currentMatchIndex}
+                                    matchStartIndex={0}
+                                  />
+                                ) : (
+                                  `${sub.label}/`
+                                )}
                               </span>
                             </div>
                           </div>
 
                           {isSubExpanded && (
                             <div className="space-y-1 mt-1 ml-2.5 pl-3 border-border border-l">
-                              {sub.files.map((file) => {
+                              {displaySubFiles.map((file) => {
                                 const isDuplicate = viewMode === 'tags' && duplicateFileIds.has(file.id);
                                 const textStyle = isDuplicate
                                   ? 'text-orange-500 font-bold'
@@ -533,13 +730,13 @@ export function CodebaseExplorerPanel({
                                 return (
                                   <div
                                     key={file.id}
-                                    className="group flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded"
+                                    id={`tree-file-node-${file.id}`}
+                                    className="group flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded transition-colors"
                                   >
-                                    <input
-                                      type="checkbox"
+                                    <Checkbox
                                       checked={!!visibleFiles[file.id]}
-                                      onChange={() => toggleFileCheckbox(file.id)}
-                                      className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
+                                      onCheckedChange={() => toggleFileCheckbox(file.id)}
+                                      className="w-3.5 h-3.5 shrink-0"
                                     />
                                     <span
                                       className={`flex items-center gap-1.5 truncate cursor-pointer flex-1 min-w-0 ${textStyle}`}
@@ -558,7 +755,21 @@ export function CodebaseExplorerPanel({
                                           }
                                         />
                                       )}
-                                      <span className="truncate">{file.name}</span>
+                                      <span className="truncate">
+                                        {finderState.isFinderOpen && finderState.searchQuery ? (
+                                          <FinderHtml
+                                            text={file.name}
+                                            searchQuery={finderState.searchQuery}
+                                            caseSensitive={finderState.caseSensitive}
+                                            wholeWord={finderState.wholeWord}
+                                            useRegex={finderState.useRegex}
+                                            currentMatchIndex={finderState.currentMatchIndex}
+                                            matchStartIndex={0}
+                                          />
+                                        ) : (
+                                          file.name
+                                        )}
+                                      </span>
                                     </span>
                                   </div>
                                 );
@@ -575,6 +786,7 @@ export function CodebaseExplorerPanel({
         })}
       </div>
 
+      {/* 4. Bottom Explorer Bar - Fixed Height */}
       <div id="panel-codebase-explorer-bottom" className="bg-muted/20 p-2 border-border border-t h-9 shrink-0">
         <div>
           <h3 className="flex items-center gap-2 font-mono font-bold text-muted-foreground text-xs uppercase tracking-wider">
