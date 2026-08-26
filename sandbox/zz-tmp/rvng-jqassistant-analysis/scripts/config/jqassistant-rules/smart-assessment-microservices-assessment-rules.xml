@@ -3,7 +3,7 @@
 
     <!-- lightweight copy of module-analysis-rules.xml for conventional filename support -->
 
-    <concept id="smart-assessment-microservices-assessment:MarkSpringController">
+    <concept id="smarttopic-microservicestopic:MarkSpringController">
         <description>Labels every class annotated with @RestController or @Controller with :Controller</description>
         <cypher><![CDATA[
             MATCH (c:Class)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(t:Type)
@@ -16,7 +16,7 @@
         ]]>        </cypher>
     </concept>
 
-    <concept id="smart-assessment-microservices-assessment:MarkSpringService">
+    <concept id="smarttopic-microservicestopic:MarkSpringService">
         <description>Labels every class annotated with @Service with :Service</description>
         <cypher><![CDATA[
             MATCH (c:Class)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(t:Type)
@@ -26,7 +26,7 @@
         ]]>        </cypher>
     </concept>
 
-    <concept id="smart-assessment-microservices-assessment:MarkSpringRepository">
+    <concept id="smarttopic-microservicestopic:MarkSpringRepository">
         <description>Labels every class annotated with @Repository with :Repository</description>
         <cypher><![CDATA[
             MATCH (c:Class)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(t:Type)
@@ -36,7 +36,7 @@
         ]]>        </cypher>
     </concept>
 
-    <concept id="smart-assessment-microservices-assessment:MarkApiLayer">
+    <concept id="smarttopic-microservicestopic:MarkApiLayer">
         <description>Labels classes in packages ending in .api as :ApiLayer</description>
         <cypher><![CDATA[
             MATCH (p:Package)-[:CONTAINS]->(c:Class)
@@ -46,7 +46,7 @@
         ]]>        </cypher>
     </concept>
 
-    <concept id="smart-assessment-microservices-assessment:MarkDomainLayer">
+    <concept id="smarttopic-microservicestopic:MarkDomainLayer">
         <description>Labels classes in packages ending in .domain as :DomainLayer</description>
         <cypher><![CDATA[
             MATCH (p:Package)-[:CONTAINS]->(c:Class)
@@ -56,7 +56,7 @@
         ]]>        </cypher>
     </concept>
 
-    <concept id="smart-assessment-microservices-assessment:MarkInfrastructureLayer">
+    <concept id="smarttopic-microservicestopic:MarkInfrastructureLayer">
         <description>Labels classes in packages ending in .infrastructure as :InfrastructureLayer</description>
         <cypher><![CDATA[
             MATCH (p:Package)-[:CONTAINS]->(c:Class)
@@ -66,9 +66,9 @@
         ]]>        </cypher>
     </concept>
 
-    <constraint id="smart-assessment-microservices-assessment:ControllerMustNotDependOnRepository" severity="major">
-        <requiresConcept refId="smart-assessment-microservices-assessment:MarkSpringController"/>
-        <requiresConcept refId="smart-assessment-microservices-assessment:MarkSpringRepository"/>
+    <constraint id="smarttopic-microservicestopic:ControllerMustNotDependOnRepository" severity="major">
+        <requiresConcept refId="smarttopic-microservicestopic:MarkSpringController"/>
+        <requiresConcept refId="smarttopic-microservicestopic:MarkSpringRepository"/>
         <description>Controllers must not directly depend on Repositories.</description>
         <cypher><![CDATA[
             MATCH (ctrl:Controller)-[:DEPENDS_ON]->(repo:Repository)
@@ -76,9 +76,9 @@
         ]]>        </cypher>
     </constraint>
 
-    <constraint id="smart-assessment-microservices-assessment:DomainMustNotDependOnInfrastructure" severity="major">
-        <requiresConcept refId="smart-assessment-microservices-assessment:MarkDomainLayer"/>
-        <requiresConcept refId="smart-assessment-microservices-assessment:MarkInfrastructureLayer"/>
+    <constraint id="smarttopic-microservicestopic:DomainMustNotDependOnInfrastructure" severity="major">
+        <requiresConcept refId="smarttopic-microservicestopic:MarkDomainLayer"/>
+        <requiresConcept refId="smarttopic-microservicestopic:MarkInfrastructureLayer"/>
         <description>Domain classes must not depend on Infrastructure classes.</description>
         <cypher><![CDATA[
             MATCH (d:DomainLayer)-[:DEPENDS_ON]->(i:InfrastructureLayer)
@@ -86,9 +86,9 @@
         ]]>        </cypher>
     </constraint>
 
-    <constraint id="smart-assessment-microservices-assessment:ApiLayerMustNotDependOnInfrastructure" severity="major">
-        <requiresConcept refId="smart-assessment-microservices-assessment:MarkApiLayer"/>
-        <requiresConcept refId="smart-assessment-microservices-assessment:MarkInfrastructureLayer"/>
+    <constraint id="smarttopic-microservicestopic:ApiLayerMustNotDependOnInfrastructure" severity="major">
+        <requiresConcept refId="smarttopic-microservicestopic:MarkApiLayer"/>
+        <requiresConcept refId="smarttopic-microservicestopic:MarkInfrastructureLayer"/>
         <description>API layer classes must not directly depend on Infrastructure classes.</description>
         <cypher><![CDATA[
             MATCH (a:ApiLayer)-[:DEPENDS_ON]->(i:InfrastructureLayer)
@@ -96,28 +96,28 @@
         ]]>        </cypher>
     </constraint>
 
-    <constraint id="smart-assessment-microservices-assessment:NoCyclicPackageDependencies" severity="blocker">
+    <constraint id="smarttopic-microservicestopic:NoCyclicPackageDependencies" severity="blocker">
         <description>No cyclic package dependencies between top-level application packages.</description>
         <cypher><![CDATA[
             MATCH (p1:Package)-[:DEPENDS_ON]->(p2:Package)-[:DEPENDS_ON]->(p1)
-            WHERE p1.fqn STARTS WITH 'com.dkt.smartassessment'
-              AND p2.fqn STARTS WITH 'com.dkt.smartassessment'
+            WHERE p1.fqn STARTS WITH 'com.ent.smarttopic'
+              AND p2.fqn STARTS WITH 'com.ent.smarttopic'
               AND p1 <> p2
             RETURN p1.fqn AS Package1, p2.fqn AS Package2
         ]]>        </cypher>
     </constraint>
 
-    <group id="smart-assessment-microservices-assessment:Default">
-        <includeConcept refId="smart-assessment-microservices-assessment:MarkSpringController"/>
-        <includeConcept refId="smart-assessment-microservices-assessment:MarkSpringService"/>
-        <includeConcept refId="smart-assessment-microservices-assessment:MarkSpringRepository"/>
-        <includeConcept refId="smart-assessment-microservices-assessment:MarkApiLayer"/>
-        <includeConcept refId="smart-assessment-microservices-assessment:MarkDomainLayer"/>
-        <includeConcept refId="smart-assessment-microservices-assessment:MarkInfrastructureLayer"/>
-        <includeConstraint refId="smart-assessment-microservices-assessment:ControllerMustNotDependOnRepository"/>
-        <includeConstraint refId="smart-assessment-microservices-assessment:DomainMustNotDependOnInfrastructure"/>
-        <includeConstraint refId="smart-assessment-microservices-assessment:ApiLayerMustNotDependOnInfrastructure"/>
-        <includeConstraint refId="smart-assessment-microservices-assessment:NoCyclicPackageDependencies"/>
+    <group id="smarttopic-microservicestopic:Default">
+        <includeConcept refId="smarttopic-microservicestopic:MarkSpringController"/>
+        <includeConcept refId="smarttopic-microservicestopic:MarkSpringService"/>
+        <includeConcept refId="smarttopic-microservicestopic:MarkSpringRepository"/>
+        <includeConcept refId="smarttopic-microservicestopic:MarkApiLayer"/>
+        <includeConcept refId="smarttopic-microservicestopic:MarkDomainLayer"/>
+        <includeConcept refId="smarttopic-microservicestopic:MarkInfrastructureLayer"/>
+        <includeConstraint refId="smarttopic-microservicestopic:ControllerMustNotDependOnRepository"/>
+        <includeConstraint refId="smarttopic-microservicestopic:DomainMustNotDependOnInfrastructure"/>
+        <includeConstraint refId="smarttopic-microservicestopic:ApiLayerMustNotDependOnInfrastructure"/>
+        <includeConstraint refId="smarttopic-microservicestopic:NoCyclicPackageDependencies"/>
     </group>
 
 </jqa:jqassistant-rules>

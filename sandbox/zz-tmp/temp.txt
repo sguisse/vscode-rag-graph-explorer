@@ -15,17 +15,17 @@
   <TASK_CONTEXT_SCOPE>
 
 
---- Content of /Users/mac-SGUISS21/01-work/01-projects/01-java/china-smart-assessment/smart-assessment-microservices-assessment/.token-razor/tmp/python/export-files/2026-08-26_15-25-12/export-2026-08-26_15-25-12_01.yaml ---
+--- Content of //work/china-smarttopic/smarttopic-microservicestopic/.token-razor/tmp/python/export-files/2026-08-26_15-25-12/export-2026-08-26_15-25-12_01.yaml ---
 
 files:
   - filename: "AclFeignClient"
     extension: "java"
-    path: "/Users/mac-SGUISS21/01-work/01-projects/01-java/china-smart-assessment/smart-assessment-microservices-assessment/src/main/java/com/dkt/smartassessment/assessmentservice/api/controller/acl/feignclient"
+    path: "//work/china-smarttopic/smarttopic-microservicestopic/src/main/java/cont/ent/super/topicservice/api/controller/acl/feignclient"
     content: |-
-      package com.dkt.smartassessment.assessmentservice.api.controller.acl.feignclient;
+      package com.ent.smarttopic.topicservice.api.controller.acl.feignclient;
 
-      import com.dkt.smartassessment.assessmentservice.application.acl.dto.request.CreateAclFeignReq;
-      import com.dkt.smartassessment.assessmentservice.application.acl.service.AclFeignService;
+      import com.ent.smarttopic.topicservice.application.acl.dto.request.CreateAclFeignReq;
+      import com.ent.smarttopic.topicservice.application.acl.service.AclFeignService;
       import lombok.RequiredArgsConstructor;
       import org.springframework.web.bind.annotation.RestController;
 
@@ -48,14 +48,14 @@ files:
 
   - filename: "CreateAclFeignReq"
     extension: "java"
-    path: "/Users/mac-SGUISS21/01-work/01-projects/01-java/china-smart-assessment/smart-assessment-microservices-assessment/src/main/java/com/dkt/smartassessment/assessmentservice/application/acl/dto/request"
+    path: "//work/china-smarttopic/smarttopic-microservicestopic/src/main/java/cont/ent/super/topicservice/application/acl/dto/request"
     content: |-
-      package com.dkt.smartassessment.assessmentservice.application.acl.dto.request;
+      package com.ent.smarttopic.topicservice.application.acl.dto.request;
 
-      import com.dkt.smartassessment.assessmentservice.domain.assessment.persistence.model.Assessment;
-      import com.dkt.smartassessment.microservicekit.common.constants.EntityRole;
-      import com.dkt.smartassessment.microservicekit.common.dto.response.CompactUserFeignRes;
-      import com.dkt.smartassessment.microservicekit.database.acl.persistence.EntityRoleAssignment;
+      import com.ent.smarttopic.topicservice.domain.topic.persistence.model.topic;
+      import com.ent.smarttopic.microservicekit.common.constants.EntityRole;
+      import com.ent.smarttopic.microservicekit.common.dto.response.CompactUserFeignRes;
+      import com.ent.smarttopic.microservicekit.database.acl.persistence.EntityRoleAssignment;
       import io.swagger.v3.oas.annotations.media.Schema;
       import jakarta.validation.constraints.NotBlank;
       import jakarta.validation.constraints.NotNull;
@@ -70,18 +70,18 @@ files:
           @NotBlank
           private String email;
 
-          @Schema(description = "Assessment ID")
-          private Long assessmentId;
+          @Schema(description = "topic ID")
+          private Long topicId;
 
           @NotNull
           @Schema(description = "Entity Role")
           private EntityRole entityRole;
 
 
-          public EntityRoleAssignment toEntityRoleAssignment(CompactUserFeignRes user, Long assessmentId) {
+          public EntityRoleAssignment toEntityRoleAssignment(CompactUserFeignRes user, Long topicId) {
               EntityRoleAssignment entityRoleAssignment = new EntityRoleAssignment();
-              entityRoleAssignment.setEntityId(assessmentId.toString());
-              entityRoleAssignment.setEntityType(Assessment.class.getSimpleName());
+              entityRoleAssignment.setEntityId(topicId.toString());
+              entityRoleAssignment.setEntityType(topic.class.getSimpleName());
               entityRoleAssignment.setEmail(email);
               if (user != null) {
                   entityRoleAssignment.setUserId(user.getId());
@@ -93,22 +93,22 @@ files:
 
   - filename: "AclFeignService"
     extension: "java"
-    path: "/Users/mac-SGUISS21/01-work/01-projects/01-java/china-smart-assessment/smart-assessment-microservices-assessment/src/main/java/com/dkt/smartassessment/assessmentservice/application/acl/service"
+    path: "//work/china-smarttopic/smarttopic-microservicestopic/src/main/java/cont/ent/super/topicservice/application/acl/service"
     content: |-
-      package com.dkt.smartassessment.assessmentservice.application.acl.service;
+      package com.ent.smarttopic.topicservice.application.acl.service;
 
-      import com.dkt.smartassessment.assessmentservice.application.acl.dto.request.CreateAclFeignReq;
-      import com.dkt.smartassessment.assessmentservice.domain.acl.AclManager;
-      import com.dkt.smartassessment.assessmentservice.domain.assessment.manager.AssessmentManager;
-      import com.dkt.smartassessment.assessmentservice.domain.assessment.persistence.model.Assessment;
-      import com.dkt.smartassessment.microservicekit.common.dto.request.UserQueryFeignReq;
-      import com.dkt.smartassessment.microservicekit.common.dto.response.CompactUserFeignRes;
-      import com.dkt.smartassessment.microservicekit.common.exception.ApplicationException;
-      import com.dkt.smartassessment.microservicekit.common.exception.ErrorCode;
-      import com.dkt.smartassessment.microservicekit.database.acl.manager.AclEntityRoleManager;
-      import com.dkt.smartassessment.microservicekit.database.acl.persistence.AclEntityRole;
-      import com.dkt.smartassessment.microservicekit.database.acl.persistence.EntityRoleAssignment;
-      import com.dkt.smartassessment.microservicekit.web.api.feign.user.IUserFeignClient;
+      import com.ent.smarttopic.topicservice.application.acl.dto.request.CreateAclFeignReq;
+      import com.ent.smarttopic.topicservice.domain.acl.AclManager;
+      import com.ent.smarttopic.topicservice.domain.topic.manager.topicManager;
+      import com.ent.smarttopic.topicservice.domain.topic.persistence.model.topic;
+      import com.ent.smarttopic.microservicekit.common.dto.request.UserQueryFeignReq;
+      import com.ent.smarttopic.microservicekit.common.dto.response.CompactUserFeignRes;
+      import com.ent.smarttopic.microservicekit.common.exception.ApplicationException;
+      import com.ent.smarttopic.microservicekit.common.exception.ErrorCode;
+      import com.ent.smarttopic.microservicekit.database.acl.manager.AclEntityRoleManager;
+      import com.ent.smarttopic.microservicekit.database.acl.persistence.AclEntityRole;
+      import com.ent.smarttopic.microservicekit.database.acl.persistence.EntityRoleAssignment;
+      import com.ent.smarttopic.microservicekit.web.api.feign.user.IUserFeignClient;
       import lombok.RequiredArgsConstructor;
       import org.springframework.stereotype.Service;
       import org.springframework.transaction.PlatformTransactionManager;
@@ -121,7 +121,7 @@ files:
       @RequiredArgsConstructor
       public class AclFeignService {
 
-          private final AssessmentManager assessmentManager;
+          private final topicManager topicManager;
           private final AclManager aclManager;
           private final AclEntityRoleManager aclRoleManager;
           private final PlatformTransactionManager transactionManager;
@@ -131,16 +131,16 @@ files:
               TransactionTemplate transaction = new TransactionTemplate(transactionManager);
               transaction.executeWithoutResult(_ ->
                       reqs.forEach(req -> {
-                          Assessment assessment = assessmentManager.selectOne(req.getAssessmentId()).orElseThrow(() -> new ApplicationException(ErrorCode.GENERIC404));
-                          Optional<EntityRoleAssignment> era = aclManager.selectByEmailAndEntityTypeAndEntityId(req.getEmail(), Assessment.class.getSimpleName(), assessment.getId().toString());
+                          topic topic = topicManager.selectOne(req.gettopicId()).orElseThrow(() -> new ApplicationException(ErrorCode.GENERIC404));
+                          Optional<EntityRoleAssignment> era = aclManager.selectByEmailAndEntityTypeAndEntityId(req.getEmail(), topic.class.getSimpleName(), topic.getId().toString());
                           if (era.isPresent()) {
                               return;
                           }
-                          AclEntityRole aclEntityRole = aclRoleManager.selectByEntityTypeAndName(Assessment.class.getSimpleName(), req.getEntityRole().getValue()).orElseThrow(() -> new ApplicationException(ErrorCode.GENERIC404));
+                          AclEntityRole aclEntityRole = aclRoleManager.selectByEntityTypeAndName(topic.class.getSimpleName(), req.getEntityRole().getValue()).orElseThrow(() -> new ApplicationException(ErrorCode.GENERIC404));
                           UserQueryFeignReq userQueryFeignReq = new UserQueryFeignReq();
                           userQueryFeignReq.setEmails(Set.of(req.getEmail()));
                           CompactUserFeignRes userFeignRes = userFeignClient.queryUsers(userQueryFeignReq).stream().findFirst().orElse(null);
-                          EntityRoleAssignment entityRoleAssignment = req.toEntityRoleAssignment(userFeignRes, assessment.getId());
+                          EntityRoleAssignment entityRoleAssignment = req.toEntityRoleAssignment(userFeignRes, topic.getId());
                           entityRoleAssignment.setAclEntityRole(aclEntityRole);
                           aclManager.save(entityRoleAssignment);
                       }));
@@ -152,18 +152,18 @@ files:
 
   - filename: "IAclFeignClient"
     extension: "java"
-    path: "/Users/mac-SGUISS21/01-work/01-projects/01-java/china-smart-assessment/smart-assessment-microservices-assessment/src/main/java/com/dkt/smartassessment/assessmentservice/api/controller/acl/feignclient"
+    path: "//work/china-smarttopic/smarttopic-microservicestopic/src/main/java/cont/ent/super/topicservice/api/controller/acl/feignclient"
     content: |-
-      package com.dkt.smartassessment.assessmentservice.api.controller.acl.feignclient;
+      package com.ent.smarttopic.topicservice.api.controller.acl.feignclient;
 
-      import com.dkt.smartassessment.assessmentservice.application.acl.dto.request.CreateAclFeignReq;
+      import com.ent.smarttopic.topicservice.application.acl.dto.request.CreateAclFeignReq;
       import org.springframework.http.MediaType;
       import org.springframework.web.bind.annotation.PostMapping;
       import org.springframework.web.bind.annotation.RequestBody;
       import org.springframework.web.bind.annotation.RequestMapping;
       import java.util.List;
 
-      @RequestMapping("/feign/assessments/acl")
+      @RequestMapping("/feign/topics/acl")
       public interface IAclFeignClient {
 
 
@@ -174,23 +174,23 @@ files:
 
       }
 
-  - filename: "Assessment"
+  - filename: "topic"
     extension: "java"
-    path: "/Users/mac-SGUISS21/01-work/01-projects/01-java/china-smart-assessment/smart-assessment-microservices-assessment/src/main/java/com/dkt/smartassessment/assessmentservice/domain/assessment/persistence/model"
+    path: "//work/china-smarttopic/smarttopic-microservicestopic/src/main/java/cont/ent/super/topicservice/domain/topic/persistence/model"
     content: |-
-      package com.dkt.smartassessment.assessmentservice.domain.assessment.persistence.model;
+      package com.ent.smarttopic.topicservice.domain.topic.persistence.model;
 
-      import com.dkt.smartassessment.assessmentservice.domain.assessment.constants.AssessmentType;
-      import com.dkt.smartassessment.assessmentservice.domain.assessment.constants.Status;
-      import com.dkt.smartassessment.assessmentservice.domain.assessment.constants.SyncStatus;
-      import com.dkt.smartassessment.assessmentservice.domain.assessment.persistence.vo.OffsetDate;
-      import com.dkt.smartassessment.assessmentservice.domain.assessment.persistence.vo.TimeRecordVo;
-      import com.dkt.smartassessment.assessmentservice.domain.assessment.persistence.vo.WorkflowDateStatus;
-      import com.dkt.smartassessment.assessmentservice.domain.assessmentitem.persistence.model.AssessmentItem;
-      import com.dkt.smartassessment.assessmentservice.domain.evidence.persistence.model.Evidence;
-      import com.dkt.smartassessment.assessmentservice.domain.snapshot.persistence.model.Book;
-      import com.dkt.smartassessment.assessmentservice.domain.snapshot.persistence.model.ScoringMethod;
-      import com.dkt.smartassessment.microservicekit.database.data.persistence.BaseIDUserAuditedModel;
+      import com.ent.smarttopic.topicservice.domain.topic.constants.topicType;
+      import com.ent.smarttopic.topicservice.domain.topic.constants.Status;
+      import com.ent.smarttopic.topicservice.domain.topic.constants.SyncStatus;
+      import com.ent.smarttopic.topicservice.domain.topic.persistence.vo.OffsetDate;
+      import com.ent.smarttopic.topicservice.domain.topic.persistence.vo.TimeRecordVo;
+      import com.ent.smarttopic.topicservice.domain.topic.persistence.vo.WorkflowDateStatus;
+      import com.ent.smarttopic.topicservice.domain.topicitem.persistence.model.topicItem;
+      import com.ent.smarttopic.topicservice.domain.evidence.persistence.model.Evidence;
+      import com.ent.smarttopic.topicservice.domain.snapshot.persistence.model.Book;
+      import com.ent.smarttopic.topicservice.domain.snapshot.persistence.model.ScoringMethod;
+      import com.ent.smarttopic.microservicekit.database.data.persistence.BaseIDUserAuditedModel;
       import com.fasterxml.jackson.annotation.JsonIgnore;
       import io.hypersistence.utils.hibernate.type.json.JsonType;
       import jakarta.persistence.*;
@@ -203,9 +203,9 @@ files:
       import java.util.List;
 
       @Getter @Setter
-      @Entity @Table(name = "assessments")
-      @Audited @AuditTable("assessment_audit_logs")
-      public class Assessment extends BaseIDUserAuditedModel {
+      @Entity @Table(name = "topics")
+      @Audited @AuditTable("topic_audit_logs")
+      public class topic extends BaseIDUserAuditedModel {
 
           @Column(name = "b32_id")
           private String b32Id;
@@ -251,8 +251,8 @@ files:
           private Status status;
 
           @Enumerated(EnumType.STRING)
-          @Column(name = "assessment_type", nullable = false)
-          private AssessmentType assessmentType;
+          @Column(name = "topic_type", nullable = false)
+          private topicType topicType;
 
           @Column(name = "assessor_id")
           private String assessorId;
@@ -307,15 +307,15 @@ files:
           @JsonIgnore
           @ManyToOne(fetch = FetchType.LAZY)
           @JoinColumn(name = "cap_original_report_id")
-          private Assessment capOriginalReport;
+          private topic capOriginalReport;
 
           @JsonIgnore
           @OneToMany(mappedBy = "capOriginalReport")
-          private List<Assessment> capAssessments;
+          private List<topic> captopics;
 
           @JsonIgnore
-          @OneToMany(fetch = FetchType.LAZY, mappedBy = "assessment")
-          private List<AssessmentItem> assessmentItems;
+          @OneToMany(fetch = FetchType.LAZY, mappedBy = "topic")
+          private List<topicItem> topicItems;
 
           @JsonIgnore
           @ManyToOne(fetch = FetchType.LAZY)
@@ -336,11 +336,11 @@ files:
           @Column(name = "compliance_target_id")
           private Long complianceTargetId;
 
-          @Column(name = "assessment_entity_id", nullable = false)
-          private Long assessmentEntityId;
+          @Column(name = "topic_entity_id", nullable = false)
+          private Long topicEntityId;
 
           @JsonIgnore
-          @OneToMany(mappedBy = "assessment", fetch = FetchType.LAZY)
+          @OneToMany(mappedBy = "topic", fetch = FetchType.LAZY)
           private List<Evidence> evidences;
 
           @Type(JsonType.class)
@@ -366,8 +366,8 @@ files:
           @Column(name = "cap_bucket_id", updatable = false, insertable = false)
           private Long capBucketId;
 
-          @Column(name = "has_cap_assessment")
-          private Boolean hasCapAssessment = false;
+          @Column(name = "has_cap_topic")
+          private Boolean hasCaptopic = false;
 
           @Column(name = "is_legacy")
           private Boolean isLegacy = false;
@@ -383,8 +383,8 @@ files:
               return workflowDateStatus;
           }
 
-          public Boolean getHasCapAssessment() {
-              return hasCapAssessment != null && hasCapAssessment;
+          public Boolean getHasCaptopic() {
+              return hasCaptopic != null && hasCaptopic;
           }
 
 
@@ -392,21 +392,21 @@ files:
 
   - filename: "AclManager"
     extension: "java"
-    path: "/Users/mac-SGUISS21/01-work/01-projects/01-java/china-smart-assessment/smart-assessment-microservices-assessment/src/main/java/com/dkt/smartassessment/assessmentservice/domain/acl"
+    path: "//work/china-smarttopic/smarttopic-microservicestopic/src/main/java/cont/ent/super/topicservice/domain/acl"
     content: |-
-      package com.dkt.smartassessment.assessmentservice.domain.acl;
+      package com.ent.smarttopic.topicservice.domain.acl;
 
-      import com.dkt.smartassessment.assessmentservice.domain.assessment.persistence.model.Assessment;
-      import com.dkt.smartassessment.assessmentservice.domain.elastic.querybuilder.SupplierERAFilterBuilder;
-      import com.dkt.smartassessment.assessmentservice.infrastructure.opensearch.OpenSearchNamingConfig;
-      import com.dkt.smartassessment.microservicekit.database.acl.persistence.AclEntityRole;
-      import com.dkt.smartassessment.microservicekit.database.acl.persistence.EntityRoleAssignment;
-      import com.dkt.smartassessment.microservicekit.database.acl.persistence.querybuilder.EntityRoleAssignmentQueryBuilder;
-      import com.dkt.smartassessment.microservicekit.database.acl.persistence.repository.EntityRoleAssignmentRepo;
-      import com.dkt.smartassessment.microservicekit.database.data.query.elastic.ElasticQueryBuilder;
-      import com.dkt.smartassessment.microservicekit.database.data.vo.ERAElasticVo;
-      import com.dkt.smartassessment.microservicekit.web.api.feign.user.IUserFeignClient;
-      import com.dkt.smartassessment.microservicekit.common.dto.response.CompactUserFeignRes;
+      import com.ent.smarttopic.topicservice.domain.topic.persistence.model.topic;
+      import com.ent.smarttopic.topicservice.domain.elastic.querybuilder.SupplierERAFilterBuilder;
+      import com.ent.smarttopic.topicservice.infrastructure.opensearch.OpenSearchNamingConfig;
+      import com.ent.smarttopic.microservicekit.database.acl.persistence.AclEntityRole;
+      import com.ent.smarttopic.microservicekit.database.acl.persistence.EntityRoleAssignment;
+      import com.ent.smarttopic.microservicekit.database.acl.persistence.querybuilder.EntityRoleAssignmentQueryBuilder;
+      import com.ent.smarttopic.microservicekit.database.acl.persistence.repository.EntityRoleAssignmentRepo;
+      import com.ent.smarttopic.microservicekit.database.data.query.elastic.ElasticQueryBuilder;
+      import com.ent.smarttopic.microservicekit.database.data.vo.ERAElasticVo;
+      import com.ent.smarttopic.microservicekit.web.api.feign.user.IUserFeignClient;
+      import com.ent.smarttopic.microservicekit.common.dto.response.CompactUserFeignRes;
       import jakarta.persistence.EntityManager;
       import lombok.RequiredArgsConstructor;
       import lombok.SneakyThrows;
@@ -462,7 +462,7 @@ files:
           public Page<EntityRoleAssignment> query(Long id, Pageable pageable) {
               Long total = new EntityRoleAssignmentQueryBuilder<>(entityManager, Long.class, EntityRoleAssignment.class, pageable)
                       .equalEntityId(id.toString())
-                      .equalEntityType(Assessment.class.getSimpleName())
+                      .equalEntityType(topic.class.getSimpleName())
                       .getSingleResult();
               if (total == 0) {
                   return Page.empty();
@@ -470,22 +470,22 @@ files:
               return new EntityRoleAssignmentQueryBuilder<>(entityManager, EntityRoleAssignment.class, EntityRoleAssignment.class, pageable)
                       .permissionPredicate()
                       .equalEntityId(id.toString())
-                      .equalEntityType(Assessment.class.getSimpleName())
+                      .equalEntityType(topic.class.getSimpleName())
                       .getResultPage(total);
 
           }
 
-          public Optional<EntityRoleAssignment> selectEntityRoleUser(Long assessmentId) {
+          public Optional<EntityRoleAssignment> selectEntityRoleUser(Long topicId) {
               String userId = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
               return repo.findByUserIdAndEntityTypeAndEntityId(
                       userId,
-                      Assessment.class.getSimpleName(),
-                      assessmentId.toString()
+                      topic.class.getSimpleName(),
+                      topicId.toString()
 
               );
           }
 
-          public void saveERAs(List<EntityRoleAssignment> entityRoleAssignments, Assessment cap, AclEntityRole aclEntityRole) {
+          public void saveERAs(List<EntityRoleAssignment> entityRoleAssignments, topic cap, AclEntityRole aclEntityRole) {
               Map<String, EntityRoleAssignment> map = entityRoleAssignments.stream()
                       .filter(e -> e.getUserId() != null)
                       .map(e -> {
@@ -504,7 +504,7 @@ files:
                   entityRoleAssignment.setPrimaryOwner(false);
                   entityRoleAssignment.setEmail(userMap.get(cap.getAssessorId()).getEmail());
                   entityRoleAssignment.setUserId(cap.getAssessorId());
-                  entityRoleAssignment.setEntityType(Assessment.class.getSimpleName());
+                  entityRoleAssignment.setEntityType(topic.class.getSimpleName());
                   entityRoleAssignment.setEntityId(cap.getId().toString());
                   entityRoleAssignment.setAclEntityRole(aclEntityRole);
                   map.put(cap.getAssessorId(), entityRoleAssignment);
@@ -514,7 +514,7 @@ files:
                   entityRoleAssignment.setPrimaryOwner(true);
                   entityRoleAssignment.setEmail(userMap.get(cap.getCreatedById()).getEmail());
                   entityRoleAssignment.setUserId(cap.getCreatedById());
-                  entityRoleAssignment.setEntityType(Assessment.class.getSimpleName());
+                  entityRoleAssignment.setEntityType(topic.class.getSimpleName());
                   entityRoleAssignment.setEntityId(cap.getId().toString());
                   entityRoleAssignment.setAclEntityRole(aclEntityRole);
                   map.put(cap.getCreatedById(), entityRoleAssignment);
@@ -527,15 +527,15 @@ files:
           }
 
 
-          public void saveEntityRoleAssignments(Assessment assessment, AclEntityRole aclEntityRole) {
+          public void saveEntityRoleAssignments(topic topic, AclEntityRole aclEntityRole) {
               List<EntityRoleAssignment> entityRoleAssignments = new ArrayList<>();
-              Set<String> userIds = Stream.of(assessment.getAssessorId(), assessment.getCreatedById()).filter(Objects::nonNull).collect(Collectors.toSet());
+              Set<String> userIds = Stream.of(topic.getAssessorId(), topic.getCreatedById()).filter(Objects::nonNull).collect(Collectors.toSet());
               Map<String, CompactUserFeignRes> userMap = CompactUserFeignRes.usersMapById(userFeignClient.listUsers(userIds));
-              EntityRoleAssignment entityRoleAssignment = toEntityRoleAssignment(assessment, userMap.get(assessment.getCreatedById()), aclEntityRole);
+              EntityRoleAssignment entityRoleAssignment = toEntityRoleAssignment(topic, userMap.get(topic.getCreatedById()), aclEntityRole);
               entityRoleAssignment.setPrimaryOwner(true);
-              entityRoleAssignment.setEmail(userMap.get(assessment.getCreatedById()).getEmail());
-              if (assessment.getAssessorId() != null && !assessment.getCreatedById().equals(assessment.getAssessorId())) {
-                  entityRoleAssignments.add(toEntityRoleAssignment(assessment, userMap.get(assessment.getAssessorId()), aclEntityRole));
+              entityRoleAssignment.setEmail(userMap.get(topic.getCreatedById()).getEmail());
+              if (topic.getAssessorId() != null && !topic.getCreatedById().equals(topic.getAssessorId())) {
+                  entityRoleAssignments.add(toEntityRoleAssignment(topic, userMap.get(topic.getAssessorId()), aclEntityRole));
               }
               entityRoleAssignments.add(entityRoleAssignment);
 
@@ -543,69 +543,69 @@ files:
           }
 
           @SneakyThrows
-          public void saveSupERAs(Assessment assessment, AclEntityRole aclEntityRole) {
+          public void saveSupERAs(topic topic, AclEntityRole aclEntityRole) {
               List<EntityRoleAssignment> entityRoleAssignments = new ArrayList<>();
               ElasticQueryBuilder queryBuilder = new ElasticQueryBuilder(openSearchNamingConfig.getIndexNamePrefix() + "sup_entity_role_assignments");
               List<ERAElasticVo> eraElastics = queryBuilder.filters(
                       new SupplierERAFilterBuilder(queryBuilder)
-                              .equalEntityId(assessment.getAssessmentEntityId().toString())
+                              .equalEntityId(topic.gettopicEntityId().toString())
                               .equalEntityType(Supplier.class.getSimpleName())
               ).getQueryBuilder().resultList(ERAElasticVo.class);
               eraElastics.forEach(era -> {
-                  if (era.getUserId() != null && (era.getUserId().equals(assessment.getAssessorId()) || era.getUserId().equals(assessment.getCreatedById()))) {
+                  if (era.getUserId() != null && (era.getUserId().equals(topic.getAssessorId()) || era.getUserId().equals(topic.getCreatedById()))) {
                       return;
                   }
                   EntityRoleAssignment e = new EntityRoleAssignment();
                   e.setAclEntityRole(aclEntityRole);
                   e.setUserId(era.getUserId());
                   e.setEmail(era.getEmail());
-                  e.setEntityId(assessment.getId().toString());
-                  e.setEntityType(Assessment.class.getSimpleName());
+                  e.setEntityId(topic.getId().toString());
+                  e.setEntityType(topic.class.getSimpleName());
                   entityRoleAssignments.add(e);
               });
               repo.saveAll(entityRoleAssignments);
           }
 
 
-          public EntityRoleAssignment toEntityRoleAssignment(Assessment assessment, CompactUserFeignRes user, AclEntityRole aclEntityRole) {
+          public EntityRoleAssignment toEntityRoleAssignment(topic topic, CompactUserFeignRes user, AclEntityRole aclEntityRole) {
               EntityRoleAssignment entityRoleAssignment = new EntityRoleAssignment();
               entityRoleAssignment.setAclEntityRole(aclEntityRole);
               entityRoleAssignment.setUserId(user.getId());
               entityRoleAssignment.setEmail(user.getEmail());
-              entityRoleAssignment.setEntityId(assessment.getId().toString());
-              entityRoleAssignment.setEntityType(Assessment.class.getSimpleName());
+              entityRoleAssignment.setEntityId(topic.getId().toString());
+              entityRoleAssignment.setEntityType(topic.class.getSimpleName());
               return entityRoleAssignment;
           }
 
       }
 
-  - filename: "AssessmentManager"
+  - filename: "topicManager"
     extension: "java"
-    path: "/Users/mac-SGUISS21/01-work/01-projects/01-java/china-smart-assessment/smart-assessment-microservices-assessment/src/main/java/com/dkt/smartassessment/assessmentservice/domain/assessment/manager"
+    path: "//work/china-smarttopic/smarttopic-microservicestopic/src/main/java/cont/ent/super/topicservice/domain/topic/manager"
     content: |-
-      package com.dkt.smartassessment.assessmentservice.domain.assessment.manager;
+      package com.ent.smarttopic.topicservice.domain.topic.manager;
 
-      import com.dkt.smartassessment.assessmentservice.api.feign.supplier.dto.SupplierRes;
-      import com.dkt.smartassessment.assessmentservice.application.assessment.dto.request.CreateAssessmentReq;
-      import com.dkt.smartassessment.assessmentservice.application.assessment.dto.request.QueryAssessmentReq;
-      import com.dkt.smartassessment.assessmentservice.application.assessment.dto.response.assessment.StatusCountRes;
-      import com.dkt.smartassessment.assessmentservice.application.elastic.assessment.vo.AssessmentElasticVo;
-      import com.dkt.smartassessment.assessmentservice.domain.assessment.constants.Status;
-      import com.dkt.smartassessment.assessmentservice.domain.assessment.persistence.model.Assessment;
-      import com.dkt.smartassessment.assessmentservice.domain.assessment.persistence.querybuilder.AssessmentFilterBuilder;
-      import com.dkt.smartassessment.assessmentservice.domain.assessment.persistence.repository.AssessmentRepository;
-      import com.dkt.smartassessment.assessmentservice.domain.assessment.persistence.vo.OffsetDate;
-      import com.dkt.smartassessment.assessmentservice.domain.assessment.persistence.vo.StatusCountVo;
-      import com.dkt.smartassessment.assessmentservice.domain.assessment.persistence.vo.TimeRecordVo;
-      import com.dkt.smartassessment.assessmentservice.infrastructure.opensearch.OpenSearchNamingConfig;
-      import com.dkt.smartassessment.microservicekit.common.dto.response.CompactUserFeignRes;
-      import com.dkt.smartassessment.microservicekit.database.acl.persistence.EntityRoleAssignment;
-      import com.dkt.smartassessment.microservicekit.database.data.query.elastic.ElasticQueryBuilder;
-      import com.dkt.smartassessment.microservicekit.database.data.query.elastic.sort.SortBuilder;
-      import com.dkt.smartassessment.microservicekit.web.api.feign.notification.INotificationFeign;
-      import com.dkt.smartassessment.microservicekit.web.api.feign.notification.dto.NotificationMessageReq;
-      import com.dkt.smartassessment.microservicekit.web.api.feign.notification.vo.MetadataVo;
-      import com.dkt.smartassessment.microservicekit.web.http.ApplicationProperties;
+      import com.ent.smarttopic.topicservice.api.feign.supplier.dto.SupplierRes;
+      import com.ent.smarttopic.topicservice.application.topic.dto.request.CreatetopicReq;
+      import com.ent.smarttopic.topicservice.application.topic.dto.request.QuerytopicReq;
+      import com.ent.smarttopic.topicservice.application.topic.dto.response.topic.StatusCountRes;
+      import com.ent.smarttopic.topicservice.application.elastic.topic.vo.topicElasticVo;
+      import com.ent.smarttopic.topicservice.domain.topic.constants.Status;
+      import com.ent.smarttopic.topicservice.domain.topic.persistence.model.topic;
+      import com.ent.smarttopic.topicservice.domain.topic.persistence.querybuilder.topicFilterBuilder;
+      import com.ent.smarttopic.topicservice.domain.topic.persistence.repository.topicRepository;
+      import com.ent.smarttopic.topicservice.domain.topic.persistence.vo.OffsetDate;
+      import com.ent.smarttopic.topicservice.domain.topic.persistence.vo.StatusCountVo;
+      import com.ent.smarttopic.topicservice.domain.topic.persistence.vo.TimeRecordVo;
+      import com.ent.smarttopic.topicservice.infrastructure.opensearch.OpenSearchNamingConfig;
+      import com.ent.smarttopic.microservicekit.common.dto.response.CompactUserFeignRes;
+      import com.ent.smarttopic.microservicekit.database.acl.persistence.EntityRoleAssignment;
+      import com.ent.smarttopic.microservicekit.database.data.query.elastic.ElasticQueryBuilder;
+      import com.ent.smarttopic.microservicekit.database.data.query.elastic.sort.SortBuilder;
+      import com.ent.smarttopic.microservicekit.web.api.feign.notification.INotificationFeign;
+      import com.ent.smarttopic.microservicekit.web.api.feign.notification.dto.NotificationMessageReq;
+      import com.ent.smarttopic.microservicekit.web.api.feign.notification.vo.MetadataVo;
+      import com.ent.smarttopic.microservicekit.web.http.ApplicationProperties;
       import lombok.RequiredArgsConstructor;
       import lombok.SneakyThrows;
       import org.springframework.data.domain.Page;
@@ -624,67 +624,67 @@ files:
 
       @Component
       @RequiredArgsConstructor
-      public class AssessmentManager {
+      public class topicManager {
 
-          private final AssessmentRepository repository;
+          private final topicRepository repository;
           private final INotificationFeign notificationFeign;
           private final ApplicationProperties applicationProperties;
           private final OpenSearchNamingConfig openSearchNamingConfig;
 
-          public Assessment toAssessment(CreateAssessmentReq req,
+          public topic totopic(CreatetopicReq req,
                                          SupplierRes supplier) {
-              Assessment assessment = new Assessment();
-              assessment.setPlannedAssessedOn(Date.from(req.getPlannedAssessedOn().toInstant()));
-              assessment.setLastStatusChangeAt(assessment.getPlannedAssessedOn());
-              assessment.setStatus(Status.PLANNED);
-              assessment.setAssessmentType(req.getAssessmentType());
-              assessment.setAssessorId(req.getAssessorId());
-              assessment.setTargetLevel(req.getTargetLevel());
-              assessment.setAssessmentEntityId(supplier.getId());
+              topic topic = new topic();
+              topic.setPlannedAssessedOn(Date.from(req.getPlannedAssessedOn().toInstant()));
+              topic.setLastStatusChangeAt(topic.getPlannedAssessedOn());
+              topic.setStatus(Status.PLANNED);
+              topic.settopicType(req.gettopicType());
+              topic.setAssessorId(req.getAssessorId());
+              topic.setTargetLevel(req.getTargetLevel());
+              topic.settopicEntityId(supplier.getId());
               TimeRecordVo timeRecord = new TimeRecordVo();
               timeRecord.setPlannedAssessedOn(req.getPlannedAssessedOn());
-              assessment.setTimeRecord(timeRecord);
-              assessment.setLastSyncAnswerAt(new Date());
-              assessment.setValidUntilOffsetTimezone("Europe/Paris");
-              setPlannedAssessedOnOffsetDate(assessment);
-              return assessment;
+              topic.setTimeRecord(timeRecord);
+              topic.setLastSyncAnswerAt(new Date());
+              topic.setValidUntilOffsetTimezone("Europe/Paris");
+              setPlannedAssessedOnOffsetDate(topic);
+              return topic;
           }
 
-          public void save(Assessment assessment) {
-              repository.save(assessment);
+          public void save(topic topic) {
+              repository.save(topic);
           }
 
           public void delete(Long id) {
               repository.deleteById(id);
           }
 
-          public Optional<Assessment> selectOne(Long id) {
+          public Optional<topic> selectOne(Long id) {
               return repository.findById(id);
           }
 
-          public List<Assessment> selectByGridIdAndVersionIdAndAssessmentEntityId(List<Long> ids) {
-              return repository.findValidAssessments(ids);
+          public List<topic> selectByGridIdAndVersionIdAndtopicEntityId(List<Long> ids) {
+              return repository.findValidtopics(ids);
           }
 
-          public List<Assessment> selectAll(List<Long> ids) {
+          public List<topic> selectAll(List<Long> ids) {
               return repository.findAllByIds(ids);
           }
 
-          public List<Assessment> selectAll() {
+          public List<topic> selectAll() {
               return repository.findAll();
           }
 
           @SneakyThrows
-          public Page<AssessmentElasticVo> select(QueryAssessmentReq req, Pageable pageable) {
-              ElasticQueryBuilder queryBuilder = new ElasticQueryBuilder(openSearchNamingConfig.assessmentIndexName());
-              AssessmentFilterBuilder filterBuilder = new AssessmentFilterBuilder(queryBuilder)
-                      .checkAccess(Assessment.class.getSimpleName(), openSearchNamingConfig.getIndexNamePrefix())
+          public Page<topicElasticVo> select(QuerytopicReq req, Pageable pageable) {
+              ElasticQueryBuilder queryBuilder = new ElasticQueryBuilder(openSearchNamingConfig.topicIndexName());
+              topicFilterBuilder filterBuilder = new topicFilterBuilder(queryBuilder)
+                      .checkAccess(topic.class.getSimpleName(), openSearchNamingConfig.getIndexNamePrefix())
                       .equalGridId(req.getGridId())
-                      .equalAssessmentEntityId(req.getAssessmentEntityId())
+                      .equaltopicEntityId(req.gettopicEntityId())
                       .equalVersionId(req.getVersionId())
                       .inGridIds(req.getGridIds())
                       .inStatuses(req.getStatuses())
-                      .inAssessmentTypes(req.getAssessmentTypes())
+                      .intopicTypes(req.gettopicTypes())
                       .isMeetsTarget(req.getMeetsTarget())
                       .inAssessorIds(req.getAssessorIds())
                       .search(req.getSearch())
@@ -698,104 +698,104 @@ files:
                       .sorts(new SortBuilder<>(queryBuilder))
                       .applyPageableSorting()
                       .getQueryBuilder()
-                      .resultPage(AssessmentElasticVo.class);
+                      .resultPage(topicElasticVo.class);
           }
 
-          public Optional<Revision<Integer, Assessment>> findRevision(Long id, Integer revReference) {
+          public Optional<Revision<Integer, topic>> findRevision(Long id, Integer revReference) {
               return repository.findRevision(id, revReference);
           }
 
-          public void sendEmailNotification(EntityRoleAssignment entityRoleAssignment, CompactUserFeignRes senderUser, Assessment assessment) {
+          public void sendEmailNotification(EntityRoleAssignment entityRoleAssignment, CompactUserFeignRes senderUser, topic topic) {
               Map<String,String> map = new HashMap<>();
               Map<String,String> dataUrl = new HashMap<>();
-              String url = applicationProperties.getUrl().get("frontend-url") + "/assessments/" + assessment.getB32Id();
-              String name = assessment.getDisplayName();
-              map.put("assessment_link", url);
-              map.put("assessment_name", name);
+              String url = applicationProperties.getUrl().get("frontend-url") + "/topics/" + topic.getB32Id();
+              String name = topic.getDisplayName();
+              map.put("topic_link", url);
+              map.put("topic_name", name);
               dataUrl.put(name, url);
               NotificationMessageReq req = new NotificationMessageReq();
               req.setMessageType(NotificationMessageReq.MessageType.INVITATION);
-              req.setSubMessageType(NotificationMessageReq.SubMessageType.ASSESSMENT_INVITATION);
+              req.setSubMessageType(NotificationMessageReq.SubMessageType.topic_INVITATION);
               req.setSenderUserId(senderUser.getId());
-              req.setMetadata(new MetadataVo(map, dataUrl, new MetadataVo.Action(url, MetadataVo.NotificationType.ASSESSMENT_NOTIFICATION)));
+              req.setMetadata(new MetadataVo(map, dataUrl, new MetadataVo.Action(url, MetadataVo.NotificationType.topic_NOTIFICATION)));
               req.setRecipientUserEmails(Set.of(entityRoleAssignment.getEmail()));
               notificationFeign.sendNotification(req);
           }
 
           @SneakyThrows
-          public StatusCountRes selectCountByUserIdAndEntityTypeGroupByStatus(Long assessmentEntityId) {
-              ElasticQueryBuilder queryBuilder = new ElasticQueryBuilder(openSearchNamingConfig.assessmentIndexName());
-              AssessmentFilterBuilder filterBuilder = new AssessmentFilterBuilder(queryBuilder)
-                      .checkAccess(Assessment.class.getSimpleName(), openSearchNamingConfig.getIndexNamePrefix())
-                      .equalAssessmentEntityId(assessmentEntityId)
+          public StatusCountRes selectCountByUserIdAndEntityTypeGroupByStatus(Long topicEntityId) {
+              ElasticQueryBuilder queryBuilder = new ElasticQueryBuilder(openSearchNamingConfig.topicIndexName());
+              topicFilterBuilder filterBuilder = new topicFilterBuilder(queryBuilder)
+                      .checkAccess(topic.class.getSimpleName(), openSearchNamingConfig.getIndexNamePrefix())
+                      .equaltopicEntityId(topicEntityId)
                       .isCapReport(false);
-              List<AssessmentElasticVo> assessmentElasticVos = queryBuilder
+              List<topicElasticVo> topicElasticVos = queryBuilder
                       .filters(filterBuilder)
                       .getQueryBuilder()
-                      .resultList(AssessmentElasticVo.class);
+                      .resultList(topicElasticVo.class);
 
-              Map<Status, Long> collect = assessmentElasticVos.stream().collect(Collectors.groupingBy(AssessmentElasticVo::getStatus, Collectors.counting()));
+              Map<Status, Long> collect = topicElasticVos.stream().collect(Collectors.groupingBy(topicElasticVo::getStatus, Collectors.counting()));
               return new StatusCountRes(collect);
           }
 
 
-          public Optional<Assessment> selectOneByb32Id(String b32Id) {
+          public Optional<topic> selectOneByb32Id(String b32Id) {
               return repository.findByB32Id(b32Id);
           }
 
-          public List<Map<String, String>>  assessmentStatsGroupedByGrid(Long supplierId) {
-              return repository.assessmentStatsGroupedByGrid(supplierId);
+          public List<Map<String, String>>  topicStatsGroupedByGrid(Long supplierId) {
+              return repository.topicStatsGroupedByGrid(supplierId);
           }
 
-          public List<Map<String, String>>  assessmentDistributionStats(Long supplierId) {
-              return repository.assessmentDistributionStats(supplierId);
+          public List<Map<String, String>>  topicDistributionStats(Long supplierId) {
+              return repository.topicDistributionStats(supplierId);
           }
 
-          public List<Assessment> selectByCapOriginalReportId(Long id) {
+          public List<topic> selectByCapOriginalReportId(Long id) {
               return repository.findByCapOriginalReportId(id);
           }
 
-          public List<Assessment> selectByValidByCapOriginalReportId(Long capOriginalReportId) {
+          public List<topic> selectByValidByCapOriginalReportId(Long capOriginalReportId) {
               return repository.findValidByCapOriginalReportId(capOriginalReportId);
           }
 
-          public List<Assessment> selectByStatus(Status status) {
+          public List<topic> selectByStatus(Status status) {
               return repository.findByStatus(status);
           }
 
-          public Optional<Assessment> selectLastCapByCapOriginalReportId(Long id) {
+          public Optional<topic> selectLastCapByCapOriginalReportId(Long id) {
               return repository.findLastCapByCapOriginalReportId(id);
           }
 
-          public void setOffsetDates(Assessment assessment) {
-              setPlannedAssessedOnOffsetDate(assessment);
-              setValidUntilOffsetDate(assessment);
+          public void setOffsetDates(topic topic) {
+              setPlannedAssessedOnOffsetDate(topic);
+              setValidUntilOffsetDate(topic);
           }
 
-          public void setValidUntilOffsetDate(Assessment assessment) {
-              OffsetDate offsetDates = assessment.getOffsetDates();
+          public void setValidUntilOffsetDate(topic topic) {
+              OffsetDate offsetDates = topic.getOffsetDates();
               if (offsetDates == null){
                   offsetDates = new OffsetDate();
               }
-              ZoneId zone = ZoneId.of(assessment.getValidUntilOffsetTimezone());
+              ZoneId zone = ZoneId.of(topic.getValidUntilOffsetTimezone());
               DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-              ZonedDateTime zonedDateTime = assessment.getValidUntil().toInstant().atZone(zone);
+              ZonedDateTime zonedDateTime = topic.getValidUntil().toInstant().atZone(zone);
               OffsetDateTime offsetDateTime = zonedDateTime.toOffsetDateTime();
               offsetDates.setValidUntil(new OffsetDate.OffsetDateValue(zonedDateTime.format(fmt), offsetDateTime));
-              assessment.setOffsetDates(offsetDates);
+              topic.setOffsetDates(offsetDates);
           }
 
-          public void setPlannedAssessedOnOffsetDate(Assessment assessment) {
-              OffsetDate offsetDates = assessment.getOffsetDates();
+          public void setPlannedAssessedOnOffsetDate(topic topic) {
+              OffsetDate offsetDates = topic.getOffsetDates();
               if (offsetDates == null){
                   offsetDates = new OffsetDate();
               }
-              ZoneId zone = ZoneId.of(assessment.getValidUntilOffsetTimezone());
+              ZoneId zone = ZoneId.of(topic.getValidUntilOffsetTimezone());
               DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-              ZonedDateTime zonedDateTime = assessment.getPlannedAssessedOn().toInstant().atZone(zone);
+              ZonedDateTime zonedDateTime = topic.getPlannedAssessedOn().toInstant().atZone(zone);
               OffsetDateTime offsetDateTime = zonedDateTime.toOffsetDateTime();
               offsetDates.setPlannedAssessedOn(new OffsetDate.OffsetDateValue(zonedDateTime.format(fmt), offsetDateTime));
-              assessment.setOffsetDates(offsetDates);
+              topic.setOffsetDates(offsetDates);
           }
 
           public Optional<Long> selectCapOriginalReportIdById(Long id) {

@@ -60,7 +60,7 @@ jqassistant:
 
   analyze:
     groups:
-      - smart-assessment-microservices-core:Default   # project custom rules (Option B)
+      - smarttopic-microservices-core:Default   # project custom rules (Option B)
 ```
 
 ---
@@ -181,18 +181,18 @@ Pass: `java_types > 0`. If `0`, re-run `jqassistant:scan`.
 
 ## Custom rules in `jqassistant/rules/`
 
-This project's rules file: `jqassistant/rules/smart-assessment-microservices-core-rules.xml`
+This project's rules file: `jqassistant/rules/smarttopic-microservices-core-rules.xml`
 
 Active concepts:
 
 | Concept ID | What it labels |
 | --- | --- |
-| `smart-assessment-microservices-core:MarkSpringController` | `@RestController` / `@Controller` → `:Controller` |
-| `smart-assessment-microservices-core:MarkSpringService` | `@Service` → `:Service` |
-| `smart-assessment-microservices-core:MarkSpringRepository` | `@Repository` → `:Repository` |
-| `smart-assessment-microservices-core:MarkApiLayer` | `:Controller` → `:ApiLayer` |
-| `smart-assessment-microservices-core:MarkDomainLayer` | `:Service` + domain packages → `:DomainLayer` |
-| `smart-assessment-microservices-core:MarkInfrastructureLayer` | `:Repository` + infra packages → `:InfrastructureLayer` |
+| `smarttopic-microservices-core:MarkSpringController` | `@RestController` / `@Controller` → `:Controller` |
+| `smarttopic-microservices-core:MarkSpringService` | `@Service` → `:Service` |
+| `smarttopic-microservices-core:MarkSpringRepository` | `@Repository` → `:Repository` |
+| `smarttopic-microservices-core:MarkApiLayer` | `:Controller` → `:ApiLayer` |
+| `smarttopic-microservices-core:MarkDomainLayer` | `:Service` + domain packages → `:DomainLayer` |
+| `smarttopic-microservices-core:MarkInfrastructureLayer` | `:Repository` + infra packages → `:InfrastructureLayer` |
 
 Active constraints:
 
@@ -203,7 +203,7 @@ Active constraints:
 | `ApiLayerMustNotDependOnInfrastructure` | No `:ApiLayer` → `:InfrastructureLayer` dependency |
 | `NoCyclicPackageDependencies` | No cyclic package-level dependencies |
 
-Base package: `com.dkt.smartassessment`
+Base package: `com.ent.smarttopic`
 
 ---
 

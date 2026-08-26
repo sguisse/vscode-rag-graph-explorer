@@ -23,9 +23,9 @@ instead of DeepSeek/OpenAI ADK agents.
 
 Use `/rev-code-jqassistant-graph-rag` when you want to:
 
-- "What is the primary responsibility of the `assessment` package?"
-- "Show me the call chain from `AssessmentController` to the database."
-- "Which classes implement `AssessmentService`?"
+- "What is the primary responsibility of the `topic` package?"
+- "Show me the call chain from `topicController` to the database."
+- "Which classes implement `topicService`?"
 - "How is user authentication handled in this project?"
 - "Find all classes that depend on `NotificationService`."
 - "Explain the architecture of the `infrastructure` layer."
@@ -234,7 +234,7 @@ Copilot will automatically call the MCP tools when relevant:
 
 ```
 What are the main packages and their responsibilities?
-Show the call chain from AssessmentController to the persistence layer.
+Show the call chain from topicController to the persistence layer.
 Which classes are annotated with @RestController?
 Find all classes that depend on NotificationService.
 Explain the domain model.

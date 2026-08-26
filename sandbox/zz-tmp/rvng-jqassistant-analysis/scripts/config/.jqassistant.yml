@@ -75,7 +75,7 @@ jqassistant:
   analyze:
     # Option A: activate built-in Java rule group
     groups:
-      - "smart-assessment-microservices-assessment:Default" # Option B: our custom rules in jqassistant/rules/smart-assessment-microservices-core-rules.xml (file name pattern: <project-name>-rules.xml)
+      - "smarttopic-microservicestopic:Default" # Option B: our custom rules in jqassistant/rules/smarttopic-microservices-core-rules.xml (file name pattern: <project-name>-rules.xml)
 
     # Option C: explicit concepts for graph enrichment (add more as needed)
     concepts:

@@ -30,33 +30,33 @@ Exit codes: `0` = OK, `1` = warnings, `2` = errors (fix before running jQAssista
 ## Mixed analysis strategy
 
 The project uses three complementary approaches together. All are activated in
-`.jqassistant.yml` and `jqassistant/rules/smart-assessment-rules.xml`.
+`.jqassistant.yml` and `jqassistant/rules/smarttopic-rules.xml`.
 
 ### Option A — Built-in Java rules
 
-No longer activated via `java:Default` (not bundled in all installations). Use the custom group `smart-assessment:Default` (Option B) instead, and add explicit concepts via Option C. To re-enable built-in Java rules if available in your jQAssistant distribution, add the group name to `analyze.groups` in `.jqassistant.yml`.
+No longer activated via `java:Default` (not bundled in all installations). Use the custom group `smarttopic:Default` (Option B) instead, and add explicit concepts via Option C. To re-enable built-in Java rules if available in your jQAssistant distribution, add the group name to `analyze.groups` in `.jqassistant.yml`.
 
 ### Option B — Custom project rules (`jqassistant/rules/`)
 
-File: `jqassistant/rules/smart-assessment-rules.xml`
-Group activated: `smart-assessment:Default`
+File: `jqassistant/rules/smarttopic-rules.xml`
+Group activated: `smarttopic:Default`
 
 **Concepts defined (graph enrichment):**
-- `smart-assessment:MarkSpringController` — labels `@RestController`/`@Controller` classes as `:Controller`
-- `smart-assessment:MarkSpringService` — labels `@Service` classes as `:Service`
-- `smart-assessment:MarkSpringRepository` — labels `@Repository` classes as `:Repository`
-- `smart-assessment:MarkApiLayer` — labels classes in `*.api` packages as `:ApiLayer`
-- `smart-assessment:MarkDomainLayer` — labels classes in `*.domain` packages as `:DomainLayer`
-- `smart-assessment:MarkInfrastructureLayer` — labels classes in `*.infrastructure` packages as `:InfrastructureLayer`
+- `smarttopic:MarkSpringController` — labels `@RestController`/`@Controller` classes as `:Controller`
+- `smarttopic:MarkSpringService` — labels `@Service` classes as `:Service`
+- `smarttopic:MarkSpringRepository` — labels `@Repository` classes as `:Repository`
+- `smarttopic:MarkApiLayer` — labels classes in `*.api` packages as `:ApiLayer`
+- `smarttopic:MarkDomainLayer` — labels classes in `*.domain` packages as `:DomainLayer`
+- `smarttopic:MarkInfrastructureLayer` — labels classes in `*.infrastructure` packages as `:InfrastructureLayer`
 
 **Constraints defined (violations):**
-- `smart-assessment:ControllerMustNotDependOnRepository` — major
-- `smart-assessment:DomainMustNotDependOnInfrastructure` — major
-- `smart-assessment:ApiLayerMustNotDependOnInfrastructure` — major
-- `smart-assessment:NoCyclicPackageDependencies` — blocker
+- `smarttopic:ControllerMustNotDependOnRepository` — major
+- `smarttopic:DomainMustNotDependOnInfrastructure` — major
+- `smarttopic:ApiLayerMustNotDependOnInfrastructure` — major
+- `smarttopic:NoCyclicPackageDependencies` — blocker
 
-Add new rules to `jqassistant/rules/smart-assessment-rules.xml` and reference them
-in the `smart-assessment:Default` group.
+Add new rules to `jqassistant/rules/smarttopic-rules.xml` and reference them
+in the `smarttopic:Default` group.
 
 ### Option C — Explicit concepts (`analyze.concepts`)
 
@@ -185,6 +185,6 @@ RETURN fe.name, api.name, be.name
 - Local templates (copy to repo root to apply):
   - `.github/skills/rvng-jqassistant-analysis/templates/rev-code-jqassistant-template.yml`
   - `.github/skills/rvng-jqassistant-analysis/templates/README.md`
-- Custom rules: `jqassistant/rules/smart-assessment-rules.xml`
+- Custom rules: `jqassistant/rules/smarttopic-rules.xml`
 
 When running offline, consult the reference file first — it contains canonical readiness queries, Maven examples, and plugin recommendations.

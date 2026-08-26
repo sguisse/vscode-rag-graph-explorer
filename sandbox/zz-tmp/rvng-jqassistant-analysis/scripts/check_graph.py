@@ -461,8 +461,8 @@ def check_java(session) -> bool:
         session,
         """
         MATCH (p1:Package)-[:DEPENDS_ON]->(p2:Package)-[:DEPENDS_ON]->(p1)
-        WHERE p1.fqn STARTS WITH 'com.dkt.smartassessment'
-          AND p2.fqn STARTS WITH 'com.dkt.smartassessment'
+        WHERE p1.fqn STARTS WITH 'com.ent.smarttopic'
+          AND p2.fqn STARTS WITH 'com.ent.smarttopic'
           AND p1 <> p2
         RETURN count(*) AS n
         """,

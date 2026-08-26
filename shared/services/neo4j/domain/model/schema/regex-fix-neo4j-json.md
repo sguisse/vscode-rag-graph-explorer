@@ -27,9 +27,9 @@ When working with Neo4j, you may encounter issues with JSON formatting, particul
 
 :param {
   paths: [
-    "/Users/mac-SGUISS21/01-work/01-projects/01-java/china-smart-assessment/smart-assessment-microservices-assessment/src/main/java/com/dkt/smartassessment/assessmentservice/domain/assessment/manager/PdfGeneratedFileManager.java"
+    "//work/china-smarttopic/smarttopic-microservicestopic/src/main/java/cont/ent/super/topicservice/domain/topic/manager/PdfGeneratedFileManager.java"
   ],
   maxDepthCallees: 3,
   maxDepthCallers: 5,
-  targetId: "com.dkt.smartassessment.assessmentservice.domain.assessment.manager.CapBucketManager"
+  targetId: "com.ent.smarttopic.topicservice.domain.topic.manager.CapBucketManager"
 }

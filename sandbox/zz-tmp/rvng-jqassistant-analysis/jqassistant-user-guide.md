@@ -101,7 +101,7 @@ jqassistant:
 
   analyze:
     groups:
-      - smart-assessment-microservices-core:Default   # project custom rules
+      - smarttopic-microservices-core:Default   # project custom rules
 ```
 
 To start fresh from the template:
@@ -115,7 +115,7 @@ cp .github/skills/rvng-jqassistant-analysis/templates/jqassistant-template.yml \
 
 ## Step 3 — Review the rules file
 
-The project rules are in `jqassistant/rules/smart-assessment-microservices-core-rules.xml`.
+The project rules are in `jqassistant/rules/smarttopic-microservices-core-rules.xml`.
 
 To start from the template:
 
@@ -243,9 +243,9 @@ jqassistant:
 jqassistant:
   analyze:
     groups:
-      - smart-assessment-microservices-core:Default   # project group (Option B)
+      - smarttopic-microservices-core:Default   # project group (Option B)
     concepts:
-      - smart-assessment-microservices-core:MarkSpringController  # explicit (Option C)
+      - smarttopic-microservices-core:MarkSpringController  # explicit (Option C)
 ```
 
 ---
