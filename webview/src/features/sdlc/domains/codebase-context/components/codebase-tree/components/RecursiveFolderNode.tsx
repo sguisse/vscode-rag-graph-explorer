@@ -31,7 +31,7 @@ export function RecursiveFolderNode({
   }
 
   const isExpanded =
-    isFilterActiveWithQuery && !finderState.collapseNodeSearchNotCompliantEnabled
+    isFilterActiveWithQuery && !finderState.collapseNotMatchingNodes
       ? true
       : (expandedFolders[node.id] ?? true);
 

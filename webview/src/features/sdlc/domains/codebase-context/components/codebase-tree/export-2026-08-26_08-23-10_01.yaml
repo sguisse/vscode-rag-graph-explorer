@@ -27,7 +27,7 @@ files:
         ScopeGroup,
         SubFolderGroup
       } from './model-ui';
-      
+
       export function CodebaseExplorerPanel({
         codebase,
         searchFilteredFiles,
@@ -41,7 +41,7 @@ files:
         onImportCodebase
       }: CodebaseExplorerPanelProps) {
         const panelRef = useRef<HTMLDivElement>(null);
-      
+
         const {
           isImportOpen,
           setIsImportOpen,
@@ -66,20 +66,20 @@ files:
           setSelectedEntity,
           onFocusNode
         );
-      
+
         const finderStateRaw = useTreeviewFinder(codebase, viewMode, groupedScopes, onFocusNode);
-      
+
         const matchingFileIndexMap = useMemo(() => {
           const map = new Map<string, number>();
           finderStateRaw.matches.forEach((f, idx) => map.set(f.id, idx));
           return map;
         }, [finderStateRaw.matches]);
-      
+
         const finderState = useMemo(() => ({
           ...finderStateRaw,
           matchingFileIndexMap,
         }), [finderStateRaw, matchingFileIndexMap]);
-      
+
         // Keyboard shortcut listener (Cmd+F / Ctrl+F) inside Explorer Panel
         useEffect(() => {
           const handleKeyDown = (e: KeyboardEvent) => {
@@ -91,11 +91,11 @@ files:
               }
             }
           };
-      
+
           window.addEventListener('keydown', handleKeyDown, true);
           return () => window.removeEventListener('keydown', handleKeyDown, true);
         }, [finderState.openAndFocusFinder]);
-      
+
         // 1. TOP SECTION: Fixed Header Toolbar + Search Finder Bar
         const topContent = (
           <div className="flex flex-col w-full shrink-0">
@@ -115,7 +115,7 @@ files:
                   }))}
                 />
               </div>
-      
+
               <div className="flex items-center gap-0.5 pr-1 shrink-0">
                 <Button
                   id="btn-toggle-treeview-finder"
@@ -129,9 +129,9 @@ files:
                 >
                   <Search size={12} />
                 </Button>
-      
+
                 <ToolbarSeparator />
-      
+
                 <Button
                   id="btn-collapse-all"
                   className="hover:bg-muted rounded w-7 h-7 text-muted-foreground hover:text-foreground transition-colors"
@@ -152,7 +152,7 @@ files:
                 >
                   <ChevronsDown size={12} />
                 </Button>
-      
+
                 <ToolbarSeparator />
                 <Button
                   id="btn-open-import-ast-dialog"
@@ -164,7 +164,7 @@ files:
                 >
                   <Upload size={12} />
                 </Button>
-      
+
                 <Button
                   id="btn-export-ast-json"
                   className="hover:bg-muted rounded w-7 h-7 text-muted-foreground hover:text-foreground transition-colors"
@@ -177,7 +177,7 @@ files:
                 </Button>
               </div>
             </div>
-      
+
             {finderState.isFinderOpen && (
               <div id="container-treeview-finder" className="p-0 bg-background border-b border-border shrink-0">
                 <FinderTree
@@ -193,8 +193,8 @@ files:
                   setUseRegex={finderState.setUseRegex}
                   isFilterActive={finderState.isFilterActive}
                   setIsFilterActive={finderState.setIsFilterActive}
-                  collapseNodeSearchNotCompliantEnabled={finderState.collapseNodeSearchNotCompliantEnabled}
-                  setCollapseNodeSearchNotCompliantEnabled={finderState.setCollapseNodeSearchNotCompliantEnabled}
+                  collapseNotMatchingNodes={finderState.collapseNotMatchingNodes}
+                  setCollapseNotMatchingNodes={finderState.setCollapseNotMatchingNodes}
                   currentMatchIndex={finderState.currentMatchIndex}
                   totalMatches={finderState.totalMatches}
                   onNext={finderState.handleNextMatch}
@@ -205,29 +205,29 @@ files:
             )}
           </div>
         );
-      
+
         // 2. MIDDLE SECTION: Scrollable Codebase Tree View
         const middleContent = (
           <div className="w-full p-4 font-mono text-xs">
             {groupedScopes.map((scope: ScopeGroup) => {
               const scopeTheme = FOLDER_THEME_REGISTRY_CONFIG[scope.key] || FOLDER_THEME_REGISTRY_CONFIG.default;
               const isFilterActiveWithQuery = finderState.isFilterActive && Boolean(finderState.searchQuery.trim());
-      
+
               if (isFilterActiveWithQuery && !scopeHasMatches(scope, viewMode, finderState.matchingFileIds)) {
                 return null;
               }
-      
+
               const isScopeExpanded = isFilterActiveWithQuery ? true : (expandedFolders[scope.key] ?? true);
-      
+
               const allScopeFiles = scope.files;
               const displayScopeFiles = isFilterActiveWithQuery
                 ? scope.files.filter((f) => finderState.matchingFileIds.has(f.id))
                 : scope.files;
-      
+
               const isScopeAllChecked = allScopeFiles.length > 0 && allScopeFiles.every((f) => visibleFiles[f.id]);
               const isScopeSomeChecked = allScopeFiles.some((f) => visibleFiles[f.id]);
               const isScopeIndeterminate = isScopeSomeChecked && !isScopeAllChecked;
-      
+
               return (
                 <div key={scope.key} className="mb-4">
                   <div className="group flex items-center gap-1.5 hover:bg-muted/50 px-1 py-1 rounded">
@@ -264,7 +264,7 @@ files:
                       </span>
                     </div>
                   </div>
-      
+
                   {isScopeExpanded && (
                     <div className="space-y-1 mt-1 ml-2.5 pl-3 border-border border-l">
                       {/* ViewMode: Scope -> direct files list */}
@@ -324,7 +324,7 @@ files:
                             </div>
                           );
                         })}
-      
+
                       {/* ViewMode: Folder -> Recursive VS Code-style tree */}
                       {viewMode === 'folder' && scope.folderTree && (
                         <>
@@ -372,7 +372,7 @@ files:
                                 </div>
                               );
                             })}
-      
+
                           {scope.folderTree.map((rootNode, rootIdx) => (
                             <RecursiveFolderNode
                               key={rootNode.id}
@@ -395,7 +395,7 @@ files:
                           ))}
                         </>
                       )}
-      
+
                       {/* ViewMode: Tags / Layer / Typology -> flat subfolders */}
                       {viewMode !== 'scope' &&
                         viewMode !== 'folder' &&
@@ -404,18 +404,18 @@ files:
                           const displaySubFiles = isFilterActiveWithQuery
                             ? sub.files.filter((f) => finderState.matchingFileIds.has(f.id))
                             : sub.files;
-      
+
                           if (isFilterActiveWithQuery && displaySubFiles.length === 0) {
                             return null;
                           }
-      
+
                           const isSubExpanded = isFilterActiveWithQuery ? true : (expandedFolders[sub.key] ?? true);
                           const subTheme = DYNAMIC_COLORS[subIdx % DYNAMIC_COLORS.length];
-      
+
                           const isSubAllChecked = sub.files.length > 0 && sub.files.every((f) => visibleFiles[f.id]);
                           const isSubSomeChecked = sub.files.some((f) => visibleFiles[f.id]);
                           const isSubIndeterminate = isSubSomeChecked && !isSubAllChecked;
-      
+
                           return (
                             <div key={sub.key} className="mb-2">
                               <div className="group flex items-center gap-1.5 hover:bg-muted/50 px-1 py-1 rounded">
@@ -452,7 +452,7 @@ files:
                                   </span>
                                 </div>
                               </div>
-      
+
                               {isSubExpanded && (
                                 <div className="space-y-1 mt-1 ml-2.5 pl-3 border-border border-l">
                                   {displaySubFiles.map((file) => {
@@ -463,7 +463,7 @@ files:
                                       : visibleFiles[file.id]
                                       ? 'text-foreground font-medium'
                                       : 'text-muted-foreground line-through';
-      
+
                                     return (
                                       <div
                                         key={file.id}
@@ -523,7 +523,7 @@ files:
             })}
           </div>
         );
-      
+
         // 3. BOTTOM SECTION: Info Explorer Status Bar
         const bottomContent = (
           <div className="w-full bg-muted/20 p-2 border-border border-t h-9 shrink-0 flex items-center justify-between">
@@ -537,7 +537,7 @@ files:
             </div>
           </div>
         );
-      
+
         return (
           <div
             ref={panelRef}
@@ -570,22 +570,22 @@ files:
     path: "/Users/mac-SGUISS21/90-temp/vscode-rag-graph-explorer/webview/src/features/explorer/wkp-lft-codebase-tree"
     content: |-
       export const CODEBASE_GROUPING_LIST: readonly string[] = ["scope", "folder", "layer", "typology", "tags"];
-      
+
       export const CODEBASE_GROUPING_ICON_MAP: { [K in (typeof CODEBASE_GROUPING_LIST)[number]]: any } = {
         scope: { icon: "📄", label: "By Scope" },
         folder: { icon: "📁", label: "By Folder" },
         layer: { icon: "🏗️", label: "By Layer" },
         typology: { icon: "🧩", label: "By Typology" },
         tags: { icon: "🏷️", label: "By Tags" },
-      
+
       } as const;
-      
+
       export type CodebaseGrouping = (typeof CODEBASE_GROUPING_LIST)[number];
-      
+
       export function isCodebaseGrouping(value: unknown): value is CodebaseGrouping {
         return typeof value === "string" && CODEBASE_GROUPING_LIST.includes(value);
       }
-      
+
       export function getCodebaseGrouping(value: unknown): CodebaseGrouping | undefined {
         if (typeof value === "string" && CODEBASE_GROUPING_LIST.includes(value)) {
           return value as CodebaseGrouping;
@@ -598,9 +598,9 @@ files:
     path: "/Users/mac-SGUISS21/90-temp/vscode-rag-graph-explorer/webview/src/features/explorer/wkp-lft-codebase-tree"
     content: |-
       import { CodebaseFile, CodebaseData, SelectedEntity } from '@/shared/services/graph-rag-explorer';
-      
+
       export type ViewMode = 'scope' | 'folder' | 'tags' | 'layer' | 'typology';
-      
+
       export interface FolderTreeNode {
         id: string;
         name: string;
@@ -608,14 +608,14 @@ files:
         files: CodebaseFile[];
         children: FolderTreeNode[];
       }
-      
+
       export interface SubFolderGroup {
         key: string;
         label: string;
         folderPath: string;
         files: CodebaseFile[];
       }
-      
+
       export interface ScopeGroup {
         key: string;
         label: string;
@@ -625,19 +625,19 @@ files:
         subFolders?: SubFolderGroup[];
         folderTree?: FolderTreeNode[];
       }
-      
+
       export interface FolderKeyWithDepth {
         key: string;
         level: number;
       }
-      
+
       export interface TriStateCheckboxProps {
         checked: boolean;
         indeterminate: boolean;
         onChange: () => void;
         className?: string;
       }
-      
+
       export interface RecursiveFolderNodeProps {
         node: FolderTreeNode;
         depth: number;
@@ -665,7 +665,7 @@ files:
           matchingFileIndexMap: Map<string, number>;
         };
       }
-      
+
       export interface CodebaseExplorerPanelProps {
         codebase: CodebaseData;
         searchFilteredFiles: CodebaseFile[];
@@ -678,7 +678,7 @@ files:
         onFocusNode?: (nodeId: string) => void;
         onImportCodebase?: (importedData: CodebaseData) => void;
       }
-      
+
       export interface ImportAstDialogProps {
         open: boolean;
         onOpenChange: (open: boolean) => void;
@@ -696,13 +696,13 @@ files:
       import { Upload, FileCode, CheckCircle2, AlertCircle, FolderOpen } from "lucide-react";
       import { CodebaseData } from "@/shared/services/graph-rag-explorer";
       import { useImportAstDialog } from "./hooks/use-import-ast-dialog";
-      
+
       interface ImportAstDialogProps {
         open: boolean;
         onOpenChange: (open: boolean) => void;
         onImport: (data: CodebaseData) => void;
       }
-      
+
       export function ImportAstDialog({ open, onOpenChange, onImport }: ImportAstDialogProps) {
         const {
           isDragging,
@@ -720,7 +720,7 @@ files:
           handleBrowseClick,
           handleConfirmImport,
         } = useImportAstDialog(onOpenChange, onImport);
-      
+
         return (
           <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent id="dialog-import-ast" className="sm:max-w-xl">
@@ -732,7 +732,7 @@ files:
                   Drop an AST .json extraction file, click to browse local files, or paste JSON below.
                 </DialogDescription>
               </DialogHeader>
-      
+
               <div className="space-y-4 py-2">
                 <input
                   id="input-file-ast-picker"
@@ -742,7 +742,7 @@ files:
                   className="hidden"
                   onChange={handleFileInputChange}
                 />
-      
+
                 <div
                   id="dropzone-ast-json"
                   onDragEnter={handleDragEnter}
@@ -767,7 +767,7 @@ files:
                     )}
                     <p className="mt-1 font-mono text-[10px] text-muted-foreground">Drag & Drop .json AST file here</p>
                   </div>
-      
+
                   <Button
                     id="btn-browse-file"
                     type="button"
@@ -778,13 +778,13 @@ files:
                     <FolderOpen size={14} /> Browse Local Files
                   </Button>
                 </div>
-      
+
                 <div className="flex justify-between items-center">
                   <span className="flex items-center gap-1 font-mono font-semibold text-muted-foreground text-xs uppercase">
                     <FileCode size={13} /> Direct JSON Input
                   </span>
                 </div>
-      
+
                 <Textarea
                   id="textarea-ast-json-paste"
                   placeholder='{\n  "files": [...],\n  "dependencies": [...]\n}'
@@ -796,7 +796,7 @@ files:
                     else setJsonText('');
                   }}
                 />
-      
+
                 {errorMsg && (
                   <div id="notice-import-ast-error" className="flex items-center gap-2 bg-destructive/15 p-2.5 border border-destructive/30 rounded font-mono text-destructive text-xs">
                     <AlertCircle size={15} className="shrink-0" />
@@ -804,7 +804,7 @@ files:
                   </div>
                 )}
               </div>
-      
+
               <DialogFooter className="gap-2">
                 <Button
                   id="btn-cancel-import-ast"
@@ -842,7 +842,7 @@ files:
         { fill: 'fill-rose-500/20', text: 'text-rose-500', iconColor: 'text-rose-500' },
         { fill: 'fill-cyan-500/20', text: 'text-cyan-500', iconColor: 'text-cyan-500' },
       ] as const;
-      
+
       export const ALLOWED_TAGS = [
         'config', 'api', 'database', 'ui', 'core', 'model',
         'Service', 'Controller', 'Repository', 'Component', 'RestController', 'Config',
@@ -851,9 +851,9 @@ files:
         'Mock', 'Stub', 'Adapter', 'Decorator', 'Factory', 'Builder', 'Singleton',
         'Observer', 'Strategy', 'Command', 'Mediator', 'Proxy', 'Visitor'
       ] as const;
-      
+
       export const LAYER_GROUPS = ["domain.model", "application", "infrastructure", "domain"] as const;
-      
+
       export const TYPOLOGY_GROUPS = [
         "Front-Component",
         "Component",
@@ -872,7 +872,7 @@ files:
       import { CodebaseFile } from '@/shared/services/graph-rag-explorer';
       import { FolderTreeNode, ScopeGroup, FolderKeyWithDepth, ViewMode } from '../model-ui';
       import { TYPOLOGY_GROUPS } from '../constants/codebase-explorer.constants';
-      
+
       export function getAllFilesFromNode(node: FolderTreeNode): CodebaseFile[] {
         let files = [...node.files];
         node.children.forEach((child) => {
@@ -880,12 +880,12 @@ files:
         });
         return files;
       }
-      
+
       export function nodeHasMatches(node: FolderTreeNode, matchingFileIds: Set<string>): boolean {
         if (node.files.some((f) => matchingFileIds.has(f.id))) return true;
         return node.children.some((child) => nodeHasMatches(child, matchingFileIds));
       }
-      
+
       export function scopeHasMatches(
         scope: ScopeGroup,
         viewMode: ViewMode,
@@ -901,10 +901,10 @@ files:
         }
         return scope.subFolders?.some((sub) => sub.files.some((f) => matchingFileIds.has(f.id))) ?? false;
       }
-      
+
       export function getCommonFolderPath(files: CodebaseFile[]): string {
         if (!files || files.length === 0) return '';
-      
+
         const fileDirPaths = files
           .map((f) => {
             const p = f.path || '';
@@ -912,12 +912,12 @@ files:
             return lastSlash >= 0 ? p.substring(0, lastSlash) : '';
           })
           .filter(Boolean);
-      
+
         if (fileDirPaths.length === 0) return '';
-      
+
         const splitDirs = fileDirPaths.map((d) => d.split('/'));
         let commonParts: string[] = [...splitDirs[0]];
-      
+
         for (let i = 1; i < splitDirs.length; i++) {
           const current = splitDirs[i];
           let j = 0;
@@ -927,35 +927,35 @@ files:
           commonParts = commonParts.slice(0, j);
           if (commonParts.length === 0) break;
         }
-      
+
         return commonParts.join('/');
       }
-      
+
       export function resolvePhysicalFolderPath(file: CodebaseFile, partName: string, fallbackScope: string): string {
         if (!file || !file.path) return fallbackScope;
-      
+
         const lastSlash = file.path.lastIndexOf('/');
         const fileDir = lastSlash >= 0 ? file.path.substring(0, lastSlash) : file.path;
-      
+
         if (!partName || partName === fallbackScope) {
           return fileDir.startsWith(fallbackScope) ? fallbackScope : fileDir;
         }
-      
+
         const slashPart = partName.replace(/\./g, '/');
-      
+
         const idx = fileDir.indexOf(slashPart);
         if (idx !== -1) {
           return fileDir.substring(0, idx + slashPart.length);
         }
-      
+
         const lastSegmentIdx = fileDir.lastIndexOf('/' + partName);
         if (lastSegmentIdx !== -1) {
           return fileDir.substring(0, lastSegmentIdx + partName.length + 1);
         }
-      
+
         return fileDir;
       }
-      
+
       export function getFileFolderKey(file: CodebaseFile): string {
         const tags = file.tags as any;
         if (Array.isArray(tags)) {
@@ -973,13 +973,13 @@ files:
         if (file.path?.toLowerCase().startsWith('config')) return 'config';
         return 'other';
       }
-      
+
       export function cleanRelativeFilePath(file: CodebaseFile): string {
         const filePath = file.path || '';
         if (!filePath) return '';
-      
+
         let relative = filePath;
-      
+
         const srcMarkers = [
           '/src/main/java/', 'src/main/java/',
           '/src/test/java/', 'src/test/java/',
@@ -989,7 +989,7 @@ files:
           '/src/test/resources/', 'src/test/resources/',
           '/src/', 'src/'
         ];
-      
+
         let found = false;
         for (const marker of srcMarkers) {
           const idx = relative.indexOf(marker);
@@ -999,7 +999,7 @@ files:
             break;
           }
         }
-      
+
         if (!found) {
           const pkgMarkers = ['/com/', 'com/', '/org/', 'org/', '/net/', 'net/', '/io/', 'io/', '/fr/', 'fr/', '/de/', 'de/'];
           for (const marker of pkgMarkers) {
@@ -1012,7 +1012,7 @@ files:
             }
           }
         }
-      
+
         if (!found) {
           const scopeMarkers = ['/frontend/', 'frontend/', '/backend/', 'backend/', '/config/', 'config/'];
           for (const marker of scopeMarkers) {
@@ -1024,11 +1024,11 @@ files:
             }
           }
         }
-      
+
         relative = relative.replace(/^\/+|\/+$/g, '').trim();
         return relative;
       }
-      
+
       export function getFileTypology(f: CodebaseFile): string {
         const name = f.name.toLowerCase();
         const path = f.path.toLowerCase();
@@ -1036,7 +1036,7 @@ files:
         const tags = typeof f.tags === 'string'
           ? [(f.tags as string).toLowerCase()]
           : [];
-      
+
         if (type === 'config' || path.includes('config') || tags.includes('config') || name.endsWith('.yml') || name.endsWith('.yaml') || name.endsWith('.json') || name.endsWith('.properties')) {
           return 'Config';
         }
@@ -1062,15 +1062,15 @@ files:
         if ((type === 'class' || type === 'model' || type === 'entity') && (path.includes('model') || path.includes('domain') || path.includes('entity') || tags.includes('model') || tags.includes('entity'))) {
           return 'Model / Entity';
         }
-      
+
         const matchedGroup = TYPOLOGY_GROUPS.find((group) => {
           const gLower = group.toLowerCase();
           return name.includes(gLower) || path.includes(gLower) || type === gLower || tags.includes(gLower);
         });
-      
+
         return matchedGroup || 'Other';
       }
-      
+
       export function compactFolderTree(nodes: FolderTreeNode[]): FolderTreeNode[] {
         return nodes.map((node) => {
           let compactedChildren = compactFolderTree(node.children);
@@ -1078,7 +1078,7 @@ files:
             ...node,
             children: compactedChildren,
           };
-      
+
           while (currentNode.files.length === 0 && currentNode.children.length === 1) {
             const singleChild = currentNode.children[0];
             currentNode = {
@@ -1089,11 +1089,11 @@ files:
               children: singleChild.children,
             };
           }
-      
+
           return currentNode;
         });
       }
-      
+
       export function buildFolderTreeForScope(scopeKey: string, scopeFiles: CodebaseFile[]): { rootFiles: CodebaseFile[]; folderTree: FolderTreeNode[] } {
         interface TempNode {
           id: string;
@@ -1102,22 +1102,22 @@ files:
           files: CodebaseFile[];
           childrenMap: Map<string, TempNode>;
         }
-      
+
         const rootChildrenMap = new Map<string, TempNode>();
         const rootFiles: CodebaseFile[] = [];
-      
+
         scopeFiles.forEach((file) => {
           const relPath = cleanRelativeFilePath(file);
           const lastSlash = relPath.lastIndexOf('/');
           const dirPath = lastSlash >= 0 ? relPath.substring(0, lastSlash) : '';
           const parts = dirPath ? dirPath.split('/').filter(Boolean) : [];
-      
+
           if (parts.length === 0) {
             rootFiles.push(file);
           } else {
             let currentMap = rootChildrenMap;
             let currentPath = scopeKey;
-      
+
             parts.forEach((part, idx) => {
               currentPath += `/${part}`;
               if (!currentMap.has(part)) {
@@ -1139,7 +1139,7 @@ files:
             });
           }
         });
-      
+
         function convertMapToArray(map: Map<string, TempNode>): FolderTreeNode[] {
           const result: FolderTreeNode[] = [];
           map.forEach((node) => {
@@ -1153,19 +1153,19 @@ files:
           });
           return result.sort((a, b) => a.name.localeCompare(b.name));
         }
-      
+
         const uncompressedTree = convertMapToArray(rootChildrenMap);
         const compactedTree = compactFolderTree(uncompressedTree);
-      
+
         return {
           rootFiles: rootFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })),
           folderTree: compactedTree,
         };
       }
-      
+
       export function collectFolderKeysWithDepth(scopes: ScopeGroup[]): FolderKeyWithDepth[] {
         const result: FolderKeyWithDepth[] = [];
-      
+
         function traverseTree(nodes: FolderTreeNode[], currentLevel: number) {
           nodes.forEach((node) => {
             result.push({ key: node.id, level: currentLevel });
@@ -1174,7 +1174,7 @@ files:
             }
           });
         }
-      
+
         scopes.forEach((scope) => {
           result.push({ key: scope.key, level: 1 });
           if (scope.folderTree) {
@@ -1186,25 +1186,25 @@ files:
             });
           }
         });
-      
+
         return result;
       }
-      
+
       export function calculateCollapseState(scopes: ScopeGroup[], mode: ViewMode): Record<string, boolean> {
         const keysWithDepth = collectFolderKeysWithDepth(scopes);
         let targetCollapseLevel = 2;
-      
+
         if (mode === 'folder') {
           targetCollapseLevel = 3;
         } else if (mode === 'scope') {
           targetCollapseLevel = 1;
         }
-      
+
         const newExpanded: Record<string, boolean> = {};
         keysWithDepth.forEach(({ key, level }) => {
           newExpanded[key] = level < targetCollapseLevel;
         });
-      
+
         return newExpanded;
       }
 
@@ -1220,7 +1220,7 @@ files:
       import { RecursiveFolderNodeProps } from '../model-ui';
       import { DYNAMIC_COLORS } from '../constants/codebase-explorer.constants';
       import { getAllFilesFromNode, nodeHasMatches } from '../utils/codebase-tree.utils';
-      
+
       export function RecursiveFolderNode({
         node,
         depth,
@@ -1239,22 +1239,22 @@ files:
         finderState,
       }: RecursiveFolderNodeProps) {
         const isFilterActiveWithQuery = finderState.isFilterActive && Boolean(finderState.searchQuery.trim());
-      
+
         if (isFilterActiveWithQuery && !nodeHasMatches(node, finderState.matchingFileIds)) {
           return null;
         }
-      
+
         const isExpanded = isFilterActiveWithQuery ? true : (expandedFolders[node.id] ?? true);
         const allNodeFiles = getAllFilesFromNode(node);
-      
+
         const displayFiles = isFilterActiveWithQuery
           ? node.files.filter((f) => finderState.matchingFileIds.has(f.id))
           : node.files;
-      
+
         const isAllChecked = allNodeFiles.length > 0 && allNodeFiles.every((f) => visibleFiles[f.id]);
         const isSomeChecked = allNodeFiles.some((f) => visibleFiles[f.id]);
         const isIndeterminate = isSomeChecked && !isAllChecked;
-      
+
         return (
           <div key={node.id} className="mb-1">
             <div className="group flex items-center gap-1.5 hover:bg-muted/50 px-1 py-1 rounded">
@@ -1291,7 +1291,7 @@ files:
                 </span>
               </div>
             </div>
-      
+
             {isExpanded && (
               <div className="space-y-1 mt-1 ml-2.5 pl-3 border-border border-l">
                 {displayFiles.map((file) => {
@@ -1345,7 +1345,7 @@ files:
                     </div>
                   );
                 })}
-      
+
                 {node.children.map((childNode, childIdx) => (
                   <RecursiveFolderNode
                     key={childNode.id}
@@ -1378,16 +1378,16 @@ files:
     content: |-
       import React, { useRef, useEffect } from 'react';
       import { TriStateCheckboxProps } from '../model-ui';
-      
+
       export function TriStateCheckbox({ checked, indeterminate, onChange, className }: TriStateCheckboxProps) {
         const checkboxRef = useRef<HTMLInputElement>(null);
-      
+
         useEffect(() => {
           if (checkboxRef.current) {
             checkboxRef.current.indeterminate = indeterminate;
           }
         }, [indeterminate]);
-      
+
         return (
           <input
             ref={checkboxRef}
@@ -1405,7 +1405,7 @@ files:
     content: |-
       import { useState, useRef, useEffect } from 'react';
       import { CodebaseData } from '@/shared/services/graph-rag-explorer';
-      
+
       export function useImportAstDialog(
         onOpenChange: (open: boolean) => void,
         onImport: (data: CodebaseData) => void
@@ -1415,7 +1415,7 @@ files:
         const [errorMsg, setErrorMsg] = useState<string | null>(null);
         const [fileName, setFileName] = useState<string | null>(null);
         const fileInputRef = useRef<HTMLInputElement>(null);
-      
+
         useEffect(() => {
           const preventGlobalDnD = (e: DragEvent) => {
             e.preventDefault();
@@ -1423,18 +1423,18 @@ files:
               e.dataTransfer.dropEffect = 'none';
             }
           };
-      
+
           window.addEventListener('dragenter', preventGlobalDnD, false);
           window.addEventListener('dragover', preventGlobalDnD, false);
           window.addEventListener('drop', preventGlobalDnD, false);
-      
+
           return () => {
             window.removeEventListener('dragenter', preventGlobalDnD, false);
             window.removeEventListener('dragover', preventGlobalDnD, false);
             window.removeEventListener('drop', preventGlobalDnD, false);
           };
         }, []);
-      
+
         const parseAndValidate = (text: string): CodebaseData | null => {
           try {
             const parsed = JSON.parse(text);
@@ -1449,12 +1449,12 @@ files:
             return null;
           }
         };
-      
+
         const processFile = (file: File) => {
           if (!file) return;
           setFileName(file.name);
           setErrorMsg(null);
-      
+
           const reader = new FileReader();
           reader.onload = (e) => {
             const content = e.target?.result as string;
@@ -1466,13 +1466,13 @@ files:
           };
           reader.readAsText(file);
         };
-      
+
         const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
           e.preventDefault();
           e.stopPropagation();
           setIsDragging(true);
         };
-      
+
         const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
           e.preventDefault();
           e.stopPropagation();
@@ -1481,37 +1481,37 @@ files:
           }
           setIsDragging(true);
         };
-      
+
         const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
           e.preventDefault();
           e.stopPropagation();
           setIsDragging(false);
         };
-      
+
         const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
           e.preventDefault();
           e.stopPropagation();
           setIsDragging(false);
-      
+
           if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             processFile(e.dataTransfer.files[0]);
             e.dataTransfer.clearData();
           }
         };
-      
+
         const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
           if (e.target.files && e.target.files.length > 0) {
             processFile(e.target.files[0]);
           }
           if (e.target) e.target.value = '';
         };
-      
+
         const handleBrowseClick = (e: React.MouseEvent) => {
           e.preventDefault();
           e.stopPropagation();
           fileInputRef.current?.click();
         };
-      
+
         const handleConfirmImport = () => {
           const data = parseAndValidate(jsonText);
           if (data) {
@@ -1522,7 +1522,7 @@ files:
             setErrorMsg(null);
           }
         };
-      
+
         return {
           isDragging,
           jsonText,
@@ -1551,7 +1551,7 @@ files:
       import { useExplorerStore } from '../../store/useExplorerStore';
       import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
       import { logInfo } from '@/services/view/log-view.service.wrapper';
-      
+
       import {
         ViewMode,
         FolderTreeNode,
@@ -1559,13 +1559,13 @@ files:
         ScopeGroup,
         FolderKeyWithDepth
       } from '../model-ui';
-      
+
       import {
         ALLOWED_TAGS,
         LAYER_GROUPS,
         TYPOLOGY_GROUPS
       } from '../constants/codebase-explorer.constants';
-      
+
       import {
         getCommonFolderPath,
         resolvePhysicalFolderPath,
@@ -1577,7 +1577,7 @@ files:
         collectFolderKeysWithDepth,
         calculateCollapseState
       } from '../utils/codebase-tree.utils';
-      
+
       export type { ViewMode, FolderTreeNode, SubFolderGroup, ScopeGroup, FolderKeyWithDepth };
       export {
         ALLOWED_TAGS,
@@ -1593,7 +1593,7 @@ files:
         collectFolderKeysWithDepth,
         calculateCollapseState
       };
-      
+
       export function useCodebaseExplorerPanel(
         codebase: CodebaseData,
         expandedFolders?: Record<string, boolean>,
@@ -1605,7 +1605,7 @@ files:
       ) {
         const [isImportOpen, setIsImportOpen] = useState(false);
         const [viewMode, setViewMode] = useState<ViewMode>('scope');
-      
+
         const handleExportCodebase = useCallback(() => {
           const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(codebase, null, 2));
           const downloadAnchor = document.createElement('a');
@@ -1615,18 +1615,18 @@ files:
           downloadAnchor.click();
           downloadAnchor.remove();
         }, [codebase]);
-      
+
         const { groupedScopes, duplicateFileIds } = useMemo(() => {
           const duplicates = new Set<string>();
           const scopesList: ScopeGroup[] = [];
           const scopeKeys = [...FOLDER_KEYS_REGISTERED_CONFIG];
-      
+
           scopeKeys.forEach((scopeKey) => {
             const scopeFiles = codebase.files.filter((f) => getFileFolderKey(f) === scopeKey);
             if (scopeFiles.length === 0) return;
-      
+
             const scopeFolderPath = getCommonFolderPath(scopeFiles) || scopeKey;
-      
+
             if (viewMode === 'scope') {
               scopesList.push({
                 key: scopeKey,
@@ -1646,11 +1646,11 @@ files:
               });
             } else {
               const subMap = new Map<string, CodebaseFile[]>();
-      
+
               if (viewMode === 'tags') {
                 const dynamicTagsMap = new Map<string, string>();
                 ALLOWED_TAGS.forEach((t) => dynamicTagsMap.set(t.toLowerCase(), t));
-      
+
                 codebase.files.forEach((f) => {
                   const tags = f.tags as any;
                   if (Array.isArray(tags)) {
@@ -1669,12 +1669,12 @@ files:
                     }
                   }
                 });
-      
+
                 dynamicTagsMap.forEach((displayTag) => subMap.set(displayTag, []));
                 subMap.set('untagged', []);
-      
+
                 const fileTagCounts = new Map<string, number>();
-      
+
                 scopeFiles.forEach((f) => {
                   const tags = f.tags as any;
                   const fileTagsList: string[] = Array.isArray(tags)
@@ -1682,10 +1682,10 @@ files:
                     : typeof tags === 'string' && tags.trim()
                     ? [tags.trim()]
                     : [];
-      
+
                   let matchedCount = 0;
                   const matchedDisplayTags = new Set<string>();
-      
+
                   fileTagsList.forEach((rawTag) => {
                     const lower = rawTag.toLowerCase();
                     if (dynamicTagsMap.has(lower)) {
@@ -1697,14 +1697,14 @@ files:
                       }
                     }
                   });
-      
+
                   if (matchedCount > 0) {
                     fileTagCounts.set(f.id, (fileTagCounts.get(f.id) || 0) + matchedCount);
                   } else {
                     subMap.get('untagged')!.push(f);
                   }
                 });
-      
+
                 fileTagCounts.forEach((count, id) => {
                   if (count > 1) duplicates.add(id);
                 });
@@ -1733,7 +1733,7 @@ files:
                   subMap.get(typo)!.push(f);
                 });
               }
-      
+
               const subFolders: SubFolderGroup[] = [];
               subMap.forEach((files, subKey) => {
                 if (files.length > 0) {
@@ -1746,9 +1746,9 @@ files:
                   });
                 }
               });
-      
+
               subFolders.sort((a, b) => a.label.localeCompare(b.label));
-      
+
               scopesList.push({
                 key: scopeKey,
                 label: scopeKey,
@@ -1758,10 +1758,10 @@ files:
               });
             }
           });
-      
+
           return { groupedScopes: scopesList, duplicateFileIds: duplicates };
         }, [codebase.files, viewMode]);
-      
+
         const handleExpandAll = useCallback(() => {
           const keysWithDepth = collectFolderKeysWithDepth(groupedScopes);
           const newExpanded: Record<string, boolean> = {};
@@ -1775,7 +1775,7 @@ files:
             },
           }));
         }, [groupedScopes]);
-      
+
         const handleCollapseAll = useCallback((overrideMode?: ViewMode) => {
           const mode = overrideMode || viewMode;
           const newExpanded = calculateCollapseState(groupedScopes, mode);
@@ -1786,7 +1786,7 @@ files:
             },
           }));
         }, [groupedScopes, viewMode]);
-      
+
         const handleToggleFolder = useCallback((folderKey: string, folderPath?: string) => {
           if (toggleFolder) {
             if (expandedFolders && expandedFolders[folderKey] === undefined) {
@@ -1802,7 +1802,7 @@ files:
             vsCodeApiService.copyToClipboard(folderPath);
           }
         }, [toggleFolder, expandedFolders]);
-      
+
         const handleFileClick = useCallback((file: CodebaseFile) => {
           if (file.path) {
             logInfo(`File single-clicked: ${file.path}. Revealing in VS Code Explorer and copying to clipboard...`);
@@ -1815,7 +1815,7 @@ files:
             setSelectedEntity({ type: 'node', nodeId: file.id });
           }
         }, [onFocusNode, setSelectedEntity]);
-      
+
         const handleFileDoubleClick = useCallback((file: CodebaseFile, e?: React.MouseEvent) => {
           e?.stopPropagation();
           if (file?.path) {
@@ -1824,7 +1824,7 @@ files:
             vsCodeApiService.openFile(file.path);
           }
         }, []);
-      
+
         const handleFolderDoubleClick = useCallback((folderPath: string, files?: CodebaseFile[], e?: React.MouseEvent) => {
           e?.stopPropagation();
           const targetPath = folderPath || getCommonFolderPath(files || []);
@@ -1833,7 +1833,7 @@ files:
             vsCodeApiService.revealInExplorer(targetPath);
           }
         }, []);
-      
+
         const toggleFileListCheckbox = useCallback((files: CodebaseFile[]) => {
           if (!toggleFileCheckbox || !visibleFiles) return;
           const isAllChecked = files.length > 0 && files.every((f) => visibleFiles[f.id]);
@@ -1844,11 +1844,11 @@ files:
             }
           });
         }, [toggleFileCheckbox, visibleFiles]);
-      
+
         useEffect(() => {
           handleCollapseAll(viewMode);
         }, [viewMode, groupedScopes, handleCollapseAll]);
-      
+
         return {
           isImportOpen,
           setIsImportOpen,
@@ -1881,7 +1881,7 @@ files:
       } from '../model-ui';
       import { cleanRelativeFilePath } from '../utils/codebase-tree.utils';
       import { useFinderBase } from '@/components/app/core/finder/useFinderBase';
-      
+
       export function useTreeviewFinder(
         codebase: CodebaseData,
         viewMode: ViewMode,
@@ -1898,20 +1898,20 @@ files:
           currentMatchIndex,
           setCurrentMatchIndex,
         } = finderBase;
-      
+
         const [isFilterActive, setIsFilterActive] = useState(false);
-        const [collapseNodeSearchNotCompliantEnabled, setCollapseNodeSearchNotCompliantEnabled] = useState(false);
-      
+        const [collapseNotMatchingNodes, setCollapseNotMatchingNodes] = useState(false);
+
         const allSearchableFiles = useMemo(() => codebase.files || [], [codebase]);
-      
+
         const matches = useMemo(() => {
           if (!searchQuery.trim()) return [];
-      
+
           let pattern = useRegex ? searchQuery : searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
           if (wholeWord) {
             pattern = `\\b${pattern}\\b`;
           }
-      
+
           try {
             const regex = new RegExp(pattern, caseSensitive ? 'g' : 'gi');
             const hasSlash = searchQuery.includes('/') || searchQuery.includes('\\');
@@ -1926,21 +1926,21 @@ files:
             return [];
           }
         }, [allSearchableFiles, searchQuery, caseSensitive, wholeWord, useRegex]);
-      
+
         const matchingFileIds = useMemo(() => new Set(matches.map((f) => f.id)), [matches]);
         const totalMatches = matches.length;
-      
+
         useEffect(() => {
           setCurrentMatchIndex(0);
         }, [searchQuery, caseSensitive, wholeWord, useRegex, setCurrentMatchIndex]);
-      
+
         const { fileParentFoldersMap, allFolderKeys } = useMemo(() => {
           const fileParentFoldersMap = new Map<string, string[]>();
           const allFolderKeys = new Set<string>();
-      
+
           groupedScopes.forEach((scope) => {
             allFolderKeys.add(scope.key);
-      
+
             if (viewMode === 'scope') {
               scope.files.forEach((file) => {
                 fileParentFoldersMap.set(file.id, [scope.key]);
@@ -1951,22 +1951,22 @@ files:
                   fileParentFoldersMap.set(file.id, [scope.key]);
                 });
               }
-      
+
               function traverseTree(nodes: FolderTreeNode[], ancestors: string[]) {
                 nodes.forEach((node) => {
                   allFolderKeys.add(node.id);
                   const currentAncestors = [...ancestors, node.id];
-      
+
                   node.files.forEach((file) => {
                     fileParentFoldersMap.set(file.id, currentAncestors);
                   });
-      
+
                   if (node.children && node.children.length > 0) {
                     traverseTree(node.children, currentAncestors);
                   }
                 });
               }
-      
+
               if (scope.folderTree) {
                 traverseTree(scope.folderTree, [scope.key]);
               }
@@ -1981,26 +1981,26 @@ files:
               }
             }
           });
-      
+
           return { fileParentFoldersMap, allFolderKeys };
         }, [groupedScopes, viewMode]);
-      
+
         useEffect(() => {
           if (!isFinderOpen || matches.length === 0) return;
           const activeMatch = matches[currentMatchIndex];
           if (!activeMatch) return;
-      
+
           if (onFocusNode) {
             onFocusNode(activeMatch.id);
           }
-      
-          if (collapseNodeSearchNotCompliantEnabled && searchQuery.trim()) {
+
+          if (collapseNotMatchingNodes && searchQuery.trim()) {
             const compliantFolderKeys = new Set<string>();
             matches.forEach((file) => {
               const parentKeys = fileParentFoldersMap.get(file.id) || [];
               parentKeys.forEach((key) => compliantFolderKeys.add(key));
             });
-      
+
             useExplorerStore.setState((s) => {
               const updatedExpanded: Record<string, boolean> = {};
               allFolderKeys.forEach((key) => {
@@ -2021,7 +2021,7 @@ files:
                 folderKeysToExpand[key] = true;
               });
             });
-      
+
             useExplorerStore.setState((s) => ({
               expandedFolders: {
                 ...s.expandedFolders,
@@ -2029,7 +2029,7 @@ files:
               },
             }));
           }
-      
+
           setTimeout(() => {
             const container = document.getElementById('tree-codebase-files');
             const element = document.getElementById(`tree-file-node-${activeMatch.id}`);
@@ -2046,28 +2046,28 @@ files:
           matches,
           isFinderOpen,
           searchQuery,
-          collapseNodeSearchNotCompliantEnabled,
+          collapseNotMatchingNodes,
           fileParentFoldersMap,
           allFolderKeys,
           onFocusNode,
         ]);
-      
+
         const handleNextMatch = useCallback(() => {
           if (totalMatches === 0) return;
           setCurrentMatchIndex((prev) => (prev >= totalMatches - 1 ? 0 : prev + 1));
         }, [totalMatches, setCurrentMatchIndex]);
-      
+
         const handlePrevMatch = useCallback(() => {
           if (totalMatches === 0) return;
           setCurrentMatchIndex((prev) => (prev <= 0 ? totalMatches - 1 : prev - 1));
         }, [totalMatches, setCurrentMatchIndex]);
-      
+
         return {
           ...finderBase,
           isFilterActive,
           setIsFilterActive,
-          collapseNodeSearchNotCompliantEnabled,
-          setCollapseNodeSearchNotCompliantEnabled,
+          collapseNotMatchingNodes,
+          setCollapseNotMatchingNodes,
           totalMatches,
           matches,
           matchingFileIds,
@@ -2075,4 +2075,3 @@ files:
           handlePrevMatch,
         };
       }
-

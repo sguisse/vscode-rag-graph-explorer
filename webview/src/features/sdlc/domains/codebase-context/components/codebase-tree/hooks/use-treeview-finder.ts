@@ -7,7 +7,7 @@ import {
   ViewMode
 } from '../model-ui';
 import { cleanRelativeFilePath } from '../utils/codebase-tree.utils';
-import { useFinderBase } from '@/components/app/core/finder/useFinderBase';
+import { useFinderBase } from '@/components/app/core/finder/hooks/useFinderBase';
 
 export function useTreeviewFinder(
   codebase: CodebaseData,
@@ -27,7 +27,7 @@ export function useTreeviewFinder(
   } = finderBase;
 
   const [isFilterActive, setIsFilterActive] = useState(false);
-  const [collapseNodeSearchNotCompliantEnabled, setCollapseNodeSearchNotCompliantEnabled] = useState(false);
+  const [collapseNotMatchingNodes, setCollapseNotMatchingNodes] = useState(false);
 
   const allSearchableFiles = useMemo(() => codebase.files || [], [codebase]);
 
@@ -121,7 +121,7 @@ export function useTreeviewFinder(
       onFocusNode(activeMatch.id);
     }
 
-    if (collapseNodeSearchNotCompliantEnabled && searchQuery.trim()) {
+    if (collapseNotMatchingNodes && searchQuery.trim()) {
       const compliantFolderKeys = new Set<string>();
       matches.forEach((file) => {
         const parentKeys = fileParentFoldersMap.get(file.id) || [];
@@ -173,7 +173,7 @@ export function useTreeviewFinder(
     matches,
     isFinderOpen,
     searchQuery,
-    collapseNodeSearchNotCompliantEnabled,
+    collapseNotMatchingNodes,
     fileParentFoldersMap,
     allFolderKeys,
     onFocusNode,
@@ -193,8 +193,8 @@ export function useTreeviewFinder(
     ...finderBase,
     isFilterActive,
     setIsFilterActive,
-    collapseNodeSearchNotCompliantEnabled,
-    setCollapseNodeSearchNotCompliantEnabled,
+    collapseNotMatchingNodes,
+    setCollapseNotMatchingNodes,
     totalMatches,
     matches,
     matchingFileIds,

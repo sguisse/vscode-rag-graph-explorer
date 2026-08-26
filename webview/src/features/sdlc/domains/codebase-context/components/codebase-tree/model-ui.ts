@@ -61,7 +61,7 @@ export interface RecursiveFolderNodeProps {
     wholeWord: boolean;
     useRegex: boolean;
     isFilterActive: boolean;
-    collapseNodeSearchNotCompliantEnabled: boolean;
+    collapseNotMatchingNodes: boolean;
     currentMatchIndex: number;
     matchingFileIds: Set<string>;
     matchingFileIndexMap: Map<string, number>;

@@ -172,7 +172,7 @@ export function CodebaseExplorerPanel({
       </div>
 
       {finderState.isFinderOpen && (
-        <div id="container-treeview-finder" className="p-0 bg-background border-b border-border shrink-0">
+        <div id="container-treeview-finder" className="bg-background p-0 border-border border-b shrink-0">
           <FinderTree
             styleView="toolbar"
             focusTrigger={finderState.focusTrigger}
@@ -186,8 +186,8 @@ export function CodebaseExplorerPanel({
             setUseRegex={finderState.setUseRegex}
             isFilterActive={finderState.isFilterActive}
             setIsFilterActive={finderState.setIsFilterActive}
-            collapseNodeSearchNotCompliantEnabled={finderState.collapseNodeSearchNotCompliantEnabled}
-            setCollapseNodeSearchNotCompliantEnabled={finderState.setCollapseNodeSearchNotCompliantEnabled}
+            collapseNotMatchingNodes={finderState.collapseNotMatchingNodes}
+            setCollapseNotMatchingNodes={finderState.setCollapseNotMatchingNodes}
             currentMatchIndex={finderState.currentMatchIndex}
             totalMatches={finderState.totalMatches}
             onNext={finderState.handleNextMatch}
@@ -200,7 +200,7 @@ export function CodebaseExplorerPanel({
   );
 
   const middleContent = (
-    <div className="w-full p-4 font-mono text-xs">
+    <div className="p-4 w-full font-mono text-xs">
       {groupedScopes.map((scope: ScopeGroup) => {
         const scopeTheme = FOLDER_THEME_REGISTRY_CONFIG[scope.key] || FOLDER_THEME_REGISTRY_CONFIG.default;
         const isFilterActiveWithQuery = finderState.isFilterActive && Boolean(finderState.searchQuery.trim());
@@ -210,7 +210,7 @@ export function CodebaseExplorerPanel({
         }
 
         const isScopeExpanded =
-          isFilterActiveWithQuery && !finderState.collapseNodeSearchNotCompliantEnabled
+          isFilterActiveWithQuery && !finderState.collapseNotMatchingNodes
             ? true
             : (expandedFolders[scope.key] ?? true);
 
@@ -404,7 +404,7 @@ export function CodebaseExplorerPanel({
                     }
 
                     const isSubExpanded =
-                      isFilterActiveWithQuery && !finderState.collapseNodeSearchNotCompliantEnabled
+                      isFilterActiveWithQuery && !finderState.collapseNotMatchingNodes
                         ? true
                         : (expandedFolders[sub.key] ?? true);
 
@@ -524,7 +524,7 @@ export function CodebaseExplorerPanel({
   );
 
   const bottomContent = (
-    <div className="w-full bg-muted/20 p-2 border-border border-t h-9 shrink-0 flex items-center justify-between">
+    <div className="flex justify-between items-center bg-muted/20 p-2 border-border border-t w-full h-9 shrink-0">
       <div>
         <h3 className="flex items-center gap-2 font-mono font-bold text-muted-foreground text-xs uppercase tracking-wider">
           <span>Explorer</span>
@@ -540,7 +540,7 @@ export function CodebaseExplorerPanel({
     <div
       ref={panelRef}
       tabIndex={-1}
-      className="flex flex-col w-full h-full min-h-0 overflow-hidden outline-none"
+      className="flex flex-col outline-none w-full h-full min-h-0 overflow-hidden"
     >
       <TopMiddleBottomPanel
         id="panel-codebase-explorer"

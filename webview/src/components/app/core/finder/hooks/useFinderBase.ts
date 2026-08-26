@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { useFinderCommon } from './useFinderCommon';
 
 export interface UseFinderBaseOptions {
   initialSearchQuery?: string;
@@ -15,6 +16,13 @@ export function useFinderBase(options: UseFinderBaseOptions = {}) {
   const [useRegex, setUseRegex] = useState(options.initialUseRegex || false);
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
   const [focusTrigger, setFocusTrigger] = useState(0);
+
+  const { activeRegex } = useFinderCommon({
+    searchQuery,
+    caseSensitive,
+    wholeWord,
+    useRegex,
+  });
 
   const openAndFocusFinder = useCallback(() => {
     setIsFinderOpen(true);
@@ -34,6 +42,10 @@ export function useFinderBase(options: UseFinderBaseOptions = {}) {
     setIsFinderOpen(false);
   }, []);
 
+  useEffect(() => {
+    setCurrentMatchIndex(0);
+  }, [searchQuery, caseSensitive, wholeWord, useRegex]);
+
   return {
     isFinderOpen,
     setIsFinderOpen,
@@ -51,5 +63,6 @@ export function useFinderBase(options: UseFinderBaseOptions = {}) {
     setUseRegex,
     currentMatchIndex,
     setCurrentMatchIndex,
+    activeRegex,
   };
 }
