@@ -1,2 +1,2 @@
 export * from './components/TriStateCheckbox';
-// Additional common UI exports will be added here
+export * from './components/SdlcSidebarMenu';
