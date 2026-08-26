@@ -1,161 +1,196 @@
 import { create } from 'zustand';
-import { useCodebaseCache } from '../../../core/store/useCodebaseCache';
 import { useSdlcSessionStore } from '../../../core/store/useSdlcSessionStore';
-import { CodebaseData, SelectedEntity, CodebaseFile } from '@/shared/services/graph-rag-explorer';
-import { INITIAL_VISIBLE_FILES_CONFIG, FOLDER_KEYS_REGISTERED_CONFIG } from '@/features/explorer/constants/graph.constants';
-import { demoCodebase, FOLDER_POSITIONS } from '@/features/explorer/wksp-cnt-graph/data/GraphData';
+import { CodebaseData } from '@/shared/services/graph-rag-explorer';
 import { GraphRendering } from '@/shared/services/graph-rag-explorer/domain/model/types/type-graph-rendering';
+import { demoCodebase } from '../components/dependency-graph/data/GraphData';
 
 export interface CodebaseDomainState {
-    codebase: CodebaseData;
-    setCodebase: (ast: CodebaseData) => void;
-    folderPositions: Record<string, { label: string }>;
-    setFolderPositions: (pos: Record<string, { label: string }>) => void;
-    selectedEntity: SelectedEntity | null;
-    setSelectedEntity: (entity: SelectedEntity | null) => void;
-    focusedNodeId: string | null;
-    setFocusedNodeId: (id: string | null | ((prev: string | null) => string | null)) => void;
-    paths: string;
-    currentPath: string;
-    pathsList: string[];
-    upstreamDepth: number;
-    downstreamDepth: number;
-    setPaths: (p: string | ((prev: string) => string)) => void;
-    setCurrentPath: (p: string) => void;
-    setPathsList: (l: string[] | ((prev: string[]) => string[])) => void;
-    setUpstreamDepth: (d: number) => void;
-    setDownstreamDepth: (d: number) => void;
-    searchTerm: string;
-    displayLevel: string;
-    maxNodesLimit: number;
-    expandedFolders: Record<string, boolean>;
-    visibleFiles: Record<string, boolean>;
-    setSearchTerm: (t: string) => void;
-    setDisplayLevel: (l: string) => void;
-    setMaxNodesLimit: (l: number) => void;
-    setExpandedFolders: (f: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void;
-    toggleFolder: (f: string) => void;
-    setVisibleFiles: (f: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void;
-    toggleFileCheckbox: (id: string) => void;
-    toggleFolderCheckbox: (folderName: string, allFiles: CodebaseFile[]) => void;
-    resetFilters: (allFiles: CodebaseFile[]) => void;
-    enableDownstream: boolean;
-    enableUpstream: boolean;
-    callersDepth: number;
-    calleesDepth: number;
-    showGrid: boolean;
-    currentLayout: string;
-    graphRendering: GraphRendering;
-    attributesVisible: boolean;
-    methodsVisible: boolean;
-    showSelectedOnly: boolean;
-    setEnableDownstream: (v: boolean | ((prev: boolean) => boolean)) => void;
-    setEnableUpstream: (v: boolean | ((prev: boolean) => boolean)) => void;
-    setCallersDepth: (d: number) => void;
-    setCalleesDepth: (d: number) => void;
-    setShowGrid: (v: boolean | ((prev: boolean) => boolean)) => void;
-    setCurrentLayout: (v: string) => void;
-    setGraphRendering: (v: GraphRendering) => void;
-    setAttributesVisible: (v: boolean | ((prev: boolean) => boolean)) => void;
-    setMethodsVisible: (v: boolean | ((prev: boolean) => boolean)) => void;
-    setShowSelectedOnly: (v: boolean | ((prev: boolean) => boolean)) => void;
-    selectedContextFiles: Record<string, boolean>;
-    expandedContextGroups: Record<string, boolean>;
-    setSelectedContextFiles: (f: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void;
-    toggleContextFileCheckbox: (id: string) => void;
-    setExpandedContextGroups: (g: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void;
-    targetFilePaths: string[];
-    setTargetFilePaths: (p: string[]) => void;
+  currentPath: string;
+  setCurrentPath: (path: string) => void;
+  pathsList: string[];
+  setPathsList: (paths: string[] | ((prev: string[]) => string[])) => void;
+  paths: string;
+  setPaths: (paths: string | ((prev: string) => string)) => void;
+  upstreamDepth: number;
+  setUpstreamDepth: (depth: number) => void;
+  downstreamDepth: number;
+  setDownstreamDepth: (depth: number) => void;
+
+  codebase: CodebaseData;
+  setCodebase: (data: CodebaseData) => void;
+  graphRendering: GraphRendering;
+  setGraphRendering: (mode: GraphRendering) => void;
+  currentLayout: string;
+  setCurrentLayout: (layout: string) => void;
+  maxNodesLimit: number;
+  setMaxNodesLimit: (limit: number) => void;
+  callersDepth: number;
+  setCallersDepth: (depth: number) => void;
+  calleesDepth: number;
+  setCalleesDepth: (depth: number) => void;
+  displayLevel: string;
+  setDisplayLevel: (level: string) => void;
+  selectedEntity: any | null;
+  setSelectedEntity: (entity: any | null) => void;
+  targetFilePaths: string[];
+  setTargetFilePaths: (paths: string[]) => void;
+
+  // Checkbox Selection & Actions
+  selectedContextFiles: Record<string, boolean>;
+  setSelectedContextFiles: (files: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void;
+  selectAllFiles: () => void;
+  toggleFileCheckbox: (id: string) => void;
+  toggleFolderCheckbox: (folderKey: string) => void;
+
+  expandedContextGroups: Record<string, boolean>;
+  setExpandedContextGroups: (groups: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void;
+  expandedFolders: Record<string, boolean>;
+  setExpandedFolders: (folders: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void;
+  toggleFolder: (folderKey: string) => void;
 }
 
 export const useCodebaseDomainState = create<CodebaseDomainState>((set, get) => ({
-    get codebase() { return useCodebaseCache.getState().currentAst || demoCodebase; },
-    setCodebase: (ast: CodebaseData) => {
-        useCodebaseCache.getState().setAst(ast);
-        set({ folderPositions: { ...get().folderPositions } });
-    },
-    folderPositions: FOLDER_POSITIONS,
-    setFolderPositions: (pos) => set({ folderPositions: pos }),
-    selectedEntity: null,
-    setSelectedEntity: (entity) => {
-        set({ selectedEntity: entity });
-        useSdlcSessionStore.getState().updateActiveSession(draft => {
-            draft.contextPointers.selectedEntityId = entity?.nodeId || null;
-        });
-    },
-    focusedNodeId: null,
-    setFocusedNodeId: (id) => set((s) => ({ focusedNodeId: typeof id === 'function' ? id(s.focusedNodeId) : id })),
-    paths: '',
-    currentPath: '',
-    pathsList: [''],
-    upstreamDepth: 2,
-    downstreamDepth: 2,
-    setPaths: (p) => set((s) => ({ paths: typeof p === 'function' ? p(s.paths) : p })),
-    setCurrentPath: (p) => set({ currentPath: p }),
-    setPathsList: (l) => set((s) => ({ pathsList: typeof l === 'function' ? l(s.pathsList) : l })),
-    setUpstreamDepth: (d) => {
-        set({ upstreamDepth: d });
-        useSdlcSessionStore.getState().updateActiveSession(draft => { draft.contextPointers.callersDepth = d; });
-    },
-    setDownstreamDepth: (d) => {
-        set({ downstreamDepth: d });
-        useSdlcSessionStore.getState().updateActiveSession(draft => { draft.contextPointers.calleesDepth = d; });
-    },
-    searchTerm: '',
-    displayLevel: 'all',
-    maxNodesLimit: 50,
-    expandedFolders: { frontend: true, backend: true, config: true, other: true },
-    visibleFiles: INITIAL_VISIBLE_FILES_CONFIG,
-    setSearchTerm: (t) => set({ searchTerm: t }),
-    setDisplayLevel: (l) => set({ displayLevel: l }),
-    setMaxNodesLimit: (l) => set({ maxNodesLimit: l }),
-    setExpandedFolders: (f) => set((s) => ({ expandedFolders: typeof f === 'function' ? f(s.expandedFolders) : f })),
-    toggleFolder: (f) => set((s) => ({ expandedFolders: { ...s.expandedFolders, [f]: !s.expandedFolders[f] } })),
-    setVisibleFiles: (f) => set((s) => ({ visibleFiles: typeof f === 'function' ? f(s.visibleFiles) : f })),
-    toggleFileCheckbox: (id) => set((s) => ({ visibleFiles: { ...s.visibleFiles, [id]: !s.visibleFiles[id] } })),
-    toggleFolderCheckbox: (folderName, allFiles) => set((state) => {
-        const registeredFolders = [...FOLDER_KEYS_REGISTERED_CONFIG];
-        const folderFiles = allFiles.filter((f) => {
-            if (registeredFolders.includes(folderName as any)) return f.path.startsWith(folderName);
-            return !registeredFolders.some((rf) => f.path.startsWith(rf));
-        });
-        const isCurrentlyChecked = folderFiles.length > 0 && folderFiles.every((f) => state.visibleFiles[f.id]);
-        const targetState = !isCurrentlyChecked;
-        const updated = { ...state.visibleFiles };
-        folderFiles.forEach((file) => { updated[file.id] = targetState; });
-        return { visibleFiles: updated };
+  get currentPath() {
+    const s = useSdlcSessionStore.getState();
+    return s.activeSessionId && s.sessions[s.activeSessionId]
+      ? s.sessions[s.activeSessionId].contextPointers.selectedEntityId || ''
+      : '';
+  },
+  setCurrentPath: (path) => {
+    useSdlcSessionStore.getState().updateActiveSession((d) => {
+      d.contextPointers.selectedEntityId = path;
+    });
+
+    // Reset & select all codebase files by default on path change
+    set((s) => {
+      const allSelected: Record<string, boolean> = {};
+      (s.codebase?.files || []).forEach((f: any) => {
+        allSelected[f.id] = true;
+      });
+      return { selectedContextFiles: allSelected };
+    });
+  },
+
+  pathsList: [],
+  setPathsList: (paths) => set((s) => ({ pathsList: typeof paths === 'function' ? paths(s.pathsList) : paths })),
+
+  paths: '',
+  setPaths: (paths) =>
+    set((s) => {
+      const newPaths = typeof paths === 'function' ? paths(s.paths) : paths;
+      const allSelected: Record<string, boolean> = {};
+      (s.codebase?.files || []).forEach((f: any) => {
+        allSelected[f.id] = true;
+      });
+      return { paths: newPaths, selectedContextFiles: allSelected };
     }),
-    resetFilters: (allFiles) => set(() => {
-        const resetVisible: Record<string, boolean> = {};
-        allFiles.forEach((f) => { resetVisible[f.id] = true; });
-        return { visibleFiles: resetVisible, searchTerm: '', displayLevel: 'all' };
+
+  get upstreamDepth() {
+    const s = useSdlcSessionStore.getState();
+    return s.activeSessionId && s.sessions[s.activeSessionId]
+      ? s.sessions[s.activeSessionId].contextPointers.callersDepth || 2
+      : 2;
+  },
+  setUpstreamDepth: (depth) =>
+    useSdlcSessionStore.getState().updateActiveSession((d) => {
+      d.contextPointers.callersDepth = depth;
     }),
-    enableDownstream: true,
-    enableUpstream: true,
-    callersDepth: 1,
-    calleesDepth: 1,
-    showGrid: false,
-    currentLayout: 'cose',
-    graphRendering: 'rounded',
-    attributesVisible: false,
-    methodsVisible: false,
-    showSelectedOnly: false,
-    setEnableDownstream: (v) => set((s) => ({ enableDownstream: typeof v === 'function' ? v(s.enableDownstream) : v })),
-    setEnableUpstream: (v) => set((s) => ({ enableUpstream: typeof v === 'function' ? v(s.enableUpstream) : v })),
-    setCallersDepth: (d) => set({ callersDepth: d }),
-    setCalleesDepth: (d) => set({ calleesDepth: d }),
-    setShowGrid: (v) => set((s) => ({ showGrid: typeof v === 'function' ? v(s.showGrid) : v })),
-    setCurrentLayout: (v) => set({ currentLayout: v }),
-    setGraphRendering: (v) => set({ graphRendering: v }),
-    setAttributesVisible: (v) => set((s) => ({ attributesVisible: typeof v === 'function' ? v(s.attributesVisible) : v })),
-    setMethodsVisible: (v) => set((s) => ({ methodsVisible: typeof v === 'function' ? v(s.methodsVisible) : v })),
-    setShowSelectedOnly: (v) => set((s) => ({ showSelectedOnly: typeof v === 'function' ? v(s.showSelectedOnly) : v })),
-    selectedContextFiles: {},
-    expandedContextGroups: {},
-    setSelectedContextFiles: (f) => set((s) => ({ selectedContextFiles: typeof f === 'function' ? f(s.selectedContextFiles) : f })),
-    toggleContextFileCheckbox: (id) => set((s) => ({ selectedContextFiles: { ...s.selectedContextFiles, [id]: !s.selectedContextFiles[id] } })),
-    setExpandedContextGroups: (g) => set((s) => ({ expandedContextGroups: typeof g === 'function' ? g(s.expandedContextGroups) : g })),
-    targetFilePaths: [],
-    setTargetFilePaths: (p) => set({ targetFilePaths: p })
+
+  get downstreamDepth() {
+    const s = useSdlcSessionStore.getState();
+    return s.activeSessionId && s.sessions[s.activeSessionId]
+      ? s.sessions[s.activeSessionId].contextPointers.calleesDepth || 2
+      : 2;
+  },
+  setDownstreamDepth: (depth) =>
+    useSdlcSessionStore.getState().updateActiveSession((d) => {
+      d.contextPointers.calleesDepth = depth;
+    }),
+
+  codebase: demoCodebase as any,
+  setCodebase: (data) => {
+    // Select all files by default on codebase load / update
+    const allSelected: Record<string, boolean> = {};
+    (data?.files || []).forEach((f: any) => {
+      allSelected[f.id] = true;
+    });
+    set({ codebase: data, selectedContextFiles: allSelected });
+  },
+
+  graphRendering: 'rounded',
+  setGraphRendering: (mode) => set({ graphRendering: mode }),
+  currentLayout: 'cose',
+  setCurrentLayout: (layout) => set({ currentLayout: layout }),
+  maxNodesLimit: 50,
+  setMaxNodesLimit: (limit) => set({ maxNodesLimit: limit }),
+  callersDepth: 2,
+  setCallersDepth: (depth) => set({ callersDepth: depth }),
+  calleesDepth: 2,
+  setCalleesDepth: (depth) => set({ calleesDepth: depth }),
+  displayLevel: 'detailed',
+  setDisplayLevel: (level) => set({ displayLevel: level }),
+  selectedEntity: null,
+  setSelectedEntity: (entity) => set({ selectedEntity: entity }),
+  targetFilePaths: [],
+  setTargetFilePaths: (paths) => set({ targetFilePaths: paths }),
+
+  // File Checkbox State Management
+  selectedContextFiles: {
+    'OrderButton.tsx': true,
+    'orderApi.ts': true,
+    'OrderController.java': true,
+    'Order.java': true,
+    'OrderRepository.java': true,
+    'JpaOrderRepository.java': true,
+    'application.yml': true,
+  },
+  setSelectedContextFiles: (files) =>
+    set((s) => ({ selectedContextFiles: typeof files === 'function' ? files(s.selectedContextFiles) : files })),
+
+  selectAllFiles: () =>
+    set((s) => {
+      const allSelected: Record<string, boolean> = {};
+      (s.codebase?.files || []).forEach((f: any) => {
+        allSelected[f.id] = true;
+      });
+      return { selectedContextFiles: allSelected };
+    }),
+
+  toggleFileCheckbox: (id) =>
+    set((s) => ({
+      selectedContextFiles: {
+        ...s.selectedContextFiles,
+        [id]: !s.selectedContextFiles[id],
+      },
+    })),
+
+  toggleFolderCheckbox: (folderKey) =>
+    set((s) => {
+      const codebaseFiles = s.codebase?.files || [];
+      const folderFiles = codebaseFiles.filter((f) => f.path.startsWith(folderKey));
+      const allChecked = folderFiles.every((f) => s.selectedContextFiles[f.id]);
+      const updated = { ...s.selectedContextFiles };
+      folderFiles.forEach((f) => {
+        updated[f.id] = !allChecked;
+      });
+      return { selectedContextFiles: updated };
+    }),
+
+  expandedContextGroups: {},
+  setExpandedContextGroups: (groups) =>
+    set((s) => ({ expandedContextGroups: typeof groups === 'function' ? groups(s.expandedContextGroups) : groups })),
+
+  expandedFolders: {},
+  setExpandedFolders: (folders) =>
+    set((s) => ({ expandedFolders: typeof folders === 'function' ? folders(s.expandedFolders) : folders })),
+
+  toggleFolder: (folderKey) =>
+    set((s) => ({
+      expandedFolders: {
+        ...s.expandedFolders,
+        [folderKey]: s.expandedFolders[folderKey] === undefined ? false : !s.expandedFolders[folderKey],
+      },
+    })),
 }));
+
 export const useExplorerStore = useCodebaseDomainState;

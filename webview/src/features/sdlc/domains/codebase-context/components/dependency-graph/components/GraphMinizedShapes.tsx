@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileCode, Settings } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import { UmlClassNodeData, NODE_STYLE_REGISTRY, removeExtension } from './graph-common-shapes';
 
 export const MinimizedClassNode: React.FC<{ id: string; data: UmlClassNodeData }> = ({ id, data }) => {
@@ -7,17 +7,13 @@ export const MinimizedClassNode: React.FC<{ id: string; data: UmlClassNodeData }
   const displayName = removeExtension(data.name);
 
   let borderClass = style.border;
-  let iconColor = style.iconColor;
 
   if (data.isFocused) {
     borderClass = 'border-amber-400 dark:border-amber-400 ring-2 ring-amber-400/80 animate-pulse shadow-lg shadow-amber-500/50';
-    iconColor = 'text-amber-400';
   } else if (data.isOrigin) {
     borderClass = 'border-red-500 dark:border-red-500 ring-2 ring-red-500/60 shadow-md shadow-red-500/20';
-    iconColor = 'text-red-500 dark:text-red-400';
   } else if (data.isDependency) {
     borderClass = 'border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/50 shadow-md shadow-amber-500/10';
-    iconColor = 'text-amber-500 dark:text-amber-400';
   }
 
   return (
@@ -26,9 +22,6 @@ export const MinimizedClassNode: React.FC<{ id: string; data: UmlClassNodeData }
       title={data.name}
     >
       <div className="flex justify-center items-center gap-1.5 w-full min-w-0 pointer-events-none">
-        {/*
-        <FileCode size={14} className={`${iconColor} shrink-0 pointer-events-none`} />
-        */}
         <h4 className="font-mono font-bold text-foreground text-xs truncate pointer-events-none" title={data.name}>{displayName}</h4>
       </div>
     </div>

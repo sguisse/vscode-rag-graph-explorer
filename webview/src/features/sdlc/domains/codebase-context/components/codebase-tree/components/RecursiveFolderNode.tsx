@@ -30,7 +30,11 @@ export function RecursiveFolderNode({
     return null;
   }
 
-  const isExpanded = isFilterActiveWithQuery ? true : (expandedFolders[node.id] ?? true);
+  const isExpanded =
+    isFilterActiveWithQuery && !finderState.collapseNodeSearchNotCompliantEnabled
+      ? true
+      : (expandedFolders[node.id] ?? true);
+
   const allNodeFiles = getAllFilesFromNode(node);
 
   const displayFiles = isFilterActiveWithQuery
@@ -91,6 +95,7 @@ export function RecursiveFolderNode({
                 <Checkbox
                   checked={!!visibleFiles[file.id]}
                   onCheckedChange={() => toggleFileCheckbox(file.id)}
+                  onClick={(e) => e.stopPropagation()}
                   className="w-3.5 h-3.5 shrink-0"
                 />
                 <span

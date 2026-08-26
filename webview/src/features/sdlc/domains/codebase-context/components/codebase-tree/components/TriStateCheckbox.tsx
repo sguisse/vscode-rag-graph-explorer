@@ -15,7 +15,11 @@ export function TriStateCheckbox({ checked, indeterminate, onChange, className }
       ref={checkboxRef}
       type="checkbox"
       checked={checked}
-      onChange={onChange}
+      onChange={(e) => {
+        e.stopPropagation();
+        onChange();
+      }}
+      onClick={(e) => e.stopPropagation()}
       className={`rounded w-3.5 h-3.5 border-border bg-background text-primary cursor-pointer shrink-0 accent-primary ${className || ''}`}
     />
   );

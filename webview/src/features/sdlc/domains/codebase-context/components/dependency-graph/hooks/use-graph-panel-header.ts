@@ -1,14 +1,14 @@
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { vscodeSettings } from '@/App';
-import { useExplorerStore } from '@/features/sdlc/domains/codebase-context/store/useCodebaseDomainState';
+import { useCodebaseDomainState } from '@/features/sdlc/domains/codebase-context/store/useCodebaseDomainState';
 import { GraphRendering } from '@/shared/services/graph-rag-explorer/domain/model/types/type-graph-rendering';
 
 export function useGraphPanelHeader(cyRef?: React.RefObject<any>) {
-  const currentLayout = useExplorerStore((s) => s.currentLayout);
-  const setCurrentLayout = useExplorerStore((s) => s.setCurrentLayout);
+  const currentLayout = useCodebaseDomainState((s) => s.currentLayout);
+  const setCurrentLayout = useCodebaseDomainState((s) => s.setCurrentLayout);
 
-  const currentRendering = useExplorerStore((s) => s.graphRendering) || 'uml';
-  const setGraphRendering = useExplorerStore((s) => s.setGraphRendering);
+  const currentRendering = useCodebaseDomainState((s) => s.graphRendering) || 'uml';
+  const setGraphRendering = useCodebaseDomainState((s) => s.setGraphRendering);
 
   const setCurrentRendering = (val: GraphRendering) => {
     if (setGraphRendering) {

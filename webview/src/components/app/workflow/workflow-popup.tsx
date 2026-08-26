@@ -29,7 +29,7 @@ export function WorkflowPopup({
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger>
+      <PopoverTrigger nativeButton={false} render={<div className="inline-block" />}>
         <div
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}

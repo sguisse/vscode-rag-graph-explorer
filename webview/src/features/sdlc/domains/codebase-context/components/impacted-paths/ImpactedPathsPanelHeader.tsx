@@ -1,4 +1,3 @@
-// webview/src/features/explorer/wkp-top-impacted-paths/ImpactedPathsPanelHeader.tsx
 import React from 'react';
 import { ArrowUp, ArrowDown, Database } from 'lucide-react';
 import { Input } from '@/components/ui/input';

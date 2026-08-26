@@ -103,7 +103,6 @@ export function useCytoscapeInstance(
 
     containerNode.addEventListener('wheel', handleWheel, { capture: true, passive: false });
 
-    // Node Cursor & data-tooltip Attribute Handlers for the global Tooltip component
     cy.on('mouseover', 'node', (evt) => {
       const node = evt.target;
       if (!node.hasClass('folder') && containerNode) {
@@ -124,14 +123,13 @@ export function useCytoscapeInstance(
       }
     });
 
-    // Single / Cmd + Click
     cy.on('tap', 'node', (evt) => {
       const node = evt.target;
       if (!node.hasClass('folder')) {
         const nodeId = node.id();
         const nodePath = node.data('path') || node.data('absolutePath') || node.data('filePath') || nodeId;
         if (nodePath) {
-          logInfo(`Cytoscape node single-clicked: ${nodeId} (${nodePath}). Revealing in VS Code Explorer & copying...`);
+          logInfo(`Cytoscape node single-clicked: ${nodeId} (${nodePath}). Revealing in VS Code Explorer...`);
           vsCodeApiService.revealInExplorer(nodePath);
           vsCodeApiService.copyToClipboard(nodePath);
         }
@@ -144,7 +142,6 @@ export function useCytoscapeInstance(
       }
     });
 
-    // Double Click
     cy.on('dbltap', 'node', (evt) => {
       if (!evt.target.hasClass('folder')) {
         const nodeId = evt.target.id();

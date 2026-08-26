@@ -1,11 +1,10 @@
-// webview/src/features/explorer/wkp-top-impacted-paths/hooks/use-impacted-paths.ts
 import { useEffect, useCallback, useRef } from 'react';
 import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
 import { getPathsChangeImpacts } from '@/services/view/graph-view.service';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { CodebaseData } from '@/shared/services/graph-rag-explorer';
-import { useExplorerStore } from '@/features/sdlc/domains/codebase-context/store/useCodebaseDomainState';
+import { useCodebaseDomainState } from '../../../store/useCodebaseDomainState';
 
 export interface UseImpactedPathsOptions {
   defaultCodebase?: CodebaseData;
@@ -21,21 +20,21 @@ export function useImpactedPaths(options: UseImpactedPathsOptions = {}) {
     downstreamDepth: propDownstreamDepth,
   } = options;
 
-  const currentPath = useExplorerStore((s) => s.currentPath);
-  const setCurrentPath = useExplorerStore((s) => s.setCurrentPath);
-  const pathsList = useExplorerStore((s) => s.pathsList);
-  const setPathsList = useExplorerStore((s) => s.setPathsList);
-  const codebaseData = useExplorerStore((s) => s.codebase);
-  const setCodebaseData = useExplorerStore((s) => s.setCodebase);
-  const paths = useExplorerStore((s) => s.paths);
-  const setPaths = useExplorerStore((s) => s.setPaths);
+  const currentPath = useCodebaseDomainState((s) => s.currentPath);
+  const setCurrentPath = useCodebaseDomainState((s) => s.setCurrentPath);
+  const pathsList = useCodebaseDomainState((s) => s.pathsList);
+  const setPathsList = useCodebaseDomainState((s) => s.setPathsList);
+  const codebaseData = useCodebaseDomainState((s) => s.codebase);
+  const setCodebaseData = useCodebaseDomainState((s) => s.setCodebase);
+  const selectAllFiles = useCodebaseDomainState((s) => s.selectAllFiles);
+  const paths = useCodebaseDomainState((s) => s.paths);
+  const setPaths = useCodebaseDomainState((s) => s.setPaths);
 
-  const internalUpstreamDepth = useExplorerStore((s) => s.upstreamDepth);
-  const setInternalUpstreamDepth = useExplorerStore((s) => s.setUpstreamDepth);
-  const internalDownstreamDepth = useExplorerStore((s) => s.downstreamDepth);
-  const setInternalDownstreamDepth = useExplorerStore((s) => s.setDownstreamDepth);
+  const internalUpstreamDepth = useCodebaseDomainState((s) => s.upstreamDepth);
+  const setInternalUpstreamDepth = useCodebaseDomainState((s) => s.setUpstreamDepth);
+  const internalDownstreamDepth = useCodebaseDomainState((s) => s.downstreamDepth);
+  const setInternalDownstreamDepth = useCodebaseDomainState((s) => s.setDownstreamDepth);
 
-  // Sync prop changes ONLY if prop is explicitly defined and differs from internal store
   useEffect(() => {
     if (propUpstreamDepth !== undefined && propUpstreamDepth !== internalUpstreamDepth) {
       setInternalUpstreamDepth(propUpstreamDepth);
@@ -83,12 +82,13 @@ export function useImpactedPaths(options: UseImpactedPathsOptions = {}) {
 
       if (realCodebaseData) {
         setCodebaseData(realCodebaseData);
+        selectAllFiles();
         if (onCodebaseChange) {
           onCodebaseChange(realCodebaseData);
         }
       }
     },
-    [onCodebaseChange, setCodebaseData]
+    [onCodebaseChange, setCodebaseData, selectAllFiles]
   );
 
   const handlePathsChange = useCallback(
@@ -101,7 +101,7 @@ export function useImpactedPaths(options: UseImpactedPathsOptions = {}) {
   );
 
   const buildDefaultCypherQueryParameters = useCallback(async () => {
-    const currentStoreState = useExplorerStore.getState();
+    const currentStoreState = useCodebaseDomainState.getState();
     const activePaths = currentStoreState.paths || '';
     const activeUpstream = currentStoreState.upstreamDepth;
     const activeDownstream = currentStoreState.downstreamDepth;

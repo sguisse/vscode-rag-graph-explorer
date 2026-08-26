@@ -6,7 +6,6 @@ export const CODEBASE_GROUPING_ICON_MAP: { [K in (typeof CODEBASE_GROUPING_LIST)
   layer: { icon: "🏗️", label: "By Layer" },
   typology: { icon: "🧩", label: "By Typology" },
   tags: { icon: "🏷️", label: "By Tags" },
-
 } as const;
 
 export type CodebaseGrouping = (typeof CODEBASE_GROUPING_LIST)[number];

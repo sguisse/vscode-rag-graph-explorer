@@ -7,8 +7,14 @@ import {
   SelectedEntity,
 } from '@/shared/services/graph-rag-explorer';
 import { buildMemberKeyToken } from '@/services/view/graph-view.service';
-import { FOLDER_BASE_X_POSITIONS_CONFIG } from '@/features/explorer/constants/graph.constants';
 import { GraphRendering } from '@/shared/services/graph-rag-explorer/domain/model/types/type-graph-rendering';
+
+const FOLDER_BASE_X_POSITIONS_CONFIG = {
+  frontend: 40,
+  backend: 490,
+  config: 940,
+  other: 1390,
+};
 
 function getNodeDimensions(
   file: CodebaseFile,

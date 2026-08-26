@@ -1,26 +1,96 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useLayoutStore } from '@/store/useLayoutStore';
 import { useSdlcWorkflowMachine } from './core/workflow/useSdlcWorkflowMachine';
-import { useCodebaseDomainState } from './domains/codebase-context/store/useCodebaseDomainState';
-import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
 
-// Domain Features & Sidebar Component
 import { SdlcSidebarMenu } from './ui-common/components/SdlcSidebarMenu';
 import { CodebaseExplorerPanel } from './domains/codebase-context/components/codebase-tree/CodebaseExplorerPanel';
 import { GraphPanel } from './domains/codebase-context/components/dependency-graph/GraphPanel';
+import {
+  GraphPanelHeaderLeft,
+  GraphPanelHeaderCenter,
+  GraphPanelHeaderRight,
+} from './domains/codebase-context/components/dependency-graph/GraphPanelHeader';
 import { ImpactedPathsPanel } from './domains/codebase-context/components/impacted-paths/impacted-paths-panel';
+import { ImpactedPathsPanelHeader } from './domains/codebase-context/components/impacted-paths/ImpactedPathsPanelHeader';
+import { useImpactedPaths } from './domains/codebase-context/components/impacted-paths/hooks/use-impacted-paths';
 import { FilesContextPanel } from './domains/codebase-context/components/files-selection/files-context';
 import { InstructionsFeature } from './domains/instructions';
 import { LlmFeature } from './domains/llm-chat';
 import { ResultsManagerFeature } from './domains/results-manager';
 import { ConfigurationFeature } from './domains/configuration';
+import { useCodebaseDomainState } from './domains/codebase-context/store/useCodebaseDomainState';
+import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
+
+function ImpactedPathsHeaderWrapper() {
+  const {
+    upstreamDepth,
+    setUpstreamDepth,
+    downstreamDepth,
+    setDownstreamDepth,
+    buildDefaultCypherQueryParameters,
+  } = useImpactedPaths();
+
+  return (
+    <ImpactedPathsPanelHeader
+      title="Impacted Paths to analyze"
+      upstreamDepth={upstreamDepth}
+      setUpstreamDepth={setUpstreamDepth}
+      downstreamDepth={downstreamDepth}
+      setDownstreamDepth={setDownstreamDepth}
+      onBuildDefaultQueryParameters={buildDefaultCypherQueryParameters}
+    />
+  );
+}
+
+function CodebaseExplorerWrapper() {
+  const codebase = useCodebaseDomainState((s) => s.codebase);
+  const expandedFolders = useCodebaseDomainState((s) => s.expandedFolders);
+  const visibleFiles = useCodebaseDomainState((s) => s.selectedContextFiles);
+  const toggleFolder = useCodebaseDomainState((s) => s.toggleFolder);
+  const toggleFileCheckbox = useCodebaseDomainState((s) => s.toggleFileCheckbox);
+  const toggleFolderCheckbox = useCodebaseDomainState((s) => s.toggleFolderCheckbox);
+  const setSelectedEntity = useCodebaseDomainState((s) => s.setSelectedEntity);
+
+  return (
+    <CodebaseExplorerPanel
+      codebase={codebase}
+      searchFilteredFiles={codebase?.files || []}
+      expandedFolders={expandedFolders}
+      visibleFiles={visibleFiles}
+      toggleFolder={toggleFolder}
+      toggleFolderCheckbox={toggleFolderCheckbox}
+      toggleFileCheckbox={toggleFileCheckbox}
+      setSelectedEntity={setSelectedEntity}
+    />
+  );
+}
+
+function FilesContextWrapper() {
+  const codebase = useCodebaseDomainState((s) => s.codebase);
+
+  return (
+    <FilesContextPanel
+      initialCodebase={codebase}
+      selectedEntity={null}
+      enableDownstream={true}
+      setEnableDownstream={() => {}}
+      enableUpstream={false}
+      setEnableUpstream={() => {}}
+      impactedSet={new Set()}
+      handleCopy={() => {}}
+    />
+  );
+}
 
 export function SdlcLayoutOrchestrator() {
   const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
   const currentStep = useSdlcWorkflowMachine((s) => s.currentStep);
-  const codebase = useCodebaseDomainState((s) => s.codebase);
+  const lastSetStepRef = useRef<string | null>(null);
 
   useEffect(() => {
+    if (lastSetStepRef.current === currentStep) return;
+    lastSetStepRef.current = currentStep;
+
     const defaultSidebarLeft = {
       visible: true,
       container: <SdlcSidebarMenu />,
@@ -28,9 +98,6 @@ export function SdlcLayoutOrchestrator() {
       isHiddable: true,
     };
 
-    // ----------------------------------------------------------------------
-    // STEP 1: CODEBASE CONTEXT
-    // ----------------------------------------------------------------------
     if (currentStep === 'CODEBASE_CONTEXT') {
       setLayoutContainers({
         header: { visible: true, isResizable: false, isHiddable: false },
@@ -40,7 +107,9 @@ export function SdlcLayoutOrchestrator() {
             visible: true,
             container: (
               <div className="flex flex-col h-full bg-background min-h-0 overflow-hidden">
-                <ContainerPanelHeader title="Impacted Paths" path="workspace.top" />
+                <div className="border-b border-border bg-card shrink-0">
+                  <ImpactedPathsHeaderWrapper />
+                </div>
                 <ImpactedPathsPanel />
               </div>
             ),
@@ -53,16 +122,7 @@ export function SdlcLayoutOrchestrator() {
             container: (
               <div className="flex flex-col h-full bg-card min-h-0 overflow-hidden">
                 <ContainerPanelHeader title="Codebase Explorer" path="workspace.left" />
-                <CodebaseExplorerPanel
-                  codebase={codebase}
-                  searchFilteredFiles={[]}
-                  expandedFolders={{}}
-                  visibleFiles={{}}
-                  toggleFolder={() => {}}
-                  toggleFolderCheckbox={() => {}}
-                  toggleFileCheckbox={() => {}}
-                  setSelectedEntity={() => {}}
-                />
+                <CodebaseExplorerWrapper />
               </div>
             ),
             isResizable: true,
@@ -73,20 +133,24 @@ export function SdlcLayoutOrchestrator() {
             visible: true,
             container: (
               <div className="flex flex-col h-full bg-background min-h-0 overflow-hidden">
-                <ContainerPanelHeader title="Dependency Graph" path="workspace.center" />
-                <GraphPanel
-                  folderPositions={{}}
-                  containerRef={() => {}}
-                  showGrid={true}
-                  isDarkMode={false}
-                  graphState={{ zoom: 1, pan: { x: 0, y: 0 }, nodePositions: {} }}
-                  selectedEntity={null}
-                  searchFilteredFiles={[]}
-                  impactedSet={new Set()}
-                  handleSelectMember={() => {}}
-                  attributesVisible={false}
-                  methodsVisible={false}
-                />
+                <div className="flex justify-between items-center px-2 py-1 border-b border-border bg-card shrink-0">
+                  <GraphPanelHeaderLeft />
+                  <GraphPanelHeaderCenter />
+                  <GraphPanelHeaderRight
+                    cyRef={{ current: null }}
+                    isGraphMaximized={false}
+                    setIsGraphMaximized={() => {}}
+                    showGrid={true}
+                    setShowGrid={() => {}}
+                    attributesVisible={false}
+                    setAttributesVisible={() => {}}
+                    methodsVisible={true}
+                    setMethodsVisible={() => {}}
+                    showSelectedOnly={false}
+                    setShowSelectedOnly={() => {}}
+                  />
+                </div>
+                <GraphPanel />
               </div>
             ),
             isResizable: false,
@@ -98,16 +162,7 @@ export function SdlcLayoutOrchestrator() {
             container: (
               <div className="flex flex-col h-full bg-card min-h-0 overflow-hidden">
                 <ContainerPanelHeader title="Files Selection & Inspector" path="workspace.right" />
-                <FilesContextPanel
-                  initialCodebase={codebase}
-                  selectedEntity={null}
-                  enableDownstream={true}
-                  setEnableDownstream={() => {}}
-                  enableUpstream={false}
-                  setEnableUpstream={() => {}}
-                  impactedSet={new Set()}
-                  handleCopy={() => {}}
-                />
+                <FilesContextWrapper />
               </div>
             ),
             isResizable: true,
@@ -119,11 +174,7 @@ export function SdlcLayoutOrchestrator() {
         sidebarRight: { visible: false },
         footer: { visible: true, isResizable: false, isHiddable: false },
       });
-    }
-    // ----------------------------------------------------------------------
-    // STEP 2: INSTRUCTIONS
-    // ----------------------------------------------------------------------
-    else if (currentStep === 'INSTRUCTIONS') {
+    } else if (currentStep === 'INSTRUCTIONS') {
       setLayoutContainers({
         header: { visible: true, isResizable: false, isHiddable: false },
         sidebarLeft: defaultSidebarLeft,
@@ -143,11 +194,7 @@ export function SdlcLayoutOrchestrator() {
         sidebarRight: { visible: false },
         footer: { visible: true, isResizable: false, isHiddable: false },
       });
-    }
-    // ----------------------------------------------------------------------
-    // STEP 3: LLM CHAT
-    // ----------------------------------------------------------------------
-    else if (currentStep === 'LLM_CHAT') {
+    } else if (currentStep === 'LLM_CHAT') {
       setLayoutContainers({
         header: { visible: true, isResizable: false, isHiddable: false },
         sidebarLeft: defaultSidebarLeft,
@@ -167,11 +214,7 @@ export function SdlcLayoutOrchestrator() {
         sidebarRight: { visible: false },
         footer: { visible: true, isResizable: false, isHiddable: false },
       });
-    }
-    // ----------------------------------------------------------------------
-    // STEP 4: RESULTS MANAGER
-    // ----------------------------------------------------------------------
-    else if (currentStep === 'RESULTS_MANAGER') {
+    } else if (currentStep === 'RESULTS_MANAGER') {
       setLayoutContainers({
         header: { visible: true, isResizable: false, isHiddable: false },
         sidebarLeft: defaultSidebarLeft,
@@ -191,11 +234,7 @@ export function SdlcLayoutOrchestrator() {
         sidebarRight: { visible: false },
         footer: { visible: true, isResizable: false, isHiddable: false },
       });
-    }
-    // ----------------------------------------------------------------------
-    // CONFIGURATION
-    // ----------------------------------------------------------------------
-    else if (currentStep === 'CONFIGURATION') {
+    } else if (currentStep === 'CONFIGURATION') {
       setLayoutContainers({
         header: { visible: true, isResizable: false, isHiddable: false },
         sidebarLeft: defaultSidebarLeft,
@@ -216,7 +255,7 @@ export function SdlcLayoutOrchestrator() {
         footer: { visible: true, isResizable: false, isHiddable: false },
       });
     }
-  }, [currentStep, setLayoutContainers, codebase]);
+  }, [currentStep, setLayoutContainers]);
 
   return null;
 }

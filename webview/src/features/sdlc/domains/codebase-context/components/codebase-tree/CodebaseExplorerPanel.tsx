@@ -75,7 +75,6 @@ export function CodebaseExplorerPanel({
     matchingFileIndexMap,
   }), [finderStateRaw, matchingFileIndexMap]);
 
-  // Keyboard shortcut listener (Cmd+F / Ctrl+F) inside Explorer Panel
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
@@ -91,7 +90,6 @@ export function CodebaseExplorerPanel({
     return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [finderState.openAndFocusFinder]);
 
-  // 1. TOP SECTION: Fixed Header Toolbar + Search Finder Bar
   const topContent = (
     <div className="flex flex-col w-full shrink-0">
       <div className="flex justify-between items-center bg-muted/20 p-0.5 border-border border-b shrink-0">
@@ -201,7 +199,6 @@ export function CodebaseExplorerPanel({
     </div>
   );
 
-  // 2. MIDDLE SECTION: Scrollable Codebase Tree View
   const middleContent = (
     <div className="w-full p-4 font-mono text-xs">
       {groupedScopes.map((scope: ScopeGroup) => {
@@ -212,7 +209,10 @@ export function CodebaseExplorerPanel({
           return null;
         }
 
-        const isScopeExpanded = isFilterActiveWithQuery ? true : (expandedFolders[scope.key] ?? true);
+        const isScopeExpanded =
+          isFilterActiveWithQuery && !finderState.collapseNodeSearchNotCompliantEnabled
+            ? true
+            : (expandedFolders[scope.key] ?? true);
 
         const allScopeFiles = scope.files;
         const displayScopeFiles = isFilterActiveWithQuery
@@ -262,7 +262,6 @@ export function CodebaseExplorerPanel({
 
             {isScopeExpanded && (
               <div className="space-y-1 mt-1 ml-2.5 pl-3 border-border border-l">
-                {/* ViewMode: Scope -> direct files list */}
                 {viewMode === 'scope' &&
                   displayScopeFiles.map((file) => {
                     const matchIndex = finderState.matchingFileIndexMap.get(file.id) ?? -1;
@@ -275,6 +274,7 @@ export function CodebaseExplorerPanel({
                         <Checkbox
                           checked={!!visibleFiles[file.id]}
                           onCheckedChange={() => toggleFileCheckbox(file.id)}
+                          onClick={(e) => e.stopPropagation()}
                           className="w-3.5 h-3.5 shrink-0"
                         />
                         <span
@@ -320,7 +320,6 @@ export function CodebaseExplorerPanel({
                     );
                   })}
 
-                {/* ViewMode: Folder -> Recursive VS Code-style tree */}
                 {viewMode === 'folder' && scope.folderTree && (
                   <>
                     {scope.rootFiles &&
@@ -338,6 +337,7 @@ export function CodebaseExplorerPanel({
                             <Checkbox
                               checked={!!visibleFiles[file.id]}
                               onCheckedChange={() => toggleFileCheckbox(file.id)}
+                              onClick={(e) => e.stopPropagation()}
                               className="w-3.5 h-3.5 shrink-0"
                             />
                             <span
@@ -391,7 +391,6 @@ export function CodebaseExplorerPanel({
                   </>
                 )}
 
-                {/* ViewMode: Tags / Layer / Typology -> flat subfolders */}
                 {viewMode !== 'scope' &&
                   viewMode !== 'folder' &&
                   scope.subFolders &&
@@ -404,7 +403,11 @@ export function CodebaseExplorerPanel({
                       return null;
                     }
 
-                    const isSubExpanded = isFilterActiveWithQuery ? true : (expandedFolders[sub.key] ?? true);
+                    const isSubExpanded =
+                      isFilterActiveWithQuery && !finderState.collapseNodeSearchNotCompliantEnabled
+                        ? true
+                        : (expandedFolders[sub.key] ?? true);
+
                     const subTheme = DYNAMIC_COLORS[subIdx % DYNAMIC_COLORS.length];
 
                     const isSubAllChecked = sub.files.length > 0 && sub.files.every((f) => visibleFiles[f.id]);
@@ -468,6 +471,7 @@ export function CodebaseExplorerPanel({
                                   <Checkbox
                                     checked={!!visibleFiles[file.id]}
                                     onCheckedChange={() => toggleFileCheckbox(file.id)}
+                                    onClick={(e) => e.stopPropagation()}
                                     className="w-3.5 h-3.5 shrink-0"
                                   />
                                   <span
@@ -519,7 +523,6 @@ export function CodebaseExplorerPanel({
     </div>
   );
 
-  // 3. BOTTOM SECTION: Info Explorer Status Bar
   const bottomContent = (
     <div className="w-full bg-muted/20 p-2 border-border border-t h-9 shrink-0 flex items-center justify-between">
       <div>

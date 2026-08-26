@@ -93,7 +93,7 @@ export const GraphPanelHeaderCenter: React.FC<GraphPanelHeaderCenterProps> = () 
     <div className="flex items-center gap-3">
       <Button
         id="btn-neo4j-connect"
-        className="flex items-center gap-1.5 bg-gradient-to-r from-orange-600 to-orange-500 shadow-sm px-2.5 border border-orange-700 rounded-md h-6 font-bold text-[10px] text-white uppercase tracking-wider"
+        className="flex items-center gap-1.5 bg-gradient-to-r from-orange-600 to-orange-500 shadow-sm px-2.5 border border-orange-700 rounded-md h-6 font-bold text-[10px] text-white uppercase tracking-wider cursor-pointer"
         onClick={displayNeo4jHandler}
       >
         <Database size={11} /> Neo4j
@@ -103,31 +103,31 @@ export const GraphPanelHeaderCenter: React.FC<GraphPanelHeaderCenterProps> = () 
 };
 
 export interface GraphPanelHeaderRightProps {
-  cyRef: React.RefObject<any>;
-  isGraphMaximized: boolean;
-  setIsGraphMaximized: (maximized: boolean) => void;
-  showGrid: boolean;
-  setShowGrid: (show: boolean) => void;
-  attributesVisible: boolean;
-  setAttributesVisible: (val: boolean) => void;
-  methodsVisible: boolean;
-  setMethodsVisible: (val: boolean) => void;
-  showSelectedOnly: boolean;
-  setShowSelectedOnly: (val: boolean) => void;
+  cyRef?: React.RefObject<any>;
+  isGraphMaximized?: boolean;
+  setIsGraphMaximized?: (maximized: boolean) => void;
+  showGrid?: boolean;
+  setShowGrid?: (show: boolean) => void;
+  attributesVisible?: boolean;
+  setAttributesVisible?: (val: boolean) => void;
+  methodsVisible?: boolean;
+  setMethodsVisible?: (val: boolean) => void;
+  showSelectedOnly?: boolean;
+  setShowSelectedOnly?: (val: boolean) => void;
 }
 
 export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
   cyRef,
-  isGraphMaximized,
-  setIsGraphMaximized,
-  showGrid,
-  setShowGrid,
-  attributesVisible,
-  setAttributesVisible,
-  methodsVisible,
-  setMethodsVisible,
-  showSelectedOnly,
-  setShowSelectedOnly,
+  isGraphMaximized = false,
+  setIsGraphMaximized = () => {},
+  showGrid = true,
+  setShowGrid = () => {},
+  attributesVisible = false,
+  setAttributesVisible = () => {},
+  methodsVisible = true,
+  setMethodsVisible = () => {},
+  showSelectedOnly = false,
+  setShowSelectedOnly = () => {},
 }) => {
   const { handleZoomIn, handleZoomOut, handleFitView } = useGraphPanelHeader(cyRef);
 

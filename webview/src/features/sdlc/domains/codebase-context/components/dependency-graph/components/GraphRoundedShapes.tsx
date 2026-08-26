@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileCode, Settings } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import { UmlClassNodeData, NODE_STYLE_REGISTRY, removeExtension } from './graph-common-shapes';
 
 export const RoundClassNode: React.FC<{ id: string; data: UmlClassNodeData }> = ({ id, data }) => {
@@ -26,21 +26,10 @@ export const RoundClassNode: React.FC<{ id: string; data: UmlClassNodeData }> = 
         className={`w-16 h-16 rounded-full border-2 ${borderClass} ${bgClass} flex flex-col items-center justify-center shadow-lg transition-all duration-200 p-1 pointer-events-none`}
         title={data.name}
       >
-        {/*
-        <FileCode size={20} className="text-white pointer-events-none shrink-0" />
-        */}
         <span className="px-0.5 max-w-[65px] font-mono font-bold text-[8px] text-white text-center truncate leading-tight pointer-events-none">
           {displayName}
         </span>
       </div>
-      {/*
-      <span
-        className="-bottom-5 z-10 absolute bg-background/90 shadow-sm px-1.5 py-0.5 border border-border rounded max-w-[110px] font-mono font-semibold text-[9px] text-foreground truncate whitespace-nowrap pointer-events-none"
-        title={data.name}
-      >
-        {displayName}
-      </span>
-      */}
     </div>
   );
 };
@@ -73,12 +62,6 @@ export const RoundConfigNode: React.FC<{ id: string; data: UmlClassNodeData }> =
           {displayName}
         </span>
       </div>
-      <span
-        className="-bottom-5 z-10 absolute bg-background/90 shadow-sm px-1.5 py-0.5 border border-border rounded max-w-[110px] font-mono font-semibold text-[9px] text-foreground truncate whitespace-nowrap pointer-events-none"
-        title={data.name}
-      >
-        {displayName}
-      </span>
     </div>
   );
 };
