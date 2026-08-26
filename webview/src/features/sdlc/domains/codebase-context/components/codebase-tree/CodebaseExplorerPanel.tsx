@@ -16,6 +16,7 @@ import { TriStateCheckbox } from './components/TriStateCheckbox';
 import { RecursiveFolderNode } from './components/RecursiveFolderNode';
 import { DYNAMIC_COLORS } from './constants/codebase-explorer.constants';
 import { scopeHasMatches } from './utils/codebase-tree.utils';
+import { useCodebaseDomainState } from '../../store/useCodebaseDomainState';
 import {
   CodebaseExplorerPanelProps,
   ViewMode,
@@ -23,19 +24,26 @@ import {
   SubFolderGroup
 } from './model-ui';
 
-export function CodebaseExplorerPanel({
-  codebase,
-  searchFilteredFiles,
-  expandedFolders,
-  visibleFiles,
-  toggleFolder,
-  toggleFolderCheckbox,
-  toggleFileCheckbox,
-  setSelectedEntity,
-  onFocusNode,
-  onImportCodebase
-}: CodebaseExplorerPanelProps) {
+export function CodebaseExplorerPanel(props: CodebaseExplorerPanelProps = {}) {
   const panelRef = useRef<HTMLDivElement>(null);
+
+  const storeCodebase = useCodebaseDomainState((s) => s.codebase);
+  const storeExpandedFolders = useCodebaseDomainState((s) => s.expandedFolders);
+  const storeVisibleFiles = useCodebaseDomainState((s) => s.selectedContextFiles);
+  const storeToggleFolder = useCodebaseDomainState((s) => s.toggleFolder);
+  const storeToggleFileCheckbox = useCodebaseDomainState((s) => s.toggleFileCheckbox);
+  const storeSetSelectedEntity = useCodebaseDomainState((s) => s.setSelectedEntity);
+  const storeSetCodebase = useCodebaseDomainState((s) => s.setCodebase);
+
+  const codebase = props.codebase ?? storeCodebase;
+  const searchFilteredFiles = props.searchFilteredFiles ?? (codebase?.files || []);
+  const expandedFolders = props.expandedFolders ?? storeExpandedFolders;
+  const visibleFiles = props.visibleFiles ?? storeVisibleFiles;
+  const toggleFolder = props.toggleFolder ?? storeToggleFolder;
+  const toggleFileCheckbox = props.toggleFileCheckbox ?? storeToggleFileCheckbox;
+  const setSelectedEntity = props.setSelectedEntity ?? storeSetSelectedEntity;
+  const onImportCodebase = props.onImportCodebase ?? storeSetCodebase;
+  const onFocusNode = props.onFocusNode;
 
   const {
     isImportOpen,
@@ -91,8 +99,8 @@ export function CodebaseExplorerPanel({
   }, [finderState.openAndFocusFinder]);
 
   const topContent = (
-    <div className="flex flex-col w-full shrink-0">
-      <div className="flex justify-between items-center bg-muted/20 p-0.5 border-border border-b shrink-0">
+    <div className="flex flex-col shrink-0 w-full">
+      <div className="flex justify-between items-center bg-muted/20 p-0.5 border-b border-border shrink-0">
         <div className="flex items-center gap-1.5 pl-2 w-full">
           <LayoutList size={14} className="text-muted-foreground shrink-0" />
           <SelectFromTypeBuilder
@@ -172,7 +180,7 @@ export function CodebaseExplorerPanel({
       </div>
 
       {finderState.isFinderOpen && (
-        <div id="container-treeview-finder" className="bg-background p-0 border-border border-b shrink-0">
+        <div id="container-treeview-finder" className="bg-background p-0 border-b border-border shrink-0">
           <FinderTree
             styleView="toolbar"
             focusTrigger={finderState.focusTrigger}
@@ -225,7 +233,7 @@ export function CodebaseExplorerPanel({
 
         return (
           <div key={scope.key} className="mb-4">
-            <div className="group flex items-center gap-1.5 hover:bg-muted/50 px-1 py-1 rounded">
+            <div className="flex items-center gap-1.5 hover:bg-muted/50 px-1 py-1 rounded group">
               <TriStateCheckbox
                 checked={isScopeAllChecked}
                 indeterminate={isScopeIndeterminate}
@@ -261,7 +269,7 @@ export function CodebaseExplorerPanel({
             </div>
 
             {isScopeExpanded && (
-              <div className="space-y-1 mt-1 ml-2.5 pl-3 border-border border-l">
+              <div className="space-y-1 mt-1 ml-2.5 pl-3 border-l border-border">
                 {viewMode === 'scope' &&
                   displayScopeFiles.map((file) => {
                     const matchIndex = finderState.matchingFileIndexMap.get(file.id) ?? -1;
@@ -269,7 +277,7 @@ export function CodebaseExplorerPanel({
                       <div
                         key={file.id}
                         id={`tree-file-node-${file.id}`}
-                        className="group flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded transition-colors"
+                        className="flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded transition-colors group"
                       >
                         <Checkbox
                           checked={!!visibleFiles[file.id]}
@@ -332,7 +340,7 @@ export function CodebaseExplorerPanel({
                           <div
                             key={file.id}
                             id={`tree-file-node-${file.id}`}
-                            className="group flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded transition-colors"
+                            className="flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded transition-colors group"
                           >
                             <Checkbox
                               checked={!!visibleFiles[file.id]}
@@ -416,7 +424,7 @@ export function CodebaseExplorerPanel({
 
                     return (
                       <div key={sub.key} className="mb-2">
-                        <div className="group flex items-center gap-1.5 hover:bg-muted/50 px-1 py-1 rounded">
+                        <div className="flex items-center gap-1.5 hover:bg-muted/50 px-1 py-1 rounded group">
                           <TriStateCheckbox
                             checked={isSubAllChecked}
                             indeterminate={isSubIndeterminate}
@@ -452,7 +460,7 @@ export function CodebaseExplorerPanel({
                         </div>
 
                         {isSubExpanded && (
-                          <div className="space-y-1 mt-1 ml-2.5 pl-3 border-border border-l">
+                          <div className="space-y-1 mt-1 ml-2.5 pl-3 border-l border-border">
                             {displaySubFiles.map((file) => {
                               const isDuplicate = viewMode === 'tags' && duplicateFileIds.has(file.id);
                               const matchIndex = finderState.matchingFileIndexMap.get(file.id) ?? -1;
@@ -466,7 +474,7 @@ export function CodebaseExplorerPanel({
                                 <div
                                   key={file.id}
                                   id={`tree-file-node-${file.id}`}
-                                  className="group flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded transition-colors"
+                                  className="flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded transition-colors group"
                                 >
                                   <Checkbox
                                     checked={!!visibleFiles[file.id]}
@@ -524,12 +532,12 @@ export function CodebaseExplorerPanel({
   );
 
   const bottomContent = (
-    <div className="flex justify-between items-center bg-muted/20 p-2 border-border border-t w-full h-9 shrink-0">
+    <div className="flex justify-between items-center bg-muted/20 p-2 border-t border-border shrink-0 w-full h-9">
       <div>
-        <h3 className="flex items-center gap-2 font-mono font-bold text-muted-foreground text-xs uppercase tracking-wider">
+        <h3 className="flex items-center gap-2 font-mono font-bold text-xs text-muted-foreground uppercase tracking-wider">
           <span>Explorer</span>
           <span id="badge-file-count" className="bg-muted px-2 py-0.5 rounded text-[10px] text-foreground">
-            {searchFilteredFiles.length}/{codebase.files.length}
+            {searchFilteredFiles.length}/{codebase?.files?.length || 0}
           </span>
         </h3>
       </div>
@@ -540,14 +548,14 @@ export function CodebaseExplorerPanel({
     <div
       ref={panelRef}
       tabIndex={-1}
-      className="flex flex-col outline-none w-full h-full min-h-0 overflow-hidden"
+      className="flex flex-col min-h-0 w-full h-full overflow-hidden outline-none"
     >
       <TopMiddleBottomPanel
         id="panel-codebase-explorer"
         topId="panel-codebase-explorer-top"
         middleId="tree-codebase-files"
         bottomId="panel-codebase-explorer-bottom"
-        className="bg-card w-full h-full min-h-0 overflow-hidden"
+        className="bg-card min-h-0 w-full h-full overflow-hidden"
         top={topContent}
         middle={middleContent}
         bottom={bottomContent}

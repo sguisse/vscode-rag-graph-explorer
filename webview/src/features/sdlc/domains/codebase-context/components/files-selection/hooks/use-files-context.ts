@@ -1,9 +1,8 @@
 import { useMemo, useEffect, useCallback } from 'react';
 import { CodebaseData, CodebaseFile, SelectedEntity } from '@/shared/services/graph-rag-explorer';
 import { calculateTransitiveImpact } from '@/services/view/graph-view.service';
-import { useExplorerStore } from '@/features/sdlc/domains/codebase-context/store/useCodebaseDomainState';
-import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
-import { logInfo } from '@/services/view/log-view.service.wrapper';
+import { useCodebaseDomainState, CodebaseDomainState } from '../../../store/useCodebaseDomainState';
+import { useCodebaseActions } from '../../../handlers/useCodebaseActions';
 
 export interface DepthFileGroup {
   key: string;
@@ -19,29 +18,27 @@ export function useFilesContext(
   enableUpstream: boolean,
   impactedSet: Set<string>
 ) {
-  const setTargetFilePaths = useExplorerStore((s) => s.setTargetFilePaths);
+  const setTargetFilePaths = useCodebaseDomainState((s: CodebaseDomainState) => s.setTargetFilePaths);
 
-  const selectedFiles = useExplorerStore((s) => s.selectedContextFiles);
-  const setSelectedFiles = useExplorerStore((s) => s.setSelectedContextFiles);
-  const expandedGroups = useExplorerStore((s) => s.expandedContextGroups);
-  const setExpandedGroups = useExplorerStore((s) => s.setExpandedContextGroups);
+  const selectedFiles = useCodebaseDomainState((s: CodebaseDomainState) => s.selectedContextFiles);
+  const setSelectedFiles = useCodebaseDomainState((s: CodebaseDomainState) => s.setSelectedContextFiles);
+  const expandedGroups = useCodebaseDomainState((s: CodebaseDomainState) => s.expandedContextGroups);
+  const setExpandedGroups = useCodebaseDomainState((s: CodebaseDomainState) => s.setExpandedContextGroups);
+
+  const { revealAndCopyFile, openFileInEditor } = useCodebaseActions();
 
   const handleFileClick = useCallback((file: CodebaseFile) => {
     if (file.path) {
-      logInfo(`FilesContext file single-clicked: ${file.id} (${file.path}). Revealing in VS Code Explorer and copying path to clipboard...`);
-      vsCodeApiService.revealInExplorer(file.path);
-      vsCodeApiService.copyToClipboard(file.path);
+      revealAndCopyFile(file);
     }
-  }, []);
+  }, [revealAndCopyFile]);
 
   const handleFileDoubleClick = useCallback((file: CodebaseFile, e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (file.path) {
-      logInfo(`FilesContext file double-clicked: ${file.id} (${file.path}). Opening in VS Code...`);
-      vsCodeApiService.revealInExplorer(file.path);
-      vsCodeApiService.openFile(file.path);
+      openFileInEditor(file);
     }
-  }, []);
+  }, [openFileInEditor]);
 
   const downstreamCount = useMemo(() => {
     if (!selectedEntity || !initialCodebase?.dependencies) return 0;
@@ -189,7 +186,7 @@ export function useFilesContext(
       });
     });
 
-    setSelectedFiles((prev) => {
+    setSelectedFiles((prev: Record<string, boolean>) => {
       const updated = { ...initialSelected };
       Object.keys(prev).forEach((id) => {
         if (id in updated) {
@@ -199,14 +196,14 @@ export function useFilesContext(
       return updated;
     });
 
-    setExpandedGroups((prev) => ({ ...initialExpanded, ...prev }));
+    setExpandedGroups((prev: Record<string, boolean>) => ({ ...initialExpanded, ...prev }));
   }, [depthGroups, setSelectedFiles, setExpandedGroups]);
 
   const toggleGroupCheckbox = (groupKey: string, groupFiles: CodebaseFile[]) => {
     const isAllChecked = groupFiles.length > 0 && groupFiles.every((f) => selectedFiles[f.id]);
     const targetState = !isAllChecked;
 
-    setSelectedFiles((prev) => {
+    setSelectedFiles((prev: Record<string, boolean>) => {
       const updated = { ...prev };
       groupFiles.forEach((file) => {
         updated[file.id] = targetState;
@@ -216,14 +213,14 @@ export function useFilesContext(
   };
 
   const toggleFileCheckbox = (fileId: string) => {
-    setSelectedFiles((prev) => ({
+    setSelectedFiles((prev: Record<string, boolean>) => ({
       ...prev,
       [fileId]: !prev[fileId],
     }));
   };
 
   const toggleGroupExpand = (groupKey: string) => {
-    setExpandedGroups((prev) => ({
+    setExpandedGroups((prev: Record<string, boolean>) => ({
       ...prev,
       [groupKey]: !prev[groupKey],
     }));

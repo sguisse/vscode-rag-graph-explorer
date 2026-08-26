@@ -69,14 +69,14 @@ export interface RecursiveFolderNodeProps {
 }
 
 export interface CodebaseExplorerPanelProps {
-  codebase: CodebaseData;
-  searchFilteredFiles: CodebaseFile[];
-  expandedFolders: Record<string, boolean>;
-  visibleFiles: Record<string, boolean>;
-  toggleFolder: (folder: string) => void;
-  toggleFolderCheckbox: (folder: string) => void;
-  toggleFileCheckbox: (id: string) => void;
-  setSelectedEntity: (entity: SelectedEntity) => void;
+  codebase?: CodebaseData;
+  searchFilteredFiles?: CodebaseFile[];
+  expandedFolders?: Record<string, boolean>;
+  visibleFiles?: Record<string, boolean>;
+  toggleFolder?: (folder: string) => void;
+  toggleFolderCheckbox?: (folder: string) => void;
+  toggleFileCheckbox?: (id: string) => void;
+  setSelectedEntity?: (entity: SelectedEntity) => void;
   onFocusNode?: (nodeId: string) => void;
   onImportCodebase?: (importedData: CodebaseData) => void;
 }

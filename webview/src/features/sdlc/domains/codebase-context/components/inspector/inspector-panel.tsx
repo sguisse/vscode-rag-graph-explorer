@@ -21,11 +21,12 @@ import {
   CodebaseMethod,
   CodebaseAttribute,
 } from '@/shared/services/graph-rag-explorer';
+import { useCodebaseDomainState } from '../../store/useCodebaseDomainState';
 import { useInspectorPanel } from './hooks/use-inspector-panel';
 
-interface InspectorPanelProps {
-  selectedEntity: SelectedEntity | null;
-  initialCodebase: CodebaseData;
+export interface InspectorPanelProps {
+  selectedEntity?: SelectedEntity | null;
+  initialCodebase?: CodebaseData;
   enableDownstream?: boolean;
   setEnableDownstream?: React.Dispatch<React.SetStateAction<boolean>>;
   enableUpstream?: boolean;
@@ -78,24 +79,27 @@ const groupTagsByCategory = (tags: string[] = []) => {
   return grouped;
 };
 
-export function InspectorPanel({
-  selectedEntity,
-  initialCodebase,
-}: InspectorPanelProps) {
+export function InspectorPanel(props: InspectorPanelProps = {}) {
+  const storeSelectedEntity = useCodebaseDomainState((s) => s.selectedEntity);
+  const storeCodebase = useCodebaseDomainState((s) => s.codebase);
+
+  const selectedEntity = props.selectedEntity ?? storeSelectedEntity;
+  const initialCodebase = props.initialCodebase ?? storeCodebase;
+
   const {
     currentFile,
     groupedAttributes,
     sortedVisibilities,
     handleCopyFileCypherQuery,
     handleCopyMethodCypherQuery,
-  } = useInspectorPanel(selectedEntity, initialCodebase);
+  } = useInspectorPanel(selectedEntity, initialCodebase, props.handleCopy);
 
   if (!selectedEntity || !currentFile) {
     return (
       <div className="py-8 font-mono text-muted-foreground text-center">
-        <ShieldAlert size={32} className="opacity-40 mx-auto mb-2 text-muted-foreground" />
+        <ShieldAlert size={32} className="mx-auto mb-2 text-muted-foreground opacity-40" />
         <h4 className="font-mono font-bold text-sm">No Active Entity Inspected</h4>
-        <p className="mx-auto mt-1 max-w-[240px] text-muted-foreground text-xs">
+        <p className="mx-auto mt-1 max-w-[240px] text-xs text-muted-foreground">
           Click any graph node, member handle, or tree item to inspect structural properties.
         </p>
       </div>
@@ -104,12 +108,12 @@ export function InspectorPanel({
 
   const renderTypeIcon = (type: string) => {
     switch (type) {
-      case 'component': return <Puzzle className="w-4 h-4 text-emerald-400 shrink-0" />;
-      case 'module': return <Boxes className="w-4 h-4 text-purple-400 shrink-0" />;
-      case 'interface': return <Braces className="w-4 h-4 text-indigo-400 shrink-0" />;
-      case 'class': return <Box className="w-4 h-4 text-blue-400 shrink-0" />;
-      case 'config': return <Settings className="w-4 h-4 text-amber-400 shrink-0" />;
-      default: return <FileCode className="w-4 h-4 text-slate-400 shrink-0" />;
+      case 'component': return <Puzzle className="shrink-0 w-4 h-4 text-emerald-400" />;
+      case 'module': return <Boxes className="shrink-0 w-4 h-4 text-purple-400" />;
+      case 'interface': return <Braces className="shrink-0 w-4 h-4 text-indigo-400" />;
+      case 'class': return <Box className="shrink-0 w-4 h-4 text-blue-400" />;
+      case 'config': return <Settings className="shrink-0 w-4 h-4 text-amber-400" />;
+      default: return <FileCode className="shrink-0 w-4 h-4 text-slate-400" />;
     }
   };
 
@@ -126,13 +130,13 @@ export function InspectorPanel({
   const groupedTags = groupTagsByCategory(currentFile.tags);
 
   return (
-    <div className="flex flex-col space-y-1.5 h-full font-mono text-xs animate-in duration-200 fade-in">
+    <div className="flex flex-col space-y-1.5 font-mono text-xs duration-200 animate-in fade-in h-full">
       <div className="space-y-1 bg-primary/5 p-2 border border-primary/20 rounded-lg shrink-0">
         <div className="flex items-start gap-2 mt-0">
           {renderTypeIcon(currentFile.type)}
-          <div className="flex-1 w-full min-w-0">
+          <div className="flex-1 min-w-0 w-full">
             <div className="flex justify-between items-center gap-2">
-              <h4 className="font-mono font-bold text-foreground text-xs truncate">
+              <h4 className="font-mono font-bold text-xs text-foreground truncate">
                 {`${currentFile.name}`}
               </h4>
 
@@ -143,20 +147,20 @@ export function InspectorPanel({
           </div>
         </div>
 
-        <div className="flex items-center gap-1 mt-0.5 min-w-0 font-mono text-[10px] text-muted-foreground">
-          <Hash className="w-3 h-3 text-primary shrink-0" />
+        <div className="flex items-center gap-1 font-mono text-[10px] text-muted-foreground mt-0.5 min-w-0">
+          <Hash className="shrink-0 w-3 h-3 text-primary" />
           <span className="truncate">{selectedEntity.nodeId}</span>
           <Database
-            className="ms-auto w-3.5 h-3.5 text-amber-400 hover:text-amber-300 transition-colors cursor-pointer shrink-0"
+            className="ms-auto shrink-0 w-3.5 h-3.5 text-amber-400 hover:text-amber-300 transition-colors cursor-pointer"
             onClick={handleCopyFileCypherQuery}
             data-tooltip="Copy Neo4j Cypher query for this file/type"
           />
         </div>
 
-        <div className="flex items-center gap-1 mt-0.5 min-w-0 font-mono text-[10px] text-muted-foreground">
-          <Folder className="w-3 h-3 text-primary shrink-0" />
+        <div className="flex items-center gap-1 font-mono text-[10px] text-muted-foreground mt-0.5 min-w-0">
+          <Folder className="shrink-0 w-3 h-3 text-primary" />
           <span
-            className="block w-full text-left truncate"
+            className="block text-left truncate w-full"
             style={{ direction: 'rtl', textAlign: 'left' }}
             title={currentFile.path}
           >
@@ -164,12 +168,12 @@ export function InspectorPanel({
           </span>
         </div>
 
-        <div className="gap-2 grid grid-cols-3 pt-2 border-border border-t">
+        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border">
           <div className="bg-background p-1.5 border border-border rounded">
             <span className="block flex items-center gap-1 text-[9px] text-muted-foreground uppercase">
               <Tag className="w-3 h-3 text-amber-500" /> Entity Type
             </span>
-            <span className="block mt-0.5 font-bold text-[11px] text-foreground uppercase">
+            <span className="block font-bold text-[11px] text-foreground uppercase mt-0.5">
               {currentFile.type}
             </span>
           </div>
@@ -184,7 +188,7 @@ export function InspectorPanel({
           </div>
         </div>
 
-        <div className="bg-slate-950 mt-2 p-2 border border-slate-800 rounded min-h-[60px] max-h-[160px] overflow-auto font-mono text-slate-300 text-xs resize-y">
+        <div className="bg-slate-950 mt-2 p-2 border border-slate-800 rounded min-h-[60px] max-h-[160px] font-mono text-xs text-slate-300 overflow-auto resize-y">
           <div className="top-0 sticky bg-slate-950/90 backdrop-blur-xs mb-1 py-0.5 font-bold text-[9px] text-amber-400 uppercase select-none">
             AI Summary:
           </div>
@@ -196,24 +200,24 @@ export function InspectorPanel({
         </div>
       </div>
 
-      <div className="flex flex-col flex-1 space-y-1.5 min-h-0 overflow-y-auto">
+      <div className="flex flex-col flex-1 min-h-0 space-y-1.5 overflow-y-auto">
         <CollapsibleCard
           cardId="card-inspector-attributes"
           defaultExpanded={false}
           title={
             <div className="flex items-center gap-1.5">
-              <ListTree className="w-3.5 h-3.5 text-primary shrink-0" />
+              <ListTree className="shrink-0 w-3.5 h-3.5 text-primary" />
               <span className="font-mono font-bold text-[11px] text-foreground uppercase tracking-wider">
                 Attributes / Fields ({currentFile.attributes?.length || 0})
               </span>
             </div>
           }
           contentToCopy={attributesCopyText}
-          className="bg-card/50 shadow-xs border-border overflow-hidden shrink-0"
-          headerClassName="bg-muted/40 p-1.5 px-2 border-border/60 border-b"
+          className="bg-card/50 border-border shadow-xs shrink-0 overflow-hidden"
+          headerClassName="bg-muted/40 p-1.5 px-2 border-b border-border/60"
         >
           {sortedVisibilities.length === 0 ? (
-            <span className="text-[12px] text-muted-foreground text-xs italic">No attributes declared</span>
+            <span className="text-[12px] text-xs text-muted-foreground italic">No attributes declared</span>
           ) : (
             <div className="space-y-0 px-0 max-h-36 overflow-y-auto">
               {sortedVisibilities.map((vis) => (
@@ -256,18 +260,18 @@ export function InspectorPanel({
           defaultExpanded={true}
           title={
             <div className="flex items-center gap-1.5">
-              <SquareFunction className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+              <SquareFunction className="shrink-0 w-3.5 h-3.5 text-indigo-400" />
               <span className="font-mono font-bold text-[11px] text-foreground uppercase tracking-wider">
                 Methods / Exports ({currentFile.methods?.length || 0})
               </span>
             </div>
           }
           contentToCopy={methodsCopyText}
-          className="bg-card/50 shadow-xs border-border overflow-hidden shrink-0"
-          headerClassName="bg-muted/40 p-1.5 px-2 border-border/60 border-b"
+          className="bg-card/50 border-border shadow-xs shrink-0 overflow-hidden"
+          headerClassName="bg-muted/40 p-1.5 px-2 border-b border-border/60"
         >
           {(!currentFile.methods || currentFile.methods.length === 0) ? (
-            <span className="text-[12px] text-muted-foreground text-xs italic">No methods declared</span>
+            <span className="text-[12px] text-xs text-muted-foreground italic">No methods declared</span>
           ) : (
             <div className="space-y-1 max-h-48 overflow-y-auto">
               {currentFile.methods.map((m: CodebaseMethod) => {
@@ -285,21 +289,21 @@ export function InspectorPanel({
                           {m.visibility}
                         </span>
                         <span
-                          className="min-w-0 font-semibold text-foreground truncate cursor-help"
+                          className="font-semibold text-foreground truncate cursor-help min-w-0"
                           data-tooltip={m.signature || ''}
                         >
                           {m.name}
                         </span>
                       </div>
                       <Database
-                        className="w-3.5 h-3.5 text-amber-400 hover:text-amber-300 transition-colors cursor-pointer shrink-0"
+                        className="shrink-0 w-3.5 h-3.5 text-amber-400 hover:text-amber-300 transition-colors cursor-pointer"
                         onClick={(e) => handleCopyMethodCypherQuery(m, e)}
                         data-tooltip={`Copy Neo4j Cypher query for method ${m.name}`}
                       />
                     </div>
 
                     {m.description && (
-                      <span className="block mt-0.5 text-[10px] text-muted-foreground leading-snug">
+                      <span className="block text-[10px] text-muted-foreground leading-snug mt-0.5">
                         {m.description}
                       </span>
                     )}
@@ -315,18 +319,18 @@ export function InspectorPanel({
           defaultExpanded={false}
           title={
             <div className="flex items-center gap-1.5">
-              <Tag className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <Tag className="shrink-0 w-3.5 h-3.5 text-amber-400" />
               <span className="font-mono font-bold text-[11px] text-foreground uppercase tracking-wider">
                 Codebase Tags ({currentFile.tags?.length || 0})
               </span>
             </div>
           }
           contentToCopy={tagsCopyText}
-          className="bg-card/50 shadow-xs border-border overflow-hidden shrink-0"
-          headerClassName="bg-muted/40 p-1.5 px-2 border-border/60 border-b"
+          className="bg-card/50 border-border shadow-xs shrink-0 overflow-hidden"
+          headerClassName="bg-muted/40 p-1.5 px-2 border-b border-border/60"
         >
           {(!currentFile.tags || currentFile.tags.length === 0) ? (
-            <span className="text-[12px] text-muted-foreground text-xs italic">No tags assigned</span>
+            <span className="text-[12px] text-xs text-muted-foreground italic">No tags assigned</span>
           ) : (
             <div className="space-y-2 p-1 max-h-48 overflow-y-auto">
               {Object.entries(groupedTags).map(([category, tags]) => {

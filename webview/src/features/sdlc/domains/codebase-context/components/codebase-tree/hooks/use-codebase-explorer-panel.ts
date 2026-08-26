@@ -1,9 +1,8 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { CodebaseData, CodebaseFile, SelectedEntity } from '@/shared/services/graph-rag-explorer';
 import { FOLDER_KEYS_REGISTERED_CONFIG } from '@/features/explorer/constants/graph.constants';
-import { useExplorerStore } from '@/features/sdlc/domains/codebase-context/store/useCodebaseDomainState';
-import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
-import { logInfo } from '@/services/view/log-view.service.wrapper';
+import { useCodebaseDomainState, CodebaseDomainState } from '../../../store/useCodebaseDomainState';
+import { useCodebaseActions } from '../../../handlers/useCodebaseActions';
 
 import {
   ViewMode,
@@ -58,6 +57,9 @@ export function useCodebaseExplorerPanel(
 ) {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('scope');
+  const setExpandedFolders = useCodebaseDomainState((s: CodebaseDomainState) => s.setExpandedFolders);
+
+  const { revealAndCopyFile, openFileInEditor, revealFolder } = useCodebaseActions();
 
   const handleExportCodebase = useCallback(() => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(codebase, null, 2));
@@ -75,7 +77,7 @@ export function useCodebaseExplorerPanel(
     const scopeKeys = [...FOLDER_KEYS_REGISTERED_CONFIG];
 
     scopeKeys.forEach((scopeKey) => {
-      const scopeFiles = codebase.files.filter((f) => getFileFolderKey(f) === scopeKey);
+      const scopeFiles = (codebase?.files || []).filter((f) => getFileFolderKey(f) === scopeKey);
       if (scopeFiles.length === 0) return;
 
       const scopeFolderPath = getCommonFolderPath(scopeFiles) || scopeKey;
@@ -104,7 +106,7 @@ export function useCodebaseExplorerPanel(
           const dynamicTagsMap = new Map<string, string>();
           ALLOWED_TAGS.forEach((t) => dynamicTagsMap.set(t.toLowerCase(), t));
 
-          codebase.files.forEach((f) => {
+          (codebase?.files || []).forEach((f) => {
             const tags = f.tags as any;
             if (Array.isArray(tags)) {
               tags.forEach((t) => {
@@ -213,7 +215,7 @@ export function useCodebaseExplorerPanel(
     });
 
     return { groupedScopes: scopesList, duplicateFileIds: duplicates };
-  }, [codebase.files, viewMode]);
+  }, [codebase?.files, viewMode]);
 
   const handleExpandAll = useCallback(() => {
     const keysWithDepth = collectFolderKeysWithDepth(groupedScopes);
@@ -221,24 +223,14 @@ export function useCodebaseExplorerPanel(
     keysWithDepth.forEach(({ key }) => {
       newExpanded[key] = true;
     });
-    useExplorerStore.setState((s) => ({
-      expandedFolders: {
-        ...s.expandedFolders,
-        ...newExpanded,
-      },
-    }));
-  }, [groupedScopes]);
+    setExpandedFolders(newExpanded);
+  }, [groupedScopes, setExpandedFolders]);
 
   const handleCollapseAll = useCallback((overrideMode?: ViewMode) => {
     const mode = overrideMode || viewMode;
     const newExpanded = calculateCollapseState(groupedScopes, mode);
-    useExplorerStore.setState((s) => ({
-      expandedFolders: {
-        ...s.expandedFolders,
-        ...newExpanded,
-      },
-    }));
-  }, [groupedScopes, viewMode]);
+    setExpandedFolders(newExpanded);
+  }, [groupedScopes, viewMode, setExpandedFolders]);
 
   const handleToggleFolder = useCallback((folderKey: string, folderPath?: string) => {
     if (toggleFolder) {
@@ -250,42 +242,35 @@ export function useCodebaseExplorerPanel(
       }
     }
     if (folderPath) {
-      logInfo(`Folder single-clicked: ${folderPath}. Revealing in VS Code Explorer and copying to clipboard...`);
-      vsCodeApiService.revealInExplorer(folderPath);
-      vsCodeApiService.copyToClipboard(folderPath);
+      revealFolder(folderPath);
     }
-  }, [toggleFolder, expandedFolders]);
+  }, [toggleFolder, expandedFolders, revealFolder]);
 
   const handleFileClick = useCallback((file: CodebaseFile) => {
     if (file.path) {
-      logInfo(`File single-clicked: ${file.path}. Revealing in VS Code Explorer and copying to clipboard...`);
-      vsCodeApiService.revealInExplorer(file.path);
-      vsCodeApiService.copyToClipboard(file.path);
+      revealAndCopyFile(file);
     }
     if (onFocusNode) {
       onFocusNode(file.id);
     } else if (setSelectedEntity) {
       setSelectedEntity({ type: 'node', nodeId: file.id });
     }
-  }, [onFocusNode, setSelectedEntity]);
+  }, [onFocusNode, setSelectedEntity, revealAndCopyFile]);
 
   const handleFileDoubleClick = useCallback((file: CodebaseFile, e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (file?.path) {
-      logInfo(`Double-clicked file item: ${file.id}. Opening in VS Code: ${file.path}`);
-      vsCodeApiService.revealInExplorer(file.path);
-      vsCodeApiService.openFile(file.path);
+      openFileInEditor(file);
     }
-  }, []);
+  }, [openFileInEditor]);
 
   const handleFolderDoubleClick = useCallback((folderPath: string, files?: CodebaseFile[], e?: React.MouseEvent) => {
     e?.stopPropagation();
     const targetPath = folderPath || getCommonFolderPath(files || []);
     if (targetPath) {
-      logInfo(`Double-clicked folder item. Revealing directory in VS Code Explorer: ${targetPath}`);
-      vsCodeApiService.revealInExplorer(targetPath);
+      revealFolder(targetPath);
     }
-  }, []);
+  }, [revealFolder]);
 
   const toggleFileListCheckbox = useCallback((files: CodebaseFile[]) => {
     if (!toggleFileCheckbox || !visibleFiles) return;

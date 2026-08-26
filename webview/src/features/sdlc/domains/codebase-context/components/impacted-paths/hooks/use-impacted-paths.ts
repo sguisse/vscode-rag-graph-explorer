@@ -4,7 +4,7 @@ import { getPathsChangeImpacts } from '@/services/view/graph-view.service';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { CodebaseData } from '@/shared/services/graph-rag-explorer';
-import { useCodebaseDomainState } from '../../../store/useCodebaseDomainState';
+import { useCodebaseDomainState, CodebaseDomainState } from '../../../store/useCodebaseDomainState';
 
 export interface UseImpactedPathsOptions {
   defaultCodebase?: CodebaseData;
@@ -20,20 +20,20 @@ export function useImpactedPaths(options: UseImpactedPathsOptions = {}) {
     downstreamDepth: propDownstreamDepth,
   } = options;
 
-  const currentPath = useCodebaseDomainState((s) => s.currentPath);
-  const setCurrentPath = useCodebaseDomainState((s) => s.setCurrentPath);
-  const pathsList = useCodebaseDomainState((s) => s.pathsList);
-  const setPathsList = useCodebaseDomainState((s) => s.setPathsList);
-  const codebaseData = useCodebaseDomainState((s) => s.codebase);
-  const setCodebaseData = useCodebaseDomainState((s) => s.setCodebase);
-  const selectAllFiles = useCodebaseDomainState((s) => s.selectAllFiles);
-  const paths = useCodebaseDomainState((s) => s.paths);
-  const setPaths = useCodebaseDomainState((s) => s.setPaths);
+  const currentPath = useCodebaseDomainState((s: CodebaseDomainState) => s.currentPath);
+  const setCurrentPath = useCodebaseDomainState((s: CodebaseDomainState) => s.setCurrentPath);
+  const pathsList = useCodebaseDomainState((s: CodebaseDomainState) => s.pathsList);
+  const setPathsList = useCodebaseDomainState((s: CodebaseDomainState) => s.setPathsList);
+  const codebaseData = useCodebaseDomainState((s: CodebaseDomainState) => s.codebase);
+  const setCodebaseData = useCodebaseDomainState((s: CodebaseDomainState) => s.setCodebase);
+  const selectAllFiles = useCodebaseDomainState((s: CodebaseDomainState) => s.selectAllFiles);
+  const paths = useCodebaseDomainState((s: CodebaseDomainState) => s.paths);
+  const setPaths = useCodebaseDomainState((s: CodebaseDomainState) => s.setPaths);
 
-  const internalUpstreamDepth = useCodebaseDomainState((s) => s.upstreamDepth);
-  const setInternalUpstreamDepth = useCodebaseDomainState((s) => s.setUpstreamDepth);
-  const internalDownstreamDepth = useCodebaseDomainState((s) => s.downstreamDepth);
-  const setInternalDownstreamDepth = useCodebaseDomainState((s) => s.setDownstreamDepth);
+  const internalUpstreamDepth = useCodebaseDomainState((s: CodebaseDomainState) => s.upstreamDepth);
+  const setInternalUpstreamDepth = useCodebaseDomainState((s: CodebaseDomainState) => s.setUpstreamDepth);
+  const internalDownstreamDepth = useCodebaseDomainState((s: CodebaseDomainState) => s.downstreamDepth);
+  const setInternalDownstreamDepth = useCodebaseDomainState((s: CodebaseDomainState) => s.setDownstreamDepth);
 
   useEffect(() => {
     if (propUpstreamDepth !== undefined && propUpstreamDepth !== internalUpstreamDepth) {
@@ -65,7 +65,7 @@ export function useImpactedPaths(options: UseImpactedPathsOptions = {}) {
   const updatePath = useCallback(
     (newPath: string) => {
       setCurrentPath(newPath);
-      setPathsList((prev) => (prev.includes(newPath) ? prev : [...prev, newPath]));
+      setPathsList((prev: string[]) => (prev.includes(newPath) ? prev : [...prev, newPath]));
     },
     [setCurrentPath, setPathsList]
   );
@@ -122,7 +122,7 @@ export function useImpactedPaths(options: UseImpactedPathsOptions = {}) {
 
   const appendOrReplacePath = useCallback(
     (newPath: string) => {
-      setPaths((prev) => {
+      setPaths((prev: string) => {
         let updated = newPath.trim();
         if (prev.trim()) {
           const existingLines = prev.split('\n').map((l) => l.trim()).filter(Boolean);

@@ -3,18 +3,20 @@ import { GitFork, FileText, ShieldAlert, ChevronDown, ChevronRight } from 'lucid
 import { Button } from '@/components/ui/button';
 import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
 import { CodebaseData, SelectedEntity } from '@/shared/services/graph-rag-explorer';
-const FilesCtxExportPanel = (props: any) => null;
+import { useCodebaseDomainState } from '../../store/useCodebaseDomainState';
 import { useFilesContext } from './hooks/use-files-context';
 
-interface FilesContextPanelProps {
-  initialCodebase: CodebaseData;
-  selectedEntity: SelectedEntity | null;
-  enableDownstream: boolean;
-  setEnableDownstream: React.Dispatch<React.SetStateAction<boolean>>;
-  enableUpstream: boolean;
-  setEnableUpstream: React.Dispatch<React.SetStateAction<boolean>>;
-  impactedSet: Set<string>;
-  handleCopy: (text: string, message: string) => void;
+const FilesCtxExportPanel = (props: any) => null;
+
+export interface FilesContextPanelProps {
+  initialCodebase?: CodebaseData;
+  selectedEntity?: SelectedEntity | null;
+  enableDownstream?: boolean;
+  setEnableDownstream?: React.Dispatch<React.SetStateAction<boolean>>;
+  enableUpstream?: boolean;
+  setEnableUpstream?: React.Dispatch<React.SetStateAction<boolean>>;
+  impactedSet?: Set<string>;
+  handleCopy?: (text: string, message: string) => void;
 }
 
 interface TriStateCheckboxProps {
@@ -44,16 +46,22 @@ function TriStateCheckbox({ checked, indeterminate, onChange, className }: TriSt
   );
 }
 
-export function FilesContextPanel({
-  initialCodebase,
-  selectedEntity,
-  enableDownstream,
-  setEnableDownstream,
-  enableUpstream,
-  setEnableUpstream,
-  impactedSet,
-  handleCopy
-}: FilesContextPanelProps) {
+export function FilesContextPanel(props: FilesContextPanelProps = {}) {
+  const storeCodebase = useCodebaseDomainState((s) => s.codebase);
+  const storeSelectedEntity = useCodebaseDomainState((s) => s.selectedEntity);
+
+  const [internalDownstream, setInternalDownstream] = React.useState(true);
+  const [internalUpstream, setInternalUpstream] = React.useState(false);
+
+  const initialCodebase = props.initialCodebase ?? storeCodebase;
+  const selectedEntity = props.selectedEntity ?? storeSelectedEntity;
+  const enableDownstream = props.enableDownstream ?? internalDownstream;
+  const setEnableDownstream = props.setEnableDownstream ?? setInternalDownstream;
+  const enableUpstream = props.enableUpstream ?? internalUpstream;
+  const setEnableUpstream = props.setEnableUpstream ?? setInternalUpstream;
+  const impactedSet = props.impactedSet ?? new Set<string>();
+  const handleCopy = props.handleCopy ?? (() => {});
+
   const {
     downstreamCount,
     upstreamCount,
@@ -117,11 +125,11 @@ export function FilesContextPanel({
 
   const middleContent = (
     <div className="flex flex-col py-1 pr-0 w-full h-full font-mono text-xs">
-      <div className="flex flex-col flex-1 space-y-2 bg-orange-500/5 p-2 border border-orange-500/25 rounded-lg h-full min-h-0">
+      <div className="flex flex-col flex-1 space-y-2 bg-orange-500/5 p-2 border border-orange-500/25 rounded-lg min-h-0 h-full">
         <div className="flex justify-between items-center shrink-0">
           <div className="flex items-center gap-1.5">
             <ShieldAlert size={14} className="text-orange-500" />
-            <h5 className="font-mono font-bold text-orange-500 text-xs">Adjust Impact Plan</h5>
+            <h5 className="font-mono font-bold text-xs text-orange-500">Adjust Impact Plan</h5>
           </div>
           <span className="bg-orange-500/10 px-1.5 py-0.2 border border-orange-500/20 rounded font-mono font-bold text-[10px] text-orange-500">
             {selectedCount} Selected
@@ -225,7 +233,7 @@ export function FilesContextPanel({
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-1.5">
             <FileText size={14} className="text-primary" />
-            <h4 className="font-mono font-bold text-foreground text-xs uppercase tracking-wider">
+            <h4 className="font-mono font-bold text-xs text-foreground uppercase tracking-wider">
               Selected Files Context
             </h4>
           </div>
@@ -234,20 +242,20 @@ export function FilesContextPanel({
         <div className="gap-1.5 grid grid-cols-10 text-center">
           <div className="col-span-2 bg-orange-500/10 p-1 border border-orange-500/20 rounded">
             <span className="block text-[9px] text-orange-500 truncate uppercase">Selected</span>
-            <span className="font-bold text-orange-500 text-xs">{selectedCount} / {initialCodebase?.files?.length || 0}</span>
+            <span className="font-bold text-xs text-orange-500">{selectedCount} / {initialCodebase?.files?.length || 0}</span>
           </div>
           <div className="col-span-2 bg-indigo-500/10 p-1 border border-indigo-500/20 rounded">
             <span className="block text-[9px] text-indigo-500 truncate uppercase">Upstream</span>
-            <span className="font-bold text-indigo-500 text-xs">{selectedUpstreamCount} / {upstreamCount}</span>
+            <span className="font-bold text-xs text-indigo-500">{selectedUpstreamCount} / {upstreamCount}</span>
           </div>
           <div className="col-span-2 bg-blue-500/10 p-1 border border-blue-500/20 rounded">
             <span className="block text-[9px] text-blue-500 truncate uppercase">Downstream</span>
-            <span className="font-bold text-blue-500 text-xs">{selectedDownstreamCount} / {downstreamCount}</span>
+            <span className="font-bold text-xs text-blue-500">{selectedDownstreamCount} / {downstreamCount}</span>
           </div>
 
           <div className="col-span-4 bg-emerald-500/10 p-1 border border-emerald-500/20 rounded">
             <span className="block text-[9px] text-emerald-500 truncate uppercase">Token Size</span>
-            <span className="font-bold text-emerald-500 text-xs">
+            <span className="font-bold text-xs text-emerald-500">
               {(combinedSelectedFilesContext.length / 1024).toFixed(1)} / {(totalFilesContext.length / 1024).toFixed(1)} KB
             </span>
           </div>
@@ -266,7 +274,7 @@ export function FilesContextPanel({
       top={topContent}
       middle={middleContent}
       bottom={bottomContent}
-      className="h-full font-mono text-xs animate-in duration-200 fade-in"
+      className="font-mono text-xs animate-in duration-200 fade-in h-full"
     />
   );
 }

@@ -1,10 +1,12 @@
 import { create } from 'zustand';
-import { useSdlcSessionStore } from '../../../core/store/useSdlcSessionStore';
 import { CodebaseData } from '@/shared/services/graph-rag-explorer';
 import { GraphRendering } from '@/shared/services/graph-rag-explorer/domain/model/types/type-graph-rendering';
 import { demoCodebase } from '../components/dependency-graph/data/GraphData';
 
-export interface CodebaseDomainState {
+// -----------------------------------------------------------------------------
+// 1. Impacted Paths Panel State
+// -----------------------------------------------------------------------------
+export interface ImpactedPathsPanelState {
   currentPath: string;
   setCurrentPath: (path: string) => void;
   pathsList: string[];
@@ -15,9 +17,23 @@ export interface CodebaseDomainState {
   setUpstreamDepth: (depth: number) => void;
   downstreamDepth: number;
   setDownstreamDepth: (depth: number) => void;
-
   codebase: CodebaseData;
   setCodebase: (data: CodebaseData) => void;
+}
+
+// -----------------------------------------------------------------------------
+// 2. Codebase Explorer Tree Panel State
+// -----------------------------------------------------------------------------
+export interface CodebaseTreePanelState {
+  expandedFolders: Record<string, boolean>;
+  setExpandedFolders: (folders: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void;
+  toggleFolder: (folderKey: string) => void;
+}
+
+// -----------------------------------------------------------------------------
+// 3. Dependency Graph Panel State
+// -----------------------------------------------------------------------------
+export interface DependencyGraphPanelState {
   graphRendering: GraphRendering;
   setGraphRendering: (mode: GraphRendering) => void;
   currentLayout: string;
@@ -30,46 +46,48 @@ export interface CodebaseDomainState {
   setCalleesDepth: (depth: number) => void;
   displayLevel: string;
   setDisplayLevel: (level: string) => void;
+}
+
+// -----------------------------------------------------------------------------
+// 4. Files Selection & Inspector Panel State
+// -----------------------------------------------------------------------------
+export interface FilesContextPanelState {
   selectedEntity: any | null;
   setSelectedEntity: (entity: any | null) => void;
   targetFilePaths: string[];
   setTargetFilePaths: (paths: string[]) => void;
-
-  // Checkbox Selection & Actions
   selectedContextFiles: Record<string, boolean>;
   setSelectedContextFiles: (files: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void;
   selectAllFiles: () => void;
   toggleFileCheckbox: (id: string) => void;
   toggleFolderCheckbox: (folderKey: string) => void;
-
   expandedContextGroups: Record<string, boolean>;
   setExpandedContextGroups: (groups: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void;
-  expandedFolders: Record<string, boolean>;
-  setExpandedFolders: (folders: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void;
-  toggleFolder: (folderKey: string) => void;
 }
 
-export const useCodebaseDomainState = create<CodebaseDomainState>((set, get) => ({
-  get currentPath() {
-    const s = useSdlcSessionStore.getState();
-    return s.activeSessionId && s.sessions[s.activeSessionId]
-      ? s.sessions[s.activeSessionId].contextPointers.selectedEntityId || ''
-      : '';
-  },
-  setCurrentPath: (path) => {
-    useSdlcSessionStore.getState().updateActiveSession((d) => {
-      d.contextPointers.selectedEntityId = path;
-    });
+// -----------------------------------------------------------------------------
+// Composite Domain Store Interface
+// -----------------------------------------------------------------------------
+export interface CodebaseDomainState
+  extends ImpactedPathsPanelState,
+    CodebaseTreePanelState,
+    DependencyGraphPanelState,
+    FilesContextPanelState {}
 
-    // Reset & select all codebase files by default on path change
+// -----------------------------------------------------------------------------
+// Store Implementation
+// -----------------------------------------------------------------------------
+export const useCodebaseDomainState = create<CodebaseDomainState>((set) => ({
+  // --- Impacted Paths Slice ---
+  currentPath: '',
+  setCurrentPath: (path) =>
     set((s) => {
       const allSelected: Record<string, boolean> = {};
       (s.codebase?.files || []).forEach((f: any) => {
         allSelected[f.id] = true;
       });
-      return { selectedContextFiles: allSelected };
-    });
-  },
+      return { currentPath: path, selectedContextFiles: allSelected };
+    }),
 
   pathsList: [],
   setPathsList: (paths) => set((s) => ({ pathsList: typeof paths === 'function' ? paths(s.pathsList) : paths })),
@@ -85,31 +103,14 @@ export const useCodebaseDomainState = create<CodebaseDomainState>((set, get) => 
       return { paths: newPaths, selectedContextFiles: allSelected };
     }),
 
-  get upstreamDepth() {
-    const s = useSdlcSessionStore.getState();
-    return s.activeSessionId && s.sessions[s.activeSessionId]
-      ? s.sessions[s.activeSessionId].contextPointers.callersDepth || 2
-      : 2;
-  },
-  setUpstreamDepth: (depth) =>
-    useSdlcSessionStore.getState().updateActiveSession((d) => {
-      d.contextPointers.callersDepth = depth;
-    }),
+  upstreamDepth: 2,
+  setUpstreamDepth: (depth) => set({ upstreamDepth: depth }),
 
-  get downstreamDepth() {
-    const s = useSdlcSessionStore.getState();
-    return s.activeSessionId && s.sessions[s.activeSessionId]
-      ? s.sessions[s.activeSessionId].contextPointers.calleesDepth || 2
-      : 2;
-  },
-  setDownstreamDepth: (depth) =>
-    useSdlcSessionStore.getState().updateActiveSession((d) => {
-      d.contextPointers.calleesDepth = depth;
-    }),
+  downstreamDepth: 2,
+  setDownstreamDepth: (depth) => set({ downstreamDepth: depth }),
 
   codebase: demoCodebase as any,
   setCodebase: (data) => {
-    // Select all files by default on codebase load / update
     const allSelected: Record<string, boolean> = {};
     (data?.files || []).forEach((f: any) => {
       allSelected[f.id] = true;
@@ -117,6 +118,20 @@ export const useCodebaseDomainState = create<CodebaseDomainState>((set, get) => 
     set({ codebase: data, selectedContextFiles: allSelected });
   },
 
+  // --- Codebase Tree Slice ---
+  expandedFolders: {},
+  setExpandedFolders: (folders) =>
+    set((s) => ({ expandedFolders: typeof folders === 'function' ? folders(s.expandedFolders) : folders })),
+
+  toggleFolder: (folderKey) =>
+    set((s) => ({
+      expandedFolders: {
+        ...s.expandedFolders,
+        [folderKey]: s.expandedFolders[folderKey] === undefined ? false : !s.expandedFolders[folderKey],
+      },
+    })),
+
+  // --- Dependency Graph Slice ---
   graphRendering: 'rounded',
   setGraphRendering: (mode) => set({ graphRendering: mode }),
   currentLayout: 'cose',
@@ -129,12 +144,13 @@ export const useCodebaseDomainState = create<CodebaseDomainState>((set, get) => 
   setCalleesDepth: (depth) => set({ calleesDepth: depth }),
   displayLevel: 'detailed',
   setDisplayLevel: (level) => set({ displayLevel: level }),
+
+  // --- Files Context & Inspector Slice ---
   selectedEntity: null,
   setSelectedEntity: (entity) => set({ selectedEntity: entity }),
   targetFilePaths: [],
   setTargetFilePaths: (paths) => set({ targetFilePaths: paths }),
 
-  // File Checkbox State Management
   selectedContextFiles: {
     'OrderButton.tsx': true,
     'orderApi.ts': true,
@@ -179,18 +195,6 @@ export const useCodebaseDomainState = create<CodebaseDomainState>((set, get) => 
   expandedContextGroups: {},
   setExpandedContextGroups: (groups) =>
     set((s) => ({ expandedContextGroups: typeof groups === 'function' ? groups(s.expandedContextGroups) : groups })),
-
-  expandedFolders: {},
-  setExpandedFolders: (folders) =>
-    set((s) => ({ expandedFolders: typeof folders === 'function' ? folders(s.expandedFolders) : folders })),
-
-  toggleFolder: (folderKey) =>
-    set((s) => ({
-      expandedFolders: {
-        ...s.expandedFolders,
-        [folderKey]: s.expandedFolders[folderKey] === undefined ? false : !s.expandedFolders[folderKey],
-      },
-    })),
 }));
 
 export const useExplorerStore = useCodebaseDomainState;

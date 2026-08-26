@@ -7,8 +7,7 @@ import {
   CodebaseAttribute,
   ConfigProperty,
 } from '@/shared/services/graph-rag-explorer';
-import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
-import { logInfo } from '@/services/view/log-view.service.wrapper';
+import { useCodebaseActions } from '../../../handlers/useCodebaseActions';
 
 const VISIBILITY_ORDER = ['public', 'protected', 'package', 'private'];
 
@@ -17,10 +16,12 @@ export function useInspectorPanel(
   initialCodebase: CodebaseData,
   handleCopy?: (text: string, message: string) => void
 ) {
+  const { copyCypherQuery } = useCodebaseActions();
+
   const currentFile = useMemo(() => {
     if (!selectedEntity) return null;
-    return initialCodebase.files.find((f: CodebaseFile) => f.id === selectedEntity.nodeId) || null;
-  }, [selectedEntity, initialCodebase.files]);
+    return initialCodebase?.files?.find((f: CodebaseFile) => f.id === selectedEntity.nodeId) || null;
+  }, [selectedEntity, initialCodebase?.files]);
 
   const selectedMethod = useMemo(() => {
     if (!selectedEntity || selectedEntity.type !== 'member' || !currentFile) return null;
@@ -60,28 +61,23 @@ export function useInspectorPanel(
     if (!selectedEntity) return;
 
     const nodeId = selectedEntity.nodeId;
-    const memberId = selectedEntity.memberId;
     const simpleName = currentFile?.name
       ? currentFile.name.replace(/\.[^/.]+$/, '')
       : (nodeId.split('.').pop() || nodeId);
 
-    let cypherQuery = '';
+    const cypherQuery = `MATCH (t:Type)
+  WHERE t.name = '${simpleName}'
+  OPTIONAL MATCH (t)-[:WITH_SOURCE]->(f:File)
+  OPTIONAL MATCH (t)-[:DECLARES]->(m:Member)
+  OPTIONAL MATCH (t)-[r:DEPENDS_ON]->(dep:Type)
+  RETURN t, f, m, r, dep;`;
 
-
-      cypherQuery = `MATCH (t:Type)
-                    WHERE t.name = '${simpleName}'
-                    OPTIONAL MATCH (t)-[:WITH_SOURCE]->(f:File)
-                    OPTIONAL MATCH (t)-[:DECLARES]->(m:Member)
-                    OPTIONAL MATCH (t)-[r:DEPENDS_ON]->(dep:Type)
-                    RETURN t, f, m, r, dep;`;
-
-    vsCodeApiService.copyToClipboard(cypherQuery);
     if (handleCopy) {
       handleCopy(cypherQuery, `Cypher query for '${simpleName}' copied to clipboard!`);
     } else {
-      logInfo(`Cypher query copied to clipboard:\n${cypherQuery}`);
+      copyCypherQuery(cypherQuery, simpleName);
     }
-  }, [selectedEntity, currentFile, handleCopy]);
+  }, [selectedEntity, currentFile, handleCopy, copyCypherQuery]);
 
   const handleCopyMethodCypherQuery = useCallback((method: CodebaseMethod, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -95,20 +91,19 @@ export function useInspectorPanel(
     const methodCleanName = method.name.replace(/\(\)$/, '').replace(/\(.*\)$/, '');
 
     const cypherQuery = `MATCH (t:Type)-[:DECLARES]->(m:Member)
-                        WHERE (t.name = '${simpleName}')
-                        AND (m.name = '${methodCleanName}')
-                        OPTIONAL MATCH (m)-[r:INVOKES]->(callee:Method)
-                        OPTIONAL MATCH (caller:Method)-[inR:INVOKES]->(m)
-                        OPTIONAL MATCH (t)-[:WITH_SOURCE]->(f:File)
-                        RETURN t, m, r, callee, inR, caller, f;`;
+  WHERE (t.name = '${simpleName}')
+  AND (m.name = '${methodCleanName}')
+  OPTIONAL MATCH (m)-[r:INVOKES]->(callee:Method)
+  OPTIONAL MATCH (caller:Method)-[inR:INVOKES]->(m)
+  OPTIONAL MATCH (t)-[:WITH_SOURCE]->(f:File)
+  RETURN t, m, r, callee, inR, caller, f;`;
 
-    vsCodeApiService.copyToClipboard(cypherQuery);
     if (handleCopy) {
       handleCopy(cypherQuery, `Cypher query for method '${method.name}' in '${simpleName}' copied to clipboard!`);
     } else {
-      logInfo(`Method Cypher query copied to clipboard:\n${cypherQuery}`);
+      copyCypherQuery(cypherQuery, `method ${method.name}`);
     }
-  }, [selectedEntity, currentFile, handleCopy]);
+  }, [selectedEntity, currentFile, handleCopy, copyCypherQuery]);
 
   return {
     currentFile,
