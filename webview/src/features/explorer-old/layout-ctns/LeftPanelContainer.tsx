@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
 import { CodebaseExplorerPanel } from '../wkp-lft-codebase-tree/CodebaseExplorerPanel';
@@ -14,11 +14,23 @@ export function LeftPanelContainer() {
   const setNotification = useAppContextStore((s) => s.setNotification);
 
   const filter = useCodebaseFilter(codebase.files);
+  const focusTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleFocusNode = useCallback(
     (nodeId: string) => {
+      if (!nodeId) return;
+
+      // Prevent redundant Zustand store updates if the node is already focused
+      const currentFocused = useExplorerStore.getState().focusedNodeId;
+      if (currentFocused === nodeId) return;
+
+      if (focusTimerRef.current) {
+        clearTimeout(focusTimerRef.current);
+      }
+
       setFocusedNodeId(nodeId);
-      setTimeout(() => {
+
+      focusTimerRef.current = setTimeout(() => {
         setFocusedNodeId((prev) => (prev === nodeId ? null : prev));
       }, 2000);
     },

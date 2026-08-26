@@ -1,4 +1,4 @@
-import { useExplorerStore } from '@/features/explorer/store/useExplorerStore';
+import { useExplorerStore } from '@/features/explorer-old/store/useExplorerStore';
 import { useCallback } from 'react';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { useLayoutStore } from '@/store/useLayoutStore';

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { FindableTreeItem } from '../model/findable-tree-item';
 import { useFinderBase, UseFinderBaseOptions } from './useFinderBase';
 
@@ -32,6 +32,13 @@ export function useFinderTree<T extends FindableTreeItem>({
 
   const [isFilterActive, setIsFilterActive] = useState(false);
   const [collapseNotMatchingNodes, setCollapseNotMatchingNodes] = useState(false);
+
+  const expandedKeysRef = useRef(expandedKeys);
+  useEffect(() => {
+    expandedKeysRef.current = expandedKeys;
+  }, [expandedKeys]);
+
+  const lastFocusedNodeIdRef = useRef<string | null>(null);
 
   const allSearchableItems = useMemo(() => {
     const list: T[] = [];
@@ -83,39 +90,57 @@ export function useFinderTree<T extends FindableTreeItem>({
     const activeMatch = matches[currentMatchIndex];
     if (!activeMatch) return;
 
-    if (onFocusNode) {
+    if (onFocusNode && lastFocusedNodeIdRef.current !== activeMatch.id) {
+      lastFocusedNodeIdRef.current = activeMatch.id;
       onFocusNode(activeMatch.id);
     }
 
     if (onExpandedKeysChange) {
+      const currentExpanded = expandedKeysRef.current || {};
       if (collapseNotMatchingNodes && searchQuery.trim()) {
         const compliantFolderKeys = new Set<string>();
         matches.forEach((item) => {
           getParentFolderKeys(item).forEach((key) => compliantFolderKeys.add(key));
         });
 
+        let hasChanged = false;
         const updatedExpanded: Record<string, boolean> = {};
-        if (expandedKeys) {
-          Object.keys(expandedKeys).forEach((key) => {
-            updatedExpanded[key] = compliantFolderKeys.has(key);
-          });
-        }
-        compliantFolderKeys.forEach((key) => {
-          updatedExpanded[key] = true;
+
+        Object.keys(currentExpanded).forEach((key) => {
+          const shouldExpand = compliantFolderKeys.has(key);
+          updatedExpanded[key] = shouldExpand;
+          if (currentExpanded[key] !== shouldExpand) {
+            hasChanged = true;
+          }
         });
-        onExpandedKeysChange(updatedExpanded);
+
+        compliantFolderKeys.forEach((key) => {
+          if (!updatedExpanded[key]) {
+            updatedExpanded[key] = true;
+            hasChanged = true;
+          }
+        });
+
+        if (hasChanged) {
+          onExpandedKeysChange(updatedExpanded);
+        }
       } else {
-        const folderKeysToExpand: Record<string, boolean> = {};
+        const folderKeysToExpand: string[] = [];
         matches.forEach((item) => {
           getParentFolderKeys(item).forEach((key) => {
-            folderKeysToExpand[key] = true;
+            if (!currentExpanded[key]) {
+              folderKeysToExpand.push(key);
+            }
           });
         });
 
-        onExpandedKeysChange({
-          ...(expandedKeys || {}),
-          ...folderKeysToExpand,
-        });
+        if (folderKeysToExpand.length > 0) {
+          const updatedExpanded = { ...currentExpanded };
+          folderKeysToExpand.forEach((key) => {
+            updatedExpanded[key] = true;
+          });
+          onExpandedKeysChange(updatedExpanded);
+        }
       }
     }
 
@@ -132,7 +157,6 @@ export function useFinderTree<T extends FindableTreeItem>({
     collapseNotMatchingNodes,
     getParentFolderKeys,
     onFocusNode,
-    expandedKeys,
     onExpandedKeysChange,
     getNodeDomId,
   ]);

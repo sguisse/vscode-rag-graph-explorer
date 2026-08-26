@@ -1,6 +1,6 @@
 import { useMemo, useCallback } from 'react';
 import { CodebaseData } from '@/shared/services/graph-rag-explorer';
-import { useExplorerStore } from '@/features/explorer/store/useExplorerStore';
+import { useExplorerStore } from '@/features/explorer-old/store/useExplorerStore';
 import { ScopeGroup, ViewMode } from '../model-ui';
 import { useFinderTree } from '@/components/app/core/finder/hooks/useFinderTree';
 import { FindableTreeItem } from '@/components/app/core/finder/model/findable-tree-item';
@@ -22,6 +22,14 @@ export function useTreeviewFinder(
 
   const expandedFolders = useExplorerStore((s) => s.expandedFolders);
   const handleExpandedKeysChange = useCallback((newExpanded: Record<string, boolean>) => {
+    const current = useExplorerStore.getState().expandedFolders || {};
+
+    const currentKeys = Object.keys(current);
+    const newKeys = Object.keys(newExpanded);
+    if (currentKeys.length === newKeys.length && newKeys.every((k) => current[k] === newExpanded[k])) {
+      return;
+    }
+
     useExplorerStore.setState({ expandedFolders: newExpanded });
   }, []);
 

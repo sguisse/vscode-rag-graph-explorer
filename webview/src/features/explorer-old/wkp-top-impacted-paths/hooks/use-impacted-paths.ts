@@ -1,4 +1,4 @@
-// webview/src/features/explorer/wkp-top-impacted-paths/hooks/use-impacted-paths.ts
+// webview/src/features/explorer-old/wkp-top-impacted-paths/hooks/use-impacted-paths.ts
 import { useEffect, useCallback, useRef } from 'react';
 import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
 import { getPathsChangeImpacts } from '@/services/view/graph-view.service';

@@ -1,212 +1,250 @@
 #!/usr/bin/env bash
 set -e
 
-echo "🚀 Modularizing CodebaseDomainState into panel-specific interfaces..."
+# Create necessary directory paths
+mkdir -p webview/src/components/app/core/finder/hooks
+mkdir -p webview/src/features/explorer-old/wkp-lft-codebase-tree/hooks
 
-STORE_FILE="webview/src/features/sdlc/domains/codebase-context/store/useCodebaseDomainState.ts"
+# 1. Update useFinderTree.ts to use a ref for expandedKeys and prevent redundant state updates
+cat << 'EOF' > webview/src/components/app/core/finder/hooks/useFinderTree.ts
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { FindableTreeItem } from '../model/findable-tree-item';
+import { useFinderBase, UseFinderBaseOptions } from './useFinderBase';
 
-cat << 'EOF' > "${STORE_FILE}"
-import { create } from 'zustand';
-import { CodebaseData } from '@/shared/services/graph-rag-explorer';
-import { GraphRendering } from '@/shared/services/graph-rag-explorer/domain/model/types/type-graph-rendering';
-import { demoCodebase } from '../components/dependency-graph/data/GraphData';
-
-// -----------------------------------------------------------------------------
-// 1. Impacted Paths Panel State
-// -----------------------------------------------------------------------------
-export interface ImpactedPathsPanelState {
-  currentPath: string;
-  setCurrentPath: (path: string) => void;
-  pathsList: string[];
-  setPathsList: (paths: string[] | ((prev: string[]) => string[])) => void;
-  paths: string;
-  setPaths: (paths: string | ((prev: string) => string)) => void;
-  upstreamDepth: number;
-  setUpstreamDepth: (depth: number) => void;
-  downstreamDepth: number;
-  setDownstreamDepth: (depth: number) => void;
-  codebase: CodebaseData;
-  setCodebase: (data: CodebaseData) => void;
+export interface UseFinderTreeOptions<T extends FindableTreeItem> extends UseFinderBaseOptions {
+  treeData: T[];
+  onFocusNode?: (nodeId: string) => void;
+  expandedKeys?: Record<string, boolean>;
+  onExpandedKeysChange?: (expanded: Record<string, boolean>) => void;
+  getNodeDomId?: (nodeId: string) => string;
 }
 
-// -----------------------------------------------------------------------------
-// 2. Codebase Explorer Tree Panel State
-// -----------------------------------------------------------------------------
-export interface CodebaseTreePanelState {
-  expandedFolders: Record<string, boolean>;
-  setExpandedFolders: (folders: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void;
-  toggleFolder: (folderKey: string) => void;
-}
+export function useFinderTree<T extends FindableTreeItem>({
+  treeData,
+  onFocusNode,
+  expandedKeys,
+  onExpandedKeysChange,
+  getNodeDomId = (id: string) => `tree-file-node-${id}`,
+  ...baseOptions
+}: UseFinderTreeOptions<T>) {
+  const finderBase = useFinderBase(baseOptions);
+  const {
+    isFinderOpen,
+    searchQuery,
+    caseSensitive,
+    wholeWord,
+    useRegex,
+    currentMatchIndex,
+    setCurrentMatchIndex,
+    activeRegex,
+  } = finderBase;
 
-// -----------------------------------------------------------------------------
-// 3. Dependency Graph Panel State
-// -----------------------------------------------------------------------------
-export interface DependencyGraphPanelState {
-  graphRendering: GraphRendering;
-  setGraphRendering: (mode: GraphRendering) => void;
-  currentLayout: string;
-  setCurrentLayout: (layout: string) => void;
-  maxNodesLimit: number;
-  setMaxNodesLimit: (limit: number) => void;
-  callersDepth: number;
-  setCallersDepth: (depth: number) => void;
-  calleesDepth: number;
-  setCalleesDepth: (depth: number) => void;
-  displayLevel: string;
-  setDisplayLevel: (level: string) => void;
-}
+  const [isFilterActive, setIsFilterActive] = useState(false);
+  const [collapseNotMatchingNodes, setCollapseNotMatchingNodes] = useState(false);
 
-// -----------------------------------------------------------------------------
-// 4. Files Selection & Inspector Panel State
-// -----------------------------------------------------------------------------
-export interface FilesContextPanelState {
-  selectedEntity: any | null;
-  setSelectedEntity: (entity: any | null) => void;
-  targetFilePaths: string[];
-  setTargetFilePaths: (paths: string[]) => void;
-  selectedContextFiles: Record<string, boolean>;
-  setSelectedContextFiles: (files: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void;
-  selectAllFiles: () => void;
-  toggleFileCheckbox: (id: string) => void;
-  toggleFolderCheckbox: (folderKey: string) => void;
-  expandedContextGroups: Record<string, boolean>;
-  setExpandedContextGroups: (groups: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void;
-}
+  const expandedKeysRef = useRef(expandedKeys);
+  useEffect(() => {
+    expandedKeysRef.current = expandedKeys;
+  }, [expandedKeys]);
 
-// -----------------------------------------------------------------------------
-// Composite Domain Store Interface
-// -----------------------------------------------------------------------------
-export interface CodebaseDomainState
-  extends ImpactedPathsPanelState,
-    CodebaseTreePanelState,
-    DependencyGraphPanelState,
-    FilesContextPanelState {}
+  const lastFocusedNodeIdRef = useRef<string | null>(null);
 
-// -----------------------------------------------------------------------------
-// Store Implementation
-// -----------------------------------------------------------------------------
-export const useCodebaseDomainState = create<CodebaseDomainState>((set) => ({
-  // --- Impacted Paths Slice ---
-  currentPath: '',
-  setCurrentPath: (path) =>
-    set((s) => {
-      const allSelected: Record<string, boolean> = {};
-      (s.codebase?.files || []).forEach((f: any) => {
-        allSelected[f.id] = true;
-      });
-      return { currentPath: path, selectedContextFiles: allSelected };
-    }),
+  const allSearchableItems = useMemo(() => {
+    const list: T[] = [];
+    const traverse = (items: T[]) => {
+      for (const item of items) {
+        list.push(item);
+        if (item.children && item.children.length > 0) {
+          traverse(item.children as T[]);
+        }
+      }
+    };
+    traverse(treeData || []);
+    return list;
+  }, [treeData]);
 
-  pathsList: [],
-  setPathsList: (paths) => set((s) => ({ pathsList: typeof paths === 'function' ? paths(s.pathsList) : paths })),
+  const matches = useMemo(() => {
+    if (!searchQuery.trim() || !activeRegex) return [];
 
-  paths: '',
-  setPaths: (paths) =>
-    set((s) => {
-      const newPaths = typeof paths === 'function' ? paths(s.paths) : paths;
-      const allSelected: Record<string, boolean> = {};
-      (s.codebase?.files || []).forEach((f: any) => {
-        allSelected[f.id] = true;
-      });
-      return { paths: newPaths, selectedContextFiles: allSelected };
-    }),
-
-  upstreamDepth: 2,
-  setUpstreamDepth: (depth) => set({ upstreamDepth: depth }),
-
-  downstreamDepth: 2,
-  setDownstreamDepth: (depth) => set({ downstreamDepth: depth }),
-
-  codebase: demoCodebase as any,
-  setCodebase: (data) => {
-    const allSelected: Record<string, boolean> = {};
-    (data?.files || []).forEach((f: any) => {
-      allSelected[f.id] = true;
+    return allSearchableItems.filter((item) => {
+      const regex = new RegExp(activeRegex.source, activeRegex.flags);
+      const matchName = regex.test(item.name);
+      regex.lastIndex = 0;
+      const matchPath = item.path ? regex.test(item.path) : false;
+      return matchName || matchPath;
     });
-    set({ codebase: data, selectedContextFiles: allSelected });
-  },
+  }, [allSearchableItems, searchQuery, activeRegex]);
 
-  // --- Codebase Tree Slice ---
-  expandedFolders: {},
-  setExpandedFolders: (folders) =>
-    set((s) => ({ expandedFolders: typeof folders === 'function' ? folders(s.expandedFolders) : folders })),
+  const matchingIds = useMemo(() => new Set(matches.map((item) => item.id)), [matches]);
+  const totalMatches = matches.length;
 
-  toggleFolder: (folderKey) =>
-    set((s) => ({
-      expandedFolders: {
-        ...s.expandedFolders,
-        [folderKey]: s.expandedFolders[folderKey] === undefined ? false : !s.expandedFolders[folderKey],
-      },
-    })),
+  const getParentFolderKeys = useCallback((item: T): string[] => {
+    const keys: string[] = [];
+    if (item.parentId) {
+      keys.push(item.parentId);
+    }
+    const pathStr = item.path || '';
+    const parts = pathStr.split('/').filter(Boolean);
+    let currentAcc = '';
 
-  // --- Dependency Graph Slice ---
-  graphRendering: 'rounded',
-  setGraphRendering: (mode) => set({ graphRendering: mode }),
-  currentLayout: 'cose',
-  setCurrentLayout: (layout) => set({ currentLayout: layout }),
-  maxNodesLimit: 50,
-  setMaxNodesLimit: (limit) => set({ maxNodesLimit: limit }),
-  callersDepth: 2,
-  setCallersDepth: (depth) => set({ callersDepth: depth }),
-  calleesDepth: 2,
-  setCalleesDepth: (depth) => set({ calleesDepth: depth }),
-  displayLevel: 'detailed',
-  setDisplayLevel: (level) => set({ displayLevel: level }),
+    for (let i = 0; i < parts.length - 1; i++) {
+      currentAcc += (i === 0 ? '' : '/') + parts[i];
+      keys.push(currentAcc);
+    }
+    return keys;
+  }, []);
 
-  // --- Files Context & Inspector Slice ---
-  selectedEntity: null,
-  setSelectedEntity: (entity) => set({ selectedEntity: entity }),
-  targetFilePaths: [],
-  setTargetFilePaths: (paths) => set({ targetFilePaths: paths }),
+  useEffect(() => {
+    if (!isFinderOpen || matches.length === 0) return;
+    const activeMatch = matches[currentMatchIndex];
+    if (!activeMatch) return;
 
-  selectedContextFiles: {
-    'OrderButton.tsx': true,
-    'orderApi.ts': true,
-    'OrderController.java': true,
-    'Order.java': true,
-    'OrderRepository.java': true,
-    'JpaOrderRepository.java': true,
-    'application.yml': true,
-  },
-  setSelectedContextFiles: (files) =>
-    set((s) => ({ selectedContextFiles: typeof files === 'function' ? files(s.selectedContextFiles) : files })),
+    if (onFocusNode && lastFocusedNodeIdRef.current !== activeMatch.id) {
+      lastFocusedNodeIdRef.current = activeMatch.id;
+      onFocusNode(activeMatch.id);
+    }
 
-  selectAllFiles: () =>
-    set((s) => {
-      const allSelected: Record<string, boolean> = {};
-      (s.codebase?.files || []).forEach((f: any) => {
-        allSelected[f.id] = true;
-      });
-      return { selectedContextFiles: allSelected };
-    }),
+    if (onExpandedKeysChange) {
+      const currentExpanded = expandedKeysRef.current || {};
+      if (collapseNotMatchingNodes && searchQuery.trim()) {
+        const compliantFolderKeys = new Set<string>();
+        matches.forEach((item) => {
+          getParentFolderKeys(item).forEach((key) => compliantFolderKeys.add(key));
+        });
 
-  toggleFileCheckbox: (id) =>
-    set((s) => ({
-      selectedContextFiles: {
-        ...s.selectedContextFiles,
-        [id]: !s.selectedContextFiles[id],
-      },
-    })),
+        let hasChanged = false;
+        const updatedExpanded: Record<string, boolean> = {};
 
-  toggleFolderCheckbox: (folderKey) =>
-    set((s) => {
-      const codebaseFiles = s.codebase?.files || [];
-      const folderFiles = codebaseFiles.filter((f) => f.path.startsWith(folderKey));
-      const allChecked = folderFiles.every((f) => s.selectedContextFiles[f.id]);
-      const updated = { ...s.selectedContextFiles };
-      folderFiles.forEach((f) => {
-        updated[f.id] = !allChecked;
-      });
-      return { selectedContextFiles: updated };
-    }),
+        Object.keys(currentExpanded).forEach((key) => {
+          const shouldExpand = compliantFolderKeys.has(key);
+          updatedExpanded[key] = shouldExpand;
+          if (currentExpanded[key] !== shouldExpand) {
+            hasChanged = true;
+          }
+        });
 
-  expandedContextGroups: {},
-  setExpandedContextGroups: (groups) =>
-    set((s) => ({ expandedContextGroups: typeof groups === 'function' ? groups(s.expandedContextGroups) : groups })),
-}));
+        compliantFolderKeys.forEach((key) => {
+          if (!updatedExpanded[key]) {
+            updatedExpanded[key] = true;
+            hasChanged = true;
+          }
+        });
 
-export const useExplorerStore = useCodebaseDomainState;
+        if (hasChanged) {
+          onExpandedKeysChange(updatedExpanded);
+        }
+      } else {
+        const folderKeysToExpand: string[] = [];
+        matches.forEach((item) => {
+          getParentFolderKeys(item).forEach((key) => {
+            if (!currentExpanded[key]) {
+              folderKeysToExpand.push(key);
+            }
+          });
+        });
+
+        if (folderKeysToExpand.length > 0) {
+          const updatedExpanded = { ...currentExpanded };
+          folderKeysToExpand.forEach((key) => {
+            updatedExpanded[key] = true;
+          });
+          onExpandedKeysChange(updatedExpanded);
+        }
+      }
+    }
+
+    const domId = getNodeDomId(activeMatch.id);
+    const element = document.getElementById(domId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [
+    currentMatchIndex,
+    matches,
+    isFinderOpen,
+    searchQuery,
+    collapseNotMatchingNodes,
+    getParentFolderKeys,
+    onFocusNode,
+    onExpandedKeysChange,
+    getNodeDomId,
+  ]);
+
+  const handleNextMatch = useCallback(() => {
+    if (totalMatches === 0) return;
+    setCurrentMatchIndex((prev) => (prev + 1) % totalMatches);
+  }, [totalMatches, setCurrentMatchIndex]);
+
+  const handlePrevMatch = useCallback(() => {
+    if (totalMatches === 0) return;
+    setCurrentMatchIndex((prev) => (prev - 1 + totalMatches) % totalMatches);
+  }, [totalMatches, setCurrentMatchIndex]);
+
+  return {
+    ...finderBase,
+    isFilterActive,
+    setIsFilterActive,
+    collapseNotMatchingNodes,
+    setCollapseNotMatchingNodes,
+    totalMatches,
+    matches,
+    matchingIds,
+    handleNextMatch,
+    handlePrevMatch,
+  };
+}
 EOF
 
-echo "✅ refactor: Partitioned CodebaseDomainState into 4 panel-specific interfaces (ImpactedPathsPanelState, CodebaseTreePanelState, DependencyGraphPanelState, FilesContextPanelState)!"
-echo "💡 Run 'npm run build' or 'cd webview && npm run build' to verify compilation."
+# 2. Update use-treeview-finder.ts with shallow state change guards
+cat << 'EOF' > webview/src/features/explorer-old/wkp-lft-codebase-tree/hooks/use-treeview-finder.ts
+import { useMemo, useCallback } from 'react';
+import { CodebaseData } from '@/shared/services/graph-rag-explorer';
+import { useExplorerStore } from '@/features/explorer-old/store/useExplorerStore';
+import { ScopeGroup, ViewMode } from '../model-ui';
+import { useFinderTree } from '@/components/app/core/finder/hooks/useFinderTree';
+import { FindableTreeItem } from '@/components/app/core/finder/model/findable-tree-item';
+
+export function useTreeviewFinder(
+  codebase: CodebaseData,
+  _viewMode: ViewMode,
+  _groupedScopes: ScopeGroup[],
+  onFocusNode?: (nodeId: string) => void
+) {
+  const treeData = useMemo<FindableTreeItem[]>(() => {
+    return (codebase.files || []).map((file) => ({
+      id: file.id,
+      name: file.name,
+      path: file.path,
+      isFolder: false,
+    }));
+  }, [codebase.files]);
+
+  const expandedFolders = useExplorerStore((s) => s.expandedFolders);
+  const handleExpandedKeysChange = useCallback((newExpanded: Record<string, boolean>) => {
+    const current = useExplorerStore.getState().expandedFolders || {};
+
+    const currentKeys = Object.keys(current);
+    const newKeys = Object.keys(newExpanded);
+    if (currentKeys.length === newKeys.length && newKeys.every((k) => current[k] === newExpanded[k])) {
+      return;
+    }
+
+    useExplorerStore.setState({ expandedFolders: newExpanded });
+  }, []);
+
+  const finderTree = useFinderTree({
+    treeData,
+    onFocusNode,
+    expandedKeys: expandedFolders,
+    onExpandedKeysChange: handleExpandedKeysChange,
+    getNodeDomId: (id: string) => `tree-file-node-${id}`,
+  });
+
+  return {
+    ...finderTree,
+    matchingFileIds: finderTree.matchingIds,
+  };
+}
+EOF
+
+echo "✅ fix: Resolved infinite update loop in treeview finder and Zustand store!"

@@ -62,6 +62,7 @@ export const SIDEBAR_MENU_ITEMS: NavItem[] = [
       { id: 'feature-install', icon: PackageCheck, label: 'Install' },
       { id: 'feature-rules', icon: Scale, label: 'Codebase Analytics Rules' },
       { id: 'feature-ai-workflow-builder', icon: Bot, label: 'AI Workflow Builder', badge: 'AI' },
+      { id: 'feature-graph-rag-explorer', icon: FolderDown, label: 'Graph RAG Explorer', badge: 'Old' },
       { id: 'feature-sdlc', icon: VectorSquare, label: 'Workflow', badge: 'New' },
       { id: 'RESULTS_MANAGER', icon: Terminal, label: 'Results Manager' },
     ],

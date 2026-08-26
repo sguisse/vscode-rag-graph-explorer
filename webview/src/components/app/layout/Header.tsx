@@ -23,7 +23,7 @@ import logoDark from '@assets/logo-dark.png';
 import { DefaultContainersSize } from '@/constants/layout-constants';
 import { ApplicationTitle } from '../ApplicationTitle';
 import { WorkflowPopup } from '@/components/app/workflow/workflow-popup';
-import { useExplorerWorkflow } from '@/features/explorer/workflow/hooks/use-explorer-workflow';
+import { useExplorerWorkflow } from '@/features/explorer-old/workflow/hooks/use-explorer-workflow';
 import { Button } from '@/components/ui/button';
 
 interface HeaderProps {
@@ -73,7 +73,7 @@ export function Header({
       </div>
 
       {/* Centered Workflow Button & Reusable Component Popup */}
-      <div className="flex justify-center items-center flex-1">
+      <div className="flex flex-1 justify-center items-center">
         <WorkflowPopup
           side="bottom"
           align="center"
@@ -83,7 +83,7 @@ export function Header({
           <Button
             variant="outline"
             size="sm"
-            className="flex items-center gap-1.5 hover:bg-primary/10 border-border h-6 px-2.5 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 hover:bg-primary/10 px-2.5 border-border h-6 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
             data-tooltip="View Pipeline Workflow"
           >
             <Workflow size={13} className="text-primary" />
@@ -92,7 +92,7 @@ export function Header({
         </WorkflowPopup>
       </div>
 
-      <div className="shrink-0 w-24" />
+      <div className="w-24 shrink-0" />
     </div>
   );
 

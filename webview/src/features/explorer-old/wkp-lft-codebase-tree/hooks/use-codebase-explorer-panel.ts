@@ -300,7 +300,7 @@ export function useCodebaseExplorerPanel(
 
   useEffect(() => {
     handleCollapseAll(viewMode);
-  }, [viewMode, groupedScopes, handleCollapseAll]);
+  }, [viewMode, handleCollapseAll]);
 
   return {
     isImportOpen,

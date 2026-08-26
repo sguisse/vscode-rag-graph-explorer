@@ -1,4 +1,4 @@
-import { useExplorerStore } from '@/features/explorer/store/useExplorerStore';
+import { useExplorerStore } from '@/features/explorer-old/store/useExplorerStore';
 
 export function useGraphToolbar() {
   const maxNodesLimit = useExplorerStore((s) => s.maxNodesLimit);

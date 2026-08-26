@@ -7,7 +7,7 @@ import {
   SelectedEntity,
 } from '@/shared/services/graph-rag-explorer';
 import { buildMemberKeyToken } from '@/services/view/graph-view.service';
-import { FOLDER_BASE_X_POSITIONS_CONFIG } from '@/features/explorer/constants/graph.constants';
+import { FOLDER_BASE_X_POSITIONS_CONFIG } from '@/features/explorer-old/constants/graph.constants';
 import { GraphRendering } from '@/shared/services/graph-rag-explorer/domain/model/types/type-graph-rendering';
 
 function getNodeDimensions(

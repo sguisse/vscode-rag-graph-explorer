@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { CodebaseData, CodebaseFile, SelectedEntity } from '@/shared/services/graph-rag-explorer';
-import { FOLDER_KEYS_REGISTERED_CONFIG } from '@/features/explorer/constants/graph.constants';
+import { FOLDER_KEYS_REGISTERED_CONFIG } from '@/features/sdlc/domains/codebase-context/components/dependency-graph/constants/graph.constants';
 import { useCodebaseDomainState, CodebaseDomainState } from '../../../store/useCodebaseDomainState';
 import { useCodebaseActions } from '../../../handlers/useCodebaseActions';
 

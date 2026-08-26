@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import cytoscape from 'cytoscape';
-import defaultWorkflowData from '@/features/explorer/workflow/data-workflow.json';
+import defaultWorkflowData from '@/features/explorer-old/workflow/data-workflow.json';
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { getWorkflowCytoscapeStyles } from '../components/shapes-workflow';
 import { logWorkflowPositionsIfChanged } from '../utils-workflow';

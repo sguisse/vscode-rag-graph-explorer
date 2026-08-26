@@ -15,6 +15,7 @@ import { vsCodeApiService } from "@/services/api/vs-code-api.service.gen";
 import { VsCodeSettings } from '@/shared/services/vscode/domain/model/VsCodeSettings.gen';
 import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
 import { initSessionPersistence } from '@/features/sdlc/core/vscode-sync/session-persistence.manager';
+import ExplorerFeature from './features/explorer-old/ExplorerFeature';
 
 export let vscodeSettings: VsCodeSettings = new VsCodeSettings();
 
@@ -68,7 +69,8 @@ export default function App() {
       {(activeFeature === 'feature-help') && HelpFeature && <HelpFeature />}
 
       {/* Replaced monolithic ExplorerFeature with the new SDLC Orchestrator */}
-      {(activeFeature === 'feature-graph-rag-explorer' || activeFeature === 'feature-sdlc') && <SdlcLayoutOrchestrator />}
+      {(activeFeature === 'feature-graph-rag-explorer') && <ExplorerFeature />}
+      {(activeFeature === 'feature-sdlc') && <SdlcLayoutOrchestrator />}
 
       {AppLayout && (
         <AppLayout

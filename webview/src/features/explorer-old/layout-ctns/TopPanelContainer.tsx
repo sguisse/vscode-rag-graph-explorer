@@ -1,4 +1,4 @@
-// webview/src/features/explorer/layout-ctns/TopPanelContainer.tsx
+// webview/src/features/explorer-old/layout-ctns/TopPanelContainer.tsx
 import React, { useCallback } from 'react';
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
