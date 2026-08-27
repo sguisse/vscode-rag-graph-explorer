@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText } from 'lucide-react';
+import { Copy, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -111,7 +111,7 @@ export function FilesCtxExportPanel({
         onClick={handleCopyFilesCtx}
         className="flex justify-center items-center gap-1.5 bg-blue-500 hover:bg-blue-600 shadow-sm rounded-lg w-20 h-17 font-bold text-white text-xs whitespace-nowrap cursor-pointer shrink-0"
       >
-        <FileText size={14} /> Copy <br/> files <br/> context
+        <Copy size={14} /> files <br/> context
       </Button>
     </div>
   );
