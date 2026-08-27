@@ -8,6 +8,7 @@ import { VibeCodingFeature, BMadMethodFeature, SpecKitFeature } from './domains/
 import { LlmFeature } from './domains/llm-chat';
 import { ResultsManagerFeature } from './domains/results-manager';
 import { ConfigurationFeature } from './domains/configuration';
+import { FilesContextLeftContainer } from './ui-common/containers/FilesContextLeftContainer';
 
 export function SdlcLayoutOrchestrator() {
   const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
@@ -24,6 +25,32 @@ export function SdlcLayoutOrchestrator() {
       isResizable: true,
       isHiddable: true,
     };
+
+    const defaultInstructionLayout = (content: React.ReactNode) => ({
+      header: { visible: true, isResizable: false, isHiddable: false },
+      sidebarLeft: defaultSidebarLeft,
+      workspace: {
+        top: { visible: false },
+        left: {
+          visible: true,
+          container: <FilesContextLeftContainer />,
+          isResizable: true,
+          isHiddable: true,
+          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' as const },
+        },
+        center: {
+          visible: true,
+          container: content,
+          isResizable: false,
+          isHiddable: false,
+          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' as const },
+        },
+        right: { visible: false },
+        bottom: { visible: false },
+      },
+      sidebarRight: { visible: false },
+      footer: { visible: true, isResizable: false, isHiddable: false },
+    });
 
     const defaultSingleCenterLayout = (content: React.ReactNode) => ({
       header: { visible: true, isResizable: false, isHiddable: false },
@@ -46,11 +73,11 @@ export function SdlcLayoutOrchestrator() {
     });
 
     if (currentStep === 'VIBE_CODING') {
-      setLayoutContainers(defaultSingleCenterLayout(<VibeCodingFeature />));
+      setLayoutContainers(defaultInstructionLayout(<VibeCodingFeature />));
     } else if (currentStep === 'BMAD_METHOD') {
-      setLayoutContainers(defaultSingleCenterLayout(<BMadMethodFeature />));
+      setLayoutContainers(defaultInstructionLayout(<BMadMethodFeature />));
     } else if (currentStep === 'SPECKIT') {
-      setLayoutContainers(defaultSingleCenterLayout(<SpecKitFeature />));
+      setLayoutContainers(defaultInstructionLayout(<SpecKitFeature />));
     } else if (currentStep === 'LLM_CHAT') {
       setLayoutContainers(defaultSingleCenterLayout(<LlmFeature />));
     } else if (currentStep === 'RESULTS_MANAGER') {
