@@ -1,24 +1,29 @@
 import React from 'react';
 import { FileCode, Settings } from 'lucide-react';
 import { UmlClassNodeData, NODE_STYLE_REGISTRY } from './graph-common-shapes';
+import { TARGET_PATH_NODES_RED_BORDER_CLASS } from '../constants/graph.constants';
 
 export const CondensedClassNode: React.FC<{ id: string; data: UmlClassNodeData }> = ({ id, data }) => {
   const style = NODE_STYLE_REGISTRY[data.type] || NODE_STYLE_REGISTRY.default;
 
-  let borderClass = style.border;
+  let borderClass = `border-2 ${style.border}`;
   let headerBg = `${style.bg} text-white`;
   let iconColor = style.iconColor;
 
   if (data.isFocused) {
-    borderClass = 'border-amber-400 dark:border-amber-400 ring-4 ring-amber-400/80 ring-offset-2 ring-offset-background animate-pulse scale-105 shadow-2xl shadow-amber-500/50';
+    borderClass = 'border-2 border-amber-400 dark:border-amber-400 ring-4 ring-amber-400/80 ring-offset-2 ring-offset-background animate-pulse scale-105 shadow-2xl shadow-amber-500/50';
     headerBg = 'bg-amber-500/40 dark:bg-amber-500/45 text-foreground';
     iconColor = 'text-amber-400';
   } else if (data.isOrigin) {
-    borderClass = 'border-red-500 dark:border-red-500 ring-2 ring-red-500/60 shadow-lg shadow-red-500/20';
-    headerBg = 'bg-red-500/30 dark:bg-red-500/35 text-foreground';
-    iconColor = 'text-red-500 dark:text-red-400';
+    borderClass = 'border-2 border-red-500 dark:border-red-500 ring-2 ring-red-500/60 shadow-lg shadow-red-500/20';
+    headerBg = 'bg-red-600 text-white';
+    iconColor = 'text-white';
+  } else if (data.isTargetPath) {
+    borderClass = `${TARGET_PATH_NODES_RED_BORDER_CLASS} border-red-500 dark:border-red-500 shadow-md shadow-red-500/20`;
+    headerBg = `${style.bg} text-white`;
+    iconColor = style.iconColor;
   } else if (data.isDependency) {
-    borderClass = 'border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/50 shadow-lg shadow-amber-500/10';
+    borderClass = 'border-2 border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/50 shadow-lg shadow-amber-500/10';
     headerBg = 'bg-amber-500/30 dark:bg-amber-500/35 text-foreground';
     iconColor = 'text-amber-500 dark:text-amber-400';
   }
@@ -27,7 +32,7 @@ export const CondensedClassNode: React.FC<{ id: string; data: UmlClassNodeData }
   const attrCount = data.attributes?.length || 0;
 
   return (
-    <div className={`w-43 bg-card rounded-md shadow-md border-2 ${borderClass} relative transition-all duration-200 opacity-100 overflow-hidden pointer-events-none select-none`} title={data.name}>
+    <div className={`w-43 bg-card rounded-md shadow-md ${borderClass} relative transition-all duration-200 opacity-100 overflow-hidden pointer-events-none select-none`} title={data.name}>
       <div className={`${headerBg} p-2 flex items-center justify-between gap-1.5 pointer-events-none`}>
         <div className="flex items-center gap-1.5 min-w-0 pointer-events-none">
           <FileCode size={14} className={`${iconColor} shrink-0 pointer-events-none`} />
@@ -44,20 +49,24 @@ export const CondensedClassNode: React.FC<{ id: string; data: UmlClassNodeData }
 };
 
 export const CondensedConfigNode: React.FC<{ id: string; data: UmlClassNodeData }> = ({ id, data }) => {
-  let borderClass = 'border-amber-500';
+  let borderClass = 'border-2 border-amber-500';
   let headerBg = 'bg-amber-500 text-white';
   let iconColor = 'text-amber-100';
 
   if (data.isFocused) {
-    borderClass = 'border-amber-400 dark:border-amber-400 ring-4 ring-amber-400/80 ring-offset-2 ring-offset-background animate-pulse scale-105 shadow-2xl shadow-amber-500/50';
+    borderClass = 'border-2 border-amber-400 dark:border-amber-400 ring-4 ring-amber-400/80 ring-offset-2 ring-offset-background animate-pulse scale-105 shadow-2xl shadow-amber-500/50';
     headerBg = 'bg-amber-500/40 dark:bg-amber-500/45 text-foreground';
     iconColor = 'text-amber-400';
   } else if (data.isOrigin) {
-    borderClass = 'border-red-500 dark:border-red-500 ring-2 ring-red-500/60 shadow-lg shadow-red-500/20';
-    headerBg = 'bg-red-500/30 dark:bg-red-500/35 text-foreground';
-    iconColor = 'text-red-500 dark:text-red-400';
+    borderClass = 'border-2 border-red-500 dark:border-red-500 ring-2 ring-red-500/60 shadow-lg shadow-red-500/20';
+    headerBg = 'bg-red-600 text-white';
+    iconColor = 'text-white';
+  } else if (data.isTargetPath) {
+    borderClass = `${TARGET_PATH_NODES_RED_BORDER_CLASS} border-red-500 dark:border-red-500 shadow-md shadow-red-500/20`;
+    headerBg = 'bg-amber-500 text-white';
+    iconColor = 'text-amber-100';
   } else if (data.isDependency) {
-    borderClass = 'border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/50 shadow-lg shadow-amber-500/10';
+    borderClass = 'border-2 border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/50 shadow-lg shadow-amber-500/10';
     headerBg = 'bg-amber-500/30 dark:bg-amber-500/35 text-foreground';
     iconColor = 'text-amber-500';
   }
@@ -65,7 +74,7 @@ export const CondensedConfigNode: React.FC<{ id: string; data: UmlClassNodeData 
   const propCount = data.configProperties?.length || 0;
 
   return (
-    <div className={`w-60 bg-card rounded-md shadow-md border-2 ${borderClass} relative transition-all duration-200 opacity-100 overflow-hidden pointer-events-none select-none`} title={data.name}>
+    <div className={`w-60 bg-card rounded-md shadow-md ${borderClass} relative transition-all duration-200 opacity-100 overflow-hidden pointer-events-none select-none`} title={data.name}>
       <div className={`flex justify-between items-center ${headerBg} p-2 pointer-events-none`}>
         <div className="flex items-center gap-1.5 min-w-0 pointer-events-none">
           <Settings size={14} className={`${iconColor} shrink-0 pointer-events-none`} />

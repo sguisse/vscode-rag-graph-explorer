@@ -109,7 +109,7 @@ export function CodebaseExplorerPanel({
         }}
       />
 
-      <div id="tree-codebase-files" className="flex-1 p-4 overflow-y-auto font-mono text-xs">
+      <div id="tree-codebase-files" className="flex-1 p-1 overflow-y-auto font-mono text-xs">
         {FOLDER_KEYS_REGISTERED_CONFIG.map(folder => {
           const theme = FOLDER_THEME_REGISTRY_CONFIG[folder] || FOLDER_THEME_REGISTRY_CONFIG.default;
           const folderFiles = codebase.files.filter(f => f.path.startsWith(folder));

@@ -8,6 +8,7 @@ import {
   removeExtension,
   NodeStyle
 } from './graph-common-shapes';
+import { TARGET_PATH_NODES_RED_BORDER_CLASS } from '../constants/graph.constants';
 
 export type { NodeStyle, UmlClassNodeData, FolderNodeProps };
 export { NODE_STYLE_REGISTRY, removeExtension };
@@ -19,26 +20,30 @@ export const FolderNode: React.FC<FolderNodeProps> = ({ isSelected }) => (
 export const UmlClassNode: React.FC<{ id: string; data: UmlClassNodeData }> = ({ id, data }) => {
   const style = NODE_STYLE_REGISTRY[data.type] || NODE_STYLE_REGISTRY.default;
 
-  let borderClass = style.border;
+  let borderClass = `border-2 ${style.border}`;
   let headerBg = `${style.bg} text-white`;
   let iconColor = style.iconColor;
 
   if (data.isFocused) {
-    borderClass = 'border-amber-400 dark:border-amber-400 ring-4 ring-amber-400/80 ring-offset-2 ring-offset-background animate-pulse scale-105 shadow-2xl shadow-amber-500/50';
+    borderClass = 'border-2 border-amber-400 dark:border-amber-400 ring-4 ring-amber-400/80 ring-offset-2 ring-offset-background animate-pulse scale-105 shadow-2xl shadow-amber-500/50';
     headerBg = 'bg-amber-500/40 dark:bg-amber-500/45 text-foreground';
     iconColor = 'text-amber-400';
   } else if (data.isOrigin) {
-    borderClass = 'border-red-500 dark:border-red-500 ring-2 ring-red-500/60 shadow-lg shadow-red-500/20';
-    headerBg = 'bg-red-500/30 dark:bg-red-500/35 text-foreground';
-    iconColor = 'text-red-500 dark:text-red-400';
+    borderClass = 'border-2 border-red-500 dark:border-red-500 ring-2 ring-red-500/60 shadow-lg shadow-red-500/30';
+    headerBg = 'bg-red-600 text-white';
+    iconColor = 'text-white';
+  } else if (data.isTargetPath) {
+    borderClass = `${TARGET_PATH_NODES_RED_BORDER_CLASS} border-red-500 dark:border-red-500 shadow-md shadow-red-500/20`;
+    headerBg = `${style.bg} text-white`;
+    iconColor = style.iconColor;
   } else if (data.isDependency) {
-    borderClass = 'border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/50 shadow-lg shadow-amber-500/10';
+    borderClass = 'border-2 border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/50 shadow-lg shadow-amber-500/10';
     headerBg = 'bg-amber-500/30 dark:bg-amber-500/35 text-foreground';
     iconColor = 'text-amber-500 dark:text-amber-400';
   }
 
   return (
-    <div className={`w-72 bg-card rounded-lg shadow-xl border-2 ${borderClass} relative transition-all duration-300 opacity-100`}>
+    <div className={`w-72 bg-card rounded-lg shadow-xl ${borderClass} relative transition-all duration-300 opacity-100`}>
       <div className={`${headerBg} p-3 relative rounded-t-[5px] transition-colors`}>
         <div className="flex justify-between items-center">
           <span className="bg-black/30 opacity-85 px-2 py-0.5 rounded font-mono text-[10px] uppercase tracking-wider">{style.badge}</span>
@@ -93,26 +98,30 @@ export const UmlClassNode: React.FC<{ id: string; data: UmlClassNodeData }> = ({
 };
 
 export const ConfigNode: React.FC<{ id: string; data: UmlClassNodeData }> = ({ id, data }) => {
-  let borderClass = 'border-amber-500';
+  let borderClass = 'border-2 border-amber-500';
   let headerBg = 'bg-amber-500 text-white';
   let iconColor = 'text-amber-100';
 
   if (data.isFocused) {
-    borderClass = 'border-amber-400 dark:border-amber-400 ring-4 ring-amber-400/80 ring-offset-2 ring-offset-background animate-pulse scale-105 shadow-2xl shadow-amber-500/50';
+    borderClass = 'border-2 border-amber-400 dark:border-amber-400 ring-4 ring-amber-400/80 ring-offset-2 ring-offset-background animate-pulse scale-105 shadow-2xl shadow-amber-500/50';
     headerBg = 'bg-amber-500/40 dark:bg-amber-500/45 text-foreground';
     iconColor = 'text-amber-400';
   } else if (data.isOrigin) {
-    borderClass = 'border-red-500 dark:border-red-500 ring-2 ring-red-500/60 shadow-lg shadow-red-500/20';
-    headerBg = 'bg-red-500/30 dark:bg-red-500/35 text-foreground';
-    iconColor = 'text-red-500 dark:text-red-400';
+    borderClass = 'border-2 border-red-500 dark:border-red-500 ring-2 ring-red-500/60 shadow-lg shadow-red-500/30';
+    headerBg = 'bg-red-600 text-white';
+    iconColor = 'text-white';
+  } else if (data.isTargetPath) {
+    borderClass = `${TARGET_PATH_NODES_RED_BORDER_CLASS} border-red-500 dark:border-red-500 shadow-md shadow-red-500/20`;
+    headerBg = 'bg-amber-500 text-white';
+    iconColor = 'text-amber-100';
   } else if (data.isDependency) {
-    borderClass = 'border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/50 shadow-lg shadow-amber-500/10';
+    borderClass = 'border-2 border-amber-400 dark:border-amber-500 ring-2 ring-amber-400/50 shadow-lg shadow-amber-500/10';
     headerBg = 'bg-amber-500/30 dark:bg-amber-500/35 text-foreground';
     iconColor = 'text-amber-500';
   }
 
   return (
-    <div className={`w-80 bg-card rounded-lg shadow-xl border-2 ${borderClass} relative transition-all duration-300 opacity-100`}>
+    <div className={`w-80 bg-card rounded-lg shadow-xl ${borderClass} relative transition-all duration-300 opacity-100`}>
       <div className={`flex justify-between items-center ${headerBg} p-2.5 rounded-t-[5px] transition-colors`}>
         <div className="flex items-center gap-1.5">
           <Settings size={16} className={iconColor} />

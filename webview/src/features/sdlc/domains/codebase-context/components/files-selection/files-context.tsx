@@ -7,7 +7,6 @@ import { useCodebaseDomainState } from '../../store/useCodebaseDomainState';
 import { useFilesContext } from './hooks/use-files-context';
 import { FilesCtxExportPanel } from '../files-ctx-export/files-ctx-export-panel';
 
-const DEFAULT_IMPACTED_SET = new Set<string>();
 const DEFAULT_HANDLE_COPY = () => {};
 
 export interface FilesContextPanelProps {
@@ -51,17 +50,17 @@ function TriStateCheckbox({ checked, indeterminate, onChange, className }: TriSt
 export function FilesContextPanel(props: FilesContextPanelProps = {}) {
   const storeCodebase = useCodebaseDomainState((s) => s.codebase);
   const storeSelectedEntity = useCodebaseDomainState((s) => s.selectedEntity);
-
-  const [internalDownstream, setInternalDownstream] = React.useState(true);
-  const [internalUpstream, setInternalUpstream] = React.useState(false);
+  const storeEnableDownstream = useCodebaseDomainState((s) => s.enableDownstream);
+  const storeSetEnableDownstream = useCodebaseDomainState((s) => s.setEnableDownstream);
+  const storeEnableUpstream = useCodebaseDomainState((s) => s.enableUpstream);
+  const storeSetEnableUpstream = useCodebaseDomainState((s) => s.setEnableUpstream);
 
   const initialCodebase = props.initialCodebase ?? storeCodebase;
   const selectedEntity = props.selectedEntity ?? storeSelectedEntity;
-  const enableDownstream = props.enableDownstream ?? internalDownstream;
-  const setEnableDownstream = props.setEnableDownstream ?? setInternalDownstream;
-  const enableUpstream = props.enableUpstream ?? internalUpstream;
-  const setEnableUpstream = props.setEnableUpstream ?? setInternalUpstream;
-  const impactedSet = props.impactedSet ?? DEFAULT_IMPACTED_SET;
+  const enableDownstream = props.enableDownstream ?? storeEnableDownstream;
+  const setEnableDownstream = props.setEnableDownstream ?? storeSetEnableDownstream;
+  const enableUpstream = props.enableUpstream ?? storeEnableUpstream;
+  const setEnableUpstream = props.setEnableUpstream ?? storeSetEnableUpstream;
   const handleCopy = props.handleCopy ?? DEFAULT_HANDLE_COPY;
 
   const {
@@ -87,7 +86,7 @@ export function FilesContextPanel(props: FilesContextPanelProps = {}) {
     selectedEntity,
     enableDownstream,
     enableUpstream,
-    impactedSet
+    props.impactedSet
   );
 
   const topContent = (
@@ -99,7 +98,7 @@ export function FilesContextPanel(props: FilesContextPanelProps = {}) {
         </div>
         <div className="gap-1.5 grid grid-cols-2">
           <Button
-            onClick={() => setEnableUpstream((prev) => !prev)}
+            onClick={() => setEnableUpstream((prev: any) => !prev)}
             className={`flex items-center justify-center gap-1.5 py-1 px-2 font-mono text-xs font-bold rounded border transition-all h-7.5 cursor-pointer ${
               enableUpstream
                 ? 'bg-orange-500 border-orange-400 text-white shadow-xs'
@@ -110,7 +109,7 @@ export function FilesContextPanel(props: FilesContextPanelProps = {}) {
             Upstream ({upstreamCount})
           </Button>
           <Button
-            onClick={() => setEnableDownstream((prev) => !prev)}
+            onClick={() => setEnableDownstream((prev: any) => !prev)}
             className={`flex items-center justify-center gap-1.5 py-1 px-2 font-mono text-xs font-bold rounded border transition-all h-7.5 cursor-pointer ${
               enableDownstream
                 ? 'bg-orange-500 border-orange-400 text-white shadow-xs'

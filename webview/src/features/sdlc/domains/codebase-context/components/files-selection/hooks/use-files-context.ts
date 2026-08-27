@@ -14,12 +14,20 @@ export interface DepthFileGroup {
 export function useFilesContext(
   initialCodebase: CodebaseData,
   selectedEntity: SelectedEntity | null,
-  enableDownstream: boolean,
-  enableUpstream: boolean,
-  impactedSet: Set<string>
+  propEnableDownstream?: boolean,
+  propEnableUpstream?: boolean,
+  propImpactedSet?: Set<string>
 ) {
   const setTargetFilePaths = useCodebaseDomainState((s: CodebaseDomainState) => s.setTargetFilePaths);
-  const setSelectedEntity = useCodebaseDomainState((s: CodebaseDomainState) => s.setSelectedEntity);
+  const setFocusedNodeId = useCodebaseDomainState((s: CodebaseDomainState) => s.setFocusedNodeId);
+
+  const storeEnableDownstream = useCodebaseDomainState((s: CodebaseDomainState) => s.enableDownstream);
+  const storeEnableUpstream = useCodebaseDomainState((s: CodebaseDomainState) => s.enableUpstream);
+  const callersDepth = useCodebaseDomainState((s: CodebaseDomainState) => s.callersDepth) ?? 2;
+  const calleesDepth = useCodebaseDomainState((s: CodebaseDomainState) => s.calleesDepth) ?? 2;
+
+  const enableDownstream = propEnableDownstream ?? storeEnableDownstream;
+  const enableUpstream = propEnableUpstream ?? storeEnableUpstream;
 
   const selectedFiles = useCodebaseDomainState((s: CodebaseDomainState) => s.selectedContextFiles);
   const setSelectedFiles = useCodebaseDomainState((s: CodebaseDomainState) => s.setSelectedContextFiles);
@@ -28,12 +36,13 @@ export function useFilesContext(
 
   const { revealAndCopyFile, openFileInEditor } = useCodebaseActions();
 
+  // Clicking a file in Adjust Impact Plan highlights & centers node temporarily without selecting it
   const handleFileClick = useCallback((file: CodebaseFile) => {
     if (file.path) {
       revealAndCopyFile(file);
     }
-    setSelectedEntity({ type: 'node', nodeId: file.id });
-  }, [revealAndCopyFile, setSelectedEntity]);
+    setFocusedNodeId(file.id);
+  }, [revealAndCopyFile, setFocusedNodeId]);
 
   const handleFileDoubleClick = useCallback((file: CodebaseFile, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -42,17 +51,30 @@ export function useFilesContext(
     }
   }, [openFileInEditor]);
 
+  const impactedSet = useMemo(() => {
+    if (propImpactedSet && propImpactedSet.size > 0) return propImpactedSet;
+    if (!selectedEntity || !initialCodebase?.dependencies) return new Set<string>();
+    return calculateTransitiveImpact(
+      selectedEntity,
+      initialCodebase.dependencies,
+      callersDepth,
+      calleesDepth,
+      enableDownstream,
+      enableUpstream
+    );
+  }, [propImpactedSet, selectedEntity, initialCodebase?.dependencies, callersDepth, calleesDepth, enableDownstream, enableUpstream]);
+
   const downstreamCount = useMemo(() => {
     if (!selectedEntity || !initialCodebase?.dependencies) return 0;
-    const dsSet = calculateTransitiveImpact(selectedEntity, initialCodebase.dependencies, 20, 20, true, false);
+    const dsSet = calculateTransitiveImpact(selectedEntity, initialCodebase.dependencies, callersDepth, calleesDepth, true, false);
     return initialCodebase.files.filter((f) => dsSet.has(f.id) && f.id !== selectedEntity.nodeId).length;
-  }, [selectedEntity, initialCodebase]);
+  }, [selectedEntity, initialCodebase, callersDepth, calleesDepth]);
 
   const upstreamCount = useMemo(() => {
     if (!selectedEntity || !initialCodebase?.dependencies) return 0;
-    const usSet = calculateTransitiveImpact(selectedEntity, initialCodebase.dependencies, 20, 20, false, true);
+    const usSet = calculateTransitiveImpact(selectedEntity, initialCodebase.dependencies, callersDepth, calleesDepth, false, true);
     return initialCodebase.files.filter((f) => usSet.has(f.id) && f.id !== selectedEntity.nodeId).length;
-  }, [selectedEntity, initialCodebase]);
+  }, [selectedEntity, initialCodebase, callersDepth, calleesDepth]);
 
   const depthGroups = useMemo<DepthFileGroup[]>(() => {
     if (!selectedEntity || !initialCodebase?.files) return [];

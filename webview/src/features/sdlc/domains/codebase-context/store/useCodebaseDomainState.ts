@@ -69,6 +69,10 @@ export interface CodebaseTreePanelState {
   expandedFolders: Record<string, boolean>;
   setExpandedFolders: (folders: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void;
   toggleFolder: (folderKey: string) => void;
+  visibleFiles: Record<string, boolean>;
+  setVisibleFiles: (files: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void;
+  toggleFileCheckbox: (id: string) => void;
+  toggleFolderCheckbox: (folderKey: string) => void;
 }
 
 export interface DependencyGraphPanelState {
@@ -95,6 +99,9 @@ export interface DependencyGraphPanelState {
   autoFit: boolean;
   setAutoFit: (autoFit: boolean | ((prev: boolean) => boolean)) => void;
   toggleAutoFit: () => void;
+  showMinimap: boolean;
+  setShowMinimap: (showMinimap: boolean) => void;
+  toggleShowMinimap: () => void;
   cyRef: React.RefObject<any> | null;
   setCyRef: (ref: React.RefObject<any> | null) => void;
 }
@@ -109,13 +116,16 @@ export interface FilesContextPanelState {
   setRightPanelTab: (tab: 'inspect' | 'files_context' | 'transformer') => void;
   selectedEntity: any | null;
   setSelectedEntity: (entity: any | null) => void;
+  enableDownstream: boolean;
+  setEnableDownstream: (val: boolean | ((prev: boolean) => boolean)) => void;
+  enableUpstream: boolean;
+  setEnableUpstream: (val: boolean | ((prev: boolean) => boolean)) => void;
   targetFilePaths: string[];
   setTargetFilePaths: (paths: string[]) => void;
   selectedContextFiles: Record<string, boolean>;
   setSelectedContextFiles: (files: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void;
   selectAllFiles: () => void;
-  toggleFileCheckbox: (id: string) => void;
-  toggleFolderCheckbox: (folderKey: string) => void;
+  toggleContextFileCheckbox: (id: string) => void;
   expandedContextGroups: Record<string, boolean>;
   setExpandedContextGroups: (groups: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void;
 }
@@ -156,7 +166,7 @@ export const useCodebaseDomainState = create<CodebaseDomainState>((set) => ({
       (s.codebase?.files || []).forEach((f: any) => {
         allSelected[f.id] = true;
       });
-      return { currentPath: path, selectedContextFiles: allSelected };
+      return { currentPath: path, visibleFiles: allSelected, selectedContextFiles: allSelected };
     }),
 
   pathsList: [],
@@ -170,7 +180,7 @@ export const useCodebaseDomainState = create<CodebaseDomainState>((set) => ({
       (s.codebase?.files || []).forEach((f: any) => {
         allSelected[f.id] = true;
       });
-      return { paths: newPaths, selectedContextFiles: allSelected };
+      return { paths: newPaths, visibleFiles: allSelected, selectedContextFiles: allSelected };
     }),
 
   upstreamDepth: 2,
@@ -185,10 +195,10 @@ export const useCodebaseDomainState = create<CodebaseDomainState>((set) => ({
     (data?.files || []).forEach((f: any) => {
       allSelected[f.id] = true;
     });
-    set({ codebase: data, selectedContextFiles: allSelected });
+    set({ codebase: data, visibleFiles: allSelected, selectedContextFiles: allSelected });
   },
 
-  // --- Codebase Tree Slice ---
+  // --- Codebase Tree Slice (Controls Graph Node Visibility) ---
   expandedFolders: {},
   setExpandedFolders: (folders) =>
     set((s) => ({ expandedFolders: typeof folders === 'function' ? folders(s.expandedFolders) : folders })),
@@ -201,10 +211,42 @@ export const useCodebaseDomainState = create<CodebaseDomainState>((set) => ({
       },
     })),
 
+  visibleFiles: {
+    'OrderButton.tsx': true,
+    'orderApi.ts': true,
+    'OrderController.java': true,
+    'Order.java': true,
+    'OrderRepository.java': true,
+    'JpaOrderRepository.java': true,
+    'application.yml': true,
+  },
+  setVisibleFiles: (files) =>
+    set((s) => ({ visibleFiles: typeof files === 'function' ? files(s.visibleFiles) : files })),
+
+  toggleFileCheckbox: (id) =>
+    set((s) => ({
+      visibleFiles: {
+        ...s.visibleFiles,
+        [id]: !s.visibleFiles[id],
+      },
+    })),
+
+  toggleFolderCheckbox: (folderKey) =>
+    set((s) => {
+      const codebaseFiles = s.codebase?.files || [];
+      const folderFiles = codebaseFiles.filter((f) => f.path.startsWith(folderKey));
+      const allChecked = folderFiles.every((f) => s.visibleFiles[f.id]);
+      const updated = { ...s.visibleFiles };
+      folderFiles.forEach((f) => {
+        updated[f.id] = !allChecked;
+      });
+      return { visibleFiles: updated };
+    }),
+
   // --- Dependency Graph Slice ---
   graphRendering: 'rounded',
   setGraphRendering: (mode) => set({ graphRendering: mode }),
-  currentLayout: 'cose',
+  currentLayout: 'preset',
   setCurrentLayout: (layout) => set({ currentLayout: layout }),
   maxNodesLimit: 50,
   setMaxNodesLimit: (limit) => set({ maxNodesLimit: limit }),
@@ -212,7 +254,7 @@ export const useCodebaseDomainState = create<CodebaseDomainState>((set) => ({
   setCallersDepth: (depth) => set({ callersDepth: depth }),
   calleesDepth: 2,
   setCalleesDepth: (depth) => set({ calleesDepth: depth }),
-  displayLevel: 'all',
+  displayLevel: 'detailed',
   setDisplayLevel: (level) => set({ displayLevel: level }),
 
   showGrid: true,
@@ -227,6 +269,10 @@ export const useCodebaseDomainState = create<CodebaseDomainState>((set) => ({
   autoFit: true,
   setAutoFit: (autoFit) => set((s) => ({ autoFit: typeof autoFit === 'function' ? autoFit(s.autoFit) : autoFit })),
   toggleAutoFit: () => set((s) => ({ autoFit: !s.autoFit })),
+
+  showMinimap: true,
+  setShowMinimap: (showMinimap) => set({ showMinimap }),
+  toggleShowMinimap: () => set((s) => ({ showMinimap: !s.showMinimap })),
 
   cyRef: null,
   setCyRef: (cyRef) => set({ cyRef }),
@@ -247,7 +293,7 @@ export const useCodebaseDomainState = create<CodebaseDomainState>((set) => ({
     }
   },
 
-  // --- Files Context & Inspector Slice ---
+  // --- Files Context & Inspector Slice (Controls Context Export & Impact Plan) ---
   rightPanelTab: 'files_context',
   setRightPanelTab: (rightPanelTab) => set({ rightPanelTab }),
 
@@ -257,6 +303,13 @@ export const useCodebaseDomainState = create<CodebaseDomainState>((set) => ({
       selectedEntity: entity,
       rightPanelTab: entity ? 'inspect' : s.rightPanelTab,
     })),
+
+  enableDownstream: true,
+  setEnableDownstream: (val) =>
+    set((s) => ({ enableDownstream: typeof val === 'function' ? val(s.enableDownstream) : val })),
+  enableUpstream: false,
+  setEnableUpstream: (val) =>
+    set((s) => ({ enableUpstream: typeof val === 'function' ? val(s.enableUpstream) : val })),
 
   targetFilePaths: [],
   setTargetFilePaths: (paths) => set({ targetFilePaths: paths }),
@@ -279,28 +332,16 @@ export const useCodebaseDomainState = create<CodebaseDomainState>((set) => ({
       (s.codebase?.files || []).forEach((f: any) => {
         allSelected[f.id] = true;
       });
-      return { selectedContextFiles: allSelected };
+      return { visibleFiles: allSelected, selectedContextFiles: allSelected };
     }),
 
-  toggleFileCheckbox: (id) =>
+  toggleContextFileCheckbox: (id) =>
     set((s) => ({
       selectedContextFiles: {
         ...s.selectedContextFiles,
         [id]: !s.selectedContextFiles[id],
       },
     })),
-
-  toggleFolderCheckbox: (folderKey) =>
-    set((s) => {
-      const codebaseFiles = s.codebase?.files || [];
-      const folderFiles = codebaseFiles.filter((f) => f.path.startsWith(folderKey));
-      const allChecked = folderFiles.every((f) => s.selectedContextFiles[f.id]);
-      const updated = { ...s.selectedContextFiles };
-      folderFiles.forEach((f) => {
-        updated[f.id] = !allChecked;
-      });
-      return { selectedContextFiles: updated };
-    }),
 
   expandedContextGroups: {},
   setExpandedContextGroups: (groups) =>
@@ -343,6 +384,9 @@ const PERSISTED_KEYS: (keyof CodebaseDomainState)[] = [
   'methodsVisible',
   'showSelectedOnly',
   'autoFit',
+  'showMinimap',
+  'enableDownstream',
+  'enableUpstream',
   'rightPanelTab',
   'exportFormat',
   'maxChunk',

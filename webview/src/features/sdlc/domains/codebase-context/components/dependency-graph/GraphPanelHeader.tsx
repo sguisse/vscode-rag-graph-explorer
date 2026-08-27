@@ -1,5 +1,5 @@
 import React from 'react';
-import { Grid, Database, Plus, Minus, Focus, SquareFunction, Target, ListTree } from 'lucide-react';
+import { Grid, Database, Plus, Minus, Focus, SquareFunction, Target, ListTree, Map } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
 import { ToggleButton } from '@/components/app/toggle-button';
@@ -139,6 +139,8 @@ export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
   const storeShowSelectedOnly = useCodebaseDomainState((s) => s.showSelectedOnly);
   const storeSetShowSelectedOnly = useCodebaseDomainState((s) => s.setShowSelectedOnly);
   const autoFit = useCodebaseDomainState((s) => s.autoFit);
+  const showMinimap = useCodebaseDomainState((s) => s.showMinimap);
+  const toggleShowMinimap = useCodebaseDomainState((s) => s.toggleShowMinimap);
 
   const showGrid = propShowGrid ?? storeShowGrid;
   const setShowGrid = propSetShowGrid ?? storeSetShowGrid;
@@ -176,6 +178,14 @@ export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
       />
 
       <ToolbarSeparator />
+
+      <ToggleButton
+        id="btn-toggle-minimap"
+        isSelected={showMinimap}
+        onToggle={toggleShowMinimap}
+        tooltipText="Toggle Graph Minimap"
+        icon={<Map size={12} />}
+      />
 
       <ToggleButton
         id="btn-toggle-grid"

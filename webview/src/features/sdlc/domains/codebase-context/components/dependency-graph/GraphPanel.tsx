@@ -8,6 +8,7 @@ import { SelectedEntity, CodebaseFile } from '@/shared/services/graph-rag-explor
 import { isMemberKeyForFileToken, extractMemberIdFromKeyToken, calculateTransitiveImpact } from '@/services/view/graph-view.service';
 import { useGraphPanel } from './hooks/use-graph-panel';
 import { GraphToolbar } from './GraphToolbar';
+import { GraphMinimap } from './components/GraphMinimap';
 import { useCodebaseDomainState } from '../../store/useCodebaseDomainState';
 import { useGraph } from './hooks/use-graph';
 import { FOLDER_POSITIONS, demoCodebase } from './data/GraphData';
@@ -39,9 +40,13 @@ export function GraphPanel(props: GraphPanelProps = {}) {
   const setCurrentPath = useCodebaseDomainState((s) => s.setCurrentPath);
   const callersDepth = useCodebaseDomainState((s) => s.callersDepth) ?? 2;
   const calleesDepth = useCodebaseDomainState((s) => s.calleesDepth) ?? 2;
+  const enableDownstream = useCodebaseDomainState((s) => s.enableDownstream);
+  const enableUpstream = useCodebaseDomainState((s) => s.enableUpstream);
   const maxNodesLimit = useCodebaseDomainState((s) => s.maxNodesLimit) ?? 50;
   const storeSetSelectedEntity = useCodebaseDomainState((s) => s.setSelectedEntity);
+  const visibleFiles = useCodebaseDomainState((s) => s.visibleFiles);
   const selectedContextFiles = useCodebaseDomainState((s) => s.selectedContextFiles);
+  const paths = useCodebaseDomainState((s) => s.paths);
   const setPaths = useCodebaseDomainState((s) => s.setPaths);
   const storeFocusedNodeId = useCodebaseDomainState((s) => s.focusedNodeId);
 
@@ -51,6 +56,13 @@ export function GraphPanel(props: GraphPanelProps = {}) {
   const storeShowSelectedOnly = useCodebaseDomainState((s) => s.showSelectedOnly);
   const autoFit = useCodebaseDomainState((s) => s.autoFit);
   const setCyRef = useCodebaseDomainState((s) => s.setCyRef);
+
+  const pathLines = useMemo(() => {
+    return (paths || '')
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+  }, [paths]);
 
   const onNodeSelect = useCallback((nodeId: string) => {
     setCurrentPath(nodeId);
@@ -76,6 +88,7 @@ export function GraphPanel(props: GraphPanelProps = {}) {
     cyRef,
     graphState: internalGraphState,
     updateGraphTopology,
+    isReady,
   } = useGraph(
     props.isDarkMode ?? false,
     onNodeSelect,
@@ -99,11 +112,11 @@ export function GraphPanel(props: GraphPanelProps = {}) {
   const searchFilteredFiles = props.searchFilteredFiles ?? (codebase.files as CodebaseFile[]);
   const focusedNodeId = props.focusedNodeId ?? storeFocusedNodeId;
 
+  // Node visibility in Graph is strictly driven by Codebase Explorer selection list (visibleFiles)
   const checkedSearchFilteredFiles = useMemo(() => {
-    return searchFilteredFiles.filter((file) => selectedContextFiles[file.id] !== false);
-  }, [searchFilteredFiles, selectedContextFiles]);
+    return searchFilteredFiles.filter((file) => visibleFiles[file.id] !== false);
+  }, [searchFilteredFiles, visibleFiles]);
 
-  // Recalculates impactedSet using toolbar callersDepth (upstream) and calleesDepth (downstream)
   const computedImpactedSet = useMemo(() => {
     if (!selectedEntity || !codebase?.dependencies) return new Set<string>();
     return calculateTransitiveImpact(
@@ -111,10 +124,10 @@ export function GraphPanel(props: GraphPanelProps = {}) {
       codebase.dependencies,
       callersDepth,
       calleesDepth,
-      true,
-      true
+      enableDownstream,
+      enableUpstream
     );
-  }, [selectedEntity, codebase?.dependencies, callersDepth, calleesDepth]);
+  }, [selectedEntity, codebase?.dependencies, callersDepth, calleesDepth, enableDownstream, enableUpstream]);
 
   const impactedSet = props.impactedSet ?? computedImpactedSet;
   const handleSelectMember = props.handleSelectMember ?? ((nodeId: string, memberId: string) => {
@@ -134,6 +147,10 @@ export function GraphPanel(props: GraphPanelProps = {}) {
     impactedSet
   );
 
+  const visibleNodeIdsKey = useMemo(() => {
+    return effectiveSearchFilteredFiles.map((f) => f.id).sort().join(',');
+  }, [effectiveSearchFilteredFiles]);
+
   useEffect(() => {
     if (autoFit) return;
     const targetNodeId = focusedNodeId || selectedEntity?.nodeId;
@@ -151,9 +168,10 @@ export function GraphPanel(props: GraphPanelProps = {}) {
   }, [focusedNodeId, selectedEntity?.nodeId, cyRef, autoFit]);
 
   useEffect(() => {
+    if (!isReady) return;
     updateGraphTopology(
       checkedSearchFilteredFiles,
-      selectedContextFiles,
+      visibleFiles,
       codebase,
       impactedSet,
       currentLayout,
@@ -167,8 +185,9 @@ export function GraphPanel(props: GraphPanelProps = {}) {
       autoFit
     );
   }, [
+    isReady,
     checkedSearchFilteredFiles,
-    selectedContextFiles,
+    visibleFiles,
     codebase,
     impactedSet,
     currentLayout,
@@ -184,15 +203,16 @@ export function GraphPanel(props: GraphPanelProps = {}) {
   ]);
 
   useEffect(() => {
-    if (autoFit && cyRef.current) {
-      setTimeout(() => {
-        if (cyRef.current && !cyRef.current.destroyed()) {
+    if (isReady && autoFit && cyRef.current) {
+      const timer = setTimeout(() => {
+        if (cyRef.current && !cyRef.current.destroyed() && cyRef.current.nodes().not('.folder').length > 0) {
           cyRef.current.fit(undefined, 30);
           cyRef.current.center();
         }
-      }, 50);
+      }, 80);
+      return () => clearTimeout(timer);
     }
-  }, [autoFit, cyRef]);
+  }, [isReady, visibleNodeIdsKey, autoFit, cyRef]);
 
   return (
     <div className="relative inset-0 outline-none w-full h-full overflow-hidden">
@@ -237,22 +257,30 @@ export function GraphPanel(props: GraphPanelProps = {}) {
           const bounds = graphState.nodePositions[file.id];
           if (!bounds) return null;
 
-          const impactedMembers: string[] = [];
-          impactedSet.forEach((item) => {
-            if (isMemberKeyForFileToken(item, file.id)) {
-              impactedMembers.push(extractMemberIdFromKeyToken(item));
-            }
-          });
+          // Checkbox state in Adjust Impact Plan controls impact plan inclusion and highlighting
+          const isCheckedInPlan = selectedContextFiles[file.id] !== false;
 
-          // Single-clicked node in graph is set as origin and styled in Red
-          const isOrigin = selectedEntity?.nodeId === file.id;
-          // Nodes within callers/callees depth are marked as dependency and styled in Orange
-          const isDependency = impactedSet.has(file.id) && !isOrigin;
+          const impactedMembers: string[] = [];
+          if (isCheckedInPlan) {
+            impactedSet.forEach((item) => {
+              if (isMemberKeyForFileToken(item, file.id)) {
+                impactedMembers.push(extractMemberIdFromKeyToken(item));
+              }
+            });
+          }
+
+          // Unchecking in Adjust Impact Plan reverts node to default type color without hiding it from graph
+          const isTargetPath = isCheckedInPlan && pathLines.some(
+            (p) => p === file.id || p === file.path || (file.path && file.path.endsWith(p))
+          );
+          const isOrigin = isCheckedInPlan && selectedEntity?.nodeId === file.id;
+          const isDependency = isCheckedInPlan && impactedSet.has(file.id) && !isOrigin && !isTargetPath;
           const isFocused = focusedNodeId === file.id;
 
           const nodeData: UmlClassNodeData = {
             ...file,
             isOrigin,
+            isTargetPath,
             isDependency,
             isFocused,
             impactedMembers,
@@ -265,7 +293,7 @@ export function GraphPanel(props: GraphPanelProps = {}) {
           return (
             <div
               key={file.id}
-              className={`absolute transition-all duration-75 ease-out pointer-events-none ${isFocused || isOrigin ? 'z-30' : 'z-20'}`}
+              className={`absolute transition-all duration-75 ease-out pointer-events-none ${isFocused || isOrigin || isTargetPath ? 'z-30' : 'z-20'}`}
               style={{ left: bounds.x, top: bounds.y, width: bounds.w, height: bounds.h }}
             >
               {file.type === 'config' ? (
@@ -291,6 +319,8 @@ export function GraphPanel(props: GraphPanelProps = {}) {
           );
         })}
       </div>
+
+      <GraphMinimap />
     </div>
   );
 }

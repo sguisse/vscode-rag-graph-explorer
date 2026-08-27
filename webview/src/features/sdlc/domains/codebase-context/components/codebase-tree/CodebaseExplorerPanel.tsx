@@ -29,7 +29,7 @@ export function CodebaseExplorerPanel(props: CodebaseExplorerPanelProps = {}) {
 
   const storeCodebase = useCodebaseDomainState((s) => s.codebase);
   const storeExpandedFolders = useCodebaseDomainState((s) => s.expandedFolders);
-  const storeVisibleFiles = useCodebaseDomainState((s) => s.selectedContextFiles);
+  const storeVisibleFiles = useCodebaseDomainState((s) => s.visibleFiles);
   const storeToggleFolder = useCodebaseDomainState((s) => s.toggleFolder);
   const storeToggleFileCheckbox = useCodebaseDomainState((s) => s.toggleFileCheckbox);
   const storeSetSelectedEntity = useCodebaseDomainState((s) => s.setSelectedEntity);
@@ -45,6 +45,11 @@ export function CodebaseExplorerPanel(props: CodebaseExplorerPanelProps = {}) {
   const setSelectedEntity = props.setSelectedEntity ?? storeSetSelectedEntity;
   const onImportCodebase = props.onImportCodebase ?? storeSetCodebase;
   const onFocusNode = props.onFocusNode ?? storeSetFocusedNodeId;
+
+  // Dynamically compute count of checked/visible files in real time
+  const activeVisibleCount = useMemo(() => {
+    return searchFilteredFiles.filter((file) => visibleFiles[file.id] !== false).length;
+  }, [searchFilteredFiles, visibleFiles]);
 
   const {
     isImportOpen,
@@ -209,7 +214,7 @@ export function CodebaseExplorerPanel(props: CodebaseExplorerPanelProps = {}) {
   );
 
   const middleContent = (
-    <div className="p-4 w-full font-mono text-xs">
+    <div className="p-1 w-full font-mono text-xs">
       {groupedScopes.map((scope: ScopeGroup) => {
         const scopeTheme = FOLDER_THEME_REGISTRY_CONFIG[scope.key] || FOLDER_THEME_REGISTRY_CONFIG.default;
         const isFilterActiveWithQuery = finderState.isFilterActive && Boolean(finderState.searchQuery.trim());
@@ -538,7 +543,7 @@ export function CodebaseExplorerPanel(props: CodebaseExplorerPanelProps = {}) {
         <h3 className="flex items-center gap-2 font-mono font-bold text-muted-foreground text-xs uppercase tracking-wider">
           <span>Explorer</span>
           <span id="badge-file-count" className="bg-muted px-2 py-0.5 rounded text-[10px] text-foreground">
-            {searchFilteredFiles.length}/{codebase?.files?.length || 0}
+            {activeVisibleCount}/{codebase?.files?.length || 0}
           </span>
         </h3>
       </div>

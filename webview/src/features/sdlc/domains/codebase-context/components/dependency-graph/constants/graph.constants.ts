@@ -1,43 +1,4 @@
-/*
-
-export type RegisteredFolderKey = typeof FOLDER_KEYS_REGISTERED_CONFIG[number];
-
-export const FOLDER_BASE_X_POSITIONS_CONFIG: Record<RegisteredFolderKey, number> = {
-  frontend: 40,
-  backend: 460,
-  config: 1270,
-  other: 1600
-};
-
-export const INITIAL_VISIBLE_FILES_CONFIG: Record<string, boolean> = {
-  'OrderButton.tsx': true,
-  'orderApi.ts': true,
-  'OrderController.java': true,
-  'Order.java': true,
-  'OrderRepository.java': true,
-  'JpaOrderRepository.java': true,
-  'application.yml': true
-};
-
-export const NODE_DIMENSIONS_CONFIG = {
-  config: { width: 320, height: 240, cssClass: 'w-80' },
-  default: { width: 288, height: 280, cssClass: 'w-72' }
-} as const;
-
-export const GRAPH_THEME_COLOR_TOKENS_CONFIG = {
-  impactedEdge: '#eab308',
-  darkLine: '#475569',
-  lightLine: '#cbd5e1',
-  darkBorder: '#334155',
-  lightBorder: '#cbd5e1',
-  darkBackground: '#18181b',
-  lightBackground: '#ffffff'
-} as const;
-
-*/
-
 export const FOLDER_KEYS_REGISTERED_CONFIG = ['frontend', 'backend', 'config', 'other'] as const;
-
 
 export interface FolderStyleToken {
   fill: string;
@@ -52,3 +13,6 @@ export const FOLDER_THEME_REGISTRY_CONFIG: Record<string, FolderStyleToken> = {
   other: { fill: 'fill-slate-500/20', text: 'text-slate-500', iconColor: 'text-slate-500' },
   default: { fill: 'fill-slate-500/20', text: 'text-slate-500', iconColor: 'text-slate-500' }
 };
+
+export const targetPathNodesRedBorderSize = '5px';
+export const TARGET_PATH_NODES_RED_BORDER_CLASS = 'border-[5px]';

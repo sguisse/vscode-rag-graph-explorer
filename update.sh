@@ -1,82 +1,594 @@
 #!/usr/bin/env bash
 set -e
 
-echo "🚀 Updating Zoom In (+) and Zoom Out (-) handlers to recenter graph canvas..."
+echo "🚀 Updating Codebase Explorer file counter to react to treeview selection changes..."
 
 # Ensure target directory exists
-mkdir -p webview/src/features/sdlc/domains/codebase-context/components/dependency-graph/hooks
+mkdir -p webview/src/features/sdlc/domains/codebase-context/components/codebase-tree
 
 # -----------------------------------------------------------------------------
-# Update use-graph-panel-header.ts: Add cyRef.current.center() to handleZoomIn and handleZoomOut
+# Update CodebaseExplorerPanel.tsx: Dynamically compute activeVisibleCount from visibleFiles
 # -----------------------------------------------------------------------------
-cat << 'EOF' > webview/src/features/sdlc/domains/codebase-context/components/dependency-graph/hooks/use-graph-panel-header.ts
-import React from 'react';
-import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
-import { vscodeSettings } from '@/App';
-import { useCodebaseDomainState } from '@/features/sdlc/domains/codebase-context/store/useCodebaseDomainState';
-import { GraphRendering } from '@/shared/services/graph-rag-explorer/domain/model/types/type-graph-rendering';
+cat << 'EOF' > webview/src/features/sdlc/domains/codebase-context/components/codebase-tree/CodebaseExplorerPanel.tsx
+import React, { useRef, useEffect, useMemo } from 'react';
+import { ChevronDown, ChevronRight, Folder, FileCode, Database, Download, Upload, LayoutList, ChevronsDown, ChevronsUp, Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ImportAstDialog } from './import-ast-dialog';
+import { ToolbarSeparator } from '@/components/app/toolbar-separator';
+import { FinderTree } from '@/components/app/core/finder/FinderTree';
+import { FinderHtml } from '@/components/app/core/finder/FinderHtml';
+import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
+import { FOLDER_THEME_REGISTRY_CONFIG } from '@/features/sdlc/domains/codebase-context/components/dependency-graph/constants/graph.constants';
+import { useCodebaseExplorerPanel } from './hooks/use-codebase-explorer-panel';
+import { useTreeviewFinder } from './hooks/use-treeview-finder';
+import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
+import { CODEBASE_GROUPING_LIST, CODEBASE_GROUPING_ICON_MAP } from './type-codebase-grouping';
+import { TriStateCheckbox } from './components/TriStateCheckbox';
+import { RecursiveFolderNode } from './components/RecursiveFolderNode';
+import { DYNAMIC_COLORS } from './constants/codebase-explorer.constants';
+import { scopeHasMatches } from './utils/codebase-tree.utils';
+import { useCodebaseDomainState } from '../../store/useCodebaseDomainState';
+import {
+  CodebaseExplorerPanelProps,
+  ViewMode,
+  ScopeGroup,
+  SubFolderGroup
+} from './model-ui';
 
-export function useGraphPanelHeader(propCyRef?: React.RefObject<any>) {
-  const currentLayout = useCodebaseDomainState((s) => s.currentLayout);
-  const setCurrentLayout = useCodebaseDomainState((s) => s.setCurrentLayout);
+export function CodebaseExplorerPanel(props: CodebaseExplorerPanelProps = {}) {
+  const panelRef = useRef<HTMLDivElement>(null);
 
-  const currentRendering = useCodebaseDomainState((s) => s.graphRendering) || 'uml';
-  const setGraphRendering = useCodebaseDomainState((s) => s.setGraphRendering);
-  const storeCyRef = useCodebaseDomainState((s) => s.cyRef);
-  const toggleAutoFit = useCodebaseDomainState((s) => s.toggleAutoFit);
+  const storeCodebase = useCodebaseDomainState((s) => s.codebase);
+  const storeExpandedFolders = useCodebaseDomainState((s) => s.expandedFolders);
+  const storeVisibleFiles = useCodebaseDomainState((s) => s.visibleFiles);
+  const storeToggleFolder = useCodebaseDomainState((s) => s.toggleFolder);
+  const storeToggleFileCheckbox = useCodebaseDomainState((s) => s.toggleFileCheckbox);
+  const storeSetSelectedEntity = useCodebaseDomainState((s) => s.setSelectedEntity);
+  const storeSetCodebase = useCodebaseDomainState((s) => s.setCodebase);
+  const storeSetFocusedNodeId = useCodebaseDomainState((s) => s.setFocusedNodeId);
 
-  const cyRef = propCyRef || storeCyRef;
+  const codebase = props.codebase ?? storeCodebase;
+  const searchFilteredFiles = props.searchFilteredFiles ?? (codebase?.files || []);
+  const expandedFolders = props.expandedFolders ?? storeExpandedFolders;
+  const visibleFiles = props.visibleFiles ?? storeVisibleFiles;
+  const toggleFolder = props.toggleFolder ?? storeToggleFolder;
+  const toggleFileCheckbox = props.toggleFileCheckbox ?? storeToggleFileCheckbox;
+  const setSelectedEntity = props.setSelectedEntity ?? storeSetSelectedEntity;
+  const onImportCodebase = props.onImportCodebase ?? storeSetCodebase;
+  const onFocusNode = props.onFocusNode ?? storeSetFocusedNodeId;
 
-  const setCurrentRendering = (val: GraphRendering) => {
-    if (setGraphRendering) {
-      setGraphRendering(val);
-    }
-  };
+  // Dynamically compute count of checked/visible files in real time
+  const activeVisibleCount = useMemo(() => {
+    return searchFilteredFiles.filter((file) => visibleFiles[file.id] !== false).length;
+  }, [searchFilteredFiles, visibleFiles]);
 
-  const displayNeo4jHandler = () => {
-    vsCodeApiService.openUrl(vscodeSettings.graphRagExplorer.neo4j.url, true);
-  };
+  const {
+    isImportOpen,
+    setIsImportOpen,
+    handleExportCodebase,
+    viewMode,
+    setViewMode,
+    groupedScopes,
+    duplicateFileIds,
+    handleExpandAll,
+    handleCollapseAll,
+    handleToggleFolder,
+    handleFileClick,
+    handleFileDoubleClick,
+    handleFolderDoubleClick,
+    toggleFileListCheckbox
+  } = useCodebaseExplorerPanel(
+    codebase,
+    expandedFolders,
+    toggleFolder,
+    toggleFileCheckbox,
+    visibleFiles,
+    setSelectedEntity,
+    onFocusNode
+  );
 
-  const handleZoomIn = () => {
-    if (cyRef?.current) {
-      cyRef.current.zoom((cyRef.current.zoom() || 1) * 1.2);
-      cyRef.current.center();
-    }
-  };
+  const finderStateRaw = useTreeviewFinder(codebase, viewMode, groupedScopes, onFocusNode);
 
-  const handleZoomOut = () => {
-    if (cyRef?.current) {
-      cyRef.current.zoom((cyRef.current.zoom() || 1) / 1.2);
-      cyRef.current.center();
-    }
-  };
+  const matchingFileIndexMap = useMemo(() => {
+    const map = new Map<string, number>();
+    finderStateRaw.matches.forEach((f, idx) => map.set(f.id, idx));
+    return map;
+  }, [finderStateRaw.matches]);
 
-  const handleFitView = (e?: React.MouseEvent | MouseEvent) => {
-    const evt = e || (window.event as MouseEvent | undefined);
-    if (evt?.metaKey || evt?.ctrlKey) {
-      evt.preventDefault?.();
-      evt.stopPropagation?.();
-      toggleAutoFit();
-      return;
-    }
-    if (cyRef?.current) {
-      cyRef.current.fit(undefined, 40);
-      cyRef.current.center();
-    }
-  };
+  const finderState = useMemo(() => ({
+    ...finderStateRaw,
+    matchingFileIndexMap,
+  }), [finderStateRaw, matchingFileIndexMap]);
 
-  return {
-    currentLayout,
-    setCurrentLayout,
-    currentRendering,
-    setCurrentRendering,
-    displayNeo4jHandler,
-    handleZoomIn,
-    handleZoomOut,
-    handleFitView,
-  };
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
+        if (panelRef.current && (panelRef.current.contains(document.activeElement) || panelRef.current.contains(e.target as Node))) {
+          e.preventDefault();
+          e.stopPropagation();
+          finderState.openAndFocusFinder();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [finderState.openAndFocusFinder]);
+
+  const topContent = (
+    <div className="flex flex-col w-full shrink-0">
+      <div className="flex justify-between items-center bg-muted/20 p-0.5 border-border border-b shrink-0">
+        <div className="flex items-center gap-1.5 pl-2 w-full">
+          <LayoutList size={14} className="text-muted-foreground shrink-0" />
+          <SelectFromTypeBuilder
+            id="select-display-level"
+            value={viewMode}
+            onChange={(val) => setViewMode(val as ViewMode)}
+            className="py-0"
+            triggerClassName="!h-6 min-h-0 py-0 px-2 text-xs border-border rounded-sm font-mono bg-background"
+            options={CODEBASE_GROUPING_LIST.map((key) => ({
+              value: key,
+              icon: CODEBASE_GROUPING_ICON_MAP[key].icon,
+              label: CODEBASE_GROUPING_ICON_MAP[key].label,
+            }))}
+          />
+        </div>
+
+        <div className="flex items-center gap-0.5 pr-1 shrink-0">
+          <Button
+            id="btn-toggle-treeview-finder"
+            className={`hover:bg-muted rounded w-7 h-7 transition-colors ${
+              finderState.isFinderOpen ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
+            }`}
+            variant="ghost"
+            size="icon"
+            onClick={finderState.toggleFinder}
+            data-tooltip="Toggle Treeview Finder (Loupe)"
+          >
+            <Search size={12} />
+          </Button>
+
+          <ToolbarSeparator />
+
+          <Button
+            id="btn-collapse-all"
+            className="hover:bg-muted rounded w-7 h-7 text-muted-foreground hover:text-foreground transition-colors"
+            variant="ghost"
+            size="icon"
+            onClick={() => handleCollapseAll()}
+            data-tooltip="Collapse All"
+          >
+            <ChevronsUp size={12} />
+          </Button>
+          <Button
+            id="btn-expand-all"
+            className="hover:bg-muted rounded w-7 h-7 text-muted-foreground hover:text-foreground transition-colors"
+            variant="ghost"
+            size="icon"
+            onClick={() => handleExpandAll()}
+            data-tooltip="Expand All"
+          >
+            <ChevronsDown size={12} />
+          </Button>
+
+          <ToolbarSeparator />
+          <Button
+            id="btn-open-import-ast-dialog"
+            className="hover:bg-muted rounded w-7 h-7 text-muted-foreground hover:text-foreground transition-colors"
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsImportOpen(true)}
+            data-tooltip="Open AST Codebase import dialog"
+          >
+            <Upload size={12} />
+          </Button>
+
+          <Button
+            id="btn-export-ast-json"
+            className="hover:bg-muted rounded w-7 h-7 text-muted-foreground hover:text-foreground transition-colors"
+            variant="ghost"
+            size="icon"
+            onClick={handleExportCodebase}
+            data-tooltip="Export current session structure as AST Codebase to JSON file"
+          >
+            <Download size={12} />
+          </Button>
+        </div>
+      </div>
+
+      {finderState.isFinderOpen && (
+        <div id="container-treeview-finder" className="bg-background p-0 border-border border-b shrink-0">
+          <FinderTree
+            styleView="toolbar"
+            focusTrigger={finderState.focusTrigger}
+            searchQuery={finderState.searchQuery}
+            setSearchQuery={finderState.setSearchQuery}
+            caseSensitive={finderState.caseSensitive}
+            setCaseSensitive={finderState.setCaseSensitive}
+            wholeWord={finderState.wholeWord}
+            setWholeWord={finderState.setWholeWord}
+            useRegex={finderState.useRegex}
+            setUseRegex={finderState.setUseRegex}
+            isFilterActive={finderState.isFilterActive}
+            setIsFilterActive={finderState.setIsFilterActive}
+            collapseNotMatchingNodes={finderState.collapseNotMatchingNodes}
+            setCollapseNotMatchingNodes={finderState.setCollapseNotMatchingNodes}
+            currentMatchIndex={finderState.currentMatchIndex}
+            totalMatches={finderState.totalMatches}
+            onNext={finderState.handleNextMatch}
+            onPrev={finderState.handlePrevMatch}
+            onClose={() => finderState.setIsFinderOpen(false)}
+          />
+        </div>
+      )}
+    </div>
+  );
+
+  const middleContent = (
+    <div className="p-4 w-full font-mono text-xs">
+      {groupedScopes.map((scope: ScopeGroup) => {
+        const scopeTheme = FOLDER_THEME_REGISTRY_CONFIG[scope.key] || FOLDER_THEME_REGISTRY_CONFIG.default;
+        const isFilterActiveWithQuery = finderState.isFilterActive && Boolean(finderState.searchQuery.trim());
+
+        if (isFilterActiveWithQuery && !scopeHasMatches(scope, viewMode, finderState.matchingFileIds)) {
+          return null;
+        }
+
+        const isScopeExpanded =
+          isFilterActiveWithQuery && !finderState.collapseNotMatchingNodes
+            ? true
+            : (expandedFolders[scope.key] ?? true);
+
+        const allScopeFiles = scope.files;
+        const displayScopeFiles = isFilterActiveWithQuery
+          ? scope.files.filter((f) => finderState.matchingFileIds.has(f.id))
+          : scope.files;
+
+        const isScopeAllChecked = allScopeFiles.length > 0 && allScopeFiles.every((f) => visibleFiles[f.id]);
+        const isScopeSomeChecked = allScopeFiles.some((f) => visibleFiles[f.id]);
+        const isScopeIndeterminate = isScopeSomeChecked && !isScopeAllChecked;
+
+        return (
+          <div key={scope.key} className="mb-4">
+            <div className="group flex items-center gap-1.5 hover:bg-muted/50 px-1 py-1 rounded">
+              <TriStateCheckbox
+                checked={isScopeAllChecked}
+                indeterminate={isScopeIndeterminate}
+                onChange={() => toggleFileListCheckbox(allScopeFiles)}
+              />
+              <div
+                className="flex flex-1 items-center gap-1.5 min-w-0 cursor-pointer"
+                onClick={() => handleToggleFolder(scope.key, scope.folderPath)}
+                onDoubleClick={(e) => handleFolderDoubleClick(scope.folderPath, allScopeFiles, e)}
+              >
+                {isScopeExpanded ? (
+                  <ChevronDown size={14} className="shrink-0" />
+                ) : (
+                  <ChevronRight size={14} className="shrink-0" />
+                )}
+                <Folder size={15} className={`${scopeTheme.fill} ${scopeTheme.text} shrink-0`} />
+                <span className="font-bold truncate" title={scope.label}>
+                  {finderState.isFinderOpen && finderState.searchQuery ? (
+                    <FinderHtml
+                      text={`${scope.label}/`}
+                      searchQuery={finderState.searchQuery}
+                      caseSensitive={finderState.caseSensitive}
+                      wholeWord={finderState.wholeWord}
+                      useRegex={finderState.useRegex}
+                      currentMatchIndex={finderState.currentMatchIndex}
+                      matchStartIndex={-1}
+                    />
+                  ) : (
+                    `${scope.label}/`
+                  )}
+                </span>
+              </div>
+            </div>
+
+            {isScopeExpanded && (
+              <div className="space-y-1 mt-1 ml-2.5 pl-3 border-border border-l">
+                {viewMode === 'scope' &&
+                  displayScopeFiles.map((file) => {
+                    const matchIndex = finderState.matchingFileIndexMap.get(file.id) ?? -1;
+                    return (
+                      <div
+                        key={file.id}
+                        id={`tree-file-node-${file.id}`}
+                        className="group flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded transition-colors"
+                      >
+                        <Checkbox
+                          checked={!!visibleFiles[file.id]}
+                          onCheckedChange={() => toggleFileCheckbox(file.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-3.5 h-3.5 shrink-0"
+                        />
+                        <span
+                          className={`flex items-center gap-1.5 truncate cursor-pointer flex-1 min-w-0 ${
+                            visibleFiles[file.id] ? 'text-foreground font-medium' : 'text-muted-foreground line-through'
+                          }`}
+                          onClick={() => handleFileClick(file)}
+                          onDoubleClick={(e) => handleFileDoubleClick(file, e)}
+                        >
+                          {scope.key === 'config' ? (
+                            <Database size={13} className="text-amber-500 shrink-0" />
+                          ) : (
+                            <FileCode
+                              size={13}
+                              className={
+                                file.type === 'interface'
+                                  ? 'text-indigo-400 shrink-0'
+                                  : scope.key === 'frontend'
+                                  ? 'text-emerald-500 shrink-0'
+                                  : scope.key === 'backend'
+                                  ? 'text-blue-500 shrink-0'
+                                  : 'text-slate-400 shrink-0'
+                              }
+                            />
+                          )}
+                          <span className="truncate">
+                            {finderState.isFinderOpen && finderState.searchQuery ? (
+                              <FinderHtml
+                                text={file.name}
+                                searchQuery={finderState.searchQuery}
+                                caseSensitive={finderState.caseSensitive}
+                                wholeWord={finderState.wholeWord}
+                                useRegex={finderState.useRegex}
+                                currentMatchIndex={finderState.currentMatchIndex}
+                                matchStartIndex={matchIndex}
+                              />
+                            ) : (
+                              file.name
+                            )}
+                          </span>
+                        </span>
+                      </div>
+                    );
+                  })}
+
+                {viewMode === 'folder' && scope.folderTree && (
+                  <>
+                    {scope.rootFiles &&
+                      (isFilterActiveWithQuery
+                        ? scope.rootFiles.filter((f) => finderState.matchingFileIds.has(f.id))
+                        : scope.rootFiles
+                      ).map((file) => {
+                        const matchIndex = finderState.matchingFileIndexMap.get(file.id) ?? -1;
+                        return (
+                          <div
+                            key={file.id}
+                            id={`tree-file-node-${file.id}`}
+                            className="group flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded transition-colors"
+                          >
+                            <Checkbox
+                              checked={!!visibleFiles[file.id]}
+                              onCheckedChange={() => toggleFileCheckbox(file.id)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-3.5 h-3.5 shrink-0"
+                            />
+                            <span
+                              className={`flex items-center gap-1.5 truncate cursor-pointer flex-1 min-w-0 ${
+                                visibleFiles[file.id] ? 'text-foreground font-medium' : 'text-muted-foreground line-through'
+                              }`}
+                              onClick={() => handleFileClick(file)}
+                              onDoubleClick={(e) => handleFileDoubleClick(file, e)}
+                            >
+                              <FileCode size={13} className="text-slate-400 shrink-0" />
+                              <span className="truncate">
+                                {finderState.isFinderOpen && finderState.searchQuery ? (
+                                  <FinderHtml
+                                    text={file.name}
+                                    searchQuery={finderState.searchQuery}
+                                    caseSensitive={finderState.caseSensitive}
+                                    wholeWord={finderState.wholeWord}
+                                    useRegex={finderState.useRegex}
+                                    currentMatchIndex={finderState.currentMatchIndex}
+                                    matchStartIndex={matchIndex}
+                                  />
+                                ) : (
+                                  file.name
+                                )}
+                              </span>
+                            </span>
+                          </div>
+                        );
+                      })}
+
+                    {scope.folderTree.map((rootNode, rootIdx) => (
+                      <RecursiveFolderNode
+                        key={rootNode.id}
+                        node={rootNode}
+                        depth={1}
+                        expandedFolders={expandedFolders}
+                        visibleFiles={visibleFiles}
+                        toggleFolder={handleToggleFolder}
+                        toggleFileCheckbox={toggleFileCheckbox}
+                        setSelectedEntity={setSelectedEntity}
+                        onFocusNode={onFocusNode}
+                        theme={DYNAMIC_COLORS[rootIdx % DYNAMIC_COLORS.length]}
+                        toggleFileListCheckbox={toggleFileListCheckbox}
+                        handleFileDoubleClick={handleFileDoubleClick}
+                        handleFolderDoubleClick={handleFolderDoubleClick}
+                        handleFileClick={handleFileClick}
+                        handleFolderClick={handleToggleFolder}
+                        finderState={finderState}
+                      />
+                    ))}
+                  </>
+                )}
+
+                {viewMode !== 'scope' &&
+                  viewMode !== 'folder' &&
+                  scope.subFolders &&
+                  scope.subFolders.map((sub: SubFolderGroup, subIdx: number) => {
+                    const displaySubFiles = isFilterActiveWithQuery
+                      ? sub.files.filter((f) => finderState.matchingFileIds.has(f.id))
+                      : sub.files;
+
+                    if (isFilterActiveWithQuery && displaySubFiles.length === 0) {
+                      return null;
+                    }
+
+                    const isSubExpanded =
+                      isFilterActiveWithQuery && !finderState.collapseNotMatchingNodes
+                        ? true
+                        : (expandedFolders[sub.key] ?? true);
+
+                    const subTheme = DYNAMIC_COLORS[subIdx % DYNAMIC_COLORS.length];
+
+                    const isSubAllChecked = sub.files.length > 0 && sub.files.every((f) => visibleFiles[f.id]);
+                    const isSubSomeChecked = sub.files.some((f) => visibleFiles[f.id]);
+                    const isSubIndeterminate = isSubSomeChecked && !isSubAllChecked;
+
+                    return (
+                      <div key={sub.key} className="mb-2">
+                        <div className="group flex items-center gap-1.5 hover:bg-muted/50 px-1 py-1 rounded">
+                          <TriStateCheckbox
+                            checked={isSubAllChecked}
+                            indeterminate={isSubIndeterminate}
+                            onChange={() => toggleFileListCheckbox(sub.files)}
+                          />
+                          <div
+                            className="flex flex-1 items-center gap-1.5 min-w-0 cursor-pointer"
+                            onClick={() => handleToggleFolder(sub.key, sub.folderPath)}
+                            onDoubleClick={(e) => handleFolderDoubleClick(sub.folderPath, sub.files, e)}
+                          >
+                            {isSubExpanded ? (
+                              <ChevronDown size={14} className="shrink-0" />
+                            ) : (
+                              <ChevronRight size={14} className="shrink-0" />
+                            )}
+                            <Folder size={14} className={`${subTheme.fill} ${subTheme.text} shrink-0`} />
+                            <span className="font-semibold text-foreground/90 truncate" title={sub.label}>
+                              {finderState.isFinderOpen && finderState.searchQuery ? (
+                                <FinderHtml
+                                  text={`${sub.label}/`}
+                                  searchQuery={finderState.searchQuery}
+                                  caseSensitive={finderState.caseSensitive}
+                                  wholeWord={finderState.wholeWord}
+                                  useRegex={finderState.useRegex}
+                                  currentMatchIndex={finderState.currentMatchIndex}
+                                  matchStartIndex={-1}
+                                />
+                              ) : (
+                                `${sub.label}/`
+                              )}
+                            </span>
+                          </div>
+                        </div>
+
+                        {isSubExpanded && (
+                          <div className="space-y-1 mt-1 ml-2.5 pl-3 border-border border-l">
+                            {displaySubFiles.map((file) => {
+                              const isDuplicate = viewMode === 'tags' && duplicateFileIds.has(file.id);
+                              const matchIndex = finderState.matchingFileIndexMap.get(file.id) ?? -1;
+                              const textStyle = isDuplicate
+                                ? 'text-orange-500 font-bold'
+                                : visibleFiles[file.id]
+                                ? 'text-foreground font-medium'
+                                : 'text-muted-foreground line-through';
+
+                              return (
+                                <div
+                                  key={file.id}
+                                  id={`tree-file-node-${file.id}`}
+                                  className="group flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded transition-colors"
+                                >
+                                  <Checkbox
+                                    checked={!!visibleFiles[file.id]}
+                                    onCheckedChange={() => toggleFileCheckbox(file.id)}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="w-3.5 h-3.5 shrink-0"
+                                  />
+                                  <span
+                                    className={`flex items-center gap-1.5 truncate cursor-pointer flex-1 min-w-0 ${textStyle}`}
+                                    onClick={() => handleFileClick(file)}
+                                    onDoubleClick={(e) => handleFileDoubleClick(file, e)}
+                                  >
+                                    {file.type === 'config' ? (
+                                      <Database size={13} className="text-amber-500 shrink-0" />
+                                    ) : (
+                                      <FileCode
+                                        size={13}
+                                        className={
+                                          file.type === 'interface'
+                                            ? 'text-indigo-400 shrink-0'
+                                            : subTheme.iconColor || 'text-slate-400'
+                                        }
+                                      />
+                                    )}
+                                    <span className="truncate">
+                                      {finderState.isFinderOpen && finderState.searchQuery ? (
+                                        <FinderHtml
+                                          text={file.name}
+                                          searchQuery={finderState.searchQuery}
+                                          caseSensitive={finderState.caseSensitive}
+                                          wholeWord={finderState.wholeWord}
+                                          useRegex={finderState.useRegex}
+                                          currentMatchIndex={finderState.currentMatchIndex}
+                                          matchStartIndex={matchIndex}
+                                        />
+                                      ) : (
+                                        file.name
+                                      )}
+                                    </span>
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const bottomContent = (
+    <div className="flex justify-between items-center bg-muted/20 p-2 border-border border-t w-full h-9 shrink-0">
+      <div>
+        <h3 className="flex items-center gap-2 font-mono font-bold text-muted-foreground text-xs uppercase tracking-wider">
+          <span>Explorer</span>
+          <span id="badge-file-count" className="bg-muted px-2 py-0.5 rounded text-[10px] text-foreground">
+            {activeVisibleCount}/{codebase?.files?.length || 0}
+          </span>
+        </h3>
+      </div>
+    </div>
+  );
+
+  return (
+    <div
+      ref={panelRef}
+      tabIndex={-1}
+      className="flex flex-col outline-none w-full h-full min-h-0 overflow-hidden"
+    >
+      <TopMiddleBottomPanel
+        id="panel-codebase-explorer"
+        topId="panel-codebase-explorer-top"
+        middleId="tree-codebase-files"
+        bottomId="panel-codebase-explorer-bottom"
+        className="bg-card w-full h-full min-h-0 overflow-hidden"
+        top={topContent}
+        middle={middleContent}
+        bottom={bottomContent}
+      />
+      <ImportAstDialog
+        open={isImportOpen}
+        onOpenChange={setIsImportOpen}
+        onImport={(data) => {
+          if (onImportCodebase) onImportCodebase(data);
+        }}
+      />
+    </div>
+  );
 }
 EOF
 
-echo "✅ feat/fix: Configured Zoom In (+) and Zoom Out (-) actions to automatically recenter graph viewport on canvas!"
+echo "✅ feat/fix: Codebase Explorer file count badge now dynamically updates in real time when deselecting/reselecting elements in the treeview!"
 echo "💡 Next step: Run 'npm run build' to re-verify build cleanliness."

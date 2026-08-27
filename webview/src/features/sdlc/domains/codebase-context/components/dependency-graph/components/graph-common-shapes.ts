@@ -47,8 +47,9 @@ export const NODE_STYLE_REGISTRY: Record<string, NodeStyle> = {
 
 export interface UmlClassNodeData extends CodebaseFile {
   isDimmed?: boolean;
-  isOrigin?: boolean;
-  isDependency?: boolean;
+  isOrigin?: boolean;      // Mouse selected node -> Full Red (border + bg)
+  isTargetPath?: boolean;  // Path node -> Red border ONLY
+  isDependency?: boolean;  // Transitive impact node -> Orange
   isFocused?: boolean;
   impactedMembers?: string[];
   selectedMember?: string;

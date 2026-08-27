@@ -303,8 +303,6 @@ export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) 
         if (
           sourceNodeId &&
           targetNodeId &&
-          visibleFiles[sourceNodeId] &&
-          visibleFiles[targetNodeId] &&
           cy.getElementById(sourceNodeId).length > 0 &&
           cy.getElementById(targetNodeId).length > 0
         ) {
@@ -347,7 +345,12 @@ export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) 
           const sourceKeyMember = buildMemberKeyToken(sourceNodeId, sourceHandle);
           const targetKeyMember = buildMemberKeyToken(targetNodeId, targetHandle);
 
+          const isSourceChecked = visibleFiles[sourceNodeId] !== false;
+          const isTargetChecked = visibleFiles[targetNodeId] !== false;
+
           const isEdgeImpacted =
+            isSourceChecked &&
+            isTargetChecked &&
             (impactedSet.has(sourceNodeId) || impactedSet.has(sourceKeyMember)) &&
             (impactedSet.has(targetNodeId) || impactedSet.has(targetKeyMember));
 
