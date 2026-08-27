@@ -198,14 +198,20 @@ export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) 
     methodsVisible: boolean = true,
     selectedEntity: SelectedEntity | null = null,
     showSelectedOnly: boolean = false,
-    graphRendering: GraphRendering = 'uml'
+    graphRendering: GraphRendering = 'rounded',
+    maxNodesLimit: number = 50,
+    autoFit: boolean = false
   ) => {
     if (!cyRef.current) return;
     const cy = cyRef.current;
 
-    const effectiveFiles = (showSelectedOnly && selectedEntity)
+    let effectiveFiles = (showSelectedOnly && selectedEntity)
       ? searchFilteredFiles.filter(f => f.id === selectedEntity.nodeId || impactedSet.has(f.id))
       : searchFilteredFiles;
+
+    if (maxNodesLimit > 0 && effectiveFiles.length > maxNodesLimit) {
+      effectiveFiles = effectiveFiles.slice(0, maxNodesLimit);
+    }
 
     const structureKey = JSON.stringify({
       files: effectiveFiles.map(f => f.id),
@@ -214,6 +220,7 @@ export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) 
       attributesVisible,
       methodsVisible,
       graphRendering,
+      maxNodesLimit,
       deps: codebase.dependencies.map(d => d.id)
     });
 
@@ -319,9 +326,12 @@ export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) 
       }
 
       cy.fit(undefined, 30);
-      if (cy.zoom() > 1) {
+      if (cy.zoom() > 1 && !autoFit) {
         cy.zoom(1);
       }
+      cy.center();
+    } else if (autoFit) {
+      cy.fit(undefined, 30);
       cy.center();
     }
 

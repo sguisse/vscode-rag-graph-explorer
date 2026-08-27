@@ -1,11 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useCallback } from 'react';
 import { FolderNode, UmlClassNode, ConfigNode } from './components/GraphUmlShapes';
 import { UmlClassNodeData } from './components/graph-common-shapes';
 import { CondensedClassNode, CondensedConfigNode } from './components/GraphCondensedShapes';
 import { RoundClassNode, RoundConfigNode } from './components/GraphRoundedShapes';
 import { MinimizedClassNode, MinimizedConfigNode } from './components/GraphMinizedShapes';
 import { SelectedEntity, CodebaseFile } from '@/shared/services/graph-rag-explorer';
-import { isMemberKeyForFileToken, extractMemberIdFromKeyToken } from '@/services/view/graph-view.service';
+import { isMemberKeyForFileToken, extractMemberIdFromKeyToken, calculateTransitiveImpact } from '@/services/view/graph-view.service';
 import { useGraphPanel } from './hooks/use-graph-panel';
 import { GraphToolbar } from './GraphToolbar';
 import { useCodebaseDomainState } from '../../store/useCodebaseDomainState';
@@ -32,11 +32,44 @@ export interface GraphPanelProps {
   showSelectedOnly?: boolean;
 }
 
-export function GraphPanel(props: GraphPanelProps) {
+export function GraphPanel(props: GraphPanelProps = {}) {
   const graphRendering = useCodebaseDomainState((s) => s.graphRendering) || 'rounded';
   const codebase = useCodebaseDomainState((s) => s.codebase) || demoCodebase;
   const currentLayout = useCodebaseDomainState((s) => s.currentLayout);
   const setCurrentPath = useCodebaseDomainState((s) => s.setCurrentPath);
+  const callersDepth = useCodebaseDomainState((s) => s.callersDepth) ?? 2;
+  const calleesDepth = useCodebaseDomainState((s) => s.calleesDepth) ?? 2;
+  const maxNodesLimit = useCodebaseDomainState((s) => s.maxNodesLimit) ?? 50;
+  const storeSetSelectedEntity = useCodebaseDomainState((s) => s.setSelectedEntity);
+  const selectedContextFiles = useCodebaseDomainState((s) => s.selectedContextFiles);
+  const setPaths = useCodebaseDomainState((s) => s.setPaths);
+  const storeFocusedNodeId = useCodebaseDomainState((s) => s.focusedNodeId);
+
+  const storeShowGrid = useCodebaseDomainState((s) => s.showGrid);
+  const storeAttributesVisible = useCodebaseDomainState((s) => s.attributesVisible);
+  const storeMethodsVisible = useCodebaseDomainState((s) => s.methodsVisible);
+  const storeShowSelectedOnly = useCodebaseDomainState((s) => s.showSelectedOnly);
+  const autoFit = useCodebaseDomainState((s) => s.autoFit);
+  const setCyRef = useCodebaseDomainState((s) => s.setCyRef);
+
+  const onNodeSelect = useCallback((nodeId: string) => {
+    setCurrentPath(nodeId);
+    storeSetSelectedEntity({ type: 'node', nodeId });
+  }, [setCurrentPath, storeSetSelectedEntity]);
+
+  const onNodeCmdClick = useCallback((nodeId: string) => {
+    const file = codebase?.files?.find((f) => f.id === nodeId);
+    const targetPath = file?.path || nodeId;
+    if (!targetPath) return;
+
+    setPaths((prev: string) => {
+      const trimmedTarget = targetPath.trim();
+      if (!prev || !prev.trim()) return trimmedTarget;
+      const existingLines = prev.split('\n').map((l) => l.trim()).filter(Boolean);
+      if (existingLines.includes(trimmedTarget)) return prev;
+      return `${trimmedTarget}\n${prev.trim()}`;
+    });
+  }, [codebase?.files, setPaths]);
 
   const {
     containerRef: internalContainerRef,
@@ -45,40 +78,82 @@ export function GraphPanel(props: GraphPanelProps) {
     updateGraphTopology,
   } = useGraph(
     props.isDarkMode ?? false,
-    (nodeId) => setCurrentPath(nodeId)
+    onNodeSelect,
+    undefined,
+    onNodeCmdClick
   );
+
+  useEffect(() => {
+    if (cyRef) {
+      setCyRef(cyRef);
+    }
+  }, [cyRef, setCyRef]);
 
   const containerRef = props.containerRef || internalContainerRef;
   const graphState = props.graphState || internalGraphState;
   const folderPositions = props.folderPositions || FOLDER_POSITIONS;
-  const showGrid = props.showGrid ?? true;
+  const showGrid = props.showGrid ?? storeShowGrid;
   const isDarkMode = props.isDarkMode ?? false;
-  const selectedEntity = props.selectedEntity ?? null;
+  const storeSelectedEntity = useCodebaseDomainState((s) => s.selectedEntity);
+  const selectedEntity = props.selectedEntity ?? storeSelectedEntity;
   const searchFilteredFiles = props.searchFilteredFiles ?? (codebase.files as CodebaseFile[]);
-  const impactedSet = props.impactedSet ?? new Set<string>();
-  const handleSelectMember = props.handleSelectMember ?? (() => {});
-  const attributesVisible = props.attributesVisible ?? false;
-  const methodsVisible = props.methodsVisible ?? true;
-  const showSelectedOnly = props.showSelectedOnly ?? false;
+  const focusedNodeId = props.focusedNodeId ?? storeFocusedNodeId;
+
+  const checkedSearchFilteredFiles = useMemo(() => {
+    return searchFilteredFiles.filter((file) => selectedContextFiles[file.id] !== false);
+  }, [searchFilteredFiles, selectedContextFiles]);
+
+  // Recalculates impactedSet using toolbar callersDepth (upstream) and calleesDepth (downstream)
+  const computedImpactedSet = useMemo(() => {
+    if (!selectedEntity || !codebase?.dependencies) return new Set<string>();
+    return calculateTransitiveImpact(
+      selectedEntity,
+      codebase.dependencies,
+      callersDepth,
+      calleesDepth,
+      true,
+      true
+    );
+  }, [selectedEntity, codebase?.dependencies, callersDepth, calleesDepth]);
+
+  const impactedSet = props.impactedSet ?? computedImpactedSet;
+  const handleSelectMember = props.handleSelectMember ?? ((nodeId: string, memberId: string) => {
+    storeSetSelectedEntity({ type: 'member', nodeId, memberId });
+  });
+
+  const attributesVisible = props.attributesVisible ?? storeAttributesVisible;
+  const methodsVisible = props.methodsVisible ?? storeMethodsVisible;
+  const showSelectedOnly = props.showSelectedOnly ?? storeShowSelectedOnly;
 
   const { effectiveFolderPositions, effectiveSearchFilteredFiles } = useGraphPanel(
     folderPositions,
     graphState.nodePositions,
     showSelectedOnly,
     selectedEntity,
-    searchFilteredFiles,
+    checkedSearchFilteredFiles,
     impactedSet
   );
 
   useEffect(() => {
-    const visibleFilesMap: Record<string, boolean> = {};
-    searchFilteredFiles.forEach((f) => {
-      visibleFilesMap[f.id] = true;
-    });
+    if (autoFit) return;
+    const targetNodeId = focusedNodeId || selectedEntity?.nodeId;
+    if (targetNodeId && cyRef.current) {
+      const cy = cyRef.current;
+      const cyNode = cy.getElementById(targetNodeId);
+      if (cyNode && cyNode.length > 0) {
+        cy.animate({
+          center: { eles: cyNode },
+          zoom: Math.max(cy.zoom(), 0.75),
+          duration: 300,
+        });
+      }
+    }
+  }, [focusedNodeId, selectedEntity?.nodeId, cyRef, autoFit]);
 
+  useEffect(() => {
     updateGraphTopology(
-      searchFilteredFiles,
-      visibleFilesMap,
+      checkedSearchFilteredFiles,
+      selectedContextFiles,
       codebase,
       impactedSet,
       currentLayout,
@@ -87,10 +162,13 @@ export function GraphPanel(props: GraphPanelProps) {
       methodsVisible,
       selectedEntity,
       showSelectedOnly,
-      graphRendering
+      graphRendering,
+      maxNodesLimit,
+      autoFit
     );
   }, [
-    searchFilteredFiles,
+    checkedSearchFilteredFiles,
+    selectedContextFiles,
     codebase,
     impactedSet,
     currentLayout,
@@ -100,8 +178,21 @@ export function GraphPanel(props: GraphPanelProps) {
     selectedEntity,
     showSelectedOnly,
     graphRendering,
+    maxNodesLimit,
+    autoFit,
     updateGraphTopology,
   ]);
+
+  useEffect(() => {
+    if (autoFit && cyRef.current) {
+      setTimeout(() => {
+        if (cyRef.current && !cyRef.current.destroyed()) {
+          cyRef.current.fit(undefined, 30);
+          cyRef.current.center();
+        }
+      }, 50);
+    }
+  }, [autoFit, cyRef]);
 
   return (
     <div className="relative inset-0 outline-none w-full h-full overflow-hidden">
@@ -153,9 +244,11 @@ export function GraphPanel(props: GraphPanelProps) {
             }
           });
 
+          // Single-clicked node in graph is set as origin and styled in Red
           const isOrigin = selectedEntity?.nodeId === file.id;
+          // Nodes within callers/callees depth are marked as dependency and styled in Orange
           const isDependency = impactedSet.has(file.id) && !isOrigin;
-          const isFocused = props.focusedNodeId === file.id;
+          const isFocused = focusedNodeId === file.id;
 
           const nodeData: UmlClassNodeData = {
             ...file,
@@ -172,7 +265,7 @@ export function GraphPanel(props: GraphPanelProps) {
           return (
             <div
               key={file.id}
-              className={`absolute transition-all duration-75 ease-out pointer-events-none ${isFocused ? 'z-30' : 'z-20'}`}
+              className={`absolute transition-all duration-75 ease-out pointer-events-none ${isFocused || isOrigin ? 'z-30' : 'z-20'}`}
               style={{ left: bounds.x, top: bounds.y, width: bounds.w, height: bounds.h }}
             >
               {file.type === 'config' ? (

@@ -246,16 +246,15 @@ export function useCodebaseExplorerPanel(
     }
   }, [toggleFolder, expandedFolders, revealFolder]);
 
+  // Treeview file click focuses/highlights the node temporarily without changing graph selection
   const handleFileClick = useCallback((file: CodebaseFile) => {
     if (file.path) {
       revealAndCopyFile(file);
     }
     if (onFocusNode) {
       onFocusNode(file.id);
-    } else if (setSelectedEntity) {
-      setSelectedEntity({ type: 'node', nodeId: file.id });
     }
-  }, [onFocusNode, setSelectedEntity, revealAndCopyFile]);
+  }, [onFocusNode, revealAndCopyFile]);
 
   const handleFileDoubleClick = useCallback((file: CodebaseFile, e?: React.MouseEvent) => {
     e?.stopPropagation();

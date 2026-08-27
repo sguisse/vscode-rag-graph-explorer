@@ -1,14 +1,19 @@
+import React from 'react';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { vscodeSettings } from '@/App';
 import { useCodebaseDomainState } from '@/features/sdlc/domains/codebase-context/store/useCodebaseDomainState';
 import { GraphRendering } from '@/shared/services/graph-rag-explorer/domain/model/types/type-graph-rendering';
 
-export function useGraphPanelHeader(cyRef?: React.RefObject<any>) {
+export function useGraphPanelHeader(propCyRef?: React.RefObject<any>) {
   const currentLayout = useCodebaseDomainState((s) => s.currentLayout);
   const setCurrentLayout = useCodebaseDomainState((s) => s.setCurrentLayout);
 
   const currentRendering = useCodebaseDomainState((s) => s.graphRendering) || 'uml';
   const setGraphRendering = useCodebaseDomainState((s) => s.setGraphRendering);
+  const storeCyRef = useCodebaseDomainState((s) => s.cyRef);
+  const toggleAutoFit = useCodebaseDomainState((s) => s.toggleAutoFit);
+
+  const cyRef = propCyRef || storeCyRef;
 
   const setCurrentRendering = (val: GraphRendering) => {
     if (setGraphRendering) {
@@ -21,16 +26,31 @@ export function useGraphPanelHeader(cyRef?: React.RefObject<any>) {
   };
 
   const handleZoomIn = () => {
-    cyRef?.current?.zoom((cyRef.current?.zoom() || 1) * 1.2);
+    if (cyRef?.current) {
+      cyRef.current.zoom((cyRef.current.zoom() || 1) * 1.2);
+      cyRef.current.center();
+    }
   };
 
   const handleZoomOut = () => {
-    cyRef?.current?.zoom((cyRef.current?.zoom() || 1) / 1.2);
+    if (cyRef?.current) {
+      cyRef.current.zoom((cyRef.current.zoom() || 1) / 1.2);
+      cyRef.current.center();
+    }
   };
 
-  const handleFitView = () => {
-    cyRef?.current?.fit(undefined, 40);
-    cyRef?.current?.center();
+  const handleFitView = (e?: React.MouseEvent | MouseEvent) => {
+    const evt = e || (window.event as MouseEvent | undefined);
+    if (evt?.metaKey || evt?.ctrlKey) {
+      evt.preventDefault?.();
+      evt.stopPropagation?.();
+      toggleAutoFit();
+      return;
+    }
+    if (cyRef?.current) {
+      cyRef.current.fit(undefined, 40);
+      cyRef.current.center();
+    }
   };
 
   return {

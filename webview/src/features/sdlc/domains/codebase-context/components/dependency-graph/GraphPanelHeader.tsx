@@ -15,6 +15,7 @@ import {
   GraphRendering
 } from '@/shared/services/graph-rag-explorer/domain/model/types/type-graph-rendering';
 import { useGraphPanelHeader } from './hooks/use-graph-panel-header';
+import { useCodebaseDomainState } from '../../store/useCodebaseDomainState';
 
 export interface GraphPanelHeaderLeftProps {
   currentLayout?: string;
@@ -117,19 +118,38 @@ export interface GraphPanelHeaderRightProps {
 }
 
 export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
-  cyRef,
+  cyRef: propCyRef,
   isGraphMaximized = false,
   setIsGraphMaximized = () => {},
-  showGrid = true,
-  setShowGrid = () => {},
-  attributesVisible = false,
-  setAttributesVisible = () => {},
-  methodsVisible = true,
-  setMethodsVisible = () => {},
-  showSelectedOnly = false,
-  setShowSelectedOnly = () => {},
+  showGrid: propShowGrid,
+  setShowGrid: propSetShowGrid,
+  attributesVisible: propAttributesVisible,
+  setAttributesVisible: propSetAttributesVisible,
+  methodsVisible: propMethodsVisible,
+  setMethodsVisible: propSetMethodsVisible,
+  showSelectedOnly: propShowSelectedOnly,
+  setShowSelectedOnly: propSetShowSelectedOnly,
 }) => {
-  const { handleZoomIn, handleZoomOut, handleFitView } = useGraphPanelHeader(cyRef);
+  const storeShowGrid = useCodebaseDomainState((s) => s.showGrid);
+  const storeSetShowGrid = useCodebaseDomainState((s) => s.setShowGrid);
+  const storeAttributesVisible = useCodebaseDomainState((s) => s.attributesVisible);
+  const storeSetAttributesVisible = useCodebaseDomainState((s) => s.setAttributesVisible);
+  const storeMethodsVisible = useCodebaseDomainState((s) => s.methodsVisible);
+  const storeSetMethodsVisible = useCodebaseDomainState((s) => s.setMethodsVisible);
+  const storeShowSelectedOnly = useCodebaseDomainState((s) => s.showSelectedOnly);
+  const storeSetShowSelectedOnly = useCodebaseDomainState((s) => s.setShowSelectedOnly);
+  const autoFit = useCodebaseDomainState((s) => s.autoFit);
+
+  const showGrid = propShowGrid ?? storeShowGrid;
+  const setShowGrid = propSetShowGrid ?? storeSetShowGrid;
+  const attributesVisible = propAttributesVisible ?? storeAttributesVisible;
+  const setAttributesVisible = propSetAttributesVisible ?? storeSetAttributesVisible;
+  const methodsVisible = propMethodsVisible ?? storeMethodsVisible;
+  const setMethodsVisible = propSetMethodsVisible ?? storeSetMethodsVisible;
+  const showSelectedOnly = propShowSelectedOnly ?? storeShowSelectedOnly;
+  const setShowSelectedOnly = propSetShowSelectedOnly ?? storeSetShowSelectedOnly;
+
+  const { handleZoomIn, handleZoomOut, handleFitView } = useGraphPanelHeader(propCyRef);
 
   return (
     <div className="flex items-center gap-1">
@@ -185,15 +205,13 @@ export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
       >
         <Minus size={12} />
       </Button>
-      <Button
+      <ToggleButton
         id="btn-graph-fit-view"
-        variant="ghost"
-        size="icon"
-        className="w-5 h-5 text-muted-foreground"
-        onClick={handleFitView}
-      >
-        <Focus size={12} />
-      </Button>
+        isSelected={autoFit}
+        onToggle={(e?: any) => handleFitView(e || (window.event as any))}
+        tooltipText={autoFit ? "Auto-Fit Mode Active (Cmd+Click to disable)" : "Fit View (Cmd+Click to toggle Auto-Fit)"}
+        icon={<Focus size={12} className={autoFit ? 'animate-pulse' : ''} />}
+      />
     </div>
   );
 };

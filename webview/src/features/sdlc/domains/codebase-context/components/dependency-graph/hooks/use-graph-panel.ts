@@ -26,6 +26,8 @@ export function useGraphPanel(
     return folderMap;
   }, [folderPositions, nodePositions]);
 
+  // Callers and Callees depth only alter impactedSet (orange highlight).
+  // Node visibility is untouched unless 'showSelectedOnly' is explicitly toggled ON.
   const effectiveSearchFilteredFiles = useMemo(() => {
     if (showSelectedOnly && selectedEntity) {
       return searchFilteredFiles.filter(f => f.id === selectedEntity.nodeId || impactedSet.has(f.id));

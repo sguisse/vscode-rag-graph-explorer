@@ -19,6 +19,7 @@ export function useFilesContext(
   impactedSet: Set<string>
 ) {
   const setTargetFilePaths = useCodebaseDomainState((s: CodebaseDomainState) => s.setTargetFilePaths);
+  const setSelectedEntity = useCodebaseDomainState((s: CodebaseDomainState) => s.setSelectedEntity);
 
   const selectedFiles = useCodebaseDomainState((s: CodebaseDomainState) => s.selectedContextFiles);
   const setSelectedFiles = useCodebaseDomainState((s: CodebaseDomainState) => s.setSelectedContextFiles);
@@ -31,7 +32,8 @@ export function useFilesContext(
     if (file.path) {
       revealAndCopyFile(file);
     }
-  }, [revealAndCopyFile]);
+    setSelectedEntity({ type: 'node', nodeId: file.id });
+  }, [revealAndCopyFile, setSelectedEntity]);
 
   const handleFileDoubleClick = useCallback((file: CodebaseFile, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -176,28 +178,29 @@ export function useFilesContext(
   };
 
   useEffect(() => {
-    const initialSelected: Record<string, boolean> = {};
     const initialExpanded: Record<string, boolean> = {};
-
     depthGroups.forEach((group) => {
       initialExpanded[group.key] = true;
-      group.files.forEach((file) => {
-        initialSelected[file.id] = true;
-      });
     });
 
-    setSelectedFiles((prev: Record<string, boolean>) => {
-      const updated = { ...initialSelected };
-      Object.keys(prev).forEach((id) => {
-        if (id in updated) {
-          updated[id] = prev[id];
+    setExpandedGroups((prev: Record<string, boolean>) => {
+      const next = { ...initialExpanded, ...prev };
+      const prevKeys = Object.keys(prev);
+      const nextKeys = Object.keys(next);
+      let hasChanged = prevKeys.length !== nextKeys.length;
+
+      if (!hasChanged) {
+        for (const key of nextKeys) {
+          if (prev[key] !== next[key]) {
+            hasChanged = true;
+            break;
+          }
         }
-      });
-      return updated;
-    });
+      }
 
-    setExpandedGroups((prev: Record<string, boolean>) => ({ ...initialExpanded, ...prev }));
-  }, [depthGroups, setSelectedFiles, setExpandedGroups]);
+      return hasChanged ? next : prev;
+    });
+  }, [depthGroups, setExpandedGroups]);
 
   const toggleGroupCheckbox = (groupKey: string, groupFiles: CodebaseFile[]) => {
     const isAllChecked = groupFiles.length > 0 && groupFiles.every((f) => selectedFiles[f.id]);

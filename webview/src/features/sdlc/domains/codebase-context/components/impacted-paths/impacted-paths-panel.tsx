@@ -24,7 +24,7 @@ export function ImpactedPathsPanel({
   });
 
   return (
-    <div className="flex flex-col bg-background p-0 w-full h-full">
+    <div className="flex flex-col bg-background p-0 w-full h-full min-h-0 overflow-hidden">
       <Textarea
         value={paths}
         onChange={handleTextareaChange}

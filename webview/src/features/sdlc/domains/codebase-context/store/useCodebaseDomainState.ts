@@ -1,11 +1,55 @@
 import { create } from 'zustand';
 import { CodebaseData } from '@/shared/services/graph-rag-explorer';
 import { GraphRendering } from '@/shared/services/graph-rag-explorer/domain/model/types/type-graph-rendering';
+import { ExportFormat } from '@/shared/services/codebase-exporter/domain/model/types';
 import { demoCodebase } from '../components/dependency-graph/data/GraphData';
+import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
+import { logInfo, logError } from '@/services/view/log-view.service.wrapper';
 
-// -----------------------------------------------------------------------------
-// 1. Impacted Paths Panel State
-// -----------------------------------------------------------------------------
+export interface AnonymizationRule {
+  id: string;
+  name: string;
+  pattern: string;
+  replacement: string;
+  inversePattern: string;
+  enabled: boolean;
+}
+
+export const DEFAULT_ANONYMIZATION_RULES: AnonymizationRule[] = [
+  {
+    id: 'rule-secrets',
+    name: 'Secret & Password Tokens',
+    pattern: '(?i)(password|secret|key|token)\\s*[:=]\\s*[\'"][^\'"]+[\'"]',
+    replacement: '$1: "ANONYMIZED_SECRET"',
+    inversePattern: 'ANONYMIZED_SECRET',
+    enabled: true,
+  },
+  {
+    id: 'rule-db-uri',
+    name: 'Database JDBC/Connection URIs',
+    pattern: 'jdbc:[a-z0-9]+://[^:\\s]+:[0-9]+/[a-zA-Z0-9_]+',
+    replacement: 'jdbc:provider://anonymized-host:5432/anon_db',
+    inversePattern: 'jdbc:provider://anonymized-host:5432/anon_db',
+    enabled: true,
+  },
+  {
+    id: 'rule-ip',
+    name: 'IPv4 Addresses',
+    pattern: '\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b',
+    replacement: '127.0.0.1',
+    inversePattern: '127.0.0.1',
+    enabled: true,
+  },
+  {
+    id: 'rule-db-user',
+    name: 'Database Usernames',
+    pattern: 'db_admin_prod',
+    replacement: 'db_user_anon',
+    inversePattern: 'db_user_anon',
+    enabled: true,
+  },
+];
+
 export interface ImpactedPathsPanelState {
   currentPath: string;
   setCurrentPath: (path: string) => void;
@@ -21,18 +65,12 @@ export interface ImpactedPathsPanelState {
   setCodebase: (data: CodebaseData) => void;
 }
 
-// -----------------------------------------------------------------------------
-// 2. Codebase Explorer Tree Panel State
-// -----------------------------------------------------------------------------
 export interface CodebaseTreePanelState {
   expandedFolders: Record<string, boolean>;
   setExpandedFolders: (folders: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void;
   toggleFolder: (folderKey: string) => void;
 }
 
-// -----------------------------------------------------------------------------
-// 3. Dependency Graph Panel State
-// -----------------------------------------------------------------------------
 export interface DependencyGraphPanelState {
   graphRendering: GraphRendering;
   setGraphRendering: (mode: GraphRendering) => void;
@@ -46,12 +84,29 @@ export interface DependencyGraphPanelState {
   setCalleesDepth: (depth: number) => void;
   displayLevel: string;
   setDisplayLevel: (level: string) => void;
+  showGrid: boolean;
+  setShowGrid: (show: boolean) => void;
+  attributesVisible: boolean;
+  setAttributesVisible: (val: boolean) => void;
+  methodsVisible: boolean;
+  setMethodsVisible: (val: boolean) => void;
+  showSelectedOnly: boolean;
+  setShowSelectedOnly: (val: boolean) => void;
+  autoFit: boolean;
+  setAutoFit: (autoFit: boolean | ((prev: boolean) => boolean)) => void;
+  toggleAutoFit: () => void;
+  cyRef: React.RefObject<any> | null;
+  setCyRef: (ref: React.RefObject<any> | null) => void;
 }
 
-// -----------------------------------------------------------------------------
-// 4. Files Selection & Inspector Panel State
-// -----------------------------------------------------------------------------
+export interface FocusState {
+  focusedNodeId: string | null;
+  setFocusedNodeId: (id: string | null) => void;
+}
+
 export interface FilesContextPanelState {
+  rightPanelTab: 'inspect' | 'files_context' | 'transformer';
+  setRightPanelTab: (tab: 'inspect' | 'files_context' | 'transformer') => void;
   selectedEntity: any | null;
   setSelectedEntity: (entity: any | null) => void;
   targetFilePaths: string[];
@@ -65,18 +120,33 @@ export interface FilesContextPanelState {
   setExpandedContextGroups: (groups: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void;
 }
 
-// -----------------------------------------------------------------------------
-// Composite Domain Store Interface
-// -----------------------------------------------------------------------------
+export interface FilesCtxExportState {
+  exportFormat: ExportFormat;
+  maxChunk: string;
+  splitChunkByFileExtension: boolean;
+  copyAsFilesToClipboard: boolean;
+  setExportFormat: (format: ExportFormat) => void;
+  setMaxChunk: (chunk: string) => void;
+  setSplitChunkByFileExtension: (val: boolean) => void;
+  setCopyAsFilesToClipboard: (val: boolean) => void;
+}
+
+export interface ContextTransformerState {
+  transformerRules: AnonymizationRule[];
+  setTransformerRules: (rules: AnonymizationRule[] | ((prev: AnonymizationRule[]) => AnonymizationRule[])) => void;
+}
+
 export interface CodebaseDomainState
   extends ImpactedPathsPanelState,
     CodebaseTreePanelState,
     DependencyGraphPanelState,
-    FilesContextPanelState {}
+    FocusState,
+    FilesContextPanelState,
+    FilesCtxExportState,
+    ContextTransformerState {}
 
-// -----------------------------------------------------------------------------
-// Store Implementation
-// -----------------------------------------------------------------------------
+let focusedNodeTimer: ReturnType<typeof setTimeout> | null = null;
+
 export const useCodebaseDomainState = create<CodebaseDomainState>((set) => ({
   // --- Impacted Paths Slice ---
   currentPath: '',
@@ -142,12 +212,52 @@ export const useCodebaseDomainState = create<CodebaseDomainState>((set) => ({
   setCallersDepth: (depth) => set({ callersDepth: depth }),
   calleesDepth: 2,
   setCalleesDepth: (depth) => set({ calleesDepth: depth }),
-  displayLevel: 'detailed',
+  displayLevel: 'all',
   setDisplayLevel: (level) => set({ displayLevel: level }),
 
+  showGrid: true,
+  setShowGrid: (showGrid) => set({ showGrid }),
+  attributesVisible: false,
+  setAttributesVisible: (attributesVisible) => set({ attributesVisible }),
+  methodsVisible: true,
+  setMethodsVisible: (methodsVisible) => set({ methodsVisible }),
+  showSelectedOnly: false,
+  setShowSelectedOnly: (showSelectedOnly) => set({ showSelectedOnly }),
+
+  autoFit: true,
+  setAutoFit: (autoFit) => set((s) => ({ autoFit: typeof autoFit === 'function' ? autoFit(s.autoFit) : autoFit })),
+  toggleAutoFit: () => set((s) => ({ autoFit: !s.autoFit })),
+
+  cyRef: null,
+  setCyRef: (cyRef) => set({ cyRef }),
+
+  // --- Focus Node Slice ---
+  focusedNodeId: null,
+  setFocusedNodeId: (id) => {
+    if (focusedNodeTimer) {
+      clearTimeout(focusedNodeTimer);
+      focusedNodeTimer = null;
+    }
+    set({ focusedNodeId: id });
+    if (id) {
+      focusedNodeTimer = setTimeout(() => {
+        set({ focusedNodeId: null });
+        focusedNodeTimer = null;
+      }, 2000);
+    }
+  },
+
   // --- Files Context & Inspector Slice ---
+  rightPanelTab: 'files_context',
+  setRightPanelTab: (rightPanelTab) => set({ rightPanelTab }),
+
   selectedEntity: null,
-  setSelectedEntity: (entity) => set({ selectedEntity: entity }),
+  setSelectedEntity: (entity) =>
+    set((s) => ({
+      selectedEntity: entity,
+      rightPanelTab: entity ? 'inspect' : s.rightPanelTab,
+    })),
+
   targetFilePaths: [],
   setTargetFilePaths: (paths) => set({ targetFilePaths: paths }),
 
@@ -195,6 +305,94 @@ export const useCodebaseDomainState = create<CodebaseDomainState>((set) => ({
   expandedContextGroups: {},
   setExpandedContextGroups: (groups) =>
     set((s) => ({ expandedContextGroups: typeof groups === 'function' ? groups(s.expandedContextGroups) : groups })),
+
+  // --- Files Export Slice ---
+  exportFormat: 'yaml',
+  maxChunk: '0',
+  splitChunkByFileExtension: false,
+  copyAsFilesToClipboard: false,
+  setExportFormat: (exportFormat) => set({ exportFormat }),
+  setMaxChunk: (maxChunk) => set({ maxChunk }),
+  setSplitChunkByFileExtension: (splitChunkByFileExtension) => set({ splitChunkByFileExtension }),
+  setCopyAsFilesToClipboard: (copyAsFilesToClipboard) => set({ copyAsFilesToClipboard }),
+
+  // --- Context Transformer Slice ---
+  transformerRules: DEFAULT_ANONYMIZATION_RULES,
+  setTransformerRules: (transformerRules) =>
+    set((s) => ({
+      transformerRules:
+        typeof transformerRules === 'function'
+          ? transformerRules(s.transformerRules)
+          : transformerRules,
+    })),
 }));
 
 export const useExplorerStore = useCodebaseDomainState;
+
+// Persistent User Preferences Synchronization
+const SETTINGS_PREF_KEY = 'tokenRazor.graphRagExplorer.userPreferences';
+const PERSISTED_KEYS: (keyof CodebaseDomainState)[] = [
+  'upstreamDepth',
+  'downstreamDepth',
+  'callersDepth',
+  'calleesDepth',
+  'graphRendering',
+  'currentLayout',
+  'showGrid',
+  'attributesVisible',
+  'methodsVisible',
+  'showSelectedOnly',
+  'autoFit',
+  'rightPanelTab',
+  'exportFormat',
+  'maxChunk',
+  'splitChunkByFileExtension',
+  'copyAsFilesToClipboard',
+  'transformerRules',
+];
+
+let isHydrating = false;
+let saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let lastPersistedHash = '';
+
+const hydrateStore = async () => {
+  try {
+    isHydrating = true;
+    const userPrefs: any = await vsCodeApiService.readUserPreferences(SETTINGS_PREF_KEY);
+    if (userPrefs && typeof userPrefs === 'object' && Object.keys(userPrefs).length > 0) {
+      useCodebaseDomainState.setState(userPrefs);
+      logInfo('CodebaseDomainState store hydrated from user preferences.');
+    }
+  } catch (error: any) {
+    logError('Failed to hydrate CodebaseDomainState store:', error);
+  } finally {
+    isHydrating = false;
+  }
+};
+
+hydrateStore();
+
+useCodebaseDomainState.subscribe((state) => {
+  if (isHydrating) return;
+  if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
+
+  saveDebounceTimer = setTimeout(() => {
+    queueMicrotask(() => {
+      const payload: Record<string, any> = {};
+      for (const key of PERSISTED_KEYS) {
+        const val = state[key];
+        if (val !== undefined && typeof val !== 'function') {
+          payload[key] = val;
+        }
+      }
+      const currentHash = JSON.stringify(payload);
+      if (currentHash === lastPersistedHash) return;
+      lastPersistedHash = currentHash;
+
+      vsCodeApiService
+        .saveUserPreferences(SETTINGS_PREF_KEY, payload)
+        .then(() => logInfo('Asynchronously saved CodebaseDomainState user preferences.'))
+        .catch((err) => logError('Failed to save CodebaseDomainState user preferences:', err));
+    });
+  }, 600);
+});

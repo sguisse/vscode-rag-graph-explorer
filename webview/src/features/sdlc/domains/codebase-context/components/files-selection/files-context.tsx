@@ -5,8 +5,10 @@ import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
 import { CodebaseData, SelectedEntity } from '@/shared/services/graph-rag-explorer';
 import { useCodebaseDomainState } from '../../store/useCodebaseDomainState';
 import { useFilesContext } from './hooks/use-files-context';
+import { FilesCtxExportPanel } from '../files-ctx-export/files-ctx-export-panel';
 
-const FilesCtxExportPanel = (props: any) => null;
+const DEFAULT_IMPACTED_SET = new Set<string>();
+const DEFAULT_HANDLE_COPY = () => {};
 
 export interface FilesContextPanelProps {
   initialCodebase?: CodebaseData;
@@ -59,8 +61,8 @@ export function FilesContextPanel(props: FilesContextPanelProps = {}) {
   const setEnableDownstream = props.setEnableDownstream ?? setInternalDownstream;
   const enableUpstream = props.enableUpstream ?? internalUpstream;
   const setEnableUpstream = props.setEnableUpstream ?? setInternalUpstream;
-  const impactedSet = props.impactedSet ?? new Set<string>();
-  const handleCopy = props.handleCopy ?? (() => {});
+  const impactedSet = props.impactedSet ?? DEFAULT_IMPACTED_SET;
+  const handleCopy = props.handleCopy ?? DEFAULT_HANDLE_COPY;
 
   const {
     downstreamCount,

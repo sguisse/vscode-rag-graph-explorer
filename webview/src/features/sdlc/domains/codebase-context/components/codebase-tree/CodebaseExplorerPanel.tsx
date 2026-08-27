@@ -34,6 +34,7 @@ export function CodebaseExplorerPanel(props: CodebaseExplorerPanelProps = {}) {
   const storeToggleFileCheckbox = useCodebaseDomainState((s) => s.toggleFileCheckbox);
   const storeSetSelectedEntity = useCodebaseDomainState((s) => s.setSelectedEntity);
   const storeSetCodebase = useCodebaseDomainState((s) => s.setCodebase);
+  const storeSetFocusedNodeId = useCodebaseDomainState((s) => s.setFocusedNodeId);
 
   const codebase = props.codebase ?? storeCodebase;
   const searchFilteredFiles = props.searchFilteredFiles ?? (codebase?.files || []);
@@ -43,7 +44,7 @@ export function CodebaseExplorerPanel(props: CodebaseExplorerPanelProps = {}) {
   const toggleFileCheckbox = props.toggleFileCheckbox ?? storeToggleFileCheckbox;
   const setSelectedEntity = props.setSelectedEntity ?? storeSetSelectedEntity;
   const onImportCodebase = props.onImportCodebase ?? storeSetCodebase;
-  const onFocusNode = props.onFocusNode;
+  const onFocusNode = props.onFocusNode ?? storeSetFocusedNodeId;
 
   const {
     isImportOpen,
