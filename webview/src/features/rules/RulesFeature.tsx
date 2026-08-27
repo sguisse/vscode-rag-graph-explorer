@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useLayoutStore } from '@/store/useLayoutStore';
-import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
+import { ContainerPanelHeader } from '@/_layout/ContainerPanelHeader';
 
 export function RulesFeature() {
   const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);

@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { useAppContextStore } from '@/store/useAppContextStore';
-import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
+import { ContainerPanelHeader } from '@/_layout/ContainerPanelHeader';
 import { ImpactedPathsPanel } from '../components/impacted-paths/impacted-paths-panel';
 import {
   ImpactedPathsPanelHeaderLeft,

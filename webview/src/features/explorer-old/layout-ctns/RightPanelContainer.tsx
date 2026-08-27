@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { useAppContextStore } from '@/store/useAppContextStore';
-import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
+import { ContainerPanelHeader } from '@/_layout/ContainerPanelHeader';
 import { TabsFilesContextContainer } from '../wkp-rgt-tabs-files-context/tabs-files-context-container';
 import { useTransitiveImpact } from '../hooks/use-transitive-impact';
 import { useExplorerStore } from '../store/useExplorerStore';

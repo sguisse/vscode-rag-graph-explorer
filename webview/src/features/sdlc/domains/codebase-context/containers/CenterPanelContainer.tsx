@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLayoutStore } from '@/store/useLayoutStore';
-import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
+import { ContainerPanelHeader } from '@/_layout/ContainerPanelHeader';
 import { GraphPanel } from '../components/dependency-graph/GraphPanel';
 import {
   GraphPanelHeaderLeft,

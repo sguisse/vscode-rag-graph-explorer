@@ -1,5 +1,5 @@
 import React from 'react';
-import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
+import { ContainerPanelHeader } from '@/_layout/ContainerPanelHeader';
 import { FilesContextPanel } from '../components/files-selection/files-context';
 
 export function RightPanelContainer() {

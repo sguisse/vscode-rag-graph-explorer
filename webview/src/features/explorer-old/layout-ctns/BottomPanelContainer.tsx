@@ -1,5 +1,5 @@
 import React from 'react';
-import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
+import { ContainerPanelHeader } from '@/_layout/ContainerPanelHeader';
 import { WkpBottomPanel } from '../wkp-btm-infos/wkp-bottom-panel';
 
 export function BottomPanelContainer() {

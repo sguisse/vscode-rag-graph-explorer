@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback } from 'react';
 import { useLayoutStore } from '@/store/useLayoutStore';
 import { useAppContextStore } from '@/store/useAppContextStore';
-import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
+import { ContainerPanelHeader } from '@/_layout/ContainerPanelHeader';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
 import { logInfo } from '@/services/view/log-view.service.wrapper';

@@ -21,7 +21,7 @@ import { useLayoutStore } from '@/store/useLayoutStore';
 import logoLight from '@assets/logo-light.png';
 import logoDark from '@assets/logo-dark.png';
 import { DefaultContainersSize } from '@/constants/layout-constants';
-import { ApplicationTitle } from '../ApplicationTitle';
+import { ApplicationTitle } from '@/components/app/ApplicationTitle';
 import { WorkflowPopup } from '@/components/app/workflow/workflow-popup';
 import { useExplorerWorkflow } from '@/features/explorer-old/workflow/hooks/use-explorer-workflow';
 import { Button } from '@/components/ui/button';

@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { useAppContextStore } from '@/store/useAppContextStore';
-import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
+import { ContainerPanelHeader } from '@/_layout/ContainerPanelHeader';
 import { TabsPromptContainer } from '../sdb-rgt-prompt/tabs-prompt-container';
 import { useExplorerStore } from '../store/useExplorerStore';
 

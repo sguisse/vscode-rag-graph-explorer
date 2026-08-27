@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLayoutStore } from '@/store/useLayoutStore';
-import { ResizableContainer } from '../container/resizable-container';
-import { useResizable } from '../container/hooks/use-resizable';
+import { ResizableContainer } from '@/components/app/container/resizable-container';
+import { useResizable } from '@/components/app/container/hooks/use-resizable';
 import { WorkspaceContainers, LayoutContainer } from './types';
 import { DefaultContainersSize } from '@/constants/layout-constants';
 

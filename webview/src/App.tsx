@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { useLayoutStore } from '@/store/useLayoutStore';
-import { AppLayout } from '@/components/app/layout/AppLayout';
+import { AppLayout } from '@/_layout/AppLayout';
 import { HomeFeature } from '@/features/home/HomeFeature';
 import { InstallFeature } from '@/features/install/InstallFeature';
 import { LayoutDemoFeature } from '@/features/layout-demo/LayoutDemoFeature';

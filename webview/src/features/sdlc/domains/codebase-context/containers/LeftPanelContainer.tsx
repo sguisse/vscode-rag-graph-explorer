@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { useAppContextStore } from '@/store/useAppContextStore';
-import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
+import { ContainerPanelHeader } from '@/_layout/ContainerPanelHeader';
 import { CodebaseExplorerPanel } from '../components/codebase-tree/CodebaseExplorerPanel';
 import { useCodebaseDomainState } from '../store/useCodebaseDomainState';
 import { CodebaseData } from '@/shared/services/graph-rag-explorer';

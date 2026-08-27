@@ -1,7 +1,7 @@
 // webview/src/features/explorer-old/layout-ctns/TopPanelContainer.tsx
 import React, { useCallback } from 'react';
 import { useAppContextStore } from '@/store/useAppContextStore';
-import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
+import { ContainerPanelHeader } from '@/_layout/ContainerPanelHeader';
 import { ImpactedPathsPanel } from '../wkp-top-impacted-paths/impacted-paths-panel';
 import {
   ImpactedPathsPanelHeaderLeft,

@@ -1,6 +1,6 @@
 import React, { useCallback, useRef } from 'react';
 import { useAppContextStore } from '@/store/useAppContextStore';
-import { ContainerPanelHeader } from '@/components/app/layout/ContainerPanelHeader';
+import { ContainerPanelHeader } from '@/_layout/ContainerPanelHeader';
 import { CodebaseExplorerPanel } from '../wkp-lft-codebase-tree/CodebaseExplorerPanel';
 import { useCodebaseFilter } from '../hooks/use-codebase-filter';
 import { useExplorerStore } from '../store/useExplorerStore';
