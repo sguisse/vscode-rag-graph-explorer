@@ -109,9 +109,9 @@ export function FilesCtxExportPanel({
 
       <Button
         onClick={handleCopyFilesCtx}
-        className="flex justify-center items-center gap-1.5 bg-blue-500 hover:bg-blue-600 shadow-sm rounded-lg w-36 h-8 font-bold text-white text-xs whitespace-nowrap cursor-pointer shrink-0"
+        className="flex justify-center items-center gap-1.5 bg-blue-500 hover:bg-blue-600 shadow-sm rounded-lg w-20 h-17 font-bold text-white text-xs whitespace-nowrap cursor-pointer shrink-0"
       >
-        <FileText size={14} /> Copy files ctx
+        <FileText size={14} /> Copy <br/> files <br/> context
       </Button>
     </div>
   );
