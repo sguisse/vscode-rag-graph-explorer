@@ -1,15 +1,17 @@
 import { create } from 'zustand';
 
 export type SdlcStep =
-    | 'CODEBASE_CONTEXT'
-    | 'INSTRUCTIONS'
-    | 'LLM_CHAT'
-    | 'RESULTS_MANAGER'
-    | 'CONFIGURATION';
+  | 'CODEBASE_CONTEXT'
+  | 'VIBE_CODING'
+  | 'BMAD_METHOD'
+  | 'SPECKIT'
+  | 'LLM_CHAT'
+  | 'RESULTS_MANAGER'
+  | 'CONFIGURATION';
 
 export interface SdlcWorkflowMachineState {
-    currentStep: SdlcStep;
-    transitionTo: (step: SdlcStep) => void;
+  currentStep: SdlcStep;
+  transitionTo: (step: SdlcStep) => void;
 }
 
 /**
@@ -17,6 +19,6 @@ export interface SdlcWorkflowMachineState {
  * SdlcLayoutOrchestrator listens to this to map domains to UI containers.
  */
 export const useSdlcWorkflowMachine = create<SdlcWorkflowMachineState>((set) => ({
-    currentStep: 'CODEBASE_CONTEXT',
-    transitionTo: (step) => set({ currentStep: step })
+  currentStep: 'CODEBASE_CONTEXT',
+  transitionTo: (step) => set({ currentStep: step })
 }));

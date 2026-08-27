@@ -13,8 +13,10 @@ import {
   VectorSquare,
   FolderDown,
   Bot,
-  ListChecks,
   LogOut,
+  Sparkles,
+  FileCheck,
+  MessageSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -80,8 +82,10 @@ export const SDLC_WORKFLOW_STEPS: NavItem[] = [
     badge: 'Status',
     children: [
       { id: 'CODEBASE_CONTEXT', icon: FolderTree, label: '1. Codebase Context' },
-      { id: 'INSTRUCTIONS', icon: ListChecks, label: '2. Instructions' },
-      { id: 'LLM_CHAT', icon: Bot, label: '3. LLM Chat' },
+      { id: 'VIBE_CODING', icon: Sparkles, label: '2. Vibe Coding' },
+      { id: 'BMAD_METHOD', icon: Bot, label: '3. BMad Method' },
+      { id: 'SPECKIT', icon: FileCheck, label: '4. SpecKit' },
+      { id: 'LLM_CHAT', icon: MessageSquare, label: '5. LLM Chat' },
     ],
   },
   { id: 'feature-help', icon: HelpCircle, label: 'Help & Shortcuts', bottom: true },
@@ -198,7 +202,7 @@ export function SidebarLeft(props: SidebarLeftProps) {
   const effectiveWidth = sidebarLeftMode === 'minimal' ? `${DefaultContainersSize.sidebarLeftMinimizedWidth}px` : '100%';
 
   const isSdlcStep = (id: string) =>
-    ['CODEBASE_CONTEXT', 'INSTRUCTIONS', 'LLM_CHAT', 'RESULTS_MANAGER', 'CONFIGURATION'].includes(id);
+    ['CODEBASE_CONTEXT', 'VIBE_CODING', 'BMAD_METHOD', 'SPECKIT', 'LLM_CHAT', 'RESULTS_MANAGER', 'CONFIGURATION'].includes(id);
 
   const isItemActive = (itemId: string): boolean => {
     if (itemId === 'exit-sdlc') return false;

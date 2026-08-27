@@ -4,7 +4,7 @@ import { useSdlcWorkflowMachine } from './core/workflow/useSdlcWorkflowMachine';
 
 import { SdlcSidebarMenu } from './ui-common/components/SdlcSidebarMenu';
 import { CodebaseContextFeature } from './domains/codebase-context';
-import { InstructionsFeature } from './domains/instructions';
+import { VibeCodingFeature, BMadMethodFeature, SpecKitFeature } from './domains/instructions';
 import { LlmFeature } from './domains/llm-chat';
 import { ResultsManagerFeature } from './domains/results-manager';
 import { ConfigurationFeature } from './domains/configuration';
@@ -45,8 +45,12 @@ export function SdlcLayoutOrchestrator() {
       footer: { visible: true, isResizable: false, isHiddable: false },
     });
 
-    if (currentStep === 'INSTRUCTIONS') {
-      setLayoutContainers(defaultSingleCenterLayout(<InstructionsFeature />));
+    if (currentStep === 'VIBE_CODING') {
+      setLayoutContainers(defaultSingleCenterLayout(<VibeCodingFeature />));
+    } else if (currentStep === 'BMAD_METHOD') {
+      setLayoutContainers(defaultSingleCenterLayout(<BMadMethodFeature />));
+    } else if (currentStep === 'SPECKIT') {
+      setLayoutContainers(defaultSingleCenterLayout(<SpecKitFeature />));
     } else if (currentStep === 'LLM_CHAT') {
       setLayoutContainers(defaultSingleCenterLayout(<LlmFeature />));
     } else if (currentStep === 'RESULTS_MANAGER') {

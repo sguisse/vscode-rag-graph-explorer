@@ -67,11 +67,11 @@
    "svg.preview.background": "editor",
 
    // Disable automatic background fetching
-   "git.autofetch": false,
+   //"git.autofetch": false,
    // Stop VS Code from counting untracked files (MASSIVE speedup for large repos)
    "git.untrackedChanges": "hidden",
    // Limit status checks to the active repository root
-   "git.repositoryScanMaxDepth": 1,
+   //"git.repositoryScanMaxDepth": 1,
    // Use faster, native diff algorithm
    "diffEditor.renderSideBySide": true,
    // Ignore whitespace changes by default in diffs
