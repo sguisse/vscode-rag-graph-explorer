@@ -14,5 +14,4 @@ export const FOLDER_THEME_REGISTRY_CONFIG: Record<string, FolderStyleToken> = {
   default: { fill: 'fill-slate-500/20', text: 'text-slate-500', iconColor: 'text-slate-500' }
 };
 
-export const targetPathNodesRedBorderSize = '5px';
-export const TARGET_PATH_NODES_RED_BORDER_CLASS = 'border-[5px]';
+export const TARGET_PATH_NODES_RED_BORDER_CLASS = 'border-[10px]';
