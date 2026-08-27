@@ -1,129 +1,353 @@
 #!/usr/bin/env bash
 set -e
 
-echo "🚀 Fixing 'Copy files ctx' button clipboard export and notification handling..."
+echo "🚀 Updating bottomContent selectedCount to reflect checked items in Adjust Impact Plan block..."
 
 # Ensure target directories exist
+mkdir -p webview/src/features/sdlc/domains/codebase-context/components/files-selection/hooks
 mkdir -p webview/src/features/sdlc/domains/codebase-context/components/files-selection
-mkdir -p webview/src/features/sdlc/domains/codebase-context/components/files-ctx-export/hooks
 
 # -----------------------------------------------------------------------------
-# 1. Update use-files-ctx-export-panel.ts: Ensure fallback clipboard copying & notification
+# 1. Update use-files-context.ts: Compute planFileIds, selectedCount, and totalPlanCount strictly for Impact Plan items
 # -----------------------------------------------------------------------------
-cat << 'EOF' > webview/src/features/sdlc/domains/codebase-context/components/files-ctx-export/hooks/use-files-ctx-export-panel.ts
-import { useAppContextStore } from '@/store/useAppContextStore';
-import { useCodebaseDomainState } from '../../../store/useCodebaseDomainState';
-import { codebaseExporterApiService } from '@/services/api/codebase-exporter-api.service.gen';
-import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
-import { logInfo, logError } from '@/services/view/log-view.service.wrapper';
-import { ExportStatus } from '@/shared/services/codebase-exporter/domain/model/export-status';
+cat << 'EOF' > webview/src/features/sdlc/domains/codebase-context/components/files-selection/hooks/use-files-context.ts
+import { useMemo, useEffect, useCallback } from 'react';
+import { CodebaseData, CodebaseFile, SelectedEntity } from '@/shared/services/graph-rag-explorer';
+import { calculateTransitiveImpact } from '@/services/view/graph-view.service';
+import { useCodebaseDomainState, CodebaseDomainState } from '../../../store/useCodebaseDomainState';
+import { useCodebaseActions } from '../../../handlers/useCodebaseActions';
 
-export function useFilesCtxExportPanel(
-  handleCopy?: (text: string, message: string) => void,
-  onCopyFilesCtx?: () => void,
-  targetFilePathsProps?: string[]
+export interface DepthFileGroup {
+  key: string;
+  label: string;
+  order: number;
+  files: CodebaseFile[];
+}
+
+export function useFilesContext(
+  initialCodebase: CodebaseData,
+  selectedEntity: SelectedEntity | null,
+  propEnableDownstream?: boolean,
+  propEnableUpstream?: boolean,
+  propImpactedSet?: Set<string>
 ) {
-  const setNotification = useAppContextStore((s) => s.setNotification);
+  const setTargetFilePaths = useCodebaseDomainState((s: CodebaseDomainState) => s.setTargetFilePaths);
+  const setFocusedNodeId = useCodebaseDomainState((s: CodebaseDomainState) => s.setFocusedNodeId);
 
-  const exportFormat = useCodebaseDomainState((s) => s.exportFormat);
-  const maxChunk = useCodebaseDomainState((s) => s.maxChunk);
-  const splitChunkByFileExtension = useCodebaseDomainState((s) => s.splitChunkByFileExtension);
-  const copyAsFilesToClipboard = useCodebaseDomainState((s) => s.copyAsFilesToClipboard);
-  const storeTargetFilePaths = useCodebaseDomainState((s) => s.targetFilePaths);
+  const storeEnableDownstream = useCodebaseDomainState((s: CodebaseDomainState) => s.enableDownstream);
+  const storeEnableUpstream = useCodebaseDomainState((s: CodebaseDomainState) => s.enableUpstream);
+  const callersDepth = useCodebaseDomainState((s: CodebaseDomainState) => s.callersDepth) ?? 2;
+  const calleesDepth = useCodebaseDomainState((s: CodebaseDomainState) => s.calleesDepth) ?? 2;
 
-  const setExportFormat = useCodebaseDomainState((s) => s.setExportFormat);
-  const setMaxChunk = useCodebaseDomainState((s) => s.setMaxChunk);
-  const setSplitChunkByFileExtension = useCodebaseDomainState((s) => s.setSplitChunkByFileExtension);
-  const setCopyAsFilesToClipboard = useCodebaseDomainState((s) => s.setCopyAsFilesToClipboard);
+  const enableDownstream = propEnableDownstream ?? storeEnableDownstream;
+  const enableUpstream = propEnableUpstream ?? storeEnableUpstream;
 
-  const handleCopyFilesCtx = async () => {
-    if (onCopyFilesCtx) {
-      onCopyFilesCtx();
-      return;
+  const selectedFiles = useCodebaseDomainState((s: CodebaseDomainState) => s.selectedContextFiles);
+  const setSelectedFiles = useCodebaseDomainState((s: CodebaseDomainState) => s.setSelectedContextFiles);
+  const expandedGroups = useCodebaseDomainState((s: CodebaseDomainState) => s.expandedContextGroups);
+  const setExpandedGroups = useCodebaseDomainState((s: CodebaseDomainState) => s.setExpandedContextGroups);
+
+  const { revealAndCopyFile, openFileInEditor } = useCodebaseActions();
+
+  // Clicking a file in Adjust Impact Plan highlights & centers node temporarily without selecting it
+  const handleFileClick = useCallback((file: CodebaseFile) => {
+    if (file.path) {
+      revealAndCopyFile(file);
     }
+    setFocusedNodeId(file.id);
+  }, [revealAndCopyFile, setFocusedNodeId]);
 
-    const files =
-      targetFilePathsProps && targetFilePathsProps.length > 0
-        ? targetFilePathsProps
-        : storeTargetFilePaths || [];
+  const handleFileDoubleClick = useCallback((file: CodebaseFile, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (file.path) {
+      openFileInEditor(file);
+    }
+  }, [openFileInEditor]);
 
-    const parsedMaxChunk =
-      typeof maxChunk === 'number' ? maxChunk : parseInt(String(maxChunk), 10) || 0;
+  const impactedSet = useMemo(() => {
+    if (propImpactedSet && propImpactedSet.size > 0) return propImpactedSet;
+    if (!selectedEntity || !initialCodebase?.dependencies) return new Set<string>();
+    return calculateTransitiveImpact(
+      selectedEntity,
+      initialCodebase.dependencies,
+      callersDepth,
+      calleesDepth,
+      enableDownstream,
+      enableUpstream
+    );
+  }, [propImpactedSet, selectedEntity, initialCodebase?.dependencies, callersDepth, calleesDepth, enableDownstream, enableUpstream]);
 
-    logInfo(`[FilesCtxExportPanel] Exporting ${files.length} selected file(s) in format '${exportFormat}'...`);
+  const downstreamCount = useMemo(() => {
+    if (!selectedEntity || !initialCodebase?.dependencies) return 0;
+    const dsSet = calculateTransitiveImpact(selectedEntity, initialCodebase.dependencies, callersDepth, calleesDepth, true, false);
+    return initialCodebase.files.filter((f) => dsSet.has(f.id) && f.id !== selectedEntity.nodeId).length;
+  }, [selectedEntity, initialCodebase, callersDepth, calleesDepth]);
 
-    try {
-      const exportStatus: ExportStatus = await codebaseExporterApiService.exportSelectedFiles(
-        files,
-        exportFormat,
-        parsedMaxChunk,
-        splitChunkByFileExtension
-      );
+  const upstreamCount = useMemo(() => {
+    if (!selectedEntity || !initialCodebase?.dependencies) return 0;
+    const usSet = calculateTransitiveImpact(selectedEntity, initialCodebase.dependencies, callersDepth, calleesDepth, false, true);
+    return initialCodebase.files.filter((f) => usSet.has(f.id) && f.id !== selectedEntity.nodeId).length;
+  }, [selectedEntity, initialCodebase, callersDepth, calleesDepth]);
 
-      logInfo(`[FilesCtxExportPanel] exportStatus received: ${JSON.stringify(exportStatus)}`);
+  const depthGroups = useMemo<DepthFileGroup[]>(() => {
+    if (!selectedEntity || !initialCodebase?.files) return [];
 
-      const checkStatusInterval = 1000;
-      let currentStatus = exportStatus;
-      while (currentStatus.pythonScriptStatus.isRunning) {
-        await new Promise((resolve) => setTimeout(resolve, checkStatusInterval));
-        currentStatus = await codebaseExporterApiService.getExportFilesStatus(currentStatus.pythonScriptStatus.pid);
-      }
+    const targetId = selectedEntity.nodeId;
+    const deps = initialCodebase.dependencies || [];
 
-      const exportResult = await codebaseExporterApiService.getExportFilesResult(
-        exportStatus.pythonScriptStatus.pid,
-        exportStatus.exportArgs?.destDir || '',
-        exportStatus.exportArgs?.timestamp || ''
-      );
+    const dsDepthMap = new Map<string, number>();
+    const dsQueue: Array<{ id: string; depth: number }> = [{ id: targetId, depth: 0 }];
+    dsDepthMap.set(targetId, 0);
 
-      if (copyAsFilesToClipboard) {
-        const result: boolean = await codebaseExporterApiService.storeExportedFilesInClipboard(
-          currentStatus.pythonScriptStatus.pid,
-          exportResult
-        );
-        if (result) {
-          if (handleCopy) {
-            handleCopy('', 'Selected Files Content copied to clipboard as files!');
-          } else {
-            setNotification('Selected Files Content copied to clipboard as files!');
+    while (dsQueue.length > 0) {
+      const { id, depth } = dsQueue.shift()!;
+      deps.forEach((dep) => {
+        const src = dep.sourceNode || dep.source;
+        const tgt = dep.targetNode || dep.target;
+        if (src === id && tgt) {
+          if (!dsDepthMap.has(tgt) || dsDepthMap.get(tgt)! > depth + 1) {
+            dsDepthMap.set(tgt, depth + 1);
+            dsQueue.push({ id: tgt, depth: depth + 1 });
           }
         }
+      });
+    }
+
+    const usDepthMap = new Map<string, number>();
+    const usQueue: Array<{ id: string; depth: number }> = [{ id: targetId, depth: 0 }];
+    usDepthMap.set(targetId, 0);
+
+    while (usQueue.length > 0) {
+      const { id, depth } = usQueue.shift()!;
+      deps.forEach((dep) => {
+        const src = dep.sourceNode || dep.source;
+        const tgt = dep.targetNode || dep.target;
+        if (tgt === id && src) {
+          if (!usDepthMap.has(src) || usDepthMap.get(src)! > depth + 1) {
+            usDepthMap.set(src, depth + 1);
+            usQueue.push({ id: src, depth: depth + 1 });
+          }
+        }
+      });
+    }
+
+    const groupsMap = new Map<string, DepthFileGroup>();
+
+    const getOrCreateGroup = (key: string, label: string, order: number) => {
+      if (!groupsMap.has(key)) {
+        groupsMap.set(key, { key, label, order, files: [] });
+      }
+      return groupsMap.get(key)!;
+    };
+
+    initialCodebase.files.forEach((file) => {
+      const isTarget = file.id === targetId;
+      const isImpacted =
+        impactedSet.has(file.id) ||
+        Array.from(impactedSet).some((item) => item === file.id || item.startsWith(file.id + '::'));
+
+      if (!isImpacted && !isTarget) return;
+
+      if (isTarget) {
+        getOrCreateGroup('target', 'Selected Target File', 150).files.push(file);
       } else {
-        const combinedFilesContent = await codebaseExporterApiService.readExportedFilesContent(
-          currentStatus.pythonScriptStatus.pid,
-          exportResult
-        );
+        const usDepth = usDepthMap.get(file.id);
+        const dsDepth = dsDepthMap.get(file.id);
 
-        if (handleCopy) {
-          handleCopy(combinedFilesContent, 'Selected Files Content copied to clipboard!');
+        if (enableUpstream && usDepth !== undefined && usDepth > 0) {
+          const key = `upstream-${usDepth}`;
+          const label = `Upstream Depth ${usDepth} (Callers)`;
+          getOrCreateGroup(key, label, 100 + usDepth).files.push(file);
+        } else if (enableDownstream && dsDepth !== undefined && dsDepth > 0) {
+          const key = `downstream-${dsDepth}`;
+          const label = `Downstream Depth ${dsDepth} (Callees)`;
+          getOrCreateGroup(key, label, 200 + dsDepth).files.push(file);
+        } else if (usDepth !== undefined && usDepth > 0) {
+          const key = `upstream-${usDepth}`;
+          const label = `Upstream Depth ${usDepth} (Callers)`;
+          getOrCreateGroup(key, label, 100 + usDepth).files.push(file);
+        } else if (dsDepth !== undefined && dsDepth > 0) {
+          const key = `downstream-${dsDepth}`;
+          const label = `Downstream Depth ${dsDepth} (Callees)`;
+          getOrCreateGroup(key, label, 200 + dsDepth).files.push(file);
         } else {
-          if (combinedFilesContent) {
-            await vsCodeApiService.copyToClipboard(combinedFilesContent);
-          }
-          setNotification('Selected Files Content copied to clipboard!');
+          getOrCreateGroup('other-impacted', 'Other Impacted Files', 300).files.push(file);
         }
       }
-    } catch (err: any) {
-      logError('[FilesCtxExportPanel] Error during exportSelectedFiles:', err);
-      setNotification('Failed to export selected files context.');
+    });
+
+    return Array.from(groupsMap.values()).sort((a, b) => a.order - b.order);
+  }, [selectedEntity, initialCodebase, impactedSet, enableUpstream, enableDownstream]);
+
+  // Unique set of file IDs belonging to the Adjust Impact Plan block
+  const planFileIds = useMemo(() => {
+    const set = new Set<string>();
+    depthGroups.forEach((group) => {
+      group.files.forEach((file) => set.add(file.id));
+    });
+    return set;
+  }, [depthGroups]);
+
+  // Number of file items checked specifically in the Adjust Impact Plan block
+  const selectedCount = useMemo(() => {
+    return Array.from(planFileIds).filter((id) => selectedFiles[id] !== false).length;
+  }, [planFileIds, selectedFiles]);
+
+  // Total file items present in the Adjust Impact Plan block
+  const totalPlanCount = useMemo(() => {
+    return planFileIds.size;
+  }, [planFileIds]);
+
+  const selectedUpstreamCount = useMemo(() => {
+    return depthGroups
+      .filter((g) => g.key.startsWith('upstream'))
+      .reduce((acc, g) => acc + g.files.filter((f) => selectedFiles[f.id] !== false).length, 0);
+  }, [depthGroups, selectedFiles]);
+
+  const selectedDownstreamCount = useMemo(() => {
+    return depthGroups
+      .filter((g) => g.key.startsWith('downstream'))
+      .reduce((acc, g) => acc + g.files.filter((f) => selectedFiles[f.id] !== false).length, 0);
+  }, [depthGroups, selectedFiles]);
+
+  const totalFilesContext = useMemo(() => {
+    if (!initialCodebase?.files) return '';
+
+    return initialCodebase.files
+      .filter((file) => planFileIds.has(file.id))
+      .map((file: CodebaseFile) => file.path)
+      .join('\n');
+  }, [initialCodebase, planFileIds]);
+
+  const combinedSelectedFilesContext = useMemo(() => {
+    if (!initialCodebase?.files) return '';
+
+    return initialCodebase.files
+      .filter((file) => planFileIds.has(file.id) && selectedFiles[file.id] !== false)
+      .map((file: CodebaseFile) => file.path)
+      .join('\n');
+  }, [initialCodebase, planFileIds, selectedFiles]);
+
+  const targetFilePaths = useMemo(() => {
+    return combinedSelectedFilesContext
+      ? combinedSelectedFilesContext.split('\n').map((p) => p.trim()).filter(Boolean)
+      : [];
+  }, [combinedSelectedFilesContext]);
+
+  useEffect(() => {
+    setTargetFilePaths(targetFilePaths);
+  }, [targetFilePaths, setTargetFilePaths]);
+
+  const getGroupStyle = (key: string) => {
+    if (key === 'target') {
+      return {
+        border: 'border-orange-500/20 dark:border-orange-500/30',
+        bgHeader: 'bg-orange-500/10 border-b border-orange-500/20',
+        text: 'text-orange-500',
+        icon: 'text-orange-500',
+      };
     }
+    if (key.startsWith('upstream')) {
+      return {
+        border: 'border-indigo-500/30 dark:border-indigo-500/40',
+        bgHeader: 'bg-indigo-500/10 border-b border-indigo-500/20',
+        text: 'text-indigo-600 dark:text-indigo-400',
+        icon: 'text-indigo-500 dark:text-indigo-400',
+      };
+    }
+    if (key.startsWith('downstream')) {
+      return {
+        border: 'border-blue-500/30 dark:border-blue-500/40',
+        bgHeader: 'bg-blue-500/10 border-b border-blue-500/20',
+        text: 'text-blue-600 dark:text-blue-400',
+        icon: 'text-blue-500 dark:text-blue-400',
+      };
+    }
+    return {
+      border: 'border-emerald-500/40 dark:border-emerald-500/50',
+      bgHeader: 'bg-emerald-500/15 border-b border-emerald-500/30',
+      text: 'text-emerald-600 dark:text-emerald-400 font-bold',
+      icon: 'text-emerald-500 dark:text-emerald-400',
+    };
+  };
+
+  useEffect(() => {
+    const initialExpanded: Record<string, boolean> = {};
+    depthGroups.forEach((group) => {
+      initialExpanded[group.key] = true;
+    });
+
+    setExpandedGroups((prev: Record<string, boolean>) => {
+      const next = { ...initialExpanded, ...prev };
+      const prevKeys = Object.keys(prev);
+      const nextKeys = Object.keys(next);
+      let hasChanged = prevKeys.length !== nextKeys.length;
+
+      if (!hasChanged) {
+        for (const key of nextKeys) {
+          if (prev[key] !== next[key]) {
+            hasChanged = true;
+            break;
+          }
+        }
+      }
+
+      return hasChanged ? next : prev;
+    });
+  }, [depthGroups, setExpandedGroups]);
+
+  const toggleGroupCheckbox = (groupKey: string, groupFiles: CodebaseFile[]) => {
+    const isAllChecked = groupFiles.length > 0 && groupFiles.every((f) => selectedFiles[f.id] !== false);
+    const targetState = !isAllChecked;
+
+    setSelectedFiles((prev: Record<string, boolean>) => {
+      const updated = { ...prev };
+      groupFiles.forEach((file) => {
+        updated[file.id] = targetState;
+      });
+      return updated;
+    });
+  };
+
+  const toggleFileCheckbox = (fileId: string) => {
+    setSelectedFiles((prev: Record<string, boolean>) => ({
+      ...prev,
+      [fileId]: prev[fileId] === false ? true : false,
+    }));
+  };
+
+  const toggleGroupExpand = (groupKey: string) => {
+    setExpandedGroups((prev: Record<string, boolean>) => ({
+      ...prev,
+      [groupKey]: !prev[groupKey],
+    }));
   };
 
   return {
-    exportFormat,
-    maxChunk,
-    splitChunkByFileExtension,
-    copyAsFilesToClipboard,
-    setExportFormat,
-    setMaxChunk,
-    setSplitChunkByFileExtension,
-    setCopyAsFilesToClipboard,
-    handleCopyFilesCtx,
+    downstreamCount,
+    upstreamCount,
+    depthGroups,
+    getGroupStyle,
+    selectedFiles,
+    expandedGroups,
+    toggleGroupCheckbox,
+    toggleFileCheckbox,
+    toggleGroupExpand,
+    selectedCount,
+    totalPlanCount,
+    selectedUpstreamCount,
+    selectedDownstreamCount,
+    totalFilesContext,
+    combinedSelectedFilesContext,
+    targetFilePaths,
+    handleFileClick,
+    handleFileDoubleClick,
   };
 }
 EOF
 
 # -----------------------------------------------------------------------------
-# 2. Update files-context.tsx: Replace empty handleCopy fallback with functional clipboard & notify callback
+# 2. Update files-context.tsx: Display selectedCount and totalPlanCount in bottomContent
 # -----------------------------------------------------------------------------
 cat << 'EOF' > webview/src/features/sdlc/domains/codebase-context/components/files-selection/files-context.tsx
 import React, { useEffect, useRef, useCallback } from 'react';
@@ -211,6 +435,7 @@ export function FilesContextPanel(props: FilesContextPanelProps = {}) {
     toggleFileCheckbox,
     toggleGroupExpand,
     selectedCount,
+    totalPlanCount,
     selectedUpstreamCount,
     selectedDownstreamCount,
     totalFilesContext,
@@ -282,8 +507,8 @@ export function FilesContextPanel(props: FilesContextPanelProps = {}) {
           ) : (
             depthGroups.map((group) => {
               const groupFiles = group.files;
-              const isAllChecked = groupFiles.length > 0 && groupFiles.every((f) => selectedFiles[f.id]);
-              const isSomeChecked = groupFiles.some((f) => selectedFiles[f.id]);
+              const isAllChecked = groupFiles.length > 0 && groupFiles.every((f) => selectedFiles[f.id] !== false);
+              const isSomeChecked = groupFiles.some((f) => selectedFiles[f.id] !== false);
               const isIndeterminate = isSomeChecked && !isAllChecked;
               const isExpanded = expandedGroups[group.key] ?? true;
               const style = getGroupStyle(group.key);
@@ -311,7 +536,7 @@ export function FilesContextPanel(props: FilesContextPanelProps = {}) {
                       </div>
                     </div>
                     <span className="bg-muted ml-2 px-1.5 py-0.2 rounded font-mono text-[9px] text-muted-foreground">
-                      {groupFiles.filter((f) => selectedFiles[f.id]).length}/{groupFiles.length}
+                      {groupFiles.filter((f) => selectedFiles[f.id] !== false).length}/{groupFiles.length}
                     </span>
                   </div>
 
@@ -319,6 +544,7 @@ export function FilesContextPanel(props: FilesContextPanelProps = {}) {
                     <div className="space-y-0.5 bg-background/40 p-1">
                       {groupFiles.map((file) => {
                         const fileSizeKb = (((file as any).size || (file as any).content?.length || 0) / 1024).toFixed(1);
+                        const isChecked = selectedFiles[file.id] !== false;
 
                         return (
                           <div
@@ -328,13 +554,13 @@ export function FilesContextPanel(props: FilesContextPanelProps = {}) {
                             <div className="flex flex-1 items-center gap-1.5 min-w-0">
                               <input
                                 type="checkbox"
-                                checked={!!selectedFiles[file.id]}
+                                checked={isChecked}
                                 onChange={() => toggleFileCheckbox(file.id)}
                                 className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
                               />
                               <span
                                 className={`truncate text-[11px] cursor-pointer ${
-                                  selectedFiles[file.id] ? 'font-semibold text-foreground' : 'text-muted-foreground line-through'
+                                  isChecked ? 'font-semibold text-foreground' : 'text-muted-foreground line-through'
                                 }`}
                                 onClick={() => handleFileClick(file)}
                                 onDoubleClick={(e) => handleFileDoubleClick(file, e)}
@@ -380,7 +606,7 @@ export function FilesContextPanel(props: FilesContextPanelProps = {}) {
         <div className="gap-1.5 grid grid-cols-10 text-center">
           <div className="col-span-2 bg-orange-500/10 p-1 border border-orange-500/20 rounded">
             <span className="block text-[9px] text-orange-500 truncate uppercase">Selected</span>
-            <span className="font-bold text-xs text-orange-500">{selectedCount} / {initialCodebase?.files?.length || 0}</span>
+            <span className="font-bold text-xs text-orange-500">{selectedCount} / {totalPlanCount}</span>
           </div>
           <div className="col-span-2 bg-indigo-500/10 p-1 border border-indigo-500/20 rounded">
             <span className="block text-[9px] text-indigo-500 truncate uppercase">Upstream</span>
@@ -420,5 +646,5 @@ export function FilesContextPanel(props: FilesContextPanelProps = {}) {
 export const FilesContextTab = FilesContextPanel;
 EOF
 
-echo "✅ feat/fix: Resolved 'Copy files ctx' button logic to copy exported context to clipboard and trigger notifications correctly!"
+echo "✅ feat/fix: In bottomContent of files-context.tsx, selectedCount now strictly represents the number of checked file items within the Adjust Impact Plan block ({selectedCount} / {totalPlanCount})!"
 echo "💡 Next step: Run 'npm run build' to re-verify build cleanliness."

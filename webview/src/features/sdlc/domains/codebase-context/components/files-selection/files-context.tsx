@@ -83,6 +83,7 @@ export function FilesContextPanel(props: FilesContextPanelProps = {}) {
     toggleFileCheckbox,
     toggleGroupExpand,
     selectedCount,
+    totalPlanCount,
     selectedUpstreamCount,
     selectedDownstreamCount,
     totalFilesContext,
@@ -154,8 +155,8 @@ export function FilesContextPanel(props: FilesContextPanelProps = {}) {
           ) : (
             depthGroups.map((group) => {
               const groupFiles = group.files;
-              const isAllChecked = groupFiles.length > 0 && groupFiles.every((f) => selectedFiles[f.id]);
-              const isSomeChecked = groupFiles.some((f) => selectedFiles[f.id]);
+              const isAllChecked = groupFiles.length > 0 && groupFiles.every((f) => selectedFiles[f.id] !== false);
+              const isSomeChecked = groupFiles.some((f) => selectedFiles[f.id] !== false);
               const isIndeterminate = isSomeChecked && !isAllChecked;
               const isExpanded = expandedGroups[group.key] ?? true;
               const style = getGroupStyle(group.key);
@@ -183,7 +184,7 @@ export function FilesContextPanel(props: FilesContextPanelProps = {}) {
                       </div>
                     </div>
                     <span className="bg-muted ml-2 px-1.5 py-0.2 rounded font-mono text-[9px] text-muted-foreground">
-                      {groupFiles.filter((f) => selectedFiles[f.id]).length}/{groupFiles.length}
+                      {groupFiles.filter((f) => selectedFiles[f.id] !== false).length}/{groupFiles.length}
                     </span>
                   </div>
 
@@ -191,6 +192,7 @@ export function FilesContextPanel(props: FilesContextPanelProps = {}) {
                     <div className="space-y-0.5 bg-background/40 p-1">
                       {groupFiles.map((file) => {
                         const fileSizeKb = (((file as any).size || (file as any).content?.length || 0) / 1024).toFixed(1);
+                        const isChecked = selectedFiles[file.id] !== false;
 
                         return (
                           <div
@@ -200,13 +202,13 @@ export function FilesContextPanel(props: FilesContextPanelProps = {}) {
                             <div className="flex flex-1 items-center gap-1.5 min-w-0">
                               <input
                                 type="checkbox"
-                                checked={!!selectedFiles[file.id]}
+                                checked={isChecked}
                                 onChange={() => toggleFileCheckbox(file.id)}
                                 className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
                               />
                               <span
                                 className={`truncate text-[11px] cursor-pointer ${
-                                  selectedFiles[file.id] ? 'font-semibold text-foreground' : 'text-muted-foreground line-through'
+                                  isChecked ? 'font-semibold text-foreground' : 'text-muted-foreground line-through'
                                 }`}
                                 onClick={() => handleFileClick(file)}
                                 onDoubleClick={(e) => handleFileDoubleClick(file, e)}
@@ -252,7 +254,7 @@ export function FilesContextPanel(props: FilesContextPanelProps = {}) {
         <div className="gap-1.5 grid grid-cols-10 text-center">
           <div className="col-span-2 bg-orange-500/10 p-1 border border-orange-500/20 rounded">
             <span className="block text-[9px] text-orange-500 truncate uppercase">Selected</span>
-            <span className="font-bold text-xs text-orange-500">{selectedCount} / {initialCodebase?.files?.length || 0}</span>
+            <span className="font-bold text-xs text-orange-500">{selectedCount} / {totalPlanCount}</span>
           </div>
           <div className="col-span-2 bg-indigo-500/10 p-1 border border-indigo-500/20 rounded">
             <span className="block text-[9px] text-indigo-500 truncate uppercase">Upstream</span>

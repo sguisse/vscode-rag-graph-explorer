@@ -351,7 +351,7 @@ export const useCodebaseDomainState = create<CodebaseDomainState>((set) => ({
   exportFormat: 'yaml',
   maxChunk: '0',
   splitChunkByFileExtension: false,
-  copyAsFilesToClipboard: false,
+  copyAsFilesToClipboard: true,
   setExportFormat: (exportFormat) => set({ exportFormat }),
   setMaxChunk: (maxChunk) => set({ maxChunk }),
   setSplitChunkByFileExtension: (splitChunkByFileExtension) => set({ splitChunkByFileExtension }),

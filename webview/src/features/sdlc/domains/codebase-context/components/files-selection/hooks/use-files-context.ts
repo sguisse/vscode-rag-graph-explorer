@@ -166,6 +166,65 @@ export function useFilesContext(
     return Array.from(groupsMap.values()).sort((a, b) => a.order - b.order);
   }, [selectedEntity, initialCodebase, impactedSet, enableUpstream, enableDownstream]);
 
+  // Unique set of file IDs belonging to the Adjust Impact Plan block
+  const planFileIds = useMemo(() => {
+    const set = new Set<string>();
+    depthGroups.forEach((group) => {
+      group.files.forEach((file) => set.add(file.id));
+    });
+    return set;
+  }, [depthGroups]);
+
+  // Number of file items checked specifically in the Adjust Impact Plan block
+  const selectedCount = useMemo(() => {
+    return Array.from(planFileIds).filter((id) => selectedFiles[id] !== false).length;
+  }, [planFileIds, selectedFiles]);
+
+  // Total file items present in the Adjust Impact Plan block
+  const totalPlanCount = useMemo(() => {
+    return planFileIds.size;
+  }, [planFileIds]);
+
+  const selectedUpstreamCount = useMemo(() => {
+    return depthGroups
+      .filter((g) => g.key.startsWith('upstream'))
+      .reduce((acc, g) => acc + g.files.filter((f) => selectedFiles[f.id] !== false).length, 0);
+  }, [depthGroups, selectedFiles]);
+
+  const selectedDownstreamCount = useMemo(() => {
+    return depthGroups
+      .filter((g) => g.key.startsWith('downstream'))
+      .reduce((acc, g) => acc + g.files.filter((f) => selectedFiles[f.id] !== false).length, 0);
+  }, [depthGroups, selectedFiles]);
+
+  const totalFilesContext = useMemo(() => {
+    if (!initialCodebase?.files) return '';
+
+    return initialCodebase.files
+      .filter((file) => planFileIds.has(file.id))
+      .map((file: CodebaseFile) => file.path)
+      .join('\n');
+  }, [initialCodebase, planFileIds]);
+
+  const combinedSelectedFilesContext = useMemo(() => {
+    if (!initialCodebase?.files) return '';
+
+    return initialCodebase.files
+      .filter((file) => planFileIds.has(file.id) && selectedFiles[file.id] !== false)
+      .map((file: CodebaseFile) => file.path)
+      .join('\n');
+  }, [initialCodebase, planFileIds, selectedFiles]);
+
+  const targetFilePaths = useMemo(() => {
+    return combinedSelectedFilesContext
+      ? combinedSelectedFilesContext.split('\n').map((p) => p.trim()).filter(Boolean)
+      : [];
+  }, [combinedSelectedFilesContext]);
+
+  useEffect(() => {
+    setTargetFilePaths(targetFilePaths);
+  }, [targetFilePaths, setTargetFilePaths]);
+
   const getGroupStyle = (key: string) => {
     if (key === 'target') {
       return {
@@ -225,7 +284,7 @@ export function useFilesContext(
   }, [depthGroups, setExpandedGroups]);
 
   const toggleGroupCheckbox = (groupKey: string, groupFiles: CodebaseFile[]) => {
-    const isAllChecked = groupFiles.length > 0 && groupFiles.every((f) => selectedFiles[f.id]);
+    const isAllChecked = groupFiles.length > 0 && groupFiles.every((f) => selectedFiles[f.id] !== false);
     const targetState = !isAllChecked;
 
     setSelectedFiles((prev: Record<string, boolean>) => {
@@ -240,7 +299,7 @@ export function useFilesContext(
   const toggleFileCheckbox = (fileId: string) => {
     setSelectedFiles((prev: Record<string, boolean>) => ({
       ...prev,
-      [fileId]: !prev[fileId],
+      [fileId]: prev[fileId] === false ? true : false,
     }));
   };
 
@@ -250,49 +309,6 @@ export function useFilesContext(
       [groupKey]: !prev[groupKey],
     }));
   };
-
-  const selectedCount = useMemo(() => {
-    return Object.values(selectedFiles).filter(Boolean).length;
-  }, [selectedFiles]);
-
-  const selectedUpstreamCount = useMemo(() => {
-    return depthGroups
-      .filter((g) => g.key.startsWith('upstream'))
-      .reduce((acc, g) => acc + g.files.filter((f) => selectedFiles[f.id]).length, 0);
-  }, [depthGroups, selectedFiles]);
-
-  const selectedDownstreamCount = useMemo(() => {
-    return depthGroups
-      .filter((g) => g.key.startsWith('downstream'))
-      .reduce((acc, g) => acc + g.files.filter((f) => selectedFiles[f.id]).length, 0);
-  }, [depthGroups, selectedFiles]);
-
-  const totalFilesContext = useMemo(() => {
-    if (!initialCodebase?.files) return '';
-
-    return initialCodebase.files
-      .map((file: CodebaseFile) => file.path)
-      .join('\n');
-  }, [initialCodebase]);
-
-  const combinedSelectedFilesContext = useMemo(() => {
-    if (!initialCodebase?.files) return '';
-
-    return initialCodebase.files
-      .filter((file) => !!selectedFiles[file.id])
-      .map((file: CodebaseFile) => file.path)
-      .join('\n');
-  }, [initialCodebase, selectedFiles]);
-
-  const targetFilePaths = useMemo(() => {
-    return combinedSelectedFilesContext
-      ? combinedSelectedFilesContext.split('\n').map((p) => p.trim()).filter(Boolean)
-      : [];
-  }, [combinedSelectedFilesContext]);
-
-  useEffect(() => {
-    setTargetFilePaths(targetFilePaths);
-  }, [targetFilePaths, setTargetFilePaths]);
 
   return {
     downstreamCount,
@@ -305,6 +321,7 @@ export function useFilesContext(
     toggleFileCheckbox,
     toggleGroupExpand,
     selectedCount,
+    totalPlanCount,
     selectedUpstreamCount,
     selectedDownstreamCount,
     totalFilesContext,
