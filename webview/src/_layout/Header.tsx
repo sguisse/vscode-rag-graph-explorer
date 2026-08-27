@@ -1,6 +1,6 @@
 import React from 'react';
 import { ToolbarSeparator } from '@/components/app/toolbar-separator';
-import { headerLeftWidth } from '@/constants/layout-constants';
+import { headerLeftWidth } from '@/_layout';
 import {
   Layers,
   Moon,
@@ -20,7 +20,7 @@ import { ToggleButton } from '@/components/app/toggle-button';
 import { useLayoutStore } from '@/store/useLayoutStore';
 import logoLight from '@assets/logo-light.png';
 import logoDark from '@assets/logo-dark.png';
-import { DefaultContainersSize } from '@/constants/layout-constants';
+import { DefaultContainersSize } from '@/_layout';
 import { ApplicationTitle } from '@/components/app/ApplicationTitle';
 import { WorkflowPopup } from '@/components/app/workflow/workflow-popup';
 import { useExplorerWorkflow } from '@/features/explorer-old/workflow/hooks/use-explorer-workflow';

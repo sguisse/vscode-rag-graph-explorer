@@ -3,7 +3,7 @@ import { useLayoutStore } from '@/store/useLayoutStore';
 import { ResizableContainer } from '@/components/app/container/resizable-container';
 import { useResizable } from '@/components/app/container/hooks/use-resizable';
 import { WorkspaceContainers, LayoutContainer } from './types';
-import { DefaultContainersSize } from '@/constants/layout-constants';
+import { DefaultContainersSize } from '@/_layout';
 
 interface WorkspaceLayoutProps {
   containers?: WorkspaceContainers;

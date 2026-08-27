@@ -10,7 +10,7 @@ import { SidebarRight } from './SidebarRight';
 import { Footer } from './Footer';
 import { WorkspaceLayout, mergeContainer } from './WorkspaceLayout';
 import { Tooltip } from '@/components/app/tooltip';
-import { DefaultContainersSize } from '@/constants/layout-constants';
+import { DefaultContainersSize } from '@/_layout';
 import { vscodeSettings } from '@/App';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 

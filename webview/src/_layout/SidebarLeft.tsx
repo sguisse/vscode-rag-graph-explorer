@@ -27,7 +27,7 @@ import {
   SidebarMenuBadge,
   SidebarFooter,
 } from '@/components/ui/sidebar';
-import { DefaultContainersSize } from '@/constants/layout-constants';
+import { DefaultContainersSize } from '@/_layout';
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { useSdlcWorkflowMachine, SdlcStep } from '@/features/sdlc/core/workflow/useSdlcWorkflowMachine';
 

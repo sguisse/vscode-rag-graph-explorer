@@ -1,6 +1,6 @@
 import React from 'react';
 import { LeftCenterRightPanel } from '@/components/app/left-center-right-panel';
-import { DefaultContainersSize } from '@/constants/layout-constants';
+import { DefaultContainersSize } from '@/_layout';
 
 export function Footer() {
   return (
