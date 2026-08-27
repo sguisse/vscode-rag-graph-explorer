@@ -11,7 +11,7 @@ export function InstructionsFeature() {
   const updateSession = useSdlcSessionStore((s) => s.updateActiveSession);
 
   if (!session) {
-    return <div className="p-4 text-center text-muted-foreground text-xs font-mono">No active session selected.</div>;
+    return <div className="p-4 font-mono text-muted-foreground text-xs text-center">No active session selected.</div>;
   }
 
   const strategy = session.instructionsPayload.strategy;
@@ -39,7 +39,7 @@ export function InstructionsFeature() {
             strategy === 'bmad' ? 'border-b-indigo-500 text-indigo-500 bg-background' : 'text-muted-foreground border-transparent'
           }`}
         >
-          BMad Agent
+          BMad Method
         </Button>
         <Button
           variant="ghost"
@@ -52,7 +52,7 @@ export function InstructionsFeature() {
         </Button>
       </div>
 
-      <div className="flex-1 overflow-y-auto min-h-0">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         {strategy === 'vibe' && <VibeInstructionsPanel />}
         {strategy === 'bmad' && <BMadInstructionsPanel />}
         {strategy === 'speckit' && <SpecKitInstructionsPanel />}
