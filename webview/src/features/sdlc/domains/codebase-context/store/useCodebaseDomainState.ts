@@ -246,7 +246,7 @@ export const useCodebaseDomainState = create<CodebaseDomainState>((set) => ({
   // --- Dependency Graph Slice ---
   graphRendering: 'rounded',
   setGraphRendering: (mode) => set({ graphRendering: mode }),
-  currentLayout: 'preset',
+  currentLayout: 'cose',
   setCurrentLayout: (layout) => set({ currentLayout: layout }),
   maxNodesLimit: 50,
   setMaxNodesLimit: (limit) => set({ maxNodesLimit: limit }),
@@ -254,7 +254,7 @@ export const useCodebaseDomainState = create<CodebaseDomainState>((set) => ({
   setCallersDepth: (depth) => set({ callersDepth: depth }),
   calleesDepth: 2,
   setCalleesDepth: (depth) => set({ calleesDepth: depth }),
-  displayLevel: 'detailed',
+  displayLevel: 'all',
   setDisplayLevel: (level) => set({ displayLevel: level }),
 
   showGrid: true,
@@ -270,7 +270,7 @@ export const useCodebaseDomainState = create<CodebaseDomainState>((set) => ({
   setAutoFit: (autoFit) => set((s) => ({ autoFit: typeof autoFit === 'function' ? autoFit(s.autoFit) : autoFit })),
   toggleAutoFit: () => set((s) => ({ autoFit: !s.autoFit })),
 
-  showMinimap: true,
+  showMinimap: false,
   setShowMinimap: (showMinimap) => set({ showMinimap }),
   toggleShowMinimap: () => set((s) => ({ showMinimap: !s.showMinimap })),
 

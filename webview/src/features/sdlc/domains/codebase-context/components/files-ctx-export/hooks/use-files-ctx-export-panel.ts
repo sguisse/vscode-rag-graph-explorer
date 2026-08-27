@@ -1,6 +1,7 @@
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { useCodebaseDomainState } from '../../../store/useCodebaseDomainState';
 import { codebaseExporterApiService } from '@/services/api/codebase-exporter-api.service.gen';
+import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { logInfo, logError } from '@/services/view/log-view.service.wrapper';
 import { ExportStatus } from '@/shared/services/codebase-exporter/domain/model/export-status';
 
@@ -82,6 +83,9 @@ export function useFilesCtxExportPanel(
         if (handleCopy) {
           handleCopy(combinedFilesContent, 'Selected Files Content copied to clipboard!');
         } else {
+          if (combinedFilesContent) {
+            await vsCodeApiService.copyToClipboard(combinedFilesContent);
+          }
           setNotification('Selected Files Content copied to clipboard!');
         }
       }

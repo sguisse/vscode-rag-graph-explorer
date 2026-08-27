@@ -96,7 +96,7 @@ export function useWorkflowPanel(
       elements,
       style: getWorkflowCytoscapeStyles(isDarkMode),
       layout: {
-        name: 'preset',
+        name: 'cose',
         fit: true,
         padding: 25,
       },

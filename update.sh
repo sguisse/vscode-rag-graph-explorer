@@ -1,594 +1,424 @@
 #!/usr/bin/env bash
 set -e
 
-echo "🚀 Updating Codebase Explorer file counter to react to treeview selection changes..."
+echo "🚀 Fixing 'Copy files ctx' button clipboard export and notification handling..."
 
-# Ensure target directory exists
-mkdir -p webview/src/features/sdlc/domains/codebase-context/components/codebase-tree
+# Ensure target directories exist
+mkdir -p webview/src/features/sdlc/domains/codebase-context/components/files-selection
+mkdir -p webview/src/features/sdlc/domains/codebase-context/components/files-ctx-export/hooks
 
 # -----------------------------------------------------------------------------
-# Update CodebaseExplorerPanel.tsx: Dynamically compute activeVisibleCount from visibleFiles
+# 1. Update use-files-ctx-export-panel.ts: Ensure fallback clipboard copying & notification
 # -----------------------------------------------------------------------------
-cat << 'EOF' > webview/src/features/sdlc/domains/codebase-context/components/codebase-tree/CodebaseExplorerPanel.tsx
-import React, { useRef, useEffect, useMemo } from 'react';
-import { ChevronDown, ChevronRight, Folder, FileCode, Database, Download, Upload, LayoutList, ChevronsDown, ChevronsUp, Search } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ImportAstDialog } from './import-ast-dialog';
-import { ToolbarSeparator } from '@/components/app/toolbar-separator';
-import { FinderTree } from '@/components/app/core/finder/FinderTree';
-import { FinderHtml } from '@/components/app/core/finder/FinderHtml';
-import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
-import { FOLDER_THEME_REGISTRY_CONFIG } from '@/features/sdlc/domains/codebase-context/components/dependency-graph/constants/graph.constants';
-import { useCodebaseExplorerPanel } from './hooks/use-codebase-explorer-panel';
-import { useTreeviewFinder } from './hooks/use-treeview-finder';
-import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
-import { CODEBASE_GROUPING_LIST, CODEBASE_GROUPING_ICON_MAP } from './type-codebase-grouping';
-import { TriStateCheckbox } from './components/TriStateCheckbox';
-import { RecursiveFolderNode } from './components/RecursiveFolderNode';
-import { DYNAMIC_COLORS } from './constants/codebase-explorer.constants';
-import { scopeHasMatches } from './utils/codebase-tree.utils';
-import { useCodebaseDomainState } from '../../store/useCodebaseDomainState';
-import {
-  CodebaseExplorerPanelProps,
-  ViewMode,
-  ScopeGroup,
-  SubFolderGroup
-} from './model-ui';
+cat << 'EOF' > webview/src/features/sdlc/domains/codebase-context/components/files-ctx-export/hooks/use-files-ctx-export-panel.ts
+import { useAppContextStore } from '@/store/useAppContextStore';
+import { useCodebaseDomainState } from '../../../store/useCodebaseDomainState';
+import { codebaseExporterApiService } from '@/services/api/codebase-exporter-api.service.gen';
+import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
+import { logInfo, logError } from '@/services/view/log-view.service.wrapper';
+import { ExportStatus } from '@/shared/services/codebase-exporter/domain/model/export-status';
 
-export function CodebaseExplorerPanel(props: CodebaseExplorerPanelProps = {}) {
-  const panelRef = useRef<HTMLDivElement>(null);
+export function useFilesCtxExportPanel(
+  handleCopy?: (text: string, message: string) => void,
+  onCopyFilesCtx?: () => void,
+  targetFilePathsProps?: string[]
+) {
+  const setNotification = useAppContextStore((s) => s.setNotification);
 
-  const storeCodebase = useCodebaseDomainState((s) => s.codebase);
-  const storeExpandedFolders = useCodebaseDomainState((s) => s.expandedFolders);
-  const storeVisibleFiles = useCodebaseDomainState((s) => s.visibleFiles);
-  const storeToggleFolder = useCodebaseDomainState((s) => s.toggleFolder);
-  const storeToggleFileCheckbox = useCodebaseDomainState((s) => s.toggleFileCheckbox);
-  const storeSetSelectedEntity = useCodebaseDomainState((s) => s.setSelectedEntity);
-  const storeSetCodebase = useCodebaseDomainState((s) => s.setCodebase);
-  const storeSetFocusedNodeId = useCodebaseDomainState((s) => s.setFocusedNodeId);
+  const exportFormat = useCodebaseDomainState((s) => s.exportFormat);
+  const maxChunk = useCodebaseDomainState((s) => s.maxChunk);
+  const splitChunkByFileExtension = useCodebaseDomainState((s) => s.splitChunkByFileExtension);
+  const copyAsFilesToClipboard = useCodebaseDomainState((s) => s.copyAsFilesToClipboard);
+  const storeTargetFilePaths = useCodebaseDomainState((s) => s.targetFilePaths);
 
-  const codebase = props.codebase ?? storeCodebase;
-  const searchFilteredFiles = props.searchFilteredFiles ?? (codebase?.files || []);
-  const expandedFolders = props.expandedFolders ?? storeExpandedFolders;
-  const visibleFiles = props.visibleFiles ?? storeVisibleFiles;
-  const toggleFolder = props.toggleFolder ?? storeToggleFolder;
-  const toggleFileCheckbox = props.toggleFileCheckbox ?? storeToggleFileCheckbox;
-  const setSelectedEntity = props.setSelectedEntity ?? storeSetSelectedEntity;
-  const onImportCodebase = props.onImportCodebase ?? storeSetCodebase;
-  const onFocusNode = props.onFocusNode ?? storeSetFocusedNodeId;
+  const setExportFormat = useCodebaseDomainState((s) => s.setExportFormat);
+  const setMaxChunk = useCodebaseDomainState((s) => s.setMaxChunk);
+  const setSplitChunkByFileExtension = useCodebaseDomainState((s) => s.setSplitChunkByFileExtension);
+  const setCopyAsFilesToClipboard = useCodebaseDomainState((s) => s.setCopyAsFilesToClipboard);
 
-  // Dynamically compute count of checked/visible files in real time
-  const activeVisibleCount = useMemo(() => {
-    return searchFilteredFiles.filter((file) => visibleFiles[file.id] !== false).length;
-  }, [searchFilteredFiles, visibleFiles]);
+  const handleCopyFilesCtx = async () => {
+    if (onCopyFilesCtx) {
+      onCopyFilesCtx();
+      return;
+    }
 
-  const {
-    isImportOpen,
-    setIsImportOpen,
-    handleExportCodebase,
-    viewMode,
-    setViewMode,
-    groupedScopes,
-    duplicateFileIds,
-    handleExpandAll,
-    handleCollapseAll,
-    handleToggleFolder,
-    handleFileClick,
-    handleFileDoubleClick,
-    handleFolderDoubleClick,
-    toggleFileListCheckbox
-  } = useCodebaseExplorerPanel(
-    codebase,
-    expandedFolders,
-    toggleFolder,
-    toggleFileCheckbox,
-    visibleFiles,
-    setSelectedEntity,
-    onFocusNode
-  );
+    const files =
+      targetFilePathsProps && targetFilePathsProps.length > 0
+        ? targetFilePathsProps
+        : storeTargetFilePaths || [];
 
-  const finderStateRaw = useTreeviewFinder(codebase, viewMode, groupedScopes, onFocusNode);
+    const parsedMaxChunk =
+      typeof maxChunk === 'number' ? maxChunk : parseInt(String(maxChunk), 10) || 0;
 
-  const matchingFileIndexMap = useMemo(() => {
-    const map = new Map<string, number>();
-    finderStateRaw.matches.forEach((f, idx) => map.set(f.id, idx));
-    return map;
-  }, [finderStateRaw.matches]);
+    logInfo(`[FilesCtxExportPanel] Exporting ${files.length} selected file(s) in format '${exportFormat}'...`);
 
-  const finderState = useMemo(() => ({
-    ...finderStateRaw,
-    matchingFileIndexMap,
-  }), [finderStateRaw, matchingFileIndexMap]);
+    try {
+      const exportStatus: ExportStatus = await codebaseExporterApiService.exportSelectedFiles(
+        files,
+        exportFormat,
+        parsedMaxChunk,
+        splitChunkByFileExtension
+      );
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
-        if (panelRef.current && (panelRef.current.contains(document.activeElement) || panelRef.current.contains(e.target as Node))) {
-          e.preventDefault();
-          e.stopPropagation();
-          finderState.openAndFocusFinder();
+      logInfo(`[FilesCtxExportPanel] exportStatus received: ${JSON.stringify(exportStatus)}`);
+
+      const checkStatusInterval = 1000;
+      let currentStatus = exportStatus;
+      while (currentStatus.pythonScriptStatus.isRunning) {
+        await new Promise((resolve) => setTimeout(resolve, checkStatusInterval));
+        currentStatus = await codebaseExporterApiService.getExportFilesStatus(currentStatus.pythonScriptStatus.pid);
+      }
+
+      const exportResult = await codebaseExporterApiService.getExportFilesResult(
+        exportStatus.pythonScriptStatus.pid,
+        exportStatus.exportArgs?.destDir || '',
+        exportStatus.exportArgs?.timestamp || ''
+      );
+
+      if (copyAsFilesToClipboard) {
+        const result: boolean = await codebaseExporterApiService.storeExportedFilesInClipboard(
+          currentStatus.pythonScriptStatus.pid,
+          exportResult
+        );
+        if (result) {
+          if (handleCopy) {
+            handleCopy('', 'Selected Files Content copied to clipboard as files!');
+          } else {
+            setNotification('Selected Files Content copied to clipboard as files!');
+          }
+        }
+      } else {
+        const combinedFilesContent = await codebaseExporterApiService.readExportedFilesContent(
+          currentStatus.pythonScriptStatus.pid,
+          exportResult
+        );
+
+        if (handleCopy) {
+          handleCopy(combinedFilesContent, 'Selected Files Content copied to clipboard!');
+        } else {
+          if (combinedFilesContent) {
+            await vsCodeApiService.copyToClipboard(combinedFilesContent);
+          }
+          setNotification('Selected Files Content copied to clipboard!');
         }
       }
-    };
+    } catch (err: any) {
+      logError('[FilesCtxExportPanel] Error during exportSelectedFiles:', err);
+      setNotification('Failed to export selected files context.');
+    }
+  };
 
-    window.addEventListener('keydown', handleKeyDown, true);
-    return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [finderState.openAndFocusFinder]);
+  return {
+    exportFormat,
+    maxChunk,
+    splitChunkByFileExtension,
+    copyAsFilesToClipboard,
+    setExportFormat,
+    setMaxChunk,
+    setSplitChunkByFileExtension,
+    setCopyAsFilesToClipboard,
+    handleCopyFilesCtx,
+  };
+}
+EOF
+
+# -----------------------------------------------------------------------------
+# 2. Update files-context.tsx: Replace empty handleCopy fallback with functional clipboard & notify callback
+# -----------------------------------------------------------------------------
+cat << 'EOF' > webview/src/features/sdlc/domains/codebase-context/components/files-selection/files-context.tsx
+import React, { useEffect, useRef, useCallback } from 'react';
+import { GitFork, FileText, ShieldAlert, ChevronDown, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
+import { CodebaseData, SelectedEntity } from '@/shared/services/graph-rag-explorer';
+import { useAppContextStore } from '@/store/useAppContextStore';
+import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
+import { useCodebaseDomainState } from '../../store/useCodebaseDomainState';
+import { useFilesContext } from './hooks/use-files-context';
+import { FilesCtxExportPanel } from '../files-ctx-export/files-ctx-export-panel';
+
+export interface FilesContextPanelProps {
+  initialCodebase?: CodebaseData;
+  selectedEntity?: SelectedEntity | null;
+  enableDownstream?: boolean;
+  setEnableDownstream?: React.Dispatch<React.SetStateAction<boolean>>;
+  enableUpstream?: boolean;
+  setEnableUpstream?: React.Dispatch<React.SetStateAction<boolean>>;
+  impactedSet?: Set<string>;
+  handleCopy?: (text: string, message: string) => void;
+}
+
+interface TriStateCheckboxProps {
+  checked: boolean;
+  indeterminate: boolean;
+  onChange: () => void;
+  className?: string;
+}
+
+function TriStateCheckbox({ checked, indeterminate, onChange, className }: TriStateCheckboxProps) {
+  const checkboxRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (checkboxRef.current) {
+      checkboxRef.current.indeterminate = indeterminate;
+    }
+  }, [indeterminate]);
+
+  return (
+    <input
+      ref={checkboxRef}
+      type="checkbox"
+      checked={checked}
+      onChange={onChange}
+      className={className}
+    />
+  );
+}
+
+export function FilesContextPanel(props: FilesContextPanelProps = {}) {
+  const setNotification = useAppContextStore((s) => s.setNotification);
+  const storeCodebase = useCodebaseDomainState((s) => s.codebase);
+  const storeSelectedEntity = useCodebaseDomainState((s) => s.selectedEntity);
+  const storeEnableDownstream = useCodebaseDomainState((s) => s.enableDownstream);
+  const storeSetEnableDownstream = useCodebaseDomainState((s) => s.setEnableDownstream);
+  const storeEnableUpstream = useCodebaseDomainState((s) => s.enableUpstream);
+  const storeSetEnableUpstream = useCodebaseDomainState((s) => s.setEnableUpstream);
+
+  const initialCodebase = props.initialCodebase ?? storeCodebase;
+  const selectedEntity = props.selectedEntity ?? storeSelectedEntity;
+  const enableDownstream = props.enableDownstream ?? storeEnableDownstream;
+  const setEnableDownstream = props.setEnableDownstream ?? storeSetEnableDownstream;
+  const enableUpstream = props.enableUpstream ?? storeEnableUpstream;
+  const setEnableUpstream = props.setEnableUpstream ?? storeSetEnableUpstream;
+
+  const defaultHandleCopy = useCallback(async (text: string, message: string) => {
+    if (text) {
+      await vsCodeApiService.copyToClipboard(text);
+    }
+    setNotification(message);
+  }, [setNotification]);
+
+  const handleCopy = props.handleCopy ?? defaultHandleCopy;
+
+  const {
+    downstreamCount,
+    upstreamCount,
+    depthGroups,
+    getGroupStyle,
+    selectedFiles,
+    expandedGroups,
+    toggleGroupCheckbox,
+    toggleFileCheckbox,
+    toggleGroupExpand,
+    selectedCount,
+    selectedUpstreamCount,
+    selectedDownstreamCount,
+    totalFilesContext,
+    combinedSelectedFilesContext,
+    targetFilePaths,
+    handleFileClick,
+    handleFileDoubleClick,
+  } = useFilesContext(
+    initialCodebase,
+    selectedEntity,
+    enableDownstream,
+    enableUpstream,
+    props.impactedSet
+  );
 
   const topContent = (
-    <div className="flex flex-col w-full shrink-0">
-      <div className="flex justify-between items-center bg-muted/20 p-0.5 border-border border-b shrink-0">
-        <div className="flex items-center gap-1.5 pl-2 w-full">
-          <LayoutList size={14} className="text-muted-foreground shrink-0" />
-          <SelectFromTypeBuilder
-            id="select-display-level"
-            value={viewMode}
-            onChange={(val) => setViewMode(val as ViewMode)}
-            className="py-0"
-            triggerClassName="!h-6 min-h-0 py-0 px-2 text-xs border-border rounded-sm font-mono bg-background"
-            options={CODEBASE_GROUPING_LIST.map((key) => ({
-              value: key,
-              icon: CODEBASE_GROUPING_ICON_MAP[key].icon,
-              label: CODEBASE_GROUPING_ICON_MAP[key].label,
-            }))}
-          />
+    <div className="space-y-1.5 mb-1 w-full">
+      <div className="space-y-1.5 bg-muted/30 p-1.5 border border-border rounded-lg w-full">
+        <div className="flex justify-between items-center">
+          <label className="font-mono font-bold text-[10px] text-muted-foreground uppercase">Impact Propagation</label>
+          <span className="bg-amber-500/10 px-1.5 py-0.2 border border-amber-500/30 rounded font-mono text-[9px] text-amber-500">Transitive BFS</span>
         </div>
-
-        <div className="flex items-center gap-0.5 pr-1 shrink-0">
+        <div className="gap-1.5 grid grid-cols-2">
           <Button
-            id="btn-toggle-treeview-finder"
-            className={`hover:bg-muted rounded w-7 h-7 transition-colors ${
-              finderState.isFinderOpen ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
+            onClick={() => setEnableUpstream((prev: any) => !prev)}
+            className={`flex items-center justify-center gap-1.5 py-1 px-2 font-mono text-xs font-bold rounded border transition-all h-7.5 cursor-pointer ${
+              enableUpstream
+                ? 'bg-orange-500 border-orange-400 text-white shadow-xs'
+                : 'bg-muted border-border text-foreground hover:bg-muted/80'
             }`}
-            variant="ghost"
-            size="icon"
-            onClick={finderState.toggleFinder}
-            data-tooltip="Toggle Treeview Finder (Loupe)"
           >
-            <Search size={12} />
-          </Button>
-
-          <ToolbarSeparator />
-
-          <Button
-            id="btn-collapse-all"
-            className="hover:bg-muted rounded w-7 h-7 text-muted-foreground hover:text-foreground transition-colors"
-            variant="ghost"
-            size="icon"
-            onClick={() => handleCollapseAll()}
-            data-tooltip="Collapse All"
-          >
-            <ChevronsUp size={12} />
+            <GitFork size={12} />
+            Upstream ({upstreamCount})
           </Button>
           <Button
-            id="btn-expand-all"
-            className="hover:bg-muted rounded w-7 h-7 text-muted-foreground hover:text-foreground transition-colors"
-            variant="ghost"
-            size="icon"
-            onClick={() => handleExpandAll()}
-            data-tooltip="Expand All"
+            onClick={() => setEnableDownstream((prev: any) => !prev)}
+            className={`flex items-center justify-center gap-1.5 py-1 px-2 font-mono text-xs font-bold rounded border transition-all h-7.5 cursor-pointer ${
+              enableDownstream
+                ? 'bg-orange-500 border-orange-400 text-white shadow-xs'
+                : 'bg-muted border-border text-foreground hover:bg-muted/80'
+            }`}
           >
-            <ChevronsDown size={12} />
-          </Button>
-
-          <ToolbarSeparator />
-          <Button
-            id="btn-open-import-ast-dialog"
-            className="hover:bg-muted rounded w-7 h-7 text-muted-foreground hover:text-foreground transition-colors"
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsImportOpen(true)}
-            data-tooltip="Open AST Codebase import dialog"
-          >
-            <Upload size={12} />
-          </Button>
-
-          <Button
-            id="btn-export-ast-json"
-            className="hover:bg-muted rounded w-7 h-7 text-muted-foreground hover:text-foreground transition-colors"
-            variant="ghost"
-            size="icon"
-            onClick={handleExportCodebase}
-            data-tooltip="Export current session structure as AST Codebase to JSON file"
-          >
-            <Download size={12} />
+            <GitFork size={12} className="rotate-180" />
+            Downstream ({downstreamCount})
           </Button>
         </div>
       </div>
-
-      {finderState.isFinderOpen && (
-        <div id="container-treeview-finder" className="bg-background p-0 border-border border-b shrink-0">
-          <FinderTree
-            styleView="toolbar"
-            focusTrigger={finderState.focusTrigger}
-            searchQuery={finderState.searchQuery}
-            setSearchQuery={finderState.setSearchQuery}
-            caseSensitive={finderState.caseSensitive}
-            setCaseSensitive={finderState.setCaseSensitive}
-            wholeWord={finderState.wholeWord}
-            setWholeWord={finderState.setWholeWord}
-            useRegex={finderState.useRegex}
-            setUseRegex={finderState.setUseRegex}
-            isFilterActive={finderState.isFilterActive}
-            setIsFilterActive={finderState.setIsFilterActive}
-            collapseNotMatchingNodes={finderState.collapseNotMatchingNodes}
-            setCollapseNotMatchingNodes={finderState.setCollapseNotMatchingNodes}
-            currentMatchIndex={finderState.currentMatchIndex}
-            totalMatches={finderState.totalMatches}
-            onNext={finderState.handleNextMatch}
-            onPrev={finderState.handlePrevMatch}
-            onClose={() => finderState.setIsFinderOpen(false)}
-          />
-        </div>
-      )}
     </div>
   );
 
   const middleContent = (
-    <div className="p-4 w-full font-mono text-xs">
-      {groupedScopes.map((scope: ScopeGroup) => {
-        const scopeTheme = FOLDER_THEME_REGISTRY_CONFIG[scope.key] || FOLDER_THEME_REGISTRY_CONFIG.default;
-        const isFilterActiveWithQuery = finderState.isFilterActive && Boolean(finderState.searchQuery.trim());
+    <div className="flex flex-col py-1 pr-0 w-full h-full font-mono text-xs">
+      <div className="flex flex-col flex-1 space-y-2 bg-orange-500/5 p-2 border border-orange-500/25 rounded-lg min-h-0 h-full">
+        <div className="flex justify-between items-center shrink-0">
+          <div className="flex items-center gap-1.5">
+            <ShieldAlert size={14} className="text-orange-500" />
+            <h5 className="font-mono font-bold text-xs text-orange-500">Adjust Impact Plan</h5>
+          </div>
+          <span className="bg-orange-500/10 px-1.5 py-0.2 border border-orange-500/20 rounded font-mono font-bold text-[10px] text-orange-500">
+            {selectedCount} Selected
+          </span>
+        </div>
 
-        if (isFilterActiveWithQuery && !scopeHasMatches(scope, viewMode, finderState.matchingFileIds)) {
-          return null;
-        }
-
-        const isScopeExpanded =
-          isFilterActiveWithQuery && !finderState.collapseNotMatchingNodes
-            ? true
-            : (expandedFolders[scope.key] ?? true);
-
-        const allScopeFiles = scope.files;
-        const displayScopeFiles = isFilterActiveWithQuery
-          ? scope.files.filter((f) => finderState.matchingFileIds.has(f.id))
-          : scope.files;
-
-        const isScopeAllChecked = allScopeFiles.length > 0 && allScopeFiles.every((f) => visibleFiles[f.id]);
-        const isScopeSomeChecked = allScopeFiles.some((f) => visibleFiles[f.id]);
-        const isScopeIndeterminate = isScopeSomeChecked && !isScopeAllChecked;
-
-        return (
-          <div key={scope.key} className="mb-4">
-            <div className="group flex items-center gap-1.5 hover:bg-muted/50 px-1 py-1 rounded">
-              <TriStateCheckbox
-                checked={isScopeAllChecked}
-                indeterminate={isScopeIndeterminate}
-                onChange={() => toggleFileListCheckbox(allScopeFiles)}
-              />
-              <div
-                className="flex flex-1 items-center gap-1.5 min-w-0 cursor-pointer"
-                onClick={() => handleToggleFolder(scope.key, scope.folderPath)}
-                onDoubleClick={(e) => handleFolderDoubleClick(scope.folderPath, allScopeFiles, e)}
-              >
-                {isScopeExpanded ? (
-                  <ChevronDown size={14} className="shrink-0" />
-                ) : (
-                  <ChevronRight size={14} className="shrink-0" />
-                )}
-                <Folder size={15} className={`${scopeTheme.fill} ${scopeTheme.text} shrink-0`} />
-                <span className="font-bold truncate" title={scope.label}>
-                  {finderState.isFinderOpen && finderState.searchQuery ? (
-                    <FinderHtml
-                      text={`${scope.label}/`}
-                      searchQuery={finderState.searchQuery}
-                      caseSensitive={finderState.caseSensitive}
-                      wholeWord={finderState.wholeWord}
-                      useRegex={finderState.useRegex}
-                      currentMatchIndex={finderState.currentMatchIndex}
-                      matchStartIndex={-1}
-                    />
-                  ) : (
-                    `${scope.label}/`
-                  )}
-                </span>
-              </div>
+        <div className="flex-1 space-y-1.5 pr-1 min-h-0 overflow-y-auto">
+          {depthGroups.length === 0 ? (
+            <div className="py-2 text-[11px] text-muted-foreground text-center italic">
+              No impacted files or selected target entity.
             </div>
+          ) : (
+            depthGroups.map((group) => {
+              const groupFiles = group.files;
+              const isAllChecked = groupFiles.length > 0 && groupFiles.every((f) => selectedFiles[f.id]);
+              const isSomeChecked = groupFiles.some((f) => selectedFiles[f.id]);
+              const isIndeterminate = isSomeChecked && !isAllChecked;
+              const isExpanded = expandedGroups[group.key] ?? true;
+              const style = getGroupStyle(group.key);
 
-            {isScopeExpanded && (
-              <div className="space-y-1 mt-1 ml-2.5 pl-3 border-border border-l">
-                {viewMode === 'scope' &&
-                  displayScopeFiles.map((file) => {
-                    const matchIndex = finderState.matchingFileIndexMap.get(file.id) ?? -1;
-                    return (
+              return (
+                <div key={group.key} className={`border ${style.border} rounded-md bg-background/60 overflow-hidden`}>
+                  <div className={`flex items-center justify-between px-1.5 py-1 ${style.bgHeader} select-none`}>
+                    <div className="flex flex-1 items-center gap-1.5 min-w-0">
+                      <TriStateCheckbox
+                        checked={isAllChecked}
+                        indeterminate={isIndeterminate}
+                        onChange={() => toggleGroupCheckbox(group.key, groupFiles)}
+                        className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
+                      />
                       <div
-                        key={file.id}
-                        id={`tree-file-node-${file.id}`}
-                        className="group flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded transition-colors"
+                        className="flex flex-1 items-center gap-1 min-w-0 cursor-pointer"
+                        onClick={() => toggleGroupExpand(group.key)}
                       >
-                        <Checkbox
-                          checked={!!visibleFiles[file.id]}
-                          onCheckedChange={() => toggleFileCheckbox(file.id)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="w-3.5 h-3.5 shrink-0"
-                        />
-                        <span
-                          className={`flex items-center gap-1.5 truncate cursor-pointer flex-1 min-w-0 ${
-                            visibleFiles[file.id] ? 'text-foreground font-medium' : 'text-muted-foreground line-through'
-                          }`}
-                          onClick={() => handleFileClick(file)}
-                          onDoubleClick={(e) => handleFileDoubleClick(file, e)}
-                        >
-                          {scope.key === 'config' ? (
-                            <Database size={13} className="text-amber-500 shrink-0" />
-                          ) : (
-                            <FileCode
-                              size={13}
-                              className={
-                                file.type === 'interface'
-                                  ? 'text-indigo-400 shrink-0'
-                                  : scope.key === 'frontend'
-                                  ? 'text-emerald-500 shrink-0'
-                                  : scope.key === 'backend'
-                                  ? 'text-blue-500 shrink-0'
-                                  : 'text-slate-400 shrink-0'
-                              }
-                            />
-                          )}
-                          <span className="truncate">
-                            {finderState.isFinderOpen && finderState.searchQuery ? (
-                              <FinderHtml
-                                text={file.name}
-                                searchQuery={finderState.searchQuery}
-                                caseSensitive={finderState.caseSensitive}
-                                wholeWord={finderState.wholeWord}
-                                useRegex={finderState.useRegex}
-                                currentMatchIndex={finderState.currentMatchIndex}
-                                matchStartIndex={matchIndex}
-                              />
-                            ) : (
-                              file.name
-                            )}
-                          </span>
-                        </span>
+                        {isExpanded ? (
+                          <ChevronDown size={14} className={`${style.icon} shrink-0`} />
+                        ) : (
+                          <ChevronRight size={14} className={`${style.icon} shrink-0`} />
+                        )}
+                        <span className={`text-[11px] truncate ${style.text}`}>{group.label}</span>
                       </div>
-                    );
-                  })}
+                    </div>
+                    <span className="bg-muted ml-2 px-1.5 py-0.2 rounded font-mono text-[9px] text-muted-foreground">
+                      {groupFiles.filter((f) => selectedFiles[f.id]).length}/{groupFiles.length}
+                    </span>
+                  </div>
 
-                {viewMode === 'folder' && scope.folderTree && (
-                  <>
-                    {scope.rootFiles &&
-                      (isFilterActiveWithQuery
-                        ? scope.rootFiles.filter((f) => finderState.matchingFileIds.has(f.id))
-                        : scope.rootFiles
-                      ).map((file) => {
-                        const matchIndex = finderState.matchingFileIndexMap.get(file.id) ?? -1;
+                  {isExpanded && (
+                    <div className="space-y-0.5 bg-background/40 p-1">
+                      {groupFiles.map((file) => {
+                        const fileSizeKb = (((file as any).size || (file as any).content?.length || 0) / 1024).toFixed(1);
+
                         return (
                           <div
                             key={file.id}
-                            id={`tree-file-node-${file.id}`}
-                            className="group flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded transition-colors"
+                            className="flex justify-between items-center hover:bg-muted/50 px-1.5 py-0.5 rounded transition-colors"
                           >
-                            <Checkbox
-                              checked={!!visibleFiles[file.id]}
-                              onCheckedChange={() => toggleFileCheckbox(file.id)}
-                              onClick={(e) => e.stopPropagation()}
-                              className="w-3.5 h-3.5 shrink-0"
-                            />
-                            <span
-                              className={`flex items-center gap-1.5 truncate cursor-pointer flex-1 min-w-0 ${
-                                visibleFiles[file.id] ? 'text-foreground font-medium' : 'text-muted-foreground line-through'
-                              }`}
-                              onClick={() => handleFileClick(file)}
-                              onDoubleClick={(e) => handleFileDoubleClick(file, e)}
-                            >
-                              <FileCode size={13} className="text-slate-400 shrink-0" />
-                              <span className="truncate">
-                                {finderState.isFinderOpen && finderState.searchQuery ? (
-                                  <FinderHtml
-                                    text={file.name}
-                                    searchQuery={finderState.searchQuery}
-                                    caseSensitive={finderState.caseSensitive}
-                                    wholeWord={finderState.wholeWord}
-                                    useRegex={finderState.useRegex}
-                                    currentMatchIndex={finderState.currentMatchIndex}
-                                    matchStartIndex={matchIndex}
-                                  />
-                                ) : (
-                                  file.name
-                                )}
+                            <div className="flex flex-1 items-center gap-1.5 min-w-0">
+                              <input
+                                type="checkbox"
+                                checked={!!selectedFiles[file.id]}
+                                onChange={() => toggleFileCheckbox(file.id)}
+                                className="rounded w-3.5 h-3.5 text-primary cursor-pointer shrink-0"
+                              />
+                              <span
+                                className={`truncate text-[11px] cursor-pointer ${
+                                  selectedFiles[file.id] ? 'font-semibold text-foreground' : 'text-muted-foreground line-through'
+                                }`}
+                                onClick={() => handleFileClick(file)}
+                                onDoubleClick={(e) => handleFileDoubleClick(file, e)}
+                              >
+                                {file.name}
                               </span>
-                            </span>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 ml-2 shrink-0">
+                              <span className="bg-muted px-1.5 py-0.2 rounded text-[9px] text-muted-foreground">
+                                {file.language || 'unknown'}
+                              </span>
+                              <span className="bg-muted px-1.5 py-0.2 rounded font-mono text-[9px] text-muted-foreground">
+                                {fileSizeKb}&nbsp;KB
+                              </span>
+                            </div>
                           </div>
                         );
                       })}
-
-                    {scope.folderTree.map((rootNode, rootIdx) => (
-                      <RecursiveFolderNode
-                        key={rootNode.id}
-                        node={rootNode}
-                        depth={1}
-                        expandedFolders={expandedFolders}
-                        visibleFiles={visibleFiles}
-                        toggleFolder={handleToggleFolder}
-                        toggleFileCheckbox={toggleFileCheckbox}
-                        setSelectedEntity={setSelectedEntity}
-                        onFocusNode={onFocusNode}
-                        theme={DYNAMIC_COLORS[rootIdx % DYNAMIC_COLORS.length]}
-                        toggleFileListCheckbox={toggleFileListCheckbox}
-                        handleFileDoubleClick={handleFileDoubleClick}
-                        handleFolderDoubleClick={handleFolderDoubleClick}
-                        handleFileClick={handleFileClick}
-                        handleFolderClick={handleToggleFolder}
-                        finderState={finderState}
-                      />
-                    ))}
-                  </>
-                )}
-
-                {viewMode !== 'scope' &&
-                  viewMode !== 'folder' &&
-                  scope.subFolders &&
-                  scope.subFolders.map((sub: SubFolderGroup, subIdx: number) => {
-                    const displaySubFiles = isFilterActiveWithQuery
-                      ? sub.files.filter((f) => finderState.matchingFileIds.has(f.id))
-                      : sub.files;
-
-                    if (isFilterActiveWithQuery && displaySubFiles.length === 0) {
-                      return null;
-                    }
-
-                    const isSubExpanded =
-                      isFilterActiveWithQuery && !finderState.collapseNotMatchingNodes
-                        ? true
-                        : (expandedFolders[sub.key] ?? true);
-
-                    const subTheme = DYNAMIC_COLORS[subIdx % DYNAMIC_COLORS.length];
-
-                    const isSubAllChecked = sub.files.length > 0 && sub.files.every((f) => visibleFiles[f.id]);
-                    const isSubSomeChecked = sub.files.some((f) => visibleFiles[f.id]);
-                    const isSubIndeterminate = isSubSomeChecked && !isSubAllChecked;
-
-                    return (
-                      <div key={sub.key} className="mb-2">
-                        <div className="group flex items-center gap-1.5 hover:bg-muted/50 px-1 py-1 rounded">
-                          <TriStateCheckbox
-                            checked={isSubAllChecked}
-                            indeterminate={isSubIndeterminate}
-                            onChange={() => toggleFileListCheckbox(sub.files)}
-                          />
-                          <div
-                            className="flex flex-1 items-center gap-1.5 min-w-0 cursor-pointer"
-                            onClick={() => handleToggleFolder(sub.key, sub.folderPath)}
-                            onDoubleClick={(e) => handleFolderDoubleClick(sub.folderPath, sub.files, e)}
-                          >
-                            {isSubExpanded ? (
-                              <ChevronDown size={14} className="shrink-0" />
-                            ) : (
-                              <ChevronRight size={14} className="shrink-0" />
-                            )}
-                            <Folder size={14} className={`${subTheme.fill} ${subTheme.text} shrink-0`} />
-                            <span className="font-semibold text-foreground/90 truncate" title={sub.label}>
-                              {finderState.isFinderOpen && finderState.searchQuery ? (
-                                <FinderHtml
-                                  text={`${sub.label}/`}
-                                  searchQuery={finderState.searchQuery}
-                                  caseSensitive={finderState.caseSensitive}
-                                  wholeWord={finderState.wholeWord}
-                                  useRegex={finderState.useRegex}
-                                  currentMatchIndex={finderState.currentMatchIndex}
-                                  matchStartIndex={-1}
-                                />
-                              ) : (
-                                `${sub.label}/`
-                              )}
-                            </span>
-                          </div>
-                        </div>
-
-                        {isSubExpanded && (
-                          <div className="space-y-1 mt-1 ml-2.5 pl-3 border-border border-l">
-                            {displaySubFiles.map((file) => {
-                              const isDuplicate = viewMode === 'tags' && duplicateFileIds.has(file.id);
-                              const matchIndex = finderState.matchingFileIndexMap.get(file.id) ?? -1;
-                              const textStyle = isDuplicate
-                                ? 'text-orange-500 font-bold'
-                                : visibleFiles[file.id]
-                                ? 'text-foreground font-medium'
-                                : 'text-muted-foreground line-through';
-
-                              return (
-                                <div
-                                  key={file.id}
-                                  id={`tree-file-node-${file.id}`}
-                                  className="group flex items-center gap-1.5 hover:bg-muted px-2 py-1 rounded transition-colors"
-                                >
-                                  <Checkbox
-                                    checked={!!visibleFiles[file.id]}
-                                    onCheckedChange={() => toggleFileCheckbox(file.id)}
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="w-3.5 h-3.5 shrink-0"
-                                  />
-                                  <span
-                                    className={`flex items-center gap-1.5 truncate cursor-pointer flex-1 min-w-0 ${textStyle}`}
-                                    onClick={() => handleFileClick(file)}
-                                    onDoubleClick={(e) => handleFileDoubleClick(file, e)}
-                                  >
-                                    {file.type === 'config' ? (
-                                      <Database size={13} className="text-amber-500 shrink-0" />
-                                    ) : (
-                                      <FileCode
-                                        size={13}
-                                        className={
-                                          file.type === 'interface'
-                                            ? 'text-indigo-400 shrink-0'
-                                            : subTheme.iconColor || 'text-slate-400'
-                                        }
-                                      />
-                                    )}
-                                    <span className="truncate">
-                                      {finderState.isFinderOpen && finderState.searchQuery ? (
-                                        <FinderHtml
-                                          text={file.name}
-                                          searchQuery={finderState.searchQuery}
-                                          caseSensitive={finderState.caseSensitive}
-                                          wholeWord={finderState.wholeWord}
-                                          useRegex={finderState.useRegex}
-                                          currentMatchIndex={finderState.currentMatchIndex}
-                                          matchStartIndex={matchIndex}
-                                        />
-                                      ) : (
-                                        file.name
-                                      )}
-                                    </span>
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-              </div>
-            )}
-          </div>
-        );
-      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
     </div>
   );
 
   const bottomContent = (
-    <div className="flex justify-between items-center bg-muted/20 p-2 border-border border-t w-full h-9 shrink-0">
-      <div>
-        <h3 className="flex items-center gap-2 font-mono font-bold text-muted-foreground text-xs uppercase tracking-wider">
-          <span>Explorer</span>
-          <span id="badge-file-count" className="bg-muted px-2 py-0.5 rounded text-[10px] text-foreground">
-            {activeVisibleCount}/{codebase?.files?.length || 0}
-          </span>
-        </h3>
+    <div className="space-y-1.5 mt-1 w-full">
+      <div className="space-y-1 bg-card p-1.5 border border-border rounded-lg w-full">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-1.5">
+            <FileText size={14} className="text-primary" />
+            <h4 className="font-mono font-bold text-xs text-foreground uppercase tracking-wider">
+              Selected Files Context
+            </h4>
+          </div>
+        </div>
+
+        <div className="gap-1.5 grid grid-cols-10 text-center">
+          <div className="col-span-2 bg-orange-500/10 p-1 border border-orange-500/20 rounded">
+            <span className="block text-[9px] text-orange-500 truncate uppercase">Selected</span>
+            <span className="font-bold text-xs text-orange-500">{selectedCount} / {initialCodebase?.files?.length || 0}</span>
+          </div>
+          <div className="col-span-2 bg-indigo-500/10 p-1 border border-indigo-500/20 rounded">
+            <span className="block text-[9px] text-indigo-500 truncate uppercase">Upstream</span>
+            <span className="font-bold text-xs text-indigo-500">{selectedUpstreamCount} / {upstreamCount}</span>
+          </div>
+          <div className="col-span-2 bg-blue-500/10 p-1 border border-blue-500/20 rounded">
+            <span className="block text-[9px] text-blue-500 truncate uppercase">Downstream</span>
+            <span className="font-bold text-xs text-blue-500">{selectedDownstreamCount} / {downstreamCount}</span>
+          </div>
+
+          <div className="col-span-4 bg-emerald-500/10 p-1 border border-emerald-500/20 rounded">
+            <span className="block text-[9px] text-emerald-500 truncate uppercase">Token Size</span>
+            <span className="font-bold text-xs text-emerald-500">
+              {(combinedSelectedFilesContext.length / 1024).toFixed(1)} / {(totalFilesContext.length / 1024).toFixed(1)} KB
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-background pt-1 w-full">
+        <FilesCtxExportPanel targetFilePaths={targetFilePaths} handleCopy={handleCopy} />
       </div>
     </div>
   );
 
   return (
-    <div
-      ref={panelRef}
-      tabIndex={-1}
-      className="flex flex-col outline-none w-full h-full min-h-0 overflow-hidden"
-    >
-      <TopMiddleBottomPanel
-        id="panel-codebase-explorer"
-        topId="panel-codebase-explorer-top"
-        middleId="tree-codebase-files"
-        bottomId="panel-codebase-explorer-bottom"
-        className="bg-card w-full h-full min-h-0 overflow-hidden"
-        top={topContent}
-        middle={middleContent}
-        bottom={bottomContent}
-      />
-      <ImportAstDialog
-        open={isImportOpen}
-        onOpenChange={setIsImportOpen}
-        onImport={(data) => {
-          if (onImportCodebase) onImportCodebase(data);
-        }}
-      />
-    </div>
+    <TopMiddleBottomPanel
+      id="files-context-panel"
+      top={topContent}
+      middle={middleContent}
+      bottom={bottomContent}
+      className="font-mono text-xs animate-in duration-200 fade-in h-full"
+    />
   );
 }
+
+export const FilesContextTab = FilesContextPanel;
 EOF
 
-echo "✅ feat/fix: Codebase Explorer file count badge now dynamically updates in real time when deselecting/reselecting elements in the treeview!"
+echo "✅ feat/fix: Resolved 'Copy files ctx' button logic to copy exported context to clipboard and trigger notifications correctly!"
 echo "💡 Next step: Run 'npm run build' to re-verify build cleanliness."

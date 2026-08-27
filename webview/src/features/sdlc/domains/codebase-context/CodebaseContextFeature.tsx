@@ -52,7 +52,7 @@ export function CodebaseContextFeature() {
         bottom: { visible: false }
       },
       sidebarRight: {
-        visible: true,
+        visible: false,
         isResizable: true,
         isHiddable: true,
         container: <SidebarRightContainer />,

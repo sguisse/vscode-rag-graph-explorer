@@ -1,9 +1,10 @@
 import React from 'react';
-import { Grid, Database, Plus, Minus, Focus, SquareFunction, Target, ListTree, Map } from 'lucide-react';
+import { Grid, Database, Plus, Minus, Focus, SquareFunction, Target, ListTree, Map, Microscope } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
 import { ToggleButton } from '@/components/app/toggle-button';
 import { ToolbarSeparator } from '@/components/app/toolbar-separator';
+import { useLayoutStore } from '@/store/useLayoutStore';
 
 import {
   GRAPH_LAYOUT_LIST,
@@ -142,6 +143,9 @@ export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
   const showMinimap = useCodebaseDomainState((s) => s.showMinimap);
   const toggleShowMinimap = useCodebaseDomainState((s) => s.toggleShowMinimap);
 
+  const isSidebarRightVisible = useLayoutStore((s) => s.containers.sidebarRight?.visible ?? false);
+  const toggleContainerVisible = useLayoutStore((s) => s.toggleContainerVisible);
+
   const showGrid = propShowGrid ?? storeShowGrid;
   const setShowGrid = propSetShowGrid ?? storeSetShowGrid;
   const attributesVisible = propAttributesVisible ?? storeAttributesVisible;
@@ -175,6 +179,14 @@ export const GraphPanelHeaderRight: React.FC<GraphPanelHeaderRightProps> = ({
         onToggle={() => setMethodsVisible(!methodsVisible)}
         tooltipText="Toggle Methods Visibility"
         icon={<SquareFunction size={12} />}
+      />
+
+      <ToggleButton
+        id="btn-toggle-inspector-sidebar"
+        isSelected={isSidebarRightVisible}
+        onToggle={() => toggleContainerVisible('sidebarRight')}
+        tooltipText="Toggle Inspector Panel (Right Sidebar)"
+        icon={<Microscope size={12} />}
       />
 
       <ToolbarSeparator />

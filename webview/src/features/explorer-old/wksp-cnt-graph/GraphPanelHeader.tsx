@@ -36,10 +36,10 @@ export const GraphPanelHeaderLeft: React.FC<GraphPanelHeaderLeftProps> = ({
     setCurrentRendering: storeSetRendering
   } = useGraphPanelHeader();
 
-  const currentLayout = propCurrentLayout || storeLayout || 'preset';
+  const currentLayout = propCurrentLayout || storeLayout || 'cose';
   const setCurrentLayout = propSetCurrentLayout || storeSetLayout;
 
-  const currentRendering = propCurrentRendering || storeRendering || 'uml';
+  const currentRendering = propCurrentRendering || storeRendering || 'rounded';
   const setCurrentRendering = propSetCurrentRendering || storeSetRendering;
 
   return (
@@ -48,7 +48,7 @@ export const GraphPanelHeaderLeft: React.FC<GraphPanelHeaderLeftProps> = ({
       <SelectFromTypeBuilder
         id="select-graph-rendering"
         value={currentRendering}
-        onChange={(val) => setCurrentRendering((val as GraphRendering) || 'uml')}
+        onChange={(val) => setCurrentRendering((val as GraphRendering) || 'rounded')}
         className="py-0"
         triggerClassName="!h-6 min-h-0 py-0 px-2 text-xs border-border rounded-sm font-mono"
         options={GRAPH_RENDERING_LIST.map((key) => ({
@@ -60,7 +60,7 @@ export const GraphPanelHeaderLeft: React.FC<GraphPanelHeaderLeftProps> = ({
       <SelectFromTypeBuilder
         id="select-graph-layout"
         value={currentLayout}
-        onChange={(val) => setCurrentLayout(val || 'preset')}
+        onChange={(val) => setCurrentLayout(val || 'cose')}
         className="py-0"
         triggerClassName="!h-6 min-h-0 py-0 px-2 text-xs border-border rounded-sm font-mono"
         options={GRAPH_LAYOUT_LIST.map((key) => ({

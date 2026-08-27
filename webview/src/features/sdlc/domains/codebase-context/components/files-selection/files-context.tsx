@@ -1,13 +1,13 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { GitFork, FileText, ShieldAlert, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
 import { CodebaseData, SelectedEntity } from '@/shared/services/graph-rag-explorer';
+import { useAppContextStore } from '@/store/useAppContextStore';
+import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { useCodebaseDomainState } from '../../store/useCodebaseDomainState';
 import { useFilesContext } from './hooks/use-files-context';
 import { FilesCtxExportPanel } from '../files-ctx-export/files-ctx-export-panel';
-
-const DEFAULT_HANDLE_COPY = () => {};
 
 export interface FilesContextPanelProps {
   initialCodebase?: CodebaseData;
@@ -48,6 +48,7 @@ function TriStateCheckbox({ checked, indeterminate, onChange, className }: TriSt
 }
 
 export function FilesContextPanel(props: FilesContextPanelProps = {}) {
+  const setNotification = useAppContextStore((s) => s.setNotification);
   const storeCodebase = useCodebaseDomainState((s) => s.codebase);
   const storeSelectedEntity = useCodebaseDomainState((s) => s.selectedEntity);
   const storeEnableDownstream = useCodebaseDomainState((s) => s.enableDownstream);
@@ -61,7 +62,15 @@ export function FilesContextPanel(props: FilesContextPanelProps = {}) {
   const setEnableDownstream = props.setEnableDownstream ?? storeSetEnableDownstream;
   const enableUpstream = props.enableUpstream ?? storeEnableUpstream;
   const setEnableUpstream = props.setEnableUpstream ?? storeSetEnableUpstream;
-  const handleCopy = props.handleCopy ?? DEFAULT_HANDLE_COPY;
+
+  const defaultHandleCopy = useCallback(async (text: string, message: string) => {
+    if (text) {
+      await vsCodeApiService.copyToClipboard(text);
+    }
+    setNotification(message);
+  }, [setNotification]);
+
+  const handleCopy = props.handleCopy ?? defaultHandleCopy;
 
   const {
     downstreamCount,
