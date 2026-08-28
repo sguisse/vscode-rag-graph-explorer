@@ -1,15 +1,3 @@
-#!/usr/bin/env bash
-set -e
-
-echo "🚀 Updating Select display in BMadInstructionsPanel.tsx to match BMad selection list labels..."
-
-# Ensure target directory exists
-mkdir -p webview/src/features/sdlc/domains/instructions/bmad-method/components
-
-# -----------------------------------------------------------------------------
-# Update BMadInstructionsPanel.tsx: Format SelectValue and SelectItem labels
-# -----------------------------------------------------------------------------
-cat << 'EOF' > webview/src/features/sdlc/domains/instructions/bmad-method/components/BMadInstructionsPanel.tsx
 import React, { useMemo } from 'react';
 import { Bot } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
@@ -142,8 +130,3 @@ export function BMadInstructionsPanel() {
     </div>
   );
 }
-EOF
-
-echo "✅ feat/fix: Formatted BMadAgent Select dropdown and trigger value in BMadInstructionsPanel.tsx to match the selection list label format!"
-echo "💡 Rebuilding webview project..."
-npm run build

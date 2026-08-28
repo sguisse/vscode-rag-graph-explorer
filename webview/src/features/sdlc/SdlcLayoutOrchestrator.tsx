@@ -5,6 +5,7 @@ import { useSdlcWorkflowMachine } from './core/workflow/useSdlcWorkflowMachine';
 import { SdlcSidebarMenu } from './ui-common/components/SdlcSidebarMenu';
 import { CodebaseContextFeature } from './domains/codebase-context';
 import { VibeCodingFeature, BMadMethodFeature, SpecKitFeature } from './domains/instructions';
+import { BMadLeftContainer } from './domains/instructions/bmad-method/containers/BMadLeftContainer';
 import { LlmFeature } from './domains/llm-chat';
 import { ResultsManagerFeature } from './domains/results-manager';
 import { ConfigurationFeature } from './domains/configuration';
@@ -26,14 +27,14 @@ export function SdlcLayoutOrchestrator() {
       isHiddable: true,
     };
 
-    const defaultInstructionLayout = (content: React.ReactNode) => ({
+    const defaultInstructionLayout = (content: React.ReactNode, leftContainer?: React.ReactNode) => ({
       header: { visible: true, isResizable: false, isHiddable: false },
       sidebarLeft: defaultSidebarLeft,
       workspace: {
         top: { visible: false },
         left: {
-          visible: true,
-          container: <FilesContextLeftContainer />,
+          visible: !!leftContainer,
+          container: leftContainer,
           isResizable: true,
           isHiddable: true,
           maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' as const },
@@ -45,7 +46,13 @@ export function SdlcLayoutOrchestrator() {
           isHiddable: false,
           maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' as const },
         },
-        right: { visible: false },
+        right: {
+            visible: true,
+            container: <FilesContextLeftContainer />,
+            isResizable: true,
+            isHiddable: true,
+            maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' as const },
+         },
         bottom: { visible: false },
       },
       sidebarRight: { visible: false },
@@ -75,7 +82,7 @@ export function SdlcLayoutOrchestrator() {
     if (currentStep === 'VIBE_CODING') {
       setLayoutContainers(defaultInstructionLayout(<VibeCodingFeature />));
     } else if (currentStep === 'BMAD_METHOD') {
-      setLayoutContainers(defaultInstructionLayout(<BMadMethodFeature />));
+      setLayoutContainers(defaultInstructionLayout(<BMadMethodFeature />, <BMadLeftContainer />));
     } else if (currentStep === 'SPECKIT') {
       setLayoutContainers(defaultInstructionLayout(<SpecKitFeature />));
     } else if (currentStep === 'LLM_CHAT') {

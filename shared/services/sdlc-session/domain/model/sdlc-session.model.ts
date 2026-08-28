@@ -10,6 +10,7 @@ export interface CodebaseContextPointers {
 }
 
 export interface InstructionsPayload {
+  selectedAgent?: string;
     strategy: 'vibe' | 'bmad' | 'speckit';
     promptText: string;
 }
