@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronRight, Sparkles } from 'lucide-react';
-import { SkillCategory, Skill } from '../model/skills';
-import BMAD_SKILLS_DATA from '../data/bmad-skills-by-category.json';
+import { SkillsByCategoryConfig, Skill } from '../model/skills';
+import BMAD_SKILLS_DATA from '../data/bmad-skills-by-category.yaml';
 import { useSdlcSessionStore } from '@/features/sdlc/core/store/useSdlcSessionStore';
 
 export function BMadMethodPanel() {
-  const categories = BMAD_SKILLS_DATA as SkillCategory[];
+  const categories = BMAD_SKILLS_DATA as SkillsByCategoryConfig;
   const activeSessionId = useSdlcSessionStore((s) => s.activeSessionId);
   const session = useSdlcSessionStore((s) => (activeSessionId ? s.sessions[activeSessionId] : null));
   const updateSession = useSdlcSessionStore((s) => s.updateActiveSession);

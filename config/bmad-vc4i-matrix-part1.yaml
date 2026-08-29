@@ -1,0 +1,196 @@
+bmad_vc4i_matrix_part1:
+  - id: quick-start
+    title: "Quick Start"
+    description: "Get help or implement quickly without all phases"
+    skills:
+      - command: bmad-help
+        name: "Help & Guidance"
+        prompts:
+          planning: >-
+            Provide step-by-step guidance on setting up finite-capacity production scheduling rules in a multi-line factory. Explain how to configure constraints for work center bottleneck management, setup time minimization, and target completion dates.
+          order: >-
+            Provide guidance on configuring order intake validation logic for complex Configure-To-Order (CTO) finished goods. Explain how to enforce option-dependency rules before releasing orders to the factory floor.
+          orderDelivery: >-
+            Provide step-by-step guidance on establishing an automated dock appointment and carrier dispatch workflow for outbound finished goods shipments, including handling delivery delay exceptions.
+          stock: >-
+            Provide guidance on establishing real-time bin-level Work-In-Progress (WIP) tracking and dynamic safety stock thresholds for long-lead component inventories.
+          referential: >-
+            Provide step-by-step guidance on structuring multi-level Bill of Materials (BOM) master data synchronization between PLM systems (EBOM) and ERP/MES execution systems (MBOM).
+          pricing: >-
+            Provide guidance on setting up dynamic pricing models that incorporate real-time BOM component cost rollups and index-based raw material surcharges.
+          orderAdmenment: >-
+            Provide step-by-step guidance on handling post-release order amendment workflows when a customer modifies finished goods options while the work order is active on the shop floor.
+
+  - id: phase1-analysis
+    title: "Phase 1: Analysis"
+    description: "Explore the problem space and validate ideas"
+    skills:
+      - command: bmad-brainstorming
+        name: "Brainstorming"
+        prompts:
+          planning: >-
+            Brainstorm 5 strategies to balance emergency high-priority customer builds against optimal machine setup changeover schedules on a high-variance assembly line.
+          order: >-
+            Brainstorm innovative approaches for automated Configure-To-Order (CTO) order promising, enabling instant lead-time estimations based on live component availability.
+          orderDelivery: >-
+            Brainstorm methods to eliminate factory outbound gate bottlenecks and streamline 3PL driver pickup verification using digital dispatch passes.
+          stock: >-
+            Brainstorm dynamic stock allocation strategies to manage component shortages across multiple overlapping factory work orders.
+          referential: >-
+            Brainstorm solutions to bridge Engineering BOM (EBOM) to Manufacturing BOM (MBOM) discrepancies without causing manufacturing downtime.
+          pricing: >-
+            Brainstorm dynamic surcharge pricing mechanisms that automatically adjust quotes based on real-time component cost spikes and energy index surcharges.
+          orderAdmenment: >-
+            Brainstorm mitigation techniques to handle late customer order amendments with minimal component scrap and zero line stoppages.
+
+      - command: bmad-forge-idea
+        name: "Forge Idea"
+        prompts:
+          planning: >-
+            Pressure-test an automated AI-driven finite re-sequencing engine designed to dynamically re-route active work orders upon unplanned machine downtime.
+          order: >-
+            Stress-test a zero-touch order intake workflow converting EDI customer purchase orders directly into validated factory work orders.
+          orderDelivery: >-
+            Pressure-test a real-time shipping tracking system that integrates factory end-of-line packaging with carrier GPS telemetry.
+          stock: >-
+            Stress-test an automated vision-based WIP stock counting solution intended to eliminate periodic physical stocktaking pauses.
+          referential: >-
+            Pressure-test a single-source-of-truth master data architecture linking PLM item masters, MES routings, and ERP financial records.
+          pricing: >-
+            Stress-test a live margin protection service that auto-rejects order quotes if live component procurement costs drop margins below threshold.
+          orderAdmenment: >-
+            Pressure-test an automated order amendment engine that calculates exact scrap/rework costs and halts affected work orders within 5 seconds.
+
+      - command: bmad-product-brief
+        name: "Product Brief"
+        prompts:
+          planning: >-
+            Create a Product Brief for a Master Production Scheduling module that optimizes shop floor sequencing while maintaining target finished goods ship dates.
+          order: >-
+            Draft a Product Brief for an Order Configuration & Feasibility Engine that validates BOM option rules and lead times before order confirmation.
+          orderDelivery: >-
+            Write a Product Brief for an Outbound Logistics Workbench connecting MES packaging outputs with carrier dispatch and ASN generation.
+          stock: >-
+            Create a Product Brief for an Enterprise Inventory Visibility Platform delivering real-time stock reservation across raw, WIP, and finished goods locations.
+          referential: >-
+            Draft a Product Brief for a Master Data Referential Service governing Item Master, multi-level BOMs, and Operations Routing across plants.
+          pricing: >-
+            Write a Product Brief for a Dynamic Manufacturing Pricing & Costing Engine supporting contract tiers, component surcharges, and cost rollups.
+          orderAdmenment: >-
+            Create a Product Brief for an In-Flight Order Amendment Portal enabling customer service reps to manage mid-production changes safely.
+
+      - command: bmad-prfaq
+        name: "Working Backwards (PRFAQ)"
+        prompts:
+          planning: >-
+            Write a PRFAQ for a shop floor predictive schedule optimization platform that guarantees 98% On-Time In-Full (OTIF) factory performance.
+          order: >-
+            Write a PRFAQ launching an Instant Order Promising Service that commits reliable build schedules within seconds of customer checkout.
+          orderDelivery: >-
+            Write a PRFAQ for an Automated Factory Gate & Shipping Manifest System that cuts outbound truck loading turnaround time by 50%.
+          stock: >-
+            Write a PRFAQ for an Autonomous Inventory Rebalancing System that prevents shop floor line starvation during component lead-time spikes.
+          referential: >-
+            Write a PRFAQ for a Zero-Downtime ECN Synchronization Platform that updates factory BOMs in real-time without interrupting active assembly lines.
+          pricing: >-
+            Write a PRFAQ for a Value-Chain Margin Protection Portal calculating exact real-time profit margins for every custom build-to-order item.
+          orderAdmenment: >-
+            Write a PRFAQ for an Instant Order Modification Portal allowing customers to adjust product configuration up to 24 hours prior to final assembly.
+
+      - command: bmad-deep-recon
+        name: "Deep Recon"
+        prompts:
+          planning: >-
+            Conduct decision-grade research into Advanced Planning and Scheduling (APS) algorithms for complex job-shop and flow-shop manufacturing environments.
+          order: >-
+            Investigate modern CPQ (Configure, Price, Quote) integration architectures with factory MES for Make-To-Order industrial equipment.
+          orderDelivery: >-
+            Analyze competitive benchmarks for factory-to-door delivery tracking, cross-docking efficiency, and automated shipping compliance.
+          stock: >-
+            Research industry best practices for Vendor-Managed Inventory (VMI) and KanBan integration in high-variance finished goods manufacturing.
+          referential: >-
+            Deep dive into PLM-to-ERP master data synchronization standards (e.g., ISO 10303 STEP, OAGIS) for complex multi-level BOM trees.
+          pricing: >-
+            Research industry patterns for component index pricing, surcharge models, and dynamic BOM cost recalculations in multi-currency environments.
+          orderAdmenment: >-
+            Research strategies for minimizing scrap rate and line disruptions caused by late customer order cancellations and engineering amendments.
+
+  - id: phase2-planning
+    title: "Phase 2: Planning"
+    description: "Define what to build and for whom"
+    skills:
+      - command: bmad-prd
+        name: "Product Requirements"
+        prompts:
+          planning: >-
+            Author a detailed PRD for a Finite Capacity Master Scheduling module, detailing work center constraint handling, shift calendars, and bottleneck management.
+          order: >-
+            Write a comprehensive PRD for an Order Build Validation engine covering option constraint checking, credit release checks, and work order creation.
+          orderDelivery: >-
+            Create a PRD for an Outbound Logistics & Delivery Execution module managing shipping labels, EDI 856 ASNs, and 3PL carrier API integrations.
+          stock: >-
+            Develop a PRD for a Warehouse & WIP Stock Management module handling serial number tracking, bin location locks, and safety stock alerts.
+          referential: >-
+            Draft a detailed PRD for a Master Data Referential engine managing Item Master records, multi-level BOM versioning, and operation routings.
+          pricing: >-
+            Create a PRD for an Automated Pricing Engine enforcing contract-tier discounts, BOM cost rollups, and dynamic raw material surcharges.
+          orderAdmenment: >-
+            Write a PRD for an Order Amendment Manager handling shop floor line-halt locks, WIP delta evaluation, and revised invoice generation.
+
+      - command: bmad-ux
+        name: "UX Design"
+        prompts:
+          planning: >-
+            Design UX specifications for a Gantt-style Plant Scheduling Console enabling drag-and-drop re-sequencing and work center load visualization.
+          order: >-
+            Design UX wireframes and flows for an Order Feasibility Assessment screen showing live BOM availability, capacity slots, and promised delivery date.
+          orderDelivery: >-
+            Design UX specs for a Factory Shipping Control Center displaying real-time loading dock status, truck queues, and manifest verification.
+          stock: >-
+            Design UX flows for a Handheld Scanner & Mobile Inventory Interface used by factory floor operators for material picking and line replenishment.
+          referential: >-
+            Design UX interfaces for a Visual BOM Editor allowing engineers to compare EBOM vs MBOM side-by-side with clear delta highlighting.
+          pricing: >-
+            Design UX specs for a Pricing & Surcharge Management Dashboard allowing commercial teams to review order margins and adjust surcharge rates.
+          orderAdmenment: >-
+            Design UX screens for an Order Amendment Impact Workbench showing scrap risk, rework costs, and production status before change confirmation.
+
+  - id: phase3-solutioning
+    title: "Phase 3: Solutioning"
+    description: "Decide how to build and break into stories"
+    skills:
+      - command: bmad-architecture
+        name: "System Architecture"
+        prompts:
+          planning: >-
+            Architect an event-driven microservices system for real-time Production Planning using Kafka to handle high-frequency work center status updates.
+          order: >-
+            Design a resilient architecture for the Order Intake & Validation service ensuring transactional consistency between ERP and MES databases.
+          orderDelivery: >-
+            Architect a high-availability Order Delivery & ASN service integrating factory packing stations with external carrier API webhooks.
+          stock: >-
+            Define technical architecture for a Distributed Stock Allocation service managing multi-plant raw material, WIP, and finished goods inventory.
+          referential: >-
+            Architect a Master Data Referential service using event sourcing to guarantee complete audit trails for BOM changes and routing revisions.
+          pricing: >-
+            Design software architecture for a low-latency Pricing Engine capable of evaluating dynamic BOM cost rollups under high concurrent API requests.
+          orderAdmenment: >-
+            Architect an Order Amendment State Machine capable of orchestrating distributed updates across Order, WIP, Inventory, and Billing systems.
+
+      - command: bmad-create-epics-and-stories
+        name: "Epics & Stories"
+        prompts:
+          planning: >-
+            Break down the Finite Production Capacity Scheduling capability into Epics and User Stories with explicit technical acceptance criteria.
+          order: >-
+            Decompose the Order Build Validation feature into Epics and Stories covering option compatibility checking, credit holds, and work order release.
+          orderDelivery: >-
+            Create Epics and User Stories for Outbound Order Delivery, covering carrier slot reservation, staging area assignment, and EDI manifest generation.
+          stock: >-
+            Break down Stock Allocation & Bin Management requirements into user stories covering component holds, picking lists, and safety stock alerts.
+          referential: >-
+            Decompose the Master Data Referential service into stories covering EBOM ingestion, MBOM transformation, and routing version control.
+          pricing: >-
+            Create Epics and Stories for the Finished Goods Pricing Engine focusing on dynamic surcharge evaluation, tier discounts, and margin validation.
+          orderAdmenment: >-
+            Break down Order Amendment processing into user stories covering WIP status checks, stock reservation releases, and delta billing generation.
