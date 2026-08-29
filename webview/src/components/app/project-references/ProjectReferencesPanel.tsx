@@ -22,6 +22,7 @@ export function ProjectReferencesPanel({
     categories,
     emojis,
     categorySelectionStates,
+    globalSelectionState,
     loading,
     importing,
     viewMode,
@@ -32,8 +33,8 @@ export function ProjectReferencesPanel({
     setCategoryFilter,
     emojiFilter,
     setEmojiFilter,
-    preSelectedOnly,
-    setPreSelectedOnly,
+    selectedOnly,
+    setSelectedOnly,
     globalFilter,
     setGlobalFilter,
     hideDescription,
@@ -49,6 +50,8 @@ export function ProjectReferencesPanel({
     collapseAllCategories,
     toggleCategorySelectAll,
     toggleReferenceSelect,
+    toggleAllSelect,
+    resetSelection,
     addReference,
     removeReference,
     removeSelectedReferences,
@@ -57,6 +60,8 @@ export function ProjectReferencesPanel({
     importUrl,
     totalSelectedCount,
     totalSelectedSizeKb,
+    totalAllCount,
+    totalAllSizeKb,
     totalCount,
     totalSizeKb,
   } = useProjectReferences(localDocumentStorage, initialViewMode);
@@ -64,17 +69,10 @@ export function ProjectReferencesPanel({
   const innerPanel = (
     <TopMiddleBottomPanel
       id="project-references-top-middle-bottom"
-      className="h-full w-full p-2 gap-2"
+      className="gap-2 py-2 w-full h-full"
       top={
         <div className="space-y-2">
-          {viewMode === 'Administrator' && (
-            <NewReferenceForm
-              categories={categories}
-              importing={importing}
-              onAddReference={addReference}
-              onImportUrl={importUrl}
-            />
-          )}
+
           <ReferencesFilterBar
             isGrouped={isGrouped}
             onToggleGrouped={setIsGrouped}
@@ -84,8 +82,8 @@ export function ProjectReferencesPanel({
             emojis={emojis}
             emojiFilter={emojiFilter}
             onEmojiFilterChange={setEmojiFilter}
-            preSelectedOnly={preSelectedOnly}
-            onPreSelectedOnlyChange={setPreSelectedOnly}
+            selectedOnly={selectedOnly}
+            onSelectedOnlyChange={setSelectedOnly}
             globalFilter={globalFilter}
             onGlobalFilterChange={setGlobalFilter}
             hideDescription={hideDescription}
@@ -108,19 +106,22 @@ export function ProjectReferencesPanel({
           badge={`${totalCount} Items`}
           defaultExpanded={true}
           contentToCopy=""
-          className="bg-card border-border h-full flex flex-col min-h-0"
+          className="flex flex-col bg-card border-border h-full min-h-0"
         >
           <ReferencesTable
             isGrouped={isGrouped}
             groupedReferences={groupedReferences}
             sortedReferences={sortedReferences}
             categorySelectionStates={categorySelectionStates}
+            globalSelectionState={globalSelectionState}
             expandedCategories={expandedCategories}
             onToggleCategoryExpand={toggleCategoryExpand}
             onExpandAllCategories={expandAllCategories}
             onCollapseAllCategories={collapseAllCategories}
             onToggleCategorySelectAll={toggleCategorySelectAll}
             onToggleReferenceSelect={toggleReferenceSelect}
+            onToggleAllSelect={toggleAllSelect}
+            onResetSelection={resetSelection}
             onReloadReference={reloadReference}
             onReloadSelectedReferences={reloadSelectedReferences}
             onRemoveReference={removeReference}
@@ -133,16 +134,24 @@ export function ProjectReferencesPanel({
             hideDescription={hideDescription}
             hideUrl={hideUrl}
             totalSelectedCount={totalSelectedCount}
-            totalCount={totalCount}
+            totalAllCount={totalAllCount}
             totalSelectedSizeKb={totalSelectedSizeKb}
-            totalSizeKb={totalSizeKb}
+            totalAllSizeKb={totalAllSizeKb}
             viewMode={viewMode}
           />
         </CollapsibleCard>
       }
       bottom={
         viewMode === 'Administrator' ? (
-          <LocalStorageCard localDocumentStorage={localDocumentStorage} />
+          <div className="space-y-2">
+            <NewReferenceForm
+                categories={categories}
+                importing={importing}
+                onAddReference={addReference}
+                onImportUrl={importUrl}
+            />
+            <LocalStorageCard localDocumentStorage={localDocumentStorage} />
+          </div>
         ) : null
       }
     />
@@ -160,10 +169,10 @@ export function ProjectReferencesPanel({
               </span>
             </div>
           }
-          badge={`${totalSelectedCount} / ${totalCount} Selected (${totalSelectedSizeKb} KB)`}
+          badge={`${totalSelectedCount} / ${totalAllCount} Selected (${totalSelectedSizeKb} KB)`}
           defaultExpanded={true}
           contentToCopy=""
-          className="bg-card shadow-sm border-border h-full flex flex-col min-h-0"
+          className="flex flex-col bg-card shadow-sm border-border h-full min-h-0"
         >
           {innerPanel}
         </CollapsibleCard>

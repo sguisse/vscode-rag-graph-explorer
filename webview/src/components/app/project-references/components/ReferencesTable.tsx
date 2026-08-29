@@ -74,12 +74,15 @@ interface ReferencesTableProps {
   groupedReferences: Record<string, ReferenceItem[]>;
   sortedReferences: ReferenceItem[];
   categorySelectionStates: Record<string, boolean | 'indeterminate'>;
+  globalSelectionState: boolean | 'indeterminate';
   expandedCategories: Record<string, boolean>;
   onToggleCategoryExpand: (cat: string) => void;
   onExpandAllCategories: () => void;
   onCollapseAllCategories: () => void;
   onToggleCategorySelectAll: (cat: string) => void;
   onToggleReferenceSelect: (id: string) => void;
+  onToggleAllSelect: () => void;
+  onResetSelection: () => void;
   onReloadReference: (id: string) => void;
   onReloadSelectedReferences: () => void;
   onRemoveReference: (id: string) => void;
@@ -92,9 +95,9 @@ interface ReferencesTableProps {
   hideDescription: boolean;
   hideUrl: boolean;
   totalSelectedCount: number;
-  totalCount: number;
+  totalAllCount: number;
   totalSelectedSizeKb: number;
-  totalSizeKb: number;
+  totalAllSizeKb: number;
   viewMode: ProjectReferencesViewMode;
 }
 
@@ -103,12 +106,15 @@ export function ReferencesTable({
   groupedReferences,
   sortedReferences,
   categorySelectionStates,
+  globalSelectionState,
   expandedCategories,
   onToggleCategoryExpand,
   onExpandAllCategories,
   onCollapseAllCategories,
   onToggleCategorySelectAll,
   onToggleReferenceSelect,
+  onToggleAllSelect,
+  onResetSelection,
   onReloadReference,
   onReloadSelectedReferences,
   onRemoveReference,
@@ -121,9 +127,9 @@ export function ReferencesTable({
   hideDescription,
   hideUrl,
   totalSelectedCount,
-  totalCount,
+  totalAllCount,
   totalSelectedSizeKb,
-  totalSizeKb,
+  totalAllSizeKb,
   viewMode,
 }: ReferencesTableProps) {
   const showDescSourceCol = !(hideDescription && hideUrl);
@@ -254,7 +260,6 @@ export function ReferencesTable({
           </div>
         </td>
 
-        {/* Colonne d'ajustement fluide avec max-w-0 pour forcer la troncature CSS */}
         {showDescSourceCol && (
           <td className="p-2 max-w-0 align-middle">
             <div className="space-y-0.5 w-full">
@@ -319,62 +324,80 @@ export function ReferencesTable({
 
   return (
     <div className="flex flex-col h-full min-h-0 p-1 space-y-2 font-mono text-xs">
-      {(isGrouped || sortRules.length > 0) && (
-        <div className="flex items-center justify-between px-2 py-1 bg-muted/40 rounded text-[10px] shrink-0">
-          <div className="flex items-center gap-2">
-            {isGrouped && (
-              <div className="flex items-center gap-0.5 pr-2 border-r border-border/60">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onExpandAllCategories}
-                  data-tooltip="Expand all categories"
-                  className="h-5 w-5 text-muted-foreground hover:text-indigo-400 hover:bg-indigo-500/10"
-                >
-                  <ChevronsDown size={12} />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onCollapseAllCategories}
-                  data-tooltip="Collapse all categories"
-                  className="h-5 w-5 text-muted-foreground hover:text-indigo-400 hover:bg-indigo-500/10"
-                >
-                  <ChevronsRight size={12} />
-                </Button>
-              </div>
-            )}
+      <div className="flex items-center justify-between px-2 py-1 bg-muted/40 rounded text-[10px] shrink-0">
+        <div className="flex items-center gap-2">
+          {isGrouped && (
+            <div className="flex items-center gap-0.5 pr-2 border-r border-border/60">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onExpandAllCategories}
+                data-tooltip="Expand all categories"
+                className="h-5 w-5 text-muted-foreground hover:text-indigo-400 hover:bg-indigo-500/10"
+              >
+                <ChevronsDown size={12} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onCollapseAllCategories}
+                data-tooltip="Collapse all categories"
+                className="h-5 w-5 text-muted-foreground hover:text-indigo-400 hover:bg-indigo-500/10"
+              >
+                <ChevronsRight size={12} />
+              </Button>
+            </div>
+          )}
 
-            {sortRules.length > 0 && (
-              <div className="flex items-center gap-1.5">
-                <span className="text-muted-foreground">Multi-sort active:</span>
-                {sortRules.map((r, i) => (
-                  <Badge key={r.field} className="text-indigo-400 bg-indigo-500/10 border-indigo-500/20">
-                    {i + 1}. {r.field} ({r.order === 'asc' ? '↑' : '↓'})
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
+          {sortRules.length > 0 && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-muted-foreground">Multi-sort active:</span>
+              {sortRules.map((r, i) => (
+                <Badge key={r.field} className="text-indigo-400 bg-indigo-500/10 border-indigo-500/20">
+                  {i + 1}. {r.field} ({r.order === 'asc' ? '↑' : '↓'})
+                </Badge>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Reset Action Buttons */}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onResetSelection}
+            data-tooltip="Reset selection to default preSelected references"
+            className="p-0 h-auto text-[9px] text-muted-foreground hover:text-foreground cursor-pointer"
+          >
+            Reset Selection
+          </Button>
 
           {sortRules.length > 0 && (
             <Button
               variant="ghost"
               size="sm"
               onClick={onClearSort}
-              className="p-0 h-auto text-[9px] text-muted-foreground hover:text-foreground"
+              className="p-0 h-auto text-[9px] text-muted-foreground hover:text-foreground cursor-pointer"
             >
               Reset Sort
             </Button>
           )}
         </div>
-      )}
+      </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden border border-border rounded bg-background relative max-h-[380px] md:max-h-[500px]">
         <table className="w-full text-left border-collapse table-auto font-mono text-xs">
           <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur border-b border-border text-[10px] uppercase text-muted-foreground font-bold select-none shadow-xs">
             <tr>
-              <th className="p-2 w-10 text-center">Sel</th>
+              <th className="p-2 w-10 text-center">
+                <div className="flex items-center justify-center">
+                  <TriStateCheckbox
+                    state={globalSelectionState}
+                    onChange={onToggleAllSelect}
+                  />
+                </div>
+              </th>
               <th className="p-2 whitespace-nowrap">{renderSortButton('Category', 'category')}</th>
               <th className="p-2 whitespace-nowrap">{renderSortButton('Name & Emoji', 'name')}</th>
               {showDescSourceCol && (
@@ -487,10 +510,11 @@ export function ReferencesTable({
             )}
           </tbody>
 
+          {/* Always display total references on the right side of / */}
           <tfoot className="sticky bottom-0 z-10 bg-muted/95 backdrop-blur border-t-2 border-border font-bold text-[10px] uppercase text-foreground shadow-xs">
             <tr>
               <td colSpan={3} className="p-2 whitespace-nowrap">
-                Total Selected: <span className="text-indigo-400">{totalSelectedCount}</span> / {totalCount} References
+                Total Selected: <span className="text-indigo-400">{totalSelectedCount}</span> / {totalAllCount} References
               </td>
               <td colSpan={showDescSourceCol ? 2 : 1} className="p-2 text-right whitespace-nowrap">
                 Total Selected Size:
@@ -499,7 +523,7 @@ export function ReferencesTable({
                 {totalSelectedSizeKb} KB
               </td>
               <td className="p-2 text-center text-muted-foreground text-[9px] whitespace-nowrap">
-                (All: {totalSizeKb} KB)
+                (All: {totalAllSizeKb} KB)
               </td>
             </tr>
           </tfoot>

@@ -14,8 +14,8 @@ interface ReferencesFilterBarProps {
   emojis: string[];
   emojiFilter: string;
   onEmojiFilterChange: (val: string) => void;
-  preSelectedOnly: boolean;
-  onPreSelectedOnlyChange: (val: boolean) => void;
+  selectedOnly: boolean;
+  onSelectedOnlyChange: (val: boolean) => void;
   globalFilter: string;
   onGlobalFilterChange: (val: string) => void;
   hideDescription: boolean;
@@ -35,8 +35,8 @@ export function ReferencesFilterBar({
   emojis,
   emojiFilter,
   onEmojiFilterChange,
-  preSelectedOnly,
-  onPreSelectedOnlyChange,
+  selectedOnly,
+  onSelectedOnlyChange,
   globalFilter,
   onGlobalFilterChange,
   hideDescription,
@@ -98,14 +98,15 @@ export function ReferencesFilterBar({
           </SelectContent>
         </Select>
 
+        {/* Renamed "Pre Selected Only" to "Selected" */}
         <label className="flex items-center gap-1.5 cursor-pointer text-[10px] font-bold text-muted-foreground hover:text-foreground uppercase select-none shrink-0">
           <input
             type="checkbox"
-            checked={preSelectedOnly}
-            onChange={(e) => onPreSelectedOnlyChange(e.target.checked)}
+            checked={selectedOnly}
+            onChange={(e) => onSelectedOnlyChange(e.target.checked)}
             className="rounded border-border text-indigo-500 focus:ring-indigo-500 h-3.5 w-3.5 cursor-pointer accent-indigo-500"
           />
-          <span>Pre-selected Only</span>
+          <span>Selected</span>
         </label>
 
         <div className="h-4 w-px bg-border shrink-0" />

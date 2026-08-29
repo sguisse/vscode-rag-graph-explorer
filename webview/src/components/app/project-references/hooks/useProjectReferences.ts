@@ -12,6 +12,7 @@ export function useProjectReferences(
   initialViewMode: ProjectReferencesViewMode = 'User'
 ) {
   const [references, setReferences] = useState<ReferenceItem[]>([]);
+  const [initialDefaults, setInitialDefaults] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState<boolean>(false);
   const [importing, setImporting] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<ProjectReferencesViewMode>(initialViewMode);
@@ -20,7 +21,7 @@ export function useProjectReferences(
   const [isGrouped, setIsGrouped] = useState<boolean>(true);
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [emojiFilter, setEmojiFilter] = useState<string>('all');
-  const [preSelectedOnly, setPreSelectedOnly] = useState<boolean>(false);
+  const [selectedOnly, setSelectedOnly] = useState<boolean>(false);
   const [globalFilter, setGlobalFilter] = useState<string>('');
 
   // Column Visibility Toggles
@@ -38,10 +39,15 @@ export function useProjectReferences(
     try {
       const data = await sdlcReferencesApiService.loadAllReferences(localDocumentStorage);
       setReferences(data);
+
+      const defaultsMap: Record<string, boolean> = {};
       const catMap: Record<string, boolean> = {};
       data.forEach((r) => {
+        defaultsMap[r.id] = !!r.preSelected;
         catMap[r.category] = true;
       });
+
+      setInitialDefaults((prev) => (Object.keys(prev).length === 0 ? defaultsMap : prev));
       setExpandedCategories((prev) => ({ ...catMap, ...prev }));
     } catch (err) {
       console.error('[useProjectReferences] Failed to load references', err);
@@ -255,7 +261,7 @@ export function useProjectReferences(
     return references.filter((item) => {
       if (categoryFilter !== 'all' && item.category !== categoryFilter) return false;
       if (emojiFilter !== 'all' && item.emoji !== emojiFilter) return false;
-      if (preSelectedOnly && !item.preSelected) return false;
+      if (selectedOnly && !item.preSelected) return false;
 
       if (search) {
         const matchName = item.name.toLowerCase().includes(search);
@@ -267,7 +273,7 @@ export function useProjectReferences(
       }
       return true;
     });
-  }, [references, categoryFilter, emojiFilter, preSelectedOnly, globalFilter]);
+  }, [references, categoryFilter, emojiFilter, selectedOnly, globalFilter]);
 
   const sortedReferences = useMemo(() => {
     if (sortRules.length === 0) return filteredReferences;
@@ -333,11 +339,59 @@ export function useProjectReferences(
     return states;
   }, [groupedReferences]);
 
-  const totalSelectedCount = useMemo(() => filteredReferences.filter((r) => r.preSelected).length, [filteredReferences]);
+  const globalSelectionState = useMemo<boolean | 'indeterminate'>(() => {
+    if (filteredReferences.length === 0) return false;
+    const selectedCount = filteredReferences.filter((r) => r.preSelected).length;
+    if (selectedCount === filteredReferences.length) return true;
+    if (selectedCount > 0) return 'indeterminate';
+    return false;
+  }, [filteredReferences]);
+
+  const toggleAllSelect = async () => {
+    if (filteredReferences.length === 0) return;
+    const allSelected = filteredReferences.every((r) => r.preSelected);
+    const nextState = !allSelected;
+    const filteredIds = new Set(filteredReferences.map((r) => r.id));
+
+    const updated = references.map((r) => {
+      if (filteredIds.has(r.id)) {
+        return { ...r, preSelected: nextState };
+      }
+      return r;
+    });
+
+    setReferences(updated);
+    for (const r of updated.filter((x) => filteredIds.has(x.id))) {
+      await sdlcReferencesApiService.update(localDocumentStorage, r);
+    }
+  };
+
+  const resetSelection = async () => {
+    const updated = references.map((r) => ({
+      ...r,
+      preSelected: initialDefaults[r.id] ?? true,
+    }));
+
+    setReferences(updated);
+    for (const r of updated) {
+      await sdlcReferencesApiService.update(localDocumentStorage, r);
+    }
+  };
+
+  // Selected counts (Total selected across entire dataset)
+  const totalSelectedCount = useMemo(() => references.filter((r) => r.preSelected).length, [references]);
   const totalSelectedSizeKb = useMemo(
-    () => Number(filteredReferences.filter((r) => r.preSelected).reduce((acc, r) => acc + (r.sizeKb || 0), 0).toFixed(2)),
-    [filteredReferences]
+    () => Number(references.filter((r) => r.preSelected).reduce((acc, r) => acc + (r.sizeKb || 0), 0).toFixed(2)),
+    [references]
   );
+
+  // Total references loaded from YAML file
+  const totalAllCount = references.length;
+  const totalAllSizeKb = useMemo(
+    () => Number(references.reduce((acc, r) => acc + (r.sizeKb || 0), 0).toFixed(2)),
+    [references]
+  );
+
   const totalCount = filteredReferences.length;
   const totalSizeKb = useMemo(
     () => Number(filteredReferences.reduce((acc, r) => acc + (r.sizeKb || 0), 0).toFixed(2)),
@@ -352,6 +406,7 @@ export function useProjectReferences(
     categories,
     emojis,
     categorySelectionStates,
+    globalSelectionState,
     loading,
     importing,
     viewMode,
@@ -362,8 +417,8 @@ export function useProjectReferences(
     setCategoryFilter,
     emojiFilter,
     setEmojiFilter,
-    preSelectedOnly,
-    setPreSelectedOnly,
+    selectedOnly,
+    setSelectedOnly,
     globalFilter,
     setGlobalFilter,
     hideDescription,
@@ -379,6 +434,8 @@ export function useProjectReferences(
     collapseAllCategories,
     toggleCategorySelectAll,
     toggleReferenceSelect,
+    toggleAllSelect,
+    resetSelection,
     addReference,
     removeReference,
     removeSelectedReferences,
@@ -387,6 +444,8 @@ export function useProjectReferences(
     importUrl,
     totalSelectedCount,
     totalSelectedSizeKb,
+    totalAllCount,
+    totalAllSizeKb,
     totalCount,
     totalSizeKb,
     refetch: fetchReferences,
