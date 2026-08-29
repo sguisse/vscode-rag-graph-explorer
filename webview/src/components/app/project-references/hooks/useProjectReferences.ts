@@ -23,6 +23,10 @@ export function useProjectReferences(
   const [preSelectedOnly, setPreSelectedOnly] = useState<boolean>(false);
   const [globalFilter, setGlobalFilter] = useState<string>('');
 
+  // Column Visibility Toggles
+  const [hideDescription, setHideDescription] = useState<boolean>(false);
+  const [hideUrl, setHideUrl] = useState<boolean>(false);
+
   const [sortRules, setSortRules] = useState<RefSortRule[]>([
     { field: 'category', order: 'asc' },
     { field: 'name', order: 'asc' },
@@ -117,14 +121,12 @@ export function useProjectReferences(
     setExpandedCategories(allCollapsed);
   };
 
-  // If partial selection (some selected, some not) or none selected -> SELECT ALL
-  // If all selected -> DESELECT ALL
   const toggleCategorySelectAll = async (catName: string) => {
     const catRefs = references.filter((r) => r.category === catName);
     if (catRefs.length === 0) return;
 
     const selectedCount = catRefs.filter((r) => r.preSelected).length;
-    const nextSelectedState = selectedCount < catRefs.length; // Partial or 0 -> true (select all)
+    const nextSelectedState = selectedCount < catRefs.length;
 
     const updated = references.map((r) => {
       if (r.category === catName) {
@@ -248,7 +250,6 @@ export function useProjectReferences(
     }
   };
 
-  // Filtered references
   const filteredReferences = useMemo(() => {
     const search = globalFilter.trim().toLowerCase();
     return references.filter((item) => {
@@ -268,7 +269,6 @@ export function useProjectReferences(
     });
   }, [references, categoryFilter, emojiFilter, preSelectedOnly, globalFilter]);
 
-  // Sorted references
   const sortedReferences = useMemo(() => {
     if (sortRules.length === 0) return filteredReferences;
 
@@ -307,7 +307,6 @@ export function useProjectReferences(
     });
   }, [filteredReferences, sortRules]);
 
-  // Grouped references
   const groupedReferences = useMemo(() => {
     const groups: Record<string, ReferenceItem[]> = {};
     sortedReferences.forEach((r) => {
@@ -367,6 +366,10 @@ export function useProjectReferences(
     setPreSelectedOnly,
     globalFilter,
     setGlobalFilter,
+    hideDescription,
+    setHideDescription,
+    hideUrl,
+    setHideUrl,
     sortRules,
     handleSort,
     clearSort,

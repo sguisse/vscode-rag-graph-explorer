@@ -12,6 +12,7 @@ import {
   Layout,
   VectorSquare,
   FolderDown,
+  FolderGit2,
   Bot,
   LogOut,
   Sparkles,
@@ -55,6 +56,7 @@ export interface SidebarLeftProps {
 export const SIDEBAR_MENU_ITEMS: NavItem[] = [
   { id: 'feature-home', icon: Home, label: 'Home' },
   { id: 'feature-codebase-exporter', icon: FolderDown, label: 'Codebase Exporter', badge: 'Upd' },
+  { id: 'feature-references', icon: FolderGit2, label: 'Project References', badge: 'New' },
   {
     id: 'group-sdlc',
     label: 'SDLC',
@@ -146,7 +148,6 @@ export function renderHeaderGroupItem(
 
   return (
     <div key={item.id} className="space-y-1 my-1">
-      {/* Group Header Row */}
       {sidebarLeftMode === 'normal' ? (
         <div className="flex justify-between items-center px-2.5 py-1.5 font-mono font-bold text-[14px] text-muted-foreground uppercase tracking-wider select-none">
           <div className="flex items-center gap-2">
@@ -164,7 +165,6 @@ export function renderHeaderGroupItem(
         </div>
       )}
 
-      {/* Nested Children Items */}
       {item.children && item.children.length > 0 && (
         <SidebarMenu className="space-y-0.5">
           {item.children.map((child) => {
@@ -174,7 +174,7 @@ export function renderHeaderGroupItem(
               isActive,
               () => onItemClick(child),
               sidebarLeftMode,
-              true // applies 10px left padding
+              true
             );
           })}
         </SidebarMenu>

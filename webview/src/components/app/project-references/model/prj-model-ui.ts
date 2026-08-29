@@ -26,6 +26,6 @@ export type ProjectReferencesViewMode = 'User' | 'Administrator';
 export interface ProjectReferencesPanelProps {
   localDocumentStorage?: string;
   viewMode?: ProjectReferencesViewMode;
-  parentCollapsible?: boolean;
+  collapsibleParentIncluded?: boolean;
   className?: string;
 }

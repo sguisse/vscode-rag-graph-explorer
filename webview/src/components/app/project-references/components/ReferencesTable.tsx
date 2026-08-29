@@ -89,6 +89,8 @@ interface ReferencesTableProps {
   sortRules: RefSortRule[];
   onHandleSort: (field: RefSortField, isShift: boolean) => void;
   onClearSort: () => void;
+  hideDescription: boolean;
+  hideUrl: boolean;
   totalSelectedCount: number;
   totalCount: number;
   totalSelectedSizeKb: number;
@@ -116,27 +118,62 @@ export function ReferencesTable({
   sortRules,
   onHandleSort,
   onClearSort,
+  hideDescription,
+  hideUrl,
   totalSelectedCount,
   totalCount,
   totalSelectedSizeKb,
   totalSizeKb,
   viewMode,
 }: ReferencesTableProps) {
-  const handleOpenUrl = (e: React.MouseEvent<HTMLAnchorElement>, url: string) => {
+  const showDescSourceCol = !(hideDescription && hideUrl);
+  const totalColumns = showDescSourceCol ? 7 : 6;
+
+  const handleOpenUrl = (e: React.MouseEvent<HTMLAnchorElement>, rawUrl: string) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!url) return;
+    if (!rawUrl) return;
+
+    const fullUrl =
+      rawUrl.startsWith('http://') || rawUrl.startsWith('https://') || rawUrl.startsWith('file://')
+        ? rawUrl
+        : `https://${rawUrl}`;
+
+    const api = vsCodeApiService as any;
+    if (typeof api.openExternal === 'function') {
+      api.openExternal(fullUrl);
+      return;
+    }
+    if (typeof api.openUrl === 'function') {
+      api.openUrl(fullUrl);
+      return;
+    }
+    if (typeof api.postMessage === 'function') {
+      api.postMessage({ command: 'openExternal', url: fullUrl, payload: fullUrl });
+      return;
+    }
 
     try {
-      if (vsCodeApiService && typeof (vsCodeApiService as any).openExternal === 'function') {
-        (vsCodeApiService as any).openExternal(url);
-      } else if (vsCodeApiService && typeof (vsCodeApiService as any).openUrl === 'function') {
-        (vsCodeApiService as any).openUrl(url);
-      } else {
-        window.open(url, '_blank', 'noopener,noreferrer');
+      if (typeof (window as any).vscode !== 'undefined' && typeof (window as any).vscode.postMessage === 'function') {
+        (window as any).vscode.postMessage({ command: 'openExternal', url: fullUrl, payload: fullUrl });
+        return;
+      }
+      if (typeof (window as any).acquireVsCodeApi === 'function') {
+        const vscode = (window as any).acquireVsCodeApi();
+        vscode.postMessage({ command: 'openExternal', url: fullUrl, payload: fullUrl });
+        return;
       }
     } catch {
-      window.open(url, '_blank', 'noopener,noreferrer');
+      // Fallback
+    }
+
+    try {
+      const w = window.open(fullUrl, '_blank', 'noopener,noreferrer');
+      if (!w) {
+        window.location.href = fullUrl;
+      }
+    } catch (err) {
+      console.error('[ReferencesTable] Failed to open external URL:', err);
     }
   };
 
@@ -204,47 +241,54 @@ export function ReferencesTable({
           />
         </td>
 
-        <td className="p-2 align-middle">
+        <td className="p-2 align-middle whitespace-nowrap">
           <Badge className="border-border bg-muted">
             {item.category}
           </Badge>
         </td>
 
-        <td className="p-2 align-middle">
+        <td className="p-2 align-middle whitespace-nowrap">
           <div className="flex items-center gap-1.5">
             <span className="text-xs shrink-0">{item.emoji}</span>
-            <span className="font-medium text-xs text-foreground truncate">{item.name}</span>
+            <span className="font-medium text-xs text-foreground">{item.name}</span>
           </div>
         </td>
 
-        <td className="p-2 align-middle">
-          <div className="space-y-0.5">
-            <div className="text-[10px] text-muted-foreground truncate">{item.description}</div>
-            {item.url && (
-              <a
-                href={item.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => handleOpenUrl(e, item.url)}
-                className="inline-flex items-center gap-1 text-[9px] text-indigo-400 hover:text-indigo-300 hover:underline cursor-pointer transition-colors max-w-full truncate"
-                data-tooltip={`Open in external browser: ${item.url}`}
-              >
-                <LinkIcon size={9} className="shrink-0" />
-                <span className="truncate">{item.url}</span>
-              </a>
-            )}
-          </div>
-        </td>
+        {/* Colonne d'ajustement fluide avec max-w-0 pour forcer la troncature CSS */}
+        {showDescSourceCol && (
+          <td className="p-2 max-w-0 align-middle">
+            <div className="space-y-0.5 w-full">
+              {!hideDescription && item.description && (
+                <div className="text-[10px] text-muted-foreground truncate" title={item.description}>
+                  {item.description}
+                </div>
+              )}
+              {!hideUrl && item.url && (
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => handleOpenUrl(e, item.url)}
+                  className="inline-flex items-center gap-1 w-full text-[9px] text-indigo-400 hover:text-indigo-300 hover:underline truncate transition-colors cursor-pointer"
+                  data-tooltip={`Open in external browser: ${item.url}`}
+                >
+                  <LinkIcon size={9} className="shrink-0" />
+                  <span className="truncate">{item.url}</span>
+                </a>
+              )}
+            </div>
+          </td>
+        )}
 
         <td className="p-2 align-middle font-mono text-[10px] text-muted-foreground whitespace-nowrap">
           {formatDate(item.updatedAt)}
         </td>
 
-        <td className="p-2 text-right align-middle font-mono text-[11px]">
+        <td className="p-2 text-right align-middle font-mono text-[11px] whitespace-nowrap">
           {item.sizeKb ? `${item.sizeKb} KB` : '-'}
         </td>
 
-        <td className="p-2 text-center align-middle" onClick={(e) => e.stopPropagation()}>
+        <td className="p-2 text-center align-middle whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-center gap-1">
             <Button
               variant="ghost"
@@ -274,9 +318,9 @@ export function ReferencesTable({
   };
 
   return (
-    <div className="p-1 space-y-2 font-mono text-xs">
+    <div className="flex flex-col h-full min-h-0 p-1 space-y-2 font-mono text-xs">
       {(isGrouped || sortRules.length > 0) && (
-        <div className="flex items-center justify-between px-2 py-1 bg-muted/40 rounded text-[10px]">
+        <div className="flex items-center justify-between px-2 py-1 bg-muted/40 rounded text-[10px] shrink-0">
           <div className="flex items-center gap-2">
             {isGrouped && (
               <div className="flex items-center gap-0.5 pr-2 border-r border-border/60">
@@ -326,17 +370,19 @@ export function ReferencesTable({
         </div>
       )}
 
-      <div className="border border-border rounded overflow-x-auto bg-background">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden border border-border rounded bg-background relative max-h-[380px] md:max-h-[500px]">
         <table className="w-full text-left border-collapse table-auto font-mono text-xs">
-          <thead className="bg-muted/80 border-b border-border text-[10px] uppercase text-muted-foreground font-bold select-none">
+          <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur border-b border-border text-[10px] uppercase text-muted-foreground font-bold select-none shadow-xs">
             <tr>
               <th className="p-2 w-10 text-center">Sel</th>
-              <th className="p-2">{renderSortButton('Category', 'category')}</th>
-              <th className="p-2">{renderSortButton('Name & Emoji', 'name')}</th>
-              <th className="p-2">Description / Source</th>
-              <th className="p-2">{renderSortButton('Updated Date', 'updatedAt')}</th>
-              <th className="p-2 text-right">{renderSortButton('Size (KB)', 'sizeKb')}</th>
-              <th className="p-2 text-center w-24">
+              <th className="p-2 whitespace-nowrap">{renderSortButton('Category', 'category')}</th>
+              <th className="p-2 whitespace-nowrap">{renderSortButton('Name & Emoji', 'name')}</th>
+              {showDescSourceCol && (
+                <th className="p-2 w-full">Description / Source</th>
+              )}
+              <th className="p-2 whitespace-nowrap">{renderSortButton('Updated Date', 'updatedAt')}</th>
+              <th className="p-2 text-right whitespace-nowrap">{renderSortButton('Size (KB)', 'sizeKb')}</th>
+              <th className="p-2 text-center w-24 whitespace-nowrap">
                 <div className="flex items-center justify-center gap-1">
                   <span>Actions</span>
                   <Button
@@ -368,14 +414,14 @@ export function ReferencesTable({
           <tbody className="divide-y divide-border/60">
             {loading ? (
               <tr>
-                <td colSpan={7} className="p-4 text-center text-muted-foreground italic text-xs">
+                <td colSpan={totalColumns} className="p-4 text-center text-muted-foreground italic text-xs">
                   Loading project references...
                 </td>
               </tr>
             ) : isGrouped ? (
               Object.keys(groupedReferences).length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-4 text-center text-muted-foreground italic text-xs">
+                  <td colSpan={totalColumns} className="p-4 text-center text-muted-foreground italic text-xs">
                     No references match your current filters.
                   </td>
                 </tr>
@@ -405,15 +451,15 @@ export function ReferencesTable({
                             onChange={() => onToggleCategorySelectAll(category)}
                           />
                         </td>
-                        <td colSpan={5} className="p-2 align-middle">
-                          <div className="flex items-center gap-2 cursor-pointer select-none">
+                        <td colSpan={totalColumns - 2} className="p-2 align-middle truncate">
+                          <div className="flex items-center gap-2 cursor-pointer select-none truncate">
                             {isExpanded ? (
                               <ChevronDown size={13} className="text-indigo-400 shrink-0" />
                             ) : (
                               <ChevronRight size={13} className="text-muted-foreground shrink-0" />
                             )}
-                            <span className="font-bold text-xs text-foreground uppercase">{category}</span>
-                            <Badge className="border-border bg-muted">
+                            <span className="font-bold text-xs text-foreground uppercase truncate">{category}</span>
+                            <Badge className="border-border bg-muted shrink-0">
                               {items.length} {items.length === 1 ? 'item' : 'items'}
                             </Badge>
                           </div>
@@ -432,7 +478,7 @@ export function ReferencesTable({
               )
             ) : sortedReferences.length === 0 ? (
               <tr>
-                <td colSpan={7} className="p-4 text-center text-muted-foreground italic text-xs">
+                <td colSpan={totalColumns} className="p-4 text-center text-muted-foreground italic text-xs">
                   No references match your current filters.
                 </td>
               </tr>
@@ -441,18 +487,18 @@ export function ReferencesTable({
             )}
           </tbody>
 
-          <tfoot className="bg-muted/90 border-t-2 border-border font-bold text-[10px] uppercase text-foreground">
+          <tfoot className="sticky bottom-0 z-10 bg-muted/95 backdrop-blur border-t-2 border-border font-bold text-[10px] uppercase text-foreground shadow-xs">
             <tr>
-              <td colSpan={3} className="p-2">
+              <td colSpan={3} className="p-2 whitespace-nowrap">
                 Total Selected: <span className="text-indigo-400">{totalSelectedCount}</span> / {totalCount} References
               </td>
-              <td colSpan={2} className="p-2 text-right">
+              <td colSpan={showDescSourceCol ? 2 : 1} className="p-2 text-right whitespace-nowrap">
                 Total Selected Size:
               </td>
-              <td className="p-2 text-right text-indigo-400 font-mono">
+              <td className="p-2 text-right text-indigo-400 font-mono whitespace-nowrap">
                 {totalSelectedSizeKb} KB
               </td>
-              <td className="p-2 text-center text-muted-foreground text-[9px]">
+              <td className="p-2 text-center text-muted-foreground text-[9px] whitespace-nowrap">
                 (All: {totalSizeKb} KB)
               </td>
             </tr>

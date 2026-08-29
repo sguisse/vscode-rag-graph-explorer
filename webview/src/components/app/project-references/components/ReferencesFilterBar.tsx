@@ -18,6 +18,10 @@ interface ReferencesFilterBarProps {
   onPreSelectedOnlyChange: (val: boolean) => void;
   globalFilter: string;
   onGlobalFilterChange: (val: string) => void;
+  hideDescription: boolean;
+  onHideDescriptionChange: (val: boolean) => void;
+  hideUrl: boolean;
+  onHideUrlChange: (val: boolean) => void;
   viewMode: ProjectReferencesViewMode;
   onViewModeToggle: (mode: ProjectReferencesViewMode) => void;
 }
@@ -35,13 +39,16 @@ export function ReferencesFilterBar({
   onPreSelectedOnlyChange,
   globalFilter,
   onGlobalFilterChange,
+  hideDescription,
+  onHideDescriptionChange,
+  hideUrl,
+  onHideUrlChange,
   viewMode,
   onViewModeToggle,
 }: ReferencesFilterBarProps) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-muted/30 border border-border rounded-md font-mono text-xs">
       <div className="flex flex-wrap items-center gap-2.5">
-        {/* Grouping Checkbox */}
         <label className="flex items-center gap-1.5 cursor-pointer text-[10px] font-bold text-foreground uppercase select-none shrink-0">
           <input
             type="checkbox"
@@ -54,7 +61,6 @@ export function ReferencesFilterBar({
 
         <div className="h-4 w-px bg-border shrink-0" />
 
-        {/* Category Select Filter */}
         <div className="flex items-center gap-1">
           <Filter size={11} className="text-muted-foreground shrink-0" />
           <Select
@@ -75,7 +81,6 @@ export function ReferencesFilterBar({
           </Select>
         </div>
 
-        {/* Emoji Select Filter */}
         <Select
           value={emojiFilter}
           onValueChange={(val: string | null) => onEmojiFilterChange(val || 'all')}
@@ -93,7 +98,6 @@ export function ReferencesFilterBar({
           </SelectContent>
         </Select>
 
-        {/* Pre-selected Only Checkbox */}
         <label className="flex items-center gap-1.5 cursor-pointer text-[10px] font-bold text-muted-foreground hover:text-foreground uppercase select-none shrink-0">
           <input
             type="checkbox"
@@ -103,9 +107,30 @@ export function ReferencesFilterBar({
           />
           <span>Pre-selected Only</span>
         </label>
+
+        <div className="h-4 w-px bg-border shrink-0" />
+
+        <label className="flex items-center gap-1.5 cursor-pointer text-[10px] font-bold text-muted-foreground hover:text-foreground uppercase select-none shrink-0">
+          <input
+            type="checkbox"
+            checked={hideDescription}
+            onChange={(e) => onHideDescriptionChange(e.target.checked)}
+            className="rounded border-border text-indigo-500 focus:ring-indigo-500 h-3.5 w-3.5 cursor-pointer accent-indigo-500"
+          />
+          <span>Hide Description</span>
+        </label>
+
+        <label className="flex items-center gap-1.5 cursor-pointer text-[10px] font-bold text-muted-foreground hover:text-foreground uppercase select-none shrink-0">
+          <input
+            type="checkbox"
+            checked={hideUrl}
+            onChange={(e) => onHideUrlChange(e.target.checked)}
+            className="rounded border-border text-indigo-500 focus:ring-indigo-500 h-3.5 w-3.5 cursor-pointer accent-indigo-500"
+          />
+          <span>Hide URL</span>
+        </label>
       </div>
 
-      {/* Right Aligned Area: Search & View Mode Toggle */}
       <div className="flex items-center gap-2">
         <div className="relative w-44">
           <Search size={12} className="absolute left-2 top-2 text-muted-foreground pointer-events-none" />

@@ -1,5 +1,6 @@
 import { AbstractApiService } from './abstract-api.service';
 import { ReferenceItem } from '@/components/app/project-references/model/prj-model-ui';
+import MOCK_REFERENCES from './mock/sdlc-references-api.mock-data.yaml';
 
 class SdlcReferencesApiService extends AbstractApiService {
   private inMemoryStore: Map<string, ReferenceItem[]> = new Map();
@@ -10,66 +11,8 @@ class SdlcReferencesApiService extends AbstractApiService {
 
   public async loadAllReferences(storageKey: string = 'default'): Promise<ReferenceItem[]> {
     if (!this.inMemoryStore.has(storageKey)) {
-      const now = new Date().toISOString();
-      const initial: ReferenceItem[] = [
-        {
-          id: 'ref-1',
-          emoji: '🏗️',
-          name: 'System Architecture Specs',
-          description: 'High-level system design and component topology',
-          category: 'Architecture & Design',
-          url: 'https://raw.githubusercontent.com/bmad-method/specs/main/arch.md',
-          preSelected: true,
-          sizeKb: 14.5,
-          content: '# System Architecture\n- Monorepo design\n- React + Webview messaging',
-          addedAt: now,
-          updatedAt: now,
-          changeDetected: 5, // 1% < 5% <= 10% -> Blue
-        },
-        {
-          id: 'ref-2',
-          emoji: '📐',
-          name: 'API Contracts & Schemas',
-          description: 'OpenAPI 3.0 specification for SDLC endpoints',
-          category: 'Architecture & Design',
-          url: 'https://api.internal/v1/openapi.yaml',
-          preSelected: true,
-          sizeKb: 28.2,
-          content: 'openapi: 3.0.0\ninfo:\n  title: SDLC API\n  version: 1.0.0',
-          addedAt: now,
-          updatedAt: now,
-          changeDetected: 15, // 10% < 15% <= 20% -> Orange
-        },
-        {
-          id: 'ref-3',
-          emoji: '📊',
-          name: 'BMad Skills Schema Configuration',
-          description: 'Local skill definitions and domain prompts YAML',
-          category: 'Domain Reference',
-          url: 'webview/src/features/sdlc/domains/instructions/bmad-method/data/bmad-skills-by-category.yaml',
-          preSelected: true,
-          sizeKb: 18.7,
-          content: 'skills:\n  - name: Analysis\n  - name: Planning',
-          addedAt: now,
-          updatedAt: now,
-          changeDetected: 28, // > 20% -> Red
-        },
-        {
-          id: 'ref-4',
-          emoji: '📝',
-          name: 'Project Coding Standards',
-          description: 'Linting, styling and commit conventions',
-          category: 'Guidelines',
-          url: 'https://docs.internal/guidelines.md',
-          preSelected: false,
-          sizeKb: 8.1,
-          content: 'Standard operating procedures...',
-          addedAt: now,
-          updatedAt: now,
-          changeDetected: 0, // <= 1% -> Default
-        },
-      ];
-      this.inMemoryStore.set(storageKey, initial);
+      const initialData = (MOCK_REFERENCES || []) as ReferenceItem[];
+      this.inMemoryStore.set(storageKey, [...initialData]);
     }
     return this.inMemoryStore.get(storageKey) || [];
   }
