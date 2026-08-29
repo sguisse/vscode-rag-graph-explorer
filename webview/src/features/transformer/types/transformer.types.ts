@@ -1,10 +1,12 @@
-export type AnonymizationStrategy = 'mask' | 'hash' | 'uuid';
+export type AnonymizationStrategy = 'mask' | 'hash' | 'uuid' | 'replace';
 
 export interface AnonymizationRule {
   id: string;
   name: string;
   pattern: string;
   strategy: AnonymizationStrategy;
+  replace?: string;
+  replacement?: string;
   enabled: boolean;
 }
 
@@ -13,8 +15,8 @@ export interface RegexExtractionStep {
   name: string;
   pattern: string;
   flags?: string;
-  targetVariable?: string;
-  replacement?: string;
+  targetVariable?: string; // If specified, stores match into this key
+  replacement?: string;    // Optional substitution
   enabled: boolean;
 }
 

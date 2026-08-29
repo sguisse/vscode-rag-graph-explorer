@@ -37,17 +37,29 @@ export const TreeTableTab: React.FC<TreeTableTabProps> = ({ parsedWorkflow }) =>
             {(parsedWorkflow.anonymizationRules || []).length === 0 ? (
               <div className="text-muted-foreground italic p-1">No anonymization rules configured.</div>
             ) : (
-              parsedWorkflow.anonymizationRules.map((rule) => (
-                <div key={rule.id} className="pt-1 text-[11px] space-y-0.5">
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold text-foreground">{rule.name}</span>
-                    <span className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-1 py-0.2 rounded text-[9px]">
-                      {rule.strategy}
-                    </span>
+              parsedWorkflow.anonymizationRules.map((rule) => {
+                const replacementValue = rule.replace ?? rule.replacement;
+                return (
+                  <div key={rule.id} className="pt-1 text-[11px] space-y-0.5">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-foreground">{rule.name}</span>
+                      <span className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-1 py-0.2 rounded text-[9px] uppercase font-bold">
+                        {rule.strategy}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center gap-2 text-muted-foreground">
+                      <span className="truncate">
+                        Pattern: <code>{rule.pattern}</code>
+                      </span>
+                      {replacementValue !== undefined && (
+                        <span className="bg-emerald-500/10 px-1 py-0.2 border border-emerald-500/20 rounded font-bold text-[9px] text-emerald-500 uppercase">
+                          "{replacementValue}"
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-muted-foreground truncate">Pattern: <code>{rule.pattern}</code></div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         )}
@@ -81,7 +93,9 @@ export const TreeTableTab: React.FC<TreeTableTabProps> = ({ parsedWorkflow }) =>
                       </span>
                     )}
                   </div>
-                  <div className="text-muted-foreground truncate">Pattern: <code>{step.pattern}</code></div>
+                  <div className="text-muted-foreground truncate">
+                    Pattern: <code>{step.pattern}</code>
+                  </div>
                 </div>
               ))
             )}

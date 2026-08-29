@@ -4,6 +4,9 @@ import {
   PipelineExecutionMetrics,
 } from '../types/transformer.types';
 
+/**
+ * Lightweight Client-side Mustache Interpolator
+ */
 export function renderMustacheTemplate(template: string, data: Record<string, any>): string {
   return template.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, key) => {
     return data[key] !== undefined ? String(data[key]) : '';
@@ -20,6 +23,9 @@ function simpleHash(str: string): number {
   return hash;
 }
 
+/**
+ * Executes full Lite-ETL transformation pipeline
+ */
 export function executeTransformationPipeline(
   inputText: string,
   workflow: TransformerWorkflow
@@ -52,6 +58,7 @@ export function executeTransformationPipeline(
         processedText = processedText.replace(regex, (match) => {
           if (rule.strategy === 'hash') return `[HASH:${Math.abs(simpleHash(match))}]`;
           if (rule.strategy === 'uuid') return `[UUID:${crypto.randomUUID().slice(0, 8)}]`;
+          if (rule.strategy === 'replace') return rule.replace ?? rule.replacement ?? '';
           return '[REDACTED]';
         });
       }
@@ -77,6 +84,7 @@ export function executeTransformationPipeline(
           stepMatchCount++;
           totalMatches++;
 
+          // Named capture groups support
           if (match.groups) {
             Object.entries(match.groups).forEach(([grpName, val]) => {
               extractedData[grpName] = val;
@@ -196,6 +204,14 @@ export const DEFAULT_WORKFLOW_JSON: TransformerWorkflow = {
       name: 'Sanitize IP Addresses',
       pattern: '\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b',
       strategy: 'hash',
+      enabled: true,
+    },
+    {
+      id: 'anon-enterprise',
+      name: 'Sanitize Enterprise Name',
+      pattern: 'dkt',
+      strategy: 'replace',
+      replace: 'ent',
       enabled: true,
     },
   ],
