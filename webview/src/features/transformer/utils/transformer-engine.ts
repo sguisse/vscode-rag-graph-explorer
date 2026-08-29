@@ -4,9 +4,6 @@ import {
   PipelineExecutionMetrics,
 } from '../types/transformer.types';
 
-/**
- * Lightweight Client-side Mustache Interpolator
- */
 export function renderMustacheTemplate(template: string, data: Record<string, any>): string {
   return template.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, key) => {
     return data[key] !== undefined ? String(data[key]) : '';
@@ -23,9 +20,6 @@ function simpleHash(str: string): number {
   return hash;
 }
 
-/**
- * Executes full Lite-ETL transformation pipeline
- */
 export function executeTransformationPipeline(
   inputText: string,
   workflow: TransformerWorkflow
@@ -84,7 +78,6 @@ export function executeTransformationPipeline(
           stepMatchCount++;
           totalMatches++;
 
-          // Named capture groups support
           if (match.groups) {
             Object.entries(match.groups).forEach(([grpName, val]) => {
               extractedData[grpName] = val;
@@ -117,7 +110,19 @@ export function executeTransformationPipeline(
         if (match) {
           stepMatchCount++;
           totalMatches++;
-          if (step.targetVariable) {
+          if (match.groups) {
+            Object.entries(match.groups).forEach(([grpName, val]) => {
+              extractedData[grpName] = val;
+              records.push({
+                id: `${step.id}-1-${grpName}`,
+                stepName: step.name,
+                variable: grpName,
+                value: val,
+                rawMatch: match![0],
+                status: 'matched',
+              });
+            });
+          } else if (step.targetVariable) {
             const extractedVal = match[1] ?? match[0];
             extractedData[step.targetVariable] = extractedVal;
             records.push({

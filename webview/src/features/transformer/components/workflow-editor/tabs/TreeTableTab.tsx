@@ -4,9 +4,10 @@ import { TransformerWorkflow } from '../../../types/transformer.types';
 
 interface TreeTableTabProps {
   parsedWorkflow: TransformerWorkflow;
+  onSelectVariable?: (variableName: string) => void;
 }
 
-export const TreeTableTab: React.FC<TreeTableTabProps> = ({ parsedWorkflow }) => {
+export const TreeTableTab: React.FC<TreeTableTabProps> = ({ parsedWorkflow, onSelectVariable }) => {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     anonymization: true,
     extraction: true,
@@ -88,7 +89,11 @@ export const TreeTableTab: React.FC<TreeTableTabProps> = ({ parsedWorkflow }) =>
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-foreground">{step.name}</span>
                     {step.targetVariable && (
-                      <span className="bg-primary/10 text-primary border border-primary/20 px-1 py-0.2 rounded text-[9px]">
+                      <span
+                        onClick={() => onSelectVariable?.(step.targetVariable!)}
+                        data-tooltip={`Click to insert {{${step.targetVariable}}} into template`}
+                        className="bg-primary/10 text-primary border border-primary/20 px-1 py-0.2 rounded text-[9px] cursor-pointer hover:bg-primary/20 hover:underline transition-colors select-none"
+                      >
                         → ${step.targetVariable}
                       </span>
                     )}

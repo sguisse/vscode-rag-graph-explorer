@@ -1,14 +1,19 @@
 import React from 'react';
 import { ContainerPanelHeader } from '@/_layout/ContainerPanelHeader';
 import { OutputPanel } from '../components/output-panel/OutputPanel';
+import { ExtractedTableRecord } from '../types/transformer.types';
 
 interface RightPanelContainerProps {
   renderedOutput: string;
   outputFormat: string;
   outputTemplate: string;
+  records: ExtractedTableRecord[];
   onCopy: () => void;
   onUpdateOutputTemplate: (template: string) => void;
   onUpdateOutputFormat: (format: string) => void;
+  templateCursorPos: number | null;
+  setTemplateCursorPos: (pos: number | null) => void;
+  onSelectVariable?: (variableName: string) => void;
 }
 
 export const RightPanelContainer: React.FC<RightPanelContainerProps> = (props) => {

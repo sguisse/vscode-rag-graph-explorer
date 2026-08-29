@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,8 @@ interface TemplateTabProps {
   outputFormat: string;
   onUpdateOutputTemplate: (template: string) => void;
   onUpdateOutputFormat: (format: string) => void;
+  templateCursorPos: number | null;
+  setTemplateCursorPos: (pos: number | null) => void;
 }
 
 export const TemplateTab: React.FC<TemplateTabProps> = ({
@@ -18,7 +20,10 @@ export const TemplateTab: React.FC<TemplateTabProps> = ({
   outputFormat,
   onUpdateOutputTemplate,
   onUpdateOutputFormat,
+  templateCursorPos,
+  setTemplateCursorPos,
 }) => {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const templatesMap = (OUTPUT_TEMPLATES_DATA as Record<string, string>) || {};
 
   const handleFormatChange = (fmt: string) => {
@@ -35,6 +40,20 @@ export const TemplateTab: React.FC<TemplateTabProps> = ({
       onUpdateOutputTemplate(defaultTemplate);
     }
   };
+
+  const updateCursorPos = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
+    const target = e.currentTarget;
+    if (target) {
+      setTemplateCursorPos(target.selectionStart);
+    }
+  };
+
+  useEffect(() => {
+    if (textareaRef.current && templateCursorPos !== null) {
+      const elem = textareaRef.current;
+      elem.setSelectionRange(templateCursorPos, templateCursorPos);
+    }
+  }, [templateCursorPos]);
 
   return (
     <div className="flex flex-col h-full w-full gap-2 p-2 font-mono text-xs bg-card">
@@ -77,8 +96,16 @@ export const TemplateTab: React.FC<TemplateTabProps> = ({
           </Button>
         </div>
         <Textarea
+          ref={textareaRef}
           value={outputTemplate}
-          onChange={(e) => onUpdateOutputTemplate(e.target.value)}
+          onChange={(e) => {
+            onUpdateOutputTemplate(e.target.value);
+            setTemplateCursorPos(e.target.selectionStart);
+          }}
+          onBlur={updateCursorPos}
+          onSelect={updateCursorPos}
+          onClick={updateCursorPos}
+          onKeyUp={updateCursorPos}
           placeholder="Enter Mustache template (e.g. {{title}}, {{description}}, {{raw_content}})..."
           className="flex-1 bg-slate-950 text-slate-200 border-slate-800 font-mono text-xs resize-none"
           spellCheck={false}

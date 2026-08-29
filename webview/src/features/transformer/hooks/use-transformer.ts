@@ -15,6 +15,7 @@ export function useTransformer() {
   );
 
   const [workflowParseError, setWorkflowJsonError] = useState<string | null>(null);
+  const [templateCursorPos, setTemplateCursorPos] = useState<number | null>(null);
 
   const parsedWorkflow = useMemo<TransformerWorkflow>(() => {
     try {
@@ -59,6 +60,32 @@ export function useTransformer() {
     });
   }, []);
 
+  const insertVariableIntoTemplate = useCallback((varName: string) => {
+    if (!varName) return;
+    const tag = `{{${varName}}}`;
+    const currentTemplate = parsedWorkflow.outputTemplate || '';
+
+    let updatedTemplate = '';
+    let nextPos = 0;
+
+    if (
+      templateCursorPos !== null &&
+      templateCursorPos >= 0 &&
+      templateCursorPos <= currentTemplate.length
+    ) {
+      const head = currentTemplate.slice(0, templateCursorPos);
+      const tail = currentTemplate.slice(templateCursorPos);
+      updatedTemplate = head + tag + tail;
+      nextPos = templateCursorPos + tag.length;
+    } else {
+      updatedTemplate = currentTemplate + (currentTemplate && !currentTemplate.endsWith('\n') ? ' ' : '') + tag;
+      nextPos = updatedTemplate.length;
+    }
+
+    setTemplateCursorPos(nextPos);
+    updateOutputTemplate(updatedTemplate);
+  }, [templateCursorPos, parsedWorkflow.outputTemplate, updateOutputTemplate]);
+
   return {
     inputText,
     setInputText,
@@ -70,5 +97,8 @@ export function useTransformer() {
     handleCopyOutput,
     updateOutputTemplate,
     updateOutputFormat,
+    templateCursorPos,
+    setTemplateCursorPos,
+    insertVariableIntoTemplate,
   };
 }

@@ -8,6 +8,7 @@ interface CenterPanelContainerProps {
   setWorkflowJsonText: (val: string) => void;
   workflowParseError: string | null;
   parsedWorkflow: TransformerWorkflow;
+  onSelectVariable?: (variableName: string) => void;
 }
 
 export const CenterPanelContainer: React.FC<CenterPanelContainerProps> = (props) => {

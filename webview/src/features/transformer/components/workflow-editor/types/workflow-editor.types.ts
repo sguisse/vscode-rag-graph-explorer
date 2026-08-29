@@ -7,4 +7,5 @@ export interface WorkflowEditorProps {
   setWorkflowJsonText: (val: string) => void;
   workflowParseError: string | null;
   parsedWorkflow: TransformerWorkflow;
+  onSelectVariable?: (variableName: string) => void;
 }

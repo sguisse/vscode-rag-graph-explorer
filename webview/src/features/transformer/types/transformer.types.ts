@@ -15,8 +15,8 @@ export interface RegexExtractionStep {
   name: string;
   pattern: string;
   flags?: string;
-  targetVariable?: string; // If specified, stores match into this key
-  replacement?: string;    // Optional substitution
+  targetVariable?: string;
+  replacement?: string;
   enabled: boolean;
 }
 

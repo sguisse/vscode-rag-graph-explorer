@@ -10,9 +10,13 @@ export const OutputPanel: React.FC<OutputPanelProps> = ({
   renderedOutput,
   outputFormat,
   outputTemplate,
+  records,
   onCopy,
   onUpdateOutputTemplate,
   onUpdateOutputFormat,
+  templateCursorPos,
+  setTemplateCursorPos,
+  onSelectVariable,
 }) => {
   const { activeTab, setActiveTab } = useOutputPanel();
 
@@ -57,13 +61,17 @@ export const OutputPanel: React.FC<OutputPanelProps> = ({
             outputFormat={outputFormat}
             onUpdateOutputTemplate={onUpdateOutputTemplate}
             onUpdateOutputFormat={onUpdateOutputFormat}
+            templateCursorPos={templateCursorPos}
+            setTemplateCursorPos={setTemplateCursorPos}
           />
         )}
         {activeTab === 'preview' && (
           <PreviewTab
             renderedOutput={renderedOutput}
             outputFormat={outputFormat}
+            records={records}
             onCopy={onCopy}
+            onSelectVariable={onSelectVariable}
           />
         )}
       </div>

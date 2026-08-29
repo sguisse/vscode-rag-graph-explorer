@@ -21,6 +21,9 @@ export function TransformerFeature() {
     handleCopyOutput,
     updateOutputTemplate,
     updateOutputFormat,
+    templateCursorPos,
+    setTemplateCursorPos,
+    insertVariableIntoTemplate,
   } = useTransformer();
 
   useEffect(() => {
@@ -41,7 +44,6 @@ export function TransformerFeature() {
             <LeftPanelContainer
               inputText={inputText}
               setInputText={setInputText}
-              records={pipelineResult.records}
             />
           ),
           isResizable: true,
@@ -56,6 +58,7 @@ export function TransformerFeature() {
               setWorkflowJsonText={setWorkflowJsonText}
               workflowParseError={workflowParseError}
               parsedWorkflow={parsedWorkflow}
+              onSelectVariable={insertVariableIntoTemplate}
             />
           ),
           isResizable: false,
@@ -69,9 +72,13 @@ export function TransformerFeature() {
               renderedOutput={pipelineResult.renderedOutput}
               outputFormat={parsedWorkflow.outputFormat}
               outputTemplate={parsedWorkflow.outputTemplate}
+              records={pipelineResult.records}
               onCopy={handleCopyOutput}
               onUpdateOutputTemplate={updateOutputTemplate}
               onUpdateOutputFormat={updateOutputFormat}
+              templateCursorPos={templateCursorPos}
+              setTemplateCursorPos={setTemplateCursorPos}
+              onSelectVariable={insertVariableIntoTemplate}
             />
           ),
           isResizable: true,
@@ -101,6 +108,9 @@ export function TransformerFeature() {
     handleCopyOutput,
     updateOutputTemplate,
     updateOutputFormat,
+    templateCursorPos,
+    setTemplateCursorPos,
+    insertVariableIntoTemplate,
   ]);
 
   return null;

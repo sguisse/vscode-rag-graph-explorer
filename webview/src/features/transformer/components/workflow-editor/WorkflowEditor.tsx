@@ -12,6 +12,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
   setWorkflowJsonText,
   workflowParseError,
   parsedWorkflow,
+  onSelectVariable,
 }) => {
   const { activeTab, setActiveTab } = useWorkflowEditor();
 
@@ -80,7 +81,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
           />
         )}
         {activeTab === 'tree' && (
-          <TreeTableTab parsedWorkflow={parsedWorkflow} />
+          <TreeTableTab parsedWorkflow={parsedWorkflow} onSelectVariable={onSelectVariable} />
         )}
         {activeTab === 'graph' && (
           <GraphDesignTab parsedWorkflow={parsedWorkflow} />

@@ -1,152 +1,72 @@
 #!/usr/bin/env bash
 set -e
 
-TRANSFORMER_TAB_DIR="webview/src/features/transformer/components/workflow-editor/tabs"
+TRANSFORMER_DIR="webview/src/features/transformer/components"
 
-mkdir -p "${TRANSFORMER_TAB_DIR}"
+mkdir -p "${TRANSFORMER_DIR}"
 
-# Update TreeTableTab.tsx to render replacement value as a styled badge
-cat << 'EOF' > "${TRANSFORMER_TAB_DIR}/TreeTableTab.tsx"
-import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, ShieldCheck, Zap, Scissors } from 'lucide-react';
-import { TransformerWorkflow } from '../../../types/transformer.types';
+# Update TransformationsTable.tsx to enable text auto-wrapping on Extracted Value and Raw Match columns
+cat << 'EOF' > "${TRANSFORMER_DIR}/TransformationsTable.tsx"
+import React from 'react';
+import { ExtractedTableRecord } from '../types/transformer.types';
 
-interface TreeTableTabProps {
-  parsedWorkflow: TransformerWorkflow;
+interface TransformationsTableProps {
+  records: ExtractedTableRecord[];
+  onSelectVariable?: (variableName: string) => void;
 }
 
-export const TreeTableTab: React.FC<TreeTableTabProps> = ({ parsedWorkflow }) => {
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    anonymization: true,
-    extraction: true,
-    minify: true,
-  });
-
-  const toggleSection = (key: string) => {
-    setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
+export const TransformationsTable: React.FC<TransformationsTableProps> = ({ records, onSelectVariable }) => {
   return (
-    <div className="flex flex-col h-full w-full p-2 font-mono text-xs overflow-y-auto space-y-2 bg-card select-none">
-      {/* 1. Anonymization Rules */}
-      <div className="border border-border rounded-md overflow-hidden bg-background">
-        <div
-          onClick={() => toggleSection('anonymization')}
-          className="flex items-center justify-between p-2 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
-        >
-          <div className="flex items-center gap-2 font-bold text-foreground">
-            {expandedSections.anonymization ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            <ShieldCheck size={14} className="text-emerald-500" />
-            <span>Anonymization Rules ({parsedWorkflow.anonymizationRules?.length || 0})</span>
-          </div>
-        </div>
-
-        {expandedSections.anonymization && (
-          <div className="p-2 space-y-1 divide-y divide-border/40">
-            {(parsedWorkflow.anonymizationRules || []).length === 0 ? (
-              <div className="text-muted-foreground italic p-1">No anonymization rules configured.</div>
+    <div className="w-full border border-border rounded-md overflow-hidden bg-background font-mono text-xs">
+      <div className="max-h-[180px] overflow-y-auto overflow-x-hidden">
+        <table className="w-full text-left border-collapse table-fixed font-mono text-xs">
+          <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur border-b border-border text-[11px] uppercase text-muted-foreground font-bold select-none">
+            <tr>
+              <th className="p-1.5 w-[25%]">Step / Rule</th>
+              <th className="p-1.5 w-[20%]">Variable</th>
+              <th className="p-1.5 w-[30%]">Extracted Value</th>
+              <th className="p-1.5 w-[25%]">Raw Match</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border/60">
+            {records.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="h-12 text-center text-muted-foreground italic p-2">
+                  No extraction variables matched.
+                </td>
+              </tr>
             ) : (
-              parsedWorkflow.anonymizationRules.map((rule) => {
-                const replacementValue = rule.replace ?? rule.replacement;
-                return (
-                  <div key={rule.id} className="pt-1 text-[11px] space-y-0.5">
-                    <div className="flex justify-between items-center">
-                      <span className="font-bold text-foreground">{rule.name}</span>
-                      <span className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-1 py-0.2 rounded text-[9px] uppercase font-bold">
-                        {rule.strategy}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center gap-2 text-muted-foreground">
-                      <span className="truncate">
-                        Pattern: <code>{rule.pattern}</code>
-                      </span>
-                      {replacementValue !== undefined && (
-                        <span className="bg-emerald-500/10 px-1 py-0.2 border border-emerald-500/20 rounded font-bold text-[9px] text-emerald-500 uppercase">
-                          "{replacementValue}"
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* 2. Extraction Steps */}
-      <div className="border border-border rounded-md overflow-hidden bg-background">
-        <div
-          onClick={() => toggleSection('extraction')}
-          className="flex items-center justify-between p-2 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
-        >
-          <div className="flex items-center gap-2 font-bold text-foreground">
-            {expandedSections.extraction ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            <Zap size={14} className="text-indigo-400" />
-            <span>Extraction Steps ({parsedWorkflow.extractionSteps?.length || 0})</span>
-          </div>
-        </div>
-
-        {expandedSections.extraction && (
-          <div className="p-2 space-y-1 divide-y divide-border/40">
-            {(parsedWorkflow.extractionSteps || []).length === 0 ? (
-              <div className="text-muted-foreground italic p-1">No extraction steps configured.</div>
-            ) : (
-              parsedWorkflow.extractionSteps.map((step) => (
-                <div key={step.id} className="pt-1 text-[11px] space-y-0.5">
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold text-foreground">{step.name}</span>
-                    {step.targetVariable && (
-                      <span className="bg-primary/10 text-primary border border-primary/20 px-1 py-0.2 rounded text-[9px]">
-                        → ${step.targetVariable}
-                      </span>
+              records.map((row) => (
+                <tr key={row.id} className="hover:bg-muted/30">
+                  <td className="p-1.5 align-top font-bold text-foreground break-all whitespace-normal">{row.stepName}</td>
+                  <td className="p-1.5 align-top break-all whitespace-normal">
+                    {row.variable ? (
+                      <code
+                        onClick={() => onSelectVariable?.(row.variable)}
+                        data-tooltip={`Click to insert {{${row.variable}}} into template`}
+                        className="text-primary bg-primary/10 px-1 py-0.5 rounded cursor-pointer hover:bg-primary/20 hover:underline transition-colors select-none inline-block break-all"
+                      >
+                        {row.variable}
+                      </code>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
                     )}
-                  </div>
-                  <div className="text-muted-foreground truncate">
-                    Pattern: <code>{step.pattern}</code>
-                  </div>
-                </div>
+                  </td>
+                  <td className="p-1.5 align-top">
+                    <span className="text-emerald-500 font-mono break-all whitespace-normal block" title={row.value}>
+                      {row.value}
+                    </span>
+                  </td>
+                  <td className="p-1.5 align-top">
+                    <span className="text-muted-foreground font-mono break-all whitespace-normal block" title={row.rawMatch}>
+                      {row.rawMatch}
+                    </span>
+                  </td>
+                </tr>
               ))
             )}
-          </div>
-        )}
-      </div>
-
-      {/* 3. Minification Settings */}
-      <div className="border border-border rounded-md overflow-hidden bg-background">
-        <div
-          onClick={() => toggleSection('minify')}
-          className="flex items-center justify-between p-2 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
-        >
-          <div className="flex items-center gap-2 font-bold text-foreground">
-            {expandedSections.minify ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            <Scissors size={14} className="text-amber-500" />
-            <span>Minify Options</span>
-          </div>
-        </div>
-
-        {expandedSections.minify && (
-          <div className="p-2 text-[11px] space-y-1">
-            <div className="flex justify-between">
-              <span>Strip Comments:</span>
-              <strong className={parsedWorkflow.minify?.stripComments ? 'text-emerald-500' : 'text-muted-foreground'}>
-                {parsedWorkflow.minify?.stripComments ? 'YES' : 'NO'}
-              </strong>
-            </div>
-            <div className="flex justify-between">
-              <span>Collapse Whitespace:</span>
-              <strong className={parsedWorkflow.minify?.collapseWhitespace ? 'text-emerald-500' : 'text-muted-foreground'}>
-                {parsedWorkflow.minify?.collapseWhitespace ? 'YES' : 'NO'}
-              </strong>
-            </div>
-            <div className="flex justify-between">
-              <span>Trim Lines:</span>
-              <strong className={parsedWorkflow.minify?.trimLines ? 'text-emerald-500' : 'text-muted-foreground'}>
-                {parsedWorkflow.minify?.trimLines ? 'YES' : 'NO'}
-              </strong>
-            </div>
-          </div>
-        )}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -156,4 +76,4 @@ EOF
 # Build Webview Application
 cd webview && npm run build
 
-echo "✅ UI update: Styled anonymization replacement values with styled emerald badge in TreeTableTab!"
+echo "✅ style: Applied auto text wrapping to Extracted Value and Raw Match table columns to eliminate horizontal scrollbars!"
