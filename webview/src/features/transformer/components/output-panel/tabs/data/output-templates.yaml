@@ -1,0 +1,35 @@
+json: |-
+  {
+    "articleTitle": "{{title}}",
+    "summary": "{{description}}",
+    "cleanBody": "{{raw_content}}"
+  }
+yaml: |-
+  articleTitle: "{{title}}"
+  summary: "{{description}}"
+  cleanBody: >-
+    {{raw_content}}
+xml: |-
+  <article>
+    <title>{{title}}</title>
+    <summary>{{description}}</summary>
+    <body format="clean">
+       <![CDATA[
+         {{raw_content}}
+       ]]>
+    </body>
+  </article>
+markdown: |-
+  # {{title}}
+
+  > **Summary:** {{description}}
+
+  ---
+
+  {{raw_content}}
+plaintext: |-
+  TITLE: {{title}}
+  SUMMARY: {{description}}
+
+  CONTENT:
+  {{raw_content}}

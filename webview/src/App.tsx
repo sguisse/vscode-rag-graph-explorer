@@ -8,6 +8,7 @@ import { LayoutDemoFeature } from '@/features/layout-demo/LayoutDemoFeature';
 import { WorkflowBuilderFeature } from '@/features/ai-workflow-builder/WorkflowBuilderFeature';
 import { ExporterFeature } from '@/features/exporter/ExporterFeature';
 import { ReferencesFeature } from '@/features/references/ReferencesFeature';
+import { TransformerFeature } from '@/features/transformer/TransformerFeature';
 import { RulesFeature } from '@/features/rules/RulesFeature';
 import { HelpFeature } from '@/features/help/HelpFeature';
 import { SdlcLayoutOrchestrator } from '@/features/sdlc/SdlcLayoutOrchestrator';
@@ -66,6 +67,7 @@ export default function App() {
       {(activeFeature === 'feature-ai-workflow-builder') && WorkflowBuilderFeature && <WorkflowBuilderFeature />}
       {(activeFeature === 'feature-codebase-exporter' || activeFeature === 'feature-exporter') && ExporterFeature && <ExporterFeature />}
       {(activeFeature === 'feature-references') && ReferencesFeature && <ReferencesFeature />}
+      {(activeFeature === 'feature-transformer') && TransformerFeature && <TransformerFeature />}
       {(activeFeature === 'feature-layout-demo') && LayoutDemoFeature && <LayoutDemoFeature />}
       {(activeFeature === 'feature-rules') && RulesFeature && <RulesFeature />}
       {(activeFeature === 'feature-help') && HelpFeature && <HelpFeature />}

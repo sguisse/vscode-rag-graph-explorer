@@ -13,6 +13,7 @@ import {
   VectorSquare,
   FolderDown,
   FolderGit2,
+  Sliders,
   Bot,
   LogOut,
   Sparkles,
@@ -57,6 +58,7 @@ export const SIDEBAR_MENU_ITEMS: NavItem[] = [
   { id: 'feature-home', icon: Home, label: 'Home' },
   { id: 'feature-codebase-exporter', icon: FolderDown, label: 'Codebase Exporter', badge: 'Upd' },
   { id: 'feature-references', icon: FolderGit2, label: 'Project References', badge: 'New' },
+  { id: 'feature-transformer', icon: Sliders, label: 'ETL Transformer', badge: 'New' },
   {
     id: 'group-sdlc',
     label: 'SDLC',
