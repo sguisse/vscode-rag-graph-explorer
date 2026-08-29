@@ -52,6 +52,7 @@ export interface CollapsibleCardProps {
   style?: React.CSSProperties;
   headerClassName?: string;
   headerStyle?: React.CSSProperties;
+  contentClassName?: string;
   footer?: React.ReactNode;
   footerStyle?: React.CSSProperties;
 }
@@ -70,6 +71,7 @@ export const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
   style,
   headerClassName,
   headerStyle,
+  contentClassName,
   footer,
   footerStyle,
 }) => {
@@ -128,7 +130,12 @@ export const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
       </CardHeader>
 
       {isOpen && children && (
-        <CardContent className="p-1 font-mono text-[11px] break-words leading-relaxed whitespace-pre-wrap">
+        <CardContent
+          className={cn(
+            "p-1 font-mono text-[11px] break-words leading-relaxed whitespace-pre-wrap overflow-y-auto min-h-0 max-h-[600px]",
+            contentClassName
+          )}
+        >
           {children}
         </CardContent>
       )}

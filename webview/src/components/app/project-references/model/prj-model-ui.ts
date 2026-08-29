@@ -1,0 +1,31 @@
+export interface ReferenceItem {
+  id: string;
+  emoji: string;
+  name: string;
+  description: string;
+  category: string;
+  url: string;
+  preSelected: boolean;
+  sizeKb: number;
+  content?: string;
+  addedAt?: string;
+  updatedAt?: string;
+  changeDetected?: number; // Expressed in % vs actual version
+}
+
+export type RefSortField = 'category' | 'preSelected' | 'name' | 'sizeKb' | 'updatedAt';
+export type RefSortOrder = 'asc' | 'desc';
+
+export interface RefSortRule {
+  field: RefSortField;
+  order: RefSortOrder;
+}
+
+export type ProjectReferencesViewMode = 'User' | 'Administrator';
+
+export interface ProjectReferencesPanelProps {
+  localDocumentStorage?: string;
+  viewMode?: ProjectReferencesViewMode;
+  parentCollapsible?: boolean;
+  className?: string;
+}

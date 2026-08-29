@@ -1,47 +1,3 @@
-#!/usr/bin/env bash
-set -e
-
-BASE_DIR="webview/src/components/app/project-references"
-
-mkdir -p "${BASE_DIR}/model"
-
-# 1. Update prj-model-ui.ts to include parentCollapsible prop
-cat << 'EOF' > "${BASE_DIR}/model/prj-model-ui.ts"
-export interface ReferenceItem {
-  id: string;
-  emoji: string;
-  name: string;
-  description: string;
-  category: string;
-  url: string;
-  preSelected: boolean;
-  sizeKb: number;
-  content?: string;
-  addedAt?: string;
-  updatedAt?: string;
-  changeDetected?: number; // Expressed in % vs actual version
-}
-
-export type RefSortField = 'category' | 'preSelected' | 'name' | 'sizeKb' | 'updatedAt';
-export type RefSortOrder = 'asc' | 'desc';
-
-export interface RefSortRule {
-  field: RefSortField;
-  order: RefSortOrder;
-}
-
-export type ProjectReferencesViewMode = 'User' | 'Administrator';
-
-export interface ProjectReferencesPanelProps {
-  localDocumentStorage?: string;
-  viewMode?: ProjectReferencesViewMode;
-  parentCollapsible?: boolean;
-  className?: string;
-}
-EOF
-
-# 2. Update ProjectReferencesPanel.tsx to make parent CollapsibleCard optional (default true)
-cat << 'EOF' > "${BASE_DIR}/ProjectReferencesPanel.tsx"
 import React from 'react';
 import { FolderGit2, Layers } from 'lucide-react';
 import { CollapsibleCard } from '@/components/app/collapsible-card';
@@ -101,7 +57,7 @@ export function ProjectReferencesPanel({
   } = useProjectReferences(localDocumentStorage, initialViewMode);
 
   const innerContent = (
-    <div className="p-2 space-y-2">
+    <div className="space-y-2 p-2">
       {/* New Reference Creation Form (Placed BEFORE Filter Bar in Administrator View) */}
       {viewMode === 'Administrator' && (
         <NewReferenceForm
@@ -185,7 +141,7 @@ export function ProjectReferencesPanel({
           title={
             <div className="flex items-center gap-2">
               <FolderGit2 size={15} className="text-indigo-400 shrink-0" />
-              <span className="font-bold text-xs uppercase tracking-wide text-foreground">
+              <span className="font-bold text-foreground text-xs uppercase tracking-wide">
                 Project References & Context
               </span>
             </div>
@@ -193,20 +149,20 @@ export function ProjectReferencesPanel({
           badge={`${totalSelectedCount} / ${totalCount} Selected (${totalSelectedSizeKb} KB)`}
           defaultExpanded={true}
           contentToCopy=""
-          className="bg-card border-border shadow-sm"
+          className="bg-card shadow-sm border-border"
         >
           {innerContent}
         </CollapsibleCard>
       ) : (
-        <div className="bg-card border border-border rounded-lg shadow-sm">
-          <div className="flex items-center justify-between p-2 border-b border-border bg-muted/20">
+        <div className="bg-card shadow-sm border border-border rounded-lg">
+          <div className="flex justify-between items-center bg-muted/20 p-2 border-border border-b">
             <div className="flex items-center gap-2">
               <FolderGit2 size={15} className="text-indigo-400 shrink-0" />
-              <span className="font-bold text-xs uppercase tracking-wide text-foreground">
+              <span className="font-bold text-foreground text-xs uppercase tracking-wide">
                 Project References & Context
               </span>
             </div>
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded border text-[10px] font-mono bg-indigo-500/10 text-indigo-400 border-indigo-500/20">
+            <span className="inline-flex items-center bg-indigo-500/10 px-1.5 py-0.5 border border-indigo-500/20 rounded font-mono text-[10px] text-indigo-400">
               {totalSelectedCount} / {totalCount} Selected ({totalSelectedSizeKb} KB)
             </span>
           </div>
@@ -216,8 +172,3 @@ export function ProjectReferencesPanel({
     </div>
   );
 }
-EOF
-
-cd webview && npm run build
-
-echo "✅ feat: Made Top Parent Collapsible Component optional via parentCollapsible prop (defaulting to true)!"

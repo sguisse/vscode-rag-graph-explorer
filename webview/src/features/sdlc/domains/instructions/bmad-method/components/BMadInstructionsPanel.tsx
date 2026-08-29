@@ -5,15 +5,12 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { useSdlcSessionStore } from '@/features/sdlc/core/store/useSdlcSessionStore';
 import { SkillsByCategoryConfig, Skill } from '../model/skills';
 import BMAD_SKILLS_DATA from '../data/bmad-skills-by-category.yaml';
+import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
+import { ProjectReferencesPanel } from '@/components/app/project-references';
 
-/**
- * Formats prompt text to preserve and properly render line feeds (\n) in textareas,
- * handling double-escaped newlines and folded YAML scalars.
- */
 function formatPromptText(text: string): string {
   if (!text) return '';
   let formatted = text.replace(/\\n/g, '\n');
-  // Ensure standard prompt section headings start on fresh new lines
   formatted = formatted
     .replace(/(BUSINESS CONTEXT:)/g, '\n$1')
     .replace(/(EXPECTED ACTION:)/g, '\n\n$1')
@@ -28,7 +25,6 @@ export function BMadInstructionsPanel() {
   const session = useSdlcSessionStore((s) => (activeSessionId ? s.sessions[activeSessionId] : null));
   const updateSession = useSdlcSessionStore((s) => s.updateActiveSession);
 
-  // Default auto-copy checkbox to checked
   const [autoCopySample, setAutoCopySample] = useState<boolean>(true);
   const [selectedDomain, setSelectedDomain] = useState<string>('');
   const [selectedSubDomain, setSelectedSubDomain] = useState<string>('');
@@ -45,7 +41,6 @@ export function BMadInstructionsPanel() {
     return null;
   }, [categories, selectedCommand]);
 
-  // Aggregate domain -> subDomain -> prompt text map
   const domainMap = useMemo(() => {
     const map: Record<string, Record<string, string>> = {};
 
@@ -79,7 +74,6 @@ export function BMadInstructionsPanel() {
     return Object.keys(domainMap[selectedDomain]);
   }, [domainMap, selectedDomain]);
 
-  // Helper to safely write formatted prompt text into the active session
   const applyPromptToTextarea = useCallback(
     (promptText: string) => {
       if (!promptText) return;
@@ -93,7 +87,6 @@ export function BMadInstructionsPanel() {
     [updateSession]
   );
 
-  // Auto-initialize combo with 1st domain and 1st subDomain on component mount or skill change
   useEffect(() => {
     if (domains.length === 0) return;
 
@@ -125,7 +118,8 @@ export function BMadInstructionsPanel() {
     }
   };
 
-  const handleDomainSelect = (val: string) => {
+  const handleDomainSelect = (val: string | null) => {
+    if (!val) return;
     setSelectedDomain(val);
     const availableSubs = domainMap[val] ? Object.keys(domainMap[val]) : [];
     const firstSub = availableSubs[0] || '';
@@ -136,7 +130,8 @@ export function BMadInstructionsPanel() {
     }
   };
 
-  const handleSubDomainSelect = (subDomain: string) => {
+  const handleSubDomainSelect = (subDomain: string | null) => {
+    if (!subDomain) return;
     setSelectedSubDomain(subDomain);
     if (autoCopySample && selectedDomain && subDomain && domainMap[selectedDomain]?.[subDomain]) {
       applyPromptToTextarea(domainMap[selectedDomain][subDomain]);
@@ -144,83 +139,90 @@ export function BMadInstructionsPanel() {
   };
 
   return (
-    <div className="space-y-3 p-3 font-mono text-xs animate-in fade-in h-full overflow-y-auto">
-      <div className="bg-indigo-500/5 p-3 border border-indigo-500/20 rounded-lg">
-        <h4 className="font-bold text-foreground text-sm uppercase">BMad Agent Framework</h4>
-        <p className="text-[10px] text-muted-foreground mt-1">
-          Structured prompting leveraging specific Agents and Skills for high-quality, predictable outputs.
-        </p>
-      </div>
+    <TopMiddleBottomPanel
+      id="bmad-instructions-panel"
+      className="h-full p-2 gap-3"
+      top={
+        <div className="space-y-2">
+          <div className="bg-indigo-500/5 p-3 border border-indigo-500/20 rounded-lg">
+            <h4 className="font-bold text-foreground text-sm uppercase">BMad Agent Framework</h4>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Structured prompting leveraging specific Agents and Skills for high-quality, predictable outputs.
+            </p>
+          </div>
 
-      <div className="space-y-2 bg-card p-2.5 border border-border rounded-lg">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <span className="font-bold text-[10px] text-foreground uppercase">
-              <Bot size={12} className="inline mr-1 text-indigo-400" /> Domain & Subdomain Prompt Selection
-            </span>
+          <div className="space-y-2 bg-card p-2.5 border border-border rounded-lg">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <span className="font-bold text-[10px] text-foreground uppercase">
+                  <Bot size={12} className="inline mr-1 text-indigo-400" /> Domain & Subdomain Prompt Selection
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <label className="flex items-center gap-1.5 cursor-pointer text-[10px] font-medium text-muted-foreground hover:text-foreground shrink-0 select-none">
+                <input
+                  type="checkbox"
+                  checked={autoCopySample}
+                  onChange={(e) => handleCheckboxChange(e.target.checked)}
+                  className="rounded border-border bg-background text-indigo-500 focus:ring-indigo-500 h-3.5 w-3.5 cursor-pointer accent-indigo-500"
+                />
+                <span>Auto-copy</span>
+              </label>
+
+              <Select value={selectedDomain} onValueChange={handleDomainSelect}>
+                <SelectTrigger className="bg-background w-1/2 h-8 text-xs">
+                  <SelectValue placeholder="Select Domain..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {domains.map((domain) => (
+                    <SelectItem key={domain} value={domain}>
+                      {domain}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={selectedSubDomain}
+                onValueChange={handleSubDomainSelect}
+                disabled={!selectedDomain || subDomains.length === 0}
+              >
+                <SelectTrigger className="bg-background w-1/2 h-8 text-xs">
+                  <SelectValue placeholder="Select Subdomain..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {subDomains.map((subDomain) => (
+                    <SelectItem key={subDomain} value={subDomain}>
+                      {subDomain}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
-
-        <div className="flex items-center gap-2 pt-1">
-          {/* Checkbox before Select dropdowns */}
-          <label className="flex items-center gap-1.5 cursor-pointer text-[10px] font-medium text-muted-foreground hover:text-foreground shrink-0 select-none">
-            <input
-              type="checkbox"
-              checked={autoCopySample}
-              onChange={(e) => handleCheckboxChange(e.target.checked)}
-              className="rounded border-border bg-background text-indigo-500 focus:ring-indigo-500 h-3.5 w-3.5 cursor-pointer accent-indigo-500"
-            />
-            <span>Auto-copy</span>
-          </label>
-
-          {/* First Select: Domain List */}
-          <Select value={selectedDomain} onValueChange={handleDomainSelect}>
-            <SelectTrigger className="bg-background w-1/2 h-8 text-xs">
-              <SelectValue placeholder="Select Domain..." />
-            </SelectTrigger>
-            <SelectContent>
-              {domains.map((domain) => (
-                <SelectItem key={domain} value={domain}>
-                  {domain}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Second Select: Ordered Subdomain List */}
-          <Select
-            value={selectedSubDomain}
-            onValueChange={handleSubDomainSelect}
-            disabled={!selectedDomain || subDomains.length === 0}
-          >
-            <SelectTrigger className="bg-background w-1/2 h-8 text-xs">
-              <SelectValue placeholder="Select Subdomain..." />
-            </SelectTrigger>
-            <SelectContent>
-              {subDomains.map((subDomain) => (
-                <SelectItem key={subDomain} value={subDomain}>
-                  {subDomain}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      }
+      middle={
+        <div className="space-y-1 h-full flex flex-col min-h-[160px]">
+          <label className="block font-bold text-[10px] text-muted-foreground uppercase">Structured Prompt:</label>
+          <Textarea
+            value={session.instructionsPayload?.promptText || ''}
+            onChange={(e) =>
+              updateSession((draft) => {
+                if (!draft.instructionsPayload) draft.instructionsPayload = { strategy: 'bmad', promptText: '' };
+                draft.instructionsPayload.promptText = e.target.value;
+              })
+            }
+            placeholder="[CONTEXT]\n...\n[EXPECTED]\n...\n[OUTPUT FORMAT]\n..."
+            className="bg-background flex-1 font-mono text-xs resize-y min-h-[160px]"
+          />
         </div>
-      </div>
-
-      <div className="space-y-1">
-        <label className="block font-bold text-[10px] text-muted-foreground uppercase">Structured Prompt:</label>
-        <Textarea
-          value={session.instructionsPayload?.promptText || ''}
-          onChange={(e) =>
-            updateSession((draft) => {
-              if (!draft.instructionsPayload) draft.instructionsPayload = { strategy: 'bmad', promptText: '' };
-              draft.instructionsPayload.promptText = e.target.value;
-            })
-          }
-          placeholder="[CONTEXT]\n...\n[EXPECTED]\n...\n[OUTPUT FORMAT]\n..."
-          className="bg-background min-h-[220px] font-mono text-xs resize-y"
-        />
-      </div>
-    </div>
+      }
+      bottom={
+        <ProjectReferencesPanel localDocumentStorage="bmad-method-references" viewMode="User" />
+      }
+    />
   );
 }
