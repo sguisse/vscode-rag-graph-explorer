@@ -3,7 +3,7 @@ import { Bot } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { useSdlcSessionStore } from '@/features/sdlc/core/store/useSdlcSessionStore';
-import { SkillsByCategoryConfig, Skill } from '../model/skills';
+import { SkillsByCategoryConfig, Skill } from '../../../model/skills';
 import BMAD_SKILLS_DATA from '../data/bmad-skills-by-category.yaml';
 import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
 import { ProjectReferencesPanel } from '@/components/app/project-references';
@@ -141,12 +141,12 @@ export function BMadInstructionsPanel() {
   return (
     <TopMiddleBottomPanel
       id="bmad-instructions-panel"
-      className="h-full p-2 gap-3"
+      className="gap-3 p-2 h-full"
       top={
         <div className="space-y-2">
           <div className="bg-indigo-500/5 p-3 border border-indigo-500/20 rounded-lg">
             <h4 className="font-bold text-foreground text-sm uppercase">BMad Agent Framework</h4>
-            <p className="text-[10px] text-muted-foreground mt-1">
+            <p className="mt-1 text-[10px] text-muted-foreground">
               Structured prompting leveraging specific Agents and Skills for high-quality, predictable outputs.
             </p>
           </div>
@@ -161,12 +161,12 @@ export function BMadInstructionsPanel() {
             </div>
 
             <div className="flex items-center gap-2 pt-1">
-              <label className="flex items-center gap-1.5 cursor-pointer text-[10px] font-medium text-muted-foreground hover:text-foreground shrink-0 select-none">
+              <label className="flex items-center gap-1.5 font-medium text-[10px] text-muted-foreground hover:text-foreground cursor-pointer select-none shrink-0">
                 <input
                   type="checkbox"
                   checked={autoCopySample}
                   onChange={(e) => handleCheckboxChange(e.target.checked)}
-                  className="rounded border-border bg-background text-indigo-500 focus:ring-indigo-500 h-3.5 w-3.5 cursor-pointer accent-indigo-500"
+                  className="bg-background border-border rounded focus:ring-indigo-500 w-3.5 h-3.5 text-indigo-500 accent-indigo-500 cursor-pointer"
                 />
                 <span>Auto-copy</span>
               </label>
@@ -205,7 +205,7 @@ export function BMadInstructionsPanel() {
         </div>
       }
       middle={
-        <div className="space-y-1 h-full flex flex-col min-h-[160px]">
+        <div className="flex flex-col space-y-1 h-full min-h-[160px]">
           <label className="block font-bold text-[10px] text-muted-foreground uppercase">Structured Prompt:</label>
           <Textarea
             value={session.instructionsPayload?.promptText || ''}
@@ -216,7 +216,7 @@ export function BMadInstructionsPanel() {
               })
             }
             placeholder="[CONTEXT]\n...\n[EXPECTED]\n...\n[OUTPUT FORMAT]\n..."
-            className="bg-background flex-1 font-mono text-xs resize-y min-h-[160px]"
+            className="flex-1 bg-background min-h-[160px] font-mono text-xs resize-y"
           />
         </div>
       }

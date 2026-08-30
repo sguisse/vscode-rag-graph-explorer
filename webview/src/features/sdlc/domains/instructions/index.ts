@@ -1,3 +1,3 @@
 export * from './vibe-coding';
-export * from './bmad-method';
-export * from './speckit';
+export * from './SDD/bmad-method';
+export * from './SDD/speckit';

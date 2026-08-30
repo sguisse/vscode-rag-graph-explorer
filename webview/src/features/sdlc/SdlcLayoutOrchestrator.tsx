@@ -5,7 +5,7 @@ import { useSdlcWorkflowMachine } from './core/workflow/useSdlcWorkflowMachine';
 import { SdlcSidebarMenu } from './ui-common/components/SdlcSidebarMenu';
 import { CodebaseContextFeature } from './domains/codebase-context';
 import { VibeCodingFeature, BMadMethodFeature, SpecKitFeature } from './domains/instructions';
-import { BMadLeftContainer } from './domains/instructions/bmad-method/containers/BMadLeftContainer';
+import { BMadLeftContainer } from './domains/instructions/SDD/bmad-method/containers/BMadLeftContainer';
 import { LlmFeature } from './domains/llm-chat';
 import { ResultsManagerFeature } from './domains/results-manager';
 import { ConfigurationFeature } from './domains/configuration';

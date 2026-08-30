@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ChevronDown, ChevronRight, Sparkles, ChevronsDown, ChevronsUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
-import { SkillsByCategoryConfig, Skill } from '../model/skills';
+import { SkillsByCategoryConfig, Skill } from '../../../model/skills';
 import BMAD_SKILLS_DATA from '../data/bmad-skills-by-category.yaml';
 import { useSdlcSessionStore } from '@/features/sdlc/core/store/useSdlcSessionStore';
 
@@ -131,7 +131,7 @@ export function BMadMethodPanel() {
                       data-tooltip={`${skill.name} (${skill.command})`}
                     >
                       <span className="text-xs shrink-0">{skill.emoji}</span>
-                      <span className="font-medium text-xs truncate shrink-0">{skill.name}</span>
+                      <span className="font-medium text-xs shrink-0">{skill.name}</span>
                       <span className="text-[9px] text-muted-foreground truncate" style={{ fontSize: '9px' }}>
                         : {skill.description}
                       </span>

@@ -1,0 +1,1852 @@
+- id: quick-start
+  title: Quick Start
+  description: Get help or initialize SpecKit Spec-Driven Development (SDD) workflows
+  icon: run-all
+  emoji: "🔀"
+  skills:
+    - icon: question
+      emoji: "❓"
+      name: Help & Guidance
+      description: Contextual help for SpecKit SDD workflows and next steps
+      command: speckit-help
+      prompts:
+        - vc4i:
+            planning: >-
+              <🧠_BUSINESS_CONTEXT>
+                Industrial shop floor planners face unexpected bottlenecks when equipment downtime impacts assembly lines. Schedulers need guidance on which SpecKit specification workflow or persona to activate to re-sequence production schedules.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Provide guidance on initiating a spec-driven re-planning workflow using SpecKit commands. Explain how to transition from incident detection to specification updates for the finite scheduling engine.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Provide a 3-step action guide with recommended SpecKit commands, target agents (Spec Architect vs. Dev), and required input parameters.
+              </🖨️_OUTPUT_FORMAT>
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                Order entry specialists encounter invalid option combinations in Configure-To-Order (CTO) requests.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Recommend the next SpecKit command to diagnose order rule validation failures and configure automated constraint specification contracts.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Concise execution pathway detailing recommended commands (e.g., speckit-spec, speckit-architecture) and decision points.
+              </🖨️_OUTPUT_FORMAT>
+            orderDelivery: >-
+              <🧠_BUSINESS_CONTEXT>
+                Logistics managers face delayed 3PL carrier assignments resulting in dock congestion and potential demurrage costs.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Identify the appropriate SpecKit analysis and specification skills needed to build an automated ASN dispatch integration.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Step-by-step guidance list specifying SpecKit skill invocation sequences for shipping notice automation.
+              </🖨️_OUTPUT_FORMAT>
+            stock: >-
+              <🧠_BUSINESS_CONTEXT>
+                Plant inventory controllers experience phantom stockouts due to delayed RFID scan ingestion.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Direct the user to the correct SpecKit workflows for specifying real-time inventory reservation locks and buffer alerts.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Structured recommendation matrix listing relevant SpecKit skills, expected inputs, and produced deliverables.
+              </🖨️_OUTPUT_FORMAT>
+            referential: >-
+              <🧠_BUSINESS_CONTEXT>
+                Engineering revisions in PLM cause BOM synchronization mismatches with MES routing master data.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Guide the user on using SpecKit agents to establish a single-source-of-truth master data spec pipeline.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Direct navigation map linking current master data issues to targeted SpecKit solutioning skills.
+              </🖨️_OUTPUT_FORMAT>
+            pricing: >-
+              <🧠_BUSINESS_CONTEXT>
+                Raw material cost fluctuations erode margins on long-lead finished goods quotes.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Outline how to leverage SpecKit skills to specify a dynamic cost-rollup and surcharge pricing engine.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Bulleted workflow guide highlighting spec drafting, architectural design, and automated build execution steps.
+              </🖨️_OUTPUT_FORMAT>
+            orderAdmenment: >-
+              <🧠_BUSINESS_CONTEXT>
+                Mid-production order modifications create shop floor scrap and scheduling chaos.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Provide instructions on selecting SpecKit skills to specify mid-flight order lock and delta billing controls.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Actionable flowchart in standard text listing agent roles and command triggers.
+              </🖨️_OUTPUT_FORMAT>
+        - ecommerce:
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                High-volume B2B e-commerce orders fail during real-time Available-To-Promise (ATP) stock validation.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Guide the developer on using SpecKit skills to troubleshoot e-commerce API webhooks and order queue processing specs.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Quick-reference diagnostic list with recommended SpecKit skills for e-commerce integration.
+              </🖨️_OUTPUT_FORMAT>
+    - icon: book
+      emoji: "🏁"
+      name: Init Spec Repo
+      description: Initialize repository layout and core SpecKit SDD conventions
+      command: speckit-init
+      prompts:
+        - vc4i:
+            planning: >-
+              <🧠_BUSINESS_CONTEXT>
+                Initializing repository layout for the Shop-Floor Finite Capacity Scheduling module under SpecKit SDD guidelines.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Establish standard SpecKit repository structure including specs folder, template files, and AGENTS.md configuration.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Directory layout tree and setup summary detailing folder structure and initial configuration contracts.
+              </🖨️_OUTPUT_FORMAT>
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                Setting up SpecKit SDD repository structure for CTO Order Build Validation service.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Bootstrap the project specifications root directory and configure option rule validation spec templates.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Boilerplate structure list with description of core specification files created.
+              </🖨️_OUTPUT_FORMAT>
+            orderDelivery: >-
+              <🧠_BUSINESS_CONTEXT>
+                Initializing SpecKit environment for Outbound Shipping & EDI 856 Integration system.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Generate project specification templates and contract definitions for carrier webhook integrations.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Summary checklist of initialized SpecKit repository files and initial contract definitions.
+              </🖨️_OUTPUT_FORMAT>
+            stock: >-
+              <🧠_BUSINESS_CONTEXT>
+                Setting up SpecKit layout for WIP Stock Allocation and RFID Telemetry project.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Initialize spec directories for stream processing rules, buffer thresholds, and Redis lock contracts.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Formatted folder map with template details for inventory event schemas.
+              </🖨️_OUTPUT_FORMAT>
+            referential: >-
+              <🧠_BUSINESS_CONTEXT>
+                Initializing SpecKit repository for Master Data Referential Synchronization hub.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Create standard specification taxonomy for multi-level BOM explosion and routing transformation rules.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Spec repository initialization report detailing schema directories and mapping contracts.
+              </🖨️_OUTPUT_FORMAT>
+            pricing: >-
+              <🧠_BUSINESS_CONTEXT>
+                Bootstrapping SpecKit structure for Dynamic Component Cost Rollup and Pricing Engine repository.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Establish spec files for financial precision rules, index feed integrations, and surcharge policies.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Structured setup overview with initialized specification paths and validation rules.
+              </🖨️_OUTPUT_FORMAT>
+            orderAdmenment: >-
+              <🧠_BUSINESS_CONTEXT>
+                Initializing SpecKit environment for Order Amendment WIP State Controller.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Setup repository structure for state machine specifications, hold locks, and delta calculation contracts.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Initialization plan with created spec template manifest and state transition schemas.
+              </🖨️_OUTPUT_FORMAT>
+        - ecommerce:
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                Initializing SpecKit repository layout for B2B E-commerce Order Ingestion Middleware.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Bootstrap spec workspace for checkout cart stock locks, payload mapping, and ERP submission queues.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Repository initialization manifest with core endpoint spec templates.
+              </🖨️_OUTPUT_FORMAT>
+  collapsed: false
+
+- id: phase1-specification
+  title: "Phase 1: Specification"
+  description: Define executable features, requirements, and domain contracts
+  icon: search
+  emoji: "📊"
+  skills:
+    - icon: file-text
+      emoji: "📄"
+      name: Feature Spec (SPEC.md)
+      description: Create or update executable SPEC.md contract
+      command: speckit-spec
+      prompts:
+        - vc4i:
+            planning: >-
+              <🧠_BUSINESS_CONTEXT>
+                High-mix discrete machinery manufacturer requires a modern SPEC.md contract for Finite Capacity Production Scheduling.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Author a formal SPEC.md document covering capacity constraints, work center availability, shift overrides, and schedule SLAs.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Executable SPEC.md contract with Endpoints, Data Models, Error Enums, and Acceptance Criteria.
+              </🖨️_OUTPUT_FORMAT>
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                Equipment builder requires a SPEC.md contract for CTO Order Build Validation Engine.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Draft a SPEC.md defining JSON option combination payload schemas, constraint violation codes, and latency SLAs (<50ms).
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Production SPEC.md contract with request/response schemas and explicit validation rules.
+              </🖨️_OUTPUT_FORMAT>
+            orderDelivery: >-
+              <🧠_BUSINESS_CONTEXT>
+                Dispatch operations need a SPEC.md contract for Outbound Shipping Notice & 3PL Carrier Integration.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Produce a SPEC.md specifying EDI 856 manifest formats, carrier slot booking API hooks, and webhook event payloads.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Strict SPEC.md contract detailing Interface Definitions, Output Validation Rules, and Carrier Delivery SLA.
+              </🖨️_OUTPUT_FORMAT>
+            stock: >-
+              <🧠_BUSINESS_CONTEXT>
+                Plant warehouse requires a SPEC.md contract for WIP Stock Allocation & Smart Bin System.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Author a SPEC.md covering real-time RFID scan ingestion, Redis distributed locks, and buffer recalculation algorithms.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Technical SPEC.md document featuring gRPC/REST method definitions, lock TTL specs, and performance guarantees.
+              </🖨️_OUTPUT_FORMAT>
+            referential: >-
+              <🧠_BUSINESS_CONTEXT>
+                Manufacturing engineering team needs a SPEC.md contract for PLM-to-MES Master Data Referential Sync.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Write a SPEC.md defining recursive EBOM-to-MBOM conversion, routing mapping endpoints, and versioning schemas.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Executable SPEC.md contract containing GraphQL/REST schemas, status codes, and data types.
+              </🖨️_OUTPUT_FORMAT>
+            pricing: >-
+              <🧠_BUSINESS_CONTEXT>
+                Commercial operations requires a SPEC.md contract for Dynamic BOM Cost Rollup & Surcharge Engine.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Create a SPEC.md specifying raw material price feed contracts, arbitrary precision decimal math, and surcharge formulas.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Precise SPEC.md contract detailing Field Data Types, Mathematical Rounding Rules, and API Endpoint Schemas.
+              </🖨️_OUTPUT_FORMAT>
+            orderAdmenment: >-
+              <🧠_BUSINESS_CONTEXT>
+                Plant operations needs a SPEC.md contract for Order Amendment Impact & WIP Controller.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Author a SPEC.md defining mid-production change evaluation, scrap/rework calculation formulas, and WIP hold locks.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Strict SPEC.md contract featuring gRPC/REST Method Definitions, State Enum Values, and Financial Delta Schemas.
+              </🖨️_OUTPUT_FORMAT>
+        - ecommerce:
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                E-commerce team requires a SPEC.md contract for B2B Web Order Ingestion & ATP Stock Reservation Service.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Create a SPEC.md covering shopping cart inventory hold locks, customer tier pricing resolution, and ERP queue status.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Production SPEC.md contract detailing Endpoint Contracts, HMAC Headers, Payload JSON Schemas, and SLA Requirements.
+              </🖨️_OUTPUT_FORMAT>
+
+    - icon: tasklist
+      emoji: "📊"
+      name: User Stories & Scenarios
+      description: Break specifications into Gherkin user stories and executable scenarios
+      command: speckit-user-stories
+      prompts:
+        - vc4i:
+            planning: >-
+              <🧠_BUSINESS_CONTEXT>
+                Finite Capacity Scheduling SPEC.md requirements need breakdown into executable BDD user stories.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Generate User Stories formatted with Given/When/Then Gherkin acceptance criteria for shift overrides and capacity solvers.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                User Stories & Scenarios Backlog formatted with Story Sizing, Dependencies, and Executable Gherkin Feature files.
+              </🖨️_OUTPUT_FORMAT>
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                CTO Order Validation Engine SPEC.md needs story and scenario decomposition.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Create User Stories (Option Constraint Engine, ERP Credit Gateway) with explicit Gherkin scenarios for invalid builds.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Backlog Document containing Scenarios, Sizing Estimates, Technical Dependencies, and Test Verification Criteria.
+              </🖨️_OUTPUT_FORMAT>
+            orderDelivery: >-
+              <🧠_BUSINESS_CONTEXT>
+                Outbound Order Delivery SPEC.md needs scenario decomposition for development sprints.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Generate granular Gherkin scenarios for EDI 856 generation, carrier slot booking failures, and dock status alerts.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Structured Scenario Backlog with Story IDs, Point Estimates, and Detailed Acceptance Test Protocols.
+              </🖨️_OUTPUT_FORMAT>
+            stock: >-
+              <🧠_BUSINESS_CONTEXT>
+                WIP Stock Allocation SPEC.md requires user scenario creation.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Break down requirements into scenarios for RFID ingestion, concurrent bin stock locks, and safety buffer breaches.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Gherkin Feature Scenarios complete with Priority Ratings, Effort Estimates, and Concrete Definition of Done Criteria.
+              </🖨️_OUTPUT_FORMAT>
+            referential: >-
+              <🧠_BUSINESS_CONTEXT>
+                Master Data Referential SPEC.md needs scenario breakdown for engineering teams.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Create Gherkin scenarios for recursive EBOM-to-MBOM conversion and routing operation assignments.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Scenario Specification featuring Ranked Stories, Technical Contracts, and Data Validation Rules.
+              </🖨️_OUTPUT_FORMAT>
+            pricing: >-
+              <🧠_BUSINESS_CONTEXT>
+                Dynamic Pricing SPEC.md requirements need translation into testable scenarios.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Break down requirements into Gherkin scenarios covering commodity index feeds, cost rollups, and volume discounting.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Feature Scenarios Document with Story Points, Mathematical Formulas, and Gherkin Verification Criteria.
+              </🖨️_OUTPUT_FORMAT>
+            orderAdmenment: >-
+              <🧠_BUSINESS_CONTEXT>
+                Order Amendment SPEC.md requires scenario decomposition.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Create Gherkin scenarios for WIP state checking, work order locks, component rollbacks, and delta billing calculations.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Backlog Specification with Scenario Breakdown, Edge Case Scenarios, and Test Verification Plans.
+              </🖨️_OUTPUT_FORMAT>
+        - ecommerce:
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                B2B E-commerce Order Ingestion SPEC.md needs scenario decomposition.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Generate Gherkin scenarios for ATP real-time locking, customer tier pricing, and ERP submission timeouts.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Sized Gherkin Scenario Backlog with API Method Names, Headers, and SLA Requirements.
+              </🖨️_OUTPUT_FORMAT>
+
+- id: phase2-design
+  title: "Phase 2: Architecture & Design"
+  description: Formalize technical design, schemas, and system contracts
+  icon: type-hierarchy
+  emoji: "🏗️"
+  skills:
+    - icon: layout
+      emoji: "📐"
+      name: System Architecture
+      description: Make system boundaries and component topologies explicit
+      command: speckit-architecture
+      prompts:
+        - vc4i:
+            planning: >-
+              <🧠_BUSINESS_CONTEXT>
+                Heavy industrial manufacturing enterprise needs an architectural blueprint for its Finite Capacity Production Scheduling System.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Architect a microservices/event-driven system handling shift calendars, work center availability, job sequencing, and real-time shop floor events.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                System Architecture Document featuring Component Diagrams (Mermaid), Event Stream Topology, API Specifications, and Data Store Choices.
+              </🖨️_OUTPUT_FORMAT>
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                System architecture needed for CTO Order Build Validation service connecting CRM, ERP, and MES.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Define technical architecture including rule evaluation engine, distributed caching layer for fast option lookup, and asynchronous work order generator.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Architecture Specification with Sequence Diagrams, Interface Definitions (gRPC/REST), Database Schemas, and Fault-Tolerance Patterns.
+              </🖨️_OUTPUT_FORMAT>
+            orderDelivery: >-
+              <🧠_BUSINESS_CONTEXT>
+                Technical design required for Outbound Order Delivery & ASN EDI 856 Service.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Architect an integration hub linking plant warehouse controllers with external 3PL carrier APIs and legacy EDI translation gateways.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Technical Architecture Document detailing API Gateway configuration, Message Queue topology (RabbitMQ/Kafka), Resiliency, and Security.
+              </🖨️_OUTPUT_FORMAT>
+            stock: >-
+              <🧠_BUSINESS_CONTEXT>
+                Architectural design for Real-Time WIP Stock Allocation & RFID Scan Processing System.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Architect an IoT telemetry processing pipeline handling 10,000 scans/sec, dynamic inventory locks, and ERP synchronization.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Comprehensive Architecture Document detailing Ingestion Pipeline, Stream Processing Rules, In-Memory Caching (Redis), and Persistence Layer.
+              </🖨️_OUTPUT_FORMAT>
+            referential: >-
+              <🧠_BUSINESS_CONTEXT>
+                Enterprise master data architecture needed for PLM-to-MES Multi-Level BOM Versioning Hub.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Design a scalable data architecture for BOM explosion, versioning, routing mapping, and multi-plant data synchronization.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Architecture Document with Entity-Relationship Diagrams, Data Pipeline Topology, Conflict Resolution Rules, and Schema Definitions.
+              </🖨️_OUTPUT_FORMAT>
+            pricing: >-
+              <🧠_BUSINESS_CONTEXT>
+                Architectural specification for Dynamic Manufacturing Pricing & Cost Rollup Engine.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Architect a high-precision financial processing engine that calculates dynamic BOM cost rollups, applies volume tier rules, and outputs quotes.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Architecture Specification detailing Numerical Precision Rules, Caching Strategy, Integration Interfaces, and Audit Logging Architecture.
+              </🖨️_OUTPUT_FORMAT>
+            orderAdmenment: >-
+              <🧠_BUSINESS_CONTEXT>
+                System architecture for Order Amendment & Shop Floor WIP State Controller.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Design a distributed transaction management architecture (Saga Pattern) to handle work order holds, stock unlocks, and delta billing updates.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                System Architecture Document featuring Saga Flow Diagrams, Compensation Logic Maps, State Persistence Schemas, and Event Models.
+              </🖨️_OUTPUT_FORMAT>
+        - ecommerce:
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                Scalable architecture design for B2B E-commerce Order Ingestion & ATP Inventory Locking Middleware.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Architect an API middleware layer handling flash order spikes, distributed stock locking, credit limit validation, and ERP queueing.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Production Architecture Document featuring High-Availability Topologies, Distributed Locking Patterns (Redis Redlock), and Latency Profiles.
+              </🖨️_OUTPUT_FORMAT>
+
+    - icon: code
+      emoji: "🔌"
+      name: API Design & Schema
+      description: Define OpenAPI, GraphQL, or Protobuf schemas from feature specs
+      command: speckit-api-design
+      prompts:
+        - vc4i:
+            planning: >-
+              <🧠_BUSINESS_CONTEXT>
+                Designing API schemas for Finite Capacity Production Scheduling Service endpoints.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Generate OpenAPI 3.0 / Protobuf specifications for schedule queries, shift overrides, and machine availability feeds.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Valid OpenAPI/Protobuf Schema Specification with detailed request/response payload examples and HTTP error responses.
+              </🖨️_OUTPUT_FORMAT>
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                Designing API schema for CTO Order Build Validation Engine.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Author OpenAPI 3.0 specs for POST /api/v1/orders/validate endpoints with exact option error object models.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Production OpenAPI YAML file containing schema objects, field validations, and error codes.
+              </🖨️_OUTPUT_FORMAT>
+            orderDelivery: >-
+              <🧠_BUSINESS_CONTEXT>
+                Designing API contracts for 3PL logistics webhook callbacks and ASN generation.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Define REST/Webhook OpenAPI specification for shipping confirmation, tracking updates, and EDI 856 payload conversion.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                OpenAPI Specification File with Webhook Event Models, Authentication Headers, and Response Status Enums.
+              </🖨️_OUTPUT_FORMAT>
+            stock: >-
+              <🧠_BUSINESS_CONTEXT>
+                Designing API schema for WIP Stock Allocation and Redis locking methods.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Generate Protobuf gRPC interface definitions for low-latency inventory lock requests and buffer telemetry.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Valid `.proto` file containing gRPC service definitions, message types, and enum status codes.
+              </🖨️_OUTPUT_FORMAT>
+            referential: >-
+              <🧠_BUSINESS_CONTEXT>
+                Designing GraphQL schema for PLM-to-MES Master Data Referential queries.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Author GraphQL SDL schema for recursive BOM structures, Work Center routing lines, and revision diffs.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                GraphQL Schema Definition File (SDL) with Type Definitions, Input Types, Queries, and Mutations.
+              </🖨️_OUTPUT_FORMAT>
+            pricing: >-
+              <🧠_BUSINESS_CONTEXT>
+                Designing API schema for Dynamic BOM Cost Rollup calculation endpoints.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Generate OpenAPI 3.0 schema specifying decimal precision fields for material costs, surcharges, and total quote prices.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                OpenAPI Specification with string-encoded Decimal fields, Currency Enums, and Math Exception Models.
+              </🖨️_OUTPUT_FORMAT>
+            orderAdmenment: >-
+              <🧠_BUSINESS_CONTEXT>
+                Designing API contracts for Order Amendment WIP Locks and Delta Billing.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Author REST/gRPC API specification for submitting mid-flight order holds, querying station status, and returning price deltas.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                API Contract Document featuring Endpoint Paths, Request Body Schemas, Enum State Definitions, and Error Models.
+              </🖨️_OUTPUT_FORMAT>
+        - ecommerce:
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                Designing API schema for B2B E-commerce Order Ingestion & Checkout Stock Locking.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Author OpenAPI spec for POST /cart/lock and POST /orders/submit endpoints with rate limiting header contracts.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Complete OpenAPI 3.0 specification with HMAC Header Contracts, Cart Item Schemas, and Rate Limit Error Models.
+              </🖨️_OUTPUT_FORMAT>
+
+- id: phase3-implementation
+  title: "Phase 3: Implementation & Validation"
+  description: Build code directly from specifications and validate alignment
+  icon: code
+  emoji: "⚙️"
+  skills:
+    - icon: terminal
+      emoji: "💻"
+      name: Spec-Driven Build
+      description: Implement code directly driven by SPEC.md contract
+      command: speckit-build
+      prompts:
+        - vc4i:
+            planning: >-
+              <🧠_BUSINESS_CONTEXT>
+                Implementing the Work Center Shift Override and Machine Downtime re-sequencing module driven by SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Write production TypeScript/Node.js code matching the SPEC.md contract for updating shop floor schedules upon downtime event ingestion.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Single complete code block with unit tests, error handling, and inline documentation matching SPEC.md constraints.
+              </🖨️_OUTPUT_FORMAT>
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                Writing the CTO Option Constraint Solver module for equipment ordering based on SPEC.md definitions.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Implement code validating option compatibility against SPEC.md schema and returning structured validation errors.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Fully implemented TypeScript service class with complete method signatures, type interfaces, and unit test suites.
+              </🖨️_OUTPUT_FORMAT>
+            orderDelivery: >-
+              <🧠_BUSINESS_CONTEXT>
+                Building the EDI 856 Advance Shipping Notice (ASN) Generator service specified in SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Write production logic to map dispatch order payloads into ANSI X12 856 string formats strictly complying with SPEC.md.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Production-ready TypeScript module with parser tests, XML/EDI schema validators, and exception handlers.
+              </🖨️_OUTPUT_FORMAT>
+            stock: >-
+              <🧠_BUSINESS_CONTEXT>
+                Building the In-Memory Stock Lock and Allocation Service as defined in SPEC.md contract.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Implement high-concurrency Redis-backed inventory lock logic satisfying SPEC.md TTL and concurrency guarantees.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Production code implementation including Redis locking primitives, fail-safe timeouts, and integration tests.
+              </🖨️_OUTPUT_FORMAT>
+            referential: >-
+              <🧠_BUSINESS_CONTEXT>
+                Developing the Recursive BOM Explosion Engine per SPEC.md master data contracts.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Build the production module that reads hierarchical BOM structures, computes component quantities, and maps routings.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Complete production source code with recursion safety limits, cycle detection, and performance benchmarks.
+              </🖨️_OUTPUT_FORMAT>
+            pricing: >-
+              <🧠_BUSINESS_CONTEXT>
+                Coding the Dynamic BOM Cost Rollup calculation class following SPEC.md math requirements.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Implement precision financial calculations computing base material costs, surcharges, and volume discounts using Decimal.js.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Executable code module utilizing BigNumber/Decimal math libraries with exhaustive edge-case unit test coverage.
+              </🖨️_OUTPUT_FORMAT>
+            orderAdmenment: >-
+              <🧠_BUSINESS_CONTEXT>
+                Implementing the Order Amendment WIP State Check & Lock service specified in SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Write code querying MES work order progress, evaluating non-amendable stations, and applying holding locks per spec.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Complete backend service code with gRPC/REST endpoints, state machine logic, and database transaction blocks.
+              </🖨️_OUTPUT_FORMAT>
+        - ecommerce:
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                Building the B2B E-commerce Webhook Listener per SPEC.md API requirements.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Implement route handlers receiving order webhooks, validating cryptographic signatures, and enqueueing orders per spec.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Production-ready Node.js/TypeScript endpoint code with HMAC validation, payload schema validation, and rate limiting.
+              </🖨️_OUTPUT_FORMAT>
+
+    - icon: eye
+      emoji: "🔍"
+      name: Spec Alignment Review
+      description: Audit code implementation against SPEC.md contract
+      command: speckit-spec-review
+      prompts:
+        - vc4i:
+            planning: >-
+              <🧠_BUSINESS_CONTEXT>
+                Reviewing pull request for Shift Scheduling Algorithm solver against SPEC.md requirements.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Conduct strict code review auditing algorithm correctness, SPEC.md SLA compliance, and unhandled edge cases.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Structured Spec Alignment Findings with Severity Ratings (Critical, Major, Minor), Code Diffs, and Refactoring Suggestions.
+              </🖨️_OUTPUT_FORMAT>
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                Auditing implementation of CTO Option Constraint Evaluator against SPEC.md contract.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Review code for spec drift, unhandled edge cases in rule parsing, and performance deviations from SPEC.md SLA.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Spec Compliance Report with Specific Line-by-Line Feedback, SLA Warnings, and Recommended Code Fixes.
+              </🖨️_OUTPUT_FORMAT>
+            orderDelivery: >-
+              <🧠_BUSINESS_CONTEXT>
+                Reviewing EDI 856 Shipping Manifest Formatter source code against SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Validate code against ANSI X12 EDI spec rules defined in SPEC.md, string escaping safety, and exception handling.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Comprehensive Review Document highlighting Spec Gaps, EDI standard compliance issues, and code optimizations.
+              </🖨️_OUTPUT_FORMAT>
+            stock: >-
+              <🧠_BUSINESS_CONTEXT>
+                Spec alignment review for Redis Stock Allocation locking mechanism.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Audit code against SPEC.md concurrency locks, Redis cluster failover rules, and lock release safety.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Concurrency & Spec Reliability Audit Report with exact line-level recommendations for lock safety.
+              </🖨️_OUTPUT_FORMAT>
+            referential: >-
+              <🧠_BUSINESS_CONTEXT>
+                Reviewing Recursive BOM Explosion source code PR against SPEC.md schemas.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Inspect code for stack overflow risks, recursion bounds required by SPEC.md, and GraphQL schema conformance.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Spec Alignment Summary featuring Performance Analysis, Schema Conformance Audit, and Query Fixes.
+              </🖨️_OUTPUT_FORMAT>
+            pricing: >-
+              <🧠_BUSINESS_CONTEXT>
+                Auditing Dynamic Pricing Math and Currency Conversion code against SPEC.md precision rules.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Inspect code for floating-point arithmetic usage violating SPEC.md decimal rules, and rounding strategy errors.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Financial Precision Audit Report highlighting exact lines requiring BigNumber replacements and rounding fixes.
+              </🖨️_OUTPUT_FORMAT>
+            orderAdmenment: >-
+              <🧠_BUSINESS_CONTEXT>
+                Reviewing Distributed Saga Transaction implementation for Order Amendments against SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Audit saga orchestrator code for missing compensation steps defined in SPEC.md, network timeouts, and state persistence.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Architectural Spec Review detailing transaction boundary risks, missing rollback triggers, and resiliency fixes.
+              </🖨️_OUTPUT_FORMAT>
+        - ecommerce:
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                Reviewing B2B E-commerce Order Submission API endpoint against SPEC.md contract.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Audit endpoint for SPEC.md security requirements (rate limiting, payload limits, HMAC signature checks).
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Spec Compliance & Security Review with Severity Matrix, Remediation Code Examples, and Hardening Recommendations.
+              </🖨️_OUTPUT_FORMAT>
+
+    - icon: checklist
+      emoji: "🧪"
+      name: Spec Test Generator
+      description: Generate automated tests directly from Gherkin feature scenarios and SPEC.md contracts
+      command: speckit-test-gen
+      prompts:
+        - vc4i:
+            planning: >-
+              <🧠_BUSINESS_CONTEXT>
+                QA test automation required for Finite Capacity Scheduling SPEC.md contract.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Generate automated Playwright/Jest integration tests matching Gherkin scenarios for shift downtime events.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Complete executable test files with mock data generators, assertion blocks, and test suite setup/teardown logic.
+              </🖨️_OUTPUT_FORMAT>
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                Automated testing needed for CTO Order Validation engine driven by SPEC.md scenarios.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Write automated API test suites passing valid and invalid CTO option payloads asserting SPEC.md status codes and errors.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Production Playwright/Supertest test code covering positive, negative, and edge-case boundary scenarios.
+              </🖨️_OUTPUT_FORMAT>
+            orderDelivery: >-
+              <🧠_BUSINESS_CONTEXT>
+                E2E automated testing for Outbound Shipping Notice & EDI 856 Generation specified in SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Construct automated tests that trigger dispatch confirmation, validate generated EDI 856 text structure, and verify webhooks.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Executable test suite with custom EDI string assertions and mock HTTP carrier server endpoints.
+              </🖨️_OUTPUT_FORMAT>
+            stock: >-
+              <🧠_BUSINESS_CONTEXT>
+                Load and concurrency test generation for Real-Time Stock Lock service defined in SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Generate automated stress tests simulating 500 concurrent stock reservation requests asserting zero double-allocation per spec.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                k6 or Artillery load test scripts combined with Jest concurrency assertion code blocks.
+              </🖨️_OUTPUT_FORMAT>
+            referential: >-
+              <🧠_BUSINESS_CONTEXT>
+                Automated test suite generation for PLM-to-MES BOM Referential Sync per SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Write integration tests verifying that EBOM updates correctly propagate to MBOM tables per SPEC.md contracts.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Executable integration test suite with database setup fixtures, API assertions, and cleanup hooks.
+              </🖨️_OUTPUT_FORMAT>
+            pricing: >-
+              <🧠_BUSINESS_CONTEXT>
+                QA test suite for Dynamic Price Calculation engine driven by SPEC.md formulas.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Generate unit and integration test matrices verifying price rollup math across 50 distinct component cost permutation cases.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Parameterized Jest/Mocha test code covering edge-case price calculations, zero-cost items, and high-volume discounts.
+              </🖨️_OUTPUT_FORMAT>
+            orderAdmenment: >-
+              <🧠_BUSINESS_CONTEXT>
+                E2E test suite for Order Amendment Workflow specified in SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Write automated E2E tests submitting post-release amendments across assembly stages and verifying SPEC.md hold statuses.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Complete Playwright/Jest E2E test file asserting shop floor state changes, cost updates, and billing delta generation.
+              </🖨️_OUTPUT_FORMAT>
+        - ecommerce:
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                Automated E2E testing for B2B E-commerce Checkout stock reservation from SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Generate automated web UI and API tests simulating cart stock locking, payment processing, and ERP order receipt.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Complete Playwright E2E automation script with network interceptors and database state verifications.
+              </🖨️_OUTPUT_FORMAT>
+
+- id: phase4-evolution
+  title: "Phase 4: Evolution & Maintenance"
+  description: Maintain specification integrity, detect drift, and refactor code safely
+  icon: sync
+  emoji: "🔄"
+  skills:
+    - icon: shield
+      emoji: "🚨"
+      name: Drift Detection
+      description: Detect specification vs. code implementation drift
+      command: speckit-drift-check
+      prompts:
+        - vc4i:
+            planning: >-
+              <🧠_BUSINESS_CONTEXT>
+                Checking for drift between finite capacity scheduling SPEC.md contracts and physical TypeScript code implementation.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Analyze codebase AST and endpoint routes to detect undocumented API endpoints, missing fields, or SLA mismatches.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Drift Analysis Audit Report detailing Mismatched Types, Undocumented Endpoints, and Spec Reconciliation Actions.
+              </🖨️_OUTPUT_FORMAT>
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                Detecting specification drift in CTO Order Validation Engine rule evaluations.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Compare live validation rule definitions against SPEC.md contract to highlight un-versioned rule changes.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Specification Drift Report listing mismatched option constraint rules and schema differences.
+              </🖨️_OUTPUT_FORMAT>
+            orderDelivery: >-
+              <🧠_BUSINESS_CONTEXT>
+                Checking drift between Outbound Order Delivery SPEC.md and carrier webhook handler implementations.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Audit carrier API response models against SPEC.md schemas to detect breaking payload changes.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Drift Detection Summary with explicit payload diffs, missing enum values, and spec update recommendations.
+              </🖨️_OUTPUT_FORMAT>
+            stock: >-
+              <🧠_BUSINESS_CONTEXT>
+                Auditing WIP Stock Allocation service for drift against Redis locking SPEC.md specifications.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Inspect TTL parameters and Redis key structures in code to ensure zero drift from SPEC.md contract.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Lock Mechanism Drift Audit Report with line-by-line parameter comparisons and required spec alignment steps.
+              </🖨️_OUTPUT_FORMAT>
+            referential: >-
+              <🧠_BUSINESS_CONTEXT>
+                Checking for schema drift in Master Data Referential GraphQL endpoints versus SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Run automated schema comparison between live GraphQL SDL and SPEC.md master data contracts.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                GraphQL Schema Drift Report highlighting new fields, deprecated types, and missing mutations.
+              </🖨️_OUTPUT_FORMAT>
+            pricing: >-
+              <🧠_BUSINESS_CONTEXT>
+                Auditing Dynamic BOM Pricing code for drift in formula definitions versus SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Compare pricing surcharge formulas in code against SPEC.md mathematical definitions to detect calculation drift.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Mathematical Drift Analysis Report specifying formula discrepancies and decimal precision deviations.
+              </🖨️_OUTPUT_FORMAT>
+            orderAdmenment: >-
+              <🧠_BUSINESS_CONTEXT>
+                Detecting drift in Order Amendment WIP hold state machine implementation versus SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Verify code state transition diagrams against SPEC.md enum values and compensation triggers.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                State Machine Drift Audit Report listing unhandled state transitions and missing rollback rules.
+              </🖨️_OUTPUT_FORMAT>
+        - ecommerce:
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                Checking drift between B2B E-commerce checkout SPEC.md and live cart stock reservation code.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Audit cart lock expiration logic and HTTP status returns against SPEC.md contracts.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                E-commerce API Drift Report detailing SLA deviations, header mismatches, and code adjustment actions.
+              </🖨️_OUTPUT_FORMAT>
+
+    - icon: sync
+      emoji: "🛠️"
+      name: Spec-Guided Refactor
+      description: Refactor code safely while preserving SPEC.md compliance
+      command: speckit-refactor
+      prompts:
+        - vc4i:
+            planning: >-
+              <🧠_BUSINESS_CONTEXT>
+                Refactoring Finite Capacity Scheduling solver algorithm for performance without breaking SPEC.md SLAs.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Refactor legacy shift calculation code into optimized pure functions while ensuring 100% SPEC.md contract adherence.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Refactored TypeScript source code with performance benchmarks and SPEC.md assertion test results.
+              </🖨️_OUTPUT_FORMAT>
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                Refactoring CTO Option Constraint Evaluator to improve memory footprint while upholding SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Rewrite rule evaluation engine to use AST bitmasks while guaranteeing zero breaking changes to SPEC.md API signatures.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Clean refactored TypeScript module with memory usage benchmarks and SPEC.md test verification suite.
+              </🖨️_OUTPUT_FORMAT>
+            orderDelivery: >-
+              <🧠_BUSINESS_CONTEXT>
+                Refactoring Outbound Order Delivery EDI 856 formatter for speed and memory efficiency.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Refactor string concatenation into streaming buffer generators matching SPEC.md EDI 856 outputs.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Refactored streaming code module with benchmark comparisons and spec compliance proofs.
+              </🖨️_OUTPUT_FORMAT>
+            stock: >-
+              <🧠_BUSINESS_CONTEXT>
+                Refactoring WIP Stock Allocation Redis Lua scripts for higher throughput.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Optimize Lua script execution paths while maintaining strict Redis lock semantics required by SPEC.md.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Optimized Redis Lua script implementation with concurrency benchmark test results.
+              </🖨️_OUTPUT_FORMAT>
+            referential: >-
+              <🧠_BUSINESS_CONTEXT>
+                Refactoring Recursive BOM Explosion engine to convert sync loops into async iterative streams.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Refactor BOM explosion logic to prevent stack overflow on deep hierarchies while preserving SPEC.md output structures.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Refactored non-blocking TypeScript code with stack depth benchmarks and SPEC.md test proofs.
+              </🖨️_OUTPUT_FORMAT>
+            pricing: >-
+              <🧠_BUSINESS_CONTEXT>
+                Refactoring Dynamic BOM Cost Rollup calculation class to support parallel component processing.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Parallelize cost rollup calculations using worker threads while maintaining Decimal.js precision mandated by SPEC.md.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Worker-thread refactored code with multi-core execution benchmarks and financial precision test proofs.
+              </🖨️_OUTPUT_FORMAT>
+            orderAdmenment: >-
+              <🧠_BUSINESS_CONTEXT>
+                Refactoring Order Amendment Saga orchestrator to improve fault tolerance.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Refactor state persistence layer to use event-sourcing while maintaining exact gRPC methods defined in SPEC.md.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Refactored Saga Orchestration code with event replay unit tests and SPEC.md interface verifications.
+              </🖨️_OUTPUT_FORMAT>
+        - ecommerce:
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                Refactoring B2B E-commerce Order Ingestion queue processor to handle flash traffic.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                Refactor queue consumer to use bulk insertion transactions while preserving SPEC.md webhook response SLAs.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                High-throughput refactored consumer code with load test telemetry and SPEC.md compliance proofs.
+              </🖨️_OUTPUT_FORMAT>
+
+- id: agents
+  title: SpecKit Personas
+  description: Specialized AI personas for Spec-Driven Development roles
+  icon: organization
+  emoji: "👥"
+  skills:
+    - icon: briefcase
+      emoji: "🧑‍💻"
+      name: "Spec Author Agent — Victor"
+      description: Spec Author for drafting executable SPEC.md contracts
+      command: speckit-agent-spec-author
+      prompts:
+        - vc4i:
+            planning: >-
+              <🧠_BUSINESS_CONTEXT>
+                Plant management needs strategic alignment between factory productivity targets and IT scheduling specs.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As Spec Author Agent Victor, draft concise, contractual SPEC.md specifications for shop-floor scheduling automation.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Executive SPEC.md Contract with clear Domain Terminology, SLA Commitments, and Acceptance Criteria.
+              </🖨️_OUTPUT_FORMAT>
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                Drafting SPEC.md for CTO Equipment Order Validation engine.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As Spec Author Agent Victor, define option constraint payload schemas, error codes, and validation rules.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Production-Ready SPEC.md contract with JSON Schemas, Error Enums, and Performance SLAs.
+              </🖨️_OUTPUT_FORMAT>
+            orderDelivery: >-
+              <🧠_BUSINESS_CONTEXT>
+                Drafting SPEC.md contract for 3PL Carrier Integration and EDI 856 Shipping Manifests.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As Spec Author Agent Victor, specify EDI ANSI X12 segment rules, webhook schemas, and dock scheduling contracts.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Strict SPEC.md contract detailing Interface Definitions, EDI Validation Rules, and Carrier Delivery SLAs.
+              </🖨️_OUTPUT_FORMAT>
+            stock: >-
+              <🧠_BUSINESS_CONTEXT>
+                Drafting SPEC.md contract for WIP Stock Allocation and Smart Bin tracking.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As Spec Author Agent Victor, author real-time RFID scan ingestion schemas, Redis lock parameters, and buffer alert rules.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Technical SPEC.md document featuring gRPC method definitions, lock TTL specs, and performance guarantees.
+              </🖨️_OUTPUT_FORMAT>
+            referential: >-
+              <🧠_BUSINESS_CONTEXT>
+                Drafting SPEC.md contract for Master Data Referential Sync across PLM and MES.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As Spec Author Agent Victor, specify recursive EBOM-to-MBOM transformation schemas, routing endpoints, and GraphQL types.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Executable SPEC.md contract containing GraphQL Schemas, REST Endpoints, HTTP Status Codes, and Data Types.
+              </🖨️_OUTPUT_FORMAT>
+            pricing: >-
+              <🧠_BUSINESS_CONTEXT>
+                Drafting SPEC.md contract for Dynamic BOM Pricing & Surcharge calculation engine.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As Spec Author Agent Victor, specify exact decimal precision rules, commodity index feed payloads, and cost rollup formulas.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Precise SPEC.md contract detailing Field Data Types, Mathematical Rounding Rules, and API Endpoint Schemas.
+              </🖨️_OUTPUT_FORMAT>
+            orderAdmenment: >-
+              <🧠_BUSINESS_CONTEXT>
+                Drafting SPEC.md contract for Order Amendment WIP State Controller.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As Spec Author Agent Victor, define work order hold requests, station status queries, and delta billing schemas.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Strict SPEC.md contract featuring gRPC/REST Method Definitions, State Enum Values, and Financial Delta Schemas.
+              </🖨️_OUTPUT_FORMAT>
+        - ecommerce:
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                Drafting SPEC.md contract for B2B E-commerce Web Order Ingestion & ATP Stock Reservation.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As Spec Author Agent Victor, specify cart stock lock endpoints, rate limiting headers, and ERP submission payload formats.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Production SPEC.md contract detailing Endpoint Contracts, HMAC Headers, Payload JSON Schemas, and SLA Requirements.
+              </🖨️_OUTPUT_FORMAT>
+
+    - icon: type-hierarchy
+      emoji: "🏗️"
+      name: "Architect Agent — Winston"
+      description: System Architect for system boundaries, schemas, and topology design
+      command: speckit-agent-architect
+      prompts:
+        - vc4i:
+            planning: >-
+              <🧠_BUSINESS_CONTEXT>
+                Designing high-performance technical architecture for real-time shop floor scheduling optimization engine per SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As Architect Agent Winston, formulate system topology choices (event streaming with Kafka, OR-Tools solver integration) matching SPEC.md.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Technical Architecture Document containing System Component Diagrams, Data Flow Topologies, and Technology Stack Decisions.
+              </🖨️_OUTPUT_FORMAT>
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                Designing technical architecture for Configure-To-Order validation engine processing 1,000 rules/sec per SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As Architect Agent Winston, design low-latency rule execution topology, distributed caching strategy, and asynchronous ERP connectors.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                System Architecture Blueprint featuring gRPC/REST Contracts, Sequence Diagrams, Caching Topology, and SLA Guarantees.
+              </🖨️_OUTPUT_FORMAT>
+            orderDelivery: >-
+              <🧠_BUSINESS_CONTEXT>
+                Architecting robust integration hub for 3PL logistics carriers, warehouse MES, and legacy EDI translation systems per SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As Architect Agent Winston, define messaging architecture, payload schemas, retry queues, and security protocols for EDI 856 notices.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Integration Architecture Specification with Message Queue Configurations, Failover Topologies, and Security Encryption Schemas.
+              </🖨️_OUTPUT_FORMAT>
+            stock: >-
+              <🧠_BUSINESS_CONTEXT>
+                Technical system architecture for high-throughput IoT RFID stock scanning and allocation system specified in SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As Architect Agent Winston, design ingestion architecture handling 10,000 events/sec, Redis distributed locking, and event persistence.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                System Architecture Document featuring Stream Processing Diagrams, Distributed Lock Topology, and DB Partitioning Strategies.
+              </🖨️_OUTPUT_FORMAT>
+            referential: >-
+              <🧠_BUSINESS_CONTEXT>
+                Designing enterprise architecture for multi-plant Master Data Referential Sync Engine (PLM/ERP/MES) per SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As Architect Agent Winston, specify data synchronization patterns, graph data store models for hierarchical BOMs, and event bus design.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Master Data Architecture Blueprint featuring Entity Models, GraphQL/REST Schemas, Data Consistency Patterns, and Deployment Topology.
+              </🖨️_OUTPUT_FORMAT>
+            pricing: >-
+              <🧠_BUSINESS_CONTEXT>
+                Architecting high-precision dynamic pricing calculation service integrated with commodity market APIs per SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As Architect Agent Winston, design service architecture ensuring arbitrary-precision arithmetic, high availability, and secure API caching.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                System Architecture Blueprint with Numerical Precision Rules, Caching Topology, Resiliency Patterns, and API Contracts.
+              </🖨️_OUTPUT_FORMAT>
+            orderAdmenment: >-
+              <🧠_BUSINESS_CONTEXT>
+                Designing distributed transaction architecture for mid-production order amendment execution across MES and ERP per SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As Architect Agent Winston, design Saga orchestrator pattern managing work order holds, inventory allocation rollbacks, and delta billing.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Distributed System Architecture Specification with Saga Execution Diagrams, Compensation Flow Maps, and State Resilience Specs.
+              </🖨️_OUTPUT_FORMAT>
+        - ecommerce:
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                Technical architecture design for high-concurrency B2B E-commerce Order Ingestion & ATP Stock Lock Service per SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As Architect Agent Winston, design cloud-native architecture supporting 5,000 peak checkout requests/sec with atomic stock holds.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Cloud Architecture Document featuring Load Balancer Configuration, Redis Redlock Topology, Database Scaling, and Resiliency SLAs.
+              </🖨️_OUTPUT_FORMAT>
+
+    - icon: code
+      emoji: "💻"
+      name: "Developer Agent — Amelia"
+      description: Developer for implementing code directly from SPEC.md contracts
+      command: speckit-agent-dev
+      prompts:
+        - vc4i:
+            planning: >-
+              <🧠_BUSINESS_CONTEXT>
+                Implementing core TypeScript module for Work Center Shift Capacity Evaluation per SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As Developer Agent Amelia, write clean, production-grade TypeScript code calculating available machine hours strictly matching SPEC.md.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Fully written TypeScript file with complete types, robust error handling, and passing unit tests matching spec SLAs.
+              </🖨️_OUTPUT_FORMAT>
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                Writing production code for CTO Option Constraint Solver driven by SPEC.md contract.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As Developer Agent Amelia, code the core validation function evaluating option combinations against compiled SPEC.md JSON schemas.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Production TypeScript implementation file with interfaces, comprehensive validation methods, and unit tests.
+              </🖨️_OUTPUT_FORMAT>
+            orderDelivery: >-
+              <🧠_BUSINESS_CONTEXT>
+                Developing ANSI X12 EDI 856 Shipping Manifest Formatter class per SPEC.md specifications.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As Developer Agent Amelia, write production logic formatting dispatch order data into compliant EDI 856 text segments.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Clean, production-ready TypeScript/Node.js module with parser unit tests and schema assertions.
+              </🖨️_OUTPUT_FORMAT>
+            stock: >-
+              <🧠_BUSINESS_CONTEXT>
+                Implementing Redis-backed atomic stock allocation lock methods specified in SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As Developer Agent Amelia, write production code utilizing Lua scripts in Redis to execute atomic stock deduction matching SPEC.md.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Production TypeScript module featuring Redis Lua scripts, fallback logic, and concurrency unit tests.
+              </🖨️_OUTPUT_FORMAT>
+            referential: >-
+              <🧠_BUSINESS_CONTEXT>
+                Writing recursive algorithm for multi-level BOM explosion and routing calculation per SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As Developer Agent Amelia, code the production function traversing hierarchical BOM nodes per SPEC.md data contracts.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Production TypeScript implementation with cycle protection, performance optimization, and Jest unit tests.
+              </🖨️_OUTPUT_FORMAT>
+            pricing: >-
+              <🧠_BUSINESS_CONTEXT>
+                Implementing Dynamic BOM Cost Rollup calculation class using Decimal.js as required by SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As Developer Agent Amelia, write production code performing exact component cost aggregation strictly enforcing SPEC.md decimal math.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Clean TypeScript implementation file with arbitrary precision math, type definitions, and mathematical test cases.
+              </🖨️_OUTPUT_FORMAT>
+            orderAdmenment: >-
+              <🧠_BUSINESS_CONTEXT>
+                Coding Order Amendment WIP State Checker gRPC handler per SPEC.md definitions.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As Developer Agent Amelia, write backend gRPC service implementation querying MES database for work order station status.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Production TypeScript source file with protobuf-generated interfaces, database query logic, and error handling.
+              </🖨️_OUTPUT_FORMAT>
+        - ecommerce:
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                Coding B2B Checkout Order Ingestion Express/Fastify route handler per SPEC.md contracts.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As Developer Agent Amelia, write production endpoint code receiving web order payloads, validating HMAC signatures per SPEC.md.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Complete Node.js endpoint file with request validation schema, HMAC signature checking, and unit tests.
+              </🖨️_OUTPUT_FORMAT>
+
+    - icon: checklist
+      emoji: "🧪"
+      name: "QA Agent — Quality"
+      description: QA Engineer for validating spec coverage and automated testing
+      command: speckit-agent-qa
+      prompts:
+        - vc4i:
+            planning: >-
+              <🧠_BUSINESS_CONTEXT>
+                QA verification required for Finite Capacity Scheduling SPEC.md contract.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As QA Agent, generate automated Playwright/Jest integration tests simulating machine downtime events and asserting SPEC.md SLAs.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Complete executable test files with mock data generators, assertion blocks, and test suite setup/teardown logic.
+              </🖨️_OUTPUT_FORMAT>
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                Automated end-to-end testing needed for CTO Order Validation engine driven by SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As QA Agent, write automated API test suites passing valid and invalid CTO option payloads asserting SPEC.md status codes.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Production Playwright/Supertest test code covering positive, negative, and edge-case boundary scenarios.
+              </🖨️_OUTPUT_FORMAT>
+            orderDelivery: >-
+              <🧠_BUSINESS_CONTEXT>
+                E2E automated testing for Outbound Shipping Notice & EDI 856 Generation specified in SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As QA Agent, construct automated tests that trigger dispatch confirmation, validate generated EDI 856 text structure, and verify webhooks.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Executable test suite with custom EDI string assertions and mock HTTP carrier server endpoints.
+              </🖨️_OUTPUT_FORMAT>
+            stock: >-
+              <🧠_BUSINESS_CONTEXT>
+                Load and concurrency test generation for Real-Time Stock Lock service defined in SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As QA Agent, generate automated stress tests simulating 500 concurrent stock reservation requests asserting zero double-allocation per spec.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                k6 or Artillery load test scripts combined with Jest concurrency assertion code blocks.
+              </🖨️_OUTPUT_FORMAT>
+            referential: >-
+              <🧠_BUSINESS_CONTEXT>
+                Automated test suite generation for PLM-to-MES BOM Referential Sync per SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As QA Agent, write integration tests verifying that EBOM updates correctly propagate to MBOM tables per SPEC.md contracts.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Executable integration test suite with database setup fixtures, API assertions, and cleanup hooks.
+              </🖨️_OUTPUT_FORMAT>
+            pricing: >-
+              <🧠_BUSINESS_CONTEXT>
+                QA test suite for Dynamic Price Calculation engine driven by SPEC.md formulas.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As QA Agent, generate unit and integration test matrices verifying price rollup math across 50 distinct component cost permutation cases.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Parameterized Jest/Mocha test code covering edge-case price calculations, zero-cost items, and high-volume discounts.
+              </🖨️_OUTPUT_FORMAT>
+            orderAdmenment: >-
+              <🧠_BUSINESS_CONTEXT>
+                E2E test suite for Order Amendment Workflow specified in SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As QA Agent, write automated E2E tests submitting post-release amendments across assembly stages and verifying SPEC.md hold statuses.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Complete Playwright/Jest E2E test file asserting shop floor state changes, cost updates, and billing delta generation.
+              </🖨️_OUTPUT_FORMAT>
+        - ecommerce:
+            order: >-
+              <🧠_BUSINESS_CONTEXT>
+                Automated E2E testing for B2B E-commerce Checkout stock reservation from SPEC.md.
+              </🧠_BUSINESS_CONTEXT>
+
+
+              <🎯_EXPECTED_ACTION>
+                As QA Agent, generate automated web UI and API tests simulating cart stock locking, payment processing, and ERP order receipt.
+              </🎯_EXPECTED_ACTION>
+
+
+              <🖨️_OUTPUT_FORMAT>
+                Complete Playwright E2E automation script with network interceptors and database state verifications.
+              </🖨️_OUTPUT_FORMAT>
+
+  collapsed: true
