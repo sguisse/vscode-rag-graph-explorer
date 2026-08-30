@@ -30,13 +30,15 @@ export const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
       <div
         onClick={() => setIsOpen((prev) => !prev)}
         data-tooltip={tooltip}
-        className="flex items-center justify-between px-3 py-2 bg-muted/40 hover:bg-muted/70 cursor-pointer border-b border-border/60 transition-colors select-none"
+        className={`flex items-center justify-between px-2.5 py-1 bg-muted/40 hover:bg-muted/70 cursor-pointer transition-colors select-none ${
+          isOpen ? 'border-b border-border/60' : 'border-b-0'
+        }`}
       >
-        <div className="flex items-center gap-2 font-mono font-semibold text-xs text-foreground truncate">
+        <div className="flex items-center gap-1.5 font-mono font-semibold text-xs text-foreground truncate">
           {isOpen ? (
-            <ChevronDown size={14} className="shrink-0 text-primary transition-transform duration-200" />
+            <ChevronDown size={13} className="shrink-0 text-primary transition-transform duration-200" />
           ) : (
-            <ChevronRight size={14} className="shrink-0 text-muted-foreground transition-transform duration-200" />
+            <ChevronRight size={13} className="shrink-0 text-muted-foreground transition-transform duration-200" />
           )}
           <span className="truncate">{title}</span>
         </div>
@@ -50,7 +52,7 @@ export const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
           )}
         </div>
       </div>
-      {isOpen && <div className="p-3 font-mono text-xs bg-card/60">{children}</div>}
+      {isOpen && <div className="p-2.5 font-mono text-xs bg-card/60">{children}</div>}
     </Card>
   );
 };

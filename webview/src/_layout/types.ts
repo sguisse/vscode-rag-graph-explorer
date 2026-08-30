@@ -12,6 +12,17 @@ export interface LayoutContainer {
   visible?: boolean;
   isResizable?: boolean;
   isHiddable?: boolean;
+
+  // Named dimension overrides replacing global defaults
+  headerHeight?: number;
+  sidebarLeftWidth?: number;
+  workspaceTopHeight?: number;
+  workspaceLeftWidth?: number;
+  workspaceRightWidth?: number;
+  workspaceBottomHeight?: number;
+  sidebarRightWidth?: number;
+  footerHeight?: number;
+
   maximizeContainer?: MaximizeContainer;
 }
 

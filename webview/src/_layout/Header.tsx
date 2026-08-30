@@ -42,6 +42,7 @@ export function Header({
 }: HeaderProps) {
   const toggleContainerVisible = useLayoutStore((s) => s.toggleContainerVisible);
   const containers = useLayoutStore((s) => s.containers);
+  const headerHeight = containers.header?.headerHeight ?? DefaultContainersSize.headerHeight;
   const { dataWorkflow, handleSelectStep } = useExplorerWorkflow();
 
   const leftContent = (
@@ -177,7 +178,7 @@ export function Header({
     <LeftCenterRightPanel
       id="app-header-panel"
       className="bg-secondary/80 px-2 border-border border-b h-10 font-mono text-foreground text-xs select-none"
-      style={{ height: `${DefaultContainersSize.headerHeight}px` }}
+      style={{ height: `${headerHeight}px` }}
       left={leftContent}
       center={centerContent}
       right={rightContent}

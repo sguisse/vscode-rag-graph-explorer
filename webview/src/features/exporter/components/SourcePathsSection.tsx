@@ -33,15 +33,15 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
       tooltip="Absolute directory or single files locations targeted for aggregation and token estimation context."
       summaryText={summary}
       defaultOpen={true}
-      className="m-1 shrink-0"
+      className="w-full min-w-0 shrink-0"
     >
-      <div className="flex gap-2 items-start font-mono text-xs">
+      <div className="flex items-start gap-2 font-mono text-xs">
         <Textarea
           value={pathsText}
           onChange={(e) => onChangePathsText(e.target.value)}
           placeholder="Enter source directories or file paths (one per line)..."
-          rows={3}
-          className="font-mono text-xs flex-1 resize-y bg-background"
+          rows={6}
+          className="flex-1 bg-background h-[138px] font-mono text-xs resize-y"
         />
 
         <div className="flex flex-col gap-1 shrink-0">

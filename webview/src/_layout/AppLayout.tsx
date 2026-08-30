@@ -57,9 +57,12 @@ export function AppLayout({
     logInfo(`settings.pinApplication=${vscodeSettings.pinApplication}`);
   }, [isDarkMode]);
 
+  const initialSidebarLeftWidth = sidebarLeftConfig?.sidebarLeftWidth ?? DefaultContainersSize.sidebarLeftWidth;
+  const initialSidebarRightWidth = sidebarRightConfig?.sidebarRightWidth ?? DefaultContainersSize.sidebarRightWidth;
+
   const [sidebarLeftMode, setSidebarLeftMode] = useState<'normal' | 'minimal'>('normal');
-  const [sidebarLeftWidth, startSidebarLeftResize] = useResizable(DefaultContainersSize.sidebarLeftWidth, 160, 1000, true, false);
-  const [sidebarRightWidth, startSidebarRightResize] = useResizable(DefaultContainersSize.sidebarRightWidth, 180, 1000, true, true);
+  const [sidebarLeftWidth, startSidebarLeftResize] = useResizable(initialSidebarLeftWidth, 160, 1000, true, false);
+  const [sidebarRightWidth, startSidebarRightResize] = useResizable(initialSidebarRightWidth, 180, 1000, true, true);
 
   const effectiveSidebarLeftWidth = sidebarLeftMode === 'minimal' ? DefaultContainersSize.sidebarLeftMinimizedWidth : sidebarLeftWidth;
 
@@ -113,13 +116,7 @@ export function AppLayout({
       </div>
     );
   }
-/*
-  useEffect(() => {
-    apiService.logMessage('info', 'App.tsx loaded', { timestamp: new Date().toISOString() }).catch((error) => {
-      console.error('Failed to log message:', error);
-    });
-  }, []);
-*/
+
   return (
     <div className="flex flex-col bg-background w-screen h-screen overflow-hidden font-sans text-foreground antialiased">
       <Tooltip delay={300} />
@@ -140,6 +137,7 @@ export function AppLayout({
       <div className="flex flex-1 w-full min-h-0 overflow-hidden">
         {sidebarLeftConfig?.visible !== false && (
           <ResizableContainer
+            key={`sidebar-left-${initialSidebarLeftWidth}`}
             id="app-sidebar-left"
             visible
             resizeHandle={
@@ -167,6 +165,7 @@ export function AppLayout({
 
         {sidebarRightConfig?.visible !== false && (
           <ResizableContainer
+            key={`sidebar-right-${initialSidebarRightWidth}`}
             id="app-sidebar-right"
             visible
             resizeHandle={sidebarRightConfig?.isResizable !== false ? 'left' : 'none'}

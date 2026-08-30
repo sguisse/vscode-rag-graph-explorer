@@ -1,82 +1,44 @@
-"use client"
+import { useState, useCallback, useEffect } from 'react';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-
-export interface UseResizableProps {
-  initialSize: number;
-  minSize: number;
-  maxSize: number;
-  isHorizontal?: boolean;
-  reverse?: boolean;
-  collapseThreshold?: number;
-}
-
-/**
- * Advanced layout management hook for high-performance split views.
- * Prevents text selection ghosting, locks global mouse cursors, and supports adaptive snap-to-collapse boundaries.
- */
 export function useResizable(
   initialSize: number,
-  minSize: number,
-  maxSize: number,
+  minSize: number = 40,
+  maxSize: number = 1000,
   isHorizontal: boolean = true,
-  reverse: boolean = false,
-  collapseThreshold?: number
-) {
+  reverse: boolean = false
+): [number, (e: React.MouseEvent) => void, React.Dispatch<React.SetStateAction<number>>] {
   const [size, setSize] = useState<number>(initialSize);
-  const [isDragging, setIsDragging] = useState<boolean>(false);
-  const sizeRef = useRef<number>(size);
 
-  // Sync internal ref tracking with state to avoid closure traps during heavy reflows
+  // Sync size whenever initialSize prop changes (e.g. via layout configuration overrides)
   useEffect(() => {
-    sizeRef.current = size;
-  }, [size]);
+    if (initialSize !== undefined && initialSize !== size) {
+      setSize(initialSize);
+    }
+  }, [initialSize]);
 
-  const startResizing = useCallback((mouseDownEvent: React.MouseEvent) => {
-    mouseDownEvent.preventDefault();
-    setIsDragging(true);
+  const startResize = useCallback(
+    (mouseDownEvent: React.MouseEvent) => {
+      mouseDownEvent.preventDefault();
+      const startPosition = isHorizontal ? mouseDownEvent.clientX : mouseDownEvent.clientY;
+      const startSize = size;
 
-    const startSize = sizeRef.current;
-    const startPosition = isHorizontal ? mouseDownEvent.clientX : mouseDownEvent.clientY;
+      const onMouseMove = (mouseMoveEvent: MouseEvent) => {
+        const currentPosition = isHorizontal ? mouseMoveEvent.clientX : mouseMoveEvent.clientY;
+        const delta = reverse ? startPosition - currentPosition : currentPosition - startPosition;
+        const newSize = Math.max(minSize, Math.min(maxSize, startSize + delta));
+        setSize(newSize);
+      };
 
-    // Prevent document selections and lock cursor visuals across the body node frame
-    const targetCursor = isHorizontal ? 'col-resize' : 'row-resize';
-    document.body.style.cursor = targetCursor;
-    document.body.style.userSelect = 'none';
-    document.body.style.webkitUserSelect = 'none';
+      const onMouseUp = () => {
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+      };
 
-    const onMouseMove = (mouseMoveEvent: MouseEvent) => {
-      const currentPosition = isHorizontal ? mouseMoveEvent.clientX : mouseMoveEvent.clientY;
-      const delta = currentPosition - startPosition;
-      const newRawSize = reverse ? startSize - delta : startSize + delta;
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    },
+    [size, isHorizontal, reverse, minSize, maxSize]
+  );
 
-      let finalSize = Math.min(Math.max(newRawSize, minSize), maxSize);
-
-      // Snap-to-Collapse Calculations
-      if (collapseThreshold !== undefined && finalSize < collapseThreshold) {
-        finalSize = 0;
-      } else if (collapseThreshold !== undefined && finalSize >= collapseThreshold && sizeRef.current === 0) {
-        finalSize = minSize; // Re-open cleanly when dragged outward past limit
-      }
-
-      setSize(finalSize);
-    };
-
-    const onMouseUp = () => {
-      setIsDragging(false);
-
-      // Clear global overrides instantly
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-      document.body.style.webkitUserSelect = '';
-
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-    };
-
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-  }, [isHorizontal, reverse, minSize, maxSize, collapseThreshold]);
-
-  return [size, startResizing, isDragging, setSize] as const;
+  return [size, startResize, setSize];
 }

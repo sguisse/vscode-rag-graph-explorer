@@ -1,6 +1,5 @@
 import React from 'react';
 import { useExportConfiguration } from '../hooks/use-export-configuration';
-import { HistoryBar } from './HistoryBar';
 import { SourcePathsSection } from './SourcePathsSection';
 import { FiltersSection } from './FiltersSection';
 import { DestinationSection } from './DestinationSection';
@@ -8,42 +7,17 @@ import { OutputFormattingSection } from './OutputFormattingSection';
 
 export const ExportConfigurationPanel: React.FC = () => {
   const {
-    historyList,
-    selectedProfileId,
-    setSelectedProfileId,
     config,
     setConfig,
     filterSimulatorInput,
     setFilterSimulatorInput,
-    handleFreezeToggle,
-    handleResetConfig,
-    handleRenameProfile,
-    handleDuplicateProfile,
-    handleAddProfile,
-    handleClearHistory,
-    handleOpenHistoryFile,
     handleRevealDestination,
     handleOpenCursorLinePath,
   } = useExportConfiguration();
 
   return (
-    <div className="flex flex-col h-full w-full bg-background overflow-y-auto space-y-1 p-1">
-      {/* 1. Configuration History */}
-      <HistoryBar
-        historyList={historyList}
-        selectedProfileId={selectedProfileId}
-        onSelectProfile={setSelectedProfileId}
-        onFreezeToggle={handleFreezeToggle}
-        onResetConfig={handleResetConfig}
-        onRenameProfile={handleRenameProfile}
-        onDuplicateProfile={handleDuplicateProfile}
-        onAddProfile={handleAddProfile}
-        onOpenFile={handleOpenHistoryFile}
-        onRevealFolder={handleRevealDestination}
-        onClearHistory={handleClearHistory}
-      />
-
-      {/* 2. Source Paths */}
+    <div className="flex flex-col h-full w-full bg-background overflow-y-auto space-y-2 p-2 box-border min-w-0">
+      {/* 1. Source Paths */}
       <SourcePathsSection
         pathsText={config.src}
         onChangePathsText={(val) => setConfig((prev) => ({ ...prev, src: val }))}
@@ -54,7 +28,7 @@ export const ExportConfigurationPanel: React.FC = () => {
         onClearPaths={() => setConfig((prev) => ({ ...prev, src: '' }))}
       />
 
-      {/* 3. Filters & Scope Constraints */}
+      {/* 2. Filters & Scope Constraints */}
       <FiltersSection
         config={config}
         onChangeConfig={setConfig}
@@ -62,7 +36,7 @@ export const ExportConfigurationPanel: React.FC = () => {
         setFilterSimulatorInput={setFilterSimulatorInput}
       />
 
-      {/* 4. Destination Directory */}
+      {/* 3. Destination Directory */}
       <DestinationSection
         destDir={config.dest}
         onChangeDestDir={(val) => setConfig((prev) => ({ ...prev, dest: val }))}
@@ -71,7 +45,7 @@ export const ExportConfigurationPanel: React.FC = () => {
         onClearDestDir={() => {}}
       />
 
-      {/* 5. Output Formatting Rules */}
+      {/* 4. Output Formatting Rules */}
       <OutputFormattingSection
         config={config}
         onChangeConfig={setConfig}

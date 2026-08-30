@@ -58,170 +58,199 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
       tooltip="Regular Expression masks defining targeted directories and source formatting inclusions or exclusions lists."
       summaryText={`Max file: ${config.max_file} KB`}
       defaultOpen={true}
-      className="m-1 shrink-0"
+      className="w-full min-w-0 shrink-0"
     >
-      <div className="space-y-3 font-mono text-xs">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-          <div className="space-y-1">
-            <label className="text-[11px] text-muted-foreground block font-semibold">
-              🏋️ Max File (KB)
-            </label>
-            <Input
-              value={config.max_file}
-              onChange={(e) =>
-                onChangeConfig((prev) => ({ ...prev, max_file: e.target.value }))
-              }
-              className="h-7 text-xs font-mono bg-background"
-            />
-          </div>
+      <div className="space-y-3 w-full min-w-0 font-mono text-xs">
+        {/* Top Constraint Controls */}
+        <div className="flex items-center gap-2 w-full min-w-0">
+          <label className="font-semibold text-[11px] text-muted-foreground whitespace-nowrap shrink-0">
+            🏋️ Max File
+          </label>
+          <Input
+            value={config.max_file}
+            onChange={(e) =>
+              onChangeConfig((prev) => ({ ...prev, max_file: e.target.value }))
+            }
+            className="bg-background w-24 h-7 font-mono text-xs shrink-0"
+          /> KB
+        </div>
 
-          <div className="space-y-1 md:col-span-1">
-            <div className="flex justify-between items-center text-[10px] text-muted-foreground font-semibold">
-              <span>✅ Include Paths</span>
-              <div className="flex gap-0.5">
-                <Button size="icon-xs" variant="ghost" onClick={() => sortLines('inc_paths')}>
-                  <ArrowDownAZ size={11} />
-                </Button>
-                <Button size="icon-xs" variant="ghost" onClick={() => clearField('inc_paths')}>
-                  <Trash2 size={11} />
-                </Button>
-              </div>
+        {/* Outer Grid: Grouped Inclusions and Grouped Exclusions */}
+        <div className="gap-3 grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] w-full min-w-0">
+          {/* Grouped Inclusions */}
+          <div className="space-y-2 bg-muted/20 p-2.5 border border-border/40 rounded-md w-full min-w-0">
+            <div className="flex justify-between items-center min-w-0 font-semibold text-[11px] text-foreground">
+              <span className="truncate">✅ Inclusions</span>
             </div>
-            <Textarea
-              value={config.inc_paths}
-              onChange={(e) =>
-                onChangeConfig((prev) => ({ ...prev, inc_paths: e.target.value }))
-              }
-              rows={4}
-              className="font-mono text-xs resize-y bg-background"
-            />
-          </div>
 
-          <div className="space-y-1 md:col-span-1">
-            <div className="flex justify-between items-center text-[10px] text-muted-foreground font-semibold">
-              <span>🟢 Include exts</span>
-              <div className="flex gap-0.5">
-                <Button size="icon-xs" variant="ghost" onClick={() => sortLines('inc_ext')}>
-                  <ArrowDownAZ size={11} />
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button size="icon-xs" variant="ghost">
-                      <MoreVertical size={11} />
+            {/* Inner Grid: Include Paths & Include Exts */}
+            <div className="gap-2.5 grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] w-full min-w-0">
+              {/* Include Paths */}
+              <div className="space-y-1 w-full min-w-0">
+                <div className="flex justify-between items-center min-w-0 font-semibold text-[10px] text-muted-foreground">
+                  <span className="truncate">Paths</span>
+                  <div className="flex gap-0.5 shrink-0">
+                    <Button size="icon-xs" variant="ghost" onClick={() => sortLines('inc_paths')} title="Sort lines">
+                      <ArrowDownAZ size={11} />
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {FILE_EXT_CATEGORY_GROUPS.filter((g) => g.includeExtsMenuEnabled).map(
-                      (grp) => (
-                        <DropdownMenuItem
-                          key={grp.label}
-                          onClick={() => appendExtensionCategory('inc_ext', grp.extensions)}
-                        >
-                          {grp.label}
-                        </DropdownMenuItem>
-                      )
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Button size="icon-xs" variant="ghost" onClick={() => clearField('inc_ext')}>
-                  <Trash2 size={11} />
-                </Button>
-              </div>
-            </div>
-            <Textarea
-              value={config.inc_ext}
-              onChange={(e) =>
-                onChangeConfig((prev) => ({ ...prev, inc_ext: e.target.value }))
-              }
-              rows={4}
-              className="font-mono text-xs resize-y bg-background"
-            />
-          </div>
-
-          <div className="space-y-1 md:col-span-1">
-            <div className="flex justify-between items-center text-[10px] text-muted-foreground font-semibold">
-              <span>🚫 Exclude Paths</span>
-              <div className="flex gap-0.5">
-                <Button size="icon-xs" variant="ghost" onClick={() => sortLines('exc_paths')}>
-                  <ArrowDownAZ size={11} />
-                </Button>
-                <Button size="icon-xs" variant="ghost" onClick={() => clearField('exc_paths')}>
-                  <Trash2 size={11} />
-                </Button>
-              </div>
-            </div>
-            <Textarea
-              value={config.exc_paths}
-              onChange={(e) =>
-                onChangeConfig((prev) => ({ ...prev, exc_paths: e.target.value }))
-              }
-              rows={4}
-              className="font-mono text-xs resize-y bg-background"
-            />
-          </div>
-
-          <div className="space-y-1 md:col-span-1">
-            <div className="flex justify-between items-center text-[10px] text-muted-foreground font-semibold">
-              <span>🔴 Exclude exts</span>
-              <div className="flex gap-0.5">
-                <Button size="icon-xs" variant="ghost" onClick={() => sortLines('exc_ext')}>
-                  <ArrowDownAZ size={11} />
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button size="icon-xs" variant="ghost">
-                      <MoreVertical size={11} />
+                    <Button size="icon-xs" variant="ghost" onClick={() => clearField('inc_paths')} title="Clear field">
+                      <Trash2 size={11} />
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {FILE_EXT_CATEGORY_GROUPS.filter((g) => g.excludeExtsMenuEnabled).map(
-                      (grp) => (
-                        <DropdownMenuItem
-                          key={grp.label}
-                          onClick={() => appendExtensionCategory('exc_ext', grp.extensions)}
-                        >
-                          {grp.label}
-                        </DropdownMenuItem>
-                      )
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Button size="icon-xs" variant="ghost" onClick={() => clearField('exc_ext')}>
-                  <Trash2 size={11} />
-                </Button>
+                  </div>
+                </div>
+                <Textarea
+                  value={config.inc_paths}
+                  onChange={(e) =>
+                    onChangeConfig((prev) => ({ ...prev, inc_paths: e.target.value }))
+                  }
+                  rows={3}
+                  className="bg-background w-full min-w-0 font-mono text-xs resize-y"
+                />
+              </div>
+
+              {/* Include Extensions */}
+              <div className="space-y-1 w-full min-w-0">
+                <div className="flex justify-between items-center min-w-0 font-semibold text-[10px] text-muted-foreground">
+                  <span className="truncate">Extensions</span>
+                  <div className="flex gap-0.5 shrink-0">
+                    <Button size="icon-xs" variant="ghost" onClick={() => sortLines('inc_ext')} title="Sort lines">
+                      <ArrowDownAZ size={11} />
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="icon-xs" variant="ghost" title="Category Presets">
+                          <MoreVertical size={11} />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {FILE_EXT_CATEGORY_GROUPS.filter((g) => g.includeExtsMenuEnabled).map(
+                          (grp) => (
+                            <DropdownMenuItem
+                              key={grp.label}
+                              onClick={() => appendExtensionCategory('inc_ext', grp.extensions)}
+                            >
+                              {grp.label}
+                            </DropdownMenuItem>
+                          )
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Button size="icon-xs" variant="ghost" onClick={() => clearField('inc_ext')} title="Clear field">
+                      <Trash2 size={11} />
+                    </Button>
+                  </div>
+                </div>
+                <Textarea
+                  value={config.inc_ext}
+                  onChange={(e) =>
+                    onChangeConfig((prev) => ({ ...prev, inc_ext: e.target.value }))
+                  }
+                  rows={3}
+                  className="bg-background w-full min-w-0 font-mono text-xs resize-y"
+                />
               </div>
             </div>
-            <Textarea
-              value={config.exc_ext}
-              onChange={(e) =>
-                onChangeConfig((prev) => ({ ...prev, exc_ext: e.target.value }))
-              }
-              rows={4}
-              className="font-mono text-xs resize-y bg-background"
-            />
+          </div>
+
+          {/* Grouped Exclusions */}
+          <div className="space-y-2 bg-muted/20 p-2.5 border border-border/40 rounded-md w-full min-w-0">
+            <div className="flex justify-between items-center min-w-0 font-semibold text-[11px] text-foreground">
+              <span className="truncate">🚫 Exclusions</span>
+            </div>
+
+            {/* Inner Grid: Exclude Paths & Exclude Exts */}
+            <div className="gap-2.5 grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] w-full min-w-0">
+              {/* Exclude Paths */}
+              <div className="space-y-1 w-full min-w-0">
+                <div className="flex justify-between items-center min-w-0 font-semibold text-[10px] text-muted-foreground">
+                  <span className="truncate">Paths</span>
+                  <div className="flex gap-0.5 shrink-0">
+                    <Button size="icon-xs" variant="ghost" onClick={() => sortLines('exc_paths')} title="Sort lines">
+                      <ArrowDownAZ size={11} />
+                    </Button>
+                    <Button size="icon-xs" variant="ghost" onClick={() => clearField('exc_paths')} title="Clear field">
+                      <Trash2 size={11} />
+                    </Button>
+                  </div>
+                </div>
+                <Textarea
+                  value={config.exc_paths}
+                  onChange={(e) =>
+                    onChangeConfig((prev) => ({ ...prev, exc_paths: e.target.value }))
+                  }
+                  rows={3}
+                  className="bg-background w-full min-w-0 font-mono text-xs resize-y"
+                />
+              </div>
+
+              {/* Exclude Extensions */}
+              <div className="space-y-1 w-full min-w-0">
+                <div className="flex justify-between items-center min-w-0 font-semibold text-[10px] text-muted-foreground">
+                  <span className="truncate">Extensions</span>
+                  <div className="flex gap-0.5 shrink-0">
+                    <Button size="icon-xs" variant="ghost" onClick={() => sortLines('exc_ext')} title="Sort lines">
+                      <ArrowDownAZ size={11} />
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="icon-xs" variant="ghost" title="Category Presets">
+                          <MoreVertical size={11} />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {FILE_EXT_CATEGORY_GROUPS.filter((g) => g.excludeExtsMenuEnabled).map(
+                          (grp) => (
+                            <DropdownMenuItem
+                              key={grp.label}
+                              onClick={() => appendExtensionCategory('exc_ext', grp.extensions)}
+                            >
+                              {grp.label}
+                            </DropdownMenuItem>
+                          )
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Button size="icon-xs" variant="ghost" onClick={() => clearField('exc_ext')} title="Clear field">
+                      <Trash2 size={11} />
+                    </Button>
+                  </div>
+                </div>
+                <Textarea
+                  value={config.exc_ext}
+                  onChange={(e) =>
+                    onChangeConfig((prev) => ({ ...prev, exc_ext: e.target.value }))
+                  }
+                  rows={3}
+                  className="bg-background w-full min-w-0 font-mono text-xs resize-y"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 bg-muted/30 p-1.5 border border-border rounded">
-          <span className="text-[11px] font-bold text-foreground shrink-0">
+        {/* Filter Simulator */}
+        <div className="flex sm:flex-row flex-col items-stretch sm:items-center gap-2 bg-muted/30 p-2 border border-border rounded-md w-full min-w-0">
+          <span className="font-bold text-[11px] text-foreground truncate shrink-0">
             🧪 Filters Simulator:
           </span>
           <Input
             value={filterSimulatorInput}
             onChange={(e) => setFilterSimulatorInput(e.target.value)}
             placeholder="Enter test file path or name to simulate matching rules..."
-            className="h-6 text-xs font-mono flex-1 bg-background"
+            className="flex-1 bg-background min-w-0 h-7 font-mono text-xs"
           />
-          <span
-            className="text-sm px-1 shrink-0"
-            title={simResult.reason}
-          >
-            {!filterSimulatorInput.trim()
-              ? '❓'
-              : simResult.isMatched
-              ? '✅'
-              : '🚫'}
-          </span>
+          <div className="flex justify-end items-center gap-1.5 min-w-0 shrink-0">
+            <span className="px-1 text-base shrink-0" title={simResult.reason}>
+              {!filterSimulatorInput.trim()
+                ? '❓'
+                : simResult.isMatched
+                ? '✅'
+                : '🚫'}
+            </span>
+            <span className="max-w-[140px] sm:max-w-[200px] font-mono text-[10px] text-muted-foreground truncate" title={simResult.reason}>
+              {filterSimulatorInput.trim() ? simResult.reason : 'Idle'}
+            </span>
+          </div>
         </div>
       </div>
     </CollapsibleCard>

@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useLayoutStore } from '@/store/useLayoutStore';
+import { TopPanelContainer } from './layout-ctns/TopPanelContainer';
 import { LeftPanelContainer } from './layout-ctns/LeftPanelContainer';
 import { CenterPanelContainer } from './layout-ctns/CenterPanelContainer';
 
@@ -11,7 +12,14 @@ export function ExporterFeature() {
       header: { visible: true, isResizable: false, isHiddable: false },
       sidebarLeft: { visible: true, isResizable: true, isHiddable: true },
       workspace: {
-        top: { visible: false },
+        top: {
+          visible: true,
+          container: <TopPanelContainer />,
+          isResizable: true,
+          isHiddable: true,
+          workspaceTopHeight: 78,
+          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
+        },
         left: {
           visible: true,
           container: <LeftPanelContainer />,

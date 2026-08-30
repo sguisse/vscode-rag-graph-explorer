@@ -16,12 +16,30 @@ export const mergeContainer = (storeC?: LayoutContainer, propC?: LayoutContainer
   const visible = storeC?.visible ?? propC?.visible ?? true;
   const isResizable = storeC?.isResizable ?? propC?.isResizable ?? true;
   const isHiddable = storeC?.isHiddable ?? propC?.isHiddable ?? true;
+
+  const headerHeight = storeC?.headerHeight ?? propC?.headerHeight;
+  const sidebarLeftWidth = storeC?.sidebarLeftWidth ?? propC?.sidebarLeftWidth;
+  const workspaceTopHeight = storeC?.workspaceTopHeight ?? propC?.workspaceTopHeight;
+  const workspaceLeftWidth = storeC?.workspaceLeftWidth ?? propC?.workspaceLeftWidth;
+  const workspaceRightWidth = storeC?.workspaceRightWidth ?? propC?.workspaceRightWidth;
+  const workspaceBottomHeight = storeC?.workspaceBottomHeight ?? propC?.workspaceBottomHeight;
+  const sidebarRightWidth = storeC?.sidebarRightWidth ?? propC?.sidebarRightWidth;
+  const footerHeight = storeC?.footerHeight ?? propC?.footerHeight;
+
   const container = storeC?.container ?? propC?.container;
 
   return {
     visible,
     isResizable,
     isHiddable,
+    headerHeight,
+    sidebarLeftWidth,
+    workspaceTopHeight,
+    workspaceLeftWidth,
+    workspaceRightWidth,
+    workspaceBottomHeight,
+    sidebarRightWidth,
+    footerHeight,
     container,
     maximizeContainer: {
       isMaximized,
@@ -48,10 +66,15 @@ export function WorkspaceLayout({ containers: propContainers }: WorkspaceLayoutP
     bottom: bottomConfig,
   };
 
-  const [topHeight, startTopResize] = useResizable(DefaultContainersSize.workspaceTopHeight, 40, 400, false, false);
-  const [leftWidth, startLeftResize] = useResizable(DefaultContainersSize.workspaceLeftWidth, 150, 1000, true, false);
-  const [rightWidth, startRightResize] = useResizable(DefaultContainersSize.workspaceRightWidth, 150, 1000, true, true);
-  const [bottomHeight, startBottomResize] = useResizable(DefaultContainersSize.workspaceBottomHeight, 40, 400, false, true);
+  const initialTopHeight = topConfig?.workspaceTopHeight ?? DefaultContainersSize.workspaceTopHeight;
+  const initialLeftWidth = leftConfig?.workspaceLeftWidth ?? DefaultContainersSize.workspaceLeftWidth;
+  const initialRightWidth = rightConfig?.workspaceRightWidth ?? DefaultContainersSize.workspaceRightWidth;
+  const initialBottomHeight = bottomConfig?.workspaceBottomHeight ?? DefaultContainersSize.workspaceBottomHeight;
+
+  const [topHeight, startTopResize] = useResizable(initialTopHeight, 40, 1000, false, false);
+  const [leftWidth, startLeftResize] = useResizable(initialLeftWidth, 150, 1000, true, false);
+  const [rightWidth, startRightResize] = useResizable(initialRightWidth, 150, 1000, true, true);
+  const [bottomHeight, startBottomResize] = useResizable(initialBottomHeight, 40, 1000, false, true);
 
   const workspaceKeys = ['top', 'left', 'center', 'right', 'bottom'] as const;
 
@@ -154,7 +177,7 @@ export function WorkspaceLayout({ containers: propContainers }: WorkspaceLayoutP
           visible
           resizeHandle={bottomConfig?.isResizable !== false && isMiddleRowVisible ? 'top' : 'none'}
           onResizeStart={startBottomResize}
-          style={isMiddleRowVisible ? { height: `${bottomHeight}px` } : undefined}
+          style={isBottomVisible ? { height: `${bottomHeight}px` } : undefined}
           className={
             isMiddleRowVisible
               ? "border-border border-t"

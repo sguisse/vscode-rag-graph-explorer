@@ -26,7 +26,7 @@ export const DestinationSection: React.FC<DestinationSectionProps> = ({
       tooltip="Absolute distribution path folder location where structured files will be generated."
       summaryText={destDir || 'Default directory'}
       defaultOpen={true}
-      className="m-1 shrink-0"
+      className="w-full min-w-0 shrink-0"
     >
       <div className="flex gap-1.5 items-center font-mono text-xs">
         <Input
