@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import { useLayoutStore } from '@/store/useLayoutStore';
-import { WorkflowBuilderPanel } from './WorkflowBuilderPanel';
-import { NodePalettePanel } from './components/palette/NodePalettePanel';
-import { AttributesPanel } from './components/inspector/AttributesPanel';
+import { LeftPanelContainer } from './layout-ctns/LeftPanelContainer';
+import { CenterPanelContainer } from './layout-ctns/CenterPanelContainer';
+import { RightPanelContainer } from './layout-ctns/RightPanelContainer';
 
 export function WorkflowBuilderFeature() {
   const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
@@ -15,18 +15,18 @@ export function WorkflowBuilderFeature() {
         top: { visible: false },
         left: {
           visible: true,
-          container: <NodePalettePanel />,
+          container: <LeftPanelContainer />,
           isHiddable: true,
         },
         center: {
           visible: true,
-          container: <WorkflowBuilderPanel />,
+          container: <CenterPanelContainer />,
           isHiddable: false,
           maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
         },
         right: {
           visible: true,
-          container: <AttributesPanel />,
+          container: <RightPanelContainer />,
           isHiddable: true,
         },
         bottom: { visible: false },

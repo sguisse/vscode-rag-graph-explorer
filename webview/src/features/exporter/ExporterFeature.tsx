@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useLayoutStore } from '@/store/useLayoutStore';
-import { ExporterPanel } from './ExporterPanel';
+import { CenterPanelContainer } from './layout-ctns/CenterPanelContainer';
 
 export function ExporterFeature() {
   const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
@@ -14,7 +14,7 @@ export function ExporterFeature() {
         left: { visible: false },
         center: {
           visible: true,
-          container: <ExporterPanel />,
+          container: <CenterPanelContainer />,
           isHiddable: false,
           maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
         },

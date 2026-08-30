@@ -10,14 +10,11 @@ import {
   HelpCircle,
   Home,
   Layout,
-  VectorSquare,
   FolderDown,
   FolderGit2,
   Sliders,
   Bot,
-  LogOut,
   Sparkles,
-  FileCheck,
   MessageSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -33,7 +30,6 @@ import {
 } from '@/components/ui/sidebar';
 import { DefaultContainersSize } from '@/_layout';
 import { useAppContextStore } from '@/store/useAppContextStore';
-import { useSdlcWorkflowMachine, SdlcStep } from '@/features/sdlc/core/workflow/useSdlcWorkflowMachine';
 
 export interface NavItem {
   id: string;
@@ -56,44 +52,42 @@ export interface SidebarLeftProps {
 
 export const SIDEBAR_MENU_ITEMS: NavItem[] = [
   { id: 'feature-home', icon: Home, label: 'Home' },
-  { id: 'feature-codebase-exporter', icon: FolderDown, label: 'Codebase Exporter', badge: 'Upd' },
+  { id: 'feature-codebase-exporter', icon: FolderDown, label: 'Codebase Exporter', badge: '' },
   { id: 'feature-references', icon: FolderGit2, label: 'Project References', badge: 'New' },
   { id: 'feature-transformer', icon: Sliders, label: 'ETL Transformer', badge: 'New' },
   {
-    id: 'group-sdlc',
-    label: 'SDLC',
+    id: 'group-sdlc-preparation',
+    label: 'SDLC preparation',
     isHeader: true,
     children: [
-      { id: 'feature-sdlc-config', icon: Settings, label: 'Configuration', badge: 'New' },
-      { id: 'feature-install', icon: PackageCheck, label: 'Install' },
+      { id: 'feature-configuration', icon: Settings, label: 'Configuration', badge: 'New' },
       { id: 'feature-rules', icon: Scale, label: 'Codebase Analytics Rules' },
       { id: 'feature-ai-workflow-builder', icon: Bot, label: 'AI Workflow Builder', badge: 'AI' },
-      { id: 'feature-graph-rag-explorer', icon: FolderDown, label: 'Graph RAG Explorer', badge: 'Old' },
-      { id: 'feature-sdlc', icon: VectorSquare, label: 'Workflow', badge: 'New' },
-      { id: 'RESULTS_MANAGER', icon: Terminal, label: 'Results Manager' },
+      { id: 'feature-install', icon: PackageCheck, label: 'Install' },
     ],
   },
-  { id: 'feature-configuration', icon: Settings, label: 'Configuration', bottom: true },
+  {
+    id: 'group-sdlc-requests',
+    label: 'SDLC Requests',
+    isHeader: true,
+    children: [
+      { id: 'feature-codebase-context', icon: FolderTree, label: '1. Codebase Context' },
+      { id: 'feature-instructions', icon: Sparkles, label: '2. Instructions & Skills' },
+      { id: 'feature-llm-chat', icon: MessageSquare, label: '3. LLM Chat' },
+    ],
+  },
+  {
+    id: 'group-sdlc-results',
+    label: 'SDLC Results',
+    isHeader: true,
+    children: [
+      { id: 'feature-results-manager', icon: Terminal, label: 'Results Manager' },
+    ],
+  },
+
   { id: 'feature-help', icon: HelpCircle, label: 'Help & Shortcuts', bottom: true },
   { id: 'feature-layout-demo', icon: Layout, label: 'Layout Demo', bottom: true },
-];
-
-export const SDLC_WORKFLOW_STEPS: NavItem[] = [
-  {
-    id: 'group-sdlc-workflow',
-    label: 'Workflow Steps',
-    isHeader: true,
-    badge: 'Status',
-    children: [
-      { id: 'CODEBASE_CONTEXT', icon: FolderTree, label: '1. Codebase Context' },
-      { id: 'VIBE_CODING', icon: Sparkles, label: '2. Vibe Coding' },
-      { id: 'BMAD_METHOD', icon: Bot, label: '3. BMad Method' },
-      { id: 'SPECKIT', icon: FileCheck, label: '4. SpecKit' },
-      { id: 'LLM_CHAT', icon: MessageSquare, label: '5. LLM Chat' },
-    ],
-  },
-  { id: 'feature-help', icon: HelpCircle, label: 'Help & Shortcuts', bottom: true },
-  { id: 'exit-sdlc', icon: LogOut, label: 'Close SDLC Workflow', bottom: true },
+  { id: 'feature-old-explorer', icon: FolderDown, label: 'Graph RAG Explorer', badge: 'Old', bottom: true },
 ];
 
 export function renderSidebarMenuItem(
@@ -105,7 +99,6 @@ export function renderSidebarMenuItem(
 ) {
   const isMinimal = sidebarLeftMode === 'minimal';
   const Icon = item.icon;
-  const isDestructive = item.id === 'exit-sdlc';
 
   return (
     <SidebarMenuItem key={item.id}>
@@ -114,9 +107,7 @@ export function renderSidebarMenuItem(
         isActive={isActive}
         onClick={onClick}
         style={isChild && !isMinimal ? { paddingLeft: '10px' } : undefined}
-        className={`relative overflow-hidden cursor-pointer transition-colors ${
-          isDestructive ? 'text-destructive-foreground hover:bg-destructive-foreground/10' : ''
-        }`}
+        className="relative overflow-hidden cursor-pointer transition-colors"
         data-tooltip={isMinimal ? item.label : undefined}
       >
         {Icon && (
@@ -197,37 +188,14 @@ export function SidebarLeft(props: SidebarLeftProps) {
   const setSidebarLeftMode = props.setSidebarLeftMode ?? setInternalMode;
   const sidebarLeftWidth = props.sidebarLeftWidth ?? DefaultContainersSize.sidebarLeftWidth;
 
-  const currentStep = useSdlcWorkflowMachine((s) => s.currentStep);
-  const transitionTo = useSdlcWorkflowMachine((s) => s.transitionTo);
-
-  const isSdlcActive = activeFeature === 'feature-sdlc' || activeFeature === 'feature-graph-rag-explorer';
   const effectiveWidth = sidebarLeftMode === 'minimal' ? `${DefaultContainersSize.sidebarLeftMinimizedWidth}px` : '100%';
 
-  const isSdlcStep = (id: string) =>
-    ['CODEBASE_CONTEXT', 'VIBE_CODING', 'BMAD_METHOD', 'SPECKIT', 'LLM_CHAT', 'RESULTS_MANAGER', 'CONFIGURATION'].includes(id);
-
   const isItemActive = (itemId: string): boolean => {
-    if (itemId === 'exit-sdlc') return false;
-    if (isSdlcActive && isSdlcStep(itemId)) {
-      return currentStep === itemId;
-    }
     return activeFeature === itemId || (itemId === 'feature-home' && activeFeature === 'home');
   };
 
   const handleItemClick = (item: NavItem) => {
-    if (item.id === 'exit-sdlc') {
-      setActiveFeature('feature-home');
-    } else if (item.id === 'feature-sdlc-config') {
-      setActiveFeature('feature-sdlc');
-      transitionTo('CONFIGURATION');
-    } else if (item.id === 'feature-sdlc') {
-      setActiveFeature('feature-sdlc');
-      transitionTo('CODEBASE_CONTEXT');
-    } else if (isSdlcActive && isSdlcStep(item.id)) {
-      transitionTo(item.id as SdlcStep);
-    } else {
-      setActiveFeature(item.id);
-    }
+    setActiveFeature(item.id);
   };
 
   const renderNavItems = (items: NavItem[]) => {
@@ -244,9 +212,8 @@ export function SidebarLeft(props: SidebarLeftProps) {
     });
   };
 
-  const activeMenuItems = isSdlcActive ? SDLC_WORKFLOW_STEPS : SIDEBAR_MENU_ITEMS;
-  const topMenuItems = activeMenuItems.filter((item) => !item.bottom);
-  const bottomMenuItems = activeMenuItems.filter((item) => item.bottom);
+  const topMenuItems = SIDEBAR_MENU_ITEMS.filter((item) => !item.bottom);
+  const bottomMenuItems = SIDEBAR_MENU_ITEMS.filter((item) => item.bottom);
 
   return (
     <Sidebar

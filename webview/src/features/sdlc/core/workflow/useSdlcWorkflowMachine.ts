@@ -2,12 +2,8 @@ import { create } from 'zustand';
 
 export type SdlcStep =
   | 'CODEBASE_CONTEXT'
-  | 'VIBE_CODING'
-  | 'BMAD_METHOD'
-  | 'SPECKIT'
-  | 'LLM_CHAT'
-  | 'RESULTS_MANAGER'
-  | 'CONFIGURATION';
+  | 'INSTRUCTIONS'
+  | 'LLM_CHAT';
 
 export interface SdlcWorkflowMachineState {
   currentStep: SdlcStep;

@@ -1,5 +1,8 @@
 export { WorkflowBuilderFeature, default as WorkflowBuilderFeatureDefault } from './WorkflowBuilderFeature';
-export { WorkflowBuilderPanel, default as WorkflowBuilderPanelDefault } from './WorkflowBuilderPanel';
+export { WorkflowBuilderPanel, default as WorkflowBuilderPanelDefault } from './components/WorkflowBuilderPanel';
+export * from './layout-ctns/LeftPanelContainer';
+export * from './layout-ctns/CenterPanelContainer';
+export * from './layout-ctns/RightPanelContainer';
 export * from './model-ui';
 export { useWorkflowStore } from './hooks/use-workflow-store';
 export { useWorkflowExecution } from './hooks/use-workflow-execution';

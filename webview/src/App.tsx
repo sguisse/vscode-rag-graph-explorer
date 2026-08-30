@@ -11,13 +11,17 @@ import { ReferencesFeature } from '@/features/references/ReferencesFeature';
 import { TransformerFeature } from '@/features/transformer/TransformerFeature';
 import { RulesFeature } from '@/features/rules/RulesFeature';
 import { HelpFeature } from '@/features/help/HelpFeature';
-import { SdlcLayoutOrchestrator } from '@/features/sdlc/SdlcLayoutOrchestrator';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { vsCodeApiService } from "@/services/api/vs-code-api.service.gen";
 import { VsCodeSettings } from '@/shared/services/vscode/domain/model/VsCodeSettings.gen';
 import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
 import { initSessionPersistence } from '@/features/sdlc/core/vscode-sync/session-persistence.manager';
-import ExplorerFeature from './features/explorer-old/ExplorerFeature';
+import ExplorerOldFeature from './features/explorer-old/ExplorerOldFeature';
+import { InstructionsFeature } from './features/sdlc/domains/instructions';
+import { ConfigurationFeature } from './features/sdlc/domains/configuration';
+import { ResultsManagerFeature } from './features/sdlc/domains/results-manager';
+import { CodebaseContextFeature } from './features/sdlc/domains/codebase-context';
+import LlmFeature from './features/sdlc/domains/llm-chat/LlmFeature';
 
 export let vscodeSettings: VsCodeSettings = new VsCodeSettings();
 
@@ -63,18 +67,26 @@ export default function App() {
   return (
     <>
       {(activeFeature === 'feature-home') && HomeFeature && <HomeFeature />}
-      {(activeFeature === 'feature-install') && InstallFeature && <InstallFeature />}
-      {(activeFeature === 'feature-ai-workflow-builder') && WorkflowBuilderFeature && <WorkflowBuilderFeature />}
       {(activeFeature === 'feature-codebase-exporter' || activeFeature === 'feature-exporter') && ExporterFeature && <ExporterFeature />}
       {(activeFeature === 'feature-references') && ReferencesFeature && <ReferencesFeature />}
       {(activeFeature === 'feature-transformer') && TransformerFeature && <TransformerFeature />}
-      {(activeFeature === 'feature-layout-demo') && LayoutDemoFeature && <LayoutDemoFeature />}
-      {(activeFeature === 'feature-rules') && RulesFeature && <RulesFeature />}
-      {(activeFeature === 'feature-help') && HelpFeature && <HelpFeature />}
 
-      {/* Replaced monolithic ExplorerFeature with the new SDLC Orchestrator */}
-      {(activeFeature === 'feature-graph-rag-explorer') && <ExplorerFeature />}
-      {(activeFeature === 'feature-sdlc') && <SdlcLayoutOrchestrator />}
+      {(activeFeature === 'feature-configuration') && ConfigurationFeature && <ConfigurationFeature />}
+      {(activeFeature === 'feature-rules') && RulesFeature && <RulesFeature />}
+      {(activeFeature === 'feature-ai-workflow-builder') && WorkflowBuilderFeature && <WorkflowBuilderFeature />}
+      {(activeFeature === 'feature-install') && InstallFeature && <InstallFeature />}
+
+
+      {(activeFeature === 'feature-codebase-context') && CodebaseContextFeature && <CodebaseContextFeature />}
+      {(activeFeature === 'feature-instructions') && InstructionsFeature && <InstructionsFeature />}
+      {(activeFeature === 'feature-llm-chat') && LlmFeature && <LlmFeature />}
+
+      {(activeFeature === 'feature-results-manager') && ResultsManagerFeature && <ResultsManagerFeature />}
+
+      {(activeFeature === 'feature-help') && HelpFeature && <HelpFeature />}
+      {(activeFeature === 'feature-old-explorer') && <ExplorerOldFeature />}
+      {(activeFeature === 'feature-layout-demo') && LayoutDemoFeature && <LayoutDemoFeature />}
+
 
       {AppLayout && (
         <AppLayout

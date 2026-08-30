@@ -11,7 +11,7 @@ export interface CodebaseContextPointers {
 
 export interface InstructionsPayload {
   selectedAgent?: string;
-    strategy: 'vibe' | 'bmad' | 'speckit';
+    strategy: 'vibe' | 'vibe-coding' | 'bmad' | 'speckit' | 'gsd';
     promptText: string;
 }
 

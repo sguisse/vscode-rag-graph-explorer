@@ -1,49 +1,35 @@
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { GlobalConfigFeature } from './sub-features/GlobalConfigFeature';
-import { CodebaseParsersConfigFeature } from './sub-features/CodebaseParsersConfigFeature';
-import { PoliciesConfigFeature } from './sub-features/PoliciesConfigFeature';
+import React, { useEffect } from 'react';
+import { useLayoutStore } from '@/store/useLayoutStore';
+import { SdlcSidebarMenu } from '@/features/sdlc/components/SdlcSidebarMenu';
+import { CenterPanelContainer } from './layout-ctns/CenterPanelContainer';
+import { FilesCtxExportPanel } from '@/features/sdlc/domains/codebase-context/components/files-ctx-export/files-ctx-export-panel';
 
 export function ConfigurationFeature() {
-  const [activeTab, setActiveTab] = useState<'global' | 'parsers' | 'policies'>('global');
+  const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
 
-  return (
-    <div className="flex flex-col bg-card w-full h-full min-h-0 overflow-hidden font-mono text-xs">
-      <div className="flex bg-muted/40 border-border border-b h-9 shrink-0">
-        <Button
-          variant="ghost"
-          onClick={() => setActiveTab('global')}
-          className={`flex-1 h-9 rounded-none border-b-2 text-xs font-bold ${
-            activeTab === 'global' ? 'border-b-primary text-primary bg-background' : 'text-muted-foreground border-transparent'
-          }`}
-        >
-          Global Settings
-        </Button>
-        <Button
-          variant="ghost"
-          onClick={() => setActiveTab('parsers')}
-          className={`flex-1 h-9 rounded-none border-b-2 text-xs font-bold ${
-            activeTab === 'parsers' ? 'border-b-indigo-500 text-indigo-500 bg-background' : 'text-muted-foreground border-transparent'
-          }`}
-        >
-          Parsers (jQA)
-        </Button>
-        <Button
-          variant="ghost"
-          onClick={() => setActiveTab('policies')}
-          className={`flex-1 h-9 rounded-none border-b-2 text-xs font-bold ${
-            activeTab === 'policies' ? 'border-b-amber-500 text-amber-500 bg-background' : 'text-muted-foreground border-transparent'
-          }`}
-        >
-          Policies & Security
-        </Button>
-      </div>
+  useEffect(() => {
+    setLayoutContainers({
+      header: { visible: true, isResizable: false, isHiddable: false },
+      workspace: {
+        top: { visible: false },
+        left: { visible: false },
+        center: {
+          visible: true,
+          container: <CenterPanelContainer />,
+          isHiddable: false,
+          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
+        },
+        right: {
+          visible: false,
+        },
+        bottom: { visible: false },
+      },
+      sidebarRight: { visible: false },
+      footer: { visible: true, isResizable: false, isHiddable: false },
+    });
+  }, [setLayoutContainers]);
 
-      <div className="flex-1 overflow-y-auto min-h-0">
-        {activeTab === 'global' && <GlobalConfigFeature />}
-        {activeTab === 'parsers' && <CodebaseParsersConfigFeature />}
-        {activeTab === 'policies' && <PoliciesConfigFeature />}
-      </div>
-    </div>
-  );
+  return null;
 }
+
+export default ConfigurationFeature;

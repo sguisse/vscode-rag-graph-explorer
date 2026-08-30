@@ -1,0 +1,172 @@
+- id: vibe-quick-start
+  title: Rapid Development
+  description: Quick start prompts for direct code generation and debugging
+  icon: run-all
+  emoji: "⚡"
+  skills:
+    - icon: code
+      emoji: "💻"
+      name: Feature Implementation
+      description: Build new features or components from requirements
+      command: vibe-feature
+      prompts:
+        - vc4i:
+            planning: >-
+              <🧠_BUSINESS_CONTEXT>
+                Rapid feature implementation request based on provided codebase context.
+              </🧠_BUSINESS_CONTEXT>
+
+              <🎯_EXPECTED_ACTION>
+                Implement the requested feature cleanly with modern best practices, TypeScript types, and modular design.
+              </🎯_EXPECTED_ACTION>
+
+              <🖨️_OUTPUT_FORMAT>
+                Production-ready code block with concise inline comments and usage examples.
+              </🖨️_OUTPUT_FORMAT>
+    - icon: bug
+      emoji: "🐛"
+      name: Bug Fix & Diagnosis
+      description: Diagnose runtime errors, exceptions, or unexpected behavior
+      command: vibe-bugfix
+      prompts:
+        - vc4i:
+            planning: >-
+              <🧠_BUSINESS_CONTEXT>
+                Bug investigation and fix in selected source code or stack trace.
+              </🧠_BUSINESS_CONTEXT>
+
+              <🎯_EXPECTED_ACTION>
+                Identify root cause of the error and produce verified fix with regression guards.
+              </🎯_EXPECTED_ACTION>
+
+              <🖨️_OUTPUT_FORMAT>
+                Brief explanation of root cause followed by complete corrected code.
+              </🖨️_OUTPUT_FORMAT>
+    - icon: sync
+      emoji: "♻️"
+      name: Code Refactoring
+      description: Optimize performance, readability, and maintainability
+      command: vibe-refactor
+      prompts:
+        - vc4i:
+            planning: >-
+              <🧠_BUSINESS_CONTEXT>
+                Refactoring existing code for better structure, maintainability, or performance.
+              </🧠_BUSINESS_CONTEXT>
+
+              <🎯_EXPECTED_ACTION>
+                Refactor code while preserving external behavior and functionality.
+              </🎯_EXPECTED_ACTION>
+
+              <🖨️_OUTPUT_FORMAT>
+                Refactored source code block accompanied by key improvement notes.
+              </🖨️_OUTPUT_FORMAT>
+
+- id: vibe-quality
+  title: Quality & Testing
+  description: Code review, test generation, and architectural analysis
+  icon: checklist
+  emoji: "🔍"
+  skills:
+    - icon: checklist
+      emoji: "🧪"
+      name: Test Generator
+      description: Generate unit, integration, or E2E tests with high coverage
+      command: vibe-test-gen
+      prompts:
+        - vc4i:
+            planning: >-
+              <🧠_BUSINESS_CONTEXT>
+                Automated test suite creation for selected components or API services.
+              </🧠_BUSINESS_CONTEXT>
+
+              <🎯_EXPECTED_ACTION>
+                Write comprehensive tests covering happy paths, edge cases, and error conditions.
+              </🎯_EXPECTED_ACTION>
+
+              <🖨️_OUTPUT_FORMAT>
+                Executable test file using standard testing framework (Jest, Vitest, Playwright).
+              </🖨️_OUTPUT_FORMAT>
+    - icon: eye
+      emoji: "🛡️"
+      name: Code Review & Security Audit
+      description: Audit code for OWASP security, performance traps, and bugs
+      command: vibe-review
+      prompts:
+        - vc4i:
+            planning: >-
+              <🧠_BUSINESS_CONTEXT>
+                Comprehensive code review for security vulnerabilities and architectural design.
+              </🧠_BUSINESS_CONTEXT>
+
+              <🎯_EXPECTED_ACTION>
+                Review code for potential security flaws, memory leaks, and anti-patterns.
+              </🎯_EXPECTED_ACTION>
+
+              <🖨️_OUTPUT_FORMAT>
+                Structured Review Findings with Severity Matrix (Critical, Major, Minor) and actionable fixes.
+              </🖨️_OUTPUT_FORMAT>
+    - icon: book
+      emoji: "📖"
+      name: Code Explanation
+      description: Step-by-step technical explanation of complex code logic
+      command: vibe-explain
+      prompts:
+        - vc4i:
+            planning: >-
+              <🧠_BUSINESS_CONTEXT>
+                Technical documentation and explanation of complex source code.
+              </🧠_BUSINESS_CONTEXT>
+
+              <🎯_EXPECTED_ACTION>
+                Explain system architecture, data flows, and method behaviors in simple terms.
+              </🎯_EXPECTED_ACTION>
+
+              <🖨️_OUTPUT_FORMAT>
+                Structured technical breakdown with key diagrams or bullet points.
+              </🖨️_OUTPUT_FORMAT>
+
+- id: vibe-agents
+  title: Vibe Personas
+  description: Specialized developer personas for rapid vibe coding
+  icon: organization
+  emoji: "👥"
+  skills:
+    - icon: briefcase
+      emoji: "🧑‍💻"
+      name: "Developer Persona — Alex"
+      description: Pragmatic full-stack engineer focused on fast, clean solutions
+      command: vibe-agent-alex
+      prompts:
+        - vc4i:
+            planning: >-
+              <🧠_BUSINESS_CONTEXT>
+                Developer assistant focused on rapid full-stack implementation.
+              </🧠_BUSINESS_CONTEXT>
+
+              <🎯_EXPECTED_ACTION>
+                As Developer Persona Alex, implement working code fast with clean TypeScript patterns.
+              </🎯_EXPECTED_ACTION>
+
+              <🖨️_OUTPUT_FORMAT>
+                Fully functional code file with unit tests and setup instructions.
+              </🖨️_OUTPUT_FORMAT>
+    - icon: layout
+      emoji: "🏗️"
+      name: "Architect Persona — Sam"
+      description: Systems architect focused on scalability, schemas, and API design
+      command: vibe-agent-sam
+      prompts:
+        - vc4i:
+            planning: >-
+              <🧠_BUSINESS_CONTEXT>
+                System design and API architectural decisions.
+              </🧠_BUSINESS_CONTEXT>
+
+              <🎯_EXPECTED_ACTION>
+                As Architect Persona Sam, design clean microservice topology and REST/gRPC contracts.
+              </🎯_EXPECTED_ACTION>
+
+              <🖨️_OUTPUT_FORMAT>
+                Architecture Specification with component diagrams and schema definitions.
+              </🖨️_OUTPUT_FORMAT>

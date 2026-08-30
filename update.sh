@@ -1,1371 +1,408 @@
 #!/usr/bin/env bash
 set -e
 
-mkdir -p webview/src/features/sdlc/domains/instructions/gsd-method/data
-
-cat << 'EOF' > webview/src/features/sdlc/domains/instructions/gsd-method/data/gsd-skills-by-category.yaml
-- id: quick-start
-  title: Quick Start
-  description: Get help or initialize GSD (Get Sheet Done) agile workflows
-  icon: run-all
-  emoji: "🔀"
-  skills:
-    - icon: question
-      emoji: "❓"
-      name: Help & Guidance
-      description: Contextual help for GSD workflow execution and step selection
-      command: gsd-help
-      prompts:
-        - vc4i:
-            planning: >-
-              <🧠_BUSINESS_CONTEXT>
-                Industrial shop floor planners face unexpected bottlenecks when equipment downtime impacts assembly lines. Schedulers need guidance on which GSD workflow or agent to activate to re-sequence production schedules efficiently.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Provide guidance on initiating a rapid, atomic execution workflow using GSD skills. Explain how to transition from incident detection to task decomposition for the finite scheduling engine.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Provide a 3-step action guide with recommended GSD commands, target agents (Planner vs. Builder), and required input parameters.
-              </🖨️_OUTPUT_FORMAT>
-            order: >-
-              <🧠_BUSINESS_CONTEXT>
-                Order entry specialists encounter invalid option combinations in Configure-To-Order (CTO) requests.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Recommend the next GSD skill to diagnose order rule validation failures and configure automated constraint checking tasks.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Concise execution pathway detailing recommended commands (e.g., gsd-spec, gsd-build) and decision points.
-              </🖨️_OUTPUT_FORMAT>
-            orderDelivery: >-
-              <🧠_BUSINESS_CONTEXT>
-                Logistics managers face delayed 3PL carrier assignments resulting in dock congestion and potential demurrage costs.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Identify the appropriate GSD planning and execution skills needed to build an automated ASN dispatch integration.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Step-by-step guidance list specifying GSD skill invocation sequences for shipping notice automation.
-              </🖨️_OUTPUT_FORMAT>
-            stock: >-
-              <🧠_BUSINESS_CONTEXT>
-                Plant inventory controllers experience phantom stockouts due to delayed RFID scan ingestion.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Direct the user to the correct GSD workflows for specifying and building real-time inventory reservation locks.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Structured recommendation matrix listing relevant GSD skills, expected inputs, and produced deliverables.
-              </🖨️_OUTPUT_FORMAT>
-            referential: >-
-              <🧠_BUSINESS_CONTEXT>
-                Engineering revisions in PLM cause BOM synchronization mismatches with MES routing master data.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Guide the user on using GSD agents to establish a single-source-of-truth master data task sequence.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Direct navigation map linking current master data issues to targeted GSD execution skills.
-              </🖨️_OUTPUT_FORMAT>
-            pricing: >-
-              <🧠_BUSINESS_CONTEXT>
-                Raw material cost fluctuations erode margins on long-lead finished goods quotes.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Outline how to leverage GSD skills to build a dynamic cost-rollup and surcharge pricing engine incrementally.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Bulleted workflow guide highlighting spec creation, task decomposition, and atomic build execution steps.
-              </🖨️_OUTPUT_FORMAT>
-            orderAdmenment: >-
-              <🧠_BUSINESS_CONTEXT>
-                Mid-production order modifications create shop floor scrap and scheduling chaos.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Provide instructions on selecting GSD skills to implement mid-flight order lock and delta billing controls.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Actionable flowchart in standard text listing agent roles and command triggers.
-              </🖨️_OUTPUT_FORMAT>
-        - ecommerce:
-            order: >-
-              <🧠_BUSINESS_CONTEXT>
-                High-volume B2B e-commerce orders fail during real-time Available-To-Promise (ATP) stock validation.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Guide the developer on using GSD skills to troubleshoot e-commerce API webhooks and order queue processing.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Quick-reference diagnostic list with recommended GSD skills for e-commerce integration.
-              </🖨️_OUTPUT_FORMAT>
-    - icon: book
-      emoji: "🏁"
-      name: Init GSD Workspace
-      description: Initialize GSD workspace, context files, and execution environment
-      command: gsd-init
-      prompts:
-        - vc4i:
-            planning: >-
-              <🧠_BUSINESS_CONTEXT>
-                Initializing workspace layout for the Shop-Floor Finite Capacity Scheduling module under GSD method guidelines.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Establish standard GSD directory structure including roadmap files, context docs, and AGENTS.md configuration.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Directory layout tree and setup summary detailing initialized folders and task manifest files.
-              </🖨️_OUTPUT_FORMAT>
-            order: >-
-              <🧠_BUSINESS_CONTEXT>
-                Setting up GSD workspace structure for CTO Order Build Validation service.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Bootstrap the GSD project workspace and initialize atomic task tracking configurations.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Boilerplate structure list with descriptions of core workspace files created.
-              </🖨️_OUTPUT_FORMAT>
-            orderDelivery: >-
-              <🧠_BUSINESS_CONTEXT>
-                Initializing GSD environment for Outbound Shipping & EDI 856 Integration system.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Generate project context templates and task manifests for 3PL carrier integrations.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Summary checklist of initialized GSD workspace files and task queue configs.
-              </🖨️_OUTPUT_FORMAT>
-            stock: >-
-              <🧠_BUSINESS_CONTEXT>
-                Setting up GSD layout for WIP Stock Allocation and RFID Telemetry project.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Initialize workspace directories for telemetry processing rules, buffer thresholds, and task tracking.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Formatted folder map with template details for inventory event tasks.
-              </🖨️_OUTPUT_FORMAT>
-            referential: >-
-              <🧠_BUSINESS_CONTEXT>
-                Initializing GSD workspace for Master Data Referential Synchronization hub.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Create standard GSD task taxonomy for multi-level BOM explosion and routing transformation rules.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Workspace initialization report detailing schema directories and task manifests.
-              </🖨️_OUTPUT_FORMAT>
-            pricing: >-
-              <🧠_BUSINESS_CONTEXT>
-                Bootstrapping GSD structure for Dynamic Component Cost Rollup and Pricing Engine repository.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Establish task tracking manifests for financial precision rules, index feed integrations, and surcharge policies.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Structured setup overview with initialized task tracking paths and validation rules.
-              </🖨️_OUTPUT_FORMAT>
-            orderAdmenment: >-
-              <🧠_BUSINESS_CONTEXT>
-                Initializing GSD environment for Order Amendment WIP State Controller.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Setup workspace structure for state machine task specs, hold locks, and delta billing tasks.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Initialization plan with created task template manifest and state transition schemas.
-              </🖨️_OUTPUT_FORMAT>
-        - ecommerce:
-            order: >-
-              <🧠_BUSINESS_CONTEXT>
-                Initializing GSD workspace layout for B2B E-commerce Order Ingestion Middleware.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Bootstrap GSD task workspace for checkout cart stock locks, payload mapping, and ERP submission queues.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Workspace initialization manifest with core endpoint task templates.
-              </🖨️_OUTPUT_FORMAT>
-  collapsed: false
-
-- id: phase1-planning
-  title: "Phase 1: Planning & Roadmap"
-  description: Slice features into concise, actionable GSD atomic tasks
-  icon: list-ordered
-  emoji: "📋"
-  skills:
-    - icon: file-text
-      emoji: "📄"
-      name: Feature Context & Spec
-      description: Create focused context file and technical specification for a feature
-      command: gsd-spec
-      prompts:
-        - vc4i:
-            planning: >-
-              <🧠_BUSINESS_CONTEXT>
-                High-mix discrete machinery manufacturer requires a focused feature spec for Finite Capacity Production Scheduling.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Write a concise GSD feature spec document covering capacity constraints, work center availability, and schedule SLAs.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Focused Feature Spec document with Scope, Data Contracts, SLAs, and Acceptance Criteria.
-              </🖨️_OUTPUT_FORMAT>
-            order: >-
-              <🧠_BUSINESS_CONTEXT>
-                Equipment builder requires a feature spec for CTO Order Build Validation Engine.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Draft a GSD feature spec defining JSON option combination payloads, constraint rules, and latency targets.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Production Feature Spec document with request/response schemas and validation logic rules.
-              </🖨️_OUTPUT_FORMAT>
-            orderDelivery: >-
-              <🧠_BUSINESS_CONTEXT>
-                Dispatch operations need a feature spec for Outbound Shipping Notice & 3PL Carrier Integration.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Produce a GSD feature spec specifying EDI 856 manifest formats, carrier slot booking API hooks, and webhooks.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Feature Spec document detailing Interface Definitions, Output Validation Rules, and Carrier SLAs.
-              </🖨️_OUTPUT_FORMAT>
-            stock: >-
-              <🧠_BUSINESS_CONTEXT>
-                Plant warehouse requires a feature spec for WIP Stock Allocation & Smart Bin System.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Author a GSD feature spec covering real-time RFID scan ingestion, Redis distributed locks, and buffer algorithms.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Technical Feature Spec document featuring method definitions, lock TTL specs, and performance targets.
-              </🖨️_OUTPUT_FORMAT>
-            referential: >-
-              <🧠_BUSINESS_CONTEXT>
-                Manufacturing engineering team needs a feature spec for PLM-to-MES Master Data Referential Sync.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Write a GSD feature spec defining recursive EBOM-to-MBOM conversion, routing mapping endpoints, and versioning schemas.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Executable Feature Spec document containing GraphQL/REST schemas, status codes, and data types.
-              </🖨️_OUTPUT_FORMAT>
-            pricing: >-
-              <🧠_BUSINESS_CONTEXT>
-                Commercial operations requires a feature spec for Dynamic BOM Cost Rollup & Surcharge Engine.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Create a GSD feature spec specifying raw material price feed contracts, arbitrary precision decimal math, and surcharge formulas.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Precise Feature Spec document detailing Field Data Types, Mathematical Rounding Rules, and API Endpoint Schemas.
-              </🖨️_OUTPUT_FORMAT>
-            orderAdmenment: >-
-              <🧠_BUSINESS_CONTEXT>
-                Plant operations needs a feature spec for Order Amendment Impact & WIP Controller.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Author a GSD feature spec defining mid-production change evaluation, scrap/rework calculation formulas, and WIP hold locks.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Feature Spec document featuring gRPC/REST Method Definitions, State Enum Values, and Financial Delta Schemas.
-              </🖨️_OUTPUT_FORMAT>
-        - ecommerce:
-            order: >-
-              <🧠_BUSINESS_CONTEXT>
-                E-commerce team requires a feature spec for B2B Web Order Ingestion & ATP Stock Reservation Service.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Create a GSD feature spec covering shopping cart inventory hold locks, customer tier pricing resolution, and ERP queue status.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Production Feature Spec document detailing Endpoint Contracts, HMAC Headers, Payload JSON Schemas, and SLA Requirements.
-              </🖨️_OUTPUT_FORMAT>
-
-    - icon: tasklist
-      emoji: "📊"
-      name: Atomic Task Slicing
-      description: Decompose feature specifications into atomic, dependency-ordered tasks
-      command: gsd-roadmap
-      prompts:
-        - vc4i:
-            planning: >-
-              <🧠_BUSINESS_CONTEXT>
-                Finite Capacity Scheduling feature spec needs breakdown into atomic GSD implementation tasks.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Slice requirements into minimal, single-purpose tasks (Shift Calendar Reader, Machine Solver, Gantt API) with clear prerequisites.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Atomic Task Roadmap document formatted with Task IDs, Dependencies, Sizing, and Definition of Done checklists.
-              </🖨️_OUTPUT_FORMAT>
-            order: >-
-              <🧠_BUSINESS_CONTEXT>
-                CTO Order Validation Engine feature spec needs task decomposition.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Create atomic tasks (Option Constraint Evaluator, Credit Checker, Work Order Generator) with explicit verification criteria.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Task Roadmap Document containing Task IDs, Sizing Estimates, Technical Dependencies, and Test Verification Plans.
-              </🖨️_OUTPUT_FORMAT>
-            orderDelivery: >-
-              <🧠_BUSINESS_CONTEXT>
-                Outbound Order Delivery feature spec needs task decomposition for atomic execution cycles.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Generate atomic tasks for EDI 856 generation, carrier slot booking API integration, and dock status alerts.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Structured Atomic Task List with Task Summaries, Effort Points, and Acceptance Verification Steps.
-              </🖨️_OUTPUT_FORMAT>
-            stock: >-
-              <🧠_BUSINESS_CONTEXT>
-                WIP Stock Allocation feature spec requires atomic task slicing.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Break down requirements into atomic tasks for RFID scan ingest, Redis inventory locks, and buffer breach notifications.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Atomic Task Backlog complete with Priority Ratings, Dependency Ordering, and Concrete Done Criteria.
-              </🖨️_OUTPUT_FORMAT>
-            referential: >-
-              <🧠_BUSINESS_CONTEXT>
-                Master Data Referential feature spec needs task decomposition for dev execution.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Create atomic tasks for recursive EBOM-to-MBOM conversion and routing operation assignments.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Task Roadmap Specification featuring Ranked Atomic Tasks, Technical Contracts, and Data Validation Rules.
-              </🖨️_OUTPUT_FORMAT>
-            pricing: >-
-              <🧠_BUSINESS_CONTEXT>
-                Dynamic Pricing feature spec requirements need translation into atomic implementation tasks.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Break down requirements into atomic tasks covering commodity index feeds, cost rollups, and volume discounting.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Atomic Task Document with Effort Estimates, Mathematical Formulas, and Code Verification Criteria.
-              </🖨️_OUTPUT_FORMAT>
-            orderAdmenment: >-
-              <🧠_BUSINESS_CONTEXT>
-                Order Amendment feature spec requires task decomposition.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Create atomic tasks for WIP state checking, work order locks, component rollbacks, and delta billing calculations.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Task Roadmap Specification with Atomic Breakdown, Edge Case Tasks, and Test Verification Plans.
-              </🖨️_OUTPUT_FORMAT>
-        - ecommerce:
-            order: >-
-              <🧠_BUSINESS_CONTEXT>
-                B2B E-commerce Order Ingestion feature spec needs atomic task slicing.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Generate atomic tasks for ATP real-time locking, customer tier pricing, and ERP submission queues.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Sized Atomic Task Backlog with API Method Names, Headers, and SLA Requirements.
-              </🖨️_OUTPUT_FORMAT>
-
-- id: phase2-execution
-  title: "Phase 2: Atomic Execution"
-  description: Build code incrementally, task by task, with continuous feedback
-  icon: code
-  emoji: "⚙️"
-  skills:
-    - icon: terminal
-      emoji: "💻"
-      name: Atomic Build Step
-      description: Execute single atomic task from roadmap with focused code changes
-      command: gsd-build
-      prompts:
-        - vc4i:
-            planning: >-
-              <🧠_BUSINESS_CONTEXT>
-                Executing atomic build step for Work Center Shift Override and Machine Downtime re-sequencing task.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Write clean production TypeScript/Node.js code for updating shop floor schedules upon downtime event ingestion for this specific task.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Single complete code block with unit tests, error handling, and inline documentation matching atomic task scope.
-              </🖨️_OUTPUT_FORMAT>
-            order: >-
-              <🧠_BUSINESS_CONTEXT>
-                Writing the CTO Option Constraint Solver module for equipment ordering as an atomic GSD task.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Implement code validating option compatibility against task specifications and returning structured validation errors.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Fully implemented TypeScript service class with complete method signatures, type interfaces, and unit test suites.
-              </🖨️_OUTPUT_FORMAT>
-            orderDelivery: >-
-              <🧠_BUSINESS_CONTEXT>
-                Building the EDI 856 Advance Shipping Notice (ASN) Generator service specified in task backlog.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Write production logic to map dispatch order payloads into ANSI X12 856 string formats strictly complying with task scope.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Production-ready TypeScript module with parser tests, XML/EDI schema validators, and exception handlers.
-              </🖨️_OUTPUT_FORMAT>
-            stock: >-
-              <🧠_BUSINESS_CONTEXT>
-                Building the In-Memory Stock Lock and Allocation Service as defined in atomic task spec.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Implement high-concurrency Redis-backed inventory lock logic satisfying TTL and concurrency requirements.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Production code implementation including Redis locking primitives, fail-safe timeouts, and integration tests.
-              </🖨️_OUTPUT_FORMAT>
-            referential: >-
-              <🧠_BUSINESS_CONTEXT>
-                Developing the Recursive BOM Explosion Engine per atomic task specifications.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Build the production module that reads hierarchical BOM structures, computes component quantities, and maps routings.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Complete production source code with recursion safety limits, cycle detection, and performance benchmarks.
-              </🖨️_OUTPUT_FORMAT>
-            pricing: >-
-              <🧠_BUSINESS_CONTEXT>
-                Coding the Dynamic BOM Cost Rollup calculation class following task mathematical specifications.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Implement precision financial calculations computing base material costs, surcharges, and volume discounts using Decimal.js.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Executable code module utilizing BigNumber/Decimal math libraries with exhaustive edge-case unit test coverage.
-              </🖨️_OUTPUT_FORMAT>
-            orderAdmenment: >-
-              <🧠_BUSINESS_CONTEXT>
-                Implementing the Order Amendment WIP State Check & Lock service specified in task backlog.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Write code querying MES work order progress, evaluating non-amendable stations, and applying holding locks per task spec.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Complete backend service code with gRPC/REST endpoints, state machine logic, and database transaction blocks.
-              </🖨️_OUTPUT_FORMAT>
-        - ecommerce:
-            order: >-
-              <🧠_BUSINESS_CONTEXT>
-                Building the B2B E-commerce Webhook Listener per atomic task requirements.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Implement route handlers receiving order webhooks, validating cryptographic signatures, and enqueueing orders per task spec.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Production-ready Node.js/TypeScript endpoint code with HMAC validation, payload schema validation, and rate limiting.
-              </🖨️_OUTPUT_FORMAT>
-
-    - icon: eye
-      emoji: "🔍"
-      name: Focused Code Review
-      description: Review code changes for task correctness and quality
-      command: gsd-review
-      prompts:
-        - vc4i:
-            planning: >-
-              <🧠_BUSINESS_CONTEXT>
-                Reviewing pull request for Shift Scheduling Algorithm solver task implementation.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Conduct strict code review auditing algorithm correctness, performance SLAs, and unhandled edge cases.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Structured Review Findings with Severity Ratings (Critical, Major, Minor), Code Diffs, and Refactoring Suggestions.
-              </🖨️_OUTPUT_FORMAT>
-            order: >-
-              <🧠_BUSINESS_CONTEXT>
-                Auditing implementation of CTO Option Constraint Evaluator task.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Review code for unhandled edge cases in rule parsing, security flaws, and performance deviations from targets.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Code Quality Report with Specific Line-by-Line Feedback, SLA Warnings, and Recommended Code Fixes.
-              </🖨️_OUTPUT_FORMAT>
-            orderDelivery: >-
-              <🧠_BUSINESS_CONTEXT>
-                Reviewing EDI 856 Shipping Manifest Formatter source code task implementation.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Validate code against ANSI X12 EDI standards, string escaping safety, and exception handling.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Comprehensive Review Document highlighting EDI standard compliance issues and code optimizations.
-              </🖨️_OUTPUT_FORMAT>
-            stock: >-
-              <🧠_BUSINESS_CONTEXT>
-                Code review for Redis Stock Allocation locking mechanism task.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Audit code against concurrency race conditions, Redis cluster failover rules, and lock release safety.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Concurrency & Reliability Audit Report with exact line-level recommendations for lock safety.
-              </🖨️_OUTPUT_FORMAT>
-            referential: >-
-              <🧠_BUSINESS_CONTEXT>
-                Reviewing Recursive BOM Explosion source code PR against task specifications.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Inspect code for stack overflow risks, recursion bounds, and query performance.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Code Review Summary featuring Performance Analysis, Memory Footprint Assessment, and Query Fixes.
-              </🖨️_OUTPUT_FORMAT>
-            pricing: >-
-              <🧠_BUSINESS_CONTEXT>
-                Auditing Dynamic Pricing Math and Currency Conversion code against precision rules.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Inspect code for floating-point arithmetic usage violating decimal math rules, and rounding strategy errors.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Financial Precision Audit Report highlighting exact lines requiring BigNumber replacements and rounding fixes.
-              </🖨️_OUTPUT_FORMAT>
-            orderAdmenment: >-
-              <🧠_BUSINESS_CONTEXT>
-                Reviewing Distributed Saga Transaction implementation for Order Amendments task.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Audit saga orchestrator code for missing compensation steps, network timeouts, and state persistence.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Architectural Code Review detailing transaction boundary risks, missing rollback triggers, and resiliency fixes.
-              </🖨️_OUTPUT_FORMAT>
-        - ecommerce:
-            order: >-
-              <🧠_BUSINESS_CONTEXT>
-                Reviewing B2B E-commerce Order Submission API endpoint task implementation.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Audit endpoint for security requirements (rate limiting, payload size limits, HMAC signature checks).
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Security & Quality Review with Severity Matrix, Remediation Code Examples, and Hardening Recommendations.
-              </🖨️_OUTPUT_FORMAT>
-
-- id: phase3-verification
-  title: "Phase 3: Verification & Retrospective"
-  description: Verify task compliance, detect drift, and perform evidence-based retrospectives
-  icon: checklist
-  emoji: "🧪"
-  skills:
-    - icon: checklist
-      emoji: "🧪"
-      name: Verification & Test Run
-      description: Run automated tests and verify task output against acceptance criteria
-      command: gsd-verify
-      prompts:
-        - vc4i:
-            planning: >-
-              <🧠_BUSINESS_CONTEXT>
-                Verification required for Finite Capacity Scheduling task implementation.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Execute automated integration tests simulating machine downtime events and verifying schedule accuracy.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Verification Summary Report detailing test pass/fail results, assertion metrics, and SLA compliance proof.
-              </🖨️_OUTPUT_FORMAT>
-            order: >-
-              <🧠_BUSINESS_CONTEXT>
-                Verification testing needed for CTO Order Validation engine task.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Run automated test suites passing valid and invalid CTO option payloads asserting status codes and error messages.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Test Execution Log with Assertion Matrix covering positive, negative, and edge-case boundary scenarios.
-              </🖨️_OUTPUT_FORMAT>
-            orderDelivery: >-
-              <🧠_BUSINESS_CONTEXT>
-                Verification testing for Outbound Shipping Notice & EDI 856 Generation task.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Run automated tests that trigger dispatch confirmation, validate generated EDI 856 text structure, and verify webhooks.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Executable Test Report with custom EDI string assertion logs and mock server verification details.
-              </🖨️_OUTPUT_FORMAT>
-            stock: >-
-              <🧠_BUSINESS_CONTEXT>
-                Verification and stress testing for Real-Time Stock Lock service task.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Execute automated stress tests simulating 500 concurrent stock reservation requests asserting zero double-allocation.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Concurrency Test Telemetry Report with pass/fail graphs and throughput metrics.
-              </🖨️_OUTPUT_FORMAT>
-            referential: >-
-              <🧠_BUSINESS_CONTEXT>
-                Verification test suite execution for PLM-to-MES BOM Referential Sync task.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Run integration tests verifying that EBOM updates correctly propagate to MBOM tables.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Verification Log showing database diff assertions, schema validations, and cleanup logs.
-              </🖨️_OUTPUT_FORMAT>
-            pricing: >-
-              <🧠_BUSINESS_CONTEXT>
-                Verification test suite for Dynamic Price Calculation engine task.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Run unit and integration test matrices verifying price rollup math across 50 distinct component cost permutation cases.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Mathematical Verification Report with parameterized test output logs and rounding accuracy proofs.
-              </🖨️_OUTPUT_FORMAT>
-            orderAdmenment: >-
-              <🧠_BUSINESS_CONTEXT>
-                Verification testing for Order Amendment Workflow task.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Run automated E2E tests submitting post-release amendments across assembly stages and verifying hold statuses.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Verification Summary Report asserting shop floor state changes, cost updates, and billing delta generation.
-              </🖨️_OUTPUT_FORMAT>
-        - ecommerce:
-            order: >-
-              <🧠_BUSINESS_CONTEXT>
-                Verification testing for B2B E-commerce Checkout stock reservation task.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Run automated web UI and API tests simulating cart stock locking, payment processing, and ERP order receipt.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                E2E Verification Summary detailing network responses, latency metrics, and database state assertions.
-              </🖨️_OUTPUT_FORMAT>
-
-    - icon: history
-      emoji: "🔎"
-      name: Retrospective & Wrap-Up
-      description: Evidence-based review of completed task cycle and backlog refinement
-      command: gsd-retrospective
-      prompts:
-        - vc4i:
-            planning: >-
-              <🧠_BUSINESS_CONTEXT>
-                Completed Task Cycle: Finite Capacity Production Scheduling Engine Rollout.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Facilitate an evidence-based retrospective analyzing velocity metrics, bug reports, and delivery performance.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Retrospective Summary Document with Action Items (Owner, Due Date), Lessons Learned, and Roadmap Adjustments.
-              </🖨️_OUTPUT_FORMAT>
-            order: >-
-              <🧠_BUSINESS_CONTEXT>
-                Completed Task Cycle: CTO Order Validation & Engineering Guardrails.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Conduct retro evaluating reduction in invalid order releases, rule execution latency, and developer pain points.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Retrospective Report including Quantitative Metrics, Root-Cause Analysis of bugs, and Action Items.
-              </🖨️_OUTPUT_FORMAT>
-            orderDelivery: >-
-              <🧠_BUSINESS_CONTEXT>
-                Completed Task Cycle: Automated Shipping Notice (EDI 856) & 3PL Integration.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Review task cycle delivery metrics, carrier onboarding friction, dock operator feedback, and system uptime.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Retrospective Document with Key Insights, Process Improvements, Carrier SLA Analysis, and Backlog Refinements.
-              </🖨️_OUTPUT_FORMAT>
-            stock: >-
-              <🧠_BUSINESS_CONTEXT>
-                Completed Task Cycle: Real-Time WIP Stock Allocation & Bin Management.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Analyze retrospective data regarding scan drop rates, Redis cache hit ratios, and cycle velocity variance.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Formal Retrospective Deliverable with Lessons Learned, Performance Analysis, and Continuous Improvement Initiatives.
-              </🖨️_OUTPUT_FORMAT>
-            referential: >-
-              <🧠_BUSINESS_CONTEXT>
-                Completed Task Cycle: PLM-to-MES Master Data Referential Hub.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Conduct retrospective on BOM synchronization accuracy, engineering change processing speed, and friction points.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Retrospective Synthesis Paper featuring Team Velocity Metrics, Root-Cause Analysis, and Roadmap Tweaks.
-              </🖨️_OUTPUT_FORMAT>
-            pricing: >-
-              <🧠_BUSINESS_CONTEXT>
-                Completed Task Cycle: Dynamic Manufacturing Pricing & Cost Rollup Engine.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Review calculation accuracy, quote generation latency, raw material feed stability, and task completion rate.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Retrospective Summary with Business Impact Metrics, Technical Debt Items identified, and Process Recommendations.
-              </🖨️_OUTPUT_FORMAT>
-            orderAdmenment: >-
-              <🧠_BUSINESS_CONTEXT>
-                Completed Task Cycle: Order Amendment WIP Lock Controller.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Analyze retrospective data on scrap reduction, shop-floor operator adherence, amendment speed, and stability.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Retro Report outlining Operational Value Delivered, Architectural Lessons, and Next Steps for Phase 2.
-              </🖨️_OUTPUT_FORMAT>
-        - ecommerce:
-            order: >-
-              <🧠_BUSINESS_CONTEXT>
-                Completed Task Cycle: B2B E-commerce Real-Time Stock Locking & Checkout Integration.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                Conduct retrospective on system performance under load, cart conversion improvements, and bugs found.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Comprehensive Retrospective Summary with System Telemetry Review, Process Improvements, and Backlog Additions.
-              </🖨️_OUTPUT_FORMAT>
-
-- id: agents
-  title: GSD Personas
-  description: Specialized AI personas for GSD (Get Sheet Done) iterative execution
-  icon: organization
-  emoji: "👥"
-  skills:
-    - icon: briefcase
-      emoji: "🧑‍💻"
-      name: "Planner Agent — Pete"
-      description: Planner for feature context specs and atomic task slicing
-      command: gsd-agent-planner
-      prompts:
-        - vc4i:
-            planning: >-
-              <🧠_BUSINESS_CONTEXT>
-                Plant management needs strategic alignment between factory productivity targets and IT scheduling tasks.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                As Planner Agent Pete, draft concise feature specs and decompose roadmap items into atomic implementation tasks.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Strategic Task Roadmap with atomic task IDs, dependency ordering, and clear acceptance criteria.
-              </🖨️_OUTPUT_FORMAT>
-            order: >-
-              <🧠_BUSINESS_CONTEXT>
-                Slicing CTO Equipment Order Validation engine features into atomic GSD tasks.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                As Planner Agent Pete, define option constraint payload schemas, error codes, and task backlog items.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Atomic Task Roadmap with dependency graphs, sizing estimates, and verification criteria.
-              </🖨️_OUTPUT_FORMAT>
-            orderDelivery: >-
-              <🧠_BUSINESS_CONTEXT>
-                Decomposing 3PL Carrier Integration and EDI 856 Shipping Manifests into atomic tasks.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                As Planner Agent Pete, specify EDI ANSI X12 segment rules, webhook schemas, and atomic task cards.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Task Breakdown List detailing Interface Definitions, EDI Validation Tasks, and Delivery Milestones.
-              </🖨️_OUTPUT_FORMAT>
-            stock: >-
-              <🧠_BUSINESS_CONTEXT>
-                Planning atomic tasks for WIP Stock Allocation and Smart Bin tracking.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                As Planner Agent Pete, decompose real-time RFID scan ingestion, Redis lock parameters, and buffer alert tasks.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Atomic Task Backlog featuring gRPC method tasks, lock TTL specs, and performance targets.
-              </🖨️_OUTPUT_FORMAT>
-            referential: >-
-              <🧠_BUSINESS_CONTEXT>
-                Planning tasks for Master Data Referential Sync across PLM and MES.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                As Planner Agent Pete, specify recursive EBOM-to-MBOM transformation tasks, routing endpoints, and GraphQL tasks.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Task Specification Document containing GraphQL Schemas, REST Endpoints, and Task Dependencies.
-              </🖨️_OUTPUT_FORMAT>
-            pricing: >-
-              <🧠_BUSINESS_CONTEXT>
-                Planning atomic tasks for Dynamic BOM Pricing & Surcharge calculation engine.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                As Planner Agent Pete, decompose exact decimal precision rules, commodity index feed payloads, and cost rollup tasks.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Atomic Task Roadmap detailing Field Data Types, Mathematical Rounding Rules, and API Tasks.
-              </🖨️_OUTPUT_FORMAT>
-            orderAdmenment: >-
-              <🧠_BUSINESS_CONTEXT>
-                Planning atomic tasks for Order Amendment WIP State Controller.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                As Planner Agent Pete, define work order hold requests, station status queries, and delta billing tasks.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Task Roadmap Specification featuring gRPC/REST Method Tasks, State Enum Values, and Billing Schemas.
-              </🖨️_OUTPUT_FORMAT>
-        - ecommerce:
-            order: >-
-              <🧠_BUSINESS_CONTEXT>
-                Planning atomic tasks for B2B E-commerce Web Order Ingestion & ATP Stock Reservation.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                As Planner Agent Pete, specify cart stock lock tasks, rate limiting header tasks, and ERP submission payload tasks.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Sized Task Backlog detailing Endpoint Contracts, HMAC Headers, Payload Schemas, and SLA Targets.
-              </🖨️_OUTPUT_FORMAT>
-
-    - icon: code
-      emoji: "💻"
-      name: "Builder Agent — Bob"
-      description: Builder for implementing focused atomic code tasks
-      command: gsd-agent-builder
-      prompts:
-        - vc4i:
-            planning: >-
-              <🧠_BUSINESS_CONTEXT>
-                Implementing core TypeScript module for Work Center Shift Capacity Evaluation task.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                As Builder Agent Bob, write clean, production-grade TypeScript code calculating available machine hours strictly matching task spec.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Fully written TypeScript file with complete types, robust error handling, and passing unit tests.
-              </🖨️_OUTPUT_FORMAT>
-            order: >-
-              <🧠_BUSINESS_CONTEXT>
-                Writing production code for CTO Option Constraint Solver task.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                As Builder Agent Bob, code the core validation function evaluating option combinations against task JSON schemas.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Production TypeScript implementation file with interfaces, comprehensive validation methods, and unit tests.
-              </🖨️_OUTPUT_FORMAT>
-            orderDelivery: >-
-              <🧠_BUSINESS_CONTEXT>
-                Developing ANSI X12 EDI 856 Shipping Manifest Formatter class task.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                As Builder Agent Bob, write production logic formatting dispatch order data into compliant EDI 856 text segments.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Clean, production-ready TypeScript/Node.js module with parser unit tests and schema assertions.
-              </🖨️_OUTPUT_FORMAT>
-            stock: >-
-              <🧠_BUSINESS_CONTEXT>
-                Implementing Redis-backed atomic stock allocation lock methods specified in task.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                As Builder Agent Bob, write production code utilizing Lua scripts in Redis to execute atomic stock deduction matching task spec.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Production TypeScript module featuring Redis Lua scripts, fallback logic, and concurrency unit tests.
-              </🖨️_OUTPUT_FORMAT>
-            referential: >-
-              <🧠_BUSINESS_CONTEXT>
-                Writing recursive algorithm for multi-level BOM explosion and routing calculation task.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                As Builder Agent Bob, code the production function traversing hierarchical BOM nodes per task contracts.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Production TypeScript implementation with cycle protection, performance optimization, and Jest unit tests.
-              </🖨️_OUTPUT_FORMAT>
-            pricing: >-
-              <🧠_BUSINESS_CONTEXT>
-                Implementing Dynamic BOM Cost Rollup calculation class using Decimal.js as required by task.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                As Builder Agent Bob, write production code performing exact component cost aggregation strictly enforcing decimal math.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Clean TypeScript implementation file with arbitrary precision math, type definitions, and mathematical test cases.
-              </🖨️_OUTPUT_FORMAT>
-            orderAdmenment: >-
-              <🧠_BUSINESS_CONTEXT>
-                Coding Order Amendment WIP State Checker gRPC handler task.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                As Builder Agent Bob, write backend gRPC service implementation querying MES database for work order station status.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Production TypeScript source file with protobuf-generated interfaces, database query logic, and error handling.
-              </🖨️_OUTPUT_FORMAT>
-        - ecommerce:
-            order: >-
-              <🧠_BUSINESS_CONTEXT>
-                Coding B2B Checkout Order Ingestion Express/Fastify route handler task.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                As Builder Agent Bob, write production endpoint code receiving web order payloads, validating HMAC signatures per task spec.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Complete Node.js endpoint file with request validation schema, HMAC signature checking, and unit tests.
-              </🖨️_OUTPUT_FORMAT>
-
-    - icon: checklist
-      emoji: "🧪"
-      name: "Verifier Agent — Vance"
-      description: Verifier for automated verification, test execution, and drift auditing
-      command: gsd-agent-verifier
-      prompts:
-        - vc4i:
-            planning: >-
-              <🧠_BUSINESS_CONTEXT>
-                Verification required for Finite Capacity Scheduling task implementation.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                As Verifier Agent Vance, run automated integration tests simulating downtime events and asserting schedule accuracy SLAs.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Complete verification test logs with assertion results, SLA metrics, and pass/fail summary.
-              </🖨️_OUTPUT_FORMAT>
-            order: >-
-              <🧠_BUSINESS_CONTEXT>
-                Verification testing needed for CTO Order Validation engine task.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                As Verifier Agent Vance, write and execute automated API test suites passing valid and invalid CTO option payloads.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Test Verification Report covering positive, negative, and edge-case boundary assertions.
-              </🖨️_OUTPUT_FORMAT>
-            orderDelivery: >-
-              <🧠_BUSINESS_CONTEXT>
-                E2E automated verification testing for Outbound Shipping Notice & EDI 856 Generation task.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                As Verifier Agent Vance, construct and run automated tests validating generated EDI 856 text structure and webhooks.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Executable Test Verification Summary with custom EDI segment assertion logs and mock carrier server responses.
-              </🖨️_OUTPUT_FORMAT>
-            stock: >-
-              <🧠_BUSINESS_CONTEXT>
-                Load and concurrency verification testing for Real-Time Stock Lock service task.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                As Verifier Agent Vance, execute stress tests simulating 500 concurrent stock reservation requests asserting zero double-allocation.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Concurrency Verification Log with k6/Artillery telemetry graphs and lock assertion proofs.
-              </🖨️_OUTPUT_FORMAT>
-            referential: >-
-              <🧠_BUSINESS_CONTEXT>
-                Verification test suite execution for PLM-to-MES BOM Referential Sync task.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                As Verifier Agent Vance, run integration tests verifying that EBOM updates correctly propagate to MBOM tables.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Verification Log showing database diff assertions, schema validations, and cleanup logs.
-              </🖨️_OUTPUT_FORMAT>
-            pricing: >-
-              <🧠_BUSINESS_CONTEXT>
-                Verification testing for Dynamic Price Calculation engine task.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                As Verifier Agent Vance, execute unit and integration test matrices verifying price rollup math across 50 distinct cost cases.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Mathematical Verification Report with parameterized test output logs and rounding accuracy proofs.
-              </🖨️_OUTPUT_FORMAT>
-            orderAdmenment: >-
-              <🧠_BUSINESS_CONTEXT>
-                E2E verification testing for Order Amendment Workflow task.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                As Verifier Agent Vance, run automated E2E tests submitting post-release amendments across assembly stages and verifying hold statuses.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Complete E2E Verification Report asserting shop floor state changes, cost updates, and billing delta generation.
-              </🖨️_OUTPUT_FORMAT>
-        - ecommerce:
-            order: >-
-              <🧠_BUSINESS_CONTEXT>
-                Automated verification testing for B2B E-commerce Checkout stock reservation task.
-              </🧠_BUSINESS_CONTEXT>
-
-
-              <🎯_EXPECTED_ACTION>
-                As Verifier Agent Vance, run automated web UI and API tests simulating cart stock locking, payment processing, and ERP receipt.
-              </🎯_EXPECTED_ACTION>
-
-
-              <🖨️_OUTPUT_FORMAT>
-                Complete E2E Verification Log with network interceptor logs and database state verifications.
-              </🖨️_OUTPUT_FORMAT>
-
-  collapsed: true
+echo "🚀 Synchronizing SidebarLeft.tsx and App.tsx for feature switching and SDLC step transitions..."
+
+# 1. Update SidebarLeft.tsx to properly map and activate features and SDLC workflow steps
+cat << 'EOF' > webview/src/_layout/SidebarLeft.tsx
+import React, { useState } from 'react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  FolderTree,
+  Scale,
+  PackageCheck,
+  Terminal,
+  Settings,
+  HelpCircle,
+  Home,
+  Layout,
+  VectorSquare,
+  FolderDown,
+  FolderGit2,
+  Sliders,
+  Bot,
+  LogOut,
+  Sparkles,
+  MessageSquare,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarMenuBadge,
+  SidebarFooter,
+} from '@/components/ui/sidebar';
+import { DefaultContainersSize } from '@/_layout';
+import { useAppContextStore } from '@/store/useAppContextStore';
+import { useSdlcWorkflowMachine, SdlcStep } from '@/features/sdlc/core/workflow/useSdlcWorkflowMachine';
+
+export interface NavItem {
+  id: string;
+  label: string;
+  icon?: React.ComponentType<{ size?: number; className?: string }>;
+  badge?: string;
+  bottom?: boolean;
+  isHeader?: boolean;
+  children?: NavItem[];
+}
+
+export interface SidebarLeftProps {
+  activeFeature?: string;
+  setActiveFeature?: (feature: string) => void;
+  sidebarLeftMode?: 'normal' | 'minimal';
+  setSidebarLeftMode?: React.Dispatch<React.SetStateAction<'normal' | 'minimal'>>;
+  sidebarLeftWidth?: number;
+  [key: string]: any;
+}
+
+export const SIDEBAR_MENU_ITEMS: NavItem[] = [
+  { id: 'feature-home', icon: Home, label: 'Home' },
+  { id: 'feature-codebase-exporter', icon: FolderDown, label: 'Codebase Exporter', badge: 'Upd' },
+  { id: 'feature-references', icon: FolderGit2, label: 'Project References', badge: 'New' },
+  { id: 'feature-transformer', icon: Sliders, label: 'ETL Transformer', badge: 'New' },
+  {
+    id: 'group-sdlc',
+    label: 'SDLC',
+    isHeader: true,
+    children: [
+      { id: 'feature-sdlc-config', icon: Settings, label: 'Configuration', badge: 'New' },
+      { id: 'feature-install', icon: PackageCheck, label: 'Install' },
+      { id: 'feature-rules', icon: Scale, label: 'Codebase Analytics Rules' },
+      { id: 'feature-ai-workflow-builder', icon: Bot, label: 'AI Workflow Builder', badge: 'AI' },
+      { id: 'feature-graph-rag-explorer', icon: FolderDown, label: 'Graph RAG Explorer', badge: 'Old' },
+      { id: 'feature-sdlc', icon: VectorSquare, label: 'Workflow', badge: 'New' },
+      { id: 'RESULTS_MANAGER', icon: Terminal, label: 'Results Manager' },
+    ],
+  },
+  { id: 'feature-configuration', icon: Settings, label: 'Configuration', bottom: true },
+  { id: 'feature-help', icon: HelpCircle, label: 'Help & Shortcuts', bottom: true },
+  { id: 'feature-layout-demo', icon: Layout, label: 'Layout Demo', bottom: true },
+];
+
+export const SDLC_WORKFLOW_STEPS: NavItem[] = [
+  {
+    id: 'group-sdlc-workflow',
+    label: 'Workflow Steps',
+    isHeader: true,
+    badge: 'Status',
+    children: [
+      { id: 'CODEBASE_CONTEXT', icon: FolderTree, label: '1. Codebase Context' },
+      { id: 'INSTRUCTIONS', icon: Sparkles, label: '2. Instructions & Skills' },
+      { id: 'LLM_CHAT', icon: MessageSquare, label: '3. LLM Chat' },
+    ],
+  },
+  { id: 'feature-help', icon: HelpCircle, label: 'Help & Shortcuts', bottom: true },
+  { id: 'exit-sdlc', icon: LogOut, label: 'Close SDLC Workflow', bottom: true },
+];
+
+export function renderSidebarMenuItem(
+  item: NavItem,
+  isActive: boolean,
+  onClick: () => void,
+  sidebarLeftMode: 'normal' | 'minimal' = 'normal',
+  isChild: boolean = false
+) {
+  const isMinimal = sidebarLeftMode === 'minimal';
+  const Icon = item.icon;
+  const isDestructive = item.id === 'exit-sdlc';
+
+  return (
+    <SidebarMenuItem key={item.id}>
+      <SidebarMenuButton
+        id={`btn-menu-${item.id.toLowerCase()}`}
+        isActive={isActive}
+        onClick={onClick}
+        style={isChild && !isMinimal ? { paddingLeft: '10px' } : undefined}
+        className={`relative overflow-hidden cursor-pointer transition-colors ${
+          isDestructive ? 'text-destructive-foreground hover:bg-destructive-foreground/10' : ''
+        }`}
+        data-tooltip={isMinimal ? item.label : undefined}
+      >
+        {Icon && (
+          <Icon size={18} className={sidebarLeftMode === 'normal' ? 'mr-2.5 shrink-0' : 'shrink-0'} />
+        )}
+        {sidebarLeftMode === 'normal' ? (
+          <>
+            <span className="text-[12px] truncate">{item.label}</span>
+            {item.badge && <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>}
+          </>
+        ) : (
+          item.badge && (
+            <span className="top-0 right-0 absolute bg-primary shadow-2xs px-1 py-0.5 rounded-full font-mono font-bold text-[8px] text-primary-foreground leading-none scale-85 origin-top-right select-none">
+              {item.badge}
+            </span>
+          )
+        )}
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
+
+export function renderHeaderGroupItem(
+  item: NavItem,
+  isItemActive: (id: string) => boolean,
+  onItemClick: (item: NavItem) => void,
+  sidebarLeftMode: 'normal' | 'minimal' = 'normal'
+) {
+  const isMinimal = sidebarLeftMode === 'minimal';
+  const Icon = item.icon;
+
+  return (
+    <div key={item.id} className="space-y-1 my-1">
+      {sidebarLeftMode === 'normal' ? (
+        <div className="flex justify-between items-center px-2.5 py-1.5 font-mono font-bold text-[14px] text-muted-foreground uppercase tracking-wider select-none">
+          <div className="flex items-center gap-2">
+            {Icon && <Icon size={14} className="text-primary" />}
+            <span>{item.label}</span>
+          </div>
+          {item.badge && <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>}
+        </div>
+      ) : (
+        <div
+          className="flex justify-center py-1.5 text-muted-foreground"
+          data-tooltip={item.label}
+        >
+          {Icon ? <Icon size={16} /> : <span className="font-bold text-[10px]">{item.label.substring(0, 2)}</span>}
+        </div>
+      )}
+
+      {item.children && item.children.length > 0 && (
+        <SidebarMenu className="space-y-0.5">
+          {item.children.map((child) => {
+            const isActive = isItemActive(child.id);
+            return renderSidebarMenuItem(
+              child,
+              isActive,
+              () => onItemClick(child),
+              sidebarLeftMode,
+              true
+            );
+          })}
+        </SidebarMenu>
+      )}
+    </div>
+  );
+}
+
+export function SidebarLeft(props: SidebarLeftProps) {
+  const storeActiveFeature = useAppContextStore((s) => s.activeFeature);
+  const storeSetActiveFeature = useAppContextStore((s) => s.setActiveFeature);
+
+  const activeFeature = props.activeFeature || storeActiveFeature;
+  const setActiveFeature = props.setActiveFeature || storeSetActiveFeature;
+
+  const [internalMode, setInternalMode] = useState<'normal' | 'minimal'>('normal');
+  const sidebarLeftMode = props.sidebarLeftMode ?? internalMode;
+  const setSidebarLeftMode = props.setSidebarLeftMode ?? setInternalMode;
+  const sidebarLeftWidth = props.sidebarLeftWidth ?? DefaultContainersSize.sidebarLeftWidth;
+
+  const currentStep = useSdlcWorkflowMachine((s) => s.currentStep);
+  const transitionTo = useSdlcWorkflowMachine((s) => s.transitionTo);
+
+  const isSdlcActive = activeFeature === 'feature-sdlc' || activeFeature === 'feature-graph-rag-explorer';
+  const effectiveWidth = sidebarLeftMode === 'minimal' ? `${DefaultContainersSize.sidebarLeftMinimizedWidth}px` : '100%';
+
+  const isSdlcStep = (id: string) =>
+    ['CODEBASE_CONTEXT', 'INSTRUCTIONS', 'LLM_CHAT', 'RESULTS_MANAGER', 'CONFIGURATION', 'VIBE_CODING', 'BMAD_METHOD', 'SPECKIT'].includes(id);
+
+  const isItemActive = (itemId: string): boolean => {
+    if (itemId === 'exit-sdlc') return false;
+    if (isSdlcActive) {
+      if (itemId === 'CODEBASE_CONTEXT') return currentStep === 'CODEBASE_CONTEXT';
+      if (itemId === 'INSTRUCTIONS') return ['VIBE_CODING', 'BMAD_METHOD', 'SPECKIT'].includes(currentStep);
+      if (itemId === 'LLM_CHAT') return currentStep === 'LLM_CHAT';
+      if (itemId === 'RESULTS_MANAGER') return currentStep === 'RESULTS_MANAGER';
+      if (itemId === 'CONFIGURATION' || itemId === 'feature-sdlc-config' || itemId === 'feature-configuration') {
+        return currentStep === 'CONFIGURATION';
+      }
+    }
+    return activeFeature === itemId || (itemId === 'feature-home' && activeFeature === 'home');
+  };
+
+  const handleItemClick = (item: NavItem) => {
+    if (item.id === 'exit-sdlc') {
+      setActiveFeature('feature-home');
+    } else if (item.id === 'feature-sdlc-config' || item.id === 'feature-configuration') {
+      setActiveFeature('feature-sdlc');
+      transitionTo('CONFIGURATION');
+    } else if (item.id === 'feature-sdlc') {
+      setActiveFeature('feature-sdlc');
+      transitionTo('CODEBASE_CONTEXT');
+    } else if (item.id === 'RESULTS_MANAGER') {
+      setActiveFeature('feature-sdlc');
+      transitionTo('RESULTS_MANAGER');
+    } else if (item.id === 'INSTRUCTIONS') {
+      setActiveFeature('feature-sdlc');
+      transitionTo('BMAD_METHOD');
+    } else if (isSdlcStep(item.id)) {
+      setActiveFeature('feature-sdlc');
+      transitionTo(item.id as SdlcStep);
+    } else {
+      setActiveFeature(item.id);
+    }
+  };
+
+  const renderNavItems = (items: NavItem[]) => {
+    return items.map((item) => {
+      if (item.isHeader) {
+        return renderHeaderGroupItem(item, isItemActive, handleItemClick, sidebarLeftMode);
+      }
+      return renderSidebarMenuItem(
+        item,
+        isItemActive(item.id),
+        () => handleItemClick(item),
+        sidebarLeftMode
+      );
+    });
+  };
+
+  const activeMenuItems = isSdlcActive ? SDLC_WORKFLOW_STEPS : SIDEBAR_MENU_ITEMS;
+  const topMenuItems = activeMenuItems.filter((item) => !item.bottom);
+  const bottomMenuItems = activeMenuItems.filter((item) => item.bottom);
+
+  return (
+    <Sidebar
+      id="ctn-sidebar-left"
+      style={{
+        width: effectiveWidth,
+        '--sidebar-width': sidebarLeftMode === 'minimal' ? `${DefaultContainersSize.sidebarLeftMinimizedWidth}px` : `${sidebarLeftWidth}px`,
+      } as React.CSSProperties}
+      className="flex flex-col justify-between border-r-0 w-full h-full min-h-0 overflow-x-hidden transition-all duration-200"
+    >
+      <SidebarContent className="flex-1 min-h-0 overflow-x-hidden overflow-y-auto">
+        <SidebarGroup>
+          <SidebarMenu>
+            {renderNavItems(topMenuItems)}
+          </SidebarMenu>
+        </SidebarGroup>
+
+        <SidebarGroup className="mt-auto pt-2 border-sidebar-border border-t">
+          <SidebarMenu>
+            {renderNavItems(bottomMenuItems)}
+          </SidebarMenu>
+        </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarFooter className="p-0 border-sidebar-border border-t h-9 overflow-hidden shrink-0">
+        <Button
+          id="btn-toggle-sidebar-left-mode"
+          variant="ghost"
+          size="sm"
+          onClick={() => setSidebarLeftMode((m) => (m === 'normal' ? 'minimal' : 'normal'))}
+          className={`w-full text-muted-foreground hover:text-foreground mt-0 rounded-none h-9 cursor-pointer ${
+            sidebarLeftMode === 'normal' ? 'justify-end px-3' : 'justify-center px-0'
+          }`}
+          data-tooltip="Toggle sidebar drawer size"
+        >
+          {sidebarLeftMode === 'normal' ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+        </Button>
+      </SidebarFooter>
+    </Sidebar>
+  );
+}
 EOF
 
-echo "✅ feat(gsd): Created gsd-skills-by-category.yaml matching Get Sheet Done (GSD) workflow structure!"
+# 2. Update App.tsx
+cat << 'EOF' > webview/src/App.tsx
+import React, { useEffect } from 'react';
+import { useAppContextStore } from '@/store/useAppContextStore';
+import { useLayoutStore } from '@/store/useLayoutStore';
+import { AppLayout } from '@/_layout/AppLayout';
+import { HomeFeature } from '@/features/home/HomeFeature';
+import { InstallFeature } from '@/features/install/InstallFeature';
+import { LayoutDemoFeature } from '@/features/layout-demo/LayoutDemoFeature';
+import { WorkflowBuilderFeature } from '@/features/ai-workflow-builder/WorkflowBuilderFeature';
+import { ExporterFeature } from '@/features/exporter/ExporterFeature';
+import { ReferencesFeature } from '@/features/references/ReferencesFeature';
+import { TransformerFeature } from '@/features/transformer/TransformerFeature';
+import { RulesFeature } from '@/features/rules/RulesFeature';
+import { HelpFeature } from '@/features/help/HelpFeature';
+import { SdlcFeature } from '@/features/sdlc/SdlcFeature';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
+import { vsCodeApiService } from "@/services/api/vs-code-api.service.gen";
+import { VsCodeSettings } from '@/shared/services/vscode/domain/model/VsCodeSettings.gen';
+import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
+import { initSessionPersistence } from '@/features/sdlc/core/vscode-sync/session-persistence.manager';
+import ExplorerFeature from './features/explorer-old/ExplorerFeature';
+import { InstructionsFeature } from './features/sdlc/domains/instructions';
+
+export let vscodeSettings: VsCodeSettings = new VsCodeSettings();
+
+export default function App() {
+
+  const contextStore = typeof useAppContextStore === 'function' ? useAppContextStore() : ({} as any);
+  const layoutStore = typeof useLayoutStore === 'function' ? useLayoutStore() : ({} as any);
+
+  const activeFeature = contextStore.activeFeature || 'feature-home';
+  const setActiveFeature = contextStore.setActiveFeature;
+  const setStatus = useAppContextStore((state) => state.setStatus);
+  const isDarkMode = contextStore.isDarkMode;
+  const setIsDarkMode = contextStore.setIsDarkMode;
+  const notification = contextStore.notification;
+  const containers = layoutStore.containers || [];
+
+  // Trigger remote API log on mount
+  useEffect(() => {
+    logInfo(`SGU App component mounted. Active feature: ${activeFeature}`);
+    vsCodeApiService.getExtensionSettings().then((settings: VsCodeSettings) => {
+        vscodeSettings = settings;
+    });
+
+    // Initialize SDLC session persistence sync
+    initSessionPersistence();
+  }, []);
+
+  useEffect(() => {
+        // Register listener for 'setStatus'
+        const unsubscribeStatus = vsCodeHandleMessage.on('updateStatus', (message) => {
+            console.info(`Status received from extension: ${message.payload}`);
+            if (message.payload) {
+                setStatus(message.payload);
+            }
+        });
+
+        // Cleanup event listeners on unmount
+        return () => {
+            unsubscribeStatus();
+        };
+    }, []);
+
+  return (
+    <>
+      {(activeFeature === 'feature-home') && HomeFeature && <HomeFeature />}
+      {(activeFeature === 'feature-install') && InstallFeature && <InstallFeature />}
+      {(activeFeature === 'feature-ai-workflow-builder') && WorkflowBuilderFeature && <WorkflowBuilderFeature />}
+      {(activeFeature === 'feature-codebase-exporter' || activeFeature === 'feature-exporter') && ExporterFeature && <ExporterFeature />}
+      {(activeFeature === 'feature-references') && ReferencesFeature && <ReferencesFeature />}
+      {(activeFeature === 'feature-transformer') && TransformerFeature && <TransformerFeature />}
+      {(activeFeature === 'feature-layout-demo') && LayoutDemoFeature && <LayoutDemoFeature />}
+      {(activeFeature === 'feature-rules') && RulesFeature && <RulesFeature />}
+      {(activeFeature === 'feature-help') && HelpFeature && <HelpFeature />}
+      {(activeFeature === 'feature-instructions') && InstructionsFeature && <InstructionsFeature />}
+
+      {(activeFeature === 'feature-graph-rag-explorer') && <ExplorerFeature />}
+      {(activeFeature === 'feature-sdlc') && <SdlcFeature />}
+
+      {AppLayout && (
+        <AppLayout
+          activeFeature={activeFeature}
+          setActiveFeature={setActiveFeature}
+          isDarkMode={isDarkMode}
+          setIsDarkMode={setIsDarkMode}
+          notification={notification}
+          layoutContainers={containers}
+        />
+      )}
+    </>
+  );
+}
+EOF
+
+echo "✅ fix(navigation): Synchronized SidebarLeft.tsx and App.tsx to correctly dispatch feature activation and SDLC workflow transitions!"
+echo "➡️ Rebuilding project..."
+npm run build

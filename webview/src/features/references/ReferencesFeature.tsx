@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useLayoutStore } from '@/store/useLayoutStore';
-import { ReferencePanel } from './ReferencePanel';
+import { CenterPanelContainer } from './layout-ctns/CenterPanelContainer';
 
 export function ReferencesFeature() {
   const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
@@ -14,7 +14,7 @@ export function ReferencesFeature() {
         left: { visible: false },
         center: {
           visible: true,
-          container: <ReferencePanel />,
+          container: <CenterPanelContainer />,
           isHiddable: false,
           maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
         },

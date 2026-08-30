@@ -2,11 +2,11 @@ import React, { useEffect } from 'react';
 import { useLayoutStore } from '@/store/useLayoutStore';
 import { SdlcSidebarMenu } from '../../ui-common/components/SdlcSidebarMenu';
 
-import { TopPanelContainer } from './containers/TopPanelContainer';
-import { LeftPanelContainer } from './containers/LeftPanelContainer';
-import { CenterPanelContainer } from './containers/CenterPanelContainer';
-import { RightPanelContainer } from './containers/RightPanelContainer';
-import { SidebarRightContainer } from './containers/SidebarRightContainer';
+import { TopPanelContainer } from './layout-ctns/TopPanelContainer';
+import { LeftPanelContainer } from './layout-ctns/LeftPanelContainer';
+import { CenterPanelContainer } from './layout-ctns/CenterPanelContainer';
+import { RightPanelContainer } from './layout-ctns/RightPanelContainer';
+import { SidebarRightContainer } from './layout-ctns/SidebarRightContainer';
 
 export function CodebaseContextFeature() {
   const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
