@@ -1,16 +1,38 @@
 import React, { useEffect } from 'react';
 import { useLayoutStore } from '@/store/useLayoutStore';
 import { useTransformer } from './hooks/use-transformer';
+import { TransformationScopeType, ReferenceFileInfo } from './components/TransformationScopePanel';
+import { TransformerWorkflow } from './model/transformer.model';
 import { TopPanelContainer } from './layout-ctns/TopPanelContainer';
 import { LeftPanelContainer } from './layout-ctns/LeftPanelContainer';
 import { CenterPanelContainer } from './layout-ctns/CenterPanelContainer';
 import { RightPanelContainer } from './layout-ctns/RightPanelContainer';
 import { BottomPanelContainer } from './layout-ctns/BottomPanelContainer';
 
-export function TransformerFeature() {
+export interface TransformerFeatureProps {
+  initialScope?: TransformationScopeType;
+  initialReferenceFileInfo?: ReferenceFileInfo;
+  initialWorkflow?: TransformerWorkflow;
+  onSaveWorkflow?: (workflow: TransformerWorkflow) => void;
+  onCloseFeature?: () => void;
+}
+
+export function TransformerFeature({
+  initialScope,
+  initialReferenceFileInfo,
+  initialWorkflow,
+  onSaveWorkflow,
+  onCloseFeature,
+}: TransformerFeatureProps = {}) {
   const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
 
   const {
+    scope,
+    setScope,
+    referenceFileInfo,
+    isDirty,
+    handleValidate,
+    handleClose,
     inputText,
     setInputText,
     workflowJsonText,
@@ -24,7 +46,13 @@ export function TransformerFeature() {
     templateCursorPos,
     setTemplateCursorPos,
     insertVariableIntoTemplate,
-  } = useTransformer();
+  } = useTransformer({
+    initialScope,
+    initialReferenceFileInfo,
+    initialWorkflow,
+    onSaveWorkflow,
+    onCloseFeature,
+  });
 
   useEffect(() => {
     setLayoutContainers({
@@ -33,7 +61,16 @@ export function TransformerFeature() {
       workspace: {
         top: {
           visible: true,
-          container: <TopPanelContainer />,
+          container: (
+            <TopPanelContainer
+              scope={scope}
+              onScopeChange={setScope}
+              referenceFileInfo={referenceFileInfo}
+              isDirty={isDirty}
+              onValidate={handleValidate}
+              onClose={handleClose}
+            />
+          ),
           isResizable: true,
           isHiddable: true,
           maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
@@ -98,6 +135,12 @@ export function TransformerFeature() {
     });
   }, [
     setLayoutContainers,
+    scope,
+    setScope,
+    referenceFileInfo,
+    isDirty,
+    handleValidate,
+    handleClose,
     inputText,
     setInputText,
     workflowJsonText,

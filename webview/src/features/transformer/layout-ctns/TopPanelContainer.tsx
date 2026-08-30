@@ -1,15 +1,36 @@
 import React from 'react';
 import { ContainerPanelHeader } from '@/_layout/ContainerPanelHeader';
-import { Sliders } from 'lucide-react';
+import { TransformationScopePanel, TransformationScopeType, ReferenceFileInfo } from '../components/TransformationScopePanel';
 
-export const TopPanelContainer: React.FC = () => {
+interface TopPanelContainerProps {
+  scope: TransformationScopeType;
+  onScopeChange: (newScope: TransformationScopeType) => void;
+  referenceFileInfo?: ReferenceFileInfo;
+  isDirty?: boolean;
+  onValidate?: () => void;
+  onClose?: () => void;
+}
+
+export const TopPanelContainer: React.FC<TopPanelContainerProps> = ({
+  scope,
+  onScopeChange,
+  referenceFileInfo,
+  isDirty,
+  onValidate,
+  onClose,
+}) => {
   return (
     <div className="flex flex-col bg-background w-full min-w-0 h-full min-h-0 overflow-hidden">
-      <ContainerPanelHeader title="ETL Transformer Studio" path="workspace.top" />
-      <div className="flex-1 p-2 min-h-0 overflow-auto flex items-center gap-2 font-mono text-xs">
-        <Sliders size={16} className="text-primary shrink-0" />
-        <span className="font-bold uppercase tracking-wider text-foreground">Client-Side Data Transformation Engine</span>
-        <span className="text-muted-foreground text-[10px]">(Multi-stage Regex Extraction, Sanitization & Mustache Templating)</span>
+      <ContainerPanelHeader title="Transformation Scope & Context" path="workspace.top" />
+      <div className="flex-1 min-h-0">
+        <TransformationScopePanel
+          scope={scope}
+          onScopeChange={onScopeChange}
+          referenceFileInfo={referenceFileInfo}
+          isDirty={isDirty}
+          onValidate={onValidate}
+          onClose={onClose}
+        />
       </div>
     </div>
   );

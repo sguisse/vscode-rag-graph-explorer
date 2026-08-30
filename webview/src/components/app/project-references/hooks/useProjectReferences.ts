@@ -296,6 +296,10 @@ export function useProjectReferences(
             valA = (a.name || '').toLowerCase();
             valB = (b.name || '').toLowerCase();
             break;
+          case 'transformer':
+            valA = a.transformer ? 1 : 0;
+            valB = b.transformer ? 1 : 0;
+            break;
           case 'sizeKb':
             valA = a.sizeKb ?? 0;
             valB = b.sizeKb ?? 0;

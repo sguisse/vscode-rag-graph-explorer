@@ -10,9 +10,12 @@ import {
   ChevronRight,
   ChevronsDown,
   ChevronsRight,
+  Wand2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
+import { useAppContextStore } from '@/store/useAppContextStore';
 import { TriStateCheckbox } from './TriStateCheckbox';
 import {
   ReferenceItem,
@@ -132,8 +135,9 @@ export function ReferencesTable({
   totalAllSizeKb,
   viewMode,
 }: ReferencesTableProps) {
+  const setNotification = useAppContextStore((s) => s.setNotification);
   const showDescSourceCol = !(hideDescription && hideUrl);
-  const totalColumns = showDescSourceCol ? 7 : 6;
+  const totalColumns = showDescSourceCol ? 8 : 7;
 
   const handleOpenUrl = (e: React.MouseEvent<HTMLAnchorElement>, rawUrl: string) => {
     e.preventDefault();
@@ -285,6 +289,12 @@ export function ReferencesTable({
           </td>
         )}
 
+        <td className="p-2 text-center align-middle whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-center">
+            <Checkbox checked={Boolean(item.transformer)} disabled />
+          </div>
+        </td>
+
         <td className="p-2 align-middle font-mono text-[10px] text-muted-foreground whitespace-nowrap">
           {formatDate(item.updatedAt)}
         </td>
@@ -303,6 +313,16 @@ export function ReferencesTable({
               className={`h-6 w-6 transition-colors ${iconClass}`}
             >
               <RefreshCw size={11} className={importing ? 'animate-spin' : ''} />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setNotification('Transformer will be implemented soon !')}
+              data-tooltip="Transform reference"
+              className="h-6 w-6 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10"
+            >
+              <Wand2 size={11} />
             </Button>
 
             {viewMode === 'Administrator' && (
@@ -403,6 +423,7 @@ export function ReferencesTable({
               {showDescSourceCol && (
                 <th className="p-2 w-full">Description / Source</th>
               )}
+              <th className="p-2 text-center whitespace-nowrap">{renderSortButton('Transfo', 'transformer')}</th>
               <th className="p-2 whitespace-nowrap">{renderSortButton('Updated Date', 'updatedAt')}</th>
               <th className="p-2 text-right whitespace-nowrap">{renderSortButton('Size (KB)', 'sizeKb')}</th>
               <th className="p-2 text-center w-24 whitespace-nowrap">
@@ -516,7 +537,7 @@ export function ReferencesTable({
               <td colSpan={3} className="p-2 whitespace-nowrap">
                 Total Selected: <span className="text-indigo-400">{totalSelectedCount}</span> / {totalAllCount} References
               </td>
-              <td colSpan={showDescSourceCol ? 2 : 1} className="p-2 text-right whitespace-nowrap">
+              <td colSpan={showDescSourceCol ? 3 : 2} className="p-2 text-right whitespace-nowrap">
                 Total Selected Size:
               </td>
               <td className="p-2 text-right text-indigo-400 font-mono whitespace-nowrap">

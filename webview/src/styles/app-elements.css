@@ -1,3 +1,14 @@
+code {
+    font-family: var(--monaco-monospace-font);
+    color: var(--color-secondary-foreground);
+    background-color: var(--color-secondary);
+    padding: 3px 3px;
+    border-radius: 4px;
+}
+
+
+
+/*
 .counter {
   font-size: 16px;
   padding: 5px 10px;
@@ -30,3 +41,4 @@
     gap: 18px;
   }
 }
+*/

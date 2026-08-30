@@ -1,21 +1,38 @@
-import { useState, useMemo, useCallback } from 'react';
-import { TransformerWorkflow } from '../types/transformer.types';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { TransformerWorkflow } from '../model/transformer.model';
+import { useTransformationScope, UseTransformationScopeOptions } from './use-transformation-scope';
 import {
   DEFAULT_WORKFLOW_JSON,
   executeTransformationPipeline,
 } from '../utils/transformer-engine';
 
-export function useTransformer() {
+export function useTransformer(options?: UseTransformationScopeOptions & {
+  initialWorkflow?: TransformerWorkflow;
+  onSaveWorkflow?: (workflow: TransformerWorkflow) => void;
+  onCloseFeature?: () => void;
+}) {
+  const optionsRef = useRef(options);
+  useEffect(() => {
+    optionsRef.current = options;
+  }, [options]);
+
+  const { scope, setScope, referenceFileInfo } = useTransformationScope(options);
+
+  const [initialWorkflowJson, setInitialWorkflowJson] = useState<string>(() =>
+    JSON.stringify(options?.initialWorkflow || DEFAULT_WORKFLOW_JSON, null, 2)
+  );
+
+  const [workflowJsonText, setWorkflowJsonText] = useState<string>(initialWorkflowJson);
   const [inputText, setInputText] = useState<string>(
     `<html>\n  <head>\n    <title>Sample Web Scraping Target</title>\n    <meta name="description" content="Extracting unstructured data into JSON payload.">\n  </head>\n  <body>\n    <h1>Contact Us</h1>\n    <p>Email: admin@example.com, Server IP: 192.168.1.50</p>\n  </body>\n</html>`
   );
 
-  const [workflowJsonText, setWorkflowJsonText] = useState<string>(
-    JSON.stringify(DEFAULT_WORKFLOW_JSON, null, 2)
-  );
-
   const [workflowParseError, setWorkflowJsonError] = useState<string | null>(null);
   const [templateCursorPos, setTemplateCursorPos] = useState<number | null>(null);
+
+  const isDirty = useMemo(() => {
+    return workflowJsonText.trim() !== initialWorkflowJson.trim();
+  }, [workflowJsonText, initialWorkflowJson]);
 
   const parsedWorkflow = useMemo<TransformerWorkflow>(() => {
     try {
@@ -35,6 +52,25 @@ export function useTransformer() {
   const handleCopyOutput = useCallback(() => {
     navigator.clipboard.writeText(pipelineResult.renderedOutput);
   }, [pipelineResult.renderedOutput]);
+
+  const handleValidate = useCallback(() => {
+    if (!workflowParseError) {
+      setInitialWorkflowJson(workflowJsonText);
+      optionsRef.current?.onSaveWorkflow?.(parsedWorkflow);
+    }
+  }, [workflowJsonText, workflowParseError, parsedWorkflow]);
+
+  const handleClose = useCallback(() => {
+    if (isDirty) {
+      const confirmSave = window.confirm(
+        'You have unsaved changes in your transformation workflow. Do you want to save modifications before closing?'
+      );
+      if (confirmSave) {
+        handleValidate();
+      }
+    }
+    optionsRef.current?.onCloseFeature?.();
+  }, [isDirty, handleValidate]);
 
   const updateOutputTemplate = useCallback((newTemplate: string) => {
     setWorkflowJsonText((prevJson) => {
@@ -87,6 +123,12 @@ export function useTransformer() {
   }, [templateCursorPos, parsedWorkflow.outputTemplate, updateOutputTemplate]);
 
   return {
+    scope,
+    setScope,
+    referenceFileInfo,
+    isDirty,
+    handleValidate,
+    handleClose,
     inputText,
     setInputText,
     workflowJsonText,
