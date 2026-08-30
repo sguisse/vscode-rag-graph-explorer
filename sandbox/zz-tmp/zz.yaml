@@ -1,4 +1,0 @@
-articleTitle: "{{title}}"
-summary: "{{description}}"
-cleanBody: >-
-            {{raw_content}}
