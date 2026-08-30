@@ -1,28 +1,101 @@
 import React from 'react';
-import { Card } from '@/components/ui/card';
-import { FolderDown, Sparkles, Clock } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useExporterExecution } from '../hooks/use-exporter-execution';
+import { useExporterStore } from '../store/useExporterStore';
+import { ActionToolbar } from './ActionToolbar';
+import { ReportTab } from './tabs/ReportTab';
+import { FilesTab } from './tabs/FilesTab';
+import { TerminalTab } from './tabs/TerminalTab';
+import { HelpTab } from './tabs/HelpTab';
+import { SimulationTab } from './tabs/SimulationTab';
+import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 
 export function ExporterPanel() {
+  const {
+    isRunning,
+    handleRunExport,
+    handleKillExport,
+    handleOpenExchangeUrl,
+    compiledBashCmd,
+    terminalLogs,
+    clearTerminalLogs,
+    reportData,
+    activeTab,
+    setActiveTab,
+  } = useExporterExecution();
+
+  const { config, setConfig } = useExporterStore();
+
   return (
-    <div className="flex flex-1 justify-center items-center space-y-4 bg-background p-4 md:p-6 min-h-0 overflow-y-auto text-foreground">
-      <Card className="flex flex-col items-center gap-4 bg-card/80 shadow-lg p-8 border border-primary/20 w-full max-w-md text-center">
-        <div className="bg-primary/10 p-4 rounded-full text-primary">
-          <FolderDown size={32} />
-        </div>
-        <div className="space-y-2">
-          <h2 className="flex justify-center items-center gap-2 font-bold text-foreground text-lg">
-            <Sparkles size={18} className="text-primary animate-pulse" />
-            Codebase Exporter
-          </h2>
-          <p className="text-muted-foreground text-xs leading-relaxed">
-            Actual Exporter extension will be migrated in this feature,<br/><b>coming soon !</b>
-          </p>
-        </div>
-        <div className="inline-flex items-center gap-2 bg-muted px-3 py-1 rounded-full font-mono text-[11px] text-muted-foreground">
-          <Clock size={12} />
-          <span>Under Active Migration</span>
-        </div>
-      </Card>
+    <div className="flex flex-col h-full w-full bg-background overflow-y-auto">
+      {/* Control Toolbar */}
+      <ActionToolbar
+        isRunning={isRunning}
+        onRunExport={handleRunExport}
+        onKillExport={handleKillExport}
+        onOpenExchangeUrl={handleOpenExchangeUrl}
+      />
+
+      {/* Results & Inspection Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col p-2">
+        <TabsList className="bg-muted p-1 border-b border-border">
+          <TabsTrigger value="report" className="text-xs font-mono font-bold">REPORT</TabsTrigger>
+          <TabsTrigger value="files" className="text-xs font-mono font-bold">FILES</TabsTrigger>
+          <TabsTrigger value="terminal" className="text-xs font-mono font-bold">TERMINAL</TabsTrigger>
+          <TabsTrigger value="help" className="text-xs font-mono font-bold">HELP</TabsTrigger>
+          <TabsTrigger value="simu" className="text-xs font-mono font-bold">SIMULATION B</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="report" className="flex-1">
+          <ReportTab
+            reportData={reportData}
+            onAppendExtension={(ext, mode) => {
+              const field = mode === 'inc' ? 'inc_ext' : 'exc_ext';
+              setConfig((prev) => ({
+                ...prev,
+                [field]: prev[field] ? `${prev[field]}\n.*\\.${ext}$` : `.*\\.${ext}$`,
+              }));
+            }}
+            onSetMaxFileSize={(kb) =>
+              setConfig((prev) => ({ ...prev, max_file: String(kb) }))
+            }
+          />
+        </TabsContent>
+
+        <TabsContent value="files" className="flex-1">
+          <FilesTab
+            reportData={reportData}
+            destDir={config.dest}
+            onOpenFile={(p) => vsCodeApiService.openFile(p)}
+            onRevealFile={(p) => vsCodeApiService.revealInExplorer(p)}
+          />
+        </TabsContent>
+
+        <TabsContent value="terminal" className="flex-1">
+          <TerminalTab
+            compiledBashCmd={compiledBashCmd}
+            terminalLogs={terminalLogs}
+            onCopyBashCmd={() => vsCodeApiService.copyToClipboard(compiledBashCmd)}
+            onCopyTerminalLogs={() => vsCodeApiService.copyToClipboard(terminalLogs)}
+            onClearTerminalLogs={clearTerminalLogs}
+          />
+        </TabsContent>
+
+        <TabsContent value="help" className="flex-1">
+          <HelpTab />
+        </TabsContent>
+
+        <TabsContent value="simu" className="flex-1">
+          <SimulationTab
+            onInjectPaths={(paths) => {
+              setConfig((prev) => {
+                const current = prev.src ? prev.src.split('\n') : [];
+                return { ...prev, src: Array.from(new Set([...current, ...paths])).join('\n') };
+              });
+            }}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

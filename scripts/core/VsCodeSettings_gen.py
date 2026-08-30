@@ -204,6 +204,75 @@ class GraphRagExplorerSettings:
         return obj
 
 @dataclass
+class ExporterSettings:
+    scriptPythonPath: str = ""
+    historyYamlPath: str = "~/files-exporter/.files-exporter-history.yaml"
+    maxFileSizeKb: int = 50
+    includePathsRegex: str = ".*"
+    includeExtensionsRegex: str = ".*\\.(java|ts|tsx|js|html|css|json|xml|yaml|yml|py|md|properties)$"
+    excludePathsRegex: str = ".*/node_modules/.*|.*/target/.*|.*/\\.git/.*|.*/dist/.*|.*/.idea/.*|.*/.vscode/.*|.*/.history/.*|.*/exported-files/.*,/\\.[^/]+"
+    excludeExtensionsRegex: str = "^[^.]+$|.*\\.(?:log|tmp|lock|zip|tar|png|jpg|gif|pyc|vsix)$"
+    defaultFormat: str = "yaml"
+    maxChunkSizeKb: int = 500
+    splitChunkByFileExtension: bool = False
+    copyGeneratedFilesToClipboard: bool = True
+    generateTreeView: bool = True
+    generateLogConsole: bool = True
+    generateLogFile: bool = False
+    tooltipDelay: int = 2000
+    copyFilesToClipboardTimeout: int = 10000
+    pinFilesExporter: bool = True
+    pinBrowserTab: bool = True
+    exchange: list = field(default_factory=lambda: [{"icon":"assets/brands/gemini.svg","url":"https://gemini.google.com/","tooltip":"Open Gemini","height":"45px","width":"45px","openInVSCode":true},{"icon":"assets/brands/notebookLM.svg","url":"https://notebooklm.google.com/","tooltip":"Open NotebookLM","height":"45px","width":"45px","openInVSCode":false}])
+    fileExtsCategoryGroups: list = field(default_factory=lambda: [{"label":"No Extension","excludeExtsMenuEnabled":true,"extensions":["^[^.]+$|.*\\."]},{"label":"CONFIG -  YAML","includeExtsMenuEnabled":true,"extensions":[".*\\.yaml$",".*\\.yml$"]},{"label":"CONFIG -  XML","includeExtsMenuEnabled":true,"extensions":[".*\\.xml$",".*\\.xsd$"]},{"label":"CONFIG -  JSON","includeExtsMenuEnabled":true,"extensions":[".*\\.json$",".*\\.jsonc$",".*\\.json5$"]},{"label":"CONFIG -  TOML","includeExtsMenuEnabled":true,"extensions":[".*\\.toml$"]},{"label":"CONFIG -  Props & Env","includeExtsMenuEnabled":true,"extensions":[".*\\.properties$",".*\\.prop$",".*\\.env$"]},{"label":"CONFIG -  Generic & INI","includeExtsMenuEnabled":true,"extensions":[".*\\.conf$",".*\\.cfg$",".*\\.config$",".*\\.ini$",".*\\.prefs$"]},{"label":"DOC -    Markdown & Tech","includeExtsMenuEnabled":true,"extensions":[".*\\.md$",".*\\.txt$",".*\\.rst$",".*\\.adoc$"]},{"label":"DOC -    Office & PDF","excludeExtsMenuEnabled":true,"extensions":[".*\\.pdf$",".*\\.docx$",".*\\.doc$",".*\\.odt$"]},{"label":"DOC -    Spreadsheets & Data Sheets","excludeExtsMenuEnabled":true,"extensions":[".*\\.xlsx$",".*\\.xls$",".*\\.csv$"]},{"label":"FE - Web Markup","includeExtsMenuEnabled":true,"extensions":[".*\\.html$",".*\\.htm$"]},{"label":"FE - CSS & Preprocessors","includeExtsMenuEnabled":true,"extensions":[".*\\.css$",".*\\.scss$",".*\\.sass$",".*\\.less$"]},{"label":"FE - JavaScript & TypeScript","includeExtsMenuEnabled":true,"extensions":[".*\\.js$",".*\\.ts$"]},{"label":"FE - React Components","includeExtsMenuEnabled":true,"extensions":[".*\\.jsx$",".*\\.tsx$"]},{"label":"FE - Modern UI Fwks","includeExtsMenuEnabled":true,"extensions":[".*\\.vue$",".*\\.svelte$",".*\\.astro$"]},{"label":"BE - Python","includeExtsMenuEnabled":true,"extensions":[".*\\.py$",".*\\.pyw$",".*\\.pyx$"]},{"label":"BE - Java & JVM","includeExtsMenuEnabled":true,"extensions":[".*\\.java$",".*\\.kt$",".*\\.kts$",".*\\.scala$",".*\\.groovy$"]},{"label":"BE - Node.js (TS/JS)","includeExtsMenuEnabled":true,"extensions":[".*\\.ts$",".*\\.js$",".*\\.mjs$",".*\\.cjs$"]},{"label":"BE - .NET (C# / F#)","includeExtsMenuEnabled":true,"extensions":[".*\\.cs$",".*\\.fs$"]},{"label":"BE - Go & Rust","includeExtsMenuEnabled":true,"extensions":[".*\\.go$",".*\\.rs$"]},{"label":"BE - C & C++","includeExtsMenuEnabled":true,"extensions":[".*\\.c$",".*\\.cpp$",".*\\.h$",".*\\.hpp$"]},{"label":"BE - PHP & Ruby","includeExtsMenuEnabled":true,"extensions":[".*\\.php$",".*\\.rb$"]},{"label":"ARCH -  Standard","excludeExtsMenuEnabled":true,"extensions":[".*\\.zip$",".*\\.rar$",".*\\.7z$",".*\\.tar$",".*\\.gz$",".*\\.bz2$",".*\\.xz$",".*\\.tgz$",".*\\.zipx$"]},{"label":"ARCH -  Img & Virtual","excludeExtsMenuEnabled":true,"extensions":[".*\\.iso$",".*\\.dmg$",".*\\.cab$",".*\\.vhd$",".*\\.vmdk$"]},{"label":"ARCH -  Java & Deployment","excludeExtsMenuEnabled":true,"extensions":[".*\\.jar$",".*\\.war$",".*\\.ear$"]},{"label":"IMG -Web & Standard","excludeExtsMenuEnabled":true,"extensions":[".*\\.jpg$",".*\\.jpeg$",".*\\.png$",".*\\.webp$",".*\\.gif$",".*\\.bmp$"]},{"label":"IMG -Vector Graphics","excludeExtsMenuEnabled":true,"extensions":[".*\\.svg$",".*\\.ai$",".*\\.eps$"]},{"label":"IMG -Design & Editing","excludeExtsMenuEnabled":true,"extensions":[".*\\.psd$",".*\\.xcf$",".*\\.tiff$",".*\\.tif$"]},{"label":"IMG -Camera RAW & HE","excludeExtsMenuEnabled":true,"extensions":[".*\\.heic$",".*\\.heif$",".*\\.raw$",".*\\.cr2$",".*\\.nef$",".*\\.arw$"]},{"label":"LOG -  Standard","excludeExtsMenuEnabled":true,"extensions":[".*\\.log$",".*\\.out$",".*\\.err$",".*\\.syslog$"]},{"label":"LOG -  Structured & Event","excludeExtsMenuEnabled":true,"extensions":[".*\\.jsonl$",".*\\.ndjson$",".*\\.event$",".*\\.evtx$"]},{"label":"LOG -  Diagnostic & Trace","excludeExtsMenuEnabled":true,"extensions":[".*\\.trace$",".*\\.audit$",".*\\.dump$",".*\\.crash$"]},{"label":"LOG -  Level Specifics","excludeExtsMenuEnabled":true,"extensions":[".*\\.info$",".*\\.warn$",".*\\.error$"]},{"label":"TMP - Standard","excludeExtsMenuEnabled":true,"extensions":[".*\\.tmp$",".*\\.temp$"]},{"label":"TMP - Backup & Cache","excludeExtsMenuEnabled":true,"extensions":[".*\\.bak$",".*\\.old$",".*\\.cache$",".*\\.swp$",".*\\.~$"]},{"label":"TMP - Lock & Process","excludeExtsMenuEnabled":true,"extensions":[".*\\.lock$",".*\\.pid$"]},{"label":"TMP - Placeholder & Keep","excludeExtsMenuEnabled":true,"extensions":[".*\\.keep$",".*\\.gitkeep$"]},{"label":"TEMPLATE - Logicless & Handlebars","includeExtsMenuEnabled":true,"extensions":[".*\\.mustache$",".*\\.hbs$",".*\\.handlebars$"]},{"label":"TEMPLATE - Generic Engine","includeExtsMenuEnabled":true,"extensions":[".*\\.template$",".*\\.tpl$",".*\\.tmpl$"]},{"label":"TEMPLATE - JavaScript & Web","includeExtsMenuEnabled":true,"extensions":[".*\\.ejs$",".*\\.pug$",".*\\.jade$",".*\\.twig$",".*\\.liquid$"]},{"label":"TEMPLATE - Python & Polyglot ","includeExtsMenuEnabled":true,"extensions":[".*\\.jinja$",".*\\.jinja2$",".*\\.j2$",".*\\.ftl$",".*\\.erb$"]}])
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ExporterSettings":
+        obj = cls()
+        if not isinstance(data, dict): return obj
+        if "scriptPythonPath" in data:
+            obj.scriptPythonPath = data["scriptPythonPath"]
+        if "historyYamlPath" in data:
+            obj.historyYamlPath = data["historyYamlPath"]
+        if "maxFileSizeKb" in data:
+            obj.maxFileSizeKb = data["maxFileSizeKb"]
+        if "includePathsRegex" in data:
+            obj.includePathsRegex = data["includePathsRegex"]
+        if "includeExtensionsRegex" in data:
+            obj.includeExtensionsRegex = data["includeExtensionsRegex"]
+        if "excludePathsRegex" in data:
+            obj.excludePathsRegex = data["excludePathsRegex"]
+        if "excludeExtensionsRegex" in data:
+            obj.excludeExtensionsRegex = data["excludeExtensionsRegex"]
+        if "defaultFormat" in data:
+            obj.defaultFormat = data["defaultFormat"]
+        if "maxChunkSizeKb" in data:
+            obj.maxChunkSizeKb = data["maxChunkSizeKb"]
+        if "splitChunkByFileExtension" in data:
+            obj.splitChunkByFileExtension = data["splitChunkByFileExtension"]
+        if "copyGeneratedFilesToClipboard" in data:
+            obj.copyGeneratedFilesToClipboard = data["copyGeneratedFilesToClipboard"]
+        if "generateTreeView" in data:
+            obj.generateTreeView = data["generateTreeView"]
+        if "generateLogConsole" in data:
+            obj.generateLogConsole = data["generateLogConsole"]
+        if "generateLogFile" in data:
+            obj.generateLogFile = data["generateLogFile"]
+        if "tooltipDelay" in data:
+            obj.tooltipDelay = data["tooltipDelay"]
+        if "copyFilesToClipboardTimeout" in data:
+            obj.copyFilesToClipboardTimeout = data["copyFilesToClipboardTimeout"]
+        if "pinFilesExporter" in data:
+            obj.pinFilesExporter = data["pinFilesExporter"]
+        if "pinBrowserTab" in data:
+            obj.pinBrowserTab = data["pinBrowserTab"]
+        if "exchange" in data:
+            obj.exchange = data["exchange"]
+        if "fileExtsCategoryGroups" in data:
+            obj.fileExtsCategoryGroups = data["fileExtsCategoryGroups"]
+        return obj
+
+@dataclass
 class VsCodeSettings:
     workspaceRoot: str = ""
     pinApplication: bool = True
@@ -219,6 +288,7 @@ class VsCodeSettings:
     processSoundPath: str = "/System/Library/Sounds/Glass.aiff"
     processSoundDelay: int = 10000
     graphRagExplorer: "GraphRagExplorerSettings" = field(default_factory=GraphRagExplorerSettings)
+    exporter: "ExporterSettings" = field(default_factory=ExporterSettings)
 
     @classmethod
     def from_dict(cls, data: dict) -> "VsCodeSettings":
@@ -252,6 +322,8 @@ class VsCodeSettings:
             obj.processSoundDelay = data["processSoundDelay"]
         if "graphRagExplorer" in data:
             obj.graphRagExplorer = GraphRagExplorerSettings.from_dict(data["graphRagExplorer"])
+        if "exporter" in data:
+            obj.exporter = ExporterSettings.from_dict(data["exporter"])
         return obj
 
     def inject_vscode_settings(self, data: dict) -> None:
@@ -316,6 +388,27 @@ class VsCodeSettingsKeys:
         class graphify:
             arguments = "tokenRazor.graphRagExplorer.graphify.arguments"
         userPreferences = "tokenRazor.graphRagExplorer.userPreferences"
+    class exporter:
+        scriptPythonPath = "tokenRazor.exporter.scriptPythonPath"
+        historyYamlPath = "tokenRazor.exporter.historyYamlPath"
+        maxFileSizeKb = "tokenRazor.exporter.maxFileSizeKb"
+        includePathsRegex = "tokenRazor.exporter.includePathsRegex"
+        includeExtensionsRegex = "tokenRazor.exporter.includeExtensionsRegex"
+        excludePathsRegex = "tokenRazor.exporter.excludePathsRegex"
+        excludeExtensionsRegex = "tokenRazor.exporter.excludeExtensionsRegex"
+        defaultFormat = "tokenRazor.exporter.defaultFormat"
+        maxChunkSizeKb = "tokenRazor.exporter.maxChunkSizeKb"
+        splitChunkByFileExtension = "tokenRazor.exporter.splitChunkByFileExtension"
+        copyGeneratedFilesToClipboard = "tokenRazor.exporter.copyGeneratedFilesToClipboard"
+        generateTreeView = "tokenRazor.exporter.generateTreeView"
+        generateLogConsole = "tokenRazor.exporter.generateLogConsole"
+        generateLogFile = "tokenRazor.exporter.generateLogFile"
+        tooltipDelay = "tokenRazor.exporter.tooltipDelay"
+        copyFilesToClipboardTimeout = "tokenRazor.exporter.copyFilesToClipboardTimeout"
+        pinFilesExporter = "tokenRazor.exporter.pinFilesExporter"
+        pinBrowserTab = "tokenRazor.exporter.pinBrowserTab"
+        exchange = "tokenRazor.exporter.exchange"
+        fileExtsCategoryGroups = "tokenRazor.exporter.fileExtsCategoryGroups"
 
 
 vsCodeSettings = VsCodeSettings()

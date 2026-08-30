@@ -31,7 +31,19 @@ export function activate(extentionContext: vscode.ExtensionContext) {
     const registeredAddFromExplorerCmd = vscode.commands.registerCommand(`${EXTENSION_BASE_CONFIG_NAME}.graphRagExplorer.addFromExplorer`, addFromExplorerCmd);
     extentionContext.subscriptions.push(registeredAddFromExplorerCmd);
 
-    logInfo('Extension activated successfully.');
+    const exporterAddFromExplorerCmd = vscode.commands.registerCommand(`${EXTENSION_BASE_CONFIG_NAME}.exporter.addFromExplorer`, createExporterAddCommand(openToolCmd));
+    const exporterExcludeFromExplorerCmd = vscode.commands.registerCommand(`${EXTENSION_BASE_CONFIG_NAME}.exporter.excludeFromExplorer`, createExporterExcludeCommand());
+    const exporterExportSelectedPathsCmd = vscode.commands.registerCommand(`${EXTENSION_BASE_CONFIG_NAME}.exporter.exportSelectedPaths`, createExporterExportSelectedPathsCommand());
+    const exporterCopyFilesCmd = vscode.commands.registerCommand(`${EXTENSION_BASE_CONFIG_NAME}.exporter.copySelectedFilesToClipboard`, createExporterCopyFilesCommand());
+
+    extentionContext.subscriptions.push(
+        exporterAddFromExplorerCmd,
+        exporterExcludeFromExplorerCmd,
+        exporterExportSelectedPathsCmd,
+        exporterCopyFilesCmd
+    );
+
+    logInfo('Extension activated successfully with dedicated exporter commands.');
 }
 
 function createOpenToolCommand(extentionContext: vscode.ExtensionContext) {
@@ -54,7 +66,6 @@ function createOpenToolCommand(extentionContext: vscode.ExtensionContext) {
 
         webviewPanel.webview.html = getWebviewContent(webviewPanel, extentionContext);
 
-        // Set custom context to TRUE when the panel is created
         vscode.commands.executeCommand('setContext', 'tokenRazor.isToolOpened', true);
 
         if (vsCodeSettingsManager.getSettings().codebaseScanEachTimeAppIsDisplayed) {
@@ -89,6 +100,54 @@ function createAddFromExplorerCommand(openTool: () => void) {
                 payload: selectedPath
             });
         }
+    };
+}
+
+function createExporterAddCommand(openTool: () => void) {
+    return (uri?: vscode.Uri, uris?: vscode.Uri[]) => {
+        let paths: string[] = [];
+        if (uris && uris.length > 0) {
+            paths = uris.map((u) => u.fsPath);
+        } else if (uri) {
+            paths = [uri.fsPath];
+        }
+        if (!currentWebviewPanel) {
+            openTool();
+        } else {
+            currentWebviewPanel.reveal(vscode.ViewColumn.One);
+        }
+        if (currentWebviewPanel && paths.length > 0) {
+            currentWebviewPanel.webview.postMessage({
+                command: 'updatePaths',
+                paths: paths
+            });
+        }
+    };
+}
+
+function createExporterExcludeCommand() {
+    return (uri?: vscode.Uri, uris?: vscode.Uri[]) => {
+        const targetUri = uri || (uris && uris[0]);
+        if (currentWebviewPanel && targetUri) {
+            currentWebviewPanel.webview.postMessage({
+                command: 'excludeExplorerPathSelection',
+                path: targetUri.fsPath
+            });
+        }
+    };
+}
+
+function createExporterExportSelectedPathsCommand() {
+    return (uri?: vscode.Uri, uris?: vscode.Uri[]) => {
+        const selectedUris = uris || (uri ? [uri] : []);
+        logInfo(`[Exporter] Headless export requested for ${selectedUris.length} paths.`);
+    };
+}
+
+function createExporterCopyFilesCommand() {
+    return (uri?: vscode.Uri, uris?: vscode.Uri[]) => {
+        const selectedUris = uris || (uri ? [uri] : []);
+        logInfo(`[Exporter] Copy files to clipboard requested for ${selectedUris.length} paths.`);
     };
 }
 
@@ -274,14 +333,6 @@ function runPythonScan(mode: string, targetFile: string = "") {
         if (activeChildProcess === child) activeChildProcess = null;
         if (code === 0) {
             logInfo('[PythonScan] Python background process completed successfully.');
-            const finalUiPayloadPath = path.join(workspaceRoot, backendScriptsPath, "target", "ui_outputs", "graph-ui-payload.json");
-            if (fs.existsSync(finalUiPayloadPath)) {
-                try {
-                    const rawPayload = JSON.parse(fs.readFileSync(finalUiPayloadPath, "utf-8"));
-                } catch (err) {
-                    logError(`[PythonScan] Failed to parse UI payload JSON structure: ${err}`, err);
-                }
-            }
         } else if (signal) {
             logWarn(`[PythonScan] Process terminated by signal ${signal}.`);
         } else {
@@ -291,7 +342,6 @@ function runPythonScan(mode: string, targetFile: string = "") {
 
     logInfo('runPythonScan Finished !!!');
 }
-
 
 function displayVsCodeExtentsionSettings() {
     logInfo("VsCode Settings : ", vsCodeSettingsManager.getSettings());

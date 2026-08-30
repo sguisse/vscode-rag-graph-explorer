@@ -26,6 +26,24 @@
       {
         "command": "tokenRazor.graphRagExplorer.addFromExplorer",
         "title": "Token Razor - 02 --> ➕ Add selected file to Graph RAG Explorer"
+      },
+      {
+        "command": "tokenRazor.exporter.addFromExplorer",
+        "title": "Token Razor - Codebase Exporter --> ➕ Sources Paths"
+      },
+      {
+        "command": "tokenRazor.exporter.excludeFromExplorer",
+        "title": "Token Razor - Codebase Exporter --> 🚫 Exclude paths"
+      },
+      {
+        "command": "tokenRazor.exporter.exportSelectedPaths",
+        "title": "Token Razor - Codebase Exporter --> 📥 Export selected paths",
+        "icon": "$(export)"
+      },
+      {
+        "command": "tokenRazor.exporter.copySelectedFilesToClipboard",
+        "title": "Token Razor - Codebase Exporter --> 📋 Copy selected files",
+        "icon": "$(copy)"
       }
     ],
     "menus": {
@@ -44,6 +62,23 @@
           "command": "tokenRazor.graphRagExplorer.addFromExplorer",
           "group": "navigation@0",
           "when": "tokenRazor.isToolOpened"
+        },
+        {
+          "command": "tokenRazor.exporter.addFromExplorer",
+          "group": "navigation@1"
+        },
+        {
+          "command": "tokenRazor.exporter.excludeFromExplorer",
+          "group": "navigation@1",
+          "when": "tokenRazor.isToolOpened"
+        },
+        {
+          "command": "tokenRazor.exporter.exportSelectedPaths",
+          "group": "navigation@1"
+        },
+        {
+          "command": "tokenRazor.exporter.copySelectedFilesToClipboard",
+          "group": "navigation@1"
         }
       ]
     },
@@ -280,9 +315,581 @@
             "}"
           ],
           "description": "User preferences for the GraphRag Explorer extension in JSON format as an array of strings (one by line, for better readability)."
+        },
+        "tokenRazor.exporter.scriptPythonPath": {
+            "type": "string",
+            "default": "",
+            "description": "Absolute path to files-exporter.py"
+        },
+        "tokenRazor.exporter.historyYamlPath": {
+            "type": "string",
+            "default": "~/files-exporter/.files-exporter-history.yaml",
+            "description": "Absolute path to the history log file."
+        },
+        "tokenRazor.exporter.maxFileSizeKb": {
+            "type": "number",
+            "default": 50,
+            "description": "Skip individual files larger than this (in KB)."
+        },
+        "tokenRazor.exporter.includePathsRegex": {
+            "type": "string",
+            "default": ".*",
+            "description": "Regex to include paths (default is all paths '.*')."
+        },
+        "tokenRazor.exporter.includeExtensionsRegex": {
+            "type": "string",
+            "default": ".*\\.(java|ts|tsx|js|html|css|json|xml|yaml|yml|py|md|properties)$",
+            "description": "Regex to include files with specific extensions (default is '.*\\.(java|ts|tsx|js|html|css|json|xml|yaml|yml|py|md|properties)$')."
+        },
+        "tokenRazor.exporter.excludePathsRegex": {
+            "type": "string",
+            "default": ".*/node_modules/.*|.*/target/.*|.*/\\.git/.*|.*/dist/.*|.*/.idea/.*|.*/.vscode/.*|.*/.history/.*|.*/exported-files/.*,/\\.[^/]+",
+            "description": "Regex to exclude paths containing specific directories (e.g., node_modules, target, .git, dist, /\\.[^/]+)."
+        },
+        "tokenRazor.exporter.excludeExtensionsRegex": {
+            "type": "string",
+            "default": "^[^.]+$|.*\\.(?:log|tmp|lock|zip|tar|png|jpg|gif|pyc|vsix)$",
+            "description": "Regex to exclude files without extensions or with specific extensions (e.g., log, tmp, lock, zip, tar, png, jpg, gif, pyc, vsix)."
+        },
+        "tokenRazor.exporter.defaultFormat": {
+            "type": "string",
+            "enum": [
+                "yaml",
+                "json",
+                "xml",
+                "txt",
+                "toml"
+            ],
+            "default": "yaml",
+            "description": "Default output format."
+        },
+        "tokenRazor.exporter.maxChunkSizeKb": {
+            "type": "number",
+            "default": 500,
+            "description": "Split output files into individual chunks <= than this (in KB)."
+        },
+        "tokenRazor.exporter.splitChunkByFileExtension": {
+            "type": "boolean",
+            "default": false,
+            "description": "Default value for grouping generated chunks by file extension."
+        },
+        "tokenRazor.exporter.copyGeneratedFilesToClipboard": {
+            "type": "boolean",
+            "default": true,
+            "description": "Default value for copying generated export files to the OS clipboard after export."
+        },
+        "tokenRazor.exporter.generateTreeView": {
+            "type": "boolean",
+            "default": true,
+            "description": "Default value for generating the tree view manifest."
+        },
+        "tokenRazor.exporter.generateLogConsole": {
+            "type": "boolean",
+            "default": true,
+            "description": "Default value for streaming exporter logs to the webview terminal."
+        },
+        "tokenRazor.exporter.generateLogFile": {
+            "type": "boolean",
+            "default": false,
+            "description": "Default value for writing exporter logs to a log file."
+        },
+        "tokenRazor.exporter.tooltipDelay": {
+            "type": "number",
+            "default": 2000,
+            "description": "Delay in milliseconds before showing the custom tooltips on hover."
+        },
+        "tokenRazor.exporter.copyFilesToClipboardTimeout": {
+            "type": "number",
+            "default": 10000,
+            "description": "Maximum non-blocking timeout limit in milliseconds to poll-verify that all exported files are fully cached into the OS clipboard."
+        },
+        "tokenRazor.exporter.pinFilesExporter": {
+            "type": "boolean",
+            "default": true,
+            "description": "Automatically pin the Files Exporter UI tab when opened to prevent it from being overwritten or closed as a preview tab."
+        },
+        "tokenRazor.exporter.pinBrowserTab": {
+            "type": "boolean",
+            "default": true,
+            "description": "Automatically pin the browser tab when opened to prevent it from being overwritten or closed as a preview tab."
+        },
+        "tokenRazor.exporter.exchange": {
+            "type": "array",
+            "description": "A list of custom exchange tools and links.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "icon": {
+                        "type": "string",
+                        "description": "Path to the icon SVG or PNG."
+                    },
+                    "url": {
+                        "type": "string",
+                        "format": "uri",
+                        "description": "The URL to open."
+                    },
+                    "tooltip": {
+                        "type": "string",
+                        "description": "The hover tooltip text."
+                    },
+                    "height": {
+                        "type": "string",
+                        "description": "Height of the icon (e.g., '45px')."
+                    },
+                    "width": {
+                        "type": "string",
+                        "description": "Width of the icon (e.g., '45px')."
+                    },
+                    "openInVSCode": {
+                        "type": "boolean",
+                        "description": "Whether to open the link inside VS Code or an external browser."
+                    }
+                },
+                "required": [
+                    "icon",
+                    "url",
+                    "tooltip"
+                ]
+            },
+            "default": [
+                {
+                    "icon": "assets/brands/gemini.svg",
+                    "url": "https://gemini.google.com/",
+                    "tooltip": "Open Gemini",
+                    "height": "45px",
+                    "width": "45px",
+                    "openInVSCode": true
+                },
+                {
+                    "icon": "assets/brands/notebookLM.svg",
+                    "url": "https://notebooklm.google.com/",
+                    "tooltip": "Open NotebookLM",
+                    "height": "45px",
+                    "width": "45px",
+                    "openInVSCode": false
+                }
+            ]
+        },
+        "tokenRazor.exporter.fileExtsCategoryGroups": {
+            "type": "array",
+            "description": "Group file extensions by categories map layout containing label groupings and explicit matching extension scopes and a flag named includeExtsMenuEnabled and a flag excludeExtsMenuEnabled to manage predefines extentions present in Predefines menus",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "label": {
+                        "type": "string"
+                    },
+                    "includeExtsMenuEnabled": {
+                        "type": "boolean"
+                    },
+                    "excludeExtsMenuEnabled": {
+                        "type": "boolean"
+                    },
+                    "extensions": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "label",
+                    "extensions"
+                ]
+            },
+            "default": [
+                {
+                    "label": "No Extension",
+                    "excludeExtsMenuEnabled": true,
+                    "extensions": [
+                        "^[^.]+$|.*\\."
+                    ]
+                },
+                {
+                    "label": "CONFIG -  YAML",
+                    "includeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.yaml$",
+                        ".*\\.yml$"
+                    ]
+                },
+                {
+                    "label": "CONFIG -  XML",
+                    "includeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.xml$",
+                        ".*\\.xsd$"
+                    ]
+                },
+                {
+                    "label": "CONFIG -  JSON",
+                    "includeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.json$",
+                        ".*\\.jsonc$",
+                        ".*\\.json5$"
+                    ]
+                },
+                {
+                    "label": "CONFIG -  TOML",
+                    "includeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.toml$"
+                    ]
+                },
+                {
+                    "label": "CONFIG -  Props & Env",
+                    "includeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.properties$",
+                        ".*\\.prop$",
+                        ".*\\.env$"
+                    ]
+                },
+                {
+                    "label": "CONFIG -  Generic & INI",
+                    "includeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.conf$",
+                        ".*\\.cfg$",
+                        ".*\\.config$",
+                        ".*\\.ini$",
+                        ".*\\.prefs$"
+                    ]
+                },
+                {
+                    "label": "DOC -    Markdown & Tech",
+                    "includeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.md$",
+                        ".*\\.txt$",
+                        ".*\\.rst$",
+                        ".*\\.adoc$"
+                    ]
+                },
+                {
+                    "label": "DOC -    Office & PDF",
+                    "excludeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.pdf$",
+                        ".*\\.docx$",
+                        ".*\\.doc$",
+                        ".*\\.odt$"
+                    ]
+                },
+                {
+                    "label": "DOC -    Spreadsheets & Data Sheets",
+                    "excludeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.xlsx$",
+                        ".*\\.xls$",
+                        ".*\\.csv$"
+                    ]
+                },
+                {
+                    "label": "FE - Web Markup",
+                    "includeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.html$",
+                        ".*\\.htm$"
+                    ]
+                },
+                {
+                    "label": "FE - CSS & Preprocessors",
+                    "includeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.css$",
+                        ".*\\.scss$",
+                        ".*\\.sass$",
+                        ".*\\.less$"
+                    ]
+                },
+                {
+                    "label": "FE - JavaScript & TypeScript",
+                    "includeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.js$",
+                        ".*\\.ts$"
+                    ]
+                },
+                {
+                    "label": "FE - React Components",
+                    "includeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.jsx$",
+                        ".*\\.tsx$"
+                    ]
+                },
+                {
+                    "label": "FE - Modern UI Fwks",
+                    "includeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.vue$",
+                        ".*\\.svelte$",
+                        ".*\\.astro$"
+                    ]
+                },
+                {
+                    "label": "BE - Python",
+                    "includeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.py$",
+                        ".*\\.pyw$",
+                        ".*\\.pyx$"
+                    ]
+                },
+                {
+                    "label": "BE - Java & JVM",
+                    "includeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.java$",
+                        ".*\\.kt$",
+                        ".*\\.kts$",
+                        ".*\\.scala$",
+                        ".*\\.groovy$"
+                    ]
+                },
+                {
+                    "label": "BE - Node.js (TS/JS)",
+                    "includeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.ts$",
+                        ".*\\.js$",
+                        ".*\\.mjs$",
+                        ".*\\.cjs$"
+                    ]
+                },
+                {
+                    "label": "BE - .NET (C# / F#)",
+                    "includeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.cs$",
+                        ".*\\.fs$"
+                    ]
+                },
+                {
+                    "label": "BE - Go & Rust",
+                    "includeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.go$",
+                        ".*\\.rs$"
+                    ]
+                },
+                {
+                    "label": "BE - C & C++",
+                    "includeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.c$",
+                        ".*\\.cpp$",
+                        ".*\\.h$",
+                        ".*\\.hpp$"
+                    ]
+                },
+                {
+                    "label": "BE - PHP & Ruby",
+                    "includeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.php$",
+                        ".*\\.rb$"
+                    ]
+                },
+                {
+                    "label": "ARCH -  Standard",
+                    "excludeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.zip$",
+                        ".*\\.rar$",
+                        ".*\\.7z$",
+                        ".*\\.tar$",
+                        ".*\\.gz$",
+                        ".*\\.bz2$",
+                        ".*\\.xz$",
+                        ".*\\.tgz$",
+                        ".*\\.zipx$"
+                    ]
+                },
+                {
+                    "label": "ARCH -  Img & Virtual",
+                    "excludeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.iso$",
+                        ".*\\.dmg$",
+                        ".*\\.cab$",
+                        ".*\\.vhd$",
+                        ".*\\.vmdk$"
+                    ]
+                },
+                {
+                    "label": "ARCH -  Java & Deployment",
+                    "excludeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.jar$",
+                        ".*\\.war$",
+                        ".*\\.ear$"
+                    ]
+                },
+                {
+                    "label": "IMG -Web & Standard",
+                    "excludeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.jpg$",
+                        ".*\\.jpeg$",
+                        ".*\\.png$",
+                        ".*\\.webp$",
+                        ".*\\.gif$",
+                        ".*\\.bmp$"
+                    ]
+                },
+                {
+                    "label": "IMG -Vector Graphics",
+                    "excludeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.svg$",
+                        ".*\\.ai$",
+                        ".*\\.eps$"
+                    ]
+                },
+                {
+                    "label": "IMG -Design & Editing",
+                    "excludeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.psd$",
+                        ".*\\.xcf$",
+                        ".*\\.tiff$",
+                        ".*\\.tif$"
+                    ]
+                },
+                {
+                    "label": "IMG -Camera RAW & HE",
+                    "excludeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.heic$",
+                        ".*\\.heif$",
+                        ".*\\.raw$",
+                        ".*\\.cr2$",
+                        ".*\\.nef$",
+                        ".*\\.arw$"
+                    ]
+                },
+                {
+                    "label": "LOG -  Standard",
+                    "excludeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.log$",
+                        ".*\\.out$",
+                        ".*\\.err$",
+                        ".*\\.syslog$"
+                    ]
+                },
+                {
+                    "label": "LOG -  Structured & Event",
+                    "excludeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.jsonl$",
+                        ".*\\.ndjson$",
+                        ".*\\.event$",
+                        ".*\\.evtx$"
+                    ]
+                },
+                {
+                    "label": "LOG -  Diagnostic & Trace",
+                    "excludeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.trace$",
+                        ".*\\.audit$",
+                        ".*\\.dump$",
+                        ".*\\.crash$"
+                    ]
+                },
+                {
+                    "label": "LOG -  Level Specifics",
+                    "excludeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.info$",
+                        ".*\\.warn$",
+                        ".*\\.error$"
+                    ]
+                },
+                {
+                    "label": "TMP - Standard",
+                    "excludeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.tmp$",
+                        ".*\\.temp$"
+                    ]
+                },
+                {
+                    "label": "TMP - Backup & Cache",
+                    "excludeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.bak$",
+                        ".*\\.old$",
+                        ".*\\.cache$",
+                        ".*\\.swp$",
+                        ".*\\.~$"
+                    ]
+                },
+                {
+                    "label": "TMP - Lock & Process",
+                    "excludeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.lock$",
+                        ".*\\.pid$"
+                    ]
+                },
+                {
+                    "label": "TMP - Placeholder & Keep",
+                    "excludeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.keep$",
+                        ".*\\.gitkeep$"
+                    ]
+                },
+                {
+                    "label": "TEMPLATE - Logicless & Handlebars",
+                    "includeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.mustache$",
+                        ".*\\.hbs$",
+                        ".*\\.handlebars$"
+                    ]
+                },
+                {
+                    "label": "TEMPLATE - Generic Engine",
+                    "includeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.template$",
+                        ".*\\.tpl$",
+                        ".*\\.tmpl$"
+                    ]
+                },
+                {
+                    "label": "TEMPLATE - JavaScript & Web",
+                    "includeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.ejs$",
+                        ".*\\.pug$",
+                        ".*\\.jade$",
+                        ".*\\.twig$",
+                        ".*\\.liquid$"
+                    ]
+                },
+                {
+                    "label": "TEMPLATE - Python & Polyglot ",
+                    "includeExtsMenuEnabled": true,
+                    "extensions": [
+                        ".*\\.jinja$",
+                        ".*\\.jinja2$",
+                        ".*\\.j2$",
+                        ".*\\.ftl$",
+                        ".*\\.erb$"
+                    ]
+                }
+            ]
         }
-      }
     }
+}
+
   },
   "scripts": {
     "postinstall": "npm install --prefix webview",
