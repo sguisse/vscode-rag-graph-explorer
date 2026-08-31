@@ -14,12 +14,12 @@ export function CodebaseContextFeature() {
   useEffect(() => {
     setLayoutContainers({
       header: { visible: true, isResizable: false, isHiddable: false },
-      sidebarLeft: {
+      /*sidebarLeft: {
         visible: true,
         container: <SdlcSidebarMenu />,
         isResizable: true,
         isHiddable: true,
-      },
+      },*/
       workspace: {
         top: {
           visible: true,

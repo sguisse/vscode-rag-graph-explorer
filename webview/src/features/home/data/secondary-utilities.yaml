@@ -1,0 +1,19 @@
+- id: feat-terminal
+  title: Token Metrics
+  icon: LineChart
+  desc: Track your estimated API cost savings and context ratio over time.
+
+- id: feat-history
+  title: Prompt History
+  icon: History
+  desc: Retrieve your previous context snapshots and generated recipes.
+
+- id: feat-configuration
+  title: Ignore Rules
+  icon: ShieldAlert
+  desc: Configure global .ctxignore files to never send sensitive data to LLMs.
+
+- id: feature-help
+  title: Documentation
+  icon: HelpCircle
+  desc: Learn how to master Context Engineering and zero-shot prompting.

@@ -1,0 +1,55 @@
+- id: feature-graph-explorer
+  title: Semantic Context Graph
+  badge: "Step 1 : Map"
+  badgeColor: bg-blue-500/10 text-blue-500 border-blue-500/20
+  icon: FolderTree
+  iconBg: bg-blue-500/10 text-blue-500
+  description: >-
+    Visualize your codebase dependencies. Select a target file and let the engine automatically fetch upstream callers and downstream services.
+  details:
+    - Neo4j Relationship Mapping
+    - Upstream/Downstream Auto-selection
+    - Cross-language Support
+  buttonText: Open Graph Explorer
+
+- id: feature-skeleton
+  title: Smart Skeletonization
+  badge: "Step 2 : Optimize"
+  badgeColor: bg-emerald-500/10 text-emerald-500 border-emerald-500/20
+  icon: Scissors
+  iconBg: bg-emerald-500/10 text-emerald-500
+  description: >-
+    Cut the noise. Strip internal implementations from downstream dependencies and keep only interfaces, types, and method signatures.
+  details:
+    - Tree-sitter AST Parsing
+    - -80% Token usage on dependencies
+    - Prevents LLM Context Dilution
+  buttonText: Configure Minifier
+
+- id: feature-impact
+  title: Blast Radius Analysis
+  badge: Anti-Hallucination
+  badgeColor: bg-indigo-500/10 text-indigo-500 border-indigo-500/20
+  icon: Target
+  iconBg: bg-indigo-500/10 text-indigo-500
+  description: >-
+    Ensure the LLM knows what will break. Automatically inject context about architectural rules and tightly coupled components.
+  details:
+    - Cyclic Dependency Alerts
+    - Architectural Boundary checks
+    - First-Time-Right Code Gen
+  buttonText: View Impact Engine
+
+- id: feat-prompt
+  title: XML Prompt Builder
+  badge: "Step 3 : Export"
+  badgeColor: bg-amber-500/10 text-amber-500 border-amber-500/20
+  icon: FileJson
+  iconBg: bg-amber-500/10 text-amber-500
+  description: >-
+    Compile your optimized context into a structured XML format, proven to yield the highest reasoning accuracy from Claude 3.5 & GPT-4o.
+  details:
+    - Live Token Cost Estimator
+    - Structured XML/JSON formats
+    - One-click copy to clipboard
+  buttonText: Build RAG Context

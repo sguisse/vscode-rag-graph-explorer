@@ -1,7 +1,19 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import cytoscape from 'cytoscape';
+import fcose from 'cytoscape-fcose';
+import dagre from 'cytoscape-dagre';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
+
+// Register Cytoscape plugins
+if (typeof cytoscape === 'function') {
+  try {
+    cytoscape.use(fcose);
+    cytoscape.use(dagre);
+  } catch (e) {
+    // Prevent duplicate registration errors during Hot Module Replacement (HMR)
+  }
+}
 
 export interface GraphState {
   zoom: number;

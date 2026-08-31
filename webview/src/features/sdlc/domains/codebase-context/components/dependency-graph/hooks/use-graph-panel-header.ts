@@ -5,7 +5,7 @@ import { useCodebaseDomainState } from '@/features/sdlc/domains/codebase-context
 import { GraphRendering } from '@/shared/services/graph-rag-explorer/types/type-graph-rendering';
 
 export function useGraphPanelHeader(propCyRef?: React.RefObject<any>) {
-  const currentLayout = useCodebaseDomainState((s) => s.currentLayout);
+  const currentLayout = useCodebaseDomainState((s) => s.currentLayout) || 'fcose';
   const setCurrentLayout = useCodebaseDomainState((s) => s.setCurrentLayout);
 
   const currentRendering = useCodebaseDomainState((s) => s.graphRendering) || 'uml';

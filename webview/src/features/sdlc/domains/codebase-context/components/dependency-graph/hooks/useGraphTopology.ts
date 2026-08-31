@@ -312,9 +312,32 @@ export function useGraphTopology(cyRef: React.RefObject<cytoscape.Core | null>) 
         }
       });
 
-      if (currentLayout === 'hierarchical' || currentLayout === 'breadthfirst' || currentLayout === 'dagre') {
+      if (currentLayout === 'hierarchical') {
         applyCustomHierarchicalLayout(cy, effectiveFiles, codebase, attributesVisible, methodsVisible, graphRendering);
-      } else if (currentLayout !== 'preset') {
+      } else if (currentLayout === 'fcose') {
+        cy.layout({
+          name: 'fcose',
+          animate: false,
+          fit: true,
+          padding: 30,
+          nodeRepulsion: 6500,
+          idealEdgeLength: 100,
+          edgeElasticity: 0.45,
+          nestingFactor: 0.1,
+          gravity: 0.25,
+          tile: true,
+        } as cytoscape.LayoutOptions).run();
+      } else if (currentLayout === 'dagre') {
+        cy.layout({
+          name: 'dagre',
+          rankDir: 'TB',
+          nodeSep: 50,
+          rankSep: 100,
+          padding: 30,
+          fit: true,
+          animate: false,
+        } as cytoscape.LayoutOptions).run();
+      } else {
         cy.layout({
           name: currentLayout,
           animate: false,

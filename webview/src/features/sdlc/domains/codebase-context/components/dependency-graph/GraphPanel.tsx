@@ -36,7 +36,7 @@ export interface GraphPanelProps {
 export function GraphPanel(props: GraphPanelProps = {}) {
   const graphRendering = useCodebaseDomainState((s) => s.graphRendering) || 'rounded';
   const codebase = useCodebaseDomainState((s) => s.codebase) || demoCodebase;
-  const currentLayout = useCodebaseDomainState((s) => s.currentLayout);
+  const currentLayout = useCodebaseDomainState((s) => s.currentLayout) || 'fcose';
   const setCurrentPath = useCodebaseDomainState((s) => s.setCurrentPath);
   const callersDepth = useCodebaseDomainState((s) => s.callersDepth) ?? 2;
   const calleesDepth = useCodebaseDomainState((s) => s.calleesDepth) ?? 2;
@@ -112,7 +112,6 @@ export function GraphPanel(props: GraphPanelProps = {}) {
   const searchFilteredFiles = props.searchFilteredFiles ?? (codebase.files as CodebaseFile[]);
   const focusedNodeId = props.focusedNodeId ?? storeFocusedNodeId;
 
-  // Node visibility in Graph is strictly driven by Codebase Explorer selection list (visibleFiles)
   const checkedSearchFilteredFiles = useMemo(() => {
     return searchFilteredFiles.filter((file) => visibleFiles[file.id] !== false);
   }, [searchFilteredFiles, visibleFiles]);
@@ -257,7 +256,6 @@ export function GraphPanel(props: GraphPanelProps = {}) {
           const bounds = graphState.nodePositions[file.id];
           if (!bounds) return null;
 
-          // Checkbox state in Adjust Impact Plan controls impact plan inclusion and highlighting
           const isCheckedInPlan = selectedContextFiles[file.id] !== false;
 
           const impactedMembers: string[] = [];
@@ -269,7 +267,6 @@ export function GraphPanel(props: GraphPanelProps = {}) {
             });
           }
 
-          // Unchecking in Adjust Impact Plan reverts node to default type color without hiding it from graph
           const isTargetPath = isCheckedInPlan && pathLines.some(
             (p) => p === file.id || p === file.path || (file.path && file.path.endsWith(p))
           );

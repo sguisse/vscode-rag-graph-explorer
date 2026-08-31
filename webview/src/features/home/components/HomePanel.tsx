@@ -25,10 +25,27 @@ import {
   ShieldAlert,
   Cpu,
   Braces,
-  Database
+  Database,
 } from 'lucide-react';
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { useLayoutStore } from '@/store/useLayoutStore';
+import { PrimaryFeatureItem, SecondaryUtilityItem } from '../model';
+import primaryFeaturesData from '../data/primary-features.yaml';
+import secondaryUtilitiesData from '../data/secondary-utilities.yaml';
+
+const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+  FolderTree,
+  Scissors,
+  Target,
+  FileJson,
+  LineChart,
+  History,
+  ShieldAlert,
+  HelpCircle,
+};
+
+const primaryFeatures = primaryFeaturesData as PrimaryFeatureItem[];
+const secondaryUtilities = secondaryUtilitiesData as SecondaryUtilityItem[];
 
 export function HomePanel() {
   const { setActiveFeature, isDarkMode, toggleThemeMode } = useAppContextStore();
@@ -56,86 +73,8 @@ export function HomePanel() {
     };
   }, [isDarkMode]);
 
-  const primaryFeatures = [
-    {
-      id: 'feature-graph-explorer',
-      title: 'Semantic Context Graph',
-      badge: 'Step 1 : Map',
-      badgeColor: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-      icon: FolderTree,
-      iconBg: 'bg-blue-500/10 text-blue-500',
-      description:
-        'Visualize your codebase dependencies. Select a target file and let the engine automatically fetch upstream callers and downstream services.',
-      details: ['Neo4j Relationship Mapping', 'Upstream/Downstream Auto-selection', 'Cross-language Support'],
-      buttonText: 'Open Graph Explorer',
-    },
-    {
-      id: 'feature-skeleton',
-      title: 'Smart Skeletonization',
-      badge: 'Step 2 : Optimize',
-      badgeColor: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
-      icon: Scissors,
-      iconBg: 'bg-emerald-500/10 text-emerald-500',
-      description:
-        'Cut the noise. Strip internal implementations from downstream dependencies and keep only interfaces, types, and method signatures.',
-      details: ['Tree-sitter AST Parsing', '-80% Token usage on dependencies', 'Prevents LLM Context Dilution'],
-      buttonText: 'Configure Minifier',
-    },
-    {
-      id: 'feature-impact',
-      title: 'Blast Radius Analysis',
-      badge: 'Anti-Hallucination',
-      badgeColor: 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20',
-      icon: Target,
-      iconBg: 'bg-indigo-500/10 text-indigo-500',
-      description:
-        'Ensure the LLM knows what will break. Automatically inject context about architectural rules and tightly coupled components.',
-      details: ['Cyclic Dependency Alerts', 'Architectural Boundary checks', 'First-Time-Right Code Gen'],
-      buttonText: 'View Impact Engine',
-    },
-    {
-      id: 'feat-prompt',
-      title: 'XML Prompt Builder',
-      badge: 'Step 3 : Export',
-      badgeColor: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
-      icon: FileJson,
-      iconBg: 'bg-amber-500/10 text-amber-500',
-      description:
-        'Compile your optimized context into a structured XML format, proven to yield the highest reasoning accuracy from Claude 3.5 & GPT-4o.',
-      details: ['Live Token Cost Estimator', 'Structured XML/JSON formats', 'One-click copy to clipboard'],
-      buttonText: 'Build RAG Context',
-    },
-  ];
-
-  const secondaryUtilities = [
-    {
-      id: 'feat-terminal',
-      title: 'Token Metrics',
-      icon: LineChart,
-      desc: 'Track your estimated API cost savings and context ratio over time.',
-    },
-    {
-      id: 'feat-history',
-      title: 'Prompt History',
-      icon: History,
-      desc: 'Retrieve your previous context snapshots and generated recipes.',
-    },
-    {
-      id: 'feat-configuration',
-      title: 'Ignore Rules',
-      icon: ShieldAlert,
-      desc: 'Configure global .ctxignore files to never send sensitive data to LLMs.',
-    },
-    {
-      id: 'feature-help',
-      title: 'Documentation',
-      icon: HelpCircle,
-      desc: 'Learn how to master Context Engineering and zero-shot prompting.',
-    },
-  ];
-
   return (
-    <div className="flex-1 space-y-8 p-3 md:p-3 min-h-0 overflow-y-auto">
+    <div className="flex-1 space-y-8 p-3 md:p-3 min-h-0 h-full overflow-y-auto">
       {/* Hero Section Banner with App Logo */}
       <div className="relative bg-gradient-to-br from-primary/15 via-primary/5 to-background shadow-sm p-8 border border-primary/20 rounded-2xl overflow-hidden">
         <div className="z-10 relative space-y-5 max-w-2xl">
@@ -211,7 +150,7 @@ export function HomePanel() {
 
         <div className="gap-4 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4">
           {primaryFeatures.map((feat) => {
-            const Icon = feat.icon;
+            const Icon = ICON_MAP[feat.icon] || FolderTree;
             return (
               <Card
                 key={feat.id}
@@ -273,7 +212,7 @@ export function HomePanel() {
 
         <div className="gap-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
           {secondaryUtilities.map((util) => {
-            const Icon = util.icon;
+            const Icon = ICON_MAP[util.icon] || HelpCircle;
             return (
               <div
                 key={util.id}
