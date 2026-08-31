@@ -1,7 +1,7 @@
 import React from 'react';
-import { ExportReportData } from '../../types/exporter.types';
 import { PricingService } from '../../utils/pricing-calculator';
 import { Card } from '@/components/ui/card';
+import { ExportReportData } from '@/shared/services/files-exporter/model/files-exporter-model';
 
 interface ReportTabProps {
   reportData: ExportReportData | null;
@@ -16,7 +16,7 @@ export const ReportTab: React.FC<ReportTabProps> = ({
 }) => {
   if (!reportData) {
     return (
-      <div className="p-8 text-center text-muted-foreground font-mono text-xs italic">
+      <div className="p-8 font-mono text-muted-foreground text-xs text-center italic">
         No export report available. Execute an export run to review metrics.
       </div>
     );
@@ -27,16 +27,16 @@ export const ReportTab: React.FC<ReportTabProps> = ({
   const metrics = reportData.metrics_per_extension || {};
 
   return (
-    <div className="p-4 space-y-4 font-mono text-xs bg-background">
-      <Card className="p-3 border border-border bg-card space-y-2">
-        <div className="font-bold text-foreground text-xs flex justify-between items-center">
+    <div className="space-y-4 bg-background p-4 font-mono text-xs">
+      <Card className="space-y-2 bg-card p-3 border border-border">
+        <div className="flex justify-between items-center font-bold text-foreground text-xs">
           <span>💰 Token Cost Estimation ({pricing.estimatedInputTokens.toLocaleString()} Tokens)</span>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse border border-border text-[11px]">
+          <table className="border border-border w-full text-[11px] text-left border-collapse">
             <thead>
-              <tr className="bg-muted text-primary font-bold">
+              <tr className="bg-muted font-bold text-primary">
                 <th className="p-1.5 border border-border">LLM Vendor</th>
                 <th className="p-1.5 border border-border">Model</th>
                 <th className="p-1.5 border border-border">Estimated Cost</th>
@@ -47,7 +47,7 @@ export const ReportTab: React.FC<ReportTabProps> = ({
                 <tr key={item.model} className="hover:bg-muted/40">
                   <td className="p-1.5 border border-border">{item.label}</td>
                   <td className="p-1.5 border border-border font-semibold">{item.model}</td>
-                  <td className="p-1.5 border border-border text-emerald-500 font-bold">
+                  <td className="p-1.5 border border-border font-bold text-emerald-500">
                     ${item.price.toFixed(4)}
                   </td>
                 </tr>
@@ -57,15 +57,15 @@ export const ReportTab: React.FC<ReportTabProps> = ({
         </div>
       </Card>
 
-      <Card className="p-3 border border-border bg-card space-y-2">
+      <Card className="space-y-2 bg-card p-3 border border-border">
         <div className="font-bold text-foreground text-xs">
           📊 Export Metrics per File Extension
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse border border-border text-[11px]">
+          <table className="border border-border w-full text-[11px] text-left border-collapse">
             <thead>
-              <tr className="bg-muted text-primary font-bold">
+              <tr className="bg-muted font-bold text-primary">
                 <th className="p-1.5 border border-border">Extension</th>
                 <th className="p-1.5 border border-border">Exported</th>
                 <th className="p-1.5 border border-border">Size Rejected</th>
@@ -80,7 +80,7 @@ export const ReportTab: React.FC<ReportTabProps> = ({
                       onClick={(e) =>
                         onAppendExtension(ext, e.metaKey || e.ctrlKey ? 'exc' : 'inc')
                       }
-                      className="text-primary underline cursor-pointer hover:opacity-80"
+                      className="hover:opacity-80 text-primary underline cursor-pointer"
                       title="Click to Include, Cmd/Ctrl+Click to Exclude"
                     >
                       {ext === 'no_ext' ? 'No Extension' : ext}

@@ -5,9 +5,9 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ArrowDownAZ, Trash2, MoreVertical } from 'lucide-react';
 import { CollapsibleCard } from '@/components/ui/collapsible-card';
-import { ExportConfig } from '../types/exporter.types';
 import { FILE_EXT_CATEGORY_GROUPS } from '../constants/exporter-constants';
 import { testFilterPatterns } from '../utils/filter-simulator';
+import { ExportConfig } from '@/shared/services/files-exporter/model/files-exporter-model';
 
 interface FiltersSectionProps {
   config: ExportConfig;

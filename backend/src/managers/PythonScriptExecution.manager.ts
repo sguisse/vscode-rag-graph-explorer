@@ -275,6 +275,13 @@ export class PythonScriptExecutionManager {
     // ─── Query Methods for Process Status ─────────────────────────────────────
 
     /**
+     * Gets the active ChildProcess instance by PID if it is currently running.
+     */
+    public getProcessInstance(pid: number): childProcess.ChildProcess | undefined {
+        return this.activeProcesses.get(pid);
+    }
+
+    /**
      * Gets the status of any process (active or finished) by PID.
      */
     public getProcessStatus(pid: number): PythonScriptStatus | undefined {

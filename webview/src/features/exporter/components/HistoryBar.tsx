@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Lock, Unlock, RotateCcw, Edit2, Copy, Plus, FileText, FolderOpen, Trash2 } from 'lucide-react';
-import { HistoryEntry } from '../types/exporter.types';
+import { HistoryEntry } from '@/shared/services/files-exporter/model/files-exporter-model';
 
 interface HistoryBarProps {
   historyList: HistoryEntry[];

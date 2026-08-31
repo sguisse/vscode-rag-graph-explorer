@@ -1,3 +1,4 @@
+import { imageApiService } from "@/services/api/image-api.service.gen";
 import { vsCodeApiService } from "@/services/api/vs-code-api.service.gen";
 import { logError } from '@/services/view/log-view.service.wrapper';
 
@@ -14,7 +15,7 @@ export async function resolveIconUrlAsync(iconPath?: string): Promise<string> {
   }
 
   try {
-    const base64Data = await vsCodeApiService.readImageAsBase64(iconPath);
+    const base64Data = await imageApiService.readImageAsBase64(iconPath);
     if (base64Data) {
       return base64Data;
     }

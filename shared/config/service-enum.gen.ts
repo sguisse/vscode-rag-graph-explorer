@@ -3,8 +3,14 @@
 
 export enum ServiceEnum {
     CODEBASE_EXPORTER = 'CodebaseExporterService',
+    BLAST_RADIUS_ERROR_FILES_IDENTIFICATOR = 'BlastRadiusErrorFilesIdentificatorService',
+    FILE_SYSTEM = 'FileSystemService',
+    FILES_EXPORTER_HISTORY = 'FilesExporterHistoryService',
+    FILES_EXPORTER = 'FilesExporterService',
+    GIT = 'GitService',
     GRAPH_RAG_EXPLORER = 'GraphRagExplorerService',
     GRAPH_RAG_INSTALLER = 'GraphRagInstallerService',
+    IMAGE = 'ImageService',
     LLM_CHAT = 'LlmChatService',
     NEO4J = 'Neo4jService',
     SDLC_SESSION = 'SdlcSessionService',

@@ -12,6 +12,14 @@ class VsCodeApiService extends AbstractApiService implements IVsCodeServicePort 
         super();
     }
 
+    public async getRepoName(): Promise<string> {
+        return await this.rpc.call(RpcMethodEnum.VSCODE_GET_REPO_NAME);
+    }
+
+    public async getWorkspaceRootPath(): Promise<string> {
+        return await this.rpc.call(RpcMethodEnum.VSCODE_GET_WORKSPACE_ROOT_PATH);
+    }
+
     public async logMessage(level: LogLevel, message: string, details?: any): Promise<void> {
         return await this.rpc.call(RpcMethodEnum.VSCODE_LOG_MESSAGE, level, message, details);
     }
@@ -28,10 +36,6 @@ class VsCodeApiService extends AbstractApiService implements IVsCodeServicePort 
         return await this.rpc.call(RpcMethodEnum.VSCODE_OPEN_FILE, targetPath);
     }
 
-    public async readFile(filePath: string): Promise<string | undefined> {
-        return await this.rpc.call(RpcMethodEnum.VSCODE_READ_FILE, filePath);
-    }
-
     public async revealInExplorer(targetPath: string): Promise<void> {
         return await this.rpc.call(RpcMethodEnum.VSCODE_REVEAL_IN_EXPLORER, targetPath);
     }
@@ -46,10 +50,6 @@ class VsCodeApiService extends AbstractApiService implements IVsCodeServicePort 
 
     public async readUserPreferences(settingsKey: string): Promise<Record<string, any>> {
         return await this.rpc.call(RpcMethodEnum.VSCODE_READ_USER_PREFERENCES, settingsKey);
-    }
-
-    public async readImageAsBase64(filePathOrUrl: string): Promise<string> {
-        return await this.rpc.call(RpcMethodEnum.VSCODE_READ_IMAGE_AS_BASE64, filePathOrUrl);
     }
 }
 

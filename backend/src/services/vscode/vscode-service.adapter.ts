@@ -4,12 +4,13 @@ import { getAppNormalizedNameFromPackageJson, getCurrentExtensionContext, getWor
 import { LogLevel } from '../../../../shared/services/vscode/domain/model/types';
 import { logMessageFromRemote as logMessageDelegate} from './delegate/logger.delegate';
 import { getExtensionSettings as getExtensionSettingsDelegate} from './delegate/get-extension-settings.delegate';
-import { readImageAsBase64 as readImageAsBase64Delegate } from './delegate/image-reader.delegate';
 import { VsCodeSettings } from '../../../../shared/services/vscode/domain/model/VsCodeSettings.gen';
 import { AbstractServiceAdapter } from '../../core/AbstractServiceAdapter';
 import { logChannel, logError, logInfo, logWarn } from '../../utils/utils-log';
 import path from 'path';
 import fs from 'fs';
+import * as os from 'os';
+import { execSync } from 'child_process';
 import { VsCodeSettingsManager, vsCodeSettingsManager } from '../../managers/VsCodeSettings.manager';
 
 export class VsCodeServiceAdapter extends AbstractServiceAdapter implements IVsCodeServicePort, vscode.Disposable {
@@ -30,15 +31,6 @@ export class VsCodeServiceAdapter extends AbstractServiceAdapter implements IVsC
             await vscode.env.openExternal(vscode.Uri.parse(url));
         } else {
             await vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(url));
-        }
-    }
-
-    public async readFile(filePath: string): Promise<string | undefined> {
-        if (fs.existsSync(filePath)) {
-            return fs.readFileSync(filePath, 'utf-8');
-        } else {
-            logWarn(`[VsCodeServiceAdapter] File does not exist: ${filePath}`);
-            return undefined;
         }
     }
 
@@ -181,9 +173,24 @@ export class VsCodeServiceAdapter extends AbstractServiceAdapter implements IVsC
         }
     }
 
-    public async readImageAsBase64(filePathOrUrl: string): Promise<string> {
-        return readImageAsBase64Delegate(filePathOrUrl);
+    public async getRepoName(): Promise<string> {
+        const wsPath = await this.getWorkspaceRootPath();
+        try {
+            const gitRoot = execSync('git rev-parse --show-toplevel', { cwd: wsPath, stdio: ['ignore', 'pipe', 'ignore'], encoding: 'utf8' }).trim();
+            return path.basename(gitRoot);
+        } catch {
+            return path.basename(wsPath);
+        }
     }
+
+    public async getWorkspaceRootPath(): Promise<string> {
+        if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+            return vscode.workspace.workspaceFolders[0].uri.fsPath;
+        }
+        return os.homedir();
+    }
+
+
 
     public dispose() {
         if (logChannel) {

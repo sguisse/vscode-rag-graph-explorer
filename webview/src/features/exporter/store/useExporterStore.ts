@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { ExportConfig, HistoryEntry, ExportReportData } from '../types/exporter.types';
 import { DEFAULT_EXPORT_CONFIG } from '../constants/exporter-constants';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
+import { ExportConfig, HistoryEntry, ExportReportData } from '@/shared/services/files-exporter/model/files-exporter-model';
 
 const STORAGE_KEY = 'tokenRazor.exporter.historyProfiles';
 

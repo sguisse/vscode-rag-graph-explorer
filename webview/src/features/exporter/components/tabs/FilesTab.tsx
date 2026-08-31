@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { FileCode, FolderOpen } from 'lucide-react';
-import { ExportReportData } from '../../types/exporter.types';
+import { ExportReportData } from '@/shared/services/files-exporter/model/files-exporter-model';
 
 interface FilesTabProps {
   reportData: ExportReportData | null;
@@ -31,29 +31,29 @@ export const FilesTab: React.FC<FilesTabProps> = ({
   });
 
   return (
-    <div className="p-4 space-y-3 font-mono text-xs bg-background">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+    <div className="space-y-3 bg-background p-4 font-mono text-xs">
+      <div className="gap-2 grid grid-cols-1 md:grid-cols-2">
         <Input
           value={fileNameFilter}
           onChange={(e) => setFileNameFilter(e.target.value)}
           placeholder="Filter by file name regex..."
-          className="h-7 text-xs font-mono bg-card"
+          className="bg-card h-7 font-mono text-xs"
         />
         <Input
           value={fileContentFilter}
           onChange={(e) => setFileContentFilter(e.target.value)}
           placeholder="Filter by content regex..."
-          className="h-7 text-xs font-mono bg-card"
+          className="bg-card h-7 font-mono text-xs"
         />
       </div>
 
-      <div className="border border-border rounded bg-card p-2 space-y-1 max-h-[350px] overflow-y-auto">
-        <div className="font-bold text-[11px] text-foreground border-b border-border pb-1">
+      <div className="space-y-1 bg-card p-2 border border-border rounded max-h-[350px] overflow-y-auto">
+        <div className="pb-1 border-border border-b font-bold text-[11px] text-foreground">
           📂 Exported Files ({filteredExports.length})
         </div>
 
         {filteredExports.length === 0 ? (
-          <div className="text-muted-foreground italic text-center py-4">
+          <div className="py-4 text-muted-foreground text-center italic">
             No exported files generated.
           </div>
         ) : (
@@ -62,11 +62,11 @@ export const FilesTab: React.FC<FilesTabProps> = ({
             return (
               <div
                 key={filePath}
-                className="flex items-center justify-between p-1 hover:bg-muted/40 rounded border-b border-border/40"
+                className="flex justify-between items-center hover:bg-muted/40 p-1 border-border/40 border-b rounded"
               >
                 <div
                   onClick={() => onOpenFile(filePath)}
-                  className="flex items-center gap-1.5 cursor-pointer text-primary hover:underline truncate flex-1"
+                  className="flex flex-1 items-center gap-1.5 text-primary hover:underline truncate cursor-pointer"
                 >
                   <FileCode size={13} className="shrink-0" />
                   <span className="truncate">{fileName}</span>

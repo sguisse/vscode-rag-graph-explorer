@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ExportConfig, HistoryEntry, ExportReportData } from '../types/exporter.types';
 import { DEFAULT_EXPORT_CONFIG } from '../constants/exporter-constants';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
+import { HistoryEntry, ExportConfig, ExportReportData } from '@/shared/services/files-exporter/model/files-exporter-model';
 
 const STORAGE_KEY = 'tokenRazor.exporter.historyProfiles';
 

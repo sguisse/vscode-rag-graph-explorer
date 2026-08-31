@@ -1,0 +1,23 @@
+import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
+import { AbstractServiceAdapter } from '../../core/AbstractServiceAdapter';
+import { logInfo } from '../../utils/utils-log';
+
+interface IClipboardServicePort {
+
+}
+
+export class ClipboardAdapter extends AbstractServiceAdapter implements IClipboardServicePort, vscode.Disposable {
+
+    constructor () {
+        super()
+    }
+
+
+
+
+    public dispose() {
+
+    }
+}

@@ -1,4 +1,5 @@
-import { PricingData } from '../types/exporter.types';
+import { PricingData } from "@/shared/services/files-exporter/model/files-exporter-model";
+
 
 export class PricingService {
   public static calculateTokenCost(tokens: number): PricingData {

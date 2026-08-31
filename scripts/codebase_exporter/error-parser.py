@@ -38,12 +38,12 @@ def main():
     if len(sys.argv) < 4:
         print(json.dumps([]))
         return
-    stack_type = sys.argv[1].lower()
+    blast_radius_scope = sys.argv[1].lower()
     workspace_root = os.path.abspath(sys.argv[2])
     content_file = sys.argv[3]
     include_out_workspace = sys.argv[4] == 'true' if len(sys.argv) > 4 else False
 
-    log_debug(f"Initializing log parsing engine for target profile: '{stack_type}'")
+    log_debug(f"Initializing log parsing engine for target profile: '{blast_radius_scope}'")
     log_debug(f"Workspace Root context path: {workspace_root}")
     log_debug(f"Include out workspace files option active: {include_out_workspace}")
 
@@ -60,42 +60,14 @@ def main():
     extracted_candidates = set()
     lines = content.splitlines()
 
-    if stack_type == 'java':
-        for line in lines:
-            match = re.search(r'at\s+([a-zA-Z0-9_\.]+)\.([a-zA-Z0-9_]+)\(([a-zA-Z0-9_\-]+\.java):\d+\)', line)
-            if match:
-                package_parts = match.group(1).split('.')
-                if len(package_parts) > 0:
-                    rel_path = "/".join(package_parts) + "/" + match.group(3)
-                    extracted_candidates.add(rel_path)
-                extracted_candidates.add(match.group(3))
-            else:
-                for m in re.findall(r'([\w\.-]+\.java)', line):
-                    extracted_candidates.add(m)
+    if blast_radius_scope == 'JAVA_STACKTRACE':
+        _parse_java_stack_trace(extracted_candidates, lines)
 
-    elif stack_type in ['browser console', 'browser-console']:
-        for line in lines:
-            unix_paths = re.findall(r'(?:/[a-zA-Z0-9_\.-]+)+\.(?:js|ts|jsx|tsx|html|css)', line)
-            for p in unix_paths:
-                extracted_candidates.add(p)
-            win_paths = re.findall(r'[a-zA-Z]:\\([^:\s]+\.(?:js|ts|jsx|tsx|html|css))', line)
-            for p in win_paths:
-                extracted_candidates.add(p)
-            urls = re.findall(r'https?://[^/\s]+/([^?\s:]+\.(?:js|ts|jsx|tsx|html|css))', line)
-            for u in urls:
-                extracted_candidates.add(u)
-            fallbacks = re.findall(r'([\w\.-]+\.(?:js|ts|jsx|tsx|html|css))', line)
-            for f in fallbacks:
-                extracted_candidates.add(f)
+    elif blast_radius_scope in ['BROWSER_CONSOLE', 'browser console', 'browser-console']:
+        _parse_browser_console_paths(extracted_candidates, lines)
 
-    elif stack_type == 'python':
-        for line in lines:
-            py_traces = re.findall(r'File\s+"([^"]+\.py)"', line)
-            for t in py_traces:
-                extracted_candidates.add(t)
-            fallbacks = re.findall(r'([\w\.-]+\.py)', line)
-            for f in fallbacks:
-                extracted_candidates.add(f)
+    elif blast_radius_scope == 'PYTHON':
+        _parse_python_paths(extracted_candidates, lines)
 
     log_debug(f"Step 1 completed. Found raw logs candidates: {list(extracted_candidates)}")
 
@@ -122,6 +94,44 @@ def main():
 
     log_debug(f"Step 2 completed. Effective resolved paths matrix: {list(final_verified_paths)}")
     print(json.dumps(list(final_verified_paths)))
+
+
+def _parse_python_paths(extracted_candidates, lines):
+    for line in lines:
+        py_traces = re.findall(r'File\s+"([^"]+\.py)"', line)
+        for t in py_traces:
+            extracted_candidates.add(t)
+        fallbacks = re.findall(r'([\w\.-]+\.py)', line)
+        for f in fallbacks:
+            extracted_candidates.add(f)
+
+def _parse_browser_console_paths(extracted_candidates, lines):
+    for line in lines:
+        unix_paths = re.findall(r'(?:/[a-zA-Z0-9_\.-]+)+\.(?:js|ts|jsx|tsx|html|css)', line)
+        for p in unix_paths:
+            extracted_candidates.add(p)
+        win_paths = re.findall(r'[a-zA-Z]:\\([^:\s]+\.(?:js|ts|jsx|tsx|html|css))', line)
+        for p in win_paths:
+            extracted_candidates.add(p)
+        urls = re.findall(r'https?://[^/\s]+/([^?\s:]+\.(?:js|ts|jsx|tsx|html|css))', line)
+        for u in urls:
+            extracted_candidates.add(u)
+        fallbacks = re.findall(r'([\w\.-]+\.(?:js|ts|jsx|tsx|html|css))', line)
+        for f in fallbacks:
+            extracted_candidates.add(f)
+
+def _parse_java_stack_trace(extracted_candidates, lines):
+    for line in lines:
+        match = re.search(r'at\s+([a-zA-Z0-9_\.]+)\.([a-zA-Z0-9_]+)\(([a-zA-Z0-9_\-]+\.java):\d+\)', line)
+        if match:
+            package_parts = match.group(1).split('.')
+            if len(package_parts) > 0:
+                rel_path = "/".join(package_parts) + "/" + match.group(3)
+                extracted_candidates.add(rel_path)
+            extracted_candidates.add(match.group(3))
+        else:
+            for m in re.findall(r'([\w\.-]+\.java)', line):
+                extracted_candidates.add(m)
 
 if __name__ == '__main__':
     main()
