@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { sdlcReferencesApiService } from '@/services/api/sdlc-references-api.service.gen';
-import { ReferenceItem } from '@/shared/services/reference/model/reference-model';
+import { referenceApiService } from '@/services/api/reference-api.service.gen';
+import { GLOBAL_PROJECT_REFERENCES_KEY, ReferenceItem } from '@/shared/services/reference/model/reference-model';
 import {
   RefSortField,
   RefSortRule,
@@ -8,7 +8,7 @@ import {
 } from '../model/prj-model-ui';
 
 export function useProjectReferences(
-  localDocumentStorage: string = 'default',
+  localDocumentStorage: string = GLOBAL_PROJECT_REFERENCES_KEY,
   initialViewMode: ProjectReferencesViewMode = 'User'
 ) {
   const [references, setReferences] = useState<ReferenceItem[]>([]);
@@ -37,7 +37,7 @@ export function useProjectReferences(
   const fetchReferences = async () => {
     setLoading(true);
     try {
-      const data = await sdlcReferencesApiService.loadAllReferences(localDocumentStorage);
+      const data = await referenceApiService.loadAllReferences(localDocumentStorage);
       setReferences(data);
 
       const defaultsMap: Record<string, boolean> = {};
@@ -143,7 +143,7 @@ export function useProjectReferences(
 
     setReferences(updated);
     for (const r of updated.filter((x) => x.category === catName)) {
-      await sdlcReferencesApiService.update(localDocumentStorage, r);
+      await referenceApiService.update(localDocumentStorage, r);
     }
   };
 
@@ -153,7 +153,7 @@ export function useProjectReferences(
     const updatedRef = { ...target, preSelected: !target.preSelected };
 
     setReferences((prev) => prev.map((r) => (r.id === id ? updatedRef : r)));
-    await sdlcReferencesApiService.update(localDocumentStorage, updatedRef);
+    await referenceApiService.update(localDocumentStorage, updatedRef);
   };
 
   const addReference = async (newRef: Omit<ReferenceItem, 'id'>) => {
@@ -165,13 +165,13 @@ export function useProjectReferences(
       updatedAt: now,
       changeDetected: 0,
     };
-    await sdlcReferencesApiService.save(localDocumentStorage, item);
+    await referenceApiService.save(localDocumentStorage, item);
     await fetchReferences();
     return item;
   };
 
   const removeReference = async (id: string) => {
-    await sdlcReferencesApiService.delete(localDocumentStorage, id);
+    await referenceApiService.delete(localDocumentStorage, id);
     setReferences((prev) => prev.filter((r) => r.id !== id));
   };
 
@@ -182,7 +182,7 @@ export function useProjectReferences(
     setLoading(true);
     try {
       for (const item of selectedList) {
-        await sdlcReferencesApiService.delete(localDocumentStorage, item.id);
+        await referenceApiService.delete(localDocumentStorage, item.id);
       }
       await fetchReferences();
     } catch (err) {
@@ -198,7 +198,7 @@ export function useProjectReferences(
 
     setImporting(true);
     try {
-      const { content, sizeKb } = await sdlcReferencesApiService.readUrlContent(target.url);
+      const { content, sizeKb } = await referenceApiService.readUrlContent(target.url);
       const now = new Date().toISOString();
       const updated: ReferenceItem = {
         ...target,
@@ -207,7 +207,7 @@ export function useProjectReferences(
         updatedAt: now,
         changeDetected: 0,
       };
-      await sdlcReferencesApiService.update(localDocumentStorage, updated);
+      await referenceApiService.update(localDocumentStorage, updated);
       setReferences((prev) => prev.map((r) => (r.id === id ? updated : r)));
     } catch (err) {
       console.error('[useProjectReferences] Failed to reload reference content', err);
@@ -224,7 +224,7 @@ export function useProjectReferences(
     try {
       const now = new Date().toISOString();
       for (const item of selectedList) {
-        const { content, sizeKb } = await sdlcReferencesApiService.readUrlContent(item.url);
+        const { content, sizeKb } = await referenceApiService.readUrlContent(item.url);
         const updated: ReferenceItem = {
           ...item,
           content,
@@ -232,7 +232,7 @@ export function useProjectReferences(
           updatedAt: now,
           changeDetected: 0,
         };
-        await sdlcReferencesApiService.update(localDocumentStorage, updated);
+        await referenceApiService.update(localDocumentStorage, updated);
       }
       await fetchReferences();
     } catch (err) {
@@ -246,7 +246,7 @@ export function useProjectReferences(
     if (!url) return null;
     setImporting(true);
     try {
-      const result = await sdlcReferencesApiService.readUrlContent(url);
+      const result = await referenceApiService.readUrlContent(url);
       return result;
     } catch (err) {
       console.error('[useProjectReferences] Failed to import URL', err);
@@ -366,7 +366,7 @@ export function useProjectReferences(
 
     setReferences(updated);
     for (const r of updated.filter((x) => filteredIds.has(x.id))) {
-      await sdlcReferencesApiService.update(localDocumentStorage, r);
+      await referenceApiService.update(localDocumentStorage, r);
     }
   };
 
@@ -378,7 +378,7 @@ export function useProjectReferences(
 
     setReferences(updated);
     for (const r of updated) {
-      await sdlcReferencesApiService.update(localDocumentStorage, r);
+      await referenceApiService.update(localDocumentStorage, r);
     }
   };
 

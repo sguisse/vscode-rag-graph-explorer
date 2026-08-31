@@ -55,6 +55,13 @@ export function registerRpcMethods(rpc: RpcProtocol): void {
     rpc.register(RpcMethodEnum.NEO4J_STOP_NEO4J_DATABASE, neo4jService.stopNeo4jDatabase.bind(neo4jService));
     rpc.register(RpcMethodEnum.NEO4J_RESTART_NEO4J_DATABASE, neo4jService.restartNeo4jDatabase.bind(neo4jService));
 
+    const referenceService = serviceRegistry.get(ServiceEnum.REFERENCE);
+    rpc.register(RpcMethodEnum.REFERENCE_LOAD_ALL_REFERENCES, referenceService.loadAllReferences.bind(referenceService));
+    rpc.register(RpcMethodEnum.REFERENCE_SAVE, referenceService.save.bind(referenceService));
+    rpc.register(RpcMethodEnum.REFERENCE_UPDATE, referenceService.update.bind(referenceService));
+    rpc.register(RpcMethodEnum.REFERENCE_DELETE, referenceService.delete.bind(referenceService));
+    rpc.register(RpcMethodEnum.REFERENCE_READ_URL_CONTENT, referenceService.readUrlContent.bind(referenceService));
+
     const sdlcSessionService = serviceRegistry.get(ServiceEnum.SDLC_SESSION);
     rpc.register(RpcMethodEnum.SDLCSESSION_SAVE_SESSION, sdlcSessionService.saveSession.bind(sdlcSessionService));
     rpc.register(RpcMethodEnum.SDLCSESSION_LOAD_ALL_SESSIONS, sdlcSessionService.loadAllSessions.bind(sdlcSessionService));

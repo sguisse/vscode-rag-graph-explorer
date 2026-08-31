@@ -122,14 +122,45 @@ function generateWebviewApiServices() {
         const portRelPath = path.relative(sharedDir, filePath).replace(/\\/g, '/').replace(/\.ts$/, '');
         convertedImports.push(`import { ${portInterfaceName} } from '@/shared/${portRelPath}';`);
 
-        const methodRegex = /^\s*(?:public\s+|async\s+)?([a-zA-Z0-9_]+)\??\s*(?:<[^>]+>)?\s*\(([\s\S]*?)\)\s*:\s*([^;]+);/gm;
+        const methodHeaderRegex = /^\s*(?:public\s+|async\s+)?([a-zA-Z0-9_]+)\??\s*(?:<[^>]+>)?\s*\(([\s\S]*?)\)\s*:\s*/gm;
         let match;
         const methodDeclarations = [];
 
-        while ((match = methodRegex.exec(content)) !== null) {
+        while ((match = methodHeaderRegex.exec(content)) !== null) {
             const methodName = match[1];
             const rawParams = match[2].trim();
-            let rawReturnType = match[3].trim();
+            const startIndex = methodHeaderRegex.lastIndex;
+
+            // Character-by-character scanner to parse return type up to the outer method-terminating semicolon
+            let depthAngle = 0;
+            let depthParen = 0;
+            let depthCurly = 0;
+            let depthSquare = 0;
+            let rawReturnType = '';
+            let endIndex = startIndex;
+
+            for (let i = startIndex; i < content.length; i++) {
+                const char = content[i];
+                if (char === '<') depthAngle++;
+                else if (char === '>') depthAngle--;
+                else if (char === '(') depthParen++;
+                else if (char === ')') depthParen--;
+                else if (char === '{') depthCurly++;
+                else if (char === '}') depthCurly--;
+                else if (char === '[') depthSquare++;
+                else if (char === ']') depthSquare--;
+
+                if (char === ';' && depthAngle === 0 && depthParen === 0 && depthCurly === 0 && depthSquare === 0) {
+                    endIndex = i;
+                    break;
+                }
+                rawReturnType += char;
+            }
+
+            methodHeaderRegex.lastIndex = endIndex + 1;
+
+            rawReturnType = rawReturnType.trim();
+            if (!rawReturnType) continue;
 
             const methodUpperSnake = camelToUpperSnake(methodName);
             const rpcEnumKey = `${rpcPrefix}_${methodUpperSnake}`;

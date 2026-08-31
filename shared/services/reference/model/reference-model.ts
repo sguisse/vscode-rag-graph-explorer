@@ -15,4 +15,6 @@ export interface ReferenceItem {
   updatedAt?: string;
   changeDetected?: number; // Expressed in % vs actual version
   transformer?: TransformerWorkflow;
+  contentAfterTransformation?: string;
+  sizeKbAfterTransformation?: number;
 }
