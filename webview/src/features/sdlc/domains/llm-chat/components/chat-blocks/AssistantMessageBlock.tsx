@@ -69,3 +69,5 @@ export const AssistantMessageBlock: React.FC<{
     </CollapsibleCard>
   );
 };
+
+export default AssistantMessageBlock;

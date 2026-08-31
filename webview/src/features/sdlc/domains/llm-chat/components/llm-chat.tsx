@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -41,6 +41,16 @@ export const LLMChat: React.FC = () => {
   } = useLlmChat();
 
   const { isOpen: isModalOpen, openModal, closeModal } = useLlmModelsInfoModal();
+
+  // Deduplicate messages by ID to prevent duplicate rendering
+  const uniqueMessages = useMemo(() => {
+    const seen = new Set<string>();
+    return messages.filter((msg) => {
+      if (seen.has(msg.id)) return false;
+      seen.add(msg.id);
+      return true;
+    });
+  }, [messages]);
 
   return (
     <div className="relative flex flex-col gap-2.5 bg-background p-0 w-full h-full min-h-0 overflow-hidden font-sans text-foreground">
@@ -94,12 +104,12 @@ export const LLMChat: React.FC = () => {
         ref={scrollContainerRef}
         className="flex flex-col flex-1 gap-2.5 p-2 min-h-0 overflow-y-auto"
       >
-        {messages.length === 0 ? (
+        {uniqueMessages.length === 0 ? (
           <div className="opacity-60 mt-8 font-mono text-xs text-center italic">
             No conversation started. Attach files as context and type your instruction below.
           </div>
         ) : (
-          messages.map((msg) =>
+          uniqueMessages.map((msg) =>
             msg.role === 'user' ? (
               <UserMessageBlock
                 key={msg.id}
@@ -143,7 +153,7 @@ export const LLMChat: React.FC = () => {
             value={selectedModel}
             onValueChange={(val) => val && setSelectedModel(val)}
           >
-            <SelectTrigger className="flex-1 max-w-[150px] h-7 font-mono text-xs">
+            <SelectTrigger className="flex-1 max-w-[350px] h-7 font-mono text-xs">
               <SelectValue placeholder="Select model..." />
             </SelectTrigger>
             <SelectContent>

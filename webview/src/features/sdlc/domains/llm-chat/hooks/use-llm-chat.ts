@@ -118,13 +118,14 @@ export function useLlmChat() {
       const available = await llmChatApiService.listAvailableModels(prov);
       logInfo('Models loaded for provider', { provider: prov, count: available.length });
       setModels(available);
+
       if (available.length > 0) {
         let preferredModel = undefined;
         if (prov === LlmProvider.OLLAMA) {
           preferredModel = 'qwen2.5-coder:1.5b';
         } else if (prov === LlmProvider.GEMINI) {
           preferredModel = available[0].id;
-        }else if (prov === LlmProvider.COPILOT) {
+        } else if (prov === LlmProvider.COPILOT) {
           preferredModel = 'MAI-Code-1-Flash';
         } else {
           preferredModel = available[0].id;
@@ -134,7 +135,8 @@ export function useLlmChat() {
         );
         const targetModelId = matchingModel ? matchingModel.id : available[0].id;
 
-        if (!selectedModel || !available.some((m) => m.id === selectedModel)) {
+        const currentSelected = useExplorerStore.getState().llmSelectedModel;
+        if (!currentSelected || !available.some((m) => m.id === currentSelected)) {
           setSelectedModel(targetModelId);
         }
       } else {
