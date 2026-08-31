@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import cytoscape from 'cytoscape';
-import fcose from 'cytoscape-fcose';
+
 import dagre from 'cytoscape-dagre';
+import fcose from 'cytoscape-fcose';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 

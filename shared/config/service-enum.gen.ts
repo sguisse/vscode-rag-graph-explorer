@@ -15,5 +15,6 @@ export enum ServiceEnum {
     NEO4J = 'Neo4jService',
     REFERENCE = 'ReferenceService',
     SDLC_SESSION = 'SdlcSessionService',
+    TRANSFORM_CONTENT = 'TransformContentService',
     VS_CODE = 'VsCodeService'
 }

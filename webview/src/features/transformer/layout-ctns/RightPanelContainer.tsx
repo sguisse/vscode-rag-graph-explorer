@@ -1,7 +1,7 @@
 import React from 'react';
 import { ContainerPanelHeader } from '@/_layout/ContainerPanelHeader';
 import { OutputPanel } from '../components/output-panel/OutputPanel';
-import { ExtractedTableRecord } from '../types/transformer.types';
+import { ExtractedTableRecord } from '@/shared/services/transform-content/model/transform-content-model';
 
 interface RightPanelContainerProps {
   renderedOutput: string;

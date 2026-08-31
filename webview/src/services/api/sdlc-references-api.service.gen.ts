@@ -1,5 +1,5 @@
+import { ReferenceItem } from '@/shared/services/reference/model/reference-model';
 import { AbstractApiService } from './abstract-api.service';
-import { ReferenceItem } from '@/components/app/project-references/model/prj-model-ui';
 import MOCK_REFERENCES from './mock/sdlc-references-api.mock-data.yaml';
 
 class SdlcReferencesApiService extends AbstractApiService {

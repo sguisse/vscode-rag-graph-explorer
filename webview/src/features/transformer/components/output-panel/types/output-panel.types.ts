@@ -1,4 +1,4 @@
-import { ExtractedTableRecord } from '../../../types/transformer.types';
+import { ExtractedTableRecord } from "@/shared/services/transform-content/model/transform-content-model";
 
 export type OutputPanelTab = 'template' | 'preview';
 

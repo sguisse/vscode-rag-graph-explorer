@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { sdlcReferencesApiService } from '@/services/api/sdlc-references-api.service.gen';
+import { ReferenceItem } from '@/shared/services/reference/model/reference-model';
 import {
-  ReferenceItem,
   RefSortField,
   RefSortRule,
   ProjectReferencesViewMode,

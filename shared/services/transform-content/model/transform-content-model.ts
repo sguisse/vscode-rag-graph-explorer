@@ -1,5 +1,17 @@
 export type AnonymizationStrategy = 'mask' | 'hash' | 'uuid' | 'replace';
 
+
+export interface TransformerWorkflow {
+  id: string;
+  name: string;
+  description?: string;
+  anonymizationRules: AnonymizationRule[];
+  extractionSteps: RegexExtractionStep[];
+  minify: MinifyOptions;
+  outputTemplate: string;
+  outputFormat: 'json' | 'yaml' | 'xml' | 'markdown' | 'plaintext';
+}
+
 export interface AnonymizationRule {
   id: string;
   name: string;
@@ -24,17 +36,6 @@ export interface MinifyOptions {
   stripComments: boolean;
   collapseWhitespace: boolean;
   trimLines: boolean;
-}
-
-export interface TransformerWorkflow {
-  id: string;
-  name: string;
-  description?: string;
-  anonymizationRules: AnonymizationRule[];
-  extractionSteps: RegexExtractionStep[];
-  minify: MinifyOptions;
-  outputTemplate: string;
-  outputFormat: 'json' | 'yaml' | 'xml' | 'markdown' | 'plaintext';
 }
 
 export interface ExtractedTableRecord {

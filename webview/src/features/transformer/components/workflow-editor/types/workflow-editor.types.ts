@@ -1,4 +1,4 @@
-import { TransformerWorkflow } from '../../../types/transformer.types';
+import { TransformerWorkflow } from "@/shared/services/transform-content/model/transform-content-model";
 
 export type WorkflowEditorTab = 'json' | 'tree' | 'graph';
 

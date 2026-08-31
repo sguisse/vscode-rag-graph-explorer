@@ -1,8 +1,5 @@
-import {
-  TransformerWorkflow,
-  ExtractedTableRecord,
-  PipelineExecutionMetrics,
-} from '../types/transformer.types';
+import { TransformerWorkflow, ExtractedTableRecord, PipelineExecutionMetrics } from "@/shared/services/transform-content/model/transform-content-model";
+
 
 export function renderMustacheTemplate(template: string, data: Record<string, any>): string {
   return template.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, key) => {

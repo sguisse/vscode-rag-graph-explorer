@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CollapsibleCard } from '@/components/app/collapsible-card';
-import { ReferenceItem } from '../model/prj-model-ui';
+import { ReferenceItem } from '@/shared/services/reference/model/reference-model';
 
 interface NewReferenceFormProps {
   categories: string[];
@@ -92,10 +92,10 @@ export function NewReferenceForm({
       contentToCopy=""
       className="bg-card border-border"
     >
-      <form onSubmit={handleSubmit} className="p-2 space-y-2 font-mono text-xs">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+      <form onSubmit={handleSubmit} className="space-y-2 p-2 font-mono text-xs">
+        <div className="gap-2 grid grid-cols-1 md:grid-cols-3">
           <div className="space-y-1">
-            <label className="block text-[10px] font-bold text-muted-foreground uppercase">Category</label>
+            <label className="block font-bold text-[10px] text-muted-foreground uppercase">Category</label>
             {isAddingNewCategory ? (
               <div className="flex items-center gap-1">
                 <Input
@@ -103,7 +103,7 @@ export function NewReferenceForm({
                   placeholder="New category..."
                   value={customCategoryInput}
                   onChange={(e) => setCustomCategoryInput(e.target.value)}
-                  className="h-7 text-xs font-mono"
+                  className="h-7 font-mono text-xs"
                   autoFocus
                 />
                 <Button
@@ -111,7 +111,7 @@ export function NewReferenceForm({
                   variant="ghost"
                   size="icon"
                   onClick={() => setIsAddingNewCategory(false)}
-                  className="h-7 w-7 text-muted-foreground"
+                  className="w-7 h-7 text-muted-foreground"
                 >
                   <X size={12} />
                 </Button>
@@ -128,7 +128,7 @@ export function NewReferenceForm({
                   }
                 }}
               >
-                <SelectTrigger className="h-7 text-xs font-mono bg-background">
+                <SelectTrigger className="bg-background h-7 font-mono text-xs">
                   <SelectValue placeholder="Select Category..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -146,54 +146,54 @@ export function NewReferenceForm({
           </div>
 
           <div className="space-y-1 col-span-2">
-            <label className="block text-[10px] font-bold text-muted-foreground uppercase">Name & Emoji</label>
+            <label className="block font-bold text-[10px] text-muted-foreground uppercase">Name & Emoji</label>
             <div className="flex items-center gap-1.5">
               <Input
                 type="text"
                 placeholder="Emoji"
                 value={newEmoji}
                 onChange={(e) => setNewEmoji(e.target.value)}
-                className="w-12 h-7 text-xs font-mono text-center"
+                className="w-12 h-7 font-mono text-xs text-center"
               />
               <Input
                 type="text"
                 placeholder="Reference Name (e.g. System Architecture Spec)"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                className="flex-1 h-7 text-xs font-mono"
+                className="flex-1 h-7 font-mono text-xs"
                 required
               />
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <div className="gap-2 grid grid-cols-1 md:grid-cols-3">
           <div className="space-y-1 col-span-2">
-            <label className="block text-[10px] font-bold text-muted-foreground uppercase">Description</label>
+            <label className="block font-bold text-[10px] text-muted-foreground uppercase">Description</label>
             <Input
               type="text"
               placeholder="Brief summary of reference purpose..."
               value={newDescription}
               onChange={(e) => setNewDescription(e.target.value)}
-              className="h-7 text-xs font-mono"
+              className="h-7 font-mono text-xs"
             />
           </div>
 
-          <div className="space-y-1 flex flex-col justify-end">
-            <label className="flex items-center gap-2 cursor-pointer text-xs select-none h-7 px-1">
+          <div className="flex flex-col justify-end space-y-1">
+            <label className="flex items-center gap-2 px-1 h-7 text-xs cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={newPreSelected}
                 onChange={(e) => setNewPreSelected(e.target.checked)}
-                className="rounded border-border text-indigo-500 focus:ring-indigo-500 h-3.5 w-3.5 accent-indigo-500 cursor-pointer"
+                className="border-border rounded focus:ring-indigo-500 w-3.5 h-3.5 text-indigo-500 accent-indigo-500 cursor-pointer"
               />
-              <span className="font-bold text-[10px] uppercase text-foreground">Always Pre-selected</span>
+              <span className="font-bold text-[10px] text-foreground uppercase">Always Pre-selected</span>
             </label>
           </div>
         </div>
 
         <div className="space-y-1">
-          <label className="block text-[10px] font-bold text-muted-foreground uppercase">
+          <label className="block font-bold text-[10px] text-muted-foreground uppercase">
             URL or Local Dependencies File
           </label>
           <div className="flex items-center gap-2">
@@ -202,7 +202,7 @@ export function NewReferenceForm({
               placeholder="https://... or file:///path/to/reference.yaml"
               value={newUrl}
               onChange={(e) => setNewUrl(e.target.value)}
-              className="flex-1 h-7 text-xs font-mono"
+              className="flex-1 h-7 font-mono text-xs"
             />
             <Button
               type="button"
@@ -210,7 +210,7 @@ export function NewReferenceForm({
               size="sm"
               onClick={handleImportUrl}
               disabled={!newUrl || importing}
-              className="h-7 text-xs font-mono gap-1 shrink-0"
+              className="gap-1 h-7 font-mono text-xs shrink-0"
             >
               <RefreshCw size={12} className={importing ? 'animate-spin' : ''} />
               <span>Import</span>
@@ -219,7 +219,7 @@ export function NewReferenceForm({
               type="submit"
               size="sm"
               disabled={!newName || (!newCategory && !customCategoryInput)}
-              className="h-7 text-xs font-mono gap-1 bg-indigo-600 hover:bg-indigo-700 text-white shrink-0"
+              className="gap-1 bg-indigo-600 hover:bg-indigo-700 h-7 font-mono text-white text-xs shrink-0"
             >
               <Plus size={12} />
               <span>Add Reference</span>

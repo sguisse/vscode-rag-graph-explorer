@@ -4,7 +4,8 @@ import { Plus, Minus, Focus, LayoutGrid, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ToolbarSeparator } from '@/components/app/toolbar-separator';
 import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
-import { TransformerWorkflow } from '../../../types/transformer.types';
+import { TransformerWorkflow } from '@/shared/services/transform-content/model/transform-content-model';
+
 
 // Constantes de structuration et de disposition géométrique
 const SUB_PROCESS_PADDING = 5; // Padding interne de 5px

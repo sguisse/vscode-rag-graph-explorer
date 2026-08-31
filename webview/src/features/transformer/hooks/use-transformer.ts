@@ -1,10 +1,11 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { TransformerWorkflow } from '../model/transformer.model';
+
 import { useTransformationScope, UseTransformationScopeOptions } from './use-transformation-scope';
 import {
   DEFAULT_WORKFLOW_JSON,
   executeTransformationPipeline,
 } from '../utils/transformer-engine';
+import { TransformerWorkflow } from '@/shared/services/transform-content/model/transform-content-model';
 
 export function useTransformer(options?: UseTransformationScopeOptions & {
   initialWorkflow?: TransformerWorkflow;

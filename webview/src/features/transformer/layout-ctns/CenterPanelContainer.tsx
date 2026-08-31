@@ -1,7 +1,7 @@
 import React from 'react';
 import { ContainerPanelHeader } from '@/_layout/ContainerPanelHeader';
 import { WorkflowEditor } from '../components/workflow-editor/WorkflowEditor';
-import { TransformerWorkflow } from '../types/transformer.types';
+import { TransformerWorkflow } from '@/shared/services/transform-content/model/transform-content-model';
 
 interface CenterPanelContainerProps {
   workflowJsonText: string;

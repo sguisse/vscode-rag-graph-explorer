@@ -17,8 +17,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { TriStateCheckbox } from './TriStateCheckbox';
+import { ReferenceItem } from '@/shared/services/reference/model/reference-model';
 import {
-  ReferenceItem,
   RefSortField,
   RefSortRule,
   ProjectReferencesViewMode,
@@ -207,9 +207,9 @@ export function ReferencesTable({
         {sortRule ? (
           <span className="inline-flex items-center gap-0.5 font-bold text-indigo-400 shrink-0">
             {sortRule.order === 'asc' ? (
-              <ArrowUp className="w-2.5 h-2.5 stroke-[2.5]" />
+              <ArrowUp className="stroke-[2.5] w-2.5 h-2.5" />
             ) : (
-              <ArrowDown className="w-2.5 h-2.5 stroke-[2.5]" />
+              <ArrowDown className="stroke-[2.5] w-2.5 h-2.5" />
             )}
             <span className="bg-indigo-500/20 px-1 py-0.2 border border-indigo-500/30 rounded-full font-mono text-[8px] leading-none">
               {ruleIndex + 1}
@@ -247,12 +247,12 @@ export function ReferencesTable({
             type="checkbox"
             checked={item.preSelected}
             onChange={() => onToggleReferenceSelect(item.id)}
-            className="rounded border-border text-indigo-500 focus:ring-indigo-500 h-3.5 w-3.5 cursor-pointer accent-indigo-500"
+            className="border-border rounded focus:ring-indigo-500 w-3.5 h-3.5 text-indigo-500 accent-indigo-500 cursor-pointer"
           />
         </td>
 
         <td className="p-2 align-middle whitespace-nowrap">
-          <Badge className="border-border bg-muted">
+          <Badge className="bg-muted border-border">
             {item.category}
           </Badge>
         </td>
@@ -260,7 +260,7 @@ export function ReferencesTable({
         <td className="p-2 align-middle whitespace-nowrap">
           <div className="flex items-center gap-1.5">
             <span className="text-xs shrink-0">{item.emoji}</span>
-            <span className="font-medium text-xs text-foreground">{item.name}</span>
+            <span className="font-medium text-foreground text-xs">{item.name}</span>
           </div>
         </td>
 
@@ -290,21 +290,21 @@ export function ReferencesTable({
         )}
 
         <td className="p-2 text-center align-middle whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center justify-center">
+          <div className="flex justify-center items-center">
             <Checkbox checked={Boolean(item.transformer)} disabled />
           </div>
         </td>
 
-        <td className="p-2 align-middle font-mono text-[10px] text-muted-foreground whitespace-nowrap">
+        <td className="p-2 font-mono text-[10px] text-muted-foreground align-middle whitespace-nowrap">
           {formatDate(item.updatedAt)}
         </td>
 
-        <td className="p-2 text-right align-middle font-mono text-[11px] whitespace-nowrap">
+        <td className="p-2 font-mono text-[11px] text-right align-middle whitespace-nowrap">
           {item.sizeKb ? `${item.sizeKb} KB` : '-'}
         </td>
 
         <td className="p-2 text-center align-middle whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center justify-center gap-1">
+          <div className="flex justify-center items-center gap-1">
             <Button
               variant="ghost"
               size="icon"
@@ -320,7 +320,7 @@ export function ReferencesTable({
               size="icon"
               onClick={() => setNotification('Transformer will be implemented soon !')}
               data-tooltip="Transform reference"
-              className="h-6 w-6 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10"
+              className="hover:bg-indigo-500/10 w-6 h-6 text-indigo-400 hover:text-indigo-300"
             >
               <Wand2 size={11} />
             </Button>
@@ -331,7 +331,7 @@ export function ReferencesTable({
                 size="icon"
                 onClick={() => onRemoveReference(item.id)}
                 data-tooltip="Remove reference (Admin)"
-                className="h-6 w-6 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                className="hover:bg-red-500/10 w-6 h-6 text-red-500 hover:text-red-600"
               >
                 <Trash2 size={11} />
               </Button>
@@ -343,17 +343,17 @@ export function ReferencesTable({
   };
 
   return (
-    <div className="flex flex-col h-full min-h-0 p-1 space-y-2 font-mono text-xs">
-      <div className="flex items-center justify-between px-2 py-1 bg-muted/40 rounded text-[10px] shrink-0">
+    <div className="flex flex-col space-y-2 p-1 h-full min-h-0 font-mono text-xs">
+      <div className="flex justify-between items-center bg-muted/40 px-2 py-1 rounded text-[10px] shrink-0">
         <div className="flex items-center gap-2">
           {isGrouped && (
-            <div className="flex items-center gap-0.5 pr-2 border-r border-border/60">
+            <div className="flex items-center gap-0.5 pr-2 border-border/60 border-r">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={onExpandAllCategories}
                 data-tooltip="Expand all categories"
-                className="h-5 w-5 text-muted-foreground hover:text-indigo-400 hover:bg-indigo-500/10"
+                className="hover:bg-indigo-500/10 w-5 h-5 text-muted-foreground hover:text-indigo-400"
               >
                 <ChevronsDown size={12} />
               </Button>
@@ -362,7 +362,7 @@ export function ReferencesTable({
                 size="icon"
                 onClick={onCollapseAllCategories}
                 data-tooltip="Collapse all categories"
-                className="h-5 w-5 text-muted-foreground hover:text-indigo-400 hover:bg-indigo-500/10"
+                className="hover:bg-indigo-500/10 w-5 h-5 text-muted-foreground hover:text-indigo-400"
               >
                 <ChevronsRight size={12} />
               </Button>
@@ -373,7 +373,7 @@ export function ReferencesTable({
             <div className="flex items-center gap-1.5">
               <span className="text-muted-foreground">Multi-sort active:</span>
               {sortRules.map((r, i) => (
-                <Badge key={r.field} className="text-indigo-400 bg-indigo-500/10 border-indigo-500/20">
+                <Badge key={r.field} className="bg-indigo-500/10 border-indigo-500/20 text-indigo-400">
                   {i + 1}. {r.field} ({r.order === 'asc' ? '↑' : '↓'})
                 </Badge>
               ))}
@@ -406,12 +406,12 @@ export function ReferencesTable({
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden border border-border rounded bg-background relative max-h-[380px] md:max-h-[500px]">
-        <table className="w-full text-left border-collapse table-auto font-mono text-xs">
-          <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur border-b border-border text-[10px] uppercase text-muted-foreground font-bold select-none shadow-xs">
+      <div className="relative flex-1 bg-background border border-border rounded min-h-0 max-h-[380px] md:max-h-[500px] overflow-x-hidden overflow-y-auto">
+        <table className="w-full font-mono text-xs text-left border-collapse table-auto">
+          <thead className="top-0 z-10 sticky bg-muted/95 shadow-xs backdrop-blur border-border border-b font-bold text-[10px] text-muted-foreground uppercase select-none">
             <tr>
               <th className="p-2 w-10 text-center">
-                <div className="flex items-center justify-center">
+                <div className="flex justify-center items-center">
                   <TriStateCheckbox
                     state={globalSelectionState}
                     onChange={onToggleAllSelect}
@@ -426,8 +426,8 @@ export function ReferencesTable({
               <th className="p-2 text-center whitespace-nowrap">{renderSortButton('Transfo', 'transformer')}</th>
               <th className="p-2 whitespace-nowrap">{renderSortButton('Updated Date', 'updatedAt')}</th>
               <th className="p-2 text-right whitespace-nowrap">{renderSortButton('Size (KB)', 'sizeKb')}</th>
-              <th className="p-2 text-center w-24 whitespace-nowrap">
-                <div className="flex items-center justify-center gap-1">
+              <th className="p-2 w-24 text-center whitespace-nowrap">
+                <div className="flex justify-center items-center gap-1">
                   <span>Actions</span>
                   <Button
                     variant="ghost"
@@ -435,7 +435,7 @@ export function ReferencesTable({
                     onClick={onReloadSelectedReferences}
                     disabled={totalSelectedCount === 0 || importing}
                     data-tooltip={`Reload all ${totalSelectedCount} selected references`}
-                    className="h-5 w-5 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/20 disabled:opacity-40"
+                    className="hover:bg-indigo-500/20 disabled:opacity-40 w-5 h-5 text-indigo-400 hover:text-indigo-300"
                   >
                     <RefreshCw size={11} className={importing ? 'animate-spin' : ''} />
                   </Button>
@@ -446,7 +446,7 @@ export function ReferencesTable({
                       onClick={onRemoveSelectedReferences}
                       disabled={totalSelectedCount === 0 || loading}
                       data-tooltip={`Remove all ${totalSelectedCount} selected references (Admin)`}
-                      className="h-5 w-5 text-red-500 hover:text-red-400 hover:bg-red-500/20 disabled:opacity-40"
+                      className="hover:bg-red-500/20 disabled:opacity-40 w-5 h-5 text-red-500 hover:text-red-400"
                     >
                       <Trash2 size={11} />
                     </Button>
@@ -458,14 +458,14 @@ export function ReferencesTable({
           <tbody className="divide-y divide-border/60">
             {loading ? (
               <tr>
-                <td colSpan={totalColumns} className="p-4 text-center text-muted-foreground italic text-xs">
+                <td colSpan={totalColumns} className="p-4 text-muted-foreground text-xs text-center italic">
                   Loading project references...
                 </td>
               </tr>
             ) : isGrouped ? (
               Object.keys(groupedReferences).length === 0 ? (
                 <tr>
-                  <td colSpan={totalColumns} className="p-4 text-center text-muted-foreground italic text-xs">
+                  <td colSpan={totalColumns} className="p-4 text-muted-foreground text-xs text-center italic">
                     No references match your current filters.
                   </td>
                 </tr>
@@ -477,7 +477,7 @@ export function ReferencesTable({
                   return (
                     <React.Fragment key={category}>
                       <tr
-                        className="bg-muted/30 hover:bg-muted/50 transition-colors font-bold select-none cursor-pointer"
+                        className="bg-muted/30 hover:bg-muted/50 font-bold transition-colors cursor-pointer select-none"
                         onClick={(e) => {
                           if (e.metaKey || e.ctrlKey) {
                             e.preventDefault();
@@ -495,15 +495,15 @@ export function ReferencesTable({
                             onChange={() => onToggleCategorySelectAll(category)}
                           />
                         </td>
-                        <td colSpan={totalColumns - 2} className="p-2 align-middle truncate">
-                          <div className="flex items-center gap-2 cursor-pointer select-none truncate">
+                        <td colSpan={totalColumns - 2} className="p-2 truncate align-middle">
+                          <div className="flex items-center gap-2 truncate cursor-pointer select-none">
                             {isExpanded ? (
                               <ChevronDown size={13} className="text-indigo-400 shrink-0" />
                             ) : (
                               <ChevronRight size={13} className="text-muted-foreground shrink-0" />
                             )}
-                            <span className="font-bold text-xs text-foreground uppercase truncate">{category}</span>
-                            <Badge className="border-border bg-muted shrink-0">
+                            <span className="font-bold text-foreground text-xs truncate uppercase">{category}</span>
+                            <Badge className="bg-muted border-border shrink-0">
                               {items.length} {items.length === 1 ? 'item' : 'items'}
                             </Badge>
                           </div>
@@ -522,7 +522,7 @@ export function ReferencesTable({
               )
             ) : sortedReferences.length === 0 ? (
               <tr>
-                <td colSpan={totalColumns} className="p-4 text-center text-muted-foreground italic text-xs">
+                <td colSpan={totalColumns} className="p-4 text-muted-foreground text-xs text-center italic">
                   No references match your current filters.
                 </td>
               </tr>
@@ -532,7 +532,7 @@ export function ReferencesTable({
           </tbody>
 
           {/* Always display total references on the right side of / */}
-          <tfoot className="sticky bottom-0 z-10 bg-muted/95 backdrop-blur border-t-2 border-border font-bold text-[10px] uppercase text-foreground shadow-xs">
+          <tfoot className="bottom-0 z-10 sticky bg-muted/95 shadow-xs backdrop-blur border-border border-t-2 font-bold text-[10px] text-foreground uppercase">
             <tr>
               <td colSpan={3} className="p-2 whitespace-nowrap">
                 Total Selected: <span className="text-indigo-400">{totalSelectedCount}</span> / {totalAllCount} References
@@ -540,10 +540,10 @@ export function ReferencesTable({
               <td colSpan={showDescSourceCol ? 3 : 2} className="p-2 text-right whitespace-nowrap">
                 Total Selected Size:
               </td>
-              <td className="p-2 text-right text-indigo-400 font-mono whitespace-nowrap">
+              <td className="p-2 font-mono text-indigo-400 text-right whitespace-nowrap">
                 {totalSelectedSizeKb} KB
               </td>
-              <td className="p-2 text-center text-muted-foreground text-[9px] whitespace-nowrap">
+              <td className="p-2 text-[9px] text-muted-foreground text-center whitespace-nowrap">
                 (All: {totalAllSizeKb} KB)
               </td>
             </tr>

@@ -2,12 +2,12 @@ import React, { useEffect } from 'react';
 import { useLayoutStore } from '@/store/useLayoutStore';
 import { useTransformer } from './hooks/use-transformer';
 import { TransformationScopeType, ReferenceFileInfo } from './components/TransformationScopePanel';
-import { TransformerWorkflow } from './model/transformer.model';
 import { TopPanelContainer } from './layout-ctns/TopPanelContainer';
 import { LeftPanelContainer } from './layout-ctns/LeftPanelContainer';
 import { CenterPanelContainer } from './layout-ctns/CenterPanelContainer';
 import { RightPanelContainer } from './layout-ctns/RightPanelContainer';
 import { BottomPanelContainer } from './layout-ctns/BottomPanelContainer';
+import { TransformerWorkflow } from '@/shared/services/transform-content/model/transform-content-model';
 
 export interface TransformerFeatureProps {
   initialScope?: TransformationScopeType;

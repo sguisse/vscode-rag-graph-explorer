@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import cytoscape from 'cytoscape';
-import { TransformerWorkflow } from '../../../types/transformer.types';
+import { TransformerWorkflow } from '@/shared/services/transform-content/model/transform-content-model';
 
 export function useWorkflowGraph(workflow: TransformerWorkflow) {
   const containerRef = useRef<HTMLDivElement>(null);

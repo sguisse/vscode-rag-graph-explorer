@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronRight, ShieldCheck, Zap, Scissors } from 'lucide-react';
-import { TransformerWorkflow } from '../../../types/transformer.types';
+import { TransformerWorkflow } from '@/shared/services/transform-content/model/transform-content-model';
 
 interface TreeTableTabProps {
   parsedWorkflow: TransformerWorkflow;
@@ -19,12 +19,12 @@ export const TreeTableTab: React.FC<TreeTableTabProps> = ({ parsedWorkflow, onSe
   };
 
   return (
-    <div className="flex flex-col h-full w-full p-2 font-mono text-xs overflow-y-auto space-y-2 bg-card select-none">
+    <div className="flex flex-col space-y-2 bg-card p-2 w-full h-full overflow-y-auto font-mono text-xs select-none">
       {/* 1. Anonymization Rules */}
-      <div className="border border-border rounded-md overflow-hidden bg-background">
+      <div className="bg-background border border-border rounded-md overflow-hidden">
         <div
           onClick={() => toggleSection('anonymization')}
-          className="flex items-center justify-between p-2 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
+          className="flex justify-between items-center bg-muted/30 hover:bg-muted/50 p-2 transition-colors cursor-pointer"
         >
           <div className="flex items-center gap-2 font-bold text-foreground">
             {expandedSections.anonymization ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -34,17 +34,17 @@ export const TreeTableTab: React.FC<TreeTableTabProps> = ({ parsedWorkflow, onSe
         </div>
 
         {expandedSections.anonymization && (
-          <div className="p-2 space-y-1 divide-y divide-border/40">
+          <div className="space-y-1 p-2 divide-y divide-border/40">
             {(parsedWorkflow.anonymizationRules || []).length === 0 ? (
-              <div className="text-muted-foreground italic p-1">No anonymization rules configured.</div>
+              <div className="p-1 text-muted-foreground italic">No anonymization rules configured.</div>
             ) : (
               parsedWorkflow.anonymizationRules.map((rule) => {
                 const replacementValue = rule.replace ?? rule.replacement;
                 return (
-                  <div key={rule.id} className="pt-1 text-[11px] space-y-0.5">
+                  <div key={rule.id} className="space-y-0.5 pt-1 text-[11px]">
                     <div className="flex justify-between items-center">
                       <span className="font-bold text-foreground">{rule.name}</span>
-                      <span className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-1 py-0.2 rounded text-[9px] uppercase font-bold">
+                      <span className="bg-emerald-500/10 px-1 py-0.2 border border-emerald-500/20 rounded font-bold text-[9px] text-emerald-500 uppercase">
                         {rule.strategy}
                       </span>
                     </div>
@@ -67,10 +67,10 @@ export const TreeTableTab: React.FC<TreeTableTabProps> = ({ parsedWorkflow, onSe
       </div>
 
       {/* 2. Extraction Steps */}
-      <div className="border border-border rounded-md overflow-hidden bg-background">
+      <div className="bg-background border border-border rounded-md overflow-hidden">
         <div
           onClick={() => toggleSection('extraction')}
-          className="flex items-center justify-between p-2 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
+          className="flex justify-between items-center bg-muted/30 hover:bg-muted/50 p-2 transition-colors cursor-pointer"
         >
           <div className="flex items-center gap-2 font-bold text-foreground">
             {expandedSections.extraction ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -80,19 +80,19 @@ export const TreeTableTab: React.FC<TreeTableTabProps> = ({ parsedWorkflow, onSe
         </div>
 
         {expandedSections.extraction && (
-          <div className="p-2 space-y-1 divide-y divide-border/40">
+          <div className="space-y-1 p-2 divide-y divide-border/40">
             {(parsedWorkflow.extractionSteps || []).length === 0 ? (
-              <div className="text-muted-foreground italic p-1">No extraction steps configured.</div>
+              <div className="p-1 text-muted-foreground italic">No extraction steps configured.</div>
             ) : (
               parsedWorkflow.extractionSteps.map((step) => (
-                <div key={step.id} className="pt-1 text-[11px] space-y-0.5">
+                <div key={step.id} className="space-y-0.5 pt-1 text-[11px]">
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-foreground">{step.name}</span>
                     {step.targetVariable && (
                       <span
                         onClick={() => onSelectVariable?.(step.targetVariable!)}
                         data-tooltip={`Click to insert {{${step.targetVariable}}} into template`}
-                        className="bg-primary/10 text-primary border border-primary/20 px-1 py-0.2 rounded text-[9px] cursor-pointer hover:bg-primary/20 hover:underline transition-colors select-none"
+                        className="bg-primary/10 hover:bg-primary/20 px-1 py-0.2 border border-primary/20 rounded text-[9px] text-primary hover:underline transition-colors cursor-pointer select-none"
                       >
                         → ${step.targetVariable}
                       </span>
@@ -109,10 +109,10 @@ export const TreeTableTab: React.FC<TreeTableTabProps> = ({ parsedWorkflow, onSe
       </div>
 
       {/* 3. Minification Settings */}
-      <div className="border border-border rounded-md overflow-hidden bg-background">
+      <div className="bg-background border border-border rounded-md overflow-hidden">
         <div
           onClick={() => toggleSection('minify')}
-          className="flex items-center justify-between p-2 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
+          className="flex justify-between items-center bg-muted/30 hover:bg-muted/50 p-2 transition-colors cursor-pointer"
         >
           <div className="flex items-center gap-2 font-bold text-foreground">
             {expandedSections.minify ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -122,7 +122,7 @@ export const TreeTableTab: React.FC<TreeTableTabProps> = ({ parsedWorkflow, onSe
         </div>
 
         {expandedSections.minify && (
-          <div className="p-2 text-[11px] space-y-1">
+          <div className="space-y-1 p-2 text-[11px]">
             <div className="flex justify-between">
               <span>Strip Comments:</span>
               <strong className={parsedWorkflow.minify?.stripComments ? 'text-emerald-500' : 'text-muted-foreground'}>
