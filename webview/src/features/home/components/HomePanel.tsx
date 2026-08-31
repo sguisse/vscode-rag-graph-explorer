@@ -74,7 +74,7 @@ export function HomePanel() {
   }, [isDarkMode]);
 
   return (
-    <div className="flex-1 space-y-8 p-3 md:p-3 min-h-0 h-full overflow-y-auto">
+    <div className="flex-1 space-y-8 p-3 md:p-3 h-full min-h-0 overflow-y-auto">
       {/* Hero Section Banner with App Logo */}
       <div className="relative bg-gradient-to-br from-primary/15 via-primary/5 to-background shadow-sm p-8 border border-primary/20 rounded-2xl overflow-hidden">
         <div className="z-10 relative space-y-5 max-w-2xl">
@@ -107,7 +107,7 @@ export function HomePanel() {
             <Button
               size="default"
               className="gap-2 shadow-sm font-semibold cursor-pointer"
-              onClick={() => setActiveFeature('feature-graph-explorer')}
+              onClick={() => setActiveFeature('feature-codebase-context')}
             >
               <FolderTree size={16} />
               Start Context Selection
