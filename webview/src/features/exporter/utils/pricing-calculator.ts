@@ -1,4 +1,4 @@
-import { PricingData } from "@/shared/services/files-exporter/model/files-exporter-model";
+import { PricingData } from "@/shared/services/file-exporter/model/file-exporter-model";
 
 
 export class PricingService {

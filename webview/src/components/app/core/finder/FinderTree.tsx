@@ -2,7 +2,7 @@ import React from 'react';
 import { Filter, FolderMinus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FinderBase, FinderBaseProps } from './FinderBase';
-import type { FinderView } from './model/types';
+import type { FinderView } from './types';
 
 export interface FinderTreeProps extends FinderBaseProps {
   isFilterActive?: boolean;

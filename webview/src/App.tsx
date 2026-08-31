@@ -13,7 +13,7 @@ import { RulesFeature } from '@/features/rules/RulesFeature';
 import { HelpFeature } from '@/features/help/HelpFeature';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { vsCodeApiService } from "@/services/api/vs-code-api.service.gen";
-import { VsCodeSettings } from '@/shared/services/vscode/domain/model/VsCodeSettings.gen';
+import { VsCodeSettings } from '@/shared/services/vscode/model/VsCodeSettings.gen';
 import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
 import { initSessionPersistence } from '@/features/sdlc/core/vscode-sync/session-persistence.manager';
 import ExplorerOldFeature from './features/explorer-old/ExplorerOldFeature';

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { AbstractServiceAdapter } from '../../core/AbstractServiceAdapter';
 import { vsCodeSettingsManager } from '../../managers/VsCodeSettings.manager';
-import { INeo4jServicePort } from '../../../../shared/services/neo4j/domain/port-out/neo4j-service.port';
+import { INeo4jServicePort } from '../../../../shared/services/neo4j/port-out/neo4j-service.port';
 import neo4j, { Driver } from 'neo4j-driver';
 import { logError, logInfo } from '../../utils/utils-log';
 

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { AbstractServiceAdapter } from '../../core/AbstractServiceAdapter';
 import { CodebaseData, mapToCodebaseData } from '../../../../shared/services/graph-rag-explorer';
-import { IGraphRagExplorerServicePort } from '../../../../shared/services/graph-rag-explorer/domain/port-out/grag-explorer-service.port';
+import { IGraphRagExplorerServicePort } from '../../../../shared/services/graph-rag-explorer/port-out/grag-explorer-service.port';
 import { logInfo } from '../../utils/utils-log';
 import { INeo4jServicePort } from '../../../../shared/services/neo4j';
 import { serviceRegistry } from '../../core/ServiceRegistry';

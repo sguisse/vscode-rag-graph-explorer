@@ -1,6 +1,6 @@
 import { CodebaseData, CodebaseFile, Dependency, SelectedEntity } from "@/shared/services/graph-rag-explorer";
 import { demoCodebase } from "@/features/explorer-old/wksp-cnt-graph/data/GraphData";
-import { MEMBER_KEY_SEPARATOR_TOKEN } from "@/shared/services/graph-rag-explorer/domain/model/codebase.constants";
+import { MEMBER_KEY_SEPARATOR_TOKEN } from "@/shared/services/graph-rag-explorer/model/codebase.constants";
 import { logError, logInfo } from "./log-view.service.wrapper";
 import { graphRagExplorerApiService } from "../api/graph-rag-explorer-api.service.gen";
 

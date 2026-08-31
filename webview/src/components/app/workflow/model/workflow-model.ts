@@ -1,4 +1,4 @@
-import { NodeType, NodeStatus, EdgeLineStyle, EdgeCurveStyle, EdgeArrowShape } from './types';
+import { NodeType, NodeStatus, EdgeLineStyle, EdgeCurveStyle, EdgeArrowShape } from '../types';
 
 export interface WorkflowNode {
   id: string;

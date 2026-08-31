@@ -1,4 +1,4 @@
-import type { SearchBy, SearchMatch } from './model/types';
+import type { SearchBy, SearchMatch } from './types';
 
 export const DEFAULT_SEARCH_BY: SearchBy = 'name';
 export const DEFAULT_MATCH_TYPE: SearchMatch = 'contains';

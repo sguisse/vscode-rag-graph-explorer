@@ -9,4 +9,4 @@ export * from './hooks/useFinderTree';
 export * from './hooks/useTextareaFinder';
 export * from './model/findable-tree-item';
 export * from './model/finder-config';
-export * from './model/types';
+export * from './types';

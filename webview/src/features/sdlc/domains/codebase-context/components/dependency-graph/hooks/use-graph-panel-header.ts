@@ -2,7 +2,7 @@ import React from 'react';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { vscodeSettings } from '@/App';
 import { useCodebaseDomainState } from '@/features/sdlc/domains/codebase-context/store/useCodebaseDomainState';
-import { GraphRendering } from '@/shared/services/graph-rag-explorer/domain/model/types/type-graph-rendering';
+import { GraphRendering } from '@/shared/services/graph-rag-explorer/types/type-graph-rendering';
 
 export function useGraphPanelHeader(propCyRef?: React.RefObject<any>) {
   const currentLayout = useCodebaseDomainState((s) => s.currentLayout);

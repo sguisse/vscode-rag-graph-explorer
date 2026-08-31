@@ -1,6 +1,6 @@
 'use strict';
 import * as vscode from 'vscode';
-import { VsCodeSettings } from '../../../shared/services/vscode/domain/model/VsCodeSettings.gen';
+import { VsCodeSettings } from '../../../shared/services/vscode/model/VsCodeSettings.gen';
 
 export class VsCodeSettingsManager {
     private static instance: VsCodeSettingsManager;

@@ -6,7 +6,7 @@ import { getWorkflowCytoscapeStyles } from '../components/shapes-workflow';
 import { logWorkflowPositionsIfChanged } from '../utils-workflow';
 import { logInfo, logError } from '@/services/view/log-view.service.wrapper';
 import { WorkflowData, WorkflowNode } from '../model/workflow-model';
-import { isCurrentStatus } from '../model/types/type-node';
+import { isCurrentStatus } from '../types/type-node';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { resolveIconUrlAsync } from '@/lib/utils-image';
 

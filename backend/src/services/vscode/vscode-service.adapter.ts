@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
-import { IVsCodeServicePort } from '../../../../shared/services/vscode/domain/port-out/vscode-service.port';
+import { IVsCodeServicePort } from '../../../../shared/services/vscode/port-out/vscode-service.port';
 import { getAppNormalizedNameFromPackageJson, getCurrentExtensionContext, getWorkspaceRoot } from '../../utils/utils-vscode';
-import { LogLevel } from '../../../../shared/services/vscode/domain/model/types';
+import { LogLevel } from '../../../../shared/services/vscode/types';
 import { logMessageFromRemote as logMessageDelegate} from './delegate/logger.delegate';
 import { getExtensionSettings as getExtensionSettingsDelegate} from './delegate/get-extension-settings.delegate';
-import { VsCodeSettings } from '../../../../shared/services/vscode/domain/model/VsCodeSettings.gen';
+import { VsCodeSettings } from '../../../../shared/services/vscode/model/VsCodeSettings.gen';
 import { AbstractServiceAdapter } from '../../core/AbstractServiceAdapter';
 import { logChannel, logError, logInfo, logWarn } from '../../utils/utils-log';
 import path from 'path';

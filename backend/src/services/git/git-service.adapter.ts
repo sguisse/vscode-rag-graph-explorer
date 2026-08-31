@@ -4,8 +4,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { AbstractServiceAdapter } from '../../core/AbstractServiceAdapter';
 import { logInfo } from '../../utils/utils-log';
-import { GitDiffResult } from '../../../../shared/services/git/domain/model/git-model';
-import { IGitServicePort } from '../../../../shared/services/git/domain/model/port-out/git-service.port';
+import { GitDiffResult } from '../../../../shared/services/git/model/git-model';
+import { IGitServicePort } from '../../../../shared/services/git/port-out/git-service.port';
 
 export class GitServiceAdapter extends AbstractServiceAdapter implements IGitServicePort, vscode.Disposable {
 

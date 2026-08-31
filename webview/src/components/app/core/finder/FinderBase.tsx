@@ -6,7 +6,7 @@ import {
   FinderMatchCounter,
   FinderNavigation,
 } from './FinderCommon';
-import { FinderView } from './model/types';
+import { FinderView } from './types';
 
 export interface FinderBaseProps {
   searchQuery: string;

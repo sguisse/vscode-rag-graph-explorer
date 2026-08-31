@@ -3,7 +3,7 @@ const path = require('path');
 
 const rootDir = path.resolve(__dirname, '../');
 const packageJsonPath = path.join(rootDir, 'package.json');
-const tsOutputPath = path.join(rootDir, 'shared/services/vscode/domain/model/VsCodeSettings.gen.ts');
+const tsOutputPath = path.join(rootDir, 'shared/services/vscode/model/VsCodeSettings.gen.ts');
 const pyOutputPath = path.join(rootDir, 'scripts/core/VsCodeSettings_gen.py');
 
 const SCOPE_PREFIX = 'tokenRazor.';
@@ -111,10 +111,25 @@ ${formatObjectLiteral(nestedKeysObj, 1)}
         return 'Any';
     }
 
+    function toPythonRepr(val) {
+        if (val === null || val === undefined) return 'None';
+        if (typeof val === 'boolean') return val ? 'True' : 'False';
+        if (typeof val === 'number') return String(val);
+        if (typeof val === 'string') return JSON.stringify(val);
+        if (Array.isArray(val)) {
+            return `[${val.map(toPythonRepr).join(', ')}]`;
+        }
+        if (typeof val === 'object') {
+            const entries = Object.entries(val).map(([k, v]) => `${JSON.stringify(k)}: ${toPythonRepr(v)}`);
+            return `{${entries.join(', ')}}`;
+        }
+        return JSON.stringify(val);
+    }
+
     function formatPythonValue(val) {
         if (typeof val === 'boolean') return val ? 'True' : 'False';
         if (val === null) return 'None';
-        if (Array.isArray(val) || typeof val === 'object') return `field(default_factory=lambda: ${JSON.stringify(val)})`;
+        if (Array.isArray(val) || typeof val === 'object') return `field(default_factory=lambda: ${toPythonRepr(val)})`;
         return JSON.stringify(val);
     }
 

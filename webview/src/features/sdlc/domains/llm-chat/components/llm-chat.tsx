@@ -46,8 +46,8 @@ export const LLMChat: React.FC = () => {
   const uniqueMessages = useMemo(() => {
     const seen = new Set<string>();
     return messages.filter((msg) => {
-      if (seen.has(msg.id)) return false;
-      seen.add(msg.id);
+      if (seen.has(msg.id || '')) return false;
+      seen.add(msg.id || '');
       return true;
     });
   }, [messages]);

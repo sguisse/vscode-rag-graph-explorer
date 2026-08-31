@@ -3,7 +3,7 @@
 
 import { RpcMethodEnum } from '@/shared/config/rpc-methods.enum.gen';
 import { AbstractApiService } from './abstract-api.service';
-import { IFilesExporterServicePort } from '@/shared/services/files-exporter/model/port-out/files-exporter-service.port';
+import { IFilesExporterServicePort } from '@/shared/services/file-exporter/port-out/file-exporter-service.port';
 
 class FilesExporterApiService extends AbstractApiService implements IFilesExporterServicePort {
     constructor() {

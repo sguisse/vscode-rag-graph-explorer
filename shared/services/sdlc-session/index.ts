@@ -1,2 +1,2 @@
-export * from './domain/model/sdlc-session.model';
-export * from './domain/port-out/sdlc-session-service.port';
+export * from './model/sdlc-session.model';
+export * from './port-out/sdlc-session-service.port';

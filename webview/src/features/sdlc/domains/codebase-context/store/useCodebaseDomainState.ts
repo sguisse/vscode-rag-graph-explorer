@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { CodebaseData } from '@/shared/services/graph-rag-explorer';
-import { GraphRendering } from '@/shared/services/graph-rag-explorer/domain/model/types/type-graph-rendering';
-import { ExportFormat } from '@/shared/services/codebase-exporter/domain/model/types';
+import { GraphRendering } from '@/shared/services/graph-rag-explorer/types/type-graph-rendering';
+import { ExportFormat } from '@/shared/services/codebase-exporter/types';
 import { demoCodebase } from '../components/dependency-graph/data/GraphData';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { logInfo, logError } from '@/services/view/log-view.service.wrapper';

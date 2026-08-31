@@ -7,7 +7,7 @@ import { ArrowDownAZ, Trash2, MoreVertical } from 'lucide-react';
 import { CollapsibleCard } from '@/components/ui/collapsible-card';
 import { FILE_EXT_CATEGORY_GROUPS } from '../constants/exporter-constants';
 import { testFilterPatterns } from '../utils/filter-simulator';
-import { ExportConfig } from '@/shared/services/files-exporter/model/files-exporter-model';
+import { ExportConfig } from '@/shared/services/file-exporter/model/file-exporter-model';
 
 interface FiltersSectionProps {
   config: ExportConfig;

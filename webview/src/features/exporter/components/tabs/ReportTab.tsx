@@ -1,7 +1,7 @@
 import React from 'react';
 import { PricingService } from '../../utils/pricing-calculator';
 import { Card } from '@/components/ui/card';
-import { ExportReportData } from '@/shared/services/files-exporter/model/files-exporter-model';
+import { ExportReportData } from '@/shared/services/file-exporter/model/file-exporter-model';
 
 interface ReportTabProps {
   reportData: ExportReportData | null;

@@ -7,7 +7,7 @@ import { getAppVersionFromPackageJson, getCurrentExtensionContext, getWorkspaceE
 import { logError, logInfo } from '../utils/utils-log';
 import { ServiceEnum } from '../../../shared/config/service-enum.gen';
 import { serviceRegistry } from '../core/ServiceRegistry';
-import { IGraphRagInstallerServicePort } from '../../../shared/services/graph-rag-explorer/domain/port-out/grag-installer-service.port';
+import { IGraphRagInstallerServicePort } from '../../../shared/services/graph-rag-explorer/port-out/grag-installer-service.port';
 import { copyFolderRecursiveSync, computeRecursivelyMD5 } from '../utils/utils-files';
 
 const VERSION_FILENAME = 'version.txt';

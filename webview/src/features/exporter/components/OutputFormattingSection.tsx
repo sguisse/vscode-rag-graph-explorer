@@ -3,9 +3,9 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CollapsibleCard } from '@/components/ui/collapsible-card';
-import { EXPORT_FORMAT_ICON_MAP, EXPORT_FORMAT_LIST, ExportFormat } from '@/shared/services/codebase-exporter/domain/model/types/type-export-format';
+import { EXPORT_FORMAT_ICON_MAP, EXPORT_FORMAT_LIST, ExportFormat } from '@/shared/services/codebase-exporter/types/type-export-format';
 import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
-import { ExportConfig } from '@/shared/services/files-exporter/model/files-exporter-model';
+import { ExportConfig } from '@/shared/services/file-exporter/model/file-exporter-model';
 
 interface OutputFormattingSectionProps {
   config: ExportConfig;

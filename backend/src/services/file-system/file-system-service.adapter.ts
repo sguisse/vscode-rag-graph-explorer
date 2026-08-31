@@ -4,7 +4,7 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { AbstractServiceAdapter } from '../../core/AbstractServiceAdapter';
 import { logInfo, logWarn } from '../../utils/utils-log';
-import { IFileSystemServicePort } from '../../../../shared/services/file-system/model/port-out/file-system-service.port';
+import { IFileSystemServicePort } from '../../../../shared/services/file-system/port-out/file-system-service.port';
 
 export class FileSystemAdapter extends AbstractServiceAdapter implements IFileSystemServicePort, vscode.Disposable {
 

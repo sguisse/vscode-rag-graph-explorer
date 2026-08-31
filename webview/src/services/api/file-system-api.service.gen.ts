@@ -3,7 +3,7 @@
 
 import { RpcMethodEnum } from '@/shared/config/rpc-methods.enum.gen';
 import { AbstractApiService } from './abstract-api.service';
-import { IFileSystemServicePort } from '@/shared/services/file-system/model/port-out/file-system-service.port';
+import { IFileSystemServicePort } from '@/shared/services/file-system/port-out/file-system-service.port';
 
 class FileSystemApiService extends AbstractApiService implements IFileSystemServicePort {
     constructor() {

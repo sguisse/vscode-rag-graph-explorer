@@ -3,7 +3,7 @@
 
 import { RpcMethodEnum } from '@/shared/config/rpc-methods.enum.gen';
 import { AbstractApiService } from './abstract-api.service';
-import { IImageServicePort } from '@/shared/services/images/model/port-out/image-service.port';
+import { IImageServicePort } from '@/shared/services/image/port-out/image-service.port';
 
 class ImageApiService extends AbstractApiService implements IImageServicePort {
     constructor() {

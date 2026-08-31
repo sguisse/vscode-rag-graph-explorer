@@ -1,12 +1,12 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { IGraphRagInstallerServicePort } from '../../../../shared/services/graph-rag-explorer/domain/port-out/grag-installer-service.port';
+import { IGraphRagInstallerServicePort } from '../../../../shared/services/graph-rag-explorer/port-out/grag-installer-service.port';
 import { AbstractServiceAdapter } from '../../core/AbstractServiceAdapter';
 import { vsCodeSettingsManager } from '../../managers/VsCodeSettings.manager';
 import { getWorkspaceExtentionPath } from '../../utils/utils-vscode';
 import { logInfo } from '../../utils/utils-log';
-import { FinalInstallStatusReport } from '../../../../shared/services/graph-rag-explorer/domain/model/install-result.model';
+import { FinalInstallStatusReport } from '../../../../shared/services/graph-rag-explorer/model/install-result.model';
 
 export class GraphRagInstallerAdapter extends AbstractServiceAdapter implements IGraphRagInstallerServicePort, vscode.Disposable {
 

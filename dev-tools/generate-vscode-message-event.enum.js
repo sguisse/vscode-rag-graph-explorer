@@ -3,7 +3,7 @@ const path = require('path');
 
 // Resolve path relative to project root
 const rootDir = path.resolve(__dirname, '../');
-const payloadFilePath = path.join(rootDir, 'shared/services/vscode/domain/model/vscode-message-payload.ts');
+const payloadFilePath = path.join(rootDir, 'shared/services/vscode/model/vscode-message-payload.ts');
 const outputPath = path.join(rootDir, 'shared/config/vscode-message-event.enum.gen.ts');
 
 function generateVsCodeMessageEventsEnum() {

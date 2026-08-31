@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { AbstractServiceAdapter } from '../../core/AbstractServiceAdapter';
-import { ISdlcSessionServicePort } from '../../../../shared/services/sdlc-session/domain/port-out/sdlc-session-service.port';
-import { SdlcSession } from '../../../../shared/services/sdlc-session/domain/model/sdlc-session.model';
+import { ISdlcSessionServicePort } from '../../../../shared/services/sdlc-session/port-out/sdlc-session-service.port';
+import { SdlcSession } from '../../../../shared/services/sdlc-session/model/sdlc-session.model';
 import { getWorkspaceExtentionPath } from '../../utils/utils-vscode';
 import { logInfo, logError } from '../../utils/utils-log';
 

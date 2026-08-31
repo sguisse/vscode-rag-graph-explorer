@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { graphRagInstallerApiService } from '@/services/api/graph-rag-installer-api.service.gen';
-import { FinalInstallStatusReport } from '@/shared/services/graph-rag-explorer/domain/model/install-result.model';
+import { FinalInstallStatusReport } from '@/shared/services/graph-rag-explorer/model/install-result.model';
 import { Server, Database, Layers, Coffee, Code2, Box, Terminal } from 'lucide-react';
 
 export type FilterType = 'ALL' | 'ERRORS' | 'CORE';

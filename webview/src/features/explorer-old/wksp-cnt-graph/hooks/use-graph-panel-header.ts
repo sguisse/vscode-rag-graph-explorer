@@ -1,7 +1,7 @@
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { vscodeSettings } from '@/App';
 import { useExplorerStore } from '@/features/explorer-old/store/useExplorerStore';
-import { GraphRendering } from '@/shared/services/graph-rag-explorer/domain/model/types/type-graph-rendering';
+import { GraphRendering } from '@/shared/services/graph-rag-explorer/types/type-graph-rendering';
 
 export function useGraphPanelHeader(cyRef?: React.RefObject<any>) {
   const currentLayout = useExplorerStore((s) => s.currentLayout);

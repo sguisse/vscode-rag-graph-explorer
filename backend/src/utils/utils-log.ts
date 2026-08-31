@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { LogLevel } from '../../../shared/services/vscode/domain/model/types';
+import { LogLevel } from '../../../shared/services/vscode/types';
 import { getAppNameFromPackageJson } from './utils-vscode';
 
 export let logChannel: vscode.LogOutputChannel;

@@ -1,1 +1,1 @@
-export * from './domain/model/PythonScriptStatus';
+export * from './model/PythonScriptStatus';

@@ -1,4 +1,4 @@
-import { ExportConfig } from '@/shared/services/files-exporter/model/files-exporter-model';
+import { ExportConfig } from '@/shared/services/file-exporter/model/file-exporter-model';
 
 export const DEFAULT_EXPORT_CONFIG: ExportConfig = {
   src: '',

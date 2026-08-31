@@ -1,4 +1,4 @@
-import { GraphRendering } from '@/shared/services/graph-rag-explorer/domain/model/types/type-graph-rendering';
+import { GraphRendering } from '@/shared/services/graph-rag-explorer/types/type-graph-rendering';
 import { create } from 'zustand';
 import {
   CodebaseData,
@@ -10,13 +10,13 @@ import {
   IChatMessageDto,
   IFileContextDto,
 } from '@/shared/services/llm-chat';
-import { ExportFormat } from '@/shared/services/codebase-exporter/domain/model/types';
+import { ExportFormat } from '@/shared/services/codebase-exporter/types';
 import { WorkflowData } from '@/components/app/workflow/model/workflow-model';
 import defaultWorkflowData from '../workflow/data-workflow.json';
 import { demoCodebase, FOLDER_POSITIONS } from '../wksp-cnt-graph/data/GraphData';
 import { INITIAL_VISIBLE_FILES_CONFIG, FOLDER_KEYS_REGISTERED_CONFIG } from '../constants/graph.constants';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
-import { VsCodeSettingsKeys } from '@/shared/services/vscode/domain/model/VsCodeSettings.gen';
+import { VsCodeSettingsKeys } from '@/shared/services/vscode/model/VsCodeSettings.gen';
 import { logError, logInfo } from '@/services/view/log-view.service.wrapper';
 
 // ============================================================================

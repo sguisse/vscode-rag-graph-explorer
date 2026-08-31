@@ -5,7 +5,7 @@ import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
 import {
   DISPLAY_LEVEL_LIST,
   DISPLAY_LEVEL_ICON_MAP,
-} from '@/shared/services/graph-rag-explorer/domain/model/types';
+} from '@/shared/services/graph-rag-explorer/types';
 import { useGraphToolbar } from './hooks/use-graph-toolbar';
 
 export function GraphToolbar() {
@@ -21,7 +21,7 @@ export function GraphToolbar() {
   } = useGraphToolbar();
 
   return (
-    <div className="top-0 left-0 z-20 absolute flex items-center gap-2.5 bg-muted/20 px-2.5 py-1 border-b border-border w-full font-mono text-xs pointer-events-auto">
+    <div className="top-0 left-0 z-20 absolute flex items-center gap-2.5 bg-muted/20 px-2.5 py-1 border-border border-b w-full font-mono text-xs pointer-events-auto">
       <div className="flex items-center gap-1.5 bg-background px-2 py-0.5 border border-border rounded-sm h-6">
         <span className="font-medium text-[10px] text-muted-foreground tracking-wider">Limit:</span>
         <Input

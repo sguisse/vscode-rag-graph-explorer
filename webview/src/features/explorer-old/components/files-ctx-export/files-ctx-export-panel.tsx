@@ -8,7 +8,7 @@ import {
   EXPORT_FORMAT_LIST,
   EXPORT_FORMAT_ICON_MAP,
   ExportFormat,
-} from '@/shared/services/codebase-exporter/domain/model/types';
+} from '@/shared/services/codebase-exporter/types';
 import { useFilesCtxExportPanel } from './hooks/use-files-ctx-export-panel';
 
 interface FilesCtxExportPanelProps {

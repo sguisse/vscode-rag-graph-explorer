@@ -1,4 +1,4 @@
-import type { SearchBy, SearchMatch, FinderView } from './types';
+import type { SearchBy, SearchMatch, FinderView } from '../types';
 import { DEFAULT_SEARCH_BY, DEFAULT_MATCH_TYPE } from '../constants';
 
 export interface FinderConfig {

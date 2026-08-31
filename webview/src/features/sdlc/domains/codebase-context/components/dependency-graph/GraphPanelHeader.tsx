@@ -9,12 +9,12 @@ import { useLayoutStore } from '@/store/useLayoutStore';
 import {
   GRAPH_LAYOUT_LIST,
   GRAPH_LAYOUT_ICON_MAP
-} from '@/shared/services/graph-rag-explorer/domain/model/types';
+} from '@/shared/services/graph-rag-explorer/types';
 import {
   GRAPH_RENDERING_LIST,
   GRAPH_RENDERING_ICON_MAP,
   GraphRendering
-} from '@/shared/services/graph-rag-explorer/domain/model/types/type-graph-rendering';
+} from '@/shared/services/graph-rag-explorer/types/type-graph-rendering';
 import { useGraphPanelHeader } from './hooks/use-graph-panel-header';
 import { useCodebaseDomainState } from '../../store/useCodebaseDomainState';
 

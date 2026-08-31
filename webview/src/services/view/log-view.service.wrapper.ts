@@ -1,4 +1,4 @@
-import { LogLevel } from "@/shared/services/vscode/domain/model/types";
+import { LogLevel } from "@/shared/services/vscode/types";
 import { vsCodeApiService } from "../api/vs-code-api.service.gen";
 
 function formatDetails(details?: any): any {

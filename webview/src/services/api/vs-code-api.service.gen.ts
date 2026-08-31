@@ -3,9 +3,9 @@
 
 import { RpcMethodEnum } from '@/shared/config/rpc-methods.enum.gen';
 import { AbstractApiService } from './abstract-api.service';
-import { LogLevel } from '@/shared/services/vscode/domain/model/types';
-import { VsCodeSettings } from '@/shared/services/vscode/domain/model/VsCodeSettings.gen';
-import { IVsCodeServicePort } from '@/shared/services/vscode/domain/port-out/vscode-service.port';
+import { LogLevel } from '@/shared/services/vscode/types';
+import { VsCodeSettings } from '@/shared/services/vscode/model/VsCodeSettings.gen';
+import { IVsCodeServicePort } from '@/shared/services/vscode/port-out/vscode-service.port';
 
 class VsCodeApiService extends AbstractApiService implements IVsCodeServicePort {
     constructor() {

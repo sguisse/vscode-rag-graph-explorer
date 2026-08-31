@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { FileCode, FolderOpen } from 'lucide-react';
-import { ExportReportData } from '@/shared/services/files-exporter/model/files-exporter-model';
+import { ExportReportData } from '@/shared/services/file-exporter/model/file-exporter-model';
 
 interface FilesTabProps {
   reportData: ExportReportData | null;

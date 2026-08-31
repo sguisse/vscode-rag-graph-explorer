@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { PythonScriptStatus } from "../../../../shared/services/_python-scripts";
-import { ExportArgs } from "../../../../shared/services/codebase-exporter/domain/model/export-args";
+import { ExportArgs } from "../../../../shared/services/codebase-exporter/model/export-args";
 import { pythonScriptExecutionManager } from '../../managers/PythonScriptExecution.manager';
 import { ChildProcess } from 'child_process';
 import { getWorkspaceExtentionPath, getWorkspaceRoot } from '../../utils/utils-vscode';

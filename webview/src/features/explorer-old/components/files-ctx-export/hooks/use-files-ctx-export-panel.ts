@@ -2,7 +2,7 @@ import { useAppContextStore } from '@/store/useAppContextStore';
 import { useExplorerStore } from '../../../store/useExplorerStore';
 import { codebaseExporterApiService } from '@/services/api/codebase-exporter-api.service.gen';
 import { logInfo, logError } from '@/services/view/log-view.service.wrapper';
-import { ExportStatus } from '@/shared/services/codebase-exporter/domain/model/export-status';
+import { ExportStatus } from '@/shared/services/codebase-exporter/model/export-status';
 
 export function useFilesCtxExportPanel(
   handleCopy?: (text: string, message: string) => void,

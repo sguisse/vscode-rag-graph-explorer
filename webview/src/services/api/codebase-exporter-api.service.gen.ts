@@ -3,11 +3,11 @@
 
 import { RpcMethodEnum } from '@/shared/config/rpc-methods.enum.gen';
 import { AbstractApiService } from './abstract-api.service';
-import { ExportStatus } from '@/shared/services/codebase-exporter/domain/model/export-status';
-import { ExportFormat } from '@/shared/services/codebase-exporter/domain/model/types';
-import { ExportArgs } from '@/shared/services/codebase-exporter/domain/model/export-args';
-import { ExportResult } from '@/shared/services/codebase-exporter/domain/model/export-result';
-import { ICodebaseExporterServicePort } from '@/shared/services/codebase-exporter/domain/port-out/codebase-exporter-service.port';
+import { ExportStatus } from '@/shared/services/codebase-exporter/model/export-status';
+import { ExportFormat } from '@/shared/services/codebase-exporter/types';
+import { ExportArgs } from '@/shared/services/codebase-exporter/model/export-args';
+import { ExportResult } from '@/shared/services/codebase-exporter/model/export-result';
+import { ICodebaseExporterServicePort } from '@/shared/services/codebase-exporter/port-out/codebase-exporter-service.port';
 
 class CodebaseExporterApiService extends AbstractApiService implements ICodebaseExporterServicePort {
     constructor() {
