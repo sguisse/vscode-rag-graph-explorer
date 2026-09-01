@@ -1,4 +1,4 @@
-import { ExportFormat } from "../../codebase-exporter/types/type-export-format";
+import { ExportFormat } from "../../codebase-exporter/types/type-export-format.gen";
 
 export interface ExportConfig {
   src: string;

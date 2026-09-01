@@ -6,8 +6,8 @@ export const DATA_SCOPE_LIST: readonly string[] = [
 ];
 
 export const DATA_SCOPE_ICON_MAP: { [K in (typeof DATA_SCOPE_LIST)[number]]: any } = {
-  LOCAL_ONLY: { icon: "🏠", label: "Local Only" },
-  REMOTE_SYNC: { icon: "🌐", label: "Remote Sync" },
+  "LOCAL_ONLY": { icon: "🏠", label: "Local Only" },
+  "REMOTE_SYNC": { icon: "🌐", label: "Remote Sync" },
 } as const;
 
 export type DataScope = (typeof DATA_SCOPE_LIST)[number];

@@ -1,5 +1,4 @@
-import { ExportFormat } from "../types";
-import { ExportMode } from "../types/type-export-mode";
+import { ExportFormat, ExportMode } from "../types";
 
 export interface ExportArgs {
   /** Array of input file/folder paths to process */

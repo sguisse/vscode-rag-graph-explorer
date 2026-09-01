@@ -3,7 +3,7 @@
 
 import { RpcMethodEnum } from '@/shared/config/rpc-methods.enum.gen';
 import { AbstractApiService } from './abstract-api.service';
-import { BlastRadiusScope } from '@/shared/services/errors/types/type-blast-radius-scope';
+import { BlastRadiusScope } from '@/shared/services/errors/types/type-blast-radius-scope.gen';
 import { IBlastRadiusErrorFilesIdentificatorServicePort } from '@/shared/services/errors/port-out/blast-radius-error-files-identificator-service.port';
 
 class BlastRadiusErrorFilesIdentificatorApiService extends AbstractApiService implements IBlastRadiusErrorFilesIdentificatorServicePort {

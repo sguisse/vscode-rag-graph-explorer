@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { CodebaseData } from '@/shared/services/graph-rag-explorer';
-import { GraphRendering } from '@/shared/services/graph-rag-explorer/types/type-graph-rendering';
+import { GraphRendering } from '@/shared/services/graph-rag-explorer/types/type-graph-rendering.gen';
 import { ExportFormat } from '@/shared/services/codebase-exporter/types';
 import { demoCodebase } from '../components/dependency-graph/data/GraphData';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';

@@ -10,7 +10,7 @@ import type { PythonScriptStatus } from '../../../../shared/services/_python-scr
 import { ChildProcess } from 'child_process';
 import { pythonScriptExecutionManager } from '../../managers/PythonScriptExecution.manager';
 import { IBlastRadiusErrorFilesIdentificatorServicePort } from '../../../../shared/services/errors/port-out/blast-radius-error-files-identificator-service.port';
-import { BlastRadiusScope } from '../../../../shared/services/errors/types/type-blast-radius-scope';
+import { BlastRadiusScope } from '../../../../shared/services/errors/types/type-blast-radius-scope.gen';
 
 export class BlastRadiusErrorFilesIdentificatorAdapter extends AbstractServiceAdapter implements IBlastRadiusErrorFilesIdentificatorServicePort, vscode.Disposable {
 

@@ -1,4 +1,4 @@
-import { GraphRendering } from '@/shared/services/graph-rag-explorer/types/type-graph-rendering';
+import { GraphRendering } from '@/shared/services/graph-rag-explorer/types/type-graph-rendering.gen';
 import { create } from 'zustand';
 import {
   CodebaseData,

@@ -1,1 +1,1 @@
-export * from './type-log-level';
+export * from './type-log-level.gen';

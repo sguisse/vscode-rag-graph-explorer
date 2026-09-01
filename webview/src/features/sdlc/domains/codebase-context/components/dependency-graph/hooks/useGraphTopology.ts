@@ -7,7 +7,7 @@ import {
   SelectedEntity,
 } from '@/shared/services/graph-rag-explorer';
 import { buildMemberKeyToken } from '@/services/view/graph-view.service';
-import { GraphRendering } from '@/shared/services/graph-rag-explorer/types/type-graph-rendering';
+import { GraphRendering } from '@/shared/services/graph-rag-explorer/types/type-graph-rendering.gen';
 
 const FOLDER_BASE_X_POSITIONS_CONFIG = {
   frontend: 40,

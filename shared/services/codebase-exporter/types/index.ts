@@ -1,2 +1,2 @@
-export * from "./type-export-format";
-export * from "./type-export-mode";
+export * from "./type-export-format.gen";
+export * from "./type-export-mode.gen";

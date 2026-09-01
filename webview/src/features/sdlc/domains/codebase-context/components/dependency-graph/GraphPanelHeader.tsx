@@ -14,7 +14,7 @@ import {
   GRAPH_RENDERING_LIST,
   GRAPH_RENDERING_ICON_MAP,
   GraphRendering
-} from '@/shared/services/graph-rag-explorer/types/type-graph-rendering';
+} from '@/shared/services/graph-rag-explorer/types/type-graph-rendering.gen';
 import { useGraphPanelHeader } from './hooks/use-graph-panel-header';
 import { useCodebaseDomainState } from '../../store/useCodebaseDomainState';
 
