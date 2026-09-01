@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { referenceApiService } from '@/services/api/reference-api.service.gen';
+import { urlApiService } from '@/services/api/url-api.service.gen';
 import {ReferenceItem, REFERENCES_PROJECT_KEY } from '@/shared/services/reference/model/reference-model';
 import {
   RefSortField,
@@ -198,12 +199,12 @@ export function useProjectReferences(
 
     setImporting(true);
     try {
-      const { content, sizeKb } = await referenceApiService.readUrlContent(target.url);
+      const content = await urlApiService.readUrlContent(target.url);
       const now = new Date().toISOString();
       const updated: ReferenceItem = {
         ...target,
         content,
-        sizeKb,
+        sizeKb: content.length / 1024,
         updatedAt: now,
         changeDetected: 0,
       };
@@ -224,7 +225,8 @@ export function useProjectReferences(
     try {
       const now = new Date().toISOString();
       for (const item of selectedList) {
-        const { content, sizeKb } = await referenceApiService.readUrlContent(item.url);
+        const content = await urlApiService.readUrlContent(item.url);
+        const sizeKb = content.length / 1024;
         const updated: ReferenceItem = {
           ...item,
           content,
@@ -246,7 +248,7 @@ export function useProjectReferences(
     if (!url) return null;
     setImporting(true);
     try {
-      const result = await referenceApiService.readUrlContent(url);
+      const result = await urlApiService.readUrlContent(url);
       return result;
     } catch (err) {
       console.error('[useProjectReferences] Failed to import URL', err);

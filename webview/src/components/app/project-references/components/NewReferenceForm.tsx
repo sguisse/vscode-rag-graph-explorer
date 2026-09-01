@@ -10,7 +10,7 @@ interface NewReferenceFormProps {
   categories: string[];
   importing: boolean;
   onAddReference: (newRef: Omit<ReferenceItem, 'id'>) => Promise<ReferenceItem>;
-  onImportUrl: (url: string) => Promise<{ content: string; sizeKb: number } | null>;
+  onImportUrl: (url: string) => Promise<string | null>;
 }
 
 export function NewReferenceForm({
@@ -40,8 +40,8 @@ export function NewReferenceForm({
     if (!newUrl) return;
     const result = await onImportUrl(newUrl);
     if (result) {
-      setImportedContent(result.content);
-      setImportedSizeKb(result.sizeKb);
+      setImportedContent(result);
+      setImportedSizeKb(result.length / 1024);
 
       if (!newName) {
         const parts = newUrl.split('/');

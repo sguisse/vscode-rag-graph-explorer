@@ -27,6 +27,7 @@ export function registerRpcMethods(rpc: RpcProtocol): void {
     rpc.register(RpcMethodEnum.FILESYSTEM_CLEAR_DIRECTORY, fileSystemService.clearDirectory.bind(fileSystemService));
     rpc.register(RpcMethodEnum.FILESYSTEM_GET_INVALID_PATHS, fileSystemService.getInvalidPaths.bind(fileSystemService));
     rpc.register(RpcMethodEnum.FILESYSTEM_READ_FILE, fileSystemService.readFile.bind(fileSystemService));
+    rpc.register(RpcMethodEnum.FILESYSTEM_WRITE_FILE, fileSystemService.writeFile.bind(fileSystemService));
 
     const gitService = serviceRegistry.get(ServiceEnum.GIT);
     rpc.register(RpcMethodEnum.GIT_GET_LOCAL_MODIFIED_FILES_FROM_LAST_COMMIT, gitService.getLocalModifiedFilesFromLastCommit.bind(gitService));
@@ -60,7 +61,6 @@ export function registerRpcMethods(rpc: RpcProtocol): void {
     rpc.register(RpcMethodEnum.REFERENCE_SAVE, referenceService.save.bind(referenceService));
     rpc.register(RpcMethodEnum.REFERENCE_UPDATE, referenceService.update.bind(referenceService));
     rpc.register(RpcMethodEnum.REFERENCE_DELETE, referenceService.delete.bind(referenceService));
-    rpc.register(RpcMethodEnum.REFERENCE_READ_URL_CONTENT, referenceService.readUrlContent.bind(referenceService));
 
     const sdlcSessionService = serviceRegistry.get(ServiceEnum.SDLC_SESSION);
     rpc.register(RpcMethodEnum.SDLCSESSION_SAVE_SESSION, sdlcSessionService.saveSession.bind(sdlcSessionService));
@@ -69,6 +69,9 @@ export function registerRpcMethods(rpc: RpcProtocol): void {
 
     const transformContentService = serviceRegistry.get(ServiceEnum.TRANSFORM_CONTENT);
     rpc.register(RpcMethodEnum.TRANSFORMCONTENT_TRANSFORM, transformContentService.transform.bind(transformContentService));
+
+    const urlService = serviceRegistry.get(ServiceEnum.URL);
+    rpc.register(RpcMethodEnum.URL_READ_URL_CONTENT, urlService.readUrlContent.bind(urlService));
 
     const vsCodeService = serviceRegistry.get(ServiceEnum.VS_CODE);
     rpc.register(RpcMethodEnum.VSCODE_GET_REPO_NAME, vsCodeService.getRepoName.bind(vsCodeService));

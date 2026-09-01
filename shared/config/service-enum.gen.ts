@@ -16,5 +16,6 @@ export enum ServiceEnum {
     REFERENCE = 'ReferenceService',
     SDLC_SESSION = 'SdlcSessionService',
     TRANSFORM_CONTENT = 'TransformContentService',
+    URL = 'UrlService',
     VS_CODE = 'VsCodeService'
 }

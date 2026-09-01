@@ -26,10 +26,6 @@ class ReferenceApiService extends AbstractApiService implements IReferenceServic
     public async delete(storageKey: string, id: string): Promise<void> {
         return await this.rpc.call(RpcMethodEnum.REFERENCE_DELETE, storageKey, id);
     }
-
-    public async readUrlContent(url: string): Promise<{ content: string; sizeKb: number }> {
-        return await this.rpc.call(RpcMethodEnum.REFERENCE_READ_URL_CONTENT, url);
-    }
 }
 
 export const referenceApiService = new ReferenceApiService();

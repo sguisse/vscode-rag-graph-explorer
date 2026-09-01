@@ -19,6 +19,7 @@ import { Neo4jAdapter } from '../services/neo4j/neo4j-service.adapter';
 import { ReferenceServiceAdapter } from '../services/reference/reference-service.adapter';
 import { SdlcSessionAdapter } from '../services/sdlc-session/sdlc-session-service.adapter';
 import { TransformContentAdapter } from '../services/transform-content/transform-content-service.adapter';
+import { UrlServiceAdapter } from '../services/url/url-service.adapter';
 import { VsCodeServiceAdapter } from '../services/vscode/vscode-service.adapter';
 import { ICodebaseExporterServicePort } from '../../../shared/services/codebase-exporter/port-out/codebase-exporter-service.port';
 import { IBlastRadiusErrorFilesIdentificatorServicePort } from '../../../shared/services/errors/port-out/blast-radius-error-files-identificator-service.port';
@@ -34,6 +35,7 @@ import { INeo4jServicePort } from '../../../shared/services/neo4j/port-out/neo4j
 import { IReferenceServicePort } from '../../../shared/services/reference/port-out/reference-service.port';
 import { ISdlcSessionServicePort } from '../../../shared/services/sdlc-session/port-out/sdlc-session-service.port';
 import { ITransformContentServicePort } from '../../../shared/services/transform-content/port-out/transform-content-service.port';
+import { IUrlServicePort } from '../../../shared/services/url/port-out/url-service.port';
 import { IVsCodeServicePort } from '../../../shared/services/vscode/port-out/vscode-service.port';
 
 export interface BackendServicesMap {
@@ -51,6 +53,7 @@ export interface BackendServicesMap {
     [ServiceEnum.REFERENCE]: IReferenceServicePort;
     [ServiceEnum.SDLC_SESSION]: ISdlcSessionServicePort;
     [ServiceEnum.TRANSFORM_CONTENT]: ITransformContentServicePort;
+    [ServiceEnum.URL]: IUrlServicePort;
     [ServiceEnum.VS_CODE]: IVsCodeServicePort;
 }
 
@@ -112,6 +115,10 @@ export function registerServices(context: vscode.ExtensionContext): void {
     const transformContentService = new TransformContentAdapter();
     serviceRegistry.register(ServiceEnum.TRANSFORM_CONTENT, transformContentService);
     context.subscriptions.push(transformContentService);
+
+    const urlService = new UrlServiceAdapter();
+    serviceRegistry.register(ServiceEnum.URL, urlService);
+    context.subscriptions.push(urlService);
 
     const vsCodeService = new VsCodeServiceAdapter();
     serviceRegistry.register(ServiceEnum.VS_CODE, vsCodeService);

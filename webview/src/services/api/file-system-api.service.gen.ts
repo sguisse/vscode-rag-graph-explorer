@@ -29,6 +29,10 @@ class FileSystemApiService extends AbstractApiService implements IFileSystemServ
     public async readFile(filePath: string): Promise<string | undefined> {
         return await this.rpc.call(RpcMethodEnum.FILESYSTEM_READ_FILE, filePath);
     }
+
+    public async writeFile(filePath: string, content: string): Promise<void> {
+        return await this.rpc.call(RpcMethodEnum.FILESYSTEM_WRITE_FILE, filePath, content);
+    }
 }
 
 export const fileSystemApiService = new FileSystemApiService();

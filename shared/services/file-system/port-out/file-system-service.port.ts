@@ -4,4 +4,5 @@ export interface IFileSystemServicePort {
   clearDirectory(dirPath: string): Promise<void>;
   getInvalidPaths(paths: string[], workspaceRoot: string): Promise<string[]>;
   readFile(filePath: string): Promise<string | undefined>;
+  writeFile(filePath: string, content: string): Promise<void>;
 }

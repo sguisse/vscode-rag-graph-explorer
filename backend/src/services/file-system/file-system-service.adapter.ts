@@ -12,7 +12,6 @@ export class FileSystemAdapter extends AbstractServiceAdapter implements IFileSy
         super()
     }
 
-
     public async exists(fsPath: string): Promise<boolean> {
         return fs.existsSync(fsPath);
     }
@@ -49,13 +48,17 @@ export class FileSystemAdapter extends AbstractServiceAdapter implements IFileSy
     }
 
     public async readFile(filePath: string): Promise<string | undefined> {
-            if (fs.existsSync(filePath)) {
-                return fs.readFileSync(filePath, 'utf-8');
-            } else {
-                logWarn(`[FileSystemAdapter] File does not exist: ${filePath}`);
-                return undefined;
-            }
+        if (fs.existsSync(filePath)) {
+            return fs.readFileSync(filePath, 'utf-8');
+        } else {
+            logWarn(`[FileSystemAdapter] File does not exist: ${filePath}`);
+            return undefined;
         }
+    }
+
+    public async writeFile(filePath: string, content: string): Promise<void> {
+        await fsPromises.writeFile(filePath, content, 'utf-8');
+    }
 
 
     public dispose() {

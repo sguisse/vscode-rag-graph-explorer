@@ -9,11 +9,42 @@ import { vsCodeSettingsManager } from '../../managers/VsCodeSettings.manager';
 import { getWorkspaceRoot } from '../../utils/utils-vscode';
 import { ReferenceItem, REFERENCES_PROJECT_KEY } from '../../../../shared/services/reference/model/reference-model';
 import { REFERENCES_CONFIG_FILENAME, REFERENCES_CONFIG_PATH } from '../../config/global-constants';
+import { ITransformContentServicePort } from '../../../../shared/services/transform-content/port-out/transform-content-service.port';
+import { serviceRegistry } from '../../core/ServiceRegistry';
+import { RpcMethodEnum } from '../../../../shared/config/rpc-methods.enum.gen';
+import { ServiceEnum } from '../../../../shared/config/service-enum.gen';
+import { IUrlServicePort } from '../../../../shared/services/url/port-out/url-service.port';
+import { IFileSystemServicePort } from '../../../../shared/services/file-system/port-out/file-system-service.port';
 
 export class ReferenceServiceAdapter extends AbstractServiceAdapter implements IReferenceServicePort, vscode.Disposable {
 
     constructor() {
         super();
+
+    }
+
+    private getTransformerService(): ITransformContentServicePort {
+        const transformerService = serviceRegistry.get(ServiceEnum.TRANSFORM_CONTENT);
+        if (!transformerService) {
+            throw new Error('TransformContentService is not available. Ensure it is initialized before use.');
+        }
+        return transformerService;
+    }
+
+    private getUrlService(): IUrlServicePort {
+        const urlService = serviceRegistry.get(ServiceEnum.URL);
+        if (!urlService) {
+            throw new Error('UrlService is not available. Ensure it is initialized before use.');
+        }
+        return urlService;
+    }
+
+    private getFileSystemService(): IFileSystemServicePort {
+        const fileSystemService = serviceRegistry.get(ServiceEnum.FILE_SYSTEM);
+        if (!fileSystemService) {
+            throw new Error('FileSystemService is not available. Ensure it is initialized before use.');
+        }
+        return fileSystemService;
     }
 
     private buildReferencesFilePath(): string {
@@ -101,7 +132,20 @@ export class ReferenceServiceAdapter extends AbstractServiceAdapter implements I
         return references;
     }
 
-    public async save(storageKey: string, reference: ReferenceItem): Promise<ReferenceItem> {
+
+    public async update(storageKey: string = REFERENCES_PROJECT_KEY, reference: ReferenceItem): Promise<ReferenceItem> {
+        return this.save(storageKey, reference);
+    }
+
+    public async delete(storageKey: string = REFERENCES_PROJECT_KEY, id: string): Promise<void> {
+        const store = this.readYamlStore();
+        if (store[storageKey]) {
+            store[storageKey] = store[storageKey].filter((r) => r.id !== id);
+            this.writeYamlStore(store);
+        }
+    }
+
+    public async save(storageKey: string = REFERENCES_PROJECT_KEY, reference: ReferenceItem): Promise<ReferenceItem> {
         const store = this.readYamlStore();
         const list = store[storageKey] || [];
         const existingIndex = list.findIndex((r) => r.id === reference.id);
@@ -112,40 +156,27 @@ export class ReferenceServiceAdapter extends AbstractServiceAdapter implements I
             list.push(reference);
         }
 
+        // Read the URL content to store in local folder
+        const referenceContent = await this.getUrlService().readUrlContent(reference.url);
+        // Write the content to the local file system and update the reference item with the local path
+        const referenceStoragePath = path.join(REFERENCES_CONFIG_PATH, `${reference.id}.txt`);
+        await this.getFileSystemService().writeFile(referenceStoragePath, referenceContent);
+
         store[storageKey] = list;
         this.writeYamlStore(store);
-        return reference;
-    }
 
-    public async update(storageKey: string, reference: ReferenceItem): Promise<ReferenceItem> {
-        return this.save(storageKey, reference);
-    }
-
-    public async delete(storageKey: string, id: string): Promise<void> {
-        const store = this.readYamlStore();
-        if (store[storageKey]) {
-            store[storageKey] = store[storageKey].filter((r) => r.id !== id);
-            this.writeYamlStore(store);
-        }
-    }
-
-    public async readUrlContent(url: string): Promise<{ content: string; sizeKb: number }> {
-        try {
-            if (url.startsWith('http://') || url.startsWith('https://')) {
-                const response = await fetch(url);
-                if (response.ok) {
-                    const text = await response.text();
-                    const sizeKb = Number((Buffer.byteLength(text, 'utf8') / 1024).toFixed(2));
-                    return { content: text, sizeKb: Math.max(0.1, sizeKb) };
-                }
+        /*
+        if (reference.transformer && reference.content) {
+            const transformerService = this.getTransformerService();
+            try {
+                const transformationResult = await transformerService.transform(reference.transformer, reference.content);
+                reference.contentAfterTransformation = transformationResult.transformedContent;
+                reference.sizeKbAfterTransformation = Number((Buffer.byteLength(transformationResult.transformedContent, 'utf8') / 1024).toFixed(2));
+                logInfo(`[ReferenceServiceAdapter] Transformation applied for reference ID: ${reference.id}`);
             }
-        } catch (error) {
-            logError(`[ReferenceServiceAdapter] Failed to fetch content from URL: ${url}`, error);
-        }
+            */
 
-        const mockContent = `# Imported Reference Content from ${url}\n\nURL: ${url}\nLoaded At: ${new Date().toLocaleString()}\n\n[CONTEXT DATA]\n- Updated configuration payload loaded.`;
-        const sizeKb = Number((Buffer.byteLength(mockContent, 'utf8') / 1024).toFixed(2));
-        return { content: mockContent, sizeKb: Math.max(0.5, sizeKb) };
+        return reference;
     }
 
     public dispose() {
