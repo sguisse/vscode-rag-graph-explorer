@@ -1,104 +1,451 @@
 #!/usr/bin/env bash
 set -e
 
-echo "🚀 Adding breadcrumb navigation interceptor hook & logging across all features..."
+echo "🚀 Implementing dynamic navigation history stack trail for breadcrumbs in Header.tsx..."
 
 # 1. Ensure target directories exist
 mkdir -p webview/src/store
-mkdir -p webview/src/hooks
 mkdir -p webview/src/_layout
-mkdir -p webview/src/features/home
-mkdir -p webview/src/features/references
-mkdir -p webview/src/features/transformer
-mkdir -p webview/src/features/install
-mkdir -p webview/src/features/rules
-mkdir -p webview/src/features/help
-mkdir -p webview/src/features/exporter
-mkdir -p webview/src/features/ai-workflow-builder
-mkdir -p webview/src/features/sdlc/domains/instructions
-mkdir -p webview/src/features/sdlc/domains/llm-chat
-mkdir -p webview/src/features/sdlc/domains/results-manager
-mkdir -p webview/src/features/sdlc/domains/codebase-context
-mkdir -p webview/src/features/sdlc/domains/configuration
-mkdir -p webview/src/features/layout-demo
+mkdir -p webview/src
 
-# 2. Create Breadcrumb Interceptor Store
-cat << 'EOF' > webview/src/store/useBreadcrumbInterceptorStore.ts
+# 2. Create Breadcrumb History Stack Store
+cat << 'EOF' > webview/src/store/useBreadcrumbHistoryStore.ts
 import { create } from 'zustand';
 
-export type NavigationActionType = 'back' | 'breadcrumb' | 'home';
-
-export interface NavigationInterceptContext {
-  originFeature: string;
-  actionType: NavigationActionType;
-  destinationPath: string;
+export interface BreadcrumbStackItem {
+  pathname: string;
+  label: string;
+  search?: Record<string, any>;
 }
 
-export type BreadcrumbInterceptorFn = (
-  ctx: NavigationInterceptContext
-) => string | boolean | void | Promise<string | boolean | void>;
-
-interface BreadcrumbInterceptorState {
-  interceptor: BreadcrumbInterceptorFn | null;
-  originFeature: string | null;
-  registerInterceptor: (originFeature: string, fn: BreadcrumbInterceptorFn) => void;
-  unregisterInterceptor: () => void;
+interface BreadcrumbHistoryState {
+  stack: BreadcrumbStackItem[];
+  pushRoute: (item: BreadcrumbStackItem, isLinkedTransition?: boolean) => void;
+  popTo: (pathname: string) => void;
+  resetTo: (item: BreadcrumbStackItem) => void;
 }
 
-export const useBreadcrumbInterceptorStore = create<BreadcrumbInterceptorState>((set) => ({
-  interceptor: null,
-  originFeature: null,
-  registerInterceptor: (originFeature, fn) => set({ originFeature, interceptor: fn }),
-  unregisterInterceptor: () => set({ originFeature: null, interceptor: null }),
+const HOME_ITEM: BreadcrumbStackItem = { pathname: '/', label: 'Home' };
+
+export const useBreadcrumbHistoryStore = create<BreadcrumbHistoryState>((set) => ({
+  stack: [HOME_ITEM],
+
+  pushRoute: (newItem, isLinkedTransition = false) => {
+    set((state) => {
+      // 1. If navigating to Home, reset stack to Home
+      if (newItem.pathname === '/') {
+        return { stack: [HOME_ITEM] };
+      }
+
+      // 2. Check if pathname already exists in current stack
+      const existingIdx = state.stack.findIndex((s) => s.pathname === newItem.pathname);
+      if (existingIdx !== -1) {
+        // Unwind stack to existing item
+        const updated = state.stack.slice(0, existingIdx + 1);
+        updated[existingIdx] = newItem; // update search params
+        return { stack: updated };
+      }
+
+      // 3. If linked transition (e.g. References -> Transformer)
+      if (isLinkedTransition) {
+        return { stack: [...state.stack, newItem] };
+      }
+
+      // 4. Top-level section change: Replace stack with [Home, newItem]
+      return { stack: [HOME_ITEM, newItem] };
+    });
+  },
+
+  popTo: (pathname) => {
+    set((state) => {
+      const idx = state.stack.findIndex((s) => s.pathname === pathname);
+      if (idx !== -1) {
+        return { stack: state.stack.slice(0, idx + 1) };
+      }
+      return state;
+    });
+  },
+
+  resetTo: (item) => {
+    set({ stack: item.pathname === '/' ? [HOME_ITEM] : [HOME_ITEM, item] });
+  },
 }));
 EOF
 
-# 3. Create Custom Hook `useBreadcrumbNavigation`
-cat << 'EOF' > webview/src/hooks/useBreadcrumbNavigation.ts
-import { useEffect, useCallback } from 'react';
-import { useNavigate } from '@tanstack/react-router';
-import { useBreadcrumbInterceptorStore, NavigationInterceptContext } from '@/store/useBreadcrumbInterceptorStore';
-import { logInfo } from '@/services/view/log-view.service.wrapper';
+# 3. Update router.tsx to synchronize route transitions with useBreadcrumbHistoryStore
+cat << 'EOF' > webview/src/router.tsx
+import React, { useEffect } from 'react';
+import {
+  createRootRoute,
+  createRoute,
+  createRouter,
+  createMemoryHistory,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from '@tanstack/react-router';
+import { AppLayout } from '@/_layout/AppLayout';
 
-export function useBreadcrumbNavigation(
-  originFeature: string,
-  customHandler?: (
-    ctx: NavigationInterceptContext,
-    navigate: ReturnType<typeof useNavigate>
-  ) => string | boolean | void | Promise<string | boolean | void>
-) {
+// Feature Component Imports
+import { HomeFeature } from '@/features/home/HomeFeature';
+import { ReferencesFeature } from '@/features/references/ReferencesFeature';
+import { TransformerFeature } from '@/features/transformer/TransformerFeature';
+import { InstallFeature } from '@/features/install/InstallFeature';
+import { RulesFeature } from '@/features/rules/RulesFeature';
+import { WorkflowBuilderFeature } from '@/features/ai-workflow-builder/WorkflowBuilderFeature';
+import { ExporterFeature } from '@/features/exporter/ExporterFeature';
+import { HelpFeature } from '@/features/help/HelpFeature';
+import ExplorerOldFeature from '@/features/explorer-old/ExplorerOldFeature';
+import { InstructionsFeature } from '@/features/sdlc/domains/instructions';
+import { ConfigurationFeature } from '@/features/sdlc/domains/configuration';
+import { ResultsManagerFeature } from '@/features/sdlc/domains/results-manager';
+import { CodebaseContextFeature } from '@/features/sdlc/domains/codebase-context';
+import LlmFeature from '@/features/sdlc/domains/llm-chat/LlmFeature';
+import { LayoutDemoFeature } from '@/features/layout-demo/LayoutDemoFeature';
+
+import { useLayoutStore } from '@/store/useLayoutStore';
+import { useAppContextStore } from '@/store/useAppContextStore';
+import { useBreadcrumbHistoryStore } from '@/store/useBreadcrumbHistoryStore';
+
+// Search payload types
+export interface ReferencesSearch {
+  updatedAt?: number;
+  updatedFile?: string;
+  sourceAction?: string;
+}
+
+export interface TransformerSearch {
+  scope?: 'Default' | 'Selected file context' | 'Reference file';
+  fileName?: string;
+  filePath?: string;
+  language?: string;
+  fromFeature?: string;
+}
+
+// Explicit Feature ID <-> Route Path Mapping Table
+const FEATURE_TO_ROUTE_MAP: Record<string, string> = {
+  'feature-home': '/',
+  'feature-references': '/references',
+  'feature-transformer': '/transformer',
+  'feature-install': '/install',
+  'feature-rules': '/rules',
+  'feature-impact': '/rules',
+  'feature-ai-workflow-builder': '/workflow-builder',
+  'feature-exporter': '/exporter',
+  'feature-codebase-exporter': '/exporter',
+  'feat-prompt': '/exporter',
+  'feature-help': '/help',
+  'feature-configuration': '/configuration',
+  'feat-configuration': '/configuration',
+  'feature-codebase-context': '/codebase-context',
+  'feature-graph-explorer': '/codebase-context',
+  'feature-skeleton': '/codebase-context',
+  'feature-instructions': '/instructions',
+  'feature-llm-chat': '/llm-chat',
+  'feature-results-manager': '/results-manager',
+  'feat-history': '/results-manager',
+  'feature-old-explorer': '/old-explorer',
+  'feature-layout-demo': '/layout-demo',
+};
+
+const ROUTE_TO_FEATURE_MAP: Record<string, string> = {
+  '/': 'feature-home',
+  '/references': 'feature-references',
+  '/transformer': 'feature-transformer',
+  '/install': 'feature-install',
+  '/rules': 'feature-rules',
+  '/workflow-builder': 'feature-ai-workflow-builder',
+  '/exporter': 'feature-exporter',
+  '/help': 'feature-help',
+  '/configuration': 'feature-configuration',
+  '/codebase-context': 'feature-codebase-context',
+  '/instructions': 'feature-instructions',
+  '/llm-chat': 'feature-llm-chat',
+  '/results-manager': 'feature-results-manager',
+  '/old-explorer': 'feature-old-explorer',
+  '/layout-demo': 'feature-layout-demo',
+};
+
+export const ROUTE_BREADCRUMB_LABELS: Record<string, string> = {
+  '/': 'Home',
+  '/references': 'Project References',
+  '/transformer': 'Transformer Engine',
+  '/install': 'Installation & Health',
+  '/rules': 'Impact Rules',
+  '/workflow-builder': 'Workflow Builder',
+  '/exporter': 'Codebase Exporter',
+  '/help': 'Documentation',
+  '/configuration': 'Configuration',
+  '/codebase-context': 'Codebase Context',
+  '/instructions': 'SDLC Instructions',
+  '/llm-chat': 'LLM Chat',
+  '/results-manager': 'Results Manager',
+  '/old-explorer': 'Legacy Explorer',
+  '/layout-demo': 'Layout Demo',
+};
+
+export function getRoutePathForFeature(featureId: string): string {
+  if (!featureId) return '/';
+  const cleanId = String(featureId).trim();
+
+  if (FEATURE_TO_ROUTE_MAP[cleanId]) {
+    return FEATURE_TO_ROUTE_MAP[cleanId];
+  }
+
+  if (cleanId === 'feature-home' || cleanId === 'home') {
+    return '/';
+  }
+
+  const slug = cleanId.replace(/^feature-|^feat-/, '');
+  return `/${slug}`;
+}
+
+// Root Layout Shell Component
+const rootRoute = createRootRoute({
+  component: RootComponent,
+});
+
+function RootComponent() {
+  const location = useLocation();
   const navigate = useNavigate();
-  const registerInterceptor = useBreadcrumbInterceptorStore((s) => s.registerInterceptor);
-  const unregisterInterceptor = useBreadcrumbInterceptorStore((s) => s.unregisterInterceptor);
 
-  const handleIntercept = useCallback(
-    async (ctx: NavigationInterceptContext) => {
-      logInfo(
-        `[Breadcrumb Intercept] Origin Feature: "${originFeature}" | Action: "${ctx.actionType}" | Target Destination: "${ctx.destinationPath}"`
-      );
+  const isDarkMode = useAppContextStore((s) => s.isDarkMode);
+  const setIsDarkMode = useAppContextStore((s) => s.setIsDarkMode);
+  const notification = useAppContextStore((s) => s.notification);
+  const containers = useLayoutStore((s) => s.containers || []);
 
-      if (customHandler) {
-        return await customHandler(ctx, navigate);
-      }
-    },
-    [originFeature, customHandler, navigate]
-  );
+  const activeFeature = ROUTE_TO_FEATURE_MAP[location.pathname] || 'feature-home';
 
+  // 1. Synchronize Route transition to Breadcrumb History Stack
   useEffect(() => {
-    registerInterceptor(originFeature, handleIntercept);
-    return () => {
-      unregisterInterceptor();
-    };
-  }, [originFeature, handleIntercept, registerInterceptor, unregisterInterceptor]);
+    const label = ROUTE_BREADCRUMB_LABELS[location.pathname] || 'Feature';
+    const isLinkedTransition = Boolean(
+      (location.search as any)?.fromFeature || location.pathname === '/transformer'
+    );
 
-  return { navigate };
+    useBreadcrumbHistoryStore.getState().pushRoute(
+      { pathname: location.pathname, label, search: location.search },
+      isLinkedTransition
+    );
+  }, [location.pathname, location.search]);
+
+  // 2. Silent non-cyclic sync: Update Zustand store activeFeature
+  useEffect(() => {
+    const currentStoreFeature = useAppContextStore.getState().activeFeature;
+    if (currentStoreFeature !== activeFeature) {
+      useAppContextStore.setState({ activeFeature });
+    }
+  }, [activeFeature, location.pathname]);
+
+  // 3. Global subscriber for store activeFeature mutations
+  useEffect(() => {
+    const unsubscribe = useAppContextStore.subscribe((state) => {
+      const targetFeature = state.activeFeature;
+      if (!targetFeature) return;
+
+      const targetPath = getRoutePathForFeature(targetFeature);
+      const currentPath = router.state.location.pathname;
+
+      if (currentPath !== targetPath) {
+        router.navigate({ to: targetPath as any }).catch((err) => {
+          console.error(`[Navigation Debug] Router navigation failed:`, err);
+        });
+      }
+    });
+
+    return unsubscribe;
+  }, []);
+
+  // Handle menu item / sidebar selection
+  const handleSetActiveFeature = (featureId: string) => {
+    const targetPath = getRoutePathForFeature(featureId);
+    if (location.pathname !== targetPath) {
+      console.info(`[Navigation Debug] Menu Item Clicked: "${featureId}" -> Navigating to "${targetPath}"`);
+      navigate({ to: targetPath as any }).catch((err) => {
+        console.error(`[Navigation Debug] Navigation error:`, err);
+      });
+    }
+  };
+
+  return (
+    <div className="flex flex-col w-full h-screen overflow-hidden bg-background text-foreground">
+      {/* Active Route Workspace Content */}
+      <div className="flex-1 min-h-0 relative">
+        <Outlet />
+      </div>
+
+      {/* App Layout Shell */}
+      {AppLayout && (
+        <AppLayout
+          activeFeature={activeFeature}
+          setActiveFeature={handleSetActiveFeature}
+          isDarkMode={isDarkMode}
+          setIsDarkMode={setIsDarkMode}
+          notification={notification}
+          layoutContainers={containers}
+        />
+      )}
+    </div>
+  );
+}
+
+// Declare All 15 Feature Routes
+export const homeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/',
+  staticData: { breadcrumb: 'Home' },
+  component: HomeFeature,
+});
+
+export const referencesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/references',
+  staticData: { breadcrumb: 'Project References' },
+  validateSearch: (search: Record<string, unknown>): ReferencesSearch => ({
+    updatedAt: search.updatedAt ? Number(search.updatedAt) : undefined,
+    updatedFile: (search.updatedFile as string) || undefined,
+    sourceAction: (search.sourceAction as string) || undefined,
+  }),
+  component: ReferencesFeature,
+});
+
+export const transformerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/transformer',
+  staticData: { breadcrumb: 'Transformer Engine' },
+  validateSearch: (search: Record<string, unknown>): TransformerSearch => ({
+    scope: (search.scope as any) || 'Default',
+    fileName: (search.fileName as string) || undefined,
+    filePath: (search.filePath as string) || undefined,
+    language: (search.language as string) || undefined,
+    fromFeature: (search.fromFeature as string) || undefined,
+  }),
+  component: TransformerFeature,
+});
+
+export const installRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/install',
+  staticData: { breadcrumb: 'Installation & Health' },
+  component: InstallFeature,
+});
+
+export const rulesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/rules',
+  staticData: { breadcrumb: 'Impact Rules' },
+  component: RulesFeature,
+});
+
+export const workflowRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/workflow-builder',
+  staticData: { breadcrumb: 'Workflow Builder' },
+  component: WorkflowBuilderFeature,
+});
+
+export const exporterRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/exporter',
+  staticData: { breadcrumb: 'Codebase Exporter' },
+  component: ExporterFeature,
+});
+
+export const helpRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/help',
+  staticData: { breadcrumb: 'Documentation' },
+  component: HelpFeature,
+});
+
+export const configurationRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/configuration',
+  staticData: { breadcrumb: 'Configuration' },
+  component: ConfigurationFeature,
+});
+
+export const codebaseContextRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/codebase-context',
+  staticData: { breadcrumb: 'Codebase Context' },
+  component: CodebaseContextFeature,
+});
+
+export const instructionsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/instructions',
+  staticData: { breadcrumb: 'SDLC Instructions' },
+  component: InstructionsFeature,
+});
+
+export const llmChatRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/llm-chat',
+  staticData: { breadcrumb: 'LLM Chat' },
+  component: LlmFeature,
+});
+
+export const resultsManagerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/results-manager',
+  staticData: { breadcrumb: 'Results Manager' },
+  component: ResultsManagerFeature,
+});
+
+export const oldExplorerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/old-explorer',
+  staticData: { breadcrumb: 'Legacy Explorer' },
+  component: ExplorerOldFeature,
+});
+
+export const layoutDemoRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/layout-demo',
+  staticData: { breadcrumb: 'Layout Demo' },
+  component: LayoutDemoFeature,
+});
+
+const routeTree = rootRoute.addChildren([
+  homeRoute,
+  referencesRoute,
+  transformerRoute,
+  installRoute,
+  rulesRoute,
+  workflowRoute,
+  exporterRoute,
+  helpRoute,
+  configurationRoute,
+  codebaseContextRoute,
+  instructionsRoute,
+  llmChatRoute,
+  resultsManagerRoute,
+  oldExplorerRoute,
+  layoutDemoRoute,
+]);
+
+// Memory history for Webview environment compatibility
+export const memoryHistory = createMemoryHistory({
+  initialEntries: ['/'],
+});
+
+export const router = createRouter({
+  routeTree,
+  history: memoryHistory,
+});
+
+declare module '@tanstack/react-router' {
+  interface Register {
+    router: typeof router;
+  }
 }
 EOF
 
-# 4. Update Header.tsx to execute feature interceptors on navigation actions
+# 4. Update Header.tsx to render breadcrumbs from useBreadcrumbHistoryStore stack
 cat << 'EOF' > webview/src/_layout/Header.tsx
 import React from 'react';
-import { useMatches, useNavigate } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';
 import { ToolbarSeparator } from '@/components/app/toolbar-separator';
 import { headerLeftWidth, DefaultContainersSize } from '@/_layout';
 import {
@@ -128,6 +475,7 @@ import { WorkflowPopup } from '@/components/app/workflow/workflow-popup';
 import { useExplorerWorkflow } from '@/features/explorer-old/workflow/hooks/use-explorer-workflow';
 import { Button } from '@/components/ui/button';
 import { useBreadcrumbInterceptorStore } from '@/store/useBreadcrumbInterceptorStore';
+import { useBreadcrumbHistoryStore } from '@/store/useBreadcrumbHistoryStore';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 interface HeaderProps {
@@ -152,19 +500,13 @@ export function Header({
   const interceptor = useBreadcrumbInterceptorStore((s) => s.interceptor);
   const registeredOrigin = useBreadcrumbInterceptorStore((s) => s.originFeature);
 
-  // TanStack Router hooks
-  const matches = useMatches();
+  // Read actual navigation history stack from store
+  const breadcrumbStack = useBreadcrumbHistoryStore((s) => s.stack);
+  const popTo = useBreadcrumbHistoryStore((s) => s.popTo);
+
   const navigate = useNavigate();
 
-  const breadcrumbs = matches
-    .filter((match) => match.staticData && (match.staticData as any).breadcrumb)
-    .map((match) => ({
-      pathname: match.pathname,
-      label: (match.staticData as any).breadcrumb as string,
-      search: match.search,
-    }));
-
-  const canGoBack = matches.length > 2 || (matches.length > 1 && matches[matches.length - 1].pathname !== '/');
+  const canGoBack = breadcrumbStack.length > 1;
 
   const handleHomeClick = async () => {
     const origin = registeredOrigin || activeFeature || 'feature-home';
@@ -180,6 +522,7 @@ export function Header({
       });
 
       if (typeof redirectPath === 'string') {
+        popTo(redirectPath);
         navigate({ to: redirectPath as any });
         return;
       } else if (redirectPath === false) {
@@ -187,6 +530,7 @@ export function Header({
       }
     }
 
+    popTo('/');
     navigate({ to: '/' });
   };
 
@@ -203,6 +547,7 @@ export function Header({
       });
 
       if (typeof redirectPath === 'string') {
+        popTo(redirectPath);
         navigate({ to: redirectPath as any, search: search || {} });
         return;
       } else if (redirectPath === false) {
@@ -210,13 +555,14 @@ export function Header({
       }
     }
 
+    popTo(pathname);
     navigate({ to: pathname, search: search || {} } as any);
   };
 
   const handleGoBack = async () => {
     const origin = registeredOrigin || activeFeature || 'unknown-feature';
-    const prevMatch = matches.length >= 2 ? matches[matches.length - 2] : null;
-    const targetPath = prevMatch ? prevMatch.pathname : '/';
+    const prevItem = breadcrumbStack.length >= 2 ? breadcrumbStack[breadcrumbStack.length - 2] : null;
+    const targetPath = prevItem ? prevItem.pathname : '/';
 
     logInfo(`[Navigation Action] Back button clicked in Origin Feature: "${origin}" -> Target: "${targetPath}"`);
 
@@ -228,6 +574,7 @@ export function Header({
       });
 
       if (typeof redirectPath === 'string') {
+        popTo(redirectPath);
         navigate({ to: redirectPath as any });
         return;
       } else if (redirectPath === false) {
@@ -235,7 +582,12 @@ export function Header({
       }
     }
 
-    window.history.back();
+    if (prevItem) {
+      popTo(prevItem.pathname);
+      navigate({ to: prevItem.pathname, search: prevItem.search || {} } as any);
+    } else {
+      window.history.back();
+    }
   };
 
   const leftContent = (
@@ -251,7 +603,7 @@ export function Header({
 
   const centerContent = (
     <div className="flex flex-col justify-center items-center gap-1 w-full min-w-0">
-      {/* Existing Top Row inside Center Content */}
+      {/* Top Row inside Center Content */}
       <div className="flex flex-1 justify-between items-center gap-2 w-full">
         <div className="flex items-center gap-2 shrink-0">
           <span style={{ paddingLeft: `${DefaultContainersSize.sidebarLeftWidth - headerLeftWidth}px` }}>
@@ -268,7 +620,7 @@ export function Header({
           </span>
         </div>
 
-        {/* Centered Workflow Button & Reusable Component Popup */}
+        {/* Centered Workflow Button */}
         <div className="flex flex-1 justify-center items-center">
           <WorkflowPopup
             side="bottom"
@@ -291,7 +643,7 @@ export function Header({
         <div className="w-24 shrink-0" />
       </div>
 
-      {/* Breadcrumb Navigation on Bottom of Existing Div */}
+      {/* Dynamic Navigation History Breadcrumb */}
       <div className="flex items-center justify-center gap-1.5 w-full overflow-x-auto text-[11px] font-mono leading-none">
         {canGoBack && (
           <Button
@@ -305,20 +657,22 @@ export function Header({
           </Button>
         )}
 
-        <button
-          onClick={handleHomeClick}
-          className="flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer font-medium"
-          title="Navigate to Home"
-        >
-          <Home size={12} />
-        </button>
+        {breadcrumbStack.map((crumb, idx) => {
+          const isLast = idx === breadcrumbStack.length - 1;
+          const isHome = crumb.pathname === '/';
 
-        {breadcrumbs.map((crumb, idx) => {
-          const isLast = idx === breadcrumbs.length - 1;
           return (
             <React.Fragment key={`${crumb.pathname}-${idx}`}>
-              <ChevronRight size={11} className="text-muted-foreground shrink-0" />
-              {isLast ? (
+              {idx > 0 && <ChevronRight size={11} className="text-muted-foreground shrink-0" />}
+              {isHome ? (
+                <button
+                  onClick={handleHomeClick}
+                  className="flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer font-medium"
+                  title="Navigate to Home"
+                >
+                  <Home size={12} />
+                </button>
+              ) : isLast ? (
                 <span className="font-bold text-primary px-1.5 py-0.2 rounded bg-primary/10 border border-primary/20">
                   {crumb.label}
                 </span>
@@ -427,783 +781,8 @@ export function Header({
 }
 EOF
 
-# 5. Inject `useBreadcrumbNavigation` into HomeFeature.tsx
-cat << 'EOF' > webview/src/features/home/HomeFeature.tsx
-import React, { useEffect } from 'react';
-import { useLayoutStore } from '@/store/useLayoutStore';
-import { CenterPanelContainer } from './layout-ctns/CenterPanelContainer';
-import { useBreadcrumbNavigation } from '@/hooks/useBreadcrumbNavigation';
-
-export function HomeFeature() {
-  const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
-  useBreadcrumbNavigation('feature-home');
-
-  useEffect(() => {
-    setLayoutContainers({
-      header: { visible: true, isResizable: false, isHiddable: false },
-      sidebarLeft: { visible: true, isResizable: true, isHiddable: true },
-      workspace: {
-        top: { visible: false },
-        left: { visible: false },
-        center: {
-          visible: true,
-          container: <CenterPanelContainer />,
-          isHiddable: false,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
-        },
-        right: { visible: false },
-        bottom: { visible: false },
-      },
-      sidebarRight: { visible: false },
-      footer: { visible: true, isResizable: false, isHiddable: false },
-    });
-  }, [setLayoutContainers]);
-
-  return null;
-}
-
-export default HomeFeature;
-EOF
-
-# 6. Inject `useBreadcrumbNavigation` into ReferencesFeature.tsx
-cat << 'EOF' > webview/src/features/references/ReferencesFeature.tsx
-import React, { useEffect } from 'react';
-import { useLayoutStore } from '@/store/useLayoutStore';
-import { CenterPanelContainer } from './layout-ctns/CenterPanelContainer';
-import { useBreadcrumbNavigation } from '@/hooks/useBreadcrumbNavigation';
-
-export function ReferencesFeature() {
-  const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
-  useBreadcrumbNavigation('feature-references');
-
-  useEffect(() => {
-    setLayoutContainers({
-      header: { visible: true, isResizable: false, isHiddable: false },
-      sidebarLeft: { visible: true, isResizable: true, isHiddable: true },
-      workspace: {
-        top: { visible: false },
-        left: { visible: false },
-        center: {
-          visible: true,
-          container: <CenterPanelContainer />,
-          isHiddable: false,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
-        },
-        right: { visible: false },
-        bottom: { visible: false },
-      },
-      sidebarRight: { visible: false },
-      footer: { visible: true, isResizable: false, isHiddable: false },
-    });
-  }, [setLayoutContainers]);
-
-  return null;
-}
-
-export default ReferencesFeature;
-EOF
-
-# 7. Inject `useBreadcrumbNavigation` into TransformerFeature.tsx
-cat << 'EOF' > webview/src/features/transformer/TransformerFeature.tsx
-import React, { useEffect } from 'react';
-import { useSearch, useNavigate } from '@tanstack/react-router';
-import { useLayoutStore } from '@/store/useLayoutStore';
-import { useTransformer } from './hooks/use-transformer';
-import { TransformationScopeType, ReferenceFileInfo } from './components/TransformationScopePanel';
-import { TopPanelContainer } from './layout-ctns/TopPanelContainer';
-import { LeftPanelContainer } from './layout-ctns/LeftPanelContainer';
-import { CenterPanelContainer } from './layout-ctns/CenterPanelContainer';
-import { RightPanelContainer } from './layout-ctns/RightPanelContainer';
-import { BottomPanelContainer } from './layout-ctns/BottomPanelContainer';
-import { TransformerWorkflow } from '@/shared/services/transform-content/model/transform-content-model';
-import { TransformerSearch } from '@/router';
-import { useBreadcrumbNavigation } from '@/hooks/useBreadcrumbNavigation';
-
-export interface TransformerFeatureProps {
-  initialScope?: TransformationScopeType;
-  initialReferenceFileInfo?: ReferenceFileInfo;
-  initialWorkflow?: TransformerWorkflow;
-  onSaveWorkflow?: (workflow: TransformerWorkflow) => void;
-  onCloseFeature?: () => void;
-}
-
-export function TransformerFeature({
-  initialScope,
-  initialReferenceFileInfo,
-  initialWorkflow,
-  onSaveWorkflow,
-  onCloseFeature,
-}: TransformerFeatureProps = {}) {
-  const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
-  const navigate = useNavigate();
-
-  useBreadcrumbNavigation('feature-transformer');
-
-  const searchParams = useSearch({ strict: false }) as TransformerSearch;
-
-  const effectiveScope = (searchParams?.scope as TransformationScopeType) || initialScope || 'Default';
-  const effectiveRefInfo: ReferenceFileInfo | undefined = searchParams?.fileName
-    ? {
-        fileName: searchParams.fileName,
-        filePath: searchParams.filePath,
-        language: searchParams.language,
-      }
-    : initialReferenceFileInfo;
-
-  const handleReturnToReferences = (actionType: 'Validated & Saved' | 'Closed') => {
-    if (onCloseFeature) {
-      onCloseFeature();
-    } else {
-      navigate({
-        to: '/references',
-        search: {
-          updatedAt: Date.now(),
-          updatedFile: effectiveRefInfo?.fileName || 'Reference Document',
-          sourceAction: actionType,
-        },
-      });
-    }
-  };
-
-  const {
-    scope,
-    setScope,
-    referenceFileInfo,
-    isDirty,
-    handleValidate,
-    inputText,
-    setInputText,
-    workflowJsonText,
-    setWorkflowJsonText,
-    workflowParseError,
-    parsedWorkflow,
-    pipelineResult,
-    handleCopyOutput,
-    updateOutputTemplate,
-    updateOutputFormat,
-    templateCursorPos,
-    setTemplateCursorPos,
-    insertVariableIntoTemplate,
-  } = useTransformer({
-    initialScope: effectiveScope,
-    initialReferenceFileInfo: effectiveRefInfo,
-    initialWorkflow,
-    onSaveWorkflow: (wf) => {
-      onSaveWorkflow?.(wf);
-      handleReturnToReferences('Validated & Saved');
-    },
-    onCloseFeature: () => handleReturnToReferences('Closed'),
-  });
-
-  useEffect(() => {
-    setLayoutContainers({
-      header: { visible: true, isResizable: false, isHiddable: false },
-      sidebarLeft: { visible: true, isResizable: true, isHiddable: true },
-      workspace: {
-        top: {
-          visible: true,
-          container: (
-            <TopPanelContainer
-              scope={scope}
-              onScopeChange={setScope}
-              referenceFileInfo={referenceFileInfo}
-              isDirty={isDirty}
-              onValidate={handleValidate}
-              onClose={() => handleReturnToReferences('Closed')}
-            />
-          ),
-          isResizable: true,
-          isHiddable: true,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
-          workspaceTopHeight: 70,
-        },
-        left: {
-          visible: true,
-          container: (
-            <LeftPanelContainer
-              inputText={inputText}
-              setInputText={setInputText}
-            />
-          ),
-          isResizable: true,
-          isHiddable: true,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
-        },
-        center: {
-          visible: true,
-          container: (
-            <CenterPanelContainer
-              workflowJsonText={workflowJsonText}
-              setWorkflowJsonText={setWorkflowJsonText}
-              workflowParseError={workflowParseError}
-              parsedWorkflow={parsedWorkflow}
-              onSelectVariable={insertVariableIntoTemplate}
-            />
-          ),
-          isResizable: false,
-          isHiddable: true,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
-        },
-        right: {
-          visible: true,
-          container: (
-            <RightPanelContainer
-              renderedOutput={pipelineResult.renderedOutput}
-              outputFormat={parsedWorkflow.outputFormat}
-              outputTemplate={parsedWorkflow.outputTemplate}
-              records={pipelineResult.records}
-              onCopy={handleCopyOutput}
-              onUpdateOutputTemplate={updateOutputTemplate}
-              onUpdateOutputFormat={updateOutputFormat}
-              templateCursorPos={templateCursorPos}
-              setTemplateCursorPos={setTemplateCursorPos}
-              onSelectVariable={insertVariableIntoTemplate}
-            />
-          ),
-          isResizable: true,
-          isHiddable: true,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
-        },
-        bottom: {
-          visible: true,
-          container: <BottomPanelContainer metrics={pipelineResult.metrics} />,
-          isResizable: true,
-          isHiddable: true,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
-        },
-      },
-      sidebarRight: { visible: false, isResizable: true, isHiddable: true },
-      footer: { visible: true, isResizable: false, isHiddable: false },
-    });
-  }, [
-    setLayoutContainers,
-    scope,
-    setScope,
-    referenceFileInfo,
-    isDirty,
-    handleValidate,
-    inputText,
-    setInputText,
-    workflowJsonText,
-    setWorkflowJsonText,
-    workflowParseError,
-    parsedWorkflow,
-    pipelineResult,
-    handleCopyOutput,
-    updateOutputTemplate,
-    updateOutputFormat,
-    templateCursorPos,
-    setTemplateCursorPos,
-    insertVariableIntoTemplate,
-  ]);
-
-  return null;
-}
-
-export default TransformerFeature;
-EOF
-
-# 8. Inject `useBreadcrumbNavigation` into InstallFeature.tsx
-cat << 'EOF' > webview/src/features/install/InstallFeature.tsx
-import React, { useEffect } from 'react';
-import { useLayoutStore } from '@/store/useLayoutStore';
-import { CenterPanelContainer } from './layout-ctns/CenterPanelContainer';
-import { useBreadcrumbNavigation } from '@/hooks/useBreadcrumbNavigation';
-
-export function InstallFeature() {
-  const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
-  useBreadcrumbNavigation('feature-install');
-
-  useEffect(() => {
-    setLayoutContainers({
-      header: { visible: true, isResizable: false, isHiddable: false },
-      sidebarLeft: { visible: true, isResizable: true, isHiddable: true },
-      workspace: {
-        top: { visible: false },
-        left: { visible: false },
-        center: {
-          visible: true,
-          container: <CenterPanelContainer />,
-          isHiddable: false,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
-        },
-        right: { visible: false },
-        bottom: { visible: false },
-      },
-      sidebarRight: { visible: false },
-      footer: { visible: true, isResizable: false, isHiddable: false },
-    });
-  }, [setLayoutContainers]);
-
-  return null;
-}
-
-export default InstallFeature;
-EOF
-
-# 9. Inject `useBreadcrumbNavigation` into RulesFeature.tsx
-cat << 'EOF' > webview/src/features/rules/RulesFeature.tsx
-import React, { useEffect } from 'react';
-import { useLayoutStore } from '@/store/useLayoutStore';
-import { CenterPanelContainer } from './layout-ctns/CenterPanelContainer';
-import { useBreadcrumbNavigation } from '@/hooks/useBreadcrumbNavigation';
-
-export function RulesFeature() {
-  const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
-  useBreadcrumbNavigation('feature-rules');
-
-  useEffect(() => {
-    setLayoutContainers({
-      header: { visible: true, isResizable: false, isHiddable: false },
-      sidebarLeft: { visible: true, isResizable: true, isHiddable: true },
-      workspace: {
-        top: { visible: false },
-        left: { visible: false },
-        center: {
-          visible: true,
-          container: <CenterPanelContainer />,
-          isHiddable: false,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
-        },
-        right: { visible: false },
-        bottom: { visible: false },
-      },
-      sidebarRight: { visible: false },
-      footer: { visible: true, isResizable: false, isHiddable: false },
-    });
-  }, [setLayoutContainers]);
-
-  return null;
-}
-
-export default RulesFeature;
-EOF
-
-# 10. Inject `useBreadcrumbNavigation` into HelpFeature.tsx
-cat << 'EOF' > webview/src/features/help/HelpFeature.tsx
-import React, { useEffect } from 'react';
-import { useLayoutStore } from '@/store/useLayoutStore';
-import { CenterPanelContainer } from './layout-ctns/CenterPanelContainer';
-import { useBreadcrumbNavigation } from '@/hooks/useBreadcrumbNavigation';
-
-export function HelpFeature() {
-  const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
-  useBreadcrumbNavigation('feature-help');
-
-  useEffect(() => {
-    setLayoutContainers({
-      header: { visible: true, isResizable: false, isHiddable: false },
-      sidebarLeft: { visible: true, isResizable: true, isHiddable: true },
-      workspace: {
-        top: { visible: false },
-        left: { visible: false },
-        center: {
-          visible: true,
-          container: <CenterPanelContainer />,
-          isHiddable: false,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
-        },
-        right: { visible: false },
-        bottom: { visible: false },
-      },
-      sidebarRight: { visible: false },
-      footer: { visible: true, isResizable: false, isHiddable: false },
-    });
-  }, [setLayoutContainers]);
-
-  return null;
-}
-
-export default HelpFeature;
-EOF
-
-# 11. Inject `useBreadcrumbNavigation` into ExporterFeature.tsx
-cat << 'EOF' > webview/src/features/exporter/ExporterFeature.tsx
-import React, { useEffect } from 'react';
-import { useLayoutStore } from '@/store/useLayoutStore';
-import { TopPanelContainer } from './layout-ctns/TopPanelContainer';
-import { LeftPanelContainer } from './layout-ctns/LeftPanelContainer';
-import { CenterPanelContainer } from './layout-ctns/CenterPanelContainer';
-import { useBreadcrumbNavigation } from '@/hooks/useBreadcrumbNavigation';
-
-export function ExporterFeature() {
-  const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
-  useBreadcrumbNavigation('feature-exporter');
-
-  useEffect(() => {
-    setLayoutContainers({
-      header: { visible: true, isResizable: false, isHiddable: false },
-      sidebarLeft: { visible: true, isResizable: true, isHiddable: true },
-      workspace: {
-        top: {
-          visible: true,
-          container: <TopPanelContainer />,
-          isResizable: true,
-          isHiddable: true,
-          workspaceTopHeight: 78,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
-        },
-        left: {
-          visible: true,
-          container: <LeftPanelContainer />,
-          isResizable: true,
-          isHiddable: true,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
-        },
-        center: {
-          visible: true,
-          container: <CenterPanelContainer />,
-          isHiddable: false,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
-        },
-        right: { visible: false },
-        bottom: { visible: false },
-      },
-      sidebarRight: { visible: false },
-      footer: { visible: true, isResizable: false, isHiddable: false },
-    });
-  }, [setLayoutContainers]);
-
-  return null;
-}
-
-export default ExporterFeature;
-EOF
-
-# 12. Inject `useBreadcrumbNavigation` into WorkflowBuilderFeature.tsx
-cat << 'EOF' > webview/src/features/ai-workflow-builder/WorkflowBuilderFeature.tsx
-import React, { useEffect } from 'react';
-import { useLayoutStore } from '@/store/useLayoutStore';
-import { LeftPanelContainer } from './layout-ctns/LeftPanelContainer';
-import { CenterPanelContainer } from './layout-ctns/CenterPanelContainer';
-import { RightPanelContainer } from './layout-ctns/RightPanelContainer';
-import { useBreadcrumbNavigation } from '@/hooks/useBreadcrumbNavigation';
-
-export function WorkflowBuilderFeature() {
-  const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
-  useBreadcrumbNavigation('feature-ai-workflow-builder');
-
-  useEffect(() => {
-    setLayoutContainers({
-      header: { visible: true, isResizable: false, isHiddable: false },
-      sidebarLeft: { visible: true, isResizable: true, isHiddable: true },
-      workspace: {
-        top: { visible: false },
-        left: {
-          visible: true,
-          container: <LeftPanelContainer />,
-          isHiddable: true,
-        },
-        center: {
-          visible: true,
-          container: <CenterPanelContainer />,
-          isHiddable: false,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
-        },
-        right: {
-          visible: true,
-          container: <RightPanelContainer />,
-          isHiddable: true,
-        },
-        bottom: { visible: false },
-      },
-      sidebarRight: { visible: false },
-      footer: { visible: true, isResizable: false, isHiddable: false },
-    });
-  }, [setLayoutContainers]);
-
-  return null;
-}
-
-export default WorkflowBuilderFeature;
-EOF
-
-# 13. Inject `useBreadcrumbNavigation` into InstructionsFeature.tsx
-cat << 'EOF' > webview/src/features/sdlc/domains/instructions/InstructionsFeature.tsx
-import React, { useEffect } from 'react';
-import { useLayoutStore } from '@/store/useLayoutStore';
-import { SdlcSidebarMenu } from '@/features/sdlc/components/SdlcSidebarMenu';
-import { LeftPanelContainer } from './containers/LeftPanelContainer';
-import { RightPanelContainer } from './containers/RightPanelContainer';
-import { CenterPanelContainer } from './containers/CenterPanelContainer';
-import { useBreadcrumbNavigation } from '@/hooks/useBreadcrumbNavigation';
-
-export function InstructionsFeature() {
-  const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
-  useBreadcrumbNavigation('feature-instructions');
-
-  useEffect(() => {
-    setLayoutContainers({
-      header: { visible: true, isResizable: false, isHiddable: false },
-      sidebarLeft: {
-        visible: true,
-        container: <SdlcSidebarMenu />,
-        isResizable: true,
-        isHiddable: true,
-      },
-      workspace: {
-        top: { visible: false },
-        left: {
-          visible: true,
-          container: <LeftPanelContainer />,
-          isHiddable: true,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
-        },
-        center: {
-          visible: true,
-          container: <CenterPanelContainer />,
-          isHiddable: false,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
-        },
-        right: {
-          visible: true,
-          container: <RightPanelContainer />,
-          isResizable: true,
-          isHiddable: true,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' as const },
-        },
-        bottom: { visible: false },
-      },
-      sidebarRight: { visible: false },
-      footer: { visible: true, isResizable: false, isHiddable: false },
-    });
-  }, [setLayoutContainers]);
-
-  return null;
-}
-
-export default InstructionsFeature;
-EOF
-
-# 14. Inject `useBreadcrumbNavigation` into LlmFeature.tsx
-cat << 'EOF' > webview/src/features/sdlc/domains/llm-chat/LlmFeature.tsx
-import React, { useEffect } from 'react';
-import { useLayoutStore } from '@/store/useLayoutStore';
-import { SdlcSidebarMenu } from '@/features/sdlc/components/SdlcSidebarMenu';
-import { CenterPanelContainer } from './layout-ctns/CenterPanelContainer';
-import { RightPanelContainer } from './layout-ctns/RightPanelContainer';
-import { useBreadcrumbNavigation } from '@/hooks/useBreadcrumbNavigation';
-
-export function LlmFeature() {
-  const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
-  useBreadcrumbNavigation('feature-llm-chat');
-
-  useEffect(() => {
-    setLayoutContainers({
-      header: { visible: true, isResizable: false, isHiddable: false },
-      sidebarLeft: {
-        visible: true,
-        container: <SdlcSidebarMenu />,
-        isResizable: true,
-        isHiddable: true,
-      },
-      workspace: {
-        top: { visible: false },
-        left: { visible: false },
-        center: {
-          visible: true,
-          container: <CenterPanelContainer />,
-          isHiddable: false,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
-        },
-        right: {
-          visible: true,
-          container: <RightPanelContainer />,
-          isResizable: true,
-          isHiddable: true,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' as const },
-        },
-        bottom: { visible: false },
-      },
-      sidebarRight: { visible: false },
-      footer: { visible: true, isResizable: false, isHiddable: false },
-    });
-  }, [setLayoutContainers]);
-
-  return null;
-}
-
-export default LlmFeature;
-EOF
-
-# 15. Inject `useBreadcrumbNavigation` into ResultsManagerFeature.tsx
-cat << 'EOF' > webview/src/features/sdlc/domains/results-manager/ResultsManagerFeature.tsx
-import React, { useEffect } from 'react';
-import { useLayoutStore } from '@/store/useLayoutStore';
-import { CenterPanelContainer } from './layout-ctns/CenterPanelContainer';
-import { useBreadcrumbNavigation } from '@/hooks/useBreadcrumbNavigation';
-
-export function ResultsManagerFeature() {
-  const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
-  useBreadcrumbNavigation('feature-results-manager');
-
-  useEffect(() => {
-    setLayoutContainers({
-      header: { visible: true, isResizable: false, isHiddable: false },
-      workspace: {
-        top: { visible: false },
-        left: { visible: false },
-        center: {
-          visible: true,
-          container: <CenterPanelContainer />,
-          isHiddable: false,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
-        },
-        right: {
-          visible: false,
-        },
-        bottom: { visible: false },
-      },
-      sidebarRight: { visible: false },
-      footer: { visible: true, isResizable: false, isHiddable: false },
-    });
-  }, [setLayoutContainers]);
-
-  return null;
-}
-
-export default ResultsManagerFeature;
-EOF
-
-# 16. Inject `useBreadcrumbNavigation` into CodebaseContextFeature.tsx
-cat << 'EOF' > webview/src/features/sdlc/domains/codebase-context/CodebaseContextFeature.tsx
-import React, { useEffect } from 'react';
-import { useLayoutStore } from '@/store/useLayoutStore';
-import { TopPanelContainer } from './layout-ctns/TopPanelContainer';
-import { LeftPanelContainer } from './layout-ctns/LeftPanelContainer';
-import { CenterPanelContainer } from './layout-ctns/CenterPanelContainer';
-import { RightPanelContainer } from './layout-ctns/RightPanelContainer';
-import { SidebarRightContainer } from './layout-ctns/SidebarRightContainer';
-import { useBreadcrumbNavigation } from '@/hooks/useBreadcrumbNavigation';
-
-export function CodebaseContextFeature() {
-  const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
-  useBreadcrumbNavigation('feature-codebase-context');
-
-  useEffect(() => {
-    setLayoutContainers({
-      header: { visible: true, isResizable: false, isHiddable: false },
-      workspace: {
-        top: {
-          visible: true,
-          container: <TopPanelContainer />,
-          isResizable: true,
-          isHiddable: true,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
-        },
-        left: {
-          visible: true,
-          container: <LeftPanelContainer />,
-          isResizable: true,
-          isHiddable: true,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
-        },
-        center: {
-          visible: true,
-          container: <CenterPanelContainer />,
-          isResizable: false,
-          isHiddable: true,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
-        },
-        right: {
-          visible: true,
-          container: <RightPanelContainer />,
-          isResizable: true,
-          isHiddable: true,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
-        },
-        bottom: { visible: false }
-      },
-      sidebarRight: {
-        visible: false,
-        isResizable: true,
-        isHiddable: true,
-        container: <SidebarRightContainer />,
-      },
-      footer: { visible: true, isResizable: false, isHiddable: false },
-    });
-  }, [setLayoutContainers]);
-
-  return null;
-}
-
-export default CodebaseContextFeature;
-EOF
-
-# 17. Inject `useBreadcrumbNavigation` into ConfigurationFeature.tsx
-cat << 'EOF' > webview/src/features/sdlc/domains/configuration/ConfigurationFeature.tsx
-import React, { useEffect } from 'react';
-import { useLayoutStore } from '@/store/useLayoutStore';
-import { CenterPanelContainer } from './layout-ctns/CenterPanelContainer';
-import { useBreadcrumbNavigation } from '@/hooks/useBreadcrumbNavigation';
-
-export function ConfigurationFeature() {
-  const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
-  useBreadcrumbNavigation('feature-configuration');
-
-  useEffect(() => {
-    setLayoutContainers({
-      header: { visible: true, isResizable: false, isHiddable: false },
-      workspace: {
-        top: { visible: false },
-        left: { visible: false },
-        center: {
-          visible: true,
-          container: <CenterPanelContainer />,
-          isHiddable: false,
-          maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
-        },
-        right: {
-          visible: false,
-        },
-        bottom: { visible: false },
-      },
-      sidebarRight: { visible: false },
-      footer: { visible: true, isResizable: false, isHiddable: false },
-    });
-  }, [setLayoutContainers]);
-
-  return null;
-}
-
-export default ConfigurationFeature;
-EOF
-
-# 18. Inject `useBreadcrumbNavigation` into LayoutDemoFeature.tsx
-cat << 'EOF' > webview/src/features/layout-demo/LayoutDemoFeature.tsx
-import React, { useEffect } from 'react';
-import { useLayoutStore } from '@/store/useLayoutStore';
-import { defaultLayoutContainersContent } from '@/features/layout-demo/default-layout-containers-content';
-import { useBreadcrumbNavigation } from '@/hooks/useBreadcrumbNavigation';
-
-export function LayoutDemoFeature() {
-  const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
-  useBreadcrumbNavigation('feature-layout-demo');
-
-  useEffect(() => {
-    setLayoutContainers({
-      header: { visible: true, isResizable: false, isHiddable: false },
-      sidebarLeft: { visible: true, isResizable: true, isHiddable: true },
-      workspace: {
-        top: { visible: true, container: defaultLayoutContainersContent.top, isResizable: true, isHiddable: true, maximizeContainer: { isMaximizable: true, maximizeScope: 'Main' } },
-        left: { visible: true, container: defaultLayoutContainersContent.left, isResizable: true, isHiddable: true, maximizeContainer: { isMaximizable: true, maximizeScope: 'Workspace' } },
-        center: { visible: true, container: defaultLayoutContainersContent.center, isResizable: false, isHiddable: false, maximizeContainer: { isMaximizable: true, maximizeScope: 'Main' } },
-        right: { visible: true, container: defaultLayoutContainersContent.right, isResizable: true, isHiddable: true, maximizeContainer: { isMaximizable: true, maximizeScope: 'Main' } },
-        bottom: { visible: true, container: defaultLayoutContainersContent.bottom, isResizable: true, isHiddable: true, maximizeContainer: { isMaximizable: true, maximizeScope: 'Main' } },
-      },
-      sidebarRight: { visible: true, container: defaultLayoutContainersContent.sidebarRight, isResizable: true, isHiddable: true, maximizeContainer: { isMaximizable: true, maximizeScope: 'Main' } },
-      footer: { visible: true, isResizable: false, isHiddable: false },
-    });
-  }, [setLayoutContainers]);
-
-  return null;
-}
-
-export default LayoutDemoFeature;
-EOF
-
-# 19. Verify compilation
-echo "⚡ Compiling project to verify build integrity..."
+# 5. Build project to verify compilation
+echo "⚡ Compiling project..."
 npm run build
 
-echo "✅ feat(breadcrumb): Successfully registered breadcrumb navigation interceptor handlers and logInfo telemetry across all application features!"
+echo "✅ feat(breadcrumb): Implemented full dynamic navigation history stack trail in Header breadcrumbs!"

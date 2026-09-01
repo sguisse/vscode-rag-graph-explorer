@@ -29,6 +29,7 @@ import { LayoutDemoFeature } from '@/features/layout-demo/LayoutDemoFeature';
 
 import { useLayoutStore } from '@/store/useLayoutStore';
 import { useAppContextStore } from '@/store/useAppContextStore';
+import { useBreadcrumbHistoryStore } from '@/store/useBreadcrumbHistoryStore';
 
 // Search payload types
 export interface ReferencesSearch {
@@ -42,6 +43,7 @@ export interface TransformerSearch {
   fileName?: string;
   filePath?: string;
   language?: string;
+  fromFeature?: string;
 }
 
 // Explicit Feature ID <-> Route Path Mapping Table
@@ -88,6 +90,24 @@ const ROUTE_TO_FEATURE_MAP: Record<string, string> = {
   '/layout-demo': 'feature-layout-demo',
 };
 
+export const ROUTE_BREADCRUMB_LABELS: Record<string, string> = {
+  '/': 'Home',
+  '/references': 'Project References',
+  '/transformer': 'Transformer Engine',
+  '/install': 'Installation & Health',
+  '/rules': 'Impact Rules',
+  '/workflow-builder': 'Workflow Builder',
+  '/exporter': 'Codebase Exporter',
+  '/help': 'Documentation',
+  '/configuration': 'Configuration',
+  '/codebase-context': 'Codebase Context',
+  '/instructions': 'SDLC Instructions',
+  '/llm-chat': 'LLM Chat',
+  '/results-manager': 'Results Manager',
+  '/old-explorer': 'Legacy Explorer',
+  '/layout-demo': 'Layout Demo',
+};
+
 export function getRoutePathForFeature(featureId: string): string {
   if (!featureId) return '/';
   const cleanId = String(featureId).trim();
@@ -113,36 +133,46 @@ function RootComponent() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const contextStore = useAppContextStore();
+  const isDarkMode = useAppContextStore((s) => s.isDarkMode);
+  const setIsDarkMode = useAppContextStore((s) => s.setIsDarkMode);
+  const notification = useAppContextStore((s) => s.notification);
   const containers = useLayoutStore((s) => s.containers || []);
-  const isDarkMode = contextStore.isDarkMode;
-  const setIsDarkMode = contextStore.setIsDarkMode;
-  const notification = contextStore.notification;
 
-  // Derive activeFeature directly from location.pathname
   const activeFeature = ROUTE_TO_FEATURE_MAP[location.pathname] || 'feature-home';
 
-  // Sync TanStack Router location -> Zustand store activeFeature
+  // 1. Synchronize Route transition to Breadcrumb History Stack
   useEffect(() => {
-    if (contextStore.activeFeature !== activeFeature && typeof contextStore.setActiveFeature === 'function') {
-      console.info(`[Navigation Debug] TanStack Location ("${location.pathname}") -> Syncing Zustand activeFeature to "${activeFeature}"`);
-      contextStore.setActiveFeature(activeFeature);
+    const label = ROUTE_BREADCRUMB_LABELS[location.pathname] || 'Feature';
+    const isLinkedTransition = Boolean(
+      (location.search as any)?.fromFeature || location.pathname === '/transformer'
+    );
+
+    useBreadcrumbHistoryStore.getState().pushRoute(
+      { pathname: location.pathname, label, search: location.search },
+      isLinkedTransition
+    );
+  }, [location.pathname, location.search]);
+
+  // 2. Silent non-cyclic sync: Update Zustand store activeFeature
+  useEffect(() => {
+    const currentStoreFeature = useAppContextStore.getState().activeFeature;
+    if (currentStoreFeature !== activeFeature) {
+      useAppContextStore.setState({ activeFeature });
     }
-  }, [activeFeature, contextStore.activeFeature, contextStore.setActiveFeature, location.pathname]);
+  }, [activeFeature, location.pathname]);
 
-  // Zustand store activeFeature changes -> TanStack Router location
+  // 3. Global subscriber for store activeFeature mutations
   useEffect(() => {
-    const unsubscribe = useAppContextStore.subscribe((state, prevState) => {
-      const newFeature = state.activeFeature;
-      if (!newFeature || (prevState && newFeature === prevState.activeFeature)) return;
+    const unsubscribe = useAppContextStore.subscribe((state) => {
+      const targetFeature = state.activeFeature;
+      if (!targetFeature) return;
 
-      const targetPath = getRoutePathForFeature(newFeature);
+      const targetPath = getRoutePathForFeature(targetFeature);
       const currentPath = router.state.location.pathname;
 
       if (currentPath !== targetPath) {
-        console.info(`[Navigation Debug] Zustand activeFeature ("${newFeature}") -> Navigating TanStack Router to "${targetPath}"`);
         router.navigate({ to: targetPath as any }).catch((err) => {
-          console.error(`[Navigation Debug] Navigation error:`, err);
+          console.error(`[Navigation Debug] Router navigation failed:`, err);
         });
       }
     });
@@ -150,15 +180,11 @@ function RootComponent() {
     return unsubscribe;
   }, []);
 
+  // Handle menu item / sidebar selection
   const handleSetActiveFeature = (featureId: string) => {
-    console.info(`[Navigation Debug] Menu Item Clicked -> featureId: "${featureId}"`);
-    if (typeof contextStore.setActiveFeature === 'function') {
-      contextStore.setActiveFeature(featureId);
-    }
-
     const targetPath = getRoutePathForFeature(featureId);
     if (location.pathname !== targetPath) {
-      console.info(`[Navigation Debug] Navigating TanStack Router to -> "${targetPath}"`);
+      console.info(`[Navigation Debug] Menu Item Clicked: "${featureId}" -> Navigating to "${targetPath}"`);
       navigate({ to: targetPath as any }).catch((err) => {
         console.error(`[Navigation Debug] Navigation error:`, err);
       });
@@ -216,6 +242,7 @@ export const transformerRoute = createRoute({
     fileName: (search.fileName as string) || undefined,
     filePath: (search.filePath as string) || undefined,
     language: (search.language as string) || undefined,
+    fromFeature: (search.fromFeature as string) || undefined,
   }),
   component: TransformerFeature,
 });

@@ -12,14 +12,28 @@ export function useTransformationScope(options?: UseTransformationScopeOptions) 
     options?.initialReferenceFileInfo
   );
 
+  const scopeVal = options?.initialScope;
+  const fileName = options?.initialReferenceFileInfo?.fileName;
+  const filePath = options?.initialReferenceFileInfo?.filePath;
+  const language = options?.initialReferenceFileInfo?.language;
+
   useEffect(() => {
-    if (options?.initialScope) {
-      setScope(options.initialScope);
+    if (scopeVal) {
+      setScope((prev) => (prev === scopeVal ? prev : scopeVal));
     }
-    if (options?.initialReferenceFileInfo) {
-      setReferenceFileInfo(options.initialReferenceFileInfo);
+    if (fileName || filePath || language) {
+      setReferenceFileInfo((prev) => {
+        if (
+          prev?.fileName === fileName &&
+          prev?.filePath === filePath &&
+          prev?.language === language
+        ) {
+          return prev;
+        }
+        return { fileName, filePath, language };
+      });
     }
-  }, [options?.initialScope, options?.initialReferenceFileInfo]);
+  }, [scopeVal, fileName, filePath, language]);
 
   return {
     scope,

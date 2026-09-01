@@ -128,7 +128,7 @@ export function NewReferenceForm({
                   }
                 }}
               >
-                <SelectTrigger className="bg-background h-7 font-mono text-xs">
+                <SelectTrigger className="bg-background w-60 h-7 font-mono text-xs">
                   <SelectValue placeholder="Select Category..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -179,7 +179,7 @@ export function NewReferenceForm({
             />
           </div>
 
-          <div className="flex flex-col justify-end space-y-1">
+          <div className="flex flex-col justify-end space-y-1" data-tooltip="If user does a 'reset selection', pre-selected references will be selected again.">
             <label className="flex items-center gap-2 px-1 h-7 text-xs cursor-pointer select-none">
               <input
                 type="checkbox"
@@ -187,7 +187,7 @@ export function NewReferenceForm({
                 onChange={(e) => setNewPreSelected(e.target.checked)}
                 className="border-border rounded focus:ring-indigo-500 w-3.5 h-3.5 text-indigo-500 accent-indigo-500 cursor-pointer"
               />
-              <span className="font-bold text-[10px] text-foreground uppercase">Always Pre-selected</span>
+              <span className="font-bold text-[10px] text-foreground uppercase">Pre-selected</span>
             </label>
           </div>
         </div>

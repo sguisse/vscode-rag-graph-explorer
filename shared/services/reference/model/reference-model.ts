@@ -9,7 +9,7 @@ export interface ReferenceItem {
   description: string;
   category: string;
   url: string;
-  preSelected: boolean;
+  preSelected: boolean; // If user reset his selection, if true it will be selected again, if false it will be unselected
   sizeKb: number;
   content?: string;
   addedAt?: string;

@@ -10,8 +10,9 @@ try {
     require('./generate-service-registrator.js');
     require('./generate-rpc-method-registrator.js');
     require('./generate-webview-api-services.js');
+    require('./generate-types.js');
 
-    console.log('\n✨ All 7 code generation tasks completed successfully!');
+    console.log('\n✨ All 8 code generation tasks completed successfully!');
 } catch (error) {
     console.error('\n❌ Code generation failed:', error);
     process.exit(1);

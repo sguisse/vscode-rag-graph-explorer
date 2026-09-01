@@ -15,6 +15,7 @@ export function ProjectReferencesPanel({
   viewMode: initialViewMode = 'User',
   collapsibleParentIncluded = true,
   className,
+  onTransformReference,
 }: ProjectReferencesPanelProps) {
   const {
     groupedReferences,
@@ -72,7 +73,6 @@ export function ProjectReferencesPanel({
       className="gap-2 py-2 w-full h-full"
       top={
         <div className="space-y-2">
-
           <ReferencesFilterBar
             isGrouped={isGrouped}
             onToggleGrouped={setIsGrouped}
@@ -138,6 +138,7 @@ export function ProjectReferencesPanel({
             totalSelectedSizeKb={totalSelectedSizeKb}
             totalAllSizeKb={totalAllSizeKb}
             viewMode={viewMode}
+            onTransformReference={onTransformReference}
           />
         </CollapsibleCard>
       }
@@ -145,10 +146,10 @@ export function ProjectReferencesPanel({
         viewMode === 'Administrator' ? (
           <div className="space-y-2">
             <NewReferenceForm
-                categories={categories}
-                importing={importing}
-                onAddReference={addReference}
-                onImportUrl={importUrl}
+              categories={categories}
+              importing={importing}
+              onAddReference={addReference}
+              onImportUrl={importUrl}
             />
             <LocalStorageCard localDocumentStorage={localDocumentStorage} />
           </div>

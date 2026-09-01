@@ -38,68 +38,78 @@ export const GraphDesignTab: React.FC<GraphDesignTabProps> = ({ parsedWorkflow }
     return () => observer.disconnect();
   }, []);
 
-  // Palette de couleurs explicite pour Cytoscape (Évite le gris par défaut #808080)
-  const themeColors = useMemo(() => {
-    if (isDarkMode) {
-      return {
-        // Mode Sombre
-        sub1Bg: 'rgba(99, 102, 241, 0.08)',
-        sub1Border: '#6366f1',
-        sub1Text: '#818cf8',
+// Palette de couleurs pastel explicite pour Cytoscape
+const themeColors = useMemo(() => {
+  if (isDarkMode) {
+    return {
+      // Mode Sombre (Pastels lumineux & Contraste lisible)
+      // Block 1: Déclinaison Bleu
+      sub1Bg: 'rgba(59, 130, 246, 0.12)',
+      sub1Border: '#60a5fa',
+      sub1Text: '#93c5fd',
 
-        sub2Bg: 'rgba(245, 158, 11, 0.08)',
-        sub2Border: '#f59e0b',
-        sub2Text: '#fbbf24',
+      // Block 2: Pastel Ambre / Pêche
+      sub2Bg: 'rgba(245, 158, 11, 0.12)',
+      sub2Border: '#fbbf24',
+      sub2Text: '#fcd34d',
 
-        sub3Bg: 'rgba(16, 185, 129, 0.08)',
-        sub3Border: '#10b981',
-        sub3Text: '#34d399',
+      // Block 3: Pastel Menthe / Émeraude
+      sub3Bg: 'rgba(16, 185, 129, 0.12)',
+      sub3Border: '#34d399',
+      sub3Text: '#6ee7b7',
 
-        step1Bg: '#1e1b4b',
-        step1Border: '#6366f1',
-        step1Text: '#f8fafc',
+      // Étapes
+      step1Bg: '#1e3a8a',
+      step1Border: '#60a5fa',
+      step1Text: '#eff6ff',
 
-        step2Bg: '#451a03',
-        step2Border: '#f59e0b',
-        step2Text: '#f8fafc',
+      step2Bg: '#78350f',
+      step2Border: '#fbbf24',
+      step2Text: '#fffbeb',
 
-        step3Bg: '#064e3b',
-        step3Border: '#10b981',
-        step3Text: '#f8fafc',
+      step3Bg: '#064e3b',
+      step3Border: '#34d399',
+      step3Text: '#ecfdf5',
 
-        edgeColor: '#818cf8',
-      };
-    } else {
-      return {
-        // Mode Clair
-        sub1Bg: 'rgba(99, 102, 241, 0.06)',
-        sub1Border: '#4f46e5',
-        sub1Text: '#3730a3',
+      edgeColor: '#93c5fd',
+    };
+  } else {
+    return {
+      // Mode Clair (Pastels doux)
+      // Block 1: Déclinaison Bleu
+      sub1Bg: '#f0f9ff',
+      sub1Border: '#93c5fd',
+      sub1Text: '#1d4ed8',
 
-        sub2Bg: 'rgba(245, 158, 11, 0.06)',
-        sub2Border: '#d97706',
-        sub2Text: '#92400e',
+      // Block 2: Pastel Jaune / Ambre
+      sub2Bg: '#fffbeb',
+      sub2Border: '#fde047',
+      sub2Text: '#b45309',
 
-        sub3Bg: 'rgba(16, 185, 129, 0.06)',
-        sub3Border: '#059669',
-        sub3Text: '#065f46',
+      // Block 3: Pastel Menthe / Vert
+      sub3Bg: '#ecfdf5',
+      sub3Border: '#6ee7b7',
+      sub3Text: '#047857',
 
-        step1Bg: '#e0e7ff',
-        step1Border: '#6366f1',
-        step1Text: '#1e1b4b',
+      // Étapes
+      step1Bg: '#dbeafe',
+      step1Border: '#3b82f6',
+      step1Text: '#1e3a8a',
 
-        step2Bg: '#fef3c7',
-        step2Border: '#d97706',
-        step2Text: '#451a03',
+      step2Bg: '#fef3c7',
+      step2Border: '#f59e0b',
+      step2Text: '#78350f',
 
-        step3Bg: '#d1fae5',
-        step3Border: '#059669',
-        step3Text: '#064e3b',
+      step3Bg: '#d1fae5',
+      step3Border: '#10b981',
+      step3Text: '#064e3b',
 
-        edgeColor: '#4f46e5',
-      };
-    }
-  }, [isDarkMode]);
+      edgeColor: '#60a5fa',
+    };
+  }
+}, [isDarkMode]);
+
+
 
   // Construction des nœuds BPMN et étapes avec respect des 5px de padding et 40px d'écartement
   const elements = useMemo(() => {

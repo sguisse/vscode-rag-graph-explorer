@@ -13,7 +13,6 @@ import {
   Wand2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { TriStateCheckbox } from './TriStateCheckbox';
@@ -102,6 +101,7 @@ interface ReferencesTableProps {
   totalSelectedSizeKb: number;
   totalAllSizeKb: number;
   viewMode: ProjectReferencesViewMode;
+  onTransformReference?: (reference: ReferenceItem) => void;
 }
 
 export function ReferencesTable({
@@ -134,6 +134,7 @@ export function ReferencesTable({
   totalSelectedSizeKb,
   totalAllSizeKb,
   viewMode,
+  onTransformReference,
 }: ReferencesTableProps) {
   const setNotification = useAppContextStore((s) => s.setNotification);
   const showDescSourceCol = !(hideDescription && hideUrl);
@@ -326,9 +327,15 @@ export function ReferencesTable({
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setNotification('Transformer will be implemented soon !')}
+              onClick={() => {
+                if (onTransformReference) {
+                  onTransformReference(item);
+                } else {
+                  setNotification('Transformer will be implemented soon !');
+                }
+              }}
               data-tooltip="Transform reference"
-              className="hover:bg-indigo-500/10 w-6 h-6 text-indigo-400 hover:text-indigo-300"
+              className="hover:bg-indigo-500/10 w-6 h-6 text-indigo-400 hover:text-indigo-300 cursor-pointer"
             >
               <Wand2 size={11} />
             </Button>

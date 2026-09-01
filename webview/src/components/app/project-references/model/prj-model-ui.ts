@@ -1,3 +1,5 @@
+import { ReferenceItem } from '@/shared/services/reference/model/reference-model';
+
 export type RefSortField = 'category' | 'preSelected' | 'name' | 'sizeKb' | 'sizeKbAfterTransformation' | 'updatedAt' | 'transformer';
 export type RefSortOrder = 'asc' | 'desc';
 
@@ -13,4 +15,5 @@ export interface ProjectReferencesPanelProps {
   viewMode?: ProjectReferencesViewMode;
   collapsibleParentIncluded?: boolean;
   className?: string;
+  onTransformReference?: (reference: ReferenceItem) => void;
 }

@@ -7,6 +7,7 @@ interface TopPanelContainerProps {
   onScopeChange: (newScope: TransformationScopeType) => void;
   referenceFileInfo?: ReferenceFileInfo;
   isDirty?: boolean;
+  hasPreviousFeature?: boolean;
   onValidate?: () => void;
   onClose?: () => void;
 }
@@ -16,6 +17,7 @@ export const TopPanelContainer: React.FC<TopPanelContainerProps> = ({
   onScopeChange,
   referenceFileInfo,
   isDirty,
+  hasPreviousFeature,
   onValidate,
   onClose,
 }) => {
@@ -28,6 +30,7 @@ export const TopPanelContainer: React.FC<TopPanelContainerProps> = ({
           onScopeChange={onScopeChange}
           referenceFileInfo={referenceFileInfo}
           isDirty={isDirty}
+          hasPreviousFeature={hasPreviousFeature}
           onValidate={onValidate}
           onClose={onClose}
         />

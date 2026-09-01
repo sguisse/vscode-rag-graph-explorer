@@ -1,5 +1,5 @@
 import React from 'react';
-import { useMatches, useNavigate } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';
 import { ToolbarSeparator } from '@/components/app/toolbar-separator';
 import { headerLeftWidth, DefaultContainersSize } from '@/_layout';
 import {
@@ -29,6 +29,7 @@ import { WorkflowPopup } from '@/components/app/workflow/workflow-popup';
 import { useExplorerWorkflow } from '@/features/explorer-old/workflow/hooks/use-explorer-workflow';
 import { Button } from '@/components/ui/button';
 import { useBreadcrumbInterceptorStore } from '@/store/useBreadcrumbInterceptorStore';
+import { useBreadcrumbHistoryStore } from '@/store/useBreadcrumbHistoryStore';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 interface HeaderProps {
@@ -53,19 +54,13 @@ export function Header({
   const interceptor = useBreadcrumbInterceptorStore((s) => s.interceptor);
   const registeredOrigin = useBreadcrumbInterceptorStore((s) => s.originFeature);
 
-  // TanStack Router hooks
-  const matches = useMatches();
+  // Read actual navigation history stack from store
+  const breadcrumbStack = useBreadcrumbHistoryStore((s) => s.stack);
+  const popTo = useBreadcrumbHistoryStore((s) => s.popTo);
+
   const navigate = useNavigate();
 
-  const breadcrumbs = matches
-    .filter((match) => match.staticData && (match.staticData as any).breadcrumb)
-    .map((match) => ({
-      pathname: match.pathname,
-      label: (match.staticData as any).breadcrumb as string,
-      search: match.search,
-    }));
-
-  const canGoBack = matches.length > 2 || (matches.length > 1 && matches[matches.length - 1].pathname !== '/');
+  const canGoBack = breadcrumbStack.length > 1;
 
   const handleHomeClick = async () => {
     const origin = registeredOrigin || activeFeature || 'feature-home';
@@ -81,6 +76,7 @@ export function Header({
       });
 
       if (typeof redirectPath === 'string') {
+        popTo(redirectPath);
         navigate({ to: redirectPath as any });
         return;
       } else if (redirectPath === false) {
@@ -88,6 +84,7 @@ export function Header({
       }
     }
 
+    popTo('/');
     navigate({ to: '/' });
   };
 
@@ -104,6 +101,7 @@ export function Header({
       });
 
       if (typeof redirectPath === 'string') {
+        popTo(redirectPath);
         navigate({ to: redirectPath as any, search: search || {} });
         return;
       } else if (redirectPath === false) {
@@ -111,13 +109,14 @@ export function Header({
       }
     }
 
+    popTo(pathname);
     navigate({ to: pathname, search: search || {} } as any);
   };
 
   const handleGoBack = async () => {
     const origin = registeredOrigin || activeFeature || 'unknown-feature';
-    const prevMatch = matches.length >= 2 ? matches[matches.length - 2] : null;
-    const targetPath = prevMatch ? prevMatch.pathname : '/';
+    const prevItem = breadcrumbStack.length >= 2 ? breadcrumbStack[breadcrumbStack.length - 2] : null;
+    const targetPath = prevItem ? prevItem.pathname : '/';
 
     logInfo(`[Navigation Action] Back button clicked in Origin Feature: "${origin}" -> Target: "${targetPath}"`);
 
@@ -129,6 +128,7 @@ export function Header({
       });
 
       if (typeof redirectPath === 'string') {
+        popTo(redirectPath);
         navigate({ to: redirectPath as any });
         return;
       } else if (redirectPath === false) {
@@ -136,7 +136,12 @@ export function Header({
       }
     }
 
-    window.history.back();
+    if (prevItem) {
+      popTo(prevItem.pathname);
+      navigate({ to: prevItem.pathname, search: prevItem.search || {} } as any);
+    } else {
+      window.history.back();
+    }
   };
 
   const leftContent = (
@@ -152,8 +157,8 @@ export function Header({
 
   const centerContent = (
     <div className="flex flex-col justify-center items-center gap-1 w-full min-w-0">
-      {/* Existing Top Row inside Center Content */}
-      <div className="flex flex-1 justify-between items-center gap-2 w-full">
+      {/* Top Row inside Center Content */}
+      <div className="flex flex-1 justify-start items-center gap-2 w-full">
         <div className="flex items-center gap-2 shrink-0">
           <span style={{ paddingLeft: `${DefaultContainersSize.sidebarLeftWidth - headerLeftWidth}px` }}>
             <ToggleButton
@@ -164,12 +169,9 @@ export function Header({
               icon={<Layers size={14} />}
             />
           </span>
-
         </div>
 
 
-      {/* Breadcrumb Navigation on Bottom of Existing Div */}
-      <div className="flex justify-start items-center gap-1.5 w-full overflow-x-auto font-mono text-[11px] leading-none">
         {canGoBack && (
           <Button
             size="icon"
@@ -182,21 +184,23 @@ export function Header({
           </Button>
         )}
 
-        <button
-          onClick={handleHomeClick}
-          className="flex items-center gap-1 font-medium text-muted-foreground hover:text-foreground cursor-pointer"
-          title="Navigate to Home"
-        >
-          <Home size={12} />
-        </button>
+        {breadcrumbStack.map((crumb, idx) => {
+          const isLast = idx === breadcrumbStack.length - 1;
+          const isHome = crumb.pathname === '/';
 
-        {breadcrumbs.map((crumb, idx) => {
-          const isLast = idx === breadcrumbs.length - 1;
           return (
             <React.Fragment key={`${crumb.pathname}-${idx}`}>
-              <ChevronRight size={11} className="text-muted-foreground shrink-0" />
-              {isLast ? (
-                <span className="bg-primary/10 px-1.5 py-1 border border-primary/20 rounded font-bold text-primary">
+              {idx > 0 && <ChevronRight size={11} className="text-muted-foreground shrink-0" />}
+              {isHome ? (
+                <button
+                  onClick={handleHomeClick}
+                  className="flex items-center gap-1 font-medium text-muted-foreground hover:text-foreground cursor-pointer"
+                  title="Navigate to Home"
+                >
+                  <Home size={12} />
+                </button>
+              ) : isLast ? (
+                <span className="bg-primary/10 px-1.5 py-0.2 border border-primary/20 rounded font-bold text-primary">
                   {crumb.label}
                 </span>
               ) : (
@@ -211,7 +215,6 @@ export function Header({
           );
         })}
       </div>
-     </div>
     </div>
   );
 
@@ -233,7 +236,7 @@ export function Header({
         <Button
             variant="outline"
             size="icon"
-            className="flex items-center gap-1.5 hover:bg-primary/10 px-2 border-border w-8 h-8 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 hover:bg-primary/10 px-2 border-border h-6 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
             data-tooltip="View Pipeline Workflow"
         >
             <Workflow size={13} className="text-primary" />

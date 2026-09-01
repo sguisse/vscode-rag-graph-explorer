@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useSearch, useNavigate } from '@tanstack/react-router';
 import { useLayoutStore } from '@/store/useLayoutStore';
 import { useTransformer } from './hooks/use-transformer';
@@ -11,6 +11,7 @@ import { BottomPanelContainer } from './layout-ctns/BottomPanelContainer';
 import { TransformerWorkflow } from '@/shared/services/transform-content/model/transform-content-model';
 import { TransformerSearch } from '@/router';
 import { useBreadcrumbNavigation } from '@/hooks/useBreadcrumbNavigation';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 export interface TransformerFeatureProps {
   initialScope?: TransformationScopeType;
@@ -32,18 +33,32 @@ export function TransformerFeature({
 
   useBreadcrumbNavigation('feature-transformer');
 
-  const searchParams = useSearch({ strict: false }) as TransformerSearch;
+  const searchParams = useSearch({ strict: false }) as TransformerSearch & { fromFeature?: string };
 
   const effectiveScope = (searchParams?.scope as TransformationScopeType) || initialScope || 'Default';
-  const effectiveRefInfo: ReferenceFileInfo | undefined = searchParams?.fileName
-    ? {
+
+  const effectiveRefInfo = useMemo<ReferenceFileInfo | undefined>(() => {
+    if (searchParams?.fileName) {
+      return {
         fileName: searchParams.fileName,
         filePath: searchParams.filePath,
         language: searchParams.language,
-      }
-    : initialReferenceFileInfo;
+      };
+    }
+    return initialReferenceFileInfo;
+  }, [searchParams?.fileName, searchParams?.filePath, searchParams?.language, initialReferenceFileInfo]);
 
-  const handleReturnToReferences = (actionType: 'Validated & Saved' | 'Closed') => {
+  const hasPreviousFeature = Boolean(
+    searchParams?.fromFeature ||
+    searchParams?.fileName ||
+    (typeof window !== 'undefined' && window.history.length > 1)
+  );
+
+  const handleReturnToPrevious = (actionType: 'Validated & Saved' | 'Closed') => {
+    if (hasPreviousFeature) {
+      logInfo('go back to prev screen');
+    }
+
     if (onCloseFeature) {
       onCloseFeature();
     } else {
@@ -83,10 +98,18 @@ export function TransformerFeature({
     initialWorkflow,
     onSaveWorkflow: (wf) => {
       onSaveWorkflow?.(wf);
-      handleReturnToReferences('Validated & Saved');
+      handleReturnToPrevious('Validated & Saved');
     },
-    onCloseFeature: () => handleReturnToReferences('Closed'),
+    onCloseFeature: () => handleReturnToPrevious('Closed'),
   });
+
+  const onValidateHandler = () => {
+    handleValidate();
+    if (hasPreviousFeature) {
+      logInfo('go back to prev screen');
+      handleReturnToPrevious('Validated & Saved');
+    }
+  };
 
   useEffect(() => {
     setLayoutContainers({
@@ -101,8 +124,9 @@ export function TransformerFeature({
               onScopeChange={setScope}
               referenceFileInfo={referenceFileInfo}
               isDirty={isDirty}
-              onValidate={handleValidate}
-              onClose={() => handleReturnToReferences('Closed')}
+              hasPreviousFeature={hasPreviousFeature}
+              onValidate={onValidateHandler}
+              onClose={() => handleReturnToPrevious('Closed')}
             />
           ),
           isResizable: true,
@@ -174,6 +198,7 @@ export function TransformerFeature({
     setScope,
     referenceFileInfo,
     isDirty,
+    hasPreviousFeature,
     handleValidate,
     inputText,
     setInputText,

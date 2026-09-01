@@ -23,6 +23,7 @@ export interface TransformationScopePanelProps {
   onScopeChange: (newScope: TransformationScopeType) => void;
   referenceFileInfo?: ReferenceFileInfo;
   isDirty?: boolean;
+  hasPreviousFeature?: boolean;
   onValidate?: () => void;
   onClose?: () => void;
 }
@@ -32,6 +33,7 @@ export const TransformationScopePanel: React.FC<TransformationScopePanelProps> =
   onScopeChange,
   referenceFileInfo,
   isDirty = false,
+  hasPreviousFeature = false,
   onValidate,
   onClose,
 }) => {
@@ -81,7 +83,7 @@ export const TransformationScopePanel: React.FC<TransformationScopePanelProps> =
 
         {/* Reference file information badge */}
         {isReferenceFileScope && referenceFileInfo && (
-          <div className="flex items-center gap-2 bg-muted/30 px-2 py-0.5 border border-border/60 rounded text-[11px] text-foreground">
+          <div className="flex items-center gap-2 bg-muted/30 px-2 py-1 border border-border/60 rounded text-[11px] text-foreground">
             <span className="flex items-center gap-1 font-bold text-primary">
               <FileCode size={13} />
               {referenceFileInfo.fileName || 'Reference File'}
@@ -92,8 +94,8 @@ export const TransformationScopePanel: React.FC<TransformationScopePanelProps> =
               </span>
             )}
             {referenceFileInfo.filePath && (
-              <span className="max-w-[180px] text-muted-foreground truncate" title={referenceFileInfo.filePath}>
-                <code>{referenceFileInfo.filePath}</code>
+              <span className="max-w-[300px] text-muted-foreground truncate" title={referenceFileInfo.filePath}>
+                <code data-tooltip={`${referenceFileInfo.filePath}`}>{referenceFileInfo.filePath}</code>
               </span>
             )}
           </div>
@@ -102,13 +104,14 @@ export const TransformationScopePanel: React.FC<TransformationScopePanelProps> =
 
       {/* Right side action buttons */}
       <div className="flex items-center gap-1.5">
-        {(onClose || isReferenceFileScope) && (
+        {/* Close / Cancel Button: ONLY visible if we came from a previous feature */}
+        {hasPreviousFeature && onClose && (
           <Button
             variant="ghost"
             size="sm"
             onClick={onClose}
             className="gap-1 hover:bg-muted px-2 h-6 font-bold text-[11px] text-muted-foreground hover:text-foreground cursor-pointer"
-            title="Close Transformer and Return"
+            title="Cancel and Return to Previous Feature"
           >
             <X size={13} />
             <span>Close</span>
