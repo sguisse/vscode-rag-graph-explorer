@@ -1,11 +1,12 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 
 import { useTransformationScope, UseTransformationScopeOptions } from './use-transformation-scope';
+import { transformContentApiService } from '@/services/api/transform-content-api.service.gen';
 import {
   DEFAULT_WORKFLOW_JSON,
-  executeTransformationPipeline,
-} from '../utils/transformer-engine';
-import { TransformerWorkflow } from '@/shared/services/transform-content/model/transform-content-model';
+  TransformerWorkflow,
+  TransformationResult
+} from '@/shared/services/transform-content/model/transform-content-model';
 
 export function useTransformer(options?: UseTransformationScopeOptions & {
   initialWorkflow?: TransformerWorkflow;
@@ -31,6 +32,22 @@ export function useTransformer(options?: UseTransformationScopeOptions & {
   const [workflowParseError, setWorkflowJsonError] = useState<string | null>(null);
   const [templateCursorPos, setTemplateCursorPos] = useState<number | null>(null);
 
+  const [pipelineResult, setPipelineResult] = useState<TransformationResult>({
+    content: '',
+    sizeKb: 0,
+    anonymizedText: '',
+    extractedData: {},
+    records: [],
+    renderedOutput: '',
+    metrics: {
+      executionTimeMs: 0,
+      inputBytes: 0,
+      outputBytes: 0,
+      totalMatches: 0,
+      logs: [],
+    },
+  });
+
   const isDirty = useMemo(() => {
     return workflowJsonText.trim() !== initialWorkflowJson.trim();
   }, [workflowJsonText, initialWorkflowJson]);
@@ -46,8 +63,22 @@ export function useTransformer(options?: UseTransformationScopeOptions & {
     }
   }, [workflowJsonText]);
 
-  const pipelineResult = useMemo(() => {
-    return executeTransformationPipeline(inputText, parsedWorkflow);
+  useEffect(() => {
+    let isMounted = true;
+    transformContentApiService
+      .transform(parsedWorkflow, inputText)
+      .then((result) => {
+        if (isMounted && result) {
+          setPipelineResult(result);
+        }
+      })
+      .catch((err) => {
+        console.error('Error executing transformation pipeline via service:', err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [inputText, parsedWorkflow]);
 
   const handleCopyOutput = useCallback(() => {

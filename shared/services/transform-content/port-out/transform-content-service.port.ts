@@ -1,4 +1,5 @@
+import { TransformerWorkflow, TransformationResult } from "../model/transform-content-model";
 
 export interface ITransformContentServicePort {
-    //getLocalModifiedFilesFromRemoteBranch(wsPath: string): Promise<GitDiffResult>;
+    transform(workflow: TransformerWorkflow, content: string): Promise<TransformationResult>;
 }

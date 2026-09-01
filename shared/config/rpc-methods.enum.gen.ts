@@ -37,6 +37,7 @@ export enum RpcMethodEnum {
     SDLCSESSION_SAVE_SESSION = 'saveSession',
     SDLCSESSION_LOAD_ALL_SESSIONS = 'loadAllSessions',
     SDLCSESSION_DELETE_SESSION = 'deleteSession',
+    TRANSFORMCONTENT_TRANSFORM = 'transform',
     VSCODE_GET_REPO_NAME = 'getRepoName',
     VSCODE_GET_WORKSPACE_ROOT_PATH = 'getWorkspaceRootPath',
     VSCODE_LOG_MESSAGE = 'logMessage',

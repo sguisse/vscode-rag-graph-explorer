@@ -67,6 +67,9 @@ export function registerRpcMethods(rpc: RpcProtocol): void {
     rpc.register(RpcMethodEnum.SDLCSESSION_LOAD_ALL_SESSIONS, sdlcSessionService.loadAllSessions.bind(sdlcSessionService));
     rpc.register(RpcMethodEnum.SDLCSESSION_DELETE_SESSION, sdlcSessionService.deleteSession.bind(sdlcSessionService));
 
+    const transformContentService = serviceRegistry.get(ServiceEnum.TRANSFORM_CONTENT);
+    rpc.register(RpcMethodEnum.TRANSFORMCONTENT_TRANSFORM, transformContentService.transform.bind(transformContentService));
+
     const vsCodeService = serviceRegistry.get(ServiceEnum.VS_CODE);
     rpc.register(RpcMethodEnum.VSCODE_GET_REPO_NAME, vsCodeService.getRepoName.bind(vsCodeService));
     rpc.register(RpcMethodEnum.VSCODE_GET_WORKSPACE_ROOT_PATH, vsCodeService.getWorkspaceRootPath.bind(vsCodeService));
