@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useSearch, useNavigate } from '@tanstack/react-router';
 import { useLayoutStore } from '@/store/useLayoutStore';
 import { useTransformer } from './hooks/use-transformer';
 import { TransformationScopeType, ReferenceFileInfo } from './components/TransformationScopePanel';
@@ -8,6 +9,8 @@ import { CenterPanelContainer } from './layout-ctns/CenterPanelContainer';
 import { RightPanelContainer } from './layout-ctns/RightPanelContainer';
 import { BottomPanelContainer } from './layout-ctns/BottomPanelContainer';
 import { TransformerWorkflow } from '@/shared/services/transform-content/model/transform-content-model';
+import { TransformerSearch } from '@/router';
+import { useBreadcrumbNavigation } from '@/hooks/useBreadcrumbNavigation';
 
 export interface TransformerFeatureProps {
   initialScope?: TransformationScopeType;
@@ -25,6 +28,35 @@ export function TransformerFeature({
   onCloseFeature,
 }: TransformerFeatureProps = {}) {
   const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
+  const navigate = useNavigate();
+
+  useBreadcrumbNavigation('feature-transformer');
+
+  const searchParams = useSearch({ strict: false }) as TransformerSearch;
+
+  const effectiveScope = (searchParams?.scope as TransformationScopeType) || initialScope || 'Default';
+  const effectiveRefInfo: ReferenceFileInfo | undefined = searchParams?.fileName
+    ? {
+        fileName: searchParams.fileName,
+        filePath: searchParams.filePath,
+        language: searchParams.language,
+      }
+    : initialReferenceFileInfo;
+
+  const handleReturnToReferences = (actionType: 'Validated & Saved' | 'Closed') => {
+    if (onCloseFeature) {
+      onCloseFeature();
+    } else {
+      navigate({
+        to: '/references',
+        search: {
+          updatedAt: Date.now(),
+          updatedFile: effectiveRefInfo?.fileName || 'Reference Document',
+          sourceAction: actionType,
+        },
+      });
+    }
+  };
 
   const {
     scope,
@@ -32,7 +64,6 @@ export function TransformerFeature({
     referenceFileInfo,
     isDirty,
     handleValidate,
-    handleClose,
     inputText,
     setInputText,
     workflowJsonText,
@@ -47,11 +78,14 @@ export function TransformerFeature({
     setTemplateCursorPos,
     insertVariableIntoTemplate,
   } = useTransformer({
-    initialScope,
-    initialReferenceFileInfo,
+    initialScope: effectiveScope,
+    initialReferenceFileInfo: effectiveRefInfo,
     initialWorkflow,
-    onSaveWorkflow,
-    onCloseFeature,
+    onSaveWorkflow: (wf) => {
+      onSaveWorkflow?.(wf);
+      handleReturnToReferences('Validated & Saved');
+    },
+    onCloseFeature: () => handleReturnToReferences('Closed'),
   });
 
   useEffect(() => {
@@ -68,14 +102,13 @@ export function TransformerFeature({
               referenceFileInfo={referenceFileInfo}
               isDirty={isDirty}
               onValidate={handleValidate}
-              onClose={handleClose}
+              onClose={() => handleReturnToReferences('Closed')}
             />
           ),
           isResizable: true,
           isHiddable: true,
           maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
           workspaceTopHeight: 70,
-
         },
         left: {
           visible: true,
@@ -142,7 +175,6 @@ export function TransformerFeature({
     referenceFileInfo,
     isDirty,
     handleValidate,
-    handleClose,
     inputText,
     setInputText,
     workflowJsonText,

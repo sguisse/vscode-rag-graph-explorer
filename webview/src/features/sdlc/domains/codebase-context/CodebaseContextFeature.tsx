@@ -1,25 +1,19 @@
 import React, { useEffect } from 'react';
 import { useLayoutStore } from '@/store/useLayoutStore';
-import { SdlcSidebarMenu } from '../../ui-common/components/SdlcSidebarMenu';
-
 import { TopPanelContainer } from './layout-ctns/TopPanelContainer';
 import { LeftPanelContainer } from './layout-ctns/LeftPanelContainer';
 import { CenterPanelContainer } from './layout-ctns/CenterPanelContainer';
 import { RightPanelContainer } from './layout-ctns/RightPanelContainer';
 import { SidebarRightContainer } from './layout-ctns/SidebarRightContainer';
+import { useBreadcrumbNavigation } from '@/hooks/useBreadcrumbNavigation';
 
 export function CodebaseContextFeature() {
   const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
+  useBreadcrumbNavigation('feature-codebase-context');
 
   useEffect(() => {
     setLayoutContainers({
       header: { visible: true, isResizable: false, isHiddable: false },
-      /*sidebarLeft: {
-        visible: true,
-        container: <SdlcSidebarMenu />,
-        isResizable: true,
-        isHiddable: true,
-      },*/
       workspace: {
         top: {
           visible: true,
@@ -63,3 +57,5 @@ export function CodebaseContextFeature() {
 
   return null;
 }
+
+export default CodebaseContextFeature;

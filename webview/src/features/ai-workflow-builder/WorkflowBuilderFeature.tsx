@@ -3,9 +3,11 @@ import { useLayoutStore } from '@/store/useLayoutStore';
 import { LeftPanelContainer } from './layout-ctns/LeftPanelContainer';
 import { CenterPanelContainer } from './layout-ctns/CenterPanelContainer';
 import { RightPanelContainer } from './layout-ctns/RightPanelContainer';
+import { useBreadcrumbNavigation } from '@/hooks/useBreadcrumbNavigation';
 
 export function WorkflowBuilderFeature() {
   const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
+  useBreadcrumbNavigation('feature-ai-workflow-builder');
 
   useEffect(() => {
     setLayoutContainers({

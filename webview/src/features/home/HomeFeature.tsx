@@ -1,9 +1,11 @@
 import React, { useEffect } from 'react';
 import { useLayoutStore } from '@/store/useLayoutStore';
 import { CenterPanelContainer } from './layout-ctns/CenterPanelContainer';
+import { useBreadcrumbNavigation } from '@/hooks/useBreadcrumbNavigation';
 
 export function HomeFeature() {
   const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
+  useBreadcrumbNavigation('feature-home');
 
   useEffect(() => {
     setLayoutContainers({

@@ -2,13 +2,13 @@ import React, { useEffect } from 'react';
 import { useLayoutStore } from '@/store/useLayoutStore';
 import { SdlcSidebarMenu } from '@/features/sdlc/components/SdlcSidebarMenu';
 import { LeftPanelContainer } from './containers/LeftPanelContainer';
-import { InstructionsPanel } from './components/InstructionsPanel';
-import { FilesCtxExportPanel } from '@/features/sdlc/domains/codebase-context/components/files-ctx-export/files-ctx-export-panel';
 import { RightPanelContainer } from './containers/RightPanelContainer';
 import { CenterPanelContainer } from './containers/CenterPanelContainer';
+import { useBreadcrumbNavigation } from '@/hooks/useBreadcrumbNavigation';
 
 export function InstructionsFeature() {
   const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
+  useBreadcrumbNavigation('feature-instructions');
 
   useEffect(() => {
     setLayoutContainers({

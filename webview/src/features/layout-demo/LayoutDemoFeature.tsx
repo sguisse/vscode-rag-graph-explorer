@@ -1,9 +1,11 @@
 import React, { useEffect } from 'react';
 import { useLayoutStore } from '@/store/useLayoutStore';
 import { defaultLayoutContainersContent } from '@/features/layout-demo/default-layout-containers-content';
+import { useBreadcrumbNavigation } from '@/hooks/useBreadcrumbNavigation';
 
 export function LayoutDemoFeature() {
   const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
+  useBreadcrumbNavigation('feature-layout-demo');
 
   useEffect(() => {
     setLayoutContainers({
@@ -23,3 +25,5 @@ export function LayoutDemoFeature() {
 
   return null;
 }
+
+export default LayoutDemoFeature;

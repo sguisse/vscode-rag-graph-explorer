@@ -3,9 +3,11 @@ import { useLayoutStore } from '@/store/useLayoutStore';
 import { SdlcSidebarMenu } from '@/features/sdlc/components/SdlcSidebarMenu';
 import { CenterPanelContainer } from './layout-ctns/CenterPanelContainer';
 import { RightPanelContainer } from './layout-ctns/RightPanelContainer';
+import { useBreadcrumbNavigation } from '@/hooks/useBreadcrumbNavigation';
 
 export function LlmFeature() {
   const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
+  useBreadcrumbNavigation('feature-llm-chat');
 
   useEffect(() => {
     setLayoutContainers({

@@ -3,9 +3,11 @@ import { useLayoutStore } from '@/store/useLayoutStore';
 import { TopPanelContainer } from './layout-ctns/TopPanelContainer';
 import { LeftPanelContainer } from './layout-ctns/LeftPanelContainer';
 import { CenterPanelContainer } from './layout-ctns/CenterPanelContainer';
+import { useBreadcrumbNavigation } from '@/hooks/useBreadcrumbNavigation';
 
 export function ExporterFeature() {
   const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
+  useBreadcrumbNavigation('feature-exporter');
 
   useEffect(() => {
     setLayoutContainers({

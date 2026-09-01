@@ -1,11 +1,11 @@
 import React, { useEffect } from 'react';
 import { useLayoutStore } from '@/store/useLayoutStore';
-import { SdlcSidebarMenu } from '@/features/sdlc/components/SdlcSidebarMenu';
 import { CenterPanelContainer } from './layout-ctns/CenterPanelContainer';
-import { FilesCtxExportPanel } from '@/features/sdlc/domains/codebase-context/components/files-ctx-export/files-ctx-export-panel';
+import { useBreadcrumbNavigation } from '@/hooks/useBreadcrumbNavigation';
 
 export function ResultsManagerFeature() {
   const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
+  useBreadcrumbNavigation('feature-results-manager');
 
   useEffect(() => {
     setLayoutContainers({
