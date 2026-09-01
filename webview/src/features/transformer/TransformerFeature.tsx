@@ -104,8 +104,8 @@ export function TransformerFeature({
     onCloseFeature: () => handleReturnToPrevious('Closed'),
   });
 
-  const onValidateHandler = () => {
-    handleValidate();
+  const onValidateHandler = async () => {
+    await handleValidate();
     if (hasPreviousFeature) {
       logInfo('go back to prev screen');
       handleReturnToPrevious('Validated & Saved');
@@ -183,7 +183,7 @@ export function TransformerFeature({
           maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
         },
         bottom: {
-          visible: false,
+          visible: true,
           container: <BottomPanelContainer metrics={pipelineResult.metrics} />,
           isResizable: true,
           isHiddable: true,

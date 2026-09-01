@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -26,10 +26,41 @@ export const TemplateTab: React.FC<TemplateTabProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const templatesMap = (OUTPUT_TEMPLATES_DATA as Record<string, string>) || {};
 
+  // Maintain local state for template changes while typing
+  const [localTemplate, setLocalTemplate] = useState<string>(outputTemplate);
+
+  // Sync refs for unmount commit check
+  const localTemplateRef = useRef(localTemplate);
+  localTemplateRef.current = localTemplate;
+
+  const outputTemplateRef = useRef(outputTemplate);
+  outputTemplateRef.current = outputTemplate;
+
+  // Keep local template synchronized when external prop changes (format switch, reset, variable insertion)
+  useEffect(() => {
+    setLocalTemplate(outputTemplate);
+  }, [outputTemplate]);
+
+  // Flush pending changes on unmount (e.g. switching tabs or navigating away)
+  useEffect(() => {
+    return () => {
+      if (localTemplateRef.current !== outputTemplateRef.current) {
+        onUpdateOutputTemplate(localTemplateRef.current);
+      }
+    };
+  }, [onUpdateOutputTemplate]);
+
+  const handleBlur = () => {
+    if (localTemplate !== outputTemplate) {
+      onUpdateOutputTemplate(localTemplate);
+    }
+  };
+
   const handleFormatChange = (fmt: string) => {
     onUpdateOutputFormat(fmt);
     const defaultTemplate = templatesMap[fmt] || templatesMap.json || '';
     if (defaultTemplate) {
+      setLocalTemplate(defaultTemplate);
       onUpdateOutputTemplate(defaultTemplate);
     }
   };
@@ -37,6 +68,7 @@ export const TemplateTab: React.FC<TemplateTabProps> = ({
   const handleResetTemplate = () => {
     const defaultTemplate = templatesMap[outputFormat] || templatesMap.json || '';
     if (defaultTemplate) {
+      setLocalTemplate(defaultTemplate);
       onUpdateOutputTemplate(defaultTemplate);
     }
   };
@@ -97,12 +129,15 @@ export const TemplateTab: React.FC<TemplateTabProps> = ({
         </div>
         <Textarea
           ref={textareaRef}
-          value={outputTemplate}
+          value={localTemplate}
           onChange={(e) => {
-            onUpdateOutputTemplate(e.target.value);
+            setLocalTemplate(e.target.value);
             setTemplateCursorPos(e.target.selectionStart);
           }}
-          onBlur={updateCursorPos}
+          onBlur={(e) => {
+            updateCursorPos(e);
+            handleBlur();
+          }}
           onSelect={updateCursorPos}
           onClick={updateCursorPos}
           onKeyUp={updateCursorPos}
@@ -114,3 +149,5 @@ export const TemplateTab: React.FC<TemplateTabProps> = ({
     </div>
   );
 };
+
+export default TemplateTab;

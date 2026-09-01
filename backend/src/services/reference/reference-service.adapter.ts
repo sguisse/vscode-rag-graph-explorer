@@ -21,6 +21,15 @@ export class ReferenceServiceAdapter extends AbstractServiceAdapter implements I
 
     constructor() {
         super();
+        this.ensureDirectoriesExist();
+    }
+
+    private ensureDirectoriesExist(): void {
+        [REFERENCES_ORIGINAL_PATH, REFERENCES_TRANSFORMED_PATH, REFERENCES_TEMP_PATH].forEach((dir) => {
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+            }
+        });
     }
 
     private getTransformerService(): ITransformContentServicePort {
@@ -108,6 +117,7 @@ export class ReferenceServiceAdapter extends AbstractServiceAdapter implements I
     }
 
     public async loadReferenceFiles(id: string): Promise<ReferenceFiles> {
+        this.ensureDirectoriesExist();
         const originalPath = path.join(REFERENCES_ORIGINAL_PATH, `${id}.txt`);
         const transformedPath = path.join(REFERENCES_TRANSFORMED_PATH, `${id}.txt`);
         const tempPath = path.join(REFERENCES_TEMP_PATH, `${id}.txt`);
@@ -147,18 +157,17 @@ export class ReferenceServiceAdapter extends AbstractServiceAdapter implements I
     }
 
     public async save(storageKey: string = REFERENCES_PROJECT_KEY, reference: ReferenceItem, initialContent?: string): Promise<ReferenceItem> {
+        this.ensureDirectoriesExist();
         const store = this.readYamlStore();
         const list = store[storageKey] || [];
         const existingIndex = list.findIndex((r) => r.id === reference.id);
 
         const originalStoragePath = path.join(REFERENCES_ORIGINAL_PATH, `${reference.id}.txt`);
 
-        // If initialContent is explicitly provided, save it to original storage
         if (initialContent !== undefined) {
             await this.getFileSystemService().writeFile(originalStoragePath, initialContent);
             reference.sizeKb = Number((Buffer.byteLength(initialContent, 'utf8') / 1024).toFixed(2));
         } else if (!(await this.getFileSystemService().exists(originalStoragePath)) && reference.url) {
-            // Fetch from URL if original file does not exist yet
             try {
                 const fetched = await this.getUrlService().readUrlContent(reference.url);
                 if (fetched && !fetched.includes('URL cannot be read')) {
@@ -170,14 +179,13 @@ export class ReferenceServiceAdapter extends AbstractServiceAdapter implements I
             }
         }
 
-        // Read original file to run transformation and update size metrics
         let originalContent = '';
         if (await this.getFileSystemService().exists(originalStoragePath)) {
             originalContent = (await this.getFileSystemService().readFile(originalStoragePath)) || '';
             reference.sizeKb = Number((Buffer.byteLength(originalContent, 'utf8') / 1024).toFixed(2));
         }
 
-        // Run transformation and save to transformed folder if transformer workflow is assigned
+        // Apply transformer workflow on original source and save output to REFERENCES_TRANSFORMED_PATH
         if (reference.transformer && originalContent) {
             try {
                 const transformerService = this.getTransformerService();
@@ -194,7 +202,7 @@ export class ReferenceServiceAdapter extends AbstractServiceAdapter implements I
             }
         }
 
-        // Clean up legacy content properties from YAML object
+        // Remove legacy embedded content attributes
         delete (reference as any).content;
         delete (reference as any).contentAfterTransformation;
 

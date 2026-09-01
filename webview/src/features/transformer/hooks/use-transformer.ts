@@ -116,7 +116,7 @@ export function useTransformer(options?: UseTransformationScopeOptions & {
       setInitialWorkflowJson(workflowJsonText);
       optionsRef.current?.onSaveWorkflow?.(parsedWorkflow);
 
-      // Associate transformer workflow with ReferenceItem and save
+      // Associate transformer workflow with ReferenceItem and save (triggers backend transformation)
       if (referenceFileInfo?.referenceId) {
         try {
           const refs = await referenceApiService.loadAllReferences(REFERENCES_PROJECT_KEY);
@@ -135,13 +135,13 @@ export function useTransformer(options?: UseTransformationScopeOptions & {
     }
   }, [workflowJsonText, workflowParseError, parsedWorkflow, referenceFileInfo?.referenceId]);
 
-  const handleClose = useCallback(() => {
+  const handleClose = useCallback(async () => {
     if (isDirty) {
       const confirmSave = window.confirm(
         'You have unsaved changes in your transformation workflow. Do you want to save modifications before closing?'
       );
       if (confirmSave) {
-        handleValidate();
+        await handleValidate();
       }
     }
     optionsRef.current?.onCloseFeature?.();
