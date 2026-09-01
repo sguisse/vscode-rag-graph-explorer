@@ -94,7 +94,7 @@ export const TransformationScopePanel: React.FC<TransformationScopePanelProps> =
               </span>
             )}
             {referenceFileInfo.filePath && (
-              <span className="max-w-[300px] text-muted-foreground truncate" title={referenceFileInfo.filePath}>
+              <span className="inline-block min-w-0 max-w-[1200px] text-muted-foreground truncate" title={referenceFileInfo.filePath}>
                 <code data-tooltip={`${referenceFileInfo.filePath}`}>{referenceFileInfo.filePath}</code>
               </span>
             )}

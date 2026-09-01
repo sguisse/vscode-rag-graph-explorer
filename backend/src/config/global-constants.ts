@@ -1,15 +1,14 @@
 import * as path from 'path';
 
 import { vsCodeSettingsManager } from '../managers/VsCodeSettings.manager';
-
-const rawBackendWorkspacePath = vsCodeSettingsManager.getSettings().backendWorkspacePath || '';
+import { getWorkspaceExtentionPath } from '../utils/utils-vscode';
 
 // Where All the Token Razor configuration data files are stored
-export const TOKEN_RAZOR_CONFIG_PATH = path.join(rawBackendWorkspacePath, 'config');
+export const TOKEN_RAZOR_CONFIG_PATH = path.join(getWorkspaceExtentionPath(), 'config');
 
 // Reference service constants
 export const REFERENCES_CONFIG_PATH = path.join(TOKEN_RAZOR_CONFIG_PATH, 'references');
-export const REFERENCES_CONFIG_FILENAME = 'project-references.yaml';
+export const REFERENCES_CONFIG_FILENAME_PATH = path.join(REFERENCES_CONFIG_PATH, 'project-references.yaml');
 
 export const REFERENCES_ORIGINAL_PATH = path.join(REFERENCES_CONFIG_PATH, 'original');
 export const REFERENCES_TEMP_PATH = path.join(REFERENCES_CONFIG_PATH, 'temp');

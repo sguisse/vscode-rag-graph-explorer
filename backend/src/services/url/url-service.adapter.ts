@@ -8,7 +8,6 @@ import { IReferenceServicePort } from '../../../../shared/services/reference/por
 import { vsCodeSettingsManager } from '../../managers/VsCodeSettings.manager';
 import { getWorkspaceRoot } from '../../utils/utils-vscode';
 import { ReferenceItem, REFERENCES_PROJECT_KEY } from '../../../../shared/services/reference/model/reference-model';
-import { REFERENCES_CONFIG_FILENAME, REFERENCES_CONFIG_PATH } from '../../config/global-constants';
 import { IUrlServicePort } from '../../../../shared/services/url/port-out/url-service.port';
 
 export class UrlServiceAdapter extends AbstractServiceAdapter implements IUrlServicePort, vscode.Disposable {
@@ -25,7 +24,11 @@ export class UrlServiceAdapter extends AbstractServiceAdapter implements IUrlSer
                     const text = await response.text();
                     const sizeKb = Number((Buffer.byteLength(text, 'utf8') / 1024).toFixed(2));
                     return text;
+                } else {
+                    logError(`[UrlServiceAdapter] Failed to fetch content from URL: ${url}. Status: ${response.status} ${response.statusText}`);
                 }
+            } else {
+                logError(`[UrlServiceAdapter] URL is not accessible: ${url}`);
             }
         } catch (error) {
             logError(`[UrlServiceAdapter] Failed to fetch content from URL: ${url}`, error);

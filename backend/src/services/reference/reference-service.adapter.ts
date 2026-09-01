@@ -6,15 +6,16 @@ import { AbstractServiceAdapter } from '../../core/AbstractServiceAdapter';
 import { logError, logInfo } from '../../utils/utils-log';
 import { IReferenceServicePort } from '../../../../shared/services/reference/port-out/reference-service.port';
 import { vsCodeSettingsManager } from '../../managers/VsCodeSettings.manager';
-import { getWorkspaceRoot } from '../../utils/utils-vscode';
+import { getWorkspaceExtentionPath, getWorkspaceRoot } from '../../utils/utils-vscode';
 import { ReferenceItem, REFERENCES_PROJECT_KEY } from '../../../../shared/services/reference/model/reference-model';
-import { REFERENCES_CONFIG_FILENAME, REFERENCES_CONFIG_PATH } from '../../config/global-constants';
+import { REFERENCES_CONFIG_PATH, REFERENCES_CONFIG_FILENAME_PATH, REFERENCES_ORIGINAL_PATH } from '../../config/global-constants';
 import { ITransformContentServicePort } from '../../../../shared/services/transform-content/port-out/transform-content-service.port';
 import { serviceRegistry } from '../../core/ServiceRegistry';
 import { RpcMethodEnum } from '../../../../shared/config/rpc-methods.enum.gen';
 import { ServiceEnum } from '../../../../shared/config/service-enum.gen';
 import { IUrlServicePort } from '../../../../shared/services/url/port-out/url-service.port';
 import { IFileSystemServicePort } from '../../../../shared/services/file-system/port-out/file-system-service.port';
+import { IVsCodeServicePort } from '../../../../shared/services/vscode/port-out/vscode-service.port';
 
 export class ReferenceServiceAdapter extends AbstractServiceAdapter implements IReferenceServicePort, vscode.Disposable {
 
@@ -47,30 +48,10 @@ export class ReferenceServiceAdapter extends AbstractServiceAdapter implements I
         return fileSystemService;
     }
 
-    private buildReferencesFilePath(): string {
-        logInfo(`[ReferenceServiceAdapter] buildReferencesFilePath start ...`);
-
-        // 1. Resolve VS Code workspace root directory
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        const rootPath = workspaceFolders && workspaceFolders.length > 0
-            ? workspaceFolders[0].uri.fsPath
-            : getWorkspaceRoot();
-
-        // 2. Convert relative path (e.g. '.token-razor') to absolute path
-        const absoluteBasePath = path.isAbsolute(REFERENCES_CONFIG_PATH)
-            ? REFERENCES_CONFIG_PATH
-            : path.resolve(rootPath, REFERENCES_CONFIG_PATH);
-
-        // 3. Construct absolute path to project-references.yaml
-        const filePath = path.join(absoluteBasePath, REFERENCES_CONFIG_FILENAME);
-
-        logInfo(`[ReferenceServiceAdapter] Using project references file path: ${filePath}`);
-        return filePath;
-    }
 
 
     private readYamlStore(): Record<string, ReferenceItem[]> {
-        const filePath = this.buildReferencesFilePath();
+        const filePath = REFERENCES_CONFIG_FILENAME_PATH;
         try {
             if (fs.existsSync(filePath)) {
                 const fileContent = fs.readFileSync(filePath, 'utf8');
@@ -95,7 +76,7 @@ export class ReferenceServiceAdapter extends AbstractServiceAdapter implements I
 
 
     private writeYamlStore(store: Record<string, ReferenceItem[]>): void {
-        const filePath = this.buildReferencesFilePath();
+        const filePath = REFERENCES_CONFIG_FILENAME_PATH;
         try {
             const dirPath = path.dirname(filePath);
             if (!fs.existsSync(dirPath)) {
@@ -159,7 +140,8 @@ export class ReferenceServiceAdapter extends AbstractServiceAdapter implements I
         // Read the URL content to store in local folder
         const referenceContent = await this.getUrlService().readUrlContent(reference.url);
         // Write the content to the local file system and update the reference item with the local path
-        const referenceStoragePath = path.join(REFERENCES_CONFIG_PATH, `${reference.id}.txt`);
+        const referenceStoragePath = path.join(REFERENCES_ORIGINAL_PATH, `${reference.id}.txt`);
+        logInfo(`[ReferenceServiceAdapter] Saved reference content to local path: ${referenceStoragePath}`);
         await this.getFileSystemService().writeFile(referenceStoragePath, referenceContent);
 
         store[storageKey] = list;
