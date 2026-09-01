@@ -16,6 +16,7 @@ export interface ReferenceFileInfo {
   fileName?: string;
   language?: string;
   size?: number;
+  referenceId?: string;
 }
 
 export interface TransformationScopePanelProps {

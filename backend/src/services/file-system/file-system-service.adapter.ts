@@ -56,9 +56,13 @@ export class FileSystemAdapter extends AbstractServiceAdapter implements IFileSy
         }
     }
 
+
     public async writeFile(filePath: string, content: string): Promise<void> {
+        const dir = path.dirname(filePath);
+        await fsPromises.mkdir(dir, { recursive: true });
         await fsPromises.writeFile(filePath, content, 'utf-8');
     }
+
 
 
     public dispose() {

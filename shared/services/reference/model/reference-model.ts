@@ -9,13 +9,17 @@ export interface ReferenceItem {
   description: string;
   category: string;
   url: string;
-  preSelected: boolean; // If user reset his selection, if true it will be selected again, if false it will be unselected
+  preSelected: boolean; // If user resets selection, if true it will be selected again
   sizeKb: number;
-  content?: string;
   addedAt?: string;
   updatedAt?: string;
   changeDetected?: number; // Expressed in % vs actual version
   transformer?: TransformerWorkflow;
-  contentAfterTransformation?: string;
   sizeKbAfterTransformation?: number;
+}
+
+export interface ReferenceFiles {
+  originalContent: string;
+  transformedContent?: string;
+  tempContent?: string;
 }

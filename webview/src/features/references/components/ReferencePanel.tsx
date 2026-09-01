@@ -27,21 +27,25 @@ export function ReferencePanel() {
   }, [search?.updatedAt, search?.updatedFile, search?.sourceAction]);
 
   // Handler triggered by table row action button or programmatic triggers
-  const handleOpenTransformer = (refInfo?: { fileName?: string; filePath?: string; language?: string } | ReferenceItem | string) => {
+  const handleOpenTransformer = (refInfo?: { fileName?: string; filePath?: string; language?: string; referenceId?: string } | ReferenceItem | string) => {
     let fileName = 'project-reference-schema.json';
     let filePath = 'src/references/project-reference-schema.json';
     let language = 'json';
+    let referenceId: string | undefined = undefined;
 
     if (typeof refInfo === 'string') {
       fileName = refInfo;
       filePath = `src/references/${fileName}`;
-    } else if (refInfo && 'name' in refInfo) {
-      fileName = refInfo.name;
-      filePath = refInfo.url || `src/references/${refInfo.name}`;
+    } else if (refInfo && 'name' in refInfo && 'id' in refInfo) {
+      const item = refInfo as ReferenceItem;
+      fileName = (item.emoji || '') + item.name;
+      referenceId = item.id;
+      filePath = `references/original/${item.id}.txt`;
     } else if (refInfo && typeof refInfo === 'object') {
       fileName = refInfo.fileName || fileName;
       filePath = refInfo.filePath || filePath;
       language = refInfo.language || language;
+      referenceId = (refInfo as any).referenceId;
     }
 
     navigate({
@@ -52,6 +56,7 @@ export function ReferencePanel() {
         filePath,
         language,
         fromFeature: 'feature-references',
+        referenceId,
       },
     });
   };

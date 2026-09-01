@@ -44,6 +44,7 @@ export interface TransformerSearch {
   filePath?: string;
   language?: string;
   fromFeature?: string;
+  referenceId?: string;
 }
 
 // Explicit Feature ID <-> Route Path Mapping Table
@@ -243,6 +244,7 @@ export const transformerRoute = createRoute({
     filePath: (search.filePath as string) || undefined,
     language: (search.language as string) || undefined,
     fromFeature: (search.fromFeature as string) || undefined,
+    referenceId: (search.referenceId as string) || undefined,
   }),
   component: TransformerFeature,
 });

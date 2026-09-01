@@ -43,10 +43,11 @@ export function TransformerFeature({
         fileName: searchParams.fileName,
         filePath: searchParams.filePath,
         language: searchParams.language,
+        referenceId: searchParams.referenceId,
       };
     }
     return initialReferenceFileInfo;
-  }, [searchParams?.fileName, searchParams?.filePath, searchParams?.language, initialReferenceFileInfo]);
+  }, [searchParams?.fileName, searchParams?.filePath, searchParams?.language, searchParams?.referenceId, initialReferenceFileInfo]);
 
   const hasPreviousFeature = Boolean(
     searchParams?.fromFeature ||
@@ -182,7 +183,7 @@ export function TransformerFeature({
           maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
         },
         bottom: {
-          visible: true,
+          visible: false,
           container: <BottomPanelContainer metrics={pipelineResult.metrics} />,
           isResizable: true,
           isHiddable: true,

@@ -2,11 +2,13 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 
 import { useTransformationScope, UseTransformationScopeOptions } from './use-transformation-scope';
 import { transformContentApiService } from '@/services/api/transform-content-api.service.gen';
+import { referenceApiService } from '@/services/api/reference-api.service.gen';
 import {
   DEFAULT_WORKFLOW_JSON,
   TransformerWorkflow,
   TransformationResult
 } from '@/shared/services/transform-content/model/transform-content-model';
+import { ReferenceItem, REFERENCES_PROJECT_KEY } from '@/shared/services/reference/model/reference-model';
 
 export function useTransformer(options?: UseTransformationScopeOptions & {
   initialWorkflow?: TransformerWorkflow;
@@ -25,9 +27,7 @@ export function useTransformer(options?: UseTransformationScopeOptions & {
   );
 
   const [workflowJsonText, setWorkflowJsonText] = useState<string>(initialWorkflowJson);
-  const [inputText, setInputText] = useState<string>(
-    `<html>\n  <head>\n    <title>Sample Web Scraping Target</title>\n    <meta name="description" content="Extracting unstructured data into JSON payload.">\n  </head>\n  <body>\n    <h1>Contact Us</h1>\n    <p>Email: admin@example.com, Server IP: 192.168.1.50</p>\n  </body>\n</html>`
-  );
+  const [inputText, setInputText] = useState<string>('');
 
   const [workflowParseError, setWorkflowJsonError] = useState<string | null>(null);
   const [templateCursorPos, setTemplateCursorPos] = useState<number | null>(null);
@@ -47,6 +47,32 @@ export function useTransformer(options?: UseTransformationScopeOptions & {
       logs: [],
     },
   });
+
+  // Fetch local file content via ReferenceFiles on demand for reference item
+  useEffect(() => {
+    if (referenceFileInfo?.referenceId) {
+      Promise.all([
+        referenceApiService.loadAllReferences(REFERENCES_PROJECT_KEY),
+        referenceApiService.loadReferenceFiles(referenceFileInfo.referenceId),
+      ]).then(([refs, files]) => {
+        const targetRef = refs.find((r) => r.id === referenceFileInfo.referenceId);
+        if (files?.originalContent) {
+          setInputText(files.originalContent);
+        }
+        if (targetRef?.transformer) {
+          const wfStr = JSON.stringify(targetRef.transformer, null, 2);
+          setInitialWorkflowJson(wfStr);
+          setWorkflowJsonText(wfStr);
+        }
+      }).catch((err) => {
+        console.error('[useTransformer] Failed to load reference item content:', err);
+      });
+    } else {
+      setInputText(
+        `<html>\n  <head>\n    <title>Sample Web Scraping Target</title>\n    <meta name="description" content="Extracting unstructured data into JSON payload.">\n  </head>\n  <body>\n    <h1>Contact Us</h1>\n    <p>Email: admin@example.com, Server IP: 192.168.1.50</p>\n  </body>\n</html>`
+      );
+    }
+  }, [referenceFileInfo?.referenceId]);
 
   const isDirty = useMemo(() => {
     return workflowJsonText.trim() !== initialWorkflowJson.trim();
@@ -85,12 +111,29 @@ export function useTransformer(options?: UseTransformationScopeOptions & {
     navigator.clipboard.writeText(pipelineResult.renderedOutput);
   }, [pipelineResult.renderedOutput]);
 
-  const handleValidate = useCallback(() => {
+  const handleValidate = useCallback(async () => {
     if (!workflowParseError) {
       setInitialWorkflowJson(workflowJsonText);
       optionsRef.current?.onSaveWorkflow?.(parsedWorkflow);
+
+      // Associate transformer workflow with ReferenceItem and save
+      if (referenceFileInfo?.referenceId) {
+        try {
+          const refs = await referenceApiService.loadAllReferences(REFERENCES_PROJECT_KEY);
+          const targetRef = refs.find((r) => r.id === referenceFileInfo.referenceId);
+          if (targetRef) {
+            const updatedRef: ReferenceItem = {
+              ...targetRef,
+              transformer: parsedWorkflow,
+            };
+            await referenceApiService.update(REFERENCES_PROJECT_KEY, updatedRef);
+          }
+        } catch (err) {
+          console.error('[useTransformer] Failed to associate transformer workflow with reference:', err);
+        }
+      }
     }
-  }, [workflowJsonText, workflowParseError, parsedWorkflow]);
+  }, [workflowJsonText, workflowParseError, parsedWorkflow, referenceFileInfo?.referenceId]);
 
   const handleClose = useCallback(() => {
     if (isDirty) {

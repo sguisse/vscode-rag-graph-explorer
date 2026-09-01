@@ -31,6 +31,7 @@ export enum RpcMethodEnum {
     NEO4J_STOP_NEO4J_DATABASE = 'stopNeo4jDatabase',
     NEO4J_RESTART_NEO4J_DATABASE = 'restartNeo4jDatabase',
     REFERENCE_LOAD_ALL_REFERENCES = 'loadAllReferences',
+    REFERENCE_LOAD_REFERENCE_FILES = 'loadReferenceFiles',
     REFERENCE_SAVE = 'save',
     REFERENCE_UPDATE = 'update',
     REFERENCE_DELETE = 'delete',

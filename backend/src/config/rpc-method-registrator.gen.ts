@@ -58,6 +58,7 @@ export function registerRpcMethods(rpc: RpcProtocol): void {
 
     const referenceService = serviceRegistry.get(ServiceEnum.REFERENCE);
     rpc.register(RpcMethodEnum.REFERENCE_LOAD_ALL_REFERENCES, referenceService.loadAllReferences.bind(referenceService));
+    rpc.register(RpcMethodEnum.REFERENCE_LOAD_REFERENCE_FILES, referenceService.loadReferenceFiles.bind(referenceService));
     rpc.register(RpcMethodEnum.REFERENCE_SAVE, referenceService.save.bind(referenceService));
     rpc.register(RpcMethodEnum.REFERENCE_UPDATE, referenceService.update.bind(referenceService));
     rpc.register(RpcMethodEnum.REFERENCE_DELETE, referenceService.delete.bind(referenceService));

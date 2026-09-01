@@ -9,7 +9,7 @@ import { ReferenceItem } from '@/shared/services/reference/model/reference-model
 interface NewReferenceFormProps {
   categories: string[];
   importing: boolean;
-  onAddReference: (newRef: Omit<ReferenceItem, 'id'>) => Promise<ReferenceItem>;
+  onAddReference: (newRef: Omit<ReferenceItem, 'id'>, initialContent?: string) => Promise<ReferenceItem>;
   onImportUrl: (url: string) => Promise<string | null>;
 }
 
@@ -59,16 +59,18 @@ export function NewReferenceForm({
     const finalCategory = isAddingNewCategory ? customCategoryInput.trim() : newCategory;
     if (!finalCategory || !newName.trim()) return;
 
-    await onAddReference({
-      category: finalCategory,
-      name: newName.trim(),
-      description: newDescription.trim() || 'No description provided',
-      emoji: newEmoji || '📄',
-      preSelected: newPreSelected,
-      url: newUrl.trim(),
-      sizeKb: importedSizeKb || 1.2,
-      content: importedContent || `Reference document for ${newName}`,
-    });
+    await onAddReference(
+      {
+        category: finalCategory,
+        name: newName.trim(),
+        description: newDescription.trim() || 'No description provided',
+        emoji: newEmoji || '📄',
+        preSelected: newPreSelected,
+        url: newUrl.trim(),
+        sizeKb: importedSizeKb || 1.2,
+      },
+      importedContent || undefined
+    );
 
     setNewName('');
     setNewDescription('');

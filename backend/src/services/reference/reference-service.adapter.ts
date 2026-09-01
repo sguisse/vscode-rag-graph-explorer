@@ -7,8 +7,8 @@ import { logError, logInfo } from '../../utils/utils-log';
 import { IReferenceServicePort } from '../../../../shared/services/reference/port-out/reference-service.port';
 import { vsCodeSettingsManager } from '../../managers/VsCodeSettings.manager';
 import { getWorkspaceExtentionPath, getWorkspaceRoot } from '../../utils/utils-vscode';
-import { ReferenceItem, REFERENCES_PROJECT_KEY } from '../../../../shared/services/reference/model/reference-model';
-import { REFERENCES_CONFIG_PATH, REFERENCES_CONFIG_FILENAME_PATH, REFERENCES_ORIGINAL_PATH } from '../../config/global-constants';
+import { ReferenceItem, ReferenceFiles, REFERENCES_PROJECT_KEY } from '../../../../shared/services/reference/model/reference-model';
+import { REFERENCES_CONFIG_PATH, REFERENCES_CONFIG_FILENAME_PATH, REFERENCES_ORIGINAL_PATH, REFERENCES_TRANSFORMED_PATH, REFERENCES_TEMP_PATH } from '../../config/global-constants';
 import { ITransformContentServicePort } from '../../../../shared/services/transform-content/port-out/transform-content-service.port';
 import { serviceRegistry } from '../../core/ServiceRegistry';
 import { RpcMethodEnum } from '../../../../shared/config/rpc-methods.enum.gen';
@@ -21,7 +21,6 @@ export class ReferenceServiceAdapter extends AbstractServiceAdapter implements I
 
     constructor() {
         super();
-
     }
 
     private getTransformerService(): ITransformContentServicePort {
@@ -48,8 +47,6 @@ export class ReferenceServiceAdapter extends AbstractServiceAdapter implements I
         return fileSystemService;
     }
 
-
-
     private readYamlStore(): Record<string, ReferenceItem[]> {
         const filePath = REFERENCES_CONFIG_FILENAME_PATH;
         try {
@@ -57,7 +54,6 @@ export class ReferenceServiceAdapter extends AbstractServiceAdapter implements I
                 const fileContent = fs.readFileSync(filePath, 'utf8');
                 const parsed = yaml.load(fileContent);
 
-                // Convert top-level array to keyed store object
                 if (Array.isArray(parsed)) {
                     return {
                         [REFERENCES_PROJECT_KEY]: parsed as ReferenceItem[],
@@ -73,7 +69,6 @@ export class ReferenceServiceAdapter extends AbstractServiceAdapter implements I
         }
         return {};
     }
-
 
     private writeYamlStore(store: Record<string, ReferenceItem[]>): void {
         const filePath = REFERENCES_CONFIG_FILENAME_PATH;
@@ -98,7 +93,6 @@ export class ReferenceServiceAdapter extends AbstractServiceAdapter implements I
 
         if (!storageKey) {
             references = Object.values(store).flat();
-            // Deduplicate items by ID if multiple keys contain the same array
             const seen = new Set<string>();
             references = references.filter(r => {
                 if (seen.has(r.id)) return false;
@@ -113,6 +107,32 @@ export class ReferenceServiceAdapter extends AbstractServiceAdapter implements I
         return references;
     }
 
+    public async loadReferenceFiles(id: string): Promise<ReferenceFiles> {
+        const originalPath = path.join(REFERENCES_ORIGINAL_PATH, `${id}.txt`);
+        const transformedPath = path.join(REFERENCES_TRANSFORMED_PATH, `${id}.txt`);
+        const tempPath = path.join(REFERENCES_TEMP_PATH, `${id}.txt`);
+
+        let originalContent = '';
+        if (await this.getFileSystemService().exists(originalPath)) {
+            originalContent = (await this.getFileSystemService().readFile(originalPath)) || '';
+        }
+
+        let transformedContent: string | undefined = undefined;
+        if (await this.getFileSystemService().exists(transformedPath)) {
+            transformedContent = await this.getFileSystemService().readFile(transformedPath);
+        }
+
+        let tempContent: string | undefined = undefined;
+        if (await this.getFileSystemService().exists(tempPath)) {
+            tempContent = await this.getFileSystemService().readFile(tempPath);
+        }
+
+        return {
+            originalContent,
+            transformedContent,
+            tempContent,
+        };
+    }
 
     public async update(storageKey: string = REFERENCES_PROJECT_KEY, reference: ReferenceItem): Promise<ReferenceItem> {
         return this.save(storageKey, reference);
@@ -126,10 +146,57 @@ export class ReferenceServiceAdapter extends AbstractServiceAdapter implements I
         }
     }
 
-    public async save(storageKey: string = REFERENCES_PROJECT_KEY, reference: ReferenceItem): Promise<ReferenceItem> {
+    public async save(storageKey: string = REFERENCES_PROJECT_KEY, reference: ReferenceItem, initialContent?: string): Promise<ReferenceItem> {
         const store = this.readYamlStore();
         const list = store[storageKey] || [];
         const existingIndex = list.findIndex((r) => r.id === reference.id);
+
+        const originalStoragePath = path.join(REFERENCES_ORIGINAL_PATH, `${reference.id}.txt`);
+
+        // If initialContent is explicitly provided, save it to original storage
+        if (initialContent !== undefined) {
+            await this.getFileSystemService().writeFile(originalStoragePath, initialContent);
+            reference.sizeKb = Number((Buffer.byteLength(initialContent, 'utf8') / 1024).toFixed(2));
+        } else if (!(await this.getFileSystemService().exists(originalStoragePath)) && reference.url) {
+            // Fetch from URL if original file does not exist yet
+            try {
+                const fetched = await this.getUrlService().readUrlContent(reference.url);
+                if (fetched && !fetched.includes('URL cannot be read')) {
+                    await this.getFileSystemService().writeFile(originalStoragePath, fetched);
+                    reference.sizeKb = Number((Buffer.byteLength(fetched, 'utf8') / 1024).toFixed(2));
+                }
+            } catch (err) {
+                logError(`[ReferenceServiceAdapter] Failed to fetch URL content for ${reference.id}:`, err);
+            }
+        }
+
+        // Read original file to run transformation and update size metrics
+        let originalContent = '';
+        if (await this.getFileSystemService().exists(originalStoragePath)) {
+            originalContent = (await this.getFileSystemService().readFile(originalStoragePath)) || '';
+            reference.sizeKb = Number((Buffer.byteLength(originalContent, 'utf8') / 1024).toFixed(2));
+        }
+
+        // Run transformation and save to transformed folder if transformer workflow is assigned
+        if (reference.transformer && originalContent) {
+            try {
+                const transformerService = this.getTransformerService();
+                const transformationResult = await transformerService.transform(reference.transformer, originalContent);
+                const transformedContent = transformationResult.renderedOutput || transformationResult.content || '';
+
+                reference.sizeKbAfterTransformation = Number((Buffer.byteLength(transformedContent, 'utf8') / 1024).toFixed(2));
+
+                const transformedStoragePath = path.join(REFERENCES_TRANSFORMED_PATH, `${reference.id}.txt`);
+                await this.getFileSystemService().writeFile(transformedStoragePath, transformedContent);
+                logInfo(`[ReferenceServiceAdapter] Saved transformed content to local path: ${transformedStoragePath}`);
+            } catch (error) {
+                logError(`[ReferenceServiceAdapter] Transformation execution failed for reference ID ${reference.id}:`, error);
+            }
+        }
+
+        // Clean up legacy content properties from YAML object
+        delete (reference as any).content;
+        delete (reference as any).contentAfterTransformation;
 
         if (existingIndex !== -1) {
             list[existingIndex] = reference;
@@ -137,26 +204,8 @@ export class ReferenceServiceAdapter extends AbstractServiceAdapter implements I
             list.push(reference);
         }
 
-        // Read the URL content to store in local folder
-        const referenceContent = await this.getUrlService().readUrlContent(reference.url);
-        // Write the content to the local file system and update the reference item with the local path
-        const referenceStoragePath = path.join(REFERENCES_ORIGINAL_PATH, `${reference.id}.txt`);
-        logInfo(`[ReferenceServiceAdapter] Saved reference content to local path: ${referenceStoragePath}`);
-        await this.getFileSystemService().writeFile(referenceStoragePath, referenceContent);
-
         store[storageKey] = list;
         this.writeYamlStore(store);
-
-        /*
-        if (reference.transformer && reference.content) {
-            const transformerService = this.getTransformerService();
-            try {
-                const transformationResult = await transformerService.transform(reference.transformer, reference.content);
-                reference.contentAfterTransformation = transformationResult.transformedContent;
-                reference.sizeKbAfterTransformation = Number((Buffer.byteLength(transformationResult.transformedContent, 'utf8') / 1024).toFixed(2));
-                logInfo(`[ReferenceServiceAdapter] Transformation applied for reference ID: ${reference.id}`);
-            }
-            */
 
         return reference;
     }

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { referenceApiService } from '@/services/api/reference-api.service.gen';
 import { urlApiService } from '@/services/api/url-api.service.gen';
-import {ReferenceItem, REFERENCES_PROJECT_KEY } from '@/shared/services/reference/model/reference-model';
+import { ReferenceItem, REFERENCES_PROJECT_KEY } from '@/shared/services/reference/model/reference-model';
 import {
   RefSortField,
   RefSortRule,
@@ -157,7 +157,7 @@ export function useProjectReferences(
     await referenceApiService.update(localDocumentStorage, updatedRef);
   };
 
-  const addReference = async (newRef: Omit<ReferenceItem, 'id'>) => {
+  const addReference = async (newRef: Omit<ReferenceItem, 'id'>, initialContent?: string) => {
     const now = new Date().toISOString();
     const item: ReferenceItem = {
       ...newRef,
@@ -166,7 +166,7 @@ export function useProjectReferences(
       updatedAt: now,
       changeDetected: 0,
     };
-    await referenceApiService.save(localDocumentStorage, item);
+    await referenceApiService.save(localDocumentStorage, item, initialContent);
     await fetchReferences();
     return item;
   };
@@ -203,12 +203,11 @@ export function useProjectReferences(
       const now = new Date().toISOString();
       const updated: ReferenceItem = {
         ...target,
-        content,
         sizeKb: content.length / 1024,
         updatedAt: now,
         changeDetected: 0,
       };
-      await referenceApiService.update(localDocumentStorage, updated);
+      await referenceApiService.save(localDocumentStorage, updated, content);
       setReferences((prev) => prev.map((r) => (r.id === id ? updated : r)));
     } catch (err) {
       console.error('[useProjectReferences] Failed to reload reference content', err);
@@ -229,12 +228,11 @@ export function useProjectReferences(
         const sizeKb = content.length / 1024;
         const updated: ReferenceItem = {
           ...item,
-          content,
           sizeKb,
           updatedAt: now,
           changeDetected: 0,
         };
-        await referenceApiService.update(localDocumentStorage, updated);
+        await referenceApiService.save(localDocumentStorage, updated, content);
       }
       await fetchReferences();
     } catch (err) {
@@ -388,14 +386,12 @@ export function useProjectReferences(
     }
   };
 
-  // Selected counts (Total selected across entire dataset)
   const totalSelectedCount = useMemo(() => references.filter((r) => r.preSelected).length, [references]);
   const totalSelectedSizeKb = useMemo(
     () => Number(references.filter((r) => r.preSelected).reduce((acc, r) => acc + (r.sizeKb || 0), 0).toFixed(2)),
     [references]
   );
 
-  // Total references loaded from YAML file
   const totalAllCount = references.length;
   const totalAllSizeKb = useMemo(
     () => Number(references.reduce((acc, r) => acc + (r.sizeKb || 0), 0).toFixed(2)),
