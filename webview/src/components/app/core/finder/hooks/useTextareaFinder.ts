@@ -11,7 +11,7 @@ export interface TextareaMatch {
 
 export function useTextareaFinder(
   text: string,
-  textareaRef: React.RefObject<HTMLTextAreaElement | null>,
+  textareaRef?: React.RefObject<HTMLTextAreaElement | null>,
   options: UseFinderBaseOptions = {}
 ) {
   const finderBase = useFinderBase(options);
@@ -44,10 +44,9 @@ export function useTextareaFinder(
   const scrollToMatch = useCallback(
     (matchIndex: number) => {
       const activeMatch = matches[matchIndex];
-      const el = textareaRef.current;
+      const el = textareaRef?.current;
       if (!activeMatch || !el) return;
 
-      el.focus();
       el.setSelectionRange(activeMatch.start, activeMatch.end);
 
       const lineHeight = parseInt(window.getComputedStyle(el).lineHeight || '20', 10);
@@ -58,10 +57,10 @@ export function useTextareaFinder(
   );
 
   useEffect(() => {
-    if (finderBase.isFinderOpen && totalMatches > 0) {
+    if (finderBase.isFinderOpen && totalMatches > 0 && textareaRef?.current) {
       scrollToMatch(currentMatchIndex);
     }
-  }, [currentMatchIndex, totalMatches, finderBase.isFinderOpen, scrollToMatch]);
+  }, [currentMatchIndex, totalMatches, finderBase.isFinderOpen, scrollToMatch, textareaRef]);
 
   const handleNextMatch = useCallback(() => {
     if (totalMatches === 0) return;
@@ -79,5 +78,6 @@ export function useTextareaFinder(
     totalMatches,
     handleNextMatch,
     handlePrevMatch,
+    scrollToMatch,
   };
 }

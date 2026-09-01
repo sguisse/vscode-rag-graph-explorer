@@ -74,6 +74,8 @@ export function TransformerFeature({
           isResizable: true,
           isHiddable: true,
           maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
+          workspaceTopHeight: 70,
+
         },
         left: {
           visible: true,

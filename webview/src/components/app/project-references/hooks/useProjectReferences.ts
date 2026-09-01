@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { referenceApiService } from '@/services/api/reference-api.service.gen';
-import { GLOBAL_PROJECT_REFERENCES_KEY, ReferenceItem } from '@/shared/services/reference/model/reference-model';
+import {ReferenceItem, REFERENCES_PROJECT_KEY } from '@/shared/services/reference/model/reference-model';
 import {
   RefSortField,
   RefSortRule,
@@ -8,7 +8,7 @@ import {
 } from '../model/prj-model-ui';
 
 export function useProjectReferences(
-  localDocumentStorage: string = GLOBAL_PROJECT_REFERENCES_KEY,
+  localDocumentStorage: string = REFERENCES_PROJECT_KEY,
   initialViewMode: ProjectReferencesViewMode = 'User'
 ) {
   const [references, setReferences] = useState<ReferenceItem[]>([]);
@@ -303,6 +303,10 @@ export function useProjectReferences(
           case 'sizeKb':
             valA = a.sizeKb ?? 0;
             valB = b.sizeKb ?? 0;
+            break;
+          case 'sizeKbAfterTransformation':
+            valA = a.sizeKbAfterTransformation ?? 0;
+            valB = b.sizeKbAfterTransformation ?? 0;
             break;
           case 'updatedAt':
             valA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;

@@ -47,19 +47,19 @@ export function ReferencesFilterBar({
   onViewModeToggle,
 }: ReferencesFilterBarProps) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-muted/30 border border-border rounded-md font-mono text-xs">
+    <div className="flex flex-wrap justify-between items-center gap-2 bg-muted/30 p-2 border border-border rounded-md font-mono text-xs">
       <div className="flex flex-wrap items-center gap-2.5">
-        <label className="flex items-center gap-1.5 cursor-pointer text-[10px] font-bold text-foreground uppercase select-none shrink-0">
+        <label className="flex items-center gap-1.5 font-bold text-[10px] text-foreground uppercase cursor-pointer select-none shrink-0">
           <input
             type="checkbox"
             checked={isGrouped}
             onChange={(e) => onToggleGrouped(e.target.checked)}
-            className="rounded border-border text-indigo-500 focus:ring-indigo-500 h-3.5 w-3.5 cursor-pointer accent-indigo-500"
+            className="border-border rounded focus:ring-indigo-500 w-3.5 h-3.5 text-indigo-500 accent-indigo-500 cursor-pointer"
           />
           <span>Group by Category</span>
         </label>
 
-        <div className="h-4 w-px bg-border shrink-0" />
+        <div className="bg-border w-px h-4 shrink-0" />
 
         <div className="flex items-center gap-1">
           <Filter size={11} className="text-muted-foreground shrink-0" />
@@ -67,7 +67,7 @@ export function ReferencesFilterBar({
             value={categoryFilter}
             onValueChange={(val: string | null) => onCategoryFilterChange(val || 'all')}
           >
-            <SelectTrigger className="bg-background h-7 text-[11px] w-36 font-mono">
+            <SelectTrigger className="bg-background w-65 h-7 font-mono text-[11px]">
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
             <SelectContent>
@@ -85,7 +85,7 @@ export function ReferencesFilterBar({
           value={emojiFilter}
           onValueChange={(val: string | null) => onEmojiFilterChange(val || 'all')}
         >
-          <SelectTrigger className="bg-background h-7 text-[11px] w-28 font-mono">
+          <SelectTrigger className="bg-background w-28 h-7 font-mono text-[11px]">
             <SelectValue placeholder="All Emojis" />
           </SelectTrigger>
           <SelectContent>
@@ -99,34 +99,34 @@ export function ReferencesFilterBar({
         </Select>
 
         {/* Renamed "Pre Selected Only" to "Selected" */}
-        <label className="flex items-center gap-1.5 cursor-pointer text-[10px] font-bold text-muted-foreground hover:text-foreground uppercase select-none shrink-0">
+        <label className="flex items-center gap-1.5 font-bold text-[10px] text-muted-foreground hover:text-foreground uppercase cursor-pointer select-none shrink-0">
           <input
             type="checkbox"
             checked={selectedOnly}
             onChange={(e) => onSelectedOnlyChange(e.target.checked)}
-            className="rounded border-border text-indigo-500 focus:ring-indigo-500 h-3.5 w-3.5 cursor-pointer accent-indigo-500"
+            className="border-border rounded focus:ring-indigo-500 w-3.5 h-3.5 text-indigo-500 accent-indigo-500 cursor-pointer"
           />
           <span>Selected</span>
         </label>
 
-        <div className="h-4 w-px bg-border shrink-0" />
+        <div className="bg-border w-px h-4 shrink-0" />
 
-        <label className="flex items-center gap-1.5 cursor-pointer text-[10px] font-bold text-muted-foreground hover:text-foreground uppercase select-none shrink-0">
+        <label className="flex items-center gap-1.5 font-bold text-[10px] text-muted-foreground hover:text-foreground uppercase cursor-pointer select-none shrink-0">
           <input
             type="checkbox"
             checked={hideDescription}
             onChange={(e) => onHideDescriptionChange(e.target.checked)}
-            className="rounded border-border text-indigo-500 focus:ring-indigo-500 h-3.5 w-3.5 cursor-pointer accent-indigo-500"
+            className="border-border rounded focus:ring-indigo-500 w-3.5 h-3.5 text-indigo-500 accent-indigo-500 cursor-pointer"
           />
           <span>Hide Description</span>
         </label>
 
-        <label className="flex items-center gap-1.5 cursor-pointer text-[10px] font-bold text-muted-foreground hover:text-foreground uppercase select-none shrink-0">
+        <label className="flex items-center gap-1.5 font-bold text-[10px] text-muted-foreground hover:text-foreground uppercase cursor-pointer select-none shrink-0">
           <input
             type="checkbox"
             checked={hideUrl}
             onChange={(e) => onHideUrlChange(e.target.checked)}
-            className="rounded border-border text-indigo-500 focus:ring-indigo-500 h-3.5 w-3.5 cursor-pointer accent-indigo-500"
+            className="border-border rounded focus:ring-indigo-500 w-3.5 h-3.5 text-indigo-500 accent-indigo-500 cursor-pointer"
           />
           <span>Hide URL</span>
         </label>
@@ -134,13 +134,13 @@ export function ReferencesFilterBar({
 
       <div className="flex items-center gap-2">
         <div className="relative w-44">
-          <Search size={12} className="absolute left-2 top-2 text-muted-foreground pointer-events-none" />
+          <Search size={12} className="top-2 left-2 absolute text-muted-foreground pointer-events-none" />
           <Input
             type="text"
             placeholder="Search column..."
             value={globalFilter}
             onChange={(e) => onGlobalFilterChange(e.target.value)}
-            className="h-7 pl-7 text-[11px] font-mono bg-background"
+            className="bg-background pl-7 h-7 font-mono text-[11px]"
           />
         </div>
 

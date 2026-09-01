@@ -1,4 +1,4 @@
-export type RefSortField = 'category' | 'preSelected' | 'name' | 'sizeKb' | 'updatedAt' | 'transformer';
+export type RefSortField = 'category' | 'preSelected' | 'name' | 'sizeKb' | 'sizeKbAfterTransformation' | 'updatedAt' | 'transformer';
 export type RefSortOrder = 'asc' | 'desc';
 
 export interface RefSortRule {

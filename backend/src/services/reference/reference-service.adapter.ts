@@ -7,8 +7,8 @@ import { logError, logInfo } from '../../utils/utils-log';
 import { IReferenceServicePort } from '../../../../shared/services/reference/port-out/reference-service.port';
 import { vsCodeSettingsManager } from '../../managers/VsCodeSettings.manager';
 import { getWorkspaceRoot } from '../../utils/utils-vscode';
-import { REFERENCES_CONFIG_PATH, PROJECT_REFERENCES_CONFIG_FILENAME, GLOBAL_PROJECT_REFERENCES_KEY } from '../../config/global-constants';
-import type { ReferenceItem } from '../../../../shared/services/reference/model/reference-model';
+import { ReferenceItem, REFERENCES_PROJECT_KEY } from '../../../../shared/services/reference/model/reference-model';
+import { REFERENCES_CONFIG_FILENAME, REFERENCES_CONFIG_PATH } from '../../config/global-constants';
 
 export class ReferenceServiceAdapter extends AbstractServiceAdapter implements IReferenceServicePort, vscode.Disposable {
 
@@ -31,7 +31,7 @@ export class ReferenceServiceAdapter extends AbstractServiceAdapter implements I
             : path.resolve(rootPath, REFERENCES_CONFIG_PATH);
 
         // 3. Construct absolute path to project-references.yaml
-        const filePath = path.join(absoluteBasePath, PROJECT_REFERENCES_CONFIG_FILENAME);
+        const filePath = path.join(absoluteBasePath, REFERENCES_CONFIG_FILENAME);
 
         logInfo(`[ReferenceServiceAdapter] Using project references file path: ${filePath}`);
         return filePath;
@@ -48,7 +48,7 @@ export class ReferenceServiceAdapter extends AbstractServiceAdapter implements I
                 // Convert top-level array to keyed store object
                 if (Array.isArray(parsed)) {
                     return {
-                        [GLOBAL_PROJECT_REFERENCES_KEY]: parsed as ReferenceItem[],
+                        [REFERENCES_PROJECT_KEY]: parsed as ReferenceItem[],
                     };
                 }
 
@@ -78,7 +78,7 @@ export class ReferenceServiceAdapter extends AbstractServiceAdapter implements I
         }
     }
 
-    public async loadAllReferences(storageKey: string = GLOBAL_PROJECT_REFERENCES_KEY): Promise<ReferenceItem[]> {
+    public async loadAllReferences(storageKey: string = REFERENCES_PROJECT_KEY): Promise<ReferenceItem[]> {
         logInfo(`[ReferenceServiceAdapter] Loading all references for storageKey: ${storageKey}`);
         const store = this.readYamlStore();
 

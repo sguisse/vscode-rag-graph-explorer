@@ -6,6 +6,10 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react(), tailwindcss(), ViteYaml()],
+  test: {
+    globals: true,
+    environment: 'jsdom',
+  },
   resolve: {
     alias: {
       '@assets': path.resolve(import.meta.dirname, '../assets'),

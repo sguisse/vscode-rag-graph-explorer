@@ -1,5 +1,6 @@
 import { TransformerWorkflow } from "../../transform-content/model/transform-content-model";
 
+export const REFERENCES_PROJECT_KEY = 'global-project-references';
 
 export interface ReferenceItem {
   id: string;

@@ -1,225 +1,266 @@
 #!/usr/bin/env bash
 set -e
 
-# Ensure output directory exists
-mkdir -p dev-tools
+# Ensure target directories exist
+mkdir -p webview/src/components/app/core/finder/hooks
+mkdir -p webview/src/features/transformer/components
 
-# Update generate-webview-api-services.js to support complex return types containing inline object definitions or internal semicolons
-cat << 'EOF' > dev-tools/generate-webview-api-services.js
-const fs = require('fs');
-const path = require('path');
+# Update useTextareaFinder to safely support optional textareaRef in Read mode
+cat << 'EOF' > webview/src/components/app/core/finder/hooks/useTextareaFinder.ts
+import { useMemo, useCallback, useEffect } from 'react';
+import { useFinderBase, UseFinderBaseOptions } from './useFinderBase';
+import { buildSearchRegex } from '../constants';
 
-const rootDir = path.resolve(__dirname, '../');
-const sharedDir = path.join(rootDir, 'shared');
-const sharedServicesDir = path.join(sharedDir, 'services');
-const outputDir = path.join(rootDir, 'webview/src/services/api');
+export interface TextareaMatch {
+  index: number;
+  start: number;
+  end: number;
+  text: string;
+}
 
-function findPortFiles(dir, fileList = []) {
-    if (!fs.existsSync(dir)) return fileList;
-    const files = fs.readdirSync(dir);
-    for (const file of files) {
-        const filePath = path.join(dir, file);
-        const stat = fs.statSync(filePath);
-        if (stat.isDirectory()) {
-            findPortFiles(filePath, fileList);
-        } else if (file.endsWith('-service.port.ts') || file.endsWith('.port.ts')) {
-            fileList.push(filePath);
-        }
+export function useTextareaFinder(
+  text: string,
+  textareaRef?: React.RefObject<HTMLTextAreaElement | null>,
+  options: UseFinderBaseOptions = {}
+) {
+  const finderBase = useFinderBase(options);
+  const { searchQuery, caseSensitive, wholeWord, useRegex, currentMatchIndex, setCurrentMatchIndex } = finderBase;
+
+  const matches = useMemo<TextareaMatch[]>(() => {
+    if (!text || !searchQuery) return [];
+
+    const regex = buildSearchRegex(searchQuery, { caseSensitive, wholeWord, useRegex });
+    if (!regex) return [];
+
+    const result: TextareaMatch[] = [];
+    let match: RegExpExecArray | null;
+    let counter = 0;
+
+    while ((match = regex.exec(text)) !== null) {
+      result.push({
+        index: counter++,
+        start: match.index,
+        end: match.index + match[0].length,
+        text: match[0],
+      });
+      if (match[0].length === 0) regex.lastIndex++;
     }
-    return fileList;
-}
+    return result;
+  }, [text, searchQuery, caseSensitive, wholeWord, useRegex]);
 
-function camelToUpperSnake(str) {
-    return str
-        .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
-        .replace(/[-_\s]+/g, '_')
-        .toUpperCase();
-}
+  const totalMatches = matches.length;
 
-function camelToKebab(str) {
-    return str
-        .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
-        .replace(/[-_\s]+/g, '-')
-        .toLowerCase();
-}
+  const scrollToMatch = useCallback(
+    (matchIndex: number) => {
+      const activeMatch = matches[matchIndex];
+      const el = textareaRef?.current;
+      if (!activeMatch || !el) return;
 
-function parseParamNames(rawParams) {
-    if (!rawParams || !rawParams.trim()) return [];
+      el.setSelectionRange(activeMatch.start, activeMatch.end);
 
-    const params = [];
-    let current = '';
-    let depthAngle = 0;
-    let depthParen = 0;
-    let depthCurly = 0;
-    let depthSquare = 0;
+      const lineHeight = parseInt(window.getComputedStyle(el).lineHeight || '20', 10);
+      const linesBefore = text.substring(0, activeMatch.start).split('\n').length - 1;
+      el.scrollTop = linesBefore * lineHeight - el.clientHeight / 2;
+    },
+    [matches, textareaRef, text]
+  );
 
-    for (let i = 0; i < rawParams.length; i++) {
-        const char = rawParams[i];
-        if (char === '<') depthAngle++;
-        else if (char === '>') depthAngle--;
-        else if (char === '(') depthParen++;
-        else if (char === ')') depthParen--;
-        else if (char === '{') depthCurly++;
-        else if (char === '}') depthCurly--;
-        else if (char === '[') depthSquare++;
-        else if (char === ']') depthSquare--;
-
-        if (char === ',' && depthAngle === 0 && depthParen === 0 && depthCurly === 0 && depthSquare === 0) {
-            params.push(current.trim());
-            current = '';
-        } else {
-            current += char;
-        }
+  useEffect(() => {
+    if (finderBase.isFinderOpen && totalMatches > 0 && textareaRef?.current) {
+      scrollToMatch(currentMatchIndex);
     }
-    if (current.trim()) {
-        params.push(current.trim());
-    }
+  }, [currentMatchIndex, totalMatches, finderBase.isFinderOpen, scrollToMatch, textareaRef]);
 
-    return params
-        .map(p => p.replace(/\s+/g, ' '))
-        .map(p => p.split(':')[0].trim().replace(/\?$/, ''))
-        .filter(Boolean);
+  const handleNextMatch = useCallback(() => {
+    if (totalMatches === 0) return;
+    setCurrentMatchIndex((prev) => (prev + 1) % totalMatches);
+  }, [totalMatches, setCurrentMatchIndex]);
+
+  const handlePrevMatch = useCallback(() => {
+    if (totalMatches === 0) return;
+    setCurrentMatchIndex((prev) => (prev - 1 + totalMatches) % totalMatches);
+  }, [totalMatches, setCurrentMatchIndex]);
+
+  return {
+    ...finderBase,
+    matches,
+    totalMatches,
+    handleNextMatch,
+    handlePrevMatch,
+    scrollToMatch,
+  };
 }
-
-function resolveSharedImport(importLine, portFilePath) {
-    const match = importLine.match(/import\s+(?:type\s+)?({[^}]+}|[^*'{}\s]+)\s+from\s+['"]([^'"]+)['"]/);
-    if (!match) return null;
-
-    const importedItems = match[1];
-    const rawPath = match[2];
-
-    if (importedItems.includes('IBackendService')) return null;
-
-    const portFileDir = path.dirname(portFilePath);
-    const absoluteImportPath = path.resolve(portFileDir, rawPath);
-    const relToShared = path.relative(sharedDir, absoluteImportPath).replace(/\\/g, '/');
-
-    return `import ${importedItems} from '@/shared/${relToShared}';`;
-}
-
-function generateWebviewApiServices() {
-    const portFiles = findPortFiles(sharedServicesDir);
-
-    for (const filePath of portFiles) {
-        const content = fs.readFileSync(filePath, 'utf-8');
-        const fileName = path.basename(filePath, '.ts').replace(/(-service)?\.port$/, '');
-        const rpcPrefix = fileName.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-
-        const interfaceMatch = content.match(/export\s+interface\s+I([A-Za-z0-9]+)ServicePort/);
-        let serviceBaseName = '';
-        if (interfaceMatch) {
-            serviceBaseName = interfaceMatch[1];
-        } else {
-            serviceBaseName = fileName.split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('');
-        }
-
-        const portInterfaceName = interfaceMatch ? `I${serviceBaseName}ServicePort` : `I${serviceBaseName}Port`;
-        const className = `${serviceBaseName}ApiService`;
-        const instanceName = `${serviceBaseName.charAt(0).toLowerCase()}${serviceBaseName.slice(1)}ApiService`;
-        const outFileName = `${camelToKebab(serviceBaseName)}-api.service.gen.ts`;
-
-        const lines = content.split('\n');
-        const convertedImports = [];
-        for (const line of lines) {
-            if (line.trim().startsWith('import ')) {
-                const converted = resolveSharedImport(line, filePath);
-                if (converted) convertedImports.push(converted);
-            }
-        }
-
-        const portRelPath = path.relative(sharedDir, filePath).replace(/\\/g, '/').replace(/\.ts$/, '');
-        convertedImports.push(`import { ${portInterfaceName} } from '@/shared/${portRelPath}';`);
-
-        const methodHeaderRegex = /^\s*(?:public\s+|async\s+)?([a-zA-Z0-9_]+)\??\s*(?:<[^>]+>)?\s*\(([\s\S]*?)\)\s*:\s*/gm;
-        let match;
-        const methodDeclarations = [];
-
-        while ((match = methodHeaderRegex.exec(content)) !== null) {
-            const methodName = match[1];
-            const rawParams = match[2].trim();
-            const startIndex = methodHeaderRegex.lastIndex;
-
-            // Character-by-character scanner to parse return type up to the outer method-terminating semicolon
-            let depthAngle = 0;
-            let depthParen = 0;
-            let depthCurly = 0;
-            let depthSquare = 0;
-            let rawReturnType = '';
-            let endIndex = startIndex;
-
-            for (let i = startIndex; i < content.length; i++) {
-                const char = content[i];
-                if (char === '<') depthAngle++;
-                else if (char === '>') depthAngle--;
-                else if (char === '(') depthParen++;
-                else if (char === ')') depthParen--;
-                else if (char === '{') depthCurly++;
-                else if (char === '}') depthCurly--;
-                else if (char === '[') depthSquare++;
-                else if (char === ']') depthSquare--;
-
-                if (char === ';' && depthAngle === 0 && depthParen === 0 && depthCurly === 0 && depthSquare === 0) {
-                    endIndex = i;
-                    break;
-                }
-                rawReturnType += char;
-            }
-
-            methodHeaderRegex.lastIndex = endIndex + 1;
-
-            rawReturnType = rawReturnType.trim();
-            if (!rawReturnType) continue;
-
-            const methodUpperSnake = camelToUpperSnake(methodName);
-            const rpcEnumKey = `${rpcPrefix}_${methodUpperSnake}`;
-
-            const paramNames = parseParamNames(rawParams);
-
-            let returnType = rawReturnType;
-            if (!returnType.startsWith('Promise<')) {
-                returnType = `Promise<${returnType}>`;
-            }
-
-            const cleanParamsSingleLine = rawParams.replace(/\s+/g, ' ');
-
-            const rpcCallArgs = [
-                `RpcMethodEnum.${rpcEnumKey}`,
-                ...paramNames
-            ].join(', ');
-
-            const methodCode = `    public async ${methodName}(${cleanParamsSingleLine}): ${returnType} {\n        return await this.rpc.call(${rpcCallArgs});\n    }`;
-            methodDeclarations.push(methodCode);
-        }
-
-        const fileContent = `// AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY.
-// Rebuild using: npm run generate:webview-api-services
-
-import { RpcMethodEnum } from '@/shared/config/rpc-methods.enum.gen';
-import { AbstractApiService } from './abstract-api.service';
-${convertedImports.join('\n')}
-
-class ${className} extends AbstractApiService implements ${portInterfaceName} {
-    constructor() {
-        super();
-    }
-
-${methodDeclarations.join('\n\n')}
-}
-
-export const ${instanceName} = new ${className}();
-`;
-
-        fs.mkdirSync(outputDir, { recursive: true });
-        const targetFilePath = path.join(outputDir, outFileName);
-        fs.writeFileSync(targetFilePath, fileContent, 'utf-8');
-        console.log(`✅ Successfully generated Webview API Service at:\n   ${targetFilePath}`);
-    }
-}
-
-generateWebviewApiServices();
 EOF
 
-# Execute the updated generator script
-node dev-tools/generate-webview-api-services.js
+# Update InputPanel.tsx to replace Textarea with read-only div + FinderHtml highlighting, Read/Edit mode toggle, and disabled search in edit mode
+cat << 'EOF' > webview/src/features/transformer/components/InputPanel.tsx
+import React, { useState, useRef, useEffect } from 'react';
+import { Search, Pencil, Eye } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
+import { FinderBase, FinderHtml, useTextareaFinder } from '@/components/app/core/finder';
 
-echo "✅ fix: Resolved TS1005 return type parsing error in generate-webview-api-services.js for complex/inline JSON object return signatures!"
+interface InputPanelProps {
+  inputText: string;
+  setInputText: (val: string) => void;
+}
+
+export const InputPanel: React.FC<InputPanelProps> = ({ inputText, setInputText }) => {
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const readOnlyContainerRef = useRef<HTMLDivElement>(null);
+
+  const finder = useTextareaFinder(inputText, textareaRef);
+
+  const handleToggleMode = () => {
+    setIsEditing((prev) => {
+      const nextMode = !prev;
+      if (nextMode && finder.isFinderOpen) {
+        finder.closeFinder();
+      }
+      return nextMode;
+    });
+  };
+
+  // Auto-scroll to active search match inside the read-only div
+  useEffect(() => {
+    if (!isEditing && finder.isFinderOpen && finder.totalMatches > 0) {
+      const activeMark = readOnlyContainerRef.current?.querySelector(
+        `mark[data-match-index="${finder.currentMatchIndex}"]`
+      );
+      if (activeMark) {
+        activeMark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }, [isEditing, finder.isFinderOpen, finder.currentMatchIndex, finder.totalMatches]);
+
+  const topContent = (
+    <div className="flex flex-col border-b border-border bg-muted/20 w-full font-mono text-xs shrink-0">
+      <div className="flex justify-between items-center px-2 py-1 w-full gap-2">
+        <div className="flex items-center gap-2">
+          <span className="font-bold text-[10px] text-muted-foreground uppercase">
+            Input Payload
+          </span>
+          <span
+            className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase border ${
+              isEditing
+                ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                : 'bg-primary/10 text-primary border border-primary/20'
+            }`}
+          >
+            {isEditing ? 'Edit Mode' : 'Read Mode'}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0">
+          {/* Read / Edit Mode Toggle Button */}
+          <Button
+            id="btn-toggle-input-mode"
+            className="h-6 px-2 gap-1 rounded text-[11px] font-bold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+            variant="ghost"
+            size="sm"
+            onClick={handleToggleMode}
+            data-tooltip={isEditing ? 'Switch to Read Mode' : 'Switch to Edit Mode'}
+            title={isEditing ? 'Switch to Read Mode' : 'Switch to Edit Mode'}
+          >
+            {isEditing ? (
+              <>
+                <Eye size={12} />
+                <span>Read</span>
+              </>
+            ) : (
+              <>
+                <Pencil size={12} />
+                <span>Edit</span>
+              </>
+            )}
+          </Button>
+
+          {/* Search Toggle Button - Disabled in Edit Mode */}
+          <Button
+            id="btn-toggle-input-finder"
+            disabled={isEditing}
+            className={`h-6 w-6 rounded transition-colors ${
+              finder.isFinderOpen && !isEditing
+                ? 'bg-primary/20 text-primary border border-primary/40 font-bold'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed'
+            }`}
+            variant="ghost"
+            size="icon"
+            onClick={finder.toggleFinder}
+            data-tooltip={isEditing ? 'Search disabled in Edit mode' : 'Find in text (Cmd+F)'}
+            title={isEditing ? 'Search disabled in Edit mode' : 'Find in text (Cmd+F)'}
+          >
+            <Search size={12} />
+          </Button>
+        </div>
+      </div>
+
+      {!isEditing && finder.isFinderOpen && (
+        <div className="border-t border-border/50 w-full">
+          <FinderBase
+            searchQuery={finder.searchQuery}
+            setSearchQuery={finder.setSearchQuery}
+            caseSensitive={finder.caseSensitive}
+            setCaseSensitive={finder.setCaseSensitive}
+            wholeWord={finder.wholeWord}
+            setWholeWord={finder.setWholeWord}
+            useRegex={finder.useRegex}
+            setUseRegex={finder.setUseRegex}
+            currentMatchIndex={finder.currentMatchIndex}
+            totalMatches={finder.totalMatches}
+            onNext={finder.handleNextMatch}
+            onPrev={finder.handlePrevMatch}
+            onClose={finder.closeFinder}
+            focusTrigger={finder.focusTrigger}
+            placeholder="Find in text..."
+          />
+        </div>
+      )}
+    </div>
+  );
+
+  const middleContent = (
+    <div className="flex flex-col h-full w-full font-mono text-xs bg-background p-1.5 min-h-0">
+      {isEditing ? (
+        <Textarea
+          ref={textareaRef}
+          value={inputText}
+          onChange={(e) => setInputText(e.target.value)}
+          placeholder="Paste input HTML, XML, Markdown, or raw text content..."
+          className="flex-1 h-full bg-muted/20 font-mono text-xs resize-none border-border"
+          spellCheck={false}
+        />
+      ) : (
+        <div
+          ref={readOnlyContainerRef}
+          className="flex-1 w-full h-full p-3 font-mono text-xs leading-normal bg-muted/20 border border-border rounded-md overflow-auto whitespace-pre-wrap break-words select-text text-foreground"
+        >
+          <FinderHtml
+            text={inputText}
+            searchQuery={finder.isFinderOpen ? finder.searchQuery : ''}
+            caseSensitive={finder.caseSensitive}
+            wholeWord={finder.wholeWord}
+            useRegex={finder.useRegex}
+            currentMatchIndex={finder.currentMatchIndex}
+          />
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <TopMiddleBottomPanel
+      id="panel-input-payload"
+      className="bg-card w-full h-full min-h-0 overflow-hidden"
+      top={topContent}
+      middle={middleContent}
+    />
+  );
+};
+
+export default InputPanel;
+EOF
+
+echo "✅ feat: Added Read/Edit mode toggle to InputPanel, rendering a formatted div with FinderHtml highlights in Read mode and disabling search in Edit mode!"

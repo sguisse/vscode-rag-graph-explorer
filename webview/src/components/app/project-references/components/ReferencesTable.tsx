@@ -224,6 +224,10 @@ export function ReferencesTable({
 
   const renderRow = (item: ReferenceItem) => {
     const { iconClass, tooltipText } = getUpdateIconStyle(item.changeDetected);
+    const hasTransfoSize =
+      item.sizeKbAfterTransformation !== undefined &&
+      item.sizeKbAfterTransformation !== null &&
+      item.sizeKbAfterTransformation > 0;
 
     return (
       <tr
@@ -289,18 +293,22 @@ export function ReferencesTable({
           </td>
         )}
 
-        <td className="p-2 text-center align-middle whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-          <div className="flex justify-center items-center">
-            <Checkbox checked={Boolean(item.transformer)} disabled />
-          </div>
+        <td className="p-2 font-mono text-[11px] text-right align-middle whitespace-nowrap">
+          {item.sizeKb ? `${item.sizeKb} KB` : '-'}
+        </td>
+
+        <td className="p-2 text-center align-middle whitespace-nowrap">
+          {hasTransfoSize ? (
+            <span className="font-mono text-[11px] text-indigo-400">{item.sizeKbAfterTransformation} KB</span>
+          ) : (
+            <Badge className="bg-muted/50 border-border/60 text-[9px] text-muted-foreground">
+              (no Transfo)
+            </Badge>
+          )}
         </td>
 
         <td className="p-2 font-mono text-[10px] text-muted-foreground align-middle whitespace-nowrap">
           {formatDate(item.updatedAt)}
-        </td>
-
-        <td className="p-2 font-mono text-[11px] text-right align-middle whitespace-nowrap">
-          {item.sizeKb ? `${item.sizeKb} KB` : '-'}
         </td>
 
         <td className="p-2 text-center align-middle whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
@@ -423,9 +431,9 @@ export function ReferencesTable({
               {showDescSourceCol && (
                 <th className="p-2 w-full">Description / Source</th>
               )}
-              <th className="p-2 text-center whitespace-nowrap">{renderSortButton('Transfo', 'transformer')}</th>
-              <th className="p-2 whitespace-nowrap">{renderSortButton('Updated Date', 'updatedAt')}</th>
               <th className="p-2 text-right whitespace-nowrap">{renderSortButton('Size (KB)', 'sizeKb')}</th>
+              <th className="p-2 text-center whitespace-nowrap">{renderSortButton('Transfo Size (KB)', 'sizeKbAfterTransformation')}</th>
+              <th className="p-2 whitespace-nowrap">{renderSortButton('Updated Date', 'updatedAt')}</th>
               <th className="p-2 w-24 text-center whitespace-nowrap">
                 <div className="flex justify-center items-center gap-1">
                   <span>Actions</span>
@@ -534,16 +542,16 @@ export function ReferencesTable({
           {/* Always display total references on the right side of / */}
           <tfoot className="bottom-0 z-10 sticky bg-muted/95 shadow-xs backdrop-blur border-border border-t-2 font-bold text-[10px] text-foreground uppercase">
             <tr>
-              <td colSpan={3} className="p-2 whitespace-nowrap">
+              <td colSpan={showDescSourceCol ? 3 : 2} className="p-2 whitespace-nowrap">
                 Total Selected: <span className="text-indigo-400">{totalSelectedCount}</span> / {totalAllCount} References
               </td>
-              <td colSpan={showDescSourceCol ? 3 : 2} className="p-2 text-right whitespace-nowrap">
+              <td colSpan={1} className="p-2 text-right whitespace-nowrap">
                 Total Selected Size:
               </td>
-              <td className="p-2 font-mono text-indigo-400 text-right whitespace-nowrap">
+              <td colSpan={1} className="p-2 font-mono text-indigo-400 text-right whitespace-nowrap">
                 {totalSelectedSizeKb} KB
               </td>
-              <td className="p-2 text-[9px] text-muted-foreground text-center whitespace-nowrap">
+              <td colSpan={4} className="p-2 text-[9px] text-muted-foreground text-center whitespace-nowrap">
                 (All: {totalAllSizeKb} KB)
               </td>
             </tr>
