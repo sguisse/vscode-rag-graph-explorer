@@ -3,9 +3,9 @@ import { useLayoutStore } from '@/store/useLayoutStore';
 import { CenterPanelContainer } from './layout-ctns/CenterPanelContainer';
 import { useBreadcrumbNavigation } from '@/hooks/useBreadcrumbNavigation';
 
-export function ResultsManagerFeature() {
+export function SessionsFeature() {
   const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
-  useBreadcrumbNavigation('feature-results-manager');
+  useBreadcrumbNavigation('feature-sessions');
 
   useEffect(() => {
     setLayoutContainers({
@@ -32,4 +32,4 @@ export function ResultsManagerFeature() {
   return null;
 }
 
-export default ResultsManagerFeature;
+export default SessionsFeature;

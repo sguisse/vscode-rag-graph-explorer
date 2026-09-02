@@ -86,6 +86,24 @@
    "diffEditor.renderSideBySide": true,
    // Ignore whitespace changes by default in diffs
    "diffEditor.ignoreTrimWhitespace": true,
+   "folder-color.pathColors": [
+      {
+         "folderPath": "vscode-rag-graph-explorer/webview/",
+         "color": "foldercolorizer.color_005fff"
+      },
+      {
+         "folderPath": "vscode-rag-graph-explorer/shared/",
+         "color": "foldercolorizer.color_8700ff"
+      },
+      {
+         "folderPath": "vscode-rag-graph-explorer/backend/",
+         "color": "foldercolorizer.color_d7af00"
+      },
+      {
+         "folderPath": "vscode-rag-graph-explorer/scripts/",
+         "color": "foldercolorizer.color_00af00"
+      }
+   ],
    // Prevent VS Code from decoration-checking every untracked file
    //"git.decorations.enabled": false
 

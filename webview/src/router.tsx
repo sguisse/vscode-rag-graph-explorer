@@ -22,7 +22,7 @@ import { HelpFeature } from '@/features/help/HelpFeature';
 import ExplorerOldFeature from '@/features/explorer-old/ExplorerOldFeature';
 import { InstructionsFeature } from '@/features/sdlc/domains/instructions';
 import { ConfigurationFeature } from '@/features/sdlc/domains/configuration';
-import { ResultsManagerFeature } from '@/features/sdlc/domains/results-manager';
+import { SessionsFeature } from '@/features/sdlc/domains/sessions';
 import { CodebaseContextFeature } from '@/features/sdlc/domains/codebase-context';
 import LlmFeature from '@/features/sdlc/domains/llm-chat/LlmFeature';
 import { LayoutDemoFeature } from '@/features/layout-demo/LayoutDemoFeature';
@@ -67,8 +67,8 @@ const FEATURE_TO_ROUTE_MAP: Record<string, string> = {
   'feature-skeleton': '/codebase-context',
   'feature-instructions': '/instructions',
   'feature-llm-chat': '/llm-chat',
-  'feature-results-manager': '/results-manager',
-  'feat-history': '/results-manager',
+  'feature-sessions': '/sessions',
+  'feat-history': '/sessions',
   'feature-old-explorer': '/old-explorer',
   'feature-layout-demo': '/layout-demo',
 };
@@ -86,7 +86,7 @@ const ROUTE_TO_FEATURE_MAP: Record<string, string> = {
   '/codebase-context': 'feature-codebase-context',
   '/instructions': 'feature-instructions',
   '/llm-chat': 'feature-llm-chat',
-  '/results-manager': 'feature-results-manager',
+  '/sessions': 'feature-sessions',
   '/old-explorer': 'feature-old-explorer',
   '/layout-demo': 'feature-layout-demo',
 };
@@ -104,7 +104,7 @@ export const ROUTE_BREADCRUMB_LABELS: Record<string, string> = {
   '/codebase-context': 'Codebase Context',
   '/instructions': 'SDLC Instructions',
   '/llm-chat': 'LLM Chat',
-  '/results-manager': 'Results Manager',
+  '/sessions': 'Sessions Manager',
   '/old-explorer': 'Legacy Explorer',
   '/layout-demo': 'Layout Demo',
 };
@@ -301,7 +301,7 @@ export const codebaseContextRoute = createRoute({
 export const instructionsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/instructions',
-  staticData: { breadcrumb: 'SDLC Instructions' },
+  staticData: { breadcrumb: 'Instructions' },
   component: InstructionsFeature,
 });
 
@@ -312,11 +312,11 @@ export const llmChatRoute = createRoute({
   component: LlmFeature,
 });
 
-export const resultsManagerRoute = createRoute({
+export const sessionsManagerRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/results-manager',
-  staticData: { breadcrumb: 'Results Manager' },
-  component: ResultsManagerFeature,
+  path: '/sessions',
+  staticData: { breadcrumb: 'Sessions' },
+  component: SessionsFeature,
 });
 
 export const oldExplorerRoute = createRoute({
@@ -346,7 +346,7 @@ const routeTree = rootRoute.addChildren([
   codebaseContextRoute,
   instructionsRoute,
   llmChatRoute,
-  resultsManagerRoute,
+  sessionsManagerRoute,
   oldExplorerRoute,
   layoutDemoRoute,
 ]);

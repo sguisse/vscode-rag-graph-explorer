@@ -71,17 +71,10 @@ export const SIDEBAR_MENU_ITEMS: NavItem[] = [
     label: 'SDLC Requests',
     isHeader: true,
     children: [
+      { id: 'feature-sessions', icon: Terminal, label: 'Sessions Manager' },
       { id: 'feature-codebase-context', icon: FolderTree, label: '1. Codebase Context' },
       { id: 'feature-instructions', icon: Sparkles, label: '2. Instructions & Ref.' },
       { id: 'feature-llm-chat', icon: MessageSquare, label: '3. LLM Chat' },
-    ],
-  },
-  {
-    id: 'group-sdlc-results',
-    label: 'SDLC Results',
-    isHeader: true,
-    children: [
-      { id: 'feature-results-manager', icon: Terminal, label: 'Results Manager' },
     ],
   },
 
