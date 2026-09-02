@@ -391,10 +391,45 @@ export function useProjectReferences(
     () => Number(references.filter((r) => r.preSelected).reduce((acc, r) => acc + (r.sizeKb || 0), 0).toFixed(2)),
     [references]
   );
+  const totalSelectedTransfoSizeKb = useMemo(
+    () =>
+      Number(
+        references
+          .filter((r) => r.preSelected)
+          .reduce((acc, r) => {
+            const transfo =
+              r.sizeKbAfterTransformation !== undefined &&
+              r.sizeKbAfterTransformation !== null &&
+              r.sizeKbAfterTransformation > 0
+                ? r.sizeKbAfterTransformation
+                : r.sizeKb || 0;
+            return acc + transfo;
+          }, 0)
+          .toFixed(2)
+      ),
+    [references]
+  );
 
   const totalAllCount = references.length;
   const totalAllSizeKb = useMemo(
     () => Number(references.reduce((acc, r) => acc + (r.sizeKb || 0), 0).toFixed(2)),
+    [references]
+  );
+  const totalAllTransfoSizeKb = useMemo(
+    () =>
+      Number(
+        references
+          .reduce((acc, r) => {
+            const transfo =
+              r.sizeKbAfterTransformation !== undefined &&
+              r.sizeKbAfterTransformation !== null &&
+              r.sizeKbAfterTransformation > 0
+                ? r.sizeKbAfterTransformation
+                : r.sizeKb || 0;
+            return acc + transfo;
+          }, 0)
+          .toFixed(2)
+      ),
     [references]
   );
 
@@ -450,8 +485,10 @@ export function useProjectReferences(
     importUrl,
     totalSelectedCount,
     totalSelectedSizeKb,
+    totalSelectedTransfoSizeKb,
     totalAllCount,
     totalAllSizeKb,
+    totalAllTransfoSizeKb,
     totalCount,
     totalSizeKb,
     refetch: fetchReferences,

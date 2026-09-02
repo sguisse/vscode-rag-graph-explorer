@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { Bot } from 'lucide-react';
+import { Bot, FileText } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { useSdlcSessionStore } from '@/features/sdlc/core/store/useSdlcSessionStore';
@@ -7,6 +7,7 @@ import { SkillsByCategoryConfig, Skill } from '../model/skills';
 import { INSTRUCTION_METHODS, InstructionMethodId } from '../types';
 import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
 import { ProjectReferencesPanel } from '@/components/app/project-references';
+import { CollapsibleCard } from '@/components/app/collapsible-card';
 
 function formatPromptText(text: string): string {
   if (!text) return '';
@@ -115,6 +116,9 @@ export function InstructionsPanel() {
 
   if (!session) return null;
 
+  const promptText = session.instructionsPayload?.promptText || '';
+  const promptCharCount = promptText.length;
+
   const handleCheckboxChange = (checked: boolean) => {
     setAutoCopySample(checked);
     if (checked && selectedDomain && selectedSubDomain && domainMap[selectedDomain]?.[selectedSubDomain]) {
@@ -209,22 +213,40 @@ export function InstructionsPanel() {
         </div>
       }
       middle={
-        <div className="flex flex-col space-y-1 h-full min-h-[160px]">
-          <label className="block font-bold text-[10px] text-muted-foreground uppercase">Structured Prompt:</label>
-          <Textarea
-            value={session.instructionsPayload?.promptText || ''}
-            onChange={(e) =>
-              updateSession((draft) => {
-                if (!draft.instructionsPayload) draft.instructionsPayload = { strategy, promptText: '' };
-                draft.instructionsPayload.promptText = e.target.value;
-              })
-            }
-            placeholder="[CONTEXT]\n...\n[EXPECTED]\n...\n[OUTPUT FORMAT]\n..."
-            className="flex-1 bg-background min-h-[160px] font-mono text-xs resize-y"
-          />
-        </div>
+        <CollapsibleCard
+          title={
+            <div className="flex items-center gap-1.5">
+              <FileText size={13} className={methodConfig.color} />
+              <span className="font-bold text-xs uppercase">Structured Prompt</span>
+            </div>
+          }
+          badge={`${promptCharCount} Chars`}
+          defaultExpanded={true}
+          contentToCopy={promptText}
+          className="flex flex-col bg-card border-border h-full min-h-0"
+        >
+          <div className="flex flex-col p-2 space-y-1 h-full min-h-[160px]">
+            <Textarea
+              value={promptText}
+              onChange={(e) =>
+                updateSession((draft) => {
+                  if (!draft.instructionsPayload) draft.instructionsPayload = { strategy, promptText: '' };
+                  draft.instructionsPayload.promptText = e.target.value;
+                })
+              }
+              placeholder="[CONTEXT]\n...\n[EXPECTED]\n...\n[OUTPUT FORMAT]\n..."
+              className="flex-1 bg-background min-h-[160px] font-mono text-xs resize-y"
+            />
+          </div>
+        </CollapsibleCard>
       }
-      bottom={<ProjectReferencesPanel localDocumentStorage="instructions-references" viewMode="User" />}
+      bottom={
+        <ProjectReferencesPanel
+          localDocumentStorage="global-project-references"
+          viewMode="User"
+          collapsibleParentIncluded={true}
+        />
+      }
     />
   );
 }

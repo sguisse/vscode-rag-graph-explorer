@@ -99,7 +99,9 @@ interface ReferencesTableProps {
   totalSelectedCount: number;
   totalAllCount: number;
   totalSelectedSizeKb: number;
+  totalSelectedTransfoSizeKb: number;
   totalAllSizeKb: number;
+  totalAllTransfoSizeKb: number;
   viewMode: ProjectReferencesViewMode;
   onTransformReference?: (reference: ReferenceItem) => void;
 }
@@ -132,7 +134,9 @@ export function ReferencesTable({
   totalSelectedCount,
   totalAllCount,
   totalSelectedSizeKb,
+  totalSelectedTransfoSizeKb,
   totalAllSizeKb,
+  totalAllTransfoSizeKb,
   viewMode,
   onTransformReference,
 }: ReferencesTableProps) {
@@ -324,21 +328,23 @@ export function ReferencesTable({
               <RefreshCw size={11} className={importing ? 'animate-spin' : ''} />
             </Button>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                if (onTransformReference) {
-                  onTransformReference(item);
-                } else {
-                  setNotification('Transformer will be implemented soon !');
-                }
-              }}
-              data-tooltip="Transform reference"
-              className="hover:bg-indigo-500/10 w-6 h-6 text-indigo-400 hover:text-indigo-300 cursor-pointer"
-            >
-              <Wand2 size={11} />
-            </Button>
+            {viewMode === 'Administrator' && (
+                <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                    if (onTransformReference) {
+                    onTransformReference(item);
+                    } else {
+                    setNotification('Transformer will be implemented soon !');
+                    }
+                }}
+                data-tooltip="Transform reference"
+                className="hover:bg-indigo-500/10 w-6 h-6 text-indigo-400 hover:text-indigo-300 cursor-pointer"
+                >
+                <Wand2 size={11} />
+                </Button>
+            )}
 
             {viewMode === 'Administrator' && (
               <Button
@@ -558,8 +564,11 @@ export function ReferencesTable({
               <td colSpan={1} className="p-2 font-mono text-indigo-400 text-right whitespace-nowrap">
                 {totalSelectedSizeKb} KB
               </td>
-              <td colSpan={4} className="p-2 text-[9px] text-muted-foreground text-center whitespace-nowrap">
-                (All: {totalAllSizeKb} KB)
+              <td colSpan={1} className="p-2 font-mono text-indigo-400 text-center whitespace-nowrap">
+                {totalSelectedTransfoSizeKb} KB
+              </td>
+              <td colSpan={2} className="p-2 text-[9px] text-muted-foreground text-center whitespace-nowrap">
+                (All: {totalAllSizeKb} KB / {totalAllTransfoSizeKb} KB)
               </td>
             </tr>
           </tfoot>

@@ -61,10 +61,11 @@ export function ProjectReferencesPanel({
     importUrl,
     totalSelectedCount,
     totalSelectedSizeKb,
+    totalSelectedTransfoSizeKb,
     totalAllCount,
     totalAllSizeKb,
+    totalAllTransfoSizeKb,
     totalCount,
-    totalSizeKb,
   } = useProjectReferences(localDocumentStorage, initialViewMode);
 
   const innerPanel = (
@@ -136,7 +137,9 @@ export function ProjectReferencesPanel({
             totalSelectedCount={totalSelectedCount}
             totalAllCount={totalAllCount}
             totalSelectedSizeKb={totalSelectedSizeKb}
+            totalSelectedTransfoSizeKb={totalSelectedTransfoSizeKb}
             totalAllSizeKb={totalAllSizeKb}
+            totalAllTransfoSizeKb={totalAllTransfoSizeKb}
             viewMode={viewMode}
             onTransformReference={onTransformReference}
           />
@@ -170,7 +173,7 @@ export function ProjectReferencesPanel({
               </span>
             </div>
           }
-          badge={`${totalSelectedCount} / ${totalAllCount} Selected (${totalSelectedSizeKb} KB)`}
+          badge={`${totalSelectedCount} / ${totalAllCount} Selected for a Size of ${totalSelectedTransfoSizeKb} KB / ${totalSelectedSizeKb} KB`}
           defaultExpanded={true}
           contentToCopy=""
           className="flex flex-col bg-card shadow-sm border-border h-full min-h-0"
