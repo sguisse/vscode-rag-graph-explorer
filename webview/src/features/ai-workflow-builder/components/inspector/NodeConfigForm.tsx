@@ -145,6 +145,67 @@ export function NodeConfigForm({ node }: { node: WorkflowNode }) {
         </>
       )}
 
+      {node.type === 'script' && (
+        <>
+          <div>
+            <label className="block font-bold text-[9px] text-muted-foreground uppercase">Script Type</label>
+            <select
+              value={node.data.scriptType || 'python'}
+              onChange={(e) => updateNodeData(node.id, { scriptType: e.target.value as 'python' | 'bash' })}
+              className="mt-1 p-1.5 bg-background border border-border rounded-lg w-full text-xs cursor-pointer font-mono"
+            >
+              <option value="python">python</option>
+              <option value="bash">bash</option>
+            </select>
+          </div>
+          <div>
+            <label className="block font-bold text-[9px] text-muted-foreground uppercase">Script Location</label>
+            <input
+              type="text"
+              value={node.data.scriptLocation || ''}
+              onChange={(e) => updateNodeData(node.id, { scriptLocation: e.target.value })}
+              className="mt-1 px-2.5 py-1.5 bg-background border border-border rounded-lg w-full text-xs font-mono"
+            />
+          </div>
+        </>
+      )}
+
+      {node.type === 'argument' && (
+        <>
+          <div>
+            <label className="block font-bold text-[9px] text-muted-foreground uppercase">Argument Name</label>
+            <input
+              type="text"
+              value={node.data.argumentName || ''}
+              onChange={(e) => updateNodeData(node.id, { argumentName: e.target.value })}
+              className="mt-1 px-2.5 py-1.5 bg-background border border-border rounded-lg w-full text-xs font-mono"
+            />
+          </div>
+          <div>
+            <label className="block font-bold text-[9px] text-muted-foreground uppercase">Argument Value</label>
+            <input
+              type="text"
+              value={node.data.argumentValue || ''}
+              onChange={(e) => updateNodeData(node.id, { argumentValue: e.target.value })}
+              className="mt-1 px-2.5 py-1.5 bg-background border border-border rounded-lg w-full text-xs font-mono"
+            />
+          </div>
+        </>
+      )}
+
+      {node.type === 'outputAnalyzer' && (
+        <div>
+          <label className="block font-bold text-[9px] text-muted-foreground uppercase">Condition Rule</label>
+          <input
+            type="text"
+            value={node.data.analyzerCondition || ''}
+            onChange={(e) => updateNodeData(node.id, { analyzerCondition: e.target.value })}
+            placeholder="e.g. exit_code == 0"
+            className="mt-1 px-2.5 py-1.5 bg-background border border-border rounded-lg w-full text-xs font-mono"
+          />
+        </div>
+      )}
+
       {/* Collapsible Appearance Block */}
       <div className="pt-2 border-border/80 border-t">
         <button

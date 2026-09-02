@@ -72,6 +72,63 @@ export function createDefaultNode(type: NodeType, position: { x: number; y: numb
           ports: [{ id: 'tool', name: 'tool', type: 'tool', direction: 'output', color: 'bg-rose-500' }],
         },
       };
+    case 'script':
+      return {
+        id,
+        type,
+        position,
+        width: 260,
+        height: 220,
+        data: {
+          label: 'Script Execution',
+          type,
+          description: 'Executes Python or Bash script',
+          scriptType: 'python',
+          scriptLocation: 'scripts/process_data.py',
+          ports: [
+            { id: 'arg_1', name: 'arg_1', type: 'text', direction: 'input', color: 'bg-purple-400' },
+            { id: 'result', name: 'result', type: 'result', direction: 'output', color: 'bg-emerald-400' },
+          ],
+        },
+      };
+    case 'argument':
+      return {
+        id,
+        type,
+        position,
+        width: 230,
+        height: 170,
+        data: {
+          label: 'Script Argument',
+          type,
+          description: 'Key/Value script argument',
+          argumentName: 'env',
+          argumentValue: 'production',
+          ports: [
+            { id: 'arg_out', name: 'arg', type: 'text', direction: 'output', color: 'bg-purple-400' },
+          ],
+        },
+      };
+    case 'outputAnalyzer':
+      return {
+        id,
+        type,
+        position,
+        width: 250,
+        height: 190,
+        data: {
+          label: 'Output Analyzer',
+          type,
+          description: 'Evaluates output status (OK / KO)',
+          analyzerCondition: 'exit_code == 0',
+          analyzerStatus: 'idle',
+          ports: [
+            { id: 'input', name: 'input', type: 'result', direction: 'input', color: 'bg-amber-400' },
+            { id: 'ok', name: 'OK', type: 'result', direction: 'output', color: 'bg-emerald-500' },
+            { id: 'ko', name: 'KO', type: 'result', direction: 'output', color: 'bg-rose-500' },
+          ],
+        },
+      };
     case 'formattedOutput':
       return {
         id,

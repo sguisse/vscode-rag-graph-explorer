@@ -9,6 +9,9 @@ import { AiAgentNodeView } from '../nodes/AiAgentNodeView';
 import { SearchToolNodeView } from '../nodes/SearchToolNodeView';
 import { FormattedOutputNodeView } from '../nodes/FormattedOutputNodeView';
 import { AnnotationNodeView } from '../nodes/AnnotationNodeView';
+import { ScriptNodeView } from '../nodes/ScriptNodeView';
+import { ArgumentNodeView } from '../nodes/ArgumentNodeView';
+import { OutputAnalyzerNodeView } from '../nodes/OutputAnalyzerNodeView';
 import { CanvasControls } from './CanvasControls';
 import { Minimap } from './Minimap';
 import { PortRubberbandLine } from './PortRubberbandLine';
@@ -298,6 +301,9 @@ export function CytoscapeCanvas() {
               {node.type === 'markdownFile' && <MarkdownFileNodeView node={node} />}
               {node.type === 'aiAgent' && <AiAgentNodeView node={node} />}
               {node.type === 'searchTool' && <SearchToolNodeView node={node} />}
+              {node.type === 'script' && <ScriptNodeView node={node} />}
+              {node.type === 'argument' && <ArgumentNodeView node={node} />}
+              {node.type === 'outputAnalyzer' && <OutputAnalyzerNodeView node={node} />}
               {node.type === 'formattedOutput' && <FormattedOutputNodeView node={node} />}
               {node.type === 'annotation' && <AnnotationNodeView node={node} />}
             </div>

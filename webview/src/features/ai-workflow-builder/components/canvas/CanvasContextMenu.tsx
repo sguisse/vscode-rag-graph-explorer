@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Type, FileText, Bot, Search, LayoutTemplate, Info } from 'lucide-react';
+import { Type, FileText, Bot, Search, LayoutTemplate, Info, Terminal, Variable, GitFork } from 'lucide-react';
 import { createDefaultNode } from '../../shapes/workflow-shapes';
 import { useWorkflowStore } from '../../hooks/use-workflow-store';
 import { NodeType } from '../../model-ui';
@@ -58,6 +58,9 @@ export function CanvasContextMenu() {
     { type: 'markdownFile', label: 'Markdown File', icon: FileText },
     { type: 'aiAgent', label: 'AI Agent', icon: Bot },
     { type: 'searchTool', label: 'Search Reddit', icon: Search },
+    { type: 'script', label: 'Script Execution', icon: Terminal },
+    { type: 'argument', label: 'Script Argument', icon: Variable },
+    { type: 'outputAnalyzer', label: 'Output Analyzer', icon: GitFork },
     { type: 'formattedOutput', label: 'Formatted Output', icon: LayoutTemplate },
     { type: 'annotation', label: 'Annotation Note', icon: Info },
   ];

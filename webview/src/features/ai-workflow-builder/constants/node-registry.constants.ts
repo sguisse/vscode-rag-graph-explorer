@@ -31,6 +31,27 @@ export const PALETTE_ITEMS: PaletteItemDefinition[] = [
     iconName: 'Search',
   },
   {
+    type: 'script',
+    label: 'Script Execution',
+    category: 'Scripts',
+    description: 'Execute Python or Bash scripts with argument inputs',
+    iconName: 'Terminal',
+  },
+  {
+    type: 'argument',
+    label: 'Script Argument',
+    category: 'Scripts',
+    description: 'Key/Value input argument for script execution',
+    iconName: 'Variable',
+  },
+  {
+    type: 'outputAnalyzer',
+    label: 'Output Analyzer',
+    category: 'Logic',
+    description: 'Evaluates workflow output with OK / KO branch endpoints',
+    iconName: 'GitFork',
+  },
+  {
     type: 'formattedOutput',
     label: 'Formatted Output',
     category: 'Output',

@@ -5,7 +5,10 @@ export type NodeType =
   | 'searchTool'
   | 'formattedOutput'
   | 'instructionBox'
-  | 'annotation';
+  | 'annotation'
+  | 'script'
+  | 'argument'
+  | 'outputAnalyzer';
 
 export type PortType = 'prompt' | 'skill' | 'tool' | 'text' | 'result' | 'note';
 export type PortDirection = 'input' | 'output';
@@ -39,6 +42,14 @@ export interface BaseNodeData {
   annotationTitle?: string;
   annotationSteps?: string[];
   annotationTip?: string;
+
+  // Script & Logic Node Properties
+  scriptType?: 'python' | 'bash';
+  scriptLocation?: string;
+  argumentName?: string;
+  argumentValue?: string;
+  analyzerCondition?: string;
+  analyzerStatus?: 'OK' | 'KO' | 'idle';
 
   // Appearance Customization
   fillColor?: string;
@@ -79,7 +90,7 @@ export interface WorkflowSchema {
 export interface PaletteItemDefinition {
   type: NodeType;
   label: string;
-  category: 'Inputs' | 'Agent' | 'Tools' | 'Output' | 'Annotations';
+  category: 'Inputs' | 'Agent' | 'Tools' | 'Output' | 'Annotations' | 'Scripts' | 'Logic';
   description: string;
   iconName: string;
   badge?: string;

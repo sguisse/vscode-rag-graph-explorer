@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Type, FileText, Bot, LayoutTemplate, Layers, GripVertical, Info } from 'lucide-react';
+import { Search, Type, FileText, Bot, LayoutTemplate, Layers, GripVertical, Info, Terminal, Variable, GitFork } from 'lucide-react';
 import { PALETTE_ITEMS } from '../../constants/node-registry.constants';
 import { PaletteItemDefinition } from '../../model-ui';
 
@@ -10,6 +10,9 @@ const ICON_MAP: Record<string, any> = {
   Search,
   LayoutTemplate,
   Info,
+  Terminal,
+  Variable,
+  GitFork,
 };
 
 export function NodePalettePanel() {

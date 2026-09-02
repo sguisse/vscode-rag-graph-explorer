@@ -41,12 +41,27 @@ export function useWorkflowExecution() {
           '• Best state management libraries in 2026',
           '• Vite vs Next.js performance benchmarks',
         ].join('\n');
+      } else if (node.type === 'script') {
+        const scriptType = node.data.scriptType || 'python';
+        const location = node.data.scriptLocation || 'scripts/run.py';
+        contextData['scriptOutput'] = `[${scriptType.toUpperCase()}] Executed successfully: ${location}`;
+        contextData['lastExitCode'] = 0;
+      } else if (node.type === 'argument') {
+        const name = node.data.argumentName || 'arg';
+        const val = node.data.argumentValue || '';
+        contextData[`arg_${node.id}`] = `${name}=${val}`;
+      } else if (node.type === 'outputAnalyzer') {
+        const exitCode = contextData['lastExitCode'] ?? 0;
+        const analyzerStatus = exitCode === 0 ? 'OK' : 'KO';
+        updateNodeData(node.id, { analyzerStatus });
+        contextData['analyzerResult'] = analyzerStatus;
       } else if (node.type === 'aiAgent') {
         const prompt = contextData['prompt'] || 'Analyze React trends';
         const reddit = contextData['redditData'] || '';
+        const scriptRes = contextData['scriptOutput'] || '';
         const tokenEstimate = Math.min(node.data.tokenBudget || 1000, 320);
 
-        contextData['agentOutput'] = `### 🤖 AI Agent Synthesis Report\n\n**Input Prompt:** ${prompt}\n\n**Retrieved Context:**\n${reddit}\n\n**Token Usage:** ${tokenEstimate} tokens\n**Recommendation:** Focus on React Server Components, TypeScript type-safety, and automated architecture validation.`;
+        contextData['agentOutput'] = `### 🤖 AI Agent Synthesis Report\n\n**Input Prompt:** ${prompt}\n\n**Retrieved Context:**\n${reddit}\n\n**Script Execution:**\n${scriptRes}\n\n**Token Usage:** ${tokenEstimate} tokens\n**Recommendation:** Focus on React Server Components, TypeScript type-safety, and automated architecture validation.`;
 
         // Update outgoing edge labels with token usage badge
         const outgoingEdges = edges.filter((e) => e.source === node.id);
@@ -54,7 +69,7 @@ export function useWorkflowExecution() {
           updateEdgeLabel(e.id, `Tokens used: ${tokenEstimate}`);
         });
       } else if (node.type === 'formattedOutput') {
-        const resultText = contextData['agentOutput'] || 'Flow completed with no output.';
+        const resultText = contextData['agentOutput'] || contextData['scriptOutput'] || 'Flow completed with no output.';
         updateNodeData(node.id, { outputText: resultText });
       }
 
