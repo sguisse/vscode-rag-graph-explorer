@@ -8,6 +8,8 @@ import { INSTRUCTION_METHODS, InstructionMethodId } from '../types';
 import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
 import { ProjectReferencesPanel } from '@/components/app/project-references';
 import { CollapsibleCard } from '@/components/app/collapsible-card';
+import { referenceApiService } from '@/services/api/reference-api.service.gen';
+import { REFERENCES_PROJECT_KEY } from '@/shared/services/reference/model/reference-model';
 
 function formatPromptText(text: string): string {
   if (!text) return '';
@@ -34,6 +36,35 @@ export function InstructionsPanel() {
   const [selectedSubDomain, setSelectedSubDomain] = useState<string>('');
 
   const selectedCommand = (session?.instructionsPayload as any)?.selectedAgent || '';
+
+  // Auto-sync project references into instructionsPayload.selectedReferences
+  useEffect(() => {
+    let isMounted = true;
+    const syncReferences = async () => {
+      try {
+        if (referenceApiService?.loadAllReferences) {
+          const refs = await referenceApiService.loadAllReferences(REFERENCES_PROJECT_KEY);
+          if (isMounted && refs) {
+            const preSelectedRefs = refs.filter((r) => Boolean(r.preSelected));
+            console.log('[InstructionsPanel] 🔄 Syncing preSelected references to session store:', preSelectedRefs.map((r) => r.name));
+            updateSession((draft) => {
+              if (!draft.instructionsPayload) {
+                draft.instructionsPayload = { strategy, promptText: '' };
+              }
+              draft.instructionsPayload.selectedReferences = preSelectedRefs;
+            });
+          }
+        }
+      } catch (err) {
+        console.error('[InstructionsPanel] Error syncing references:', err);
+      }
+    };
+    syncReferences();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [updateSession, strategy]);
 
   const selectedSkill = useMemo<Skill | null>(() => {
     if (!selectedCommand) return null;
@@ -82,11 +113,15 @@ export function InstructionsPanel() {
   const applyPromptToTextarea = useCallback(
     (promptText: string) => {
       if (!promptText) return;
+      console.log('[InstructionsPanel] 📝 Applying prompt text to instructionsPayload:', promptText.substring(0, 40));
       updateSession((draft) => {
         if (!draft.instructionsPayload) {
           draft.instructionsPayload = { strategy, promptText: '' };
         }
         draft.instructionsPayload.promptText = promptText;
+        if (draft.llmChat) {
+          draft.llmChat.customPrompt = undefined;
+        }
       });
     },
     [strategy, updateSession]
@@ -228,12 +263,17 @@ export function InstructionsPanel() {
           <div className="flex flex-col p-2 space-y-1 h-full min-h-[160px]">
             <Textarea
               value={promptText}
-              onChange={(e) =>
+              onChange={(e) => {
+                const newVal = e.target.value;
+                console.log('[InstructionsPanel] ✏️ User edited prompt:', newVal.substring(0, 40));
                 updateSession((draft) => {
                   if (!draft.instructionsPayload) draft.instructionsPayload = { strategy, promptText: '' };
-                  draft.instructionsPayload.promptText = e.target.value;
-                })
-              }
+                  draft.instructionsPayload.promptText = newVal;
+                  if (draft.llmChat) {
+                    draft.llmChat.customPrompt = undefined;
+                  }
+                });
+              }}
               placeholder="[CONTEXT]\n...\n[EXPECTED]\n...\n[OUTPUT FORMAT]\n..."
               className="flex-1 bg-background min-h-[160px] font-mono text-xs resize-y"
             />

@@ -174,7 +174,7 @@ export function ProjectReferencesPanel({
             </div>
           }
           badge={`${totalSelectedCount} / ${totalAllCount} Selected for a Size of ${totalSelectedTransfoSizeKb} KB / ${totalSelectedSizeKb} KB`}
-          defaultExpanded={true}
+          defaultExpanded={false}
           contentToCopy=""
           className="flex flex-col bg-card shadow-sm border-border h-full min-h-0"
         >

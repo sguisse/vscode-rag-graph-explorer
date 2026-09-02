@@ -1,13 +1,52 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ContainerPanelHeader } from '@/_layout/ContainerPanelHeader';
-import { LLMChat } from '../components/llm-chat';
+import { LlmPromptPanel } from '../components/llm-prompt-panel';
+import { ReferenceItem, REFERENCES_PROJECT_KEY } from '@/shared/services/reference/model/reference-model';
+import { referenceApiService } from '@/services/api/reference-api.service.gen';
+import { useSdlcSessionStore } from '@/features/sdlc/core/store/useSdlcSessionStore';
 
 export const CenterPanelContainer: React.FC = () => {
+  const [allReferences, setAllReferences] = useState<ReferenceItem[]>([]);
+  const activeSessionId = useSdlcSessionStore((s) => s.activeSessionId);
+  const updateSession = useSdlcSessionStore((s) => s.updateActiveSession);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchReferences = async () => {
+      try {
+        if (referenceApiService?.loadAllReferences) {
+          const refs = await referenceApiService.loadAllReferences(REFERENCES_PROJECT_KEY);
+          if (isMounted && refs) {
+            setAllReferences(refs);
+
+            const preSelectedRefs = refs.filter((r) => Boolean(r.preSelected));
+            updateSession((draft) => {
+              if (!draft.instructionsPayload) {
+                draft.instructionsPayload = { strategy: 'bmad', promptText: '' };
+              }
+              if (!draft.instructionsPayload.selectedReferences) {
+                draft.instructionsPayload.selectedReferences = preSelectedRefs;
+              }
+            });
+          }
+        }
+      } catch (err) {
+        console.error('[CenterPanelContainer LLM Chat] Error loading references:', err);
+      }
+    };
+
+    fetchReferences();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeSessionId, updateSession]);
+
   return (
     <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden">
-      <ContainerPanelHeader title="LLM Workflow Chat" path="workspace.center" />
-      <div className="flex-1 min-h-0 overflow-hidden">
-        <LLMChat />
+      <ContainerPanelHeader title="Prompt Tuning & Reference Context" path="workspace.center" />
+      <div className="flex-1 p-1.5 min-h-0 overflow-hidden">
+        <LlmPromptPanel allReferences={allReferences} />
       </div>
     </div>
   );
