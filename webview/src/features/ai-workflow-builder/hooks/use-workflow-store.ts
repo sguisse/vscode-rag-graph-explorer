@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { WorkflowNode, WorkflowEdge, WorkflowSchema } from '../model-ui';
+import { WorkflowNode, WorkflowEdge, WorkflowSchema, WorkflowPort } from '../model-ui';
 import { DEFAULT_WORKFLOW_SCHEMA } from '../constants/workflow.constants';
 
 interface WorkflowState {
@@ -48,6 +48,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   panOffset: { x: 0, y: 0 },
   logs: ['Workflow initialised with AI Agent setup schema.'],
   connectingPort: null,
+
   setNodes: (nodes) => set({ nodes }),
   setEdges: (edges) => set({ edges }),
   addNode: (node) => set((s) => ({ nodes: [...s.nodes, node], selectedNodeId: node.id, selectedEdgeId: null })),
@@ -59,39 +60,169 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     set((s) => ({
       nodes: s.nodes.map((n) => (n.id === id ? { ...n, position } : n)),
     })),
+
   removeNode: (id) =>
-    set((s) => ({
-      nodes: s.nodes.filter((n) => n.id !== id),
-      edges: s.edges.filter((e) => e.source !== id && e.target !== id),
-      selectedNodeId: s.selectedNodeId === id ? null : s.selectedNodeId,
-    })),
+    set((s) => {
+      const edgesToRemove = s.edges.filter((e) => e.source === id || e.target === id);
+      let updatedNodes = s.nodes.filter((n) => n.id !== id);
+
+      // Clean up dynamic note ports created on target nodes when connected note source node is removed
+      edgesToRemove.forEach((edge) => {
+        if (edge.source === id) {
+          const targetNode = updatedNodes.find((n) => n.id === edge.target);
+          if (targetNode) {
+            const targetPort = targetNode.data.ports.find((p) => p.id === edge.targetPort);
+            if (targetPort && (targetPort.type === 'note' || targetPort.name.toLowerCase().startsWith('note'))) {
+              updatedNodes = updatedNodes.map((n) => {
+                if (n.id === targetNode.id) {
+                  const remainingPorts = n.data.ports.filter((p) => p.id !== edge.targetPort);
+                  let noteCounter = 1;
+                  const reindexedPorts = remainingPorts.map((p) => {
+                    if (p.direction === 'input' && (p.type === 'note' || p.name.toLowerCase().startsWith('note'))) {
+                      const idxStr = noteCounter < 10 ? `0${noteCounter}` : `${noteCounter}`;
+                      noteCounter++;
+                      return { ...p, name: `note ${idxStr}` };
+                    }
+                    return p;
+                  });
+                  return {
+                    ...n,
+                    data: { ...n.data, ports: reindexedPorts },
+                  };
+                }
+                return n;
+              });
+            }
+          }
+        }
+      });
+
+      return {
+        nodes: updatedNodes,
+        edges: s.edges.filter((e) => e.source !== id && e.target !== id),
+        selectedNodeId: s.selectedNodeId === id ? null : s.selectedNodeId,
+      };
+    }),
+
   addEdge: (edge) =>
     set((s) => {
+      const sourceNode = s.nodes.find((n) => n.id === edge.source);
+      const targetNode = s.nodes.find((n) => n.id === edge.target);
+      if (!sourceNode || !targetNode) return s;
+
+      let updatedNodes = s.nodes;
+      let finalEdge = { ...edge };
+
+      // Determine if edge originates from an annotation node or note output port
+      const sourcePortObj = sourceNode.data.ports.find((p) => p.id === edge.sourcePort);
+      const isNoteRelationship =
+        sourceNode.type === 'annotation' ||
+        edge.sourcePort === 'note' ||
+        sourcePortObj?.type === 'note' ||
+        sourcePortObj?.name.toLowerCase().includes('note');
+
+      if (isNoteRelationship) {
+        // Count existing note input ports on target node
+        const existingNotePorts = targetNode.data.ports.filter(
+          (p) => p.direction === 'input' && (p.type === 'note' || p.name.toLowerCase().startsWith('note'))
+        );
+        const nextIndex = existingNotePorts.length + 1;
+        const formattedIndex = nextIndex < 10 ? `0${nextIndex}` : `${nextIndex}`;
+        const newPortId = `note-port-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+        const newPortName = `note ${formattedIndex}`;
+
+        const newPort: WorkflowPort = {
+          id: newPortId,
+          name: newPortName,
+          type: 'note',
+          direction: 'input',
+          color: 'bg-sky-400',
+        };
+
+        finalEdge.targetPort = newPortId;
+
+        updatedNodes = s.nodes.map((n) => {
+          if (n.id === targetNode.id) {
+            return {
+              ...n,
+              data: {
+                ...n.data,
+                ports: [...n.data.ports, newPort],
+              },
+            };
+          }
+          return n;
+        });
+      }
+
       const exists = s.edges.some(
-        (e) => e.source === edge.source && e.target === edge.target && e.targetPort === edge.targetPort
+        (e) => e.source === finalEdge.source && e.target === finalEdge.target && e.targetPort === finalEdge.targetPort
       );
       if (exists) return s;
-      return { edges: [...s.edges, edge] };
+
+      return {
+        nodes: updatedNodes,
+        edges: [...s.edges, finalEdge],
+      };
     }),
+
   updateEdge: (id, partialEdge) =>
     set((s) => ({
       edges: s.edges.map((e) => (e.id === id ? { ...e, ...partialEdge } : e)),
     })),
+
   updateEdgeLabel: (id, label) =>
     set((s) => ({
       edges: s.edges.map((e) => (e.id === id ? { ...e, label } : e)),
     })),
+
   removeEdge: (id) =>
-    set((s) => ({
-      edges: s.edges.filter((e) => e.id !== id),
-      selectedEdgeId: s.selectedEdgeId === id ? null : s.selectedEdgeId,
-    })),
+    set((s) => {
+      const edgeToRemove = s.edges.find((e) => e.id === id);
+      if (!edgeToRemove) return s;
+
+      const targetNode = s.nodes.find((n) => n.id === edgeToRemove.target);
+      let updatedNodes = s.nodes;
+
+      if (targetNode) {
+        const targetPort = targetNode.data.ports.find((p) => p.id === edgeToRemove.targetPort);
+        if (targetPort && (targetPort.type === 'note' || targetPort.name.toLowerCase().startsWith('note'))) {
+          updatedNodes = s.nodes.map((n) => {
+            if (n.id === targetNode.id) {
+              const remainingPorts = n.data.ports.filter((p) => p.id !== edgeToRemove.targetPort);
+              let noteCounter = 1;
+              const reindexedPorts = remainingPorts.map((p) => {
+                if (p.direction === 'input' && (p.type === 'note' || p.name.toLowerCase().startsWith('note'))) {
+                  const idxStr = noteCounter < 10 ? `0${noteCounter}` : `${noteCounter}`;
+                  noteCounter++;
+                  return { ...p, name: `note ${idxStr}` };
+                }
+                return p;
+              });
+              return {
+                ...n,
+                data: { ...n.data, ports: reindexedPorts },
+              };
+            }
+            return n;
+          });
+        }
+      }
+
+      return {
+        nodes: updatedNodes,
+        edges: s.edges.filter((e) => e.id !== id),
+        selectedEdgeId: s.selectedEdgeId === id ? null : s.selectedEdgeId,
+      };
+    }),
+
   setSelectedNodeId: (id) => set({ selectedNodeId: id, selectedEdgeId: id ? null : null }),
   setSelectedEdgeId: (id) => set({ selectedEdgeId: id, selectedNodeId: id ? null : null }),
   setIsRunning: (running) => set({ isRunning: running }),
   setApiKey: (key) => set({ apiKey: key }),
   setZoomLevel: (zoom) => set({ zoomLevel: zoom }),
   setPanOffset: (pan) => set({ panOffset: pan }),
+
   centerOnNode: (nodeId, containerWidth = 800, containerHeight = 600) => {
     const state = get();
     const targetNode = state.nodes.find((n) => n.id === nodeId);
@@ -110,9 +241,11 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       panOffset: { x: targetPanX, y: targetPanY },
     });
   },
+
   setConnectingPort: (port) => set({ connectingPort: port }),
   addLog: (log) => set((s) => ({ logs: [...s.logs, `[${new Date().toLocaleTimeString()}] ${log}`] })),
   clearLogs: () => set({ logs: [] }),
+
   resetWorkflow: () =>
     set({
       nodes: DEFAULT_WORKFLOW_SCHEMA.nodes,
@@ -122,6 +255,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       panOffset: { x: 0, y: 0 },
       logs: ['Workflow reset to default preset.'],
     }),
+
   loadWorkflow: (schema) =>
     set({
       nodes: schema.nodes,

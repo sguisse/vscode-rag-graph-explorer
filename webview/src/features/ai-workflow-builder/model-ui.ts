@@ -12,6 +12,7 @@ export type NodeType =
 
 export type PortType = 'prompt' | 'skill' | 'tool' | 'text' | 'result' | 'note';
 export type PortDirection = 'input' | 'output';
+export type PortSide = 'top' | 'right' | 'bottom' | 'left';
 
 export type EdgeStyle = 'solid' | 'dashed' | 'dotted';
 export type NodeFontFamily = 'Sans' | 'Mono' | 'Serif';
@@ -21,6 +22,7 @@ export interface WorkflowPort {
   name: string;
   type: PortType;
   direction: PortDirection;
+  side?: PortSide;
   color?: string;
 }
 
@@ -43,7 +45,7 @@ export interface BaseNodeData {
   annotationSteps?: string[];
   annotationTip?: string;
 
-  // Script & Logic Node Properties
+  // Script & Logic Properties
   scriptType?: 'python' | 'bash';
   scriptLocation?: string;
   argumentName?: string;

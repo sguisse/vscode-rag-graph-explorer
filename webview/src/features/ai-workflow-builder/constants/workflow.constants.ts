@@ -70,6 +70,7 @@ export const DEFAULT_WORKFLOW_SCHEMA: WorkflowSchema = {
         model: 'Mock - Offline',
         tokenBudget: 1000,
         ports: [
+          { id: 'note-01', name: 'note 01', type: 'note', direction: 'input', color: 'bg-sky-400' },
           { id: 'prompt', name: 'prompt', type: 'prompt', direction: 'input', color: 'bg-amber-400' },
           { id: 'skill', name: 'skill', type: 'skill', direction: 'input', color: 'bg-amber-500' },
           { id: 'agent_tools', name: 'agent tools', type: 'tool', direction: 'input', color: 'bg-rose-400' },
@@ -119,7 +120,7 @@ export const DEFAULT_WORKFLOW_SCHEMA: WorkflowSchema = {
       source: 'node-annotation-1',
       sourcePort: 'note',
       target: 'node-agent-1',
-      targetPort: 'prompt',
+      targetPort: 'note-01',
       label: 'Setup Guide',
     },
     {

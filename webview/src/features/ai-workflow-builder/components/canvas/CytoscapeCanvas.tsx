@@ -3,6 +3,7 @@ import { useWorkflowStore } from '../../hooks/use-workflow-store';
 import { useWorkflowPersistence } from '../../hooks/use-workflow-persistence';
 import { createDefaultNode } from '../../shapes/workflow-shapes';
 import { copyNodeToClipboard, getClipboardNode, duplicateNode } from '../../utils/clipboard.utils';
+import { getPortCoordinates, getBezierPath } from '../../utils/port-layout.utils';
 import { TextInputNodeView } from '../nodes/TextInputNodeView';
 import { MarkdownFileNodeView } from '../nodes/MarkdownFileNodeView';
 import { AiAgentNodeView } from '../nodes/AiAgentNodeView';
@@ -76,7 +77,7 @@ export function CytoscapeCanvas() {
     };
   }, []);
 
-  // Keyboard shortcut listeners (Delete, Copy, Paste, Duplicate)
+  // Keyboard shortcut listeners
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const activeTag = document.activeElement?.tagName.toLowerCase();
@@ -116,20 +117,17 @@ export function CytoscapeCanvas() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedNodeId, selectedEdgeId, nodes, removeNode, removeEdge, addNode, addLog]);
 
-  // Check if click target is an interactive node control
   const isInteractiveTarget = (target: HTMLElement): boolean => {
     return Boolean(
       target.closest('input, textarea, select, button, [data-port-id], [draggable="true"]')
     );
   };
 
-  // Background drag panning (Left Click or Middle Click)
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     if (isInteractiveTarget(target)) return;
 
     if (e.button === 0 || e.button === 1) {
-      // Clear selection if clicking empty canvas
       if (!target.closest('[data-node-wrapper]')) {
         setSelectedNodeId(null);
         setSelectedEdgeId(null);
@@ -219,7 +217,7 @@ export function CytoscapeCanvas() {
           transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel / 100})`,
         }}
       >
-        {/* Connection Edges SVG Overlay */}
+        {/* Connection Edges SVG Overlay dynamically computed via getPortCoordinates */}
         <svg className="top-0 left-0 absolute pointer-events-none w-full h-full z-0">
           {edges.map((edge) => {
             const sourceNode = nodes.find((n) => n.id === edge.source);
@@ -230,13 +228,9 @@ export function CytoscapeCanvas() {
             const isSelected = selectedEdgeId === edge.id;
             const isAnnotationEdge = sourceNode.type === 'annotation' || targetNode.type === 'annotation';
 
-            const x1 = sourceNode.position.x + (sourceNode.width || 240);
-            const y1 = sourceNode.position.y + (sourceNode.height || 200) / 2;
-            const x2 = targetNode.position.x;
-            const y2 = targetNode.position.y + (targetNode.height || 200) / 2;
-
-            const dx = Math.abs(x2 - x1) * 0.5;
-            const pathData = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+            const srcCoord = getPortCoordinates(sourceNode, edge.sourcePort, edges, nodes);
+            const tgtCoord = getPortCoordinates(targetNode, edge.targetPort, edges, nodes);
+            const { path: pathData, midX, midY } = getBezierPath(srcCoord, tgtCoord);
 
             const dashStyle = edge.style === 'dashed' ? '6 4' : edge.style === 'dotted' ? '2 3' : isAnnotationEdge ? '6 4' : undefined;
             const lineColor = isSelected ? '#10b981' : edge.color || (isAnnotationEdge ? '#0284c7' : '#6366f1');
@@ -261,7 +255,7 @@ export function CytoscapeCanvas() {
                   className="transition-colors"
                 />
                 {edge.label && (
-                  <g transform={`translate(${(x1 + x2) / 2}, ${(y1 + y2) / 2})`}>
+                  <g transform={`translate(${midX}, ${midY})`}>
                     <rect x="-45" y="-10" width="90" height="20" rx="4" fill={badgeBg} stroke={lineColor} strokeWidth="1.5" />
                     <text x="0" y="3" textAnchor="middle" fill={labelTextCol} fontSize="9" fontFamily="monospace" fontWeight="bold">
                       {edge.label}

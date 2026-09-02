@@ -42,7 +42,7 @@ export function OutputAnalyzerNodeView({ node }: { node: WorkflowNode }) {
           )}
         </div>
 
-        {/* Visual Endpoint Indicators for OK / KO */}
+        {/* Output Endpoint Badges */}
         <div className="flex justify-end gap-2 pt-1 border-t border-border/50 text-[10px]">
           <div className="flex items-center gap-1 bg-emerald-500/15 text-emerald-500 px-1.5 py-0.5 rounded font-bold border border-emerald-500/30">
             <span>OK</span>
