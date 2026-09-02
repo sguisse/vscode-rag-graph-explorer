@@ -23,7 +23,6 @@ export const UserMessageBlock: React.FC<{
 
   const { contextText, instructionText } = parseUserMessageContent(msg.content);
 
-  // User Message Main Block Adaptive Colors
   const userBg = isDarkMode
     ? 'color-mix(in srgb, var(--blue-7, #082a8f) 25%, var(--card))'
     : 'color-mix(in srgb, var(--blue-1, #bcecff) 18%, var(--card))';
@@ -34,7 +33,6 @@ export const UserMessageBlock: React.FC<{
     ? 'color-mix(in srgb, var(--blue-4, #0377ff) 45%, var(--border))'
     : 'color-mix(in srgb, var(--blue-3, #5fb9ff) 40%, var(--border))';
 
-  // Shared Sub-Card Colors
   const subCardBg = isDarkMode
     ? 'color-mix(in srgb, var(--black-0, #000000) 30%, var(--card))'
     : 'color-mix(in srgb, var(--white-0, #ffffff) 65%, var(--card))';

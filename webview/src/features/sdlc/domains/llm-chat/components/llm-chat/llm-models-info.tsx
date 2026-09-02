@@ -37,7 +37,6 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
   const setLlmSelectedModel = useExplorerStore((s) => s.setLlmSelectedModel);
   const currentSelectedModel = useExplorerStore((s) => s.llmSelectedModel);
 
-  // Resizable column widths state
   const [colWidths, setColWidths] = useState<Record<string, number>>({
     provider: 95,
     name: 210,
@@ -179,7 +178,6 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
     const hasSubRows = Boolean(row.subRows && row.subRows.length > 0);
     const isSelectedModel = row.rowType === 'model' && row.id === currentSelectedModel;
 
-    // Detail Sub-Row: Merge Columns across remaining 13 cells
     if (row.rowType === 'detail') {
       return (
         <React.Fragment key={row.id}>
@@ -217,7 +215,6 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
       );
     }
 
-    // Main Model Row
     let rowTextStyle = 'text-foreground';
     if (row.hasPromo) {
       rowTextStyle = 'font-bold text-emerald-600 dark:text-emerald-400';
@@ -238,7 +235,6 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
           }`}
           data-tooltip="Click to select this model for LLM Chat"
         >
-          {/* 1st Column: Provider (Fixed Sticky 1) */}
           <td
             style={{ width: `${colWidths.provider}px`, minWidth: `${colWidths.provider}px` }}
             className="left-0 z-10 sticky bg-background/95 backdrop-blur p-2 font-mono text-xs align-middle"
@@ -248,7 +244,6 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
             </span>
           </td>
 
-          {/* 2nd Column: Model Name (Fixed Sticky 2 + Tree expand toggle) */}
           <td
             style={{
               width: `${colWidths.name}px`,
@@ -287,7 +282,6 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
             </div>
           </td>
 
-          {/* 3rd Column: Cost Rating */}
           <td
             style={{ width: `${colWidths.cost}px` }}
             className="group relative p-2 font-mono text-xs align-middle"
@@ -298,7 +292,6 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
             </div>
           </td>
 
-          {/* 4th Column: Category */}
           <td style={{ width: `${colWidths.category}px` }} className="p-2 font-mono text-xs align-middle">
             {row.categoryText !== '-' ? (
               <span className={`inline-flex items-center gap-1 bg-primary/10 px-1.5 py-0.5 border border-primary/20 rounded font-mono text-[10px] ${rowTextStyle}`}>
@@ -309,22 +302,18 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
             )}
           </td>
 
-          {/* Max Context */}
           <td style={{ width: `${colWidths.contextWindow}px` }} className="p-2 font-mono text-xs align-middle">
             <span className={`font-mono text-xs ${rowTextStyle}`}>{formatTokens(row.contextWindow)}</span>
           </td>
 
-          {/* Max Prompt */}
           <td style={{ width: `${colWidths.maxPrompt}px` }} className="p-2 font-mono text-xs align-middle">
             <span className={`font-mono text-xs ${rowTextStyle}`}>{formatTokens(row.maxPromptTokens)}</span>
           </td>
 
-          {/* Max Output */}
           <td style={{ width: `${colWidths.maxOutput}px` }} className="p-2 font-mono text-xs align-middle">
             <span className={`font-mono text-xs ${rowTextStyle}`}>{formatTokens(row.maxOutputTokens)}</span>
           </td>
 
-          {/* Adaptive Thinking */}
           <td style={{ width: `${colWidths.adaptiveThinking}px` }} className="p-2 font-mono text-xs text-center align-middle">
             {isAdaptiveYes ? (
               <span data-tooltip={`adaptive_thinking: ${row.adaptiveThinking}`} className="text-sm cursor-help">
@@ -335,7 +324,6 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
             )}
           </td>
 
-          {/* Reasoning Effort */}
           <td style={{ width: `${colWidths.reasoningEffort}px` }} className="p-2 font-mono text-xs align-middle">
             {row.reasoningEfforts.length > 0 ? (
               <div className="flex flex-wrap items-center gap-1">
@@ -353,7 +341,6 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
             )}
           </td>
 
-          {/* Tools */}
           <td style={{ width: `${colWidths.tools}px` }} className="p-2 font-mono text-xs text-center align-middle">
             {row.parallelToolCalls ? (
               <span
@@ -367,7 +354,6 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
             )}
           </td>
 
-          {/* Vision */}
           <td
             style={{ width: `${colWidths.vision}px` }}
             className="group relative p-2 font-mono text-xs text-center align-middle"
@@ -376,22 +362,18 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
             <Checkbox checked={row.vision} disabled className="pointer-events-none" />
           </td>
 
-          {/* Tokenizer */}
           <td style={{ width: `${colWidths.tokenizer}px` }} className="p-2 font-mono text-xs align-middle">
             <span className={`font-mono text-[11px] ${rowTextStyle}`}>{row.tokenizer}</span>
           </td>
 
-          {/* Streaming */}
           <td style={{ width: `${colWidths.streaming}px` }} className="p-2 font-mono text-xs text-center align-middle">
             <Checkbox checked={row.streaming} disabled className="pointer-events-none" />
           </td>
 
-          {/* Structured Outputs */}
           <td style={{ width: `${colWidths.structuredOutputs}px` }} className="p-2 font-mono text-xs text-center align-middle">
             <Checkbox checked={row.structuredOutputs} disabled className="pointer-events-none" />
           </td>
 
-          {/* Token Pricing */}
           <td style={{ width: `${colWidths.tokenPricing}px` }} className="p-2 font-mono text-xs align-middle">
             <span className={`font-mono text-[11px] truncate block ${rowTextStyle}`}>
               {row.tokenPricingText}
@@ -399,7 +381,6 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
           </td>
         </tr>
 
-        {/* Render TreeTable Sub-Rows when expanded */}
         {hasSubRows &&
           isExpanded &&
           row.subRows!.map((subRow) => renderTableRow(subRow, depth + 1))}
@@ -409,7 +390,6 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
 
   return (
     <div className="flex flex-col gap-2.5 bg-card p-2.5 border border-border rounded-lg w-full h-full min-h-0 overflow-hidden font-sans text-foreground">
-      {/* Filters & Control Bar */}
       <div className="flex flex-wrap justify-between items-center gap-2 pb-2 border-border border-b shrink-0">
         <div className="flex items-center gap-2">
           <Layers size={16} className="text-primary" />
@@ -418,7 +398,6 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
             {tableData.length} models
           </span>
 
-          {/* Active Sort Rules Badges */}
           {sortRules.length > 0 && (
             <div className="flex items-center gap-1 ml-2 pl-2 border-border border-l">
               <span className="text-[10px] text-muted-foreground">Sorted by:</span>
@@ -444,7 +423,6 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Provider Select with z-[10000] for Portal Overlay */}
           <Select
             value={selectedProvider}
             onValueChange={(val) => setSelectedProvider(val || 'all')}
@@ -481,7 +459,6 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
         </div>
       </div>
 
-      {/* Flat Table Display with Fixed First 2 Columns and Merged Sub-Rows */}
       <div className="flex-1 bg-background border border-border rounded min-h-0 overflow-auto">
         <table className="w-full text-left border-collapse table-fixed">
           <thead className="top-0 z-20 sticky bg-muted/90 backdrop-blur border-border border-b font-mono text-[11px] uppercase">

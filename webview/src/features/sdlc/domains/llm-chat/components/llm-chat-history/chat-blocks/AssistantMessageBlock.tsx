@@ -18,7 +18,6 @@ export const AssistantMessageBlock: React.FC<{
   const cardId = `asst-${msg.id}`;
   const isOpen = expandedCards[cardId] ?? true;
 
-  // Assistant Response Block Adaptive Colors (Yellow / Amber palette)
   const assistantBg = isDarkMode
     ? 'color-mix(in srgb, var(--yellow-7, #653200) 25%, var(--card))'
     : 'color-mix(in srgb, var(--yellow-0, #fff8c5) 35%, var(--card))';

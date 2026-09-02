@@ -1,16 +1,16 @@
 import React from 'react';
 import { ContainerPanelHeader } from '@/_layout/ContainerPanelHeader';
-import { LLMChat } from '../components/llm-chat/llm-chat';
+import { LlmChatHistory } from '../components/llm-chat-history/llm-chat-history';
 
-export const CenterPanelContainer: React.FC = () => {
+export const RightPanelContainer: React.FC = () => {
   return (
     <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden">
-      <ContainerPanelHeader title="LLM Workflow Chat" path="workspace.center" />
+      <ContainerPanelHeader title="LLM Chat History" path="workspace.right" />
       <div className="flex-1 min-h-0 overflow-hidden">
-        <LLMChat />
+        <LlmChatHistory />
       </div>
     </div>
   );
 };
 
-export default CenterPanelContainer;
+export default RightPanelContainer;

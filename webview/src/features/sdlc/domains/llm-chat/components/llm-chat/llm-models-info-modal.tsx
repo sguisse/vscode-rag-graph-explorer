@@ -46,7 +46,6 @@ export const LLMModelsInfoModal: React.FC<LLMModelsInfoModalProps> = ({
         isMaximized ? 'rounded-none border-none' : 'rounded-xl'
       }`}
     >
-      {/* Draggable Header Bar (Double click to Maximize/Restore) */}
       <div
         onMouseDown={startDrag}
         onDoubleClick={toggleMaximize}
@@ -60,9 +59,7 @@ export const LLMModelsInfoModal: React.FC<LLMModelsInfoModalProps> = ({
           </h3>
         </div>
 
-        {/* Window Control Buttons */}
         <div className="flex items-center gap-1">
-          {/* Minimize Button */}
           <Button
             variant="ghost"
             size="icon"
@@ -76,7 +73,6 @@ export const LLMModelsInfoModal: React.FC<LLMModelsInfoModalProps> = ({
             <Minus size={13} />
           </Button>
 
-          {/* Maximize / Restore Button */}
           <Button
             variant="ghost"
             size="icon"
@@ -90,7 +86,6 @@ export const LLMModelsInfoModal: React.FC<LLMModelsInfoModalProps> = ({
             {isMaximized ? <Copy size={12} className="rotate-180" /> : <Square size={11} />}
           </Button>
 
-          {/* Close Button */}
           <Button
             variant="ghost"
             size="icon"
@@ -103,7 +98,6 @@ export const LLMModelsInfoModal: React.FC<LLMModelsInfoModalProps> = ({
         </div>
       </div>
 
-      {/* Main Content Panel (Hidden when minimized) */}
       {!isMinimized && (
         <div className="flex-1 bg-background p-2.5 rounded-b-xl min-h-0 overflow-hidden select-text">
           <LLMModelsInfo
@@ -118,7 +112,6 @@ export const LLMModelsInfoModal: React.FC<LLMModelsInfoModalProps> = ({
         </div>
       )}
 
-      {/* Resize Bottom-Right Handle (Disabled when maximized or minimized) */}
       {!isMaximized && !isMinimized && (
         <div
           onMouseDown={startResize}

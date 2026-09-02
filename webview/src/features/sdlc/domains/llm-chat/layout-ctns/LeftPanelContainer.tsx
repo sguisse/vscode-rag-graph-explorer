@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ContainerPanelHeader } from '@/_layout/ContainerPanelHeader';
-import { LlmPromptPanel } from '../components/llm-prompt-panel';
+import { LlmPromptPanel } from '../components/prompt-panel/llm-prompt-panel';
 import { ReferenceItem, REFERENCES_PROJECT_KEY } from '@/shared/services/reference/model/reference-model';
 import { referenceApiService } from '@/services/api/reference-api.service.gen';
 import { useSdlcSessionStore } from '@/features/sdlc/core/store/useSdlcSessionStore';
@@ -44,7 +44,7 @@ export const LeftPanelContainer: React.FC = () => {
 
   return (
     <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden">
-      <ContainerPanelHeader title="Prompt Tuning & Reference Context" path="workspace.center" />
+      <ContainerPanelHeader title="Prompt Tuning & Reference Context" path="workspace.left" />
       <div className="flex-1 p-1.5 min-h-0 overflow-hidden">
         <LlmPromptPanel allReferences={allReferences} />
       </div>

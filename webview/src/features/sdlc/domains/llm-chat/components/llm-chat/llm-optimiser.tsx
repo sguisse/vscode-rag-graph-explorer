@@ -1,11 +1,3 @@
-#!/usr/bin/env bash
-set -e
-
-echo "🐛 Fixing TypeScript onValueChange type error in LLMOptimiser..."
-
-mkdir -p webview/src/features/sdlc/domains/llm-chat/components/llm-chat
-
-cat << 'EOF' > webview/src/features/sdlc/domains/llm-chat/components/llm-chat/llm-optimiser.tsx
 import React, { useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -40,7 +32,7 @@ export const LLMOptimiser: React.FC = () => {
         <div className="flex items-center gap-2">
           <span className="font-bold shrink-0 text-muted-foreground">Workflow:</span>
           <Select value={workflow} onValueChange={(val) => val && setWorkflow(val)}>
-            <SelectTrigger className="h-7 text-xs font-mono bg-background">
+            <SelectTrigger className="h-7 text-xs w-60 font-mono bg-background">
               <SelectValue placeholder="Select Workflow..." />
             </SelectTrigger>
             <SelectContent>
@@ -56,7 +48,7 @@ export const LLMOptimiser: React.FC = () => {
         <div className="flex items-center gap-2">
           <span className="font-bold shrink-0 text-muted-foreground">Prompt Type:</span>
           <Select value={promptType} onValueChange={(val) => val && setPromptType(val as PromptType)}>
-            <SelectTrigger className="h-7 text-xs font-mono bg-background">
+            <SelectTrigger className="h-7 text-xs w-60 font-mono bg-background">
               <SelectValue placeholder="Select Type..." />
             </SelectTrigger>
             <SelectContent>
@@ -125,6 +117,3 @@ export const LLMOptimiser: React.FC = () => {
 };
 
 export default LLMOptimiser;
-EOF
-
-echo "✅ fix/llm-optimiser: Fixed TS2322 error by wrapping onValueChange callback with non-null check!"
