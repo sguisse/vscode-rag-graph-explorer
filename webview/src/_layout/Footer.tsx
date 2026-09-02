@@ -17,7 +17,7 @@ export function Footer() {
         </div>
       }
       center={
-        <span>AST Compilation Log: Matrix Active</span>
+        <span>---</span>
       }
       right={
         <div className="bg-muted px-2 py-0.5 border border-border rounded text-[10px]">

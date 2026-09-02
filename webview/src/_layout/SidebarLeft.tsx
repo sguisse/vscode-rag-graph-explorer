@@ -72,7 +72,7 @@ export const SIDEBAR_MENU_ITEMS: NavItem[] = [
     isHeader: true,
     children: [
       { id: 'feature-codebase-context', icon: FolderTree, label: '1. Codebase Context' },
-      { id: 'feature-instructions', icon: Sparkles, label: '2. Instructions & Skills' },
+      { id: 'feature-instructions', icon: Sparkles, label: '2. Instructions & Ref.' },
       { id: 'feature-llm-chat', icon: MessageSquare, label: '3. LLM Chat' },
     ],
   },
@@ -107,7 +107,7 @@ export function renderSidebarMenuItem(
         isActive={isActive}
         onClick={onClick}
         style={isChild && !isMinimal ? { paddingLeft: '10px' } : undefined}
-        className="relative overflow-hidden cursor-pointer transition-colors"
+        className="relative overflow-hidden transition-colors cursor-pointer"
         data-tooltip={isMinimal ? item.label : undefined}
       >
         {Icon && (

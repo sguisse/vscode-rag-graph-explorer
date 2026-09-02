@@ -14,6 +14,7 @@ import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
 import { FinderTree, FinderHtml } from '@/components/app/core/finder';
 import { useInstructionsMethodPanel } from '../hooks/use-instructions-method-panel';
 import { INSTRUCTION_METHOD_OPTIONS, INSTRUCTION_METHODS, InstructionMethodId } from '../types';
+import { ToolbarSeparator } from '@/components/app/toolbar-separator';
 
 export function InstructionsMethodPanel() {
   const {
@@ -35,12 +36,12 @@ export function InstructionsMethodPanel() {
   const currentMethodConfig = INSTRUCTION_METHODS[selectedMethod] || INSTRUCTION_METHODS['bmad'];
 
   const topContent = (
-    <div className="flex flex-col border-b border-border bg-muted/20 w-full font-mono text-xs shrink-0">
-      <div className="flex justify-between items-center px-2 py-1 border-b border-border/50 w-full gap-2">
+    <div className="flex flex-col bg-muted/20 border-border border-b w-full font-mono text-xs shrink-0">
+      <div className="flex justify-between items-center gap-2 px-2 py-1 border-border/50 border-b w-full">
         <div className="flex items-center gap-1.5 shrink-0">
           <Select value={selectedMethod} onValueChange={(val) => handleMethodChange(val as InstructionMethodId)}>
             <SelectTrigger
-              className="bg-background text-xs font-mono font-bold w-[140px] !min-h-0 !py-0 [&>svg]:h-3 [&>svg]:w-3"
+              className="bg-background !py-0 w-[140px] [&>svg]:w-3 [&>svg]:h-3 !min-h-0 font-mono font-bold text-xs"
               style={{ height: '22px', minHeight: '22px', paddingTop: 0, paddingBottom: 0 }}
             >
               <SelectValue placeholder="Select Method...">
@@ -62,6 +63,35 @@ export function InstructionsMethodPanel() {
         </div>
 
         <div className="flex items-center gap-0.5 shrink-0">
+          {viewMode === 'tree' && (
+            <>
+              <Button
+                id="btn-collapse-all-instructions-skills"
+                className="hover:bg-muted rounded w-6 h-6 text-muted-foreground hover:text-foreground transition-colors"
+                variant="ghost"
+                size="icon"
+                onClick={handleCollapseAll}
+                data-tooltip="Collapse All"
+              >
+                <ChevronsUp size={12} />
+              </Button>
+              <Button
+                id="btn-expand-all-instructions-skills"
+                className="hover:bg-muted rounded w-6 h-6 text-muted-foreground hover:text-foreground transition-colors"
+                variant="ghost"
+                size="icon"
+                onClick={handleExpandAll}
+                data-tooltip="Expand All"
+              >
+                <ChevronsDown size={12} />
+              </Button>
+
+              <ToolbarSeparator/>
+            </>
+          )}
+
+
+
           <Button
             id="btn-toggle-instructions-finder"
             className={`h-6 w-6 rounded transition-colors ${
@@ -88,35 +118,11 @@ export function InstructionsMethodPanel() {
             {viewMode === 'tree' ? <FolderTree size={12} /> : <ListOrdered size={12} />}
           </Button>
 
-          {viewMode === 'tree' && (
-            <>
-              <Button
-                id="btn-collapse-all-instructions-skills"
-                className="hover:bg-muted rounded w-6 h-6 text-muted-foreground hover:text-foreground transition-colors"
-                variant="ghost"
-                size="icon"
-                onClick={handleCollapseAll}
-                data-tooltip="Collapse All"
-              >
-                <ChevronsUp size={12} />
-              </Button>
-              <Button
-                id="btn-expand-all-instructions-skills"
-                className="hover:bg-muted rounded w-6 h-6 text-muted-foreground hover:text-foreground transition-colors"
-                variant="ghost"
-                size="icon"
-                onClick={handleExpandAll}
-                data-tooltip="Expand All"
-              >
-                <ChevronsDown size={12} />
-              </Button>
-            </>
-          )}
         </div>
       </div>
 
       {finder.isFinderOpen && (
-        <div className="border-t border-border/50 w-full">
+        <div className="border-border/50 border-t w-full">
           <FinderTree
             searchQuery={finder.searchQuery}
             setSearchQuery={finder.setSearchQuery}
@@ -250,13 +256,13 @@ export function InstructionsMethodPanel() {
                 }`}
                 data-tooltip={`${skill.name} (${skill.command})`}
               >
-                <span className="font-bold text-[10px] text-muted-foreground w-5 text-right shrink-0">
+                <span className="w-5 font-bold text-[10px] text-muted-foreground text-right shrink-0">
                   {index + 1}.
                 </span>
                 <span className="text-xs shrink-0">{skill.emoji}</span>
-                <div className="flex flex-col min-w-0 flex-1">
+                <div className="flex flex-col flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-semibold text-xs text-foreground truncate">
+                    <span className="font-semibold text-foreground text-xs truncate">
                       <FinderHtml
                         text={skill.name}
                         searchQuery={finder.searchQuery}
@@ -266,7 +272,7 @@ export function InstructionsMethodPanel() {
                         currentMatchIndex={finder.currentMatchIndex}
                       />
                     </span>
-                    <span className="px-1 py-0.2 rounded border border-border bg-muted/60 text-[9px] text-muted-foreground shrink-0 font-mono">
+                    <span className="bg-muted/60 px-1 py-0.2 border border-border rounded font-mono text-[9px] text-muted-foreground shrink-0">
                       {categoryEmoji} {categoryTitle}
                     </span>
                   </div>
