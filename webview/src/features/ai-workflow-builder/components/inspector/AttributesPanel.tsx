@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sliders, Terminal, Trash2 } from 'lucide-react';
+import { Sliders, Terminal, Trash2, Copy, Check } from 'lucide-react';
 import { useWorkflowStore } from '../../hooks/use-workflow-store';
 import { NodeConfigForm } from './NodeConfigForm';
 import { EdgeConfigForm } from './EdgeConfigForm';
@@ -13,8 +13,22 @@ export function AttributesPanel() {
   // Height state for Execution Telemetry section
   const [telemetryHeight, setTelemetryHeight] = useState(200);
   const [isResizing, setIsResizing] = useState(false);
+  const [copiedLogs, setCopiedLogs] = useState(false);
   const resizeStartY = useRef<number>(0);
   const resizeStartHeight = useRef<number>(200);
+
+  const handleCopyLogs = async () => {
+    try {
+      const logText = logs.join('\n');
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(logText);
+        setCopiedLogs(true);
+        setTimeout(() => setCopiedLogs(false), 2000);
+      }
+    } catch (err) {
+      console.warn('Failed to copy telemetry logs:', err);
+    }
+  };
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -27,7 +41,6 @@ export function AttributesPanel() {
     if (!isResizing) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      // Dragging upward increases height, dragging downward decreases height
       const deltaY = resizeStartY.current - e.clientY;
       const newHeight = Math.max(80, Math.min(550, resizeStartHeight.current + deltaY));
       setTelemetryHeight(newHeight);
@@ -48,7 +61,7 @@ export function AttributesPanel() {
 
   return (
     <div className="flex flex-col bg-card w-full h-full min-h-0 font-mono text-xs border-border border-l select-none">
-      {/* Header */}
+      {/* Inspector Header */}
       <div className="flex justify-between items-center p-2 border-border border-b shrink-0">
         <span className="flex items-center gap-1.5 font-bold text-foreground">
           <Sliders size={14} className="text-primary" /> Inspector
@@ -66,7 +79,7 @@ export function AttributesPanel() {
         )}
       </div>
 
-      {/* Configuration Form (Node or Edge) - Flexible remaining area */}
+      {/* Configuration Form (Node or Edge) */}
       <div className="flex-1 min-h-0 p-3 overflow-y-auto">
         {selectedNode ? (
           <NodeConfigForm node={selectedNode} />
@@ -97,9 +110,24 @@ export function AttributesPanel() {
           <span className="flex items-center gap-1.5 font-bold text-foreground text-[11px]">
             <Terminal size={13} className="text-emerald-500" /> Execution Telemetry
           </span>
-          <button onClick={clearLogs} className="text-[10px] text-muted-foreground hover:text-foreground cursor-pointer">
-            Clear
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={handleCopyLogs}
+              className="hover:bg-muted p-1 rounded text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              title="Copy Execution Telemetry Content"
+            >
+              {copiedLogs ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+            </button>
+            <button
+              type="button"
+              onClick={clearLogs}
+              className="hover:bg-muted p-1 rounded text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+              title="Clear Execution Telemetry"
+            >
+              <Trash2 size={12} />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 p-2 bg-background overflow-y-auto font-mono text-[10px] text-foreground space-y-1">

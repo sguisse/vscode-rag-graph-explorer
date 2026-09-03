@@ -5,20 +5,41 @@ import { createDefaultNode } from '../../shapes/workflow-shapes';
 import { copyNodeToClipboard, getClipboardNode, duplicateNode } from '../../utils/clipboard.utils';
 import { getPortCoordinates, getBezierPath } from '../../utils/port-layout.utils';
 import { TextInputNodeView } from '../nodes/TextInputNodeView';
+import { JsonInputNodeView } from '../nodes/JsonInputNodeView';
+import { UrlNodeView } from '../nodes/UrlNodeView';
 import { MarkdownFileNodeView } from '../nodes/MarkdownFileNodeView';
 import { AiAgentNodeView } from '../nodes/AiAgentNodeView';
+import { LlmNodeView } from '../nodes/LlmNodeView';
+import { ReplaceNodeView } from '../nodes/ReplaceNodeView';
+import { SanitizeNodeView } from '../nodes/SanitizeNodeView';
+import { ExtractDataNodeView } from '../nodes/ExtractDataNodeView';
 import { SearchToolNodeView } from '../nodes/SearchToolNodeView';
 import { FormattedOutputNodeView } from '../nodes/FormattedOutputNodeView';
 import { AnnotationNodeView } from '../nodes/AnnotationNodeView';
 import { ScriptNodeView } from '../nodes/ScriptNodeView';
 import { ArgumentNodeView } from '../nodes/ArgumentNodeView';
 import { OutputAnalyzerNodeView } from '../nodes/OutputAnalyzerNodeView';
+import { ImageNodeView } from '../nodes/ImageNodeView';
 import { CanvasControls } from './CanvasControls';
 import { Minimap } from './Minimap';
 import { PortRubberbandLine } from './PortRubberbandLine';
 import { AccessibilityValidator } from './AccessibilityValidator';
 import { KeyboardShortcutsDialog } from './KeyboardShortcutsDialog';
 import { CanvasContextMenu } from './CanvasContextMenu';
+
+const DISTINCT_EDGE_COLORS = [
+  '#6366f1', // Indigo
+  '#f59e0b', // Amber
+  '#10b981', // Emerald
+  '#ec4899', // Pink
+  '#0284c7', // Sky
+  '#8b5cf6', // Purple
+  '#14b8a6', // Teal
+  '#f97316', // Orange
+  '#06b6d4', // Cyan
+  '#84cc16', // Lime
+  '#e11d48', // Rose
+];
 
 export function CytoscapeCanvas() {
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -39,13 +60,14 @@ export function CytoscapeCanvas() {
     removeEdge,
     setSelectedEdgeId,
     setSelectedNodeId,
+    candidateNotePort,
+    showGrid,
     addLog,
   } = useWorkflowStore();
 
   const [isCanvasPanning, setIsCanvasPanning] = useState(false);
   const [panStart, setPanStart] = useState<{ x: number; y: number; initialPan: { x: number; y: number } } | null>(null);
 
-  // Native non-passive mouse wheel listener for smooth scrolling and zoom
   useEffect(() => {
     const container = canvasRef.current;
     if (!container) return;
@@ -77,7 +99,6 @@ export function CytoscapeCanvas() {
     };
   }, []);
 
-  // Keyboard shortcut listeners
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const activeTag = document.activeElement?.tagName.toLowerCase();
@@ -203,7 +224,9 @@ export function CytoscapeCanvas() {
         isCanvasPanning ? 'cursor-grabbing' : 'cursor-grab'
       }`}
       style={{
-        backgroundImage: 'radial-gradient(circle, var(--border) 1px, transparent 1px)',
+        backgroundImage: showGrid
+          ? 'radial-gradient(circle, rgba(148, 163, 184, 0.4) 1.5px, transparent 1.5px)'
+          : 'none',
         backgroundSize: '20px 20px',
         backgroundPosition: `${panOffset.x}px ${panOffset.y}px`,
       }}
@@ -217,9 +240,8 @@ export function CytoscapeCanvas() {
           transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel / 100})`,
         }}
       >
-        {/* Connection Edges SVG Overlay dynamically computed via getPortCoordinates */}
         <svg className="top-0 left-0 absolute pointer-events-none w-full h-full z-0">
-          {edges.map((edge) => {
+          {edges.map((edge, idx) => {
             const sourceNode = nodes.find((n) => n.id === edge.source);
             const targetNode = nodes.find((n) => n.id === edge.target);
 
@@ -228,13 +250,17 @@ export function CytoscapeCanvas() {
             const isSelected = selectedEdgeId === edge.id;
             const isAnnotationEdge = sourceNode.type === 'annotation' || targetNode.type === 'annotation';
 
-            const srcCoord = getPortCoordinates(sourceNode, edge.sourcePort, edges, nodes);
-            const tgtCoord = getPortCoordinates(targetNode, edge.targetPort, edges, nodes);
+            const srcCoord = getPortCoordinates(sourceNode, edge.sourcePort, edges, nodes, candidateNotePort);
+            const tgtCoord = getPortCoordinates(targetNode, edge.targetPort, edges, nodes, candidateNotePort);
             const { path: pathData, midX, midY } = getBezierPath(srcCoord, tgtCoord);
 
             const dashStyle = edge.style === 'dashed' ? '6 4' : edge.style === 'dotted' ? '2 3' : isAnnotationEdge ? '6 4' : undefined;
-            const lineColor = isSelected ? '#10b981' : edge.color || (isAnnotationEdge ? '#0284c7' : '#6366f1');
-            const badgeBg = edge.labelColor || 'var(--card)';
+
+            const autoColor = DISTINCT_EDGE_COLORS[idx % DISTINCT_EDGE_COLORS.length];
+            const lineColor = isSelected ? '#10b981' : edge.color || (isAnnotationEdge ? '#0284c7' : autoColor);
+
+            // Fond transparent pour le badge et couleur de texte dynamique selon le thème (noir en clair / blanc en sombre)
+            const badgeBg = edge.labelColor || 'transparent';
             const labelTextCol = edge.labelTextColor || 'var(--foreground)';
 
             return (
@@ -256,8 +282,25 @@ export function CytoscapeCanvas() {
                 />
                 {edge.label && (
                   <g transform={`translate(${midX}, ${midY})`}>
-                    <rect x="-45" y="-10" width="90" height="20" rx="4" fill={badgeBg} stroke={lineColor} strokeWidth="1.5" />
-                    <text x="0" y="3" textAnchor="middle" fill={labelTextCol} fontSize="9" fontFamily="monospace" fontWeight="bold">
+                    <rect
+                      x="-50"
+                      y="-11"
+                      width="100"
+                      height="22"
+                      rx="5"
+                      fill={badgeBg}
+                      stroke={lineColor}
+                      strokeWidth="1.5"
+                    />
+                    <text
+                      x="0"
+                      y="4"
+                      textAnchor="middle"
+                      fill={labelTextCol}
+                      fontSize="10"
+                      fontFamily="monospace"
+                      fontWeight="bold"
+                    >
                       {edge.label}
                     </text>
                   </g>
@@ -267,8 +310,10 @@ export function CytoscapeCanvas() {
           })}
         </svg>
 
-        {/* Dynamic React Graph Nodes */}
         {nodes.map((node) => {
+          const width = node.data.isCollapsed ? 150 : (node.width || 240);
+          const height = node.data.isCollapsed ? 150 : (node.height || 200);
+
           return (
             <div
               key={node.id}
@@ -277,8 +322,8 @@ export function CytoscapeCanvas() {
                 position: 'absolute',
                 left: `${node.position.x}px`,
                 top: `${node.position.y}px`,
-                width: `${node.width || 240}px`,
-                height: `${node.height || 200}px`,
+                width: `${width}px`,
+                height: `${height}px`,
               }}
               draggable
               onDragEnd={(e) => {
@@ -292,9 +337,16 @@ export function CytoscapeCanvas() {
               }}
             >
               {node.type === 'textInput' && <TextInputNodeView node={node} />}
+              {node.type === 'jsonInput' && <JsonInputNodeView node={node} />}
+              {node.type === 'urlInput' && <UrlNodeView node={node} />}
               {node.type === 'markdownFile' && <MarkdownFileNodeView node={node} />}
+              {node.type === 'llm' && <LlmNodeView node={node} />}
               {node.type === 'aiAgent' && <AiAgentNodeView node={node} />}
+              {node.type === 'replace' && <ReplaceNodeView node={node} />}
+              {node.type === 'sanitize' && <SanitizeNodeView node={node} />}
+              {node.type === 'extractData' && <ExtractDataNodeView node={node} />}
               {node.type === 'searchTool' && <SearchToolNodeView node={node} />}
+              {node.type === 'image' && <ImageNodeView node={node} />}
               {node.type === 'script' && <ScriptNodeView node={node} />}
               {node.type === 'argument' && <ArgumentNodeView node={node} />}
               {node.type === 'outputAnalyzer' && <OutputAnalyzerNodeView node={node} />}

@@ -48,7 +48,7 @@ export const LLMChat: React.FC = () => {
             <span className="font-bold text-xs uppercase">LLM Prompt & Workflow Optimiser</span>
           </div>
         }
-        defaultExpanded={false}
+        defaultExpanded={true}
         contentToCopy=""
         className="bg-card border-border shrink-0"
       >

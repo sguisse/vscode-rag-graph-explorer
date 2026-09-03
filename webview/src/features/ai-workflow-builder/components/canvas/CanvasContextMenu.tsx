@@ -1,5 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { Type, FileText, Bot, Search, LayoutTemplate, Info, Terminal, Variable, GitFork } from 'lucide-react';
+import {
+  Type,
+  FileText,
+  Bot,
+  Search,
+  LayoutTemplate,
+  Info,
+  Terminal,
+  Variable,
+  GitFork,
+  Image as ImageIcon,
+  FileJson,
+  Globe,
+  Cpu,
+  Replace,
+  ShieldCheck,
+  FileCode,
+} from 'lucide-react';
 import { createDefaultNode } from '../../shapes/workflow-shapes';
 import { useWorkflowStore } from '../../hooks/use-workflow-store';
 import { NodeType } from '../../model-ui';
@@ -55,9 +72,16 @@ export function CanvasContextMenu() {
 
   const nodeTypes: { type: NodeType; label: string; icon: any }[] = [
     { type: 'textInput', label: 'Text Input', icon: Type },
+    { type: 'jsonInput', label: 'JSON Input', icon: FileJson },
+    { type: 'urlInput', label: 'URL Input', icon: Globe },
     { type: 'markdownFile', label: 'Markdown File', icon: FileText },
+    { type: 'llm', label: 'LLM Node', icon: Cpu },
     { type: 'aiAgent', label: 'AI Agent', icon: Bot },
+    { type: 'replace', label: 'Replace Text', icon: Replace },
+    { type: 'sanitize', label: 'Sanitize Text', icon: ShieldCheck },
+    { type: 'extractData', label: 'Extract Variable', icon: FileCode },
     { type: 'searchTool', label: 'Search Reddit', icon: Search },
+    { type: 'image', label: 'Image Node', icon: ImageIcon },
     { type: 'script', label: 'Script Execution', icon: Terminal },
     { type: 'argument', label: 'Script Argument', icon: Variable },
     { type: 'outputAnalyzer', label: 'Output Analyzer', icon: GitFork },
@@ -68,7 +92,7 @@ export function CanvasContextMenu() {
   return (
     <div
       style={{ left: `${pos.x}px`, top: `${pos.y}px` }}
-      className="fixed bg-card shadow-xl p-1 border border-border rounded-lg w-48 font-mono text-xs z-50 select-none animate-in fade-in duration-150"
+      className="fixed bg-card shadow-xl p-1 border border-border rounded-lg w-52 font-mono text-xs z-50 select-none animate-in fade-in duration-150 max-h-80 overflow-y-auto"
     >
       <div className="px-2 py-1 font-bold text-[10px] text-muted-foreground uppercase border-b border-border mb-1">
         Add Node to Canvas

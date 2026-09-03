@@ -9,21 +9,21 @@ export function SearchToolNodeView({ node }: { node: WorkflowNode }) {
 
   return (
     <BaseNodeContainer node={node} icon={Search} headerBg="bg-rose-500/10">
-      <div className="space-y-2 font-mono text-xs">
+      <div className="flex flex-col gap-2 font-mono text-xs select-none">
         <div>
           <label className="block font-bold text-[9px] text-muted-foreground uppercase">Subreddit</label>
           <input
             type="text"
             value={node.data.subreddit || ''}
             onChange={(e) => updateNodeData(node.id, { subreddit: e.target.value })}
-            className="mt-0.5 px-1.5 py-0.5 bg-background border border-border rounded w-full text-[11px]"
+            className="mt-0.5 px-1.5 py-0.5 bg-background border border-border rounded w-full text-[11px] font-mono"
           />
         </div>
 
         <div>
-          <div className="flex justify-between items-center text-[9px]">
-            <span className="font-bold text-muted-foreground uppercase">Topic Limit</span>
-            <span className="font-bold text-primary">{node.data.topicLimit || 10}</span>
+          <div className="flex justify-between items-center text-[9px] gap-2 mb-0.5">
+            <span className="font-bold text-muted-foreground uppercase whitespace-nowrap">Topic Limit</span>
+            <span className="font-bold text-primary shrink-0">{node.data.topicLimit || 10}</span>
           </div>
           <input
             type="range"
@@ -31,7 +31,7 @@ export function SearchToolNodeView({ node }: { node: WorkflowNode }) {
             max="50"
             value={node.data.topicLimit || 10}
             onChange={(e) => updateNodeData(node.id, { topicLimit: Number(e.target.value) })}
-            className="mt-1 w-full accent-primary cursor-pointer"
+            className="w-full accent-primary cursor-pointer"
           />
         </div>
       </div>

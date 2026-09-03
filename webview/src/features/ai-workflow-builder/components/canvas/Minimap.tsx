@@ -3,22 +3,20 @@ import { Map, LocateFixed } from 'lucide-react';
 import { useWorkflowStore } from '../../hooks/use-workflow-store';
 
 export function Minimap() {
-  const { nodes, zoomLevel, panOffset, setPanOffset, setSelectedNodeId, centerOnNode } = useWorkflowStore();
+  const { nodes, zoomLevel, panOffset, setPanOffset, centerOnNode } = useWorkflowStore();
   const minimapRef = useRef<HTMLDivElement>(null);
   const [isDraggingViewport, setIsDraggingViewport] = useState(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number; initialPan: { x: number; y: number } } | null>(null);
 
-  // Compute bounding box encompassing all nodes + canvas padding
   const padding = 300;
   const minX = Math.min(...nodes.map((n) => n.position.x), 0) - padding;
-  const maxX = Math.max(...nodes.map((n) => n.position.x + (n.width || 240)), 1200) + padding;
+  const maxX = Math.max(...nodes.map((n) => n.position.x + (n.data.isCollapsed ? 150 : (n.width || 240))), 1200) + padding;
   const minY = Math.min(...nodes.map((n) => n.position.y), 0) - padding;
-  const maxY = Math.max(...nodes.map((n) => n.position.y + (n.height || 200)), 800) + padding;
+  const maxY = Math.max(...nodes.map((n) => n.position.y + (n.data.isCollapsed ? 150 : (n.height || 200))), 800) + padding;
 
   const boundsWidth = Math.max(maxX - minX, 100);
   const boundsHeight = Math.max(maxY - minY, 100);
 
-  // Minimap pixel dimensions (inside inner container)
   const minimapWidth = 160;
   const minimapHeight = 96;
 
@@ -26,7 +24,6 @@ export function Minimap() {
   const scaleY = minimapHeight / boundsHeight;
   const scale = zoomLevel / 100;
 
-  // Measure visible canvas viewport
   const getContainerDimensions = useCallback(() => {
     const container = document.getElementById('workflow-canvas-container');
     return {
@@ -37,7 +34,6 @@ export function Minimap() {
 
   const { width: cWidth, height: cHeight } = getContainerDimensions();
 
-  // Transformed viewport box mapped onto minimap coordinates
   const viewportGraphX = -panOffset.x / scale;
   const viewportGraphY = -panOffset.y / scale;
   const viewportGraphW = cWidth / scale;
@@ -48,7 +44,6 @@ export function Minimap() {
   const viewW = Math.max(viewportGraphW * scaleX, 16);
   const viewH = Math.max(viewportGraphH * scaleY, 12);
 
-  // Center pan view on specific minimap pixel coordinate
   const panToMinimapCoord = useCallback(
     (mx: number, my: number) => {
       const graphX = mx / scaleX + minX;
@@ -135,12 +130,11 @@ export function Minimap() {
         onClick={handleMinimapClick}
         className="relative flex-1 bg-background/90 border border-border/80 rounded-md overflow-hidden cursor-crosshair"
       >
-        {/* Mini Nodes */}
         {nodes.map((node) => {
           const left = (node.position.x - minX) * scaleX;
           const top = (node.position.y - minY) * scaleY;
-          const width = Math.max((node.width || 240) * scaleX, 8);
-          const height = Math.max((node.height || 200) * scaleY, 6);
+          const width = Math.max((node.data.isCollapsed ? 150 : (node.width || 240)) * scaleX, 8);
+          const height = Math.max((node.data.isCollapsed ? 150 : (node.height || 200)) * scaleY, 6);
 
           return (
             <div
@@ -161,7 +155,6 @@ export function Minimap() {
           );
         })}
 
-        {/* Dynamic Interactive Viewport Frame */}
         <div
           onMouseDown={handleViewportMouseDown}
           className={`absolute border-2 border-emerald-500 bg-emerald-500/15 rounded-[3px] shadow-sm ${

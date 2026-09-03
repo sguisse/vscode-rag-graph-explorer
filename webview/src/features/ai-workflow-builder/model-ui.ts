@@ -1,14 +1,21 @@
 export type NodeType =
   | 'textInput'
+  | 'jsonInput'
+  | 'urlInput'
   | 'markdownFile'
   | 'aiAgent'
+  | 'llm'
+  | 'replace'
+  | 'sanitize'
+  | 'extractData'
   | 'searchTool'
   | 'formattedOutput'
   | 'instructionBox'
   | 'annotation'
   | 'script'
   | 'argument'
-  | 'outputAnalyzer';
+  | 'outputAnalyzer'
+  | 'image';
 
 export type PortType = 'prompt' | 'skill' | 'tool' | 'text' | 'result' | 'note';
 export type PortDirection = 'input' | 'output';
@@ -30,6 +37,7 @@ export interface BaseNodeData {
   label: string;
   type: NodeType;
   description?: string;
+  isCollapsed?: boolean;
   status?: 'idle' | 'running' | 'success' | 'error';
   executionTimeMs?: number;
   ports: WorkflowPort[];
@@ -45,6 +53,29 @@ export interface BaseNodeData {
   annotationSteps?: string[];
   annotationTip?: string;
 
+  // JSON Input Properties
+  jsonText?: string;
+
+  // URL Input Properties
+  url?: string;
+  bearerToken?: string;
+
+  // LLM Node Properties
+  llmProvider?: 'Ollama' | 'Copilot' | 'Gemini' | 'Claude' | 'OpenAI';
+
+  // Transformer Properties
+  replacePattern?: string;
+  replaceBy?: string;
+  sanitizePattern?: string;
+  sanitizeMethod?: 'Hash' | 'Mask' | 'MD5' | 'Redact';
+
+  // Extractor Properties
+  extractPattern?: string;
+  extractVarName?: string;
+
+  // Universal Variable Store
+  outputVariableName?: string;
+
   // Script & Logic Properties
   scriptType?: 'python' | 'bash';
   scriptLocation?: string;
@@ -52,6 +83,10 @@ export interface BaseNodeData {
   argumentValue?: string;
   analyzerCondition?: string;
   analyzerStatus?: 'OK' | 'KO' | 'idle';
+
+  // Image Node Properties
+  imageUrl?: string;
+  displayImageOnly?: boolean;
 
   // Appearance Customization
   fillColor?: string;
@@ -92,7 +127,9 @@ export interface WorkflowSchema {
 export interface PaletteItemDefinition {
   type: NodeType;
   label: string;
-  category: 'Inputs' | 'Agent' | 'Tools' | 'Output' | 'Annotations' | 'Scripts' | 'Logic';
+  group: 'Data Node' | 'Step Node';
+  subGroup: string;
+  category?: string;
   description: string;
   iconName: string;
   badge?: string;

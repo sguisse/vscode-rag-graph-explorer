@@ -1,6 +1,12 @@
 import { create } from 'zustand';
-import { WorkflowNode, WorkflowEdge, WorkflowSchema, WorkflowPort } from '../model-ui';
+import { WorkflowNode, WorkflowEdge, WorkflowSchema, WorkflowPort, PortSide } from '../model-ui';
 import { DEFAULT_WORKFLOW_SCHEMA } from '../constants/workflow.constants';
+
+interface CandidateNotePort {
+  targetNodeId: string;
+  side: PortSide;
+  portName: string;
+}
 
 interface WorkflowState {
   nodes: WorkflowNode[];
@@ -11,13 +17,16 @@ interface WorkflowState {
   apiKey: string;
   zoomLevel: number;
   panOffset: { x: number; y: number };
+  showGrid: boolean;
   logs: string[];
   connectingPort: { nodeId: string; portId: string; direction: 'input' | 'output' } | null;
+  candidateNotePort: CandidateNotePort | null;
   setNodes: (nodes: WorkflowNode[]) => void;
   setEdges: (edges: WorkflowEdge[]) => void;
   addNode: (node: WorkflowNode) => void;
   updateNodeData: (id: string, partialData: Record<string, any>) => void;
   updateNodePosition: (id: string, position: { x: number; y: number }) => void;
+  updateNodeSizeAndPosition: (id: string, size: { width: number; height: number }, position?: { x: number; y: number }) => void;
   removeNode: (id: string) => void;
   addEdge: (edge: WorkflowEdge) => void;
   updateEdge: (id: string, partialEdge: Partial<WorkflowEdge>) => void;
@@ -29,8 +38,12 @@ interface WorkflowState {
   setApiKey: (key: string) => void;
   setZoomLevel: (zoom: number) => void;
   setPanOffset: (pan: { x: number; y: number }) => void;
+  toggleGrid: () => void;
+  collapseAllNodes: () => void;
+  expandAllNodes: () => void;
   centerOnNode: (nodeId: string, containerWidth?: number, containerHeight?: number) => void;
   setConnectingPort: (port: { nodeId: string; portId: string; direction: 'input' | 'output' } | null) => void;
+  setCandidateNotePort: (candidate: CandidateNotePort | null) => void;
   addLog: (log: string) => void;
   clearLogs: () => void;
   resetWorkflow: () => void;
@@ -46,8 +59,10 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   apiKey: '',
   zoomLevel: 100,
   panOffset: { x: 0, y: 0 },
+  showGrid: true,
   logs: ['Workflow initialised with AI Agent setup schema.'],
   connectingPort: null,
+  candidateNotePort: null,
 
   setNodes: (nodes) => set({ nodes }),
   setEdges: (edges) => set({ edges }),
@@ -60,13 +75,35 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     set((s) => ({
       nodes: s.nodes.map((n) => (n.id === id ? { ...n, position } : n)),
     })),
+  updateNodeSizeAndPosition: (id, size, position) =>
+    set((s) => ({
+      nodes: s.nodes.map((n) =>
+        n.id === id
+          ? {
+              ...n,
+              width: Math.max(160, size.width),
+              height: Math.max(100, size.height),
+              position: position ? position : n.position,
+            }
+          : n
+      ),
+    })),
+
+  collapseAllNodes: () =>
+    set((s) => ({
+      nodes: s.nodes.map((n) => ({ ...n, data: { ...n.data, isCollapsed: true } })),
+    })),
+
+  expandAllNodes: () =>
+    set((s) => ({
+      nodes: s.nodes.map((n) => ({ ...n, data: { ...n.data, isCollapsed: false } })),
+    })),
 
   removeNode: (id) =>
     set((s) => {
       const edgesToRemove = s.edges.filter((e) => e.source === id || e.target === id);
       let updatedNodes = s.nodes.filter((n) => n.id !== id);
 
-      // Clean up dynamic note ports created on target nodes when connected note source node is removed
       edgesToRemove.forEach((edge) => {
         if (edge.source === id) {
           const targetNode = updatedNodes.find((n) => n.id === edge.target);
@@ -113,7 +150,6 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       let updatedNodes = s.nodes;
       let finalEdge = { ...edge };
 
-      // Determine if edge originates from an annotation node or note output port
       const sourcePortObj = sourceNode.data.ports.find((p) => p.id === edge.sourcePort);
       const isNoteRelationship =
         sourceNode.type === 'annotation' ||
@@ -122,20 +158,24 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         sourcePortObj?.name.toLowerCase().includes('note');
 
       if (isNoteRelationship) {
-        // Count existing note input ports on target node
-        const existingNotePorts = targetNode.data.ports.filter(
-          (p) => p.direction === 'input' && (p.type === 'note' || p.name.toLowerCase().startsWith('note'))
-        );
-        const nextIndex = existingNotePorts.length + 1;
-        const formattedIndex = nextIndex < 10 ? `0${nextIndex}` : `${nextIndex}`;
-        const newPortId = `note-port-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-        const newPortName = `note ${formattedIndex}`;
+        let side: PortSide = s.candidateNotePort?.targetNodeId === targetNode.id ? s.candidateNotePort.side : 'left';
+        let portName = s.candidateNotePort?.targetNodeId === targetNode.id ? s.candidateNotePort.portName : '';
 
+        if (!portName) {
+          const existingNotePorts = targetNode.data.ports.filter(
+            (p) => p.direction === 'input' && (p.type === 'note' || p.name.toLowerCase().startsWith('note'))
+          );
+          const nextIdx = existingNotePorts.length + 1;
+          portName = `note ${nextIdx < 10 ? '0' + nextIdx : nextIdx}`;
+        }
+
+        const newPortId = `note-port-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
         const newPort: WorkflowPort = {
           id: newPortId,
-          name: newPortName,
+          name: portName,
           type: 'note',
           direction: 'input',
+          side,
           color: 'bg-sky-400',
         };
 
@@ -158,11 +198,12 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       const exists = s.edges.some(
         (e) => e.source === finalEdge.source && e.target === finalEdge.target && e.targetPort === finalEdge.targetPort
       );
-      if (exists) return s;
 
       return {
         nodes: updatedNodes,
-        edges: [...s.edges, finalEdge],
+        edges: exists ? s.edges : [...s.edges, finalEdge],
+        candidateNotePort: null,
+        connectingPort: null,
       };
     }),
 
@@ -222,6 +263,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   setApiKey: (key) => set({ apiKey: key }),
   setZoomLevel: (zoom) => set({ zoomLevel: zoom }),
   setPanOffset: (pan) => set({ panOffset: pan }),
+  toggleGrid: () => set((s) => ({ showGrid: !s.showGrid })),
 
   centerOnNode: (nodeId, containerWidth = 800, containerHeight = 600) => {
     const state = get();
@@ -242,7 +284,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     });
   },
 
-  setConnectingPort: (port) => set({ connectingPort: port }),
+  setConnectingPort: (port) => set({ connectingPort: port, candidateNotePort: port === null ? null : get().candidateNotePort }),
+  setCandidateNotePort: (candidate) => set({ candidateNotePort: candidate }),
   addLog: (log) => set((s) => ({ logs: [...s.logs, `[${new Date().toLocaleTimeString()}] ${log}`] })),
   clearLogs: () => set({ logs: [] }),
 
@@ -252,6 +295,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       edges: DEFAULT_WORKFLOW_SCHEMA.edges,
       selectedNodeId: null,
       selectedEdgeId: null,
+      candidateNotePort: null,
       panOffset: { x: 0, y: 0 },
       logs: ['Workflow reset to default preset.'],
     }),
@@ -262,6 +306,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       edges: schema.edges,
       selectedNodeId: null,
       selectedEdgeId: null,
+      candidateNotePort: null,
       panOffset: { x: 0, y: 0 },
       logs: ['Workflow loaded successfully from template schema.'],
     }),

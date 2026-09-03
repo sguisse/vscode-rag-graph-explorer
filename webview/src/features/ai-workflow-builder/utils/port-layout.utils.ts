@@ -6,17 +6,13 @@ export interface PortCoordinateResult {
   side: PortSide;
 }
 
-/**
- * Calculates which border side (top, right, bottom, left) a port should move to
- * based on relative target/source node positioning for shortest line distance.
- */
 export function getDynamicPortSide(
   node: WorkflowNode,
   port: WorkflowPort,
   edges: WorkflowEdge[],
   nodes: WorkflowNode[]
 ): PortSide {
-  if (port.side) return port.side; // Override if explicit side is specified
+  if (port.side) return port.side;
 
   const connectedEdge = edges.find(
     (e) => (e.source === node.id && e.sourcePort === port.id) || (e.target === node.id && e.targetPort === port.id)
@@ -33,10 +29,10 @@ export function getDynamicPortSide(
     return port.direction === 'input' ? 'left' : 'right';
   }
 
-  const nodeW = node.width || 240;
-  const nodeH = node.height || 200;
-  const otherW = otherNode.width || 240;
-  const otherH = otherNode.height || 200;
+  const nodeW = node.data.isCollapsed ? 150 : (node.width || 240);
+  const nodeH = node.data.isCollapsed ? 150 : (node.height || 200);
+  const otherW = otherNode.data.isCollapsed ? 150 : (otherNode.width || 240);
+  const otherH = otherNode.data.isCollapsed ? 150 : (otherNode.height || 200);
 
   const cx1 = node.position.x + nodeW / 2;
   const cy1 = node.position.y + nodeH / 2;
@@ -53,25 +49,52 @@ export function getDynamicPortSide(
   }
 }
 
-/**
- * Calculates absolute canvas coordinates for a port based on its dynamic border side
- */
 export function getPortCoordinates(
   node: WorkflowNode,
   portId: string,
   edges: WorkflowEdge[],
-  nodes: WorkflowNode[]
+  nodes: WorkflowNode[],
+  candidateNotePort?: { targetNodeId: string; side: PortSide; portName: string } | null
 ): PortCoordinateResult {
-  const width = node.width || 240;
-  const height = node.height || 200;
-  const port = node.data.ports.find((p) => p.id === portId);
+  const width = node.data.isCollapsed ? 150 : (node.width || 240);
+  const height = node.data.isCollapsed ? 150 : (node.height || 200);
 
+  if (
+    candidateNotePort &&
+    candidateNotePort.targetNodeId === node.id &&
+    (portId === 'candidate-temp-id' || !node.data.ports.some((p) => p.id === portId))
+  ) {
+    const side = candidateNotePort.side;
+    let x = node.position.x;
+    let y = node.position.y;
+    switch (side) {
+      case 'top':
+        x += width / 2;
+        y += 0;
+        break;
+      case 'bottom':
+        x += width / 2;
+        y += height;
+        break;
+      case 'left':
+        x += 0;
+        y += height / 2;
+        break;
+      case 'right':
+        x += width;
+        y += height / 2;
+        break;
+    }
+    return { x, y, side };
+  }
+
+  const port = node.data.ports.find((p) => p.id === portId);
   if (!port) {
     return { x: node.position.x + width / 2, y: node.position.y + height / 2, side: 'right' };
   }
 
-  const side = getDynamicPortSide(node, port, edges, nodes);
-  const sidePorts = node.data.ports.filter((p) => getDynamicPortSide(node, p, edges, nodes) === side);
+  const side = port.side || getDynamicPortSide(node, port, edges, nodes);
+  const sidePorts = node.data.ports.filter((p) => (p.side || getDynamicPortSide(node, p, edges, nodes)) === side);
 
   const index = sidePorts.findIndex((p) => p.id === portId);
   const total = sidePorts.length || 1;
@@ -102,9 +125,6 @@ export function getPortCoordinates(
   return { x, y, side };
 }
 
-/**
- * Calculates Bezier path matching source and target border orientations
- */
 export function getBezierPath(
   src: PortCoordinateResult,
   tgt: PortCoordinateResult

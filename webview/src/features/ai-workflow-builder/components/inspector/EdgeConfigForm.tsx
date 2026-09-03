@@ -11,7 +11,9 @@ const LINK_COLOR_SWATCHES = [
   { label: 'Rose', value: '#f43f5e' },
   { label: 'Sky', value: '#0284c7' },
   { label: 'Purple', value: '#8b5cf6' },
-  { label: 'Slate', value: '#64748b' },
+  { label: 'Transparent', value: 'transparent' },
+  { label: 'White', value: '#ffffff' },
+  { label: 'Dark Slate', value: '#1e293b' },
 ];
 
 export function EdgeConfigForm({ edge }: { edge: WorkflowEdge }) {
@@ -41,7 +43,6 @@ export function EdgeConfigForm({ edge }: { edge: WorkflowEdge }) {
         </div>
       </div>
 
-      {/* Relationship Title */}
       <div>
         <label className="flex items-center gap-1 font-bold text-[9px] text-muted-foreground uppercase">
           <Type size={11} /> Relationship Title
@@ -55,7 +56,6 @@ export function EdgeConfigForm({ edge }: { edge: WorkflowEdge }) {
         />
       </div>
 
-      {/* Dedicated Collapsible Appearance Block for Relationships */}
       <div className="pt-2 border-border/80 border-t">
         <button
           type="button"
@@ -70,7 +70,6 @@ export function EdgeConfigForm({ edge }: { edge: WorkflowEdge }) {
 
         {isAppearanceOpen && (
           <div className="space-y-3 mt-2.5 pl-1">
-            {/* Line Style */}
             <div>
               <label className="flex items-center gap-1 font-bold text-[9px] text-muted-foreground uppercase">
                 <Sliders size={11} /> Line Style
@@ -86,7 +85,6 @@ export function EdgeConfigForm({ edge }: { edge: WorkflowEdge }) {
               </select>
             </div>
 
-            {/* Line Color */}
             <div>
               <label className="flex items-center gap-1 font-bold text-[9px] text-muted-foreground uppercase">
                 Line Color
@@ -105,7 +103,7 @@ export function EdgeConfigForm({ edge }: { edge: WorkflowEdge }) {
                       type="button"
                       onClick={() => updateEdge(edge.id, { color: c.value })}
                       className="w-4 h-4 rounded-full border border-background shadow-2xs hover:scale-125 transition-transform cursor-pointer"
-                      style={{ backgroundColor: c.value }}
+                      style={{ backgroundColor: c.value === 'transparent' ? 'rgba(0,0,0,0.1)' : c.value }}
                       title={c.label}
                     />
                   ))}
@@ -113,7 +111,6 @@ export function EdgeConfigForm({ edge }: { edge: WorkflowEdge }) {
               </div>
             </div>
 
-            {/* Label Text Color */}
             <div>
               <label className="flex items-center gap-1 font-bold text-[9px] text-muted-foreground uppercase">
                 Label Text Color
@@ -121,7 +118,7 @@ export function EdgeConfigForm({ edge }: { edge: WorkflowEdge }) {
               <div className="flex items-center gap-1.5 mt-1">
                 <input
                   type="color"
-                  value={edge.labelTextColor || '#ffffff'}
+                  value={edge.labelTextColor || '#000000'}
                   onChange={(e) => updateEdge(edge.id, { labelTextColor: e.target.value })}
                   className="w-6 h-6 bg-transparent border border-border rounded-full cursor-pointer shrink-0"
                 />
@@ -132,7 +129,7 @@ export function EdgeConfigForm({ edge }: { edge: WorkflowEdge }) {
                       type="button"
                       onClick={() => updateEdge(edge.id, { labelTextColor: c.value })}
                       className="w-4 h-4 rounded-full border border-background shadow-2xs hover:scale-125 transition-transform cursor-pointer"
-                      style={{ backgroundColor: c.value }}
+                      style={{ backgroundColor: c.value === 'transparent' ? 'rgba(0,0,0,0.1)' : c.value }}
                       title={c.label}
                     />
                   ))}
@@ -140,7 +137,6 @@ export function EdgeConfigForm({ edge }: { edge: WorkflowEdge }) {
               </div>
             </div>
 
-            {/* Label Badge Background Color */}
             <div>
               <label className="flex items-center gap-1 font-bold text-[9px] text-muted-foreground uppercase">
                 Badge Background Color
@@ -148,7 +144,7 @@ export function EdgeConfigForm({ edge }: { edge: WorkflowEdge }) {
               <div className="flex items-center gap-1.5 mt-1">
                 <input
                   type="color"
-                  value={edge.labelColor || '#0f172a'}
+                  value={edge.labelColor || '#000000'}
                   onChange={(e) => updateEdge(edge.id, { labelColor: e.target.value })}
                   className="w-6 h-6 bg-transparent border border-border rounded-full cursor-pointer shrink-0"
                 />
@@ -159,7 +155,7 @@ export function EdgeConfigForm({ edge }: { edge: WorkflowEdge }) {
                       type="button"
                       onClick={() => updateEdge(edge.id, { labelColor: c.value })}
                       className="w-4 h-4 rounded-full border border-background shadow-2xs hover:scale-125 transition-transform cursor-pointer"
-                      style={{ backgroundColor: c.value }}
+                      style={{ backgroundColor: c.value === 'transparent' ? 'rgba(0,0,0,0.1)' : c.value }}
                       title={c.label}
                     />
                   ))}

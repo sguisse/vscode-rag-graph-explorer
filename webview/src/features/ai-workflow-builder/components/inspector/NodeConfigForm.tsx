@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, Palette, Type, Sliders } from 'lucide-react';
+import { ChevronDown, ChevronRight, Palette, Type, Sliders, Maximize2, Variable } from 'lucide-react';
 import { WorkflowNode, NodeFontFamily } from '../../model-ui';
 import { useWorkflowStore } from '../../hooks/use-workflow-store';
 
@@ -25,12 +25,12 @@ const STROKE_TEXT_SWATCHES = [
 ];
 
 export function NodeConfigForm({ node }: { node: WorkflowNode }) {
-  const { updateNodeData } = useWorkflowStore();
+  const { updateNodeData, updateNodeSizeAndPosition } = useWorkflowStore();
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(true);
 
   return (
     <div className="space-y-3 font-mono text-xs select-none">
-      {/* Node Info & Fields */}
+      {/* Node Info & Common Fields */}
       <div>
         <label className="block font-bold text-[9px] text-muted-foreground uppercase">Title</label>
         <input
@@ -61,6 +61,180 @@ export function NodeConfigForm({ node }: { node: WorkflowNode }) {
             className="mt-1 p-2 bg-background border border-border rounded-lg w-full h-24 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </div>
+      )}
+
+      {node.type === 'jsonInput' && (
+        <div>
+          <label className="block font-bold text-[9px] text-muted-foreground uppercase">JSON Payload</label>
+          <textarea
+            value={node.data.jsonText || ''}
+            onChange={(e) => updateNodeData(node.id, { jsonText: e.target.value })}
+            className="mt-1 p-2 bg-background border border-border rounded-lg w-full h-24 text-xs font-mono resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+        </div>
+      )}
+
+      {node.type === 'urlInput' && (
+        <>
+          <div>
+            <label className="block font-bold text-[9px] text-muted-foreground uppercase">Target URL</label>
+            <input
+              type="text"
+              value={node.data.url || ''}
+              onChange={(e) => updateNodeData(node.id, { url: e.target.value })}
+              placeholder="https://api.example.com/data"
+              className="mt-1 px-2.5 py-1.5 bg-background border border-border rounded-lg w-full text-xs font-mono"
+            />
+          </div>
+          <div>
+            <label className="block font-bold text-[9px] text-muted-foreground uppercase">Bearer Token</label>
+            <input
+              type="password"
+              value={node.data.bearerToken || ''}
+              onChange={(e) => updateNodeData(node.id, { bearerToken: e.target.value })}
+              placeholder="bearer token..."
+              className="mt-1 px-2.5 py-1.5 bg-background border border-border rounded-lg w-full text-xs font-mono"
+            />
+          </div>
+        </>
+      )}
+
+      {node.type === 'llm' && (
+        <>
+          <div>
+            <label className="block font-bold text-[9px] text-muted-foreground uppercase">LLM Provider</label>
+            <select
+              value={node.data.llmProvider || 'Ollama'}
+              onChange={(e) => updateNodeData(node.id, { llmProvider: e.target.value as any })}
+              className="mt-1 p-1.5 bg-background border border-border rounded-lg w-full text-xs cursor-pointer"
+            >
+              <option value="Ollama">Ollama</option>
+              <option value="Copilot">Copilot</option>
+              <option value="Gemini">Gemini</option>
+              <option value="Claude">Claude</option>
+              <option value="OpenAI">OpenAI</option>
+            </select>
+          </div>
+          <div>
+            <label className="block font-bold text-[9px] text-muted-foreground uppercase">Model Selection</label>
+            <input
+              type="text"
+              value={node.data.model || ''}
+              onChange={(e) => updateNodeData(node.id, { model: e.target.value })}
+              placeholder="e.g. llama3:latest or gpt-4o"
+              className="mt-1 px-2.5 py-1.5 bg-background border border-border rounded-lg w-full text-xs"
+            />
+          </div>
+        </>
+      )}
+
+      {node.type === 'replace' && (
+        <>
+          <div>
+            <label className="block font-bold text-[9px] text-muted-foreground uppercase">Regex Pattern</label>
+            <input
+              type="text"
+              value={node.data.replacePattern || ''}
+              onChange={(e) => updateNodeData(node.id, { replacePattern: e.target.value })}
+              className="mt-1 px-2.5 py-1.5 bg-background border border-border rounded-lg w-full text-xs font-mono"
+            />
+          </div>
+          <div>
+            <label className="block font-bold text-[9px] text-muted-foreground uppercase">Replace By</label>
+            <input
+              type="text"
+              value={node.data.replaceBy || ''}
+              onChange={(e) => updateNodeData(node.id, { replaceBy: e.target.value })}
+              className="mt-1 px-2.5 py-1.5 bg-background border border-border rounded-lg w-full text-xs font-mono"
+            />
+          </div>
+        </>
+      )}
+
+      {node.type === 'sanitize' && (
+        <>
+          <div>
+            <label className="block font-bold text-[9px] text-muted-foreground uppercase">Regex Pattern</label>
+            <input
+              type="text"
+              value={node.data.sanitizePattern || ''}
+              onChange={(e) => updateNodeData(node.id, { sanitizePattern: e.target.value })}
+              className="mt-1 px-2.5 py-1.5 bg-background border border-border rounded-lg w-full text-xs font-mono"
+            />
+          </div>
+          <div>
+            <label className="block font-bold text-[9px] text-muted-foreground uppercase">Sanitize Method</label>
+            <select
+              value={node.data.sanitizeMethod || 'Mask'}
+              onChange={(e) => updateNodeData(node.id, { sanitizeMethod: e.target.value as any })}
+              className="mt-1 p-1.5 bg-background border border-border rounded-lg w-full text-xs cursor-pointer"
+            >
+              <option value="Mask">Mask (****)</option>
+              <option value="Hash">Hash (SHA256)</option>
+              <option value="MD5">MD5</option>
+              <option value="Redact">Redact ([REDACTED])</option>
+            </select>
+          </div>
+        </>
+      )}
+
+      {node.type === 'extractData' && (
+        <>
+          <div>
+            <label className="block font-bold text-[9px] text-muted-foreground uppercase">Regex Pattern</label>
+            <input
+              type="text"
+              value={node.data.extractPattern || ''}
+              onChange={(e) => updateNodeData(node.id, { extractPattern: e.target.value })}
+              className="mt-1 px-2.5 py-1.5 bg-background border border-border rounded-lg w-full text-xs font-mono"
+            />
+          </div>
+          <div>
+            <label className="block font-bold text-[9px] text-muted-foreground uppercase">Extracted Variable Name</label>
+            <input
+              type="text"
+              value={node.data.extractVarName || ''}
+              onChange={(e) =>
+                updateNodeData(node.id, {
+                  extractVarName: e.target.value,
+                  outputVariableName: e.target.value,
+                })
+              }
+              className="mt-1 px-2.5 py-1.5 bg-background border border-border rounded-lg w-full text-xs font-mono"
+            />
+          </div>
+        </>
+      )}
+
+      {node.type === 'image' && (
+        <>
+          <div>
+            <label className="block font-bold text-[9px] text-muted-foreground uppercase">Image URL (http, https, file, data)</label>
+            <input
+              type="text"
+              value={node.data.imageUrl || ''}
+              onChange={(e) => updateNodeData(node.id, { imageUrl: e.target.value })}
+              placeholder="https://... or data:image/..."
+              className="mt-1 px-2.5 py-1.5 bg-background border border-border rounded-lg w-full text-xs font-mono"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 pt-1">
+            <input
+              type="checkbox"
+              id={`display-image-only-${node.id}`}
+              checked={Boolean(node.data.displayImageOnly)}
+              onChange={(e) => updateNodeData(node.id, { displayImageOnly: e.target.checked })}
+              className="w-3.5 h-3.5 accent-primary rounded cursor-pointer"
+            />
+            <label
+              htmlFor={`display-image-only-${node.id}`}
+              className="font-bold text-[10px] text-muted-foreground uppercase cursor-pointer select-none"
+            >
+              Display Image Only
+            </label>
+          </div>
+        </>
       )}
 
       {node.type === 'markdownFile' && (
@@ -117,34 +291,6 @@ export function NodeConfigForm({ node }: { node: WorkflowNode }) {
         </>
       )}
 
-      {node.type === 'searchTool' && (
-        <>
-          <div>
-            <label className="block font-bold text-[9px] text-muted-foreground uppercase">Subreddit</label>
-            <input
-              type="text"
-              value={node.data.subreddit || ''}
-              onChange={(e) => updateNodeData(node.id, { subreddit: e.target.value })}
-              className="mt-1 px-2.5 py-1.5 bg-background border border-border rounded-lg w-full text-xs"
-            />
-          </div>
-          <div>
-            <div className="flex justify-between items-center text-[10px]">
-              <span className="font-bold text-muted-foreground uppercase">Topic Limit</span>
-              <span className="font-bold text-primary">{node.data.topicLimit || 10}</span>
-            </div>
-            <input
-              type="range"
-              min="1"
-              max="50"
-              value={node.data.topicLimit || 10}
-              onChange={(e) => updateNodeData(node.id, { topicLimit: Number(e.target.value) })}
-              className="mt-1 w-full accent-primary cursor-pointer"
-            />
-          </div>
-        </>
-      )}
-
       {node.type === 'script' && (
         <>
           <div>
@@ -170,41 +316,57 @@ export function NodeConfigForm({ node }: { node: WorkflowNode }) {
         </>
       )}
 
-      {node.type === 'argument' && (
-        <>
-          <div>
-            <label className="block font-bold text-[9px] text-muted-foreground uppercase">Argument Name</label>
-            <input
-              type="text"
-              value={node.data.argumentName || ''}
-              onChange={(e) => updateNodeData(node.id, { argumentName: e.target.value })}
-              className="mt-1 px-2.5 py-1.5 bg-background border border-border rounded-lg w-full text-xs font-mono"
-            />
-          </div>
-          <div>
-            <label className="block font-bold text-[9px] text-muted-foreground uppercase">Argument Value</label>
-            <input
-              type="text"
-              value={node.data.argumentValue || ''}
-              onChange={(e) => updateNodeData(node.id, { argumentValue: e.target.value })}
-              className="mt-1 px-2.5 py-1.5 bg-background border border-border rounded-lg w-full text-xs font-mono"
-            />
-          </div>
-        </>
-      )}
+      {/* Universal Output Variable Naming Section */}
+      <div className="pt-2 border-border/80 border-t">
+        <label className="flex items-center gap-1 font-bold text-[9px] text-muted-foreground uppercase mb-1">
+          <Variable size={11} className="text-sky-400" /> Output Variable Name
+        </label>
+        <input
+          type="text"
+          value={node.data.outputVariableName || ''}
+          onChange={(e) => updateNodeData(node.id, { outputVariableName: e.target.value })}
+          placeholder="e.g. promptPayload or sanitizedResult"
+          className="px-2.5 py-1.5 bg-background border border-border rounded-lg w-full text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+        <p className="mt-1 text-[9px] text-muted-foreground leading-tight">
+          Exposes this node output as a named context variable for downstream nodes.
+        </p>
+      </div>
 
-      {node.type === 'outputAnalyzer' && (
-        <div>
-          <label className="block font-bold text-[9px] text-muted-foreground uppercase">Condition Rule</label>
-          <input
-            type="text"
-            value={node.data.analyzerCondition || ''}
-            onChange={(e) => updateNodeData(node.id, { analyzerCondition: e.target.value })}
-            placeholder="e.g. exit_code == 0"
-            className="mt-1 px-2.5 py-1.5 bg-background border border-border rounded-lg w-full text-xs font-mono"
-          />
+      {/* Node Dimensions (Width & Height) */}
+      <div className="pt-2 border-border/80 border-t">
+        <label className="flex items-center gap-1 font-bold text-[9px] text-muted-foreground uppercase mb-1">
+          <Maximize2 size={11} /> Size Dimensions (px)
+        </label>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block font-bold text-[8px] text-muted-foreground uppercase">Width</label>
+            <input
+              type="number"
+              min="160"
+              max="1200"
+              value={node.width || 240}
+              onChange={(e) =>
+                updateNodeSizeAndPosition(node.id, { width: Number(e.target.value), height: node.height || 200 })
+              }
+              className="mt-0.5 px-2 py-1 bg-background border border-border rounded text-xs font-mono"
+            />
+          </div>
+          <div>
+            <label className="block font-bold text-[8px] text-muted-foreground uppercase">Height</label>
+            <input
+              type="number"
+              min="100"
+              max="1000"
+              value={node.height || 200}
+              onChange={(e) =>
+                updateNodeSizeAndPosition(node.id, { width: node.width || 240, height: Number(e.target.value) })
+              }
+              className="mt-0.5 px-2 py-1 bg-background border border-border rounded text-xs font-mono"
+            />
+          </div>
         </div>
-      )}
+      </div>
 
       {/* Collapsible Appearance Block */}
       <div className="pt-2 border-border/80 border-t">
