@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { FileCode, FolderOpen } from 'lucide-react';
 import { ExportReportData } from '@/shared/services/file-exporter/model/file-exporter-model';
-import { logInfo } from '../../utils/log-info';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 interface FilesTabProps {
   reportData: ExportReportData | null;
@@ -32,12 +32,12 @@ export const FilesTab: React.FC<FilesTabProps> = ({
   });
 
   const handleOpenFile = (filePath: string) => {
-    logInfo('[FilesTab] handleOpenFile handler triggered', filePath);
+    logInfo('[FilesTab] handleOpenFile handler triggered', [filePath]);
     onOpenFile(filePath);
   };
 
   const handleRevealFile = (filePath: string) => {
-    logInfo('[FilesTab] handleRevealFile handler triggered', filePath);
+    logInfo('[FilesTab] handleRevealFile handler triggered', [filePath]);
     onRevealFile(filePath);
   };
 
@@ -47,7 +47,7 @@ export const FilesTab: React.FC<FilesTabProps> = ({
         <Input
           value={fileNameFilter}
           onChange={(e) => {
-            logInfo('[FilesTab] fileNameFilter changed', e.target.value);
+            logInfo('[FilesTab] fileNameFilter changed', [e.target.value]);
             setFileNameFilter(e.target.value);
           }}
           placeholder="Filter by file name regex..."
@@ -56,7 +56,7 @@ export const FilesTab: React.FC<FilesTabProps> = ({
         <Input
           value={fileContentFilter}
           onChange={(e) => {
-            logInfo('[FilesTab] fileContentFilter changed', e.target.value);
+            logInfo('[FilesTab] fileContentFilter changed', [e.target.value]);
             setFileContentFilter(e.target.value);
           }}
           placeholder="Filter by content regex..."

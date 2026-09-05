@@ -38,6 +38,7 @@ export interface ExporterStoreState {
   setConfig: (updater: ExportConfig | ((prev: ExportConfig) => ExportConfig)) => void;
   setHistoryList: (list: HistoryEntry[]) => void;
   setSelectedProfileId: (id: string) => void;
+  setHistoryViewMode: (mode: HistoryViewMode) => void;
   setFilterSimulatorInput: (val: string) => void;
   setIsRunning: (running: boolean) => void;
   setActiveTab: (tab: ExporterTabId) => void;
@@ -56,8 +57,8 @@ export interface ExporterStoreState {
   freezeToggle: (id: string) => Promise<void>;
   resetConfig: () => void;
   renameProfile: (id: string, newName: string) => Promise<void>;
-  duplicateProfile: (id: string) => Promise<void>;
-  addProfile: () => Promise<void>;
+  duplicateProfile: (id: string) => Promise<string | null>;
+  addProfile: (customConfig?: ExportConfig) => Promise<string | null>;
   clearHistoryWithMode: (mode: 'remove-selected-hard' | 'remove-selected-soft' | 'clear-all-hard' | 'clear-all-soft') => Promise<void>;
 }
 
@@ -85,6 +86,8 @@ export const useExporterStore = create<ExporterStoreState>((set, get) => ({
     isErrorModalOpen: false,
     isConflictModalOpen: false,
     isGuardrailModalOpen: false,
+    isValidationModalOpen: false,
+    isDeleteModalOpen: false,
     conflictExtensions: [],
     conflictSource: '',
     conflictTarget: '',
@@ -106,6 +109,23 @@ export const useExporterStore = create<ExporterStoreState>((set, get) => ({
   setHistoryList: (historyList) => set({ historyList }),
 
   setSelectedProfileId: (id) => set({ selectedProfileId: id }),
+  setHistoryViewMode: (historyViewMode) => {
+    const { selectedProfileId, historyList, currentRepo } = get();
+    let nextSelectedId = selectedProfileId;
+    if (
+      historyViewMode === 'scope-current-repo' &&
+      selectedProfileId !== 'default' &&
+      currentRepo
+    ) {
+      const isVisible = historyList.some(
+        (h) => h.id === selectedProfileId && (!h.repo || h.repo === currentRepo)
+      );
+      if (!isVisible) {
+        nextSelectedId = 'default';
+      }
+    }
+    set({ historyViewMode, selectedProfileId: nextSelectedId });
+  },
   setFilterSimulatorInput: (filterSimulatorInput) => set({ filterSimulatorInput }),
   setIsRunning: (isRunning) => set({ isRunning }),
   setActiveTab: (activeTab) => set({ activeTab }),
@@ -203,28 +223,48 @@ export const useExporterStore = create<ExporterStoreState>((set, get) => ({
     try {
       const res = await filesExporterHistoryApiService.duplicateEntry(id, currentRepo);
       set({ historyList: res.history, selectedProfileId: res.newId });
+      return res.newId;
     } catch (e) {
       console.error('[useExporterStore] Error duplicating profile:', e);
+      return null;
     }
   },
 
-  addProfile: async () => {
+  addProfile: async (customConfig?: ExportConfig) => {
     const { defaultConfig, workspaceRoot, currentRepo } = get();
+    const targetConfig = customConfig || defaultConfig;
     try {
-      const res = await filesExporterHistoryApiService.addNewEntry(defaultConfig, workspaceRoot, currentRepo);
-      set({ historyList: res.history, selectedProfileId: res.newId, config: defaultConfig });
+      const res = await filesExporterHistoryApiService.addNewEntry(targetConfig, workspaceRoot, currentRepo);
+      set({ historyList: res.history, selectedProfileId: res.newId, config: targetConfig });
+      return res.newId;
     } catch (e) {
       console.error('[useExporterStore] Error adding profile:', e);
+      return null;
     }
   },
 
   clearHistoryWithMode: async (mode) => {
-    const { selectedProfileId } = get();
+    const { selectedProfileId, historyList, defaultConfig } = get();
+    if (selectedProfileId === 'default' && (mode === 'remove-selected-hard' || mode === 'remove-selected-soft')) {
+      return;
+    }
     try {
       const res = await filesExporterHistoryApiService.clearHistoryWithMode({ selectedId: selectedProfileId, mode });
-      set({ historyList: res.history, selectedProfileId: res.selectedId });
+      if (res && Array.isArray(res.history)) {
+        set({ historyList: res.history, selectedProfileId: res.selectedId || 'default' });
+        if (!res.selectedId || res.selectedId === 'default') {
+          set({ config: defaultConfig });
+        }
+      } else if (mode === 'remove-selected-hard' || mode === 'remove-selected-soft') {
+        const updated = historyList.filter((h) => h.id !== selectedProfileId);
+        set({ historyList: updated, selectedProfileId: 'default', config: defaultConfig });
+      }
     } catch (e) {
       console.error('[useExporterStore] Error clearing history:', e);
+      if (mode === 'remove-selected-hard' || mode === 'remove-selected-soft') {
+        const updated = historyList.filter((h) => h.id !== selectedProfileId);
+        set({ historyList: updated, selectedProfileId: 'default', config: defaultConfig });
+      }
     }
   },
 }));

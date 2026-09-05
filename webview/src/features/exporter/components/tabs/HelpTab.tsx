@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Copy } from 'lucide-react';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
-import { logInfo } from '../../utils/log-info';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 export const HelpTab: React.FC = () => {
   const samplePrompt = `Role: Senior Software Architect

@@ -6,7 +6,7 @@ import { CollapsibleCard, BadgeObject } from '@/components/ui/collapsible-card';
 import { useExporterStore } from '../store/useExporterStore';
 import { PathMappingService } from '../utils/path-resolver';
 import { fileSystemApiService } from '@/services/api/file-system-api.service.gen';
-import { logInfo } from '../utils/log-info';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 interface DestinationSectionProps {
   destDir: string;
@@ -35,17 +35,17 @@ export const DestinationSection: React.FC<DestinationSectionProps> = ({
   const isInvalid = validationState.destDirInvalid || Boolean(destError);
 
   const handleCopyLatestFiles = () => {
-    logInfo('[DestinationSection] onCopyLatestFiles handler triggered', destDir);
+    logInfo('[DestinationSection] onCopyLatestFiles handler triggered', [destDir]);
     onCopyLatestFiles();
   };
 
   const handleRevealDestDir = () => {
-    logInfo('[DestinationSection] onRevealDestDir handler triggered', destDir);
+    logInfo('[DestinationSection] onRevealDestDir handler triggered', [destDir]);
     onRevealDestDir();
   };
 
   const handleClearDestDir = () => {
-    logInfo('[DestinationSection] onClearDestDir handler triggered', destDir);
+    logInfo('[DestinationSection] onClearDestDir handler triggered', [destDir]);
     onClearDestDir();
   };
 

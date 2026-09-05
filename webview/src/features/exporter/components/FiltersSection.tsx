@@ -10,7 +10,7 @@ import { testFilterPatterns } from '../utils/filter-simulator';
 import { explodeTextAreaRegex, groupExtensionsText } from '../utils/regex-exploder';
 import { ExportConfig } from '@/shared/services/file-exporter/model/file-exporter-model';
 import { useExporterStore } from '../store/useExporterStore';
-import { logInfo } from '../utils/log-info';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 interface FiltersSectionProps {
   config: ExportConfig;
@@ -121,7 +121,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
     const nextDir = currentDir === 'asc' ? 'desc' : 'asc';
     setSortDirections((prev) => ({ ...prev, [field]: nextDir }));
 
-    logInfo('[FiltersSection] toggleSortLines handler triggered', { field, direction: nextDir });
+    logInfo('[FiltersSection] toggleSortLines handler triggered', [{ field, direction: nextDir }]);
 
     onChangeConfig((prev) => {
       const val = String(prev[field] || '');
@@ -138,7 +138,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
   };
 
   const explodeRegex = (field: keyof ExportConfig) => {
-    logInfo('[FiltersSection] explodeRegex handler triggered', field);
+    logInfo('[FiltersSection] explodeRegex handler triggered', [field]);
     onChangeConfig((prev) => {
       const val = String(prev[field] || '');
       const exploded = explodeTextAreaRegex(val);
@@ -147,7 +147,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
   };
 
   const groupExtensions = (field: 'inc_ext' | 'exc_ext') => {
-    logInfo('[FiltersSection] groupExtensions handler triggered', field);
+    logInfo('[FiltersSection] groupExtensions handler triggered', [field]);
     onChangeConfig((prev) => {
       const val = String(prev[field] || '');
       const result = groupExtensionsText(val, FILE_EXT_CATEGORY_GROUPS);
@@ -156,12 +156,12 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
   };
 
   const clearField = (field: keyof ExportConfig) => {
-    logInfo('[FiltersSection] clearField handler triggered', field);
+    logInfo('[FiltersSection] clearField handler triggered', [field]);
     onChangeConfig((prev) => ({ ...prev, [field]: '' }));
   };
 
   const appendExtensionCategory = (field: 'inc_ext' | 'exc_ext', label: string, extensions: string[]) => {
-    logInfo('[FiltersSection] appendExtensionCategory handler triggered', { field, label, extensions });
+    logInfo('[FiltersSection] appendExtensionCategory handler triggered', [{ field, label, extensions }]);
     onChangeConfig((prev) => {
       const current = prev[field] ? prev[field].split('\n') : [];
       const combined = Array.from(new Set([...current, ...extensions]));
@@ -181,7 +181,6 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
       className="w-full min-w-0 shrink-0"
     >
       <div className="space-y-3 w-full min-w-0 font-mono text-xs">
-        {/* Top Constraint Controls */}
         <div className="flex items-center gap-2 w-full min-w-0">
           <label className="font-semibold text-[11px] text-muted-foreground whitespace-nowrap shrink-0">
             🏋️ Max File
@@ -200,17 +199,13 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
           /> KB
         </div>
 
-        {/* Outer Grid: Grouped Inclusions and Grouped Exclusions */}
         <div className="gap-3 grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] w-full min-w-0">
-          {/* Grouped Inclusions */}
           <div className="space-y-2 bg-muted/20 p-2.5 border border-border/40 rounded-md w-full min-w-0">
             <div className="flex justify-between items-center min-w-0 font-semibold text-[11px] text-foreground">
               <span className="truncate">✅ Inclusions</span>
             </div>
 
-            {/* Inner Grid: Include Paths & Include Exts */}
             <div className="gap-2.5 grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] w-full min-w-0">
-              {/* Include Paths */}
               <div className="space-y-1 w-full min-w-0">
                 <div className="flex justify-between items-center min-w-0 font-semibold text-[10px] text-muted-foreground">
                   <span className="truncate">Paths</span>
@@ -256,7 +251,6 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                 />
               </div>
 
-              {/* Include Extensions */}
               <div className="space-y-1 w-full min-w-0">
                 <div className="flex justify-between items-center min-w-0 font-semibold text-[10px] text-muted-foreground">
                   <span className="truncate">Extensions</span>
@@ -331,15 +325,12 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
             </div>
           </div>
 
-          {/* Grouped Exclusions */}
           <div className="space-y-2 bg-muted/20 p-2.5 border border-border/40 rounded-md w-full min-w-0">
             <div className="flex justify-between items-center min-w-0 font-semibold text-[11px] text-foreground">
               <span className="truncate">🚫 Exclusions</span>
             </div>
 
-            {/* Inner Grid: Exclude Paths & Exclude Exts */}
             <div className="gap-2.5 grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] w-full min-w-0">
-              {/* Exclude Paths */}
               <div className="space-y-1 w-full min-w-0">
                 <div className="flex justify-between items-center min-w-0 font-semibold text-[10px] text-muted-foreground">
                   <span className="truncate">Paths</span>
@@ -385,7 +376,6 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                 />
               </div>
 
-              {/* Exclude Extensions */}
               <div className="space-y-1 w-full min-w-0">
                 <div className="flex justify-between items-center min-w-0 font-semibold text-[10px] text-muted-foreground">
                   <span className="truncate">Extensions</span>
@@ -461,7 +451,6 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
           </div>
         </div>
 
-        {/* Filter Simulator */}
         <div className="flex sm:flex-row flex-col items-stretch sm:items-center gap-2 bg-muted/30 p-2 border border-border rounded-md w-full min-w-0">
           <span className="font-bold text-[11px] text-foreground truncate shrink-0">
             🧪 Filters Simulator:

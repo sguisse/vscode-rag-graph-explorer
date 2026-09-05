@@ -1,16 +1,73 @@
 import { useExporterStore } from '../store/useExporterStore';
 import { filesExporterApiService } from '@/services/api/files-exporter-api.service.gen';
 import { ExporterValidatorService } from '../utils/validator.service';
-import { logInfo } from '../utils/log-info';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { PathMappingService } from '../utils/path-resolver';
+import { generateNewConfigName, generateDuplicateName } from '../utils/date-formatter';
+import { isConfigDirty } from '../utils/config-dirty-checker';
 
 export function useExporterExecution() {
   const store = useExporterStore();
 
+  const selectedEntry = store.historyList.find((h) => h.id === store.selectedProfileId);
+  const isDefault = store.selectedProfileId === 'default';
+  const targetSavedConfig = isDefault ? store.defaultConfig : selectedEntry?.config;
+
+  const isDirty = isConfigDirty(store.config, targetSavedConfig);
+
+  const handleSaveConfig = async () => {
+    logInfo('[useExporterExecution] handleSaveConfig starting...');
+    const isFrozen = Boolean(selectedEntry?.frozen);
+
+    if (isFrozen) {
+      logInfo('[useExporterExecution] Profile is locked, opening SaveLockedProfileDialog');
+      store.setModalState({ isSaveLockedModalOpen: true });
+      return;
+    }
+
+    await store.saveProfile();
+    filesExporterApiService.showNotification('info', 'Configuration saved successfully!');
+  };
+
+  const handleDuplicateFromSaveModal = async () => {
+    logInfo('[useExporterExecution] handleDuplicateFromSaveModal starting...');
+    store.setModalState({ isSaveLockedModalOpen: false });
+
+    const id = store.selectedProfileId;
+    const wsName =
+      store.currentRepo ||
+      (store.workspaceRoot ? store.workspaceRoot.split(/[/\\]/).pop() || '' : 'workspace');
+
+    let newName = '';
+    if (id === 'default') {
+      newName = generateNewConfigName(wsName);
+    } else {
+      const targetEntry = store.historyList.find((h) => h.id === id);
+      const originalName = targetEntry ? targetEntry.display : 'Default Configuration';
+      const existingNames = store.historyList.map((h) => h.display);
+      newName = generateDuplicateName(originalName, existingNames);
+    }
+
+    const newId = await store.addProfile(store.config);
+    if (newId) {
+      await store.renameProfile(newId, newName);
+    }
+  };
+
+  const handleForceSaveFromSaveModal = async () => {
+    logInfo('[useExporterExecution] handleForceSaveFromSaveModal starting...');
+    store.setModalState({ isSaveLockedModalOpen: false });
+
+    if (store.selectedProfileId !== 'default') {
+      await store.freezeToggle(store.selectedProfileId);
+      await store.saveProfile();
+      filesExporterApiService.showNotification('info', 'Profile unlocked and configuration saved!');
+    }
+  };
+
   const handleRunExport = async () => {
     logInfo('[useExporterExecution] handleRunExport starting...');
 
-    // Validate all configuration fields using ExporterValidatorService
     const validationErrors: string[] = [];
 
     const srcErr = ExporterValidatorService.validatePathList(store.config.src, store.invalidPaths);
@@ -97,7 +154,7 @@ export function useExporterExecution() {
 
       let isDone = false;
       let checkCount = 0;
-      const maxChecks = 120; // 2 minutes max polling
+      const maxChecks = 120;
 
       while (!isDone && checkCount < maxChecks) {
         await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -175,12 +232,16 @@ export function useExporterExecution() {
   };
 
   const handleOpenExchangeUrl = (url: string) => {
-    logInfo('[useExporterExecution] handleOpenExchangeUrl starting...', url);
+    logInfo('[useExporterExecution] handleOpenExchangeUrl starting...', [url]);
     filesExporterApiService.openBrowserTab(url, true);
   };
 
   return {
     isRunning: store.isRunning,
+    isDirty,
+    handleSaveConfig,
+    handleDuplicateFromSaveModal,
+    handleForceSaveFromSaveModal,
     handleRunExport,
     handleKillExport,
     handleOpenExchangeUrl,
@@ -193,7 +254,7 @@ export function useExporterExecution() {
     reportData: store.reportData,
     activeTab: store.activeTab,
     setActiveTab: (tab: any) => {
-      logInfo('[useExporterExecution] setActiveTab starting...', tab);
+      logInfo('[useExporterExecution] setActiveTab starting...', [tab]);
       store.setActiveTab(tab);
     },
     exchangeLinks: store.exchangeLinks,

@@ -5,7 +5,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Folder, FileCode, ChevronRight, ChevronDown, FolderOpen, Ban, Search, X } from 'lucide-react';
 import { TreeManifestNode } from '@/shared/services/file-exporter/model/file-exporter-model';
 import { filesExporterApiService } from '@/services/api/files-exporter-api.service.gen';
-import { logInfo } from '../../utils/log-info';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 export interface TreeTabProps {
   rootNode: TreeManifestNode | null;
@@ -21,12 +21,12 @@ export function TreeTab({ rootNode, onExcludePattern, onCaptureSelectedPaths }: 
   const [checkedKeys, setCheckedKeys] = useState<Record<string, boolean>>({});
 
   const toggleExpand = (pathKey: string) => {
-    logInfo('[TreeTab] toggleExpand handler triggered', pathKey);
+    logInfo('[TreeTab] toggleExpand handler triggered', [pathKey]);
     setExpandedKeys((prev) => ({ ...prev, [pathKey]: !prev[pathKey] }));
   };
 
   const toggleCheck = (pathKey: string, node: TreeManifestNode) => {
-    logInfo('[TreeTab] toggleCheck handler triggered', pathKey);
+    logInfo('[TreeTab] toggleCheck handler triggered', [pathKey]);
     const isChecked = !checkedKeys[pathKey];
     const newChecked = { ...checkedKeys };
 
@@ -42,23 +42,23 @@ export function TreeTab({ rootNode, onExcludePattern, onCaptureSelectedPaths }: 
   };
 
   const handleOpenFile = (path: string) => {
-    logInfo('[TreeTab] handleOpenFile handler triggered', path);
+    logInfo('[TreeTab] handleOpenFile handler triggered', [path]);
     filesExporterApiService.openPathAtCursor(path);
   };
 
   const handleRevealNode = (path: string) => {
-    logInfo('[TreeTab] handleRevealNode handler triggered', path);
+    logInfo('[TreeTab] handleRevealNode handler triggered', [path]);
     filesExporterApiService.openPathAtCursor(path);
   };
 
   const handleExcludePattern = (pattern: string, isExt: boolean) => {
-    logInfo('[TreeTab] handleExcludePattern handler triggered', { pattern, isExt });
+    logInfo('[TreeTab] handleExcludePattern handler triggered', [{ pattern, isExt }]);
     onExcludePattern(pattern, isExt);
   };
 
   const handleToggleViewMode = () => {
     const nextMode = viewMode === 'standard' ? 'extension' : 'standard';
-    logInfo('[TreeTab] handleToggleViewMode handler triggered', nextMode);
+    logInfo('[TreeTab] handleToggleViewMode handler triggered', [nextMode]);
     setViewMode(nextMode);
   };
 
@@ -158,7 +158,7 @@ export function TreeTab({ rootNode, onExcludePattern, onCaptureSelectedPaths }: 
           <Input
             value={searchQuery}
             onChange={(e) => {
-              logInfo('[TreeTab] searchQuery changed', e.target.value);
+              logInfo('[TreeTab] searchQuery changed', [e.target.value]);
               setSearchQuery(e.target.value);
             }}
             placeholder="Search manifest nodes..."

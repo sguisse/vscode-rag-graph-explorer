@@ -8,7 +8,7 @@ import { FiltersSection } from './FiltersSection';
 import { DestinationSection } from './DestinationSection';
 import { OutputFormattingSection } from './OutputFormattingSection';
 import { ErrorFilesModal } from './ErrorFilesModal';
-import { logInfo } from '../utils/log-info';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 export const ExportConfigurationPanel: React.FC = () => {
   const {
@@ -93,7 +93,6 @@ export const ExportConfigurationPanel: React.FC = () => {
 
   const middleContent = (
     <div className="flex flex-col space-y-2 p-2 box-border min-w-0">
-      {/* 1. Source Paths */}
       <SourcePathsSection
         pathsText={config.src}
         isOpen={cardsOpenState.sourcePaths}
@@ -106,7 +105,6 @@ export const ExportConfigurationPanel: React.FC = () => {
         onClearPaths={() => setConfig((prev) => ({ ...prev, src: '' }))}
       />
 
-      {/* 2. Filters & Scope Constraints */}
       <FiltersSection
         config={config}
         isOpen={cardsOpenState.filters}
@@ -116,7 +114,6 @@ export const ExportConfigurationPanel: React.FC = () => {
         setFilterSimulatorInput={setFilterSimulatorInput}
       />
 
-      {/* 3. Destination Directory */}
       <DestinationSection
         destDir={config.dest}
         isOpen={cardsOpenState.destination}
@@ -127,7 +124,6 @@ export const ExportConfigurationPanel: React.FC = () => {
         onClearDestDir={handleClearDestDir}
       />
 
-      {/* 4. Output Formatting Rules */}
       <OutputFormattingSection
         config={config}
         isOpen={cardsOpenState.outputFormatting}
@@ -146,7 +142,6 @@ export const ExportConfigurationPanel: React.FC = () => {
         middle={middleContent}
       />
 
-      {/* Stack trace error files analysis modal */}
       <ErrorFilesModal
         isOpen={modalState.isErrorModalOpen}
         onClose={handleCloseErrorModal}

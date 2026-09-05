@@ -68,7 +68,6 @@ export class VsCodeServiceAdapter extends AbstractServiceAdapter implements IVsC
         }
     }
 
-
     public async revealInExplorer(targetPath: string): Promise<void> {
         logInfo(`[VsCodeServiceAdapter] revealInExplorer invoked with path: ${targetPath}`);
         try {
@@ -94,6 +93,49 @@ export class VsCodeServiceAdapter extends AbstractServiceAdapter implements IVsC
         }
     }
 
+    public async revealInOsExplorer(targetPath: string): Promise<void> {
+        logInfo(`[VsCodeServiceAdapter] revealInOsExplorer invoked with path: ${targetPath}`);
+        try {
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            const rootPath = workspaceFolders && workspaceFolders.length > 0 ? workspaceFolders[0].uri.fsPath : getWorkspaceRoot();
+            let fullPath = targetPath;
+
+            if (!path.isAbsolute(fullPath) && rootPath) {
+                fullPath = path.join(rootPath, fullPath);
+            }
+
+            fullPath = this.resolveSourceFilePath(fullPath);
+
+            if (fs.existsSync(fullPath)) {
+                const normFull = path.normalize(fullPath).toLowerCase();
+                const normRoot = rootPath ? path.normalize(rootPath).toLowerCase() : '';
+
+                // If path is inside the active workspace root, open in VS Code Explorer
+                if (normRoot && normFull.startsWith(normRoot)) {
+                    logInfo(`[VsCodeServiceAdapter] Path is within workspace root, revealing in VS Code Explorer: ${fullPath}`);
+                    await this.revealInExplorer(fullPath);
+                } else {
+                    // Otherwise open in OS native explorer (Finder/Explorer/xdg-open)
+                    logInfo(`[VsCodeServiceAdapter] Path is outside workspace root, opening in OS native explorer: ${fullPath}`);
+                    const platform = os.platform();
+                    const stat = fs.statSync(fullPath);
+                    const folderPath = stat.isDirectory() ? fullPath : path.dirname(fullPath);
+
+                    if (platform === 'darwin') {
+                        execSync(`open "${folderPath}"`);
+                    } else if (platform === 'win32') {
+                        execSync(`explorer "${folderPath}"`);
+                    } else {
+                        execSync(`xdg-open "${folderPath}"`);
+                    }
+                }
+            } else {
+                logWarn(`[VsCodeServiceAdapter] Resolved file path does not exist for OS explorer: ${fullPath}`);
+            }
+        } catch (err) {
+            logError(`[VsCodeServiceAdapter] Failed to reveal path in OS explorer: ${err}`);
+        }
+    }
 
     private resolveSourceFilePath(filePath: string): string {
         if (!filePath.endsWith('.class')) {
@@ -189,8 +231,6 @@ export class VsCodeServiceAdapter extends AbstractServiceAdapter implements IVsC
         }
         return os.homedir();
     }
-
-
 
     public dispose() {
         if (logChannel) {

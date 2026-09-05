@@ -1,7 +1,7 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { logInfo } from '../utils/log-info';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 export interface ExtensionConflictDialogProps {
   isOpen: boolean;
@@ -25,12 +25,12 @@ export function ExtensionConflictDialog({
   const formattedExts = extensions.map((e) => (e === 'no_ext' ? 'No Extension' : `.${e}`)).join(', ');
 
   const handleMove = () => {
-    logInfo('[ExtensionConflictDialog] onMove handler triggered', { extensions, conflictSource, targetFieldName });
+    logInfo('[ExtensionConflictDialog] onMove handler triggered', [{ extensions, conflictSource, targetFieldName }]);
     onMove();
   };
 
   const handleAddAnyway = () => {
-    logInfo('[ExtensionConflictDialog] onAddAnyway handler triggered', { extensions, conflictSource, targetFieldName });
+    logInfo('[ExtensionConflictDialog] onAddAnyway handler triggered', [{ extensions, conflictSource, targetFieldName }]);
     onAddAnyway();
   };
 

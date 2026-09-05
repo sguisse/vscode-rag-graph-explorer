@@ -11,14 +11,19 @@ import { HelpTab } from './tabs/HelpTab';
 import { SimulationTab } from './tabs/SimulationTab';
 import { TreeTab } from './tabs/TreeTab';
 import { ValidationErrorDialog } from './ValidationErrorDialog';
+import { SaveLockedProfileDialog } from './SaveLockedProfileDialog';
 import { filesExporterApiService } from '@/services/api/files-exporter-api.service.gen';
 import { ExporterTabId } from '../types/exporter.types';
 import { PathMappingService } from '../utils/path-resolver';
-import { logInfo } from '../utils/log-info';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 export function ExporterPanel() {
   const {
     isRunning,
+    isDirty,
+    handleSaveConfig,
+    handleDuplicateFromSaveModal,
+    handleForceSaveFromSaveModal,
     handleRunExport,
     handleKillExport,
     handleOpenExchangeUrl,
@@ -33,16 +38,19 @@ export function ExporterPanel() {
     setModalState,
   } = useExporterExecution();
 
-  const { config, setConfig, workspaceRoot } = useExporterStore();
+  const { config, setConfig, workspaceRoot, historyList, selectedProfileId } = useExporterStore();
+  const selectedEntry = historyList.find((h) => h.id === selectedProfileId);
 
   const handleTabChange = (val: string) => {
-    logInfo('[ExporterPanel] Active tab changed', val);
+    logInfo('[ExporterPanel] Active tab changed', [val]);
     setActiveTab(val as ExporterTabId);
   };
 
   const topContent = (
     <ActionToolbar
       isRunning={isRunning}
+      isDirty={isDirty}
+      onSaveConfig={handleSaveConfig}
       onRunExport={handleRunExport}
       onKillExport={handleKillExport}
       onOpenExchangeUrl={handleOpenExchangeUrl}
@@ -70,7 +78,7 @@ export function ExporterPanel() {
           <ReportTab
             reportData={reportData}
             onAppendExtension={(ext, mode) => {
-              logInfo('[ExporterPanel] onAppendExtension', { ext, mode });
+              logInfo('[ExporterPanel] onAppendExtension', [{ ext, mode }]);
               const field = mode === 'inc' ? 'inc_ext' : 'exc_ext';
               setConfig((prev) => ({
                 ...prev,
@@ -78,7 +86,7 @@ export function ExporterPanel() {
               }));
             }}
             onSetMaxFileSize={(kb) => {
-              logInfo('[ExporterPanel] onSetMaxFileSize', kb);
+              logInfo('[ExporterPanel] onSetMaxFileSize', [kb]);
               setConfig((prev) => ({ ...prev, max_file: String(kb) }));
             }}
           />
@@ -89,11 +97,11 @@ export function ExporterPanel() {
             reportData={reportData}
             destDir={config.dest}
             onOpenFile={(p) => {
-              logInfo('[ExporterPanel] FilesTab onOpenFile', p);
+              logInfo('[ExporterPanel] FilesTab onOpenFile', [p]);
               filesExporterApiService.openPathAtCursor(p);
             }}
             onRevealFile={(p) => {
-              logInfo('[ExporterPanel] FilesTab onRevealFile', p);
+              logInfo('[ExporterPanel] FilesTab onRevealFile', [p]);
               filesExporterApiService.openPathAtCursor(p);
             }}
           />
@@ -103,7 +111,7 @@ export function ExporterPanel() {
           <TreeTab
             rootNode={reportData?.tree_manifest?.root || null}
             onExcludePattern={(pattern) => {
-              logInfo('[ExporterPanel] TreeTab onExcludePattern', pattern);
+              logInfo('[ExporterPanel] TreeTab onExcludePattern', [pattern]);
               setConfig((prev) => ({
                 ...prev,
                 exc_paths: prev.exc_paths ? `${prev.exc_paths}\n${pattern}` : pattern,
@@ -172,11 +180,18 @@ export function ExporterPanel() {
         middle={middleContent}
       />
 
-      {/* Configuration Validation Error Dialog */}
       <ValidationErrorDialog
         isOpen={Boolean(modalState.isValidationModalOpen)}
         errors={modalState.validationErrors || []}
         onClose={() => setModalState({ isValidationModalOpen: false })}
+      />
+
+      <SaveLockedProfileDialog
+        isOpen={Boolean(modalState.isSaveLockedModalOpen)}
+        profileName={selectedEntry?.display}
+        onDuplicate={handleDuplicateFromSaveModal}
+        onForceSave={handleForceSaveFromSaveModal}
+        onCancel={() => setModalState({ isSaveLockedModalOpen: false })}
       />
     </>
   );

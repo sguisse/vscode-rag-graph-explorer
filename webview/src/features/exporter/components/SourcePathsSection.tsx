@@ -7,7 +7,7 @@ import { useExporterStore } from '../store/useExporterStore';
 import { PathMappingService } from '../utils/path-resolver';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { filesExporterApiService } from '@/services/api/files-exporter-api.service.gen';
-import { logInfo } from '../utils/log-info';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 interface SourcePathsSectionProps {
   pathsText: string;
@@ -42,7 +42,7 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
   const lines = pathsText.split(/[,\n\r]+/).map((l) => l.trim()).filter(Boolean);
 
   const handleRemovePath = (lineToRemove: string) => {
-    logInfo('[SourcePathsSection] handleRemovePath triggered', lineToRemove);
+    logInfo('[SourcePathsSection] handleRemovePath triggered', [lineToRemove]);
     const newLines = lines.filter((l) => l !== lineToRemove);
     onChangePathsText(newLines.join('\n'));
   };
@@ -80,7 +80,7 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
     const fullDisplay = `${folderPart}${filePart}`;
 
     const onClick = () => {
-      logInfo('[SourcePathsSection] Single click on badge -> revealInExplorer & copyToClipboard', absPath);
+      logInfo('[SourcePathsSection] Single click on badge -> revealInExplorer & copyToClipboard', [absPath]);
       vsCodeApiService.revealInExplorer(absPath);
       vsCodeApiService.copyToClipboard(absPath);
       filesExporterApiService.showNotification('info', `Path copied to clipboard: ${absPath}`);
@@ -88,7 +88,7 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
 
     const onDoubleClick = () => {
       if (isFile) {
-        logInfo('[SourcePathsSection] Double click on file badge -> openFile', absPath);
+        logInfo('[SourcePathsSection] Double click on file badge -> openFile', [absPath]);
         vsCodeApiService.openFile(absPath);
       }
     };
@@ -97,7 +97,6 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
       ? 'Single-click to copy path & reveal in Explorer, Double-click to open file'
       : 'Single-click to copy path & reveal folder in Explorer';
 
-    // 1. Non-existing path -> Destructive color (red) with removal cross icon
     if (isInvalidPath) {
       return [
         {
@@ -126,7 +125,6 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
       ];
     }
 
-    // 2. External workspace existing path -> Amber color
     if (isExternal) {
       return [
         {
@@ -144,7 +142,6 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
       ];
     }
 
-    // 3. Workspace existing path ending with filename -> Full Emerald (bg, fg, border)
     if (isFile) {
       return [
         {
@@ -162,7 +159,6 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
       ];
     }
 
-    // 4. Workspace existing folder -> Common Blue color
     return [
       {
         label: (

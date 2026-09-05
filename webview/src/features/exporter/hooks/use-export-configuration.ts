@@ -5,7 +5,7 @@ import { filesExporterApiService } from '@/services/api/files-exporter-api.servi
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { fileSystemApiService } from '@/services/api/file-system-api.service.gen';
 import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
-import { logInfo } from '../utils/log-info';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { PathMappingService } from '../utils/path-resolver';
 import { ExporterValidatorService } from '../utils/validator.service';
 
@@ -37,12 +37,12 @@ export function useExportConfiguration() {
     store.fetchInitialState();
 
     vsCodeApiService.getRepoName().then((repo) => {
-      logInfo('[useExportConfiguration] Active repository:', repo);
+      logInfo('[useExportConfiguration] Active repository:', [repo]);
     }).catch(() => {});
 
     const unsubscribeSelectedPath = vsCodeHandleMessage.on('selectedPath', (msg) => {
       if (msg.payload) {
-        logInfo('[useExportConfiguration] Received selectedPath message', msg.payload);
+        logInfo('[useExportConfiguration] Received selectedPath message', [msg.payload]);
         const newPaths = String(msg.payload).split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
         addPathsToConfig(newPaths);
       }
@@ -50,7 +50,7 @@ export function useExportConfiguration() {
 
     const unsubscribeUpdatePaths = vsCodeHandleMessage.on('updatePaths', (msg) => {
       if (Array.isArray(msg.paths)) {
-        logInfo('[useExportConfiguration] Received updatePaths message', msg.paths);
+        logInfo('[useExportConfiguration] Received updatePaths message', [msg.paths]);
         const newPaths = msg.paths.flatMap((p) => String(p).split(/[,\n\r]+/)).map((s) => s.trim()).filter(Boolean);
         addPathsToConfig(newPaths);
       }
@@ -140,7 +140,7 @@ export function useExportConfiguration() {
       addPathsToConfig(openFiles);
       filesExporterApiService.showNotification('info', `Added open editor files (${openFiles.length} total paths)`);
     } catch (err: any) {
-      logInfo('[useExportConfiguration] Error adding open files:', err);
+      logInfo('[useExportConfiguration] Error adding open files:', [err]);
     }
   };
 
@@ -154,27 +154,27 @@ export function useExportConfiguration() {
       addPathsToConfig(gitFiles);
       filesExporterApiService.showNotification('info', `Added modified Git files (${gitFiles.length} total paths)`);
     } catch (err: any) {
-      logInfo('[useExportConfiguration] Error adding Git diff files:', err);
+      logInfo('[useExportConfiguration] Error adding Git diff files:', [err]);
     }
   };
 
   const handleCopyLatestFiles = async () => {
-    logInfo('[useExportConfiguration] handleCopyLatestFiles starting...', store.config.dest);
+    logInfo('[useExportConfiguration] handleCopyLatestFiles starting...', [store.config.dest]);
     try {
       const res = await filesExporterApiService.copyLatestExportedFiles(store.config.dest);
       filesExporterApiService.showNotification(res.success ? 'info' : 'warn', res.message);
     } catch (err: any) {
-      logInfo('[useExportConfiguration] Error copying latest files:', err);
+      logInfo('[useExportConfiguration] Error copying latest files:', [err]);
     }
   };
 
   const handleClearDestDir = async () => {
-    logInfo('[useExportConfiguration] handleClearDestDir starting...', store.config.dest);
+    logInfo('[useExportConfiguration] handleClearDestDir starting...', [store.config.dest]);
     try {
       const res = await filesExporterApiService.clearDestDirectory(store.config.dest);
       filesExporterApiService.showNotification(res.success ? 'info' : 'warn', res.message);
     } catch (err: any) {
-      logInfo('[useExportConfiguration] Error clearing dest dir:', err);
+      logInfo('[useExportConfiguration] Error clearing dest dir:', [err]);
     }
   };
 
@@ -190,17 +190,29 @@ export function useExportConfiguration() {
 
   const handleOpenHistoryFile = async () => {
     logInfo('[useExportConfiguration] handleOpenHistoryFile starting...');
-    await filesExporterHistoryApiService.openHistoryFile();
+    try {
+      await filesExporterHistoryApiService.openHistoryFile();
+      logInfo('[useExportConfiguration] handleOpenHistoryFile completed');
+    } catch (err: any) {
+      logInfo('[useExportConfiguration] handleOpenHistoryFile error:', [err?.message || err]);
+    }
   };
 
   const handleRevealHistoryFolder = async () => {
     logInfo('[useExportConfiguration] handleRevealHistoryFolder starting...');
-    await filesExporterHistoryApiService.revealHistoryFile();
+    try {
+      await filesExporterHistoryApiService.revealHistoryFile();
+      logInfo('[useExportConfiguration] handleRevealHistoryFolder completed');
+    } catch (err: any) {
+      logInfo('[useExportConfiguration] handleRevealHistoryFolder error:', [err?.message || err]);
+    }
   };
 
   const handleRevealDestination = async () => {
-    logInfo('[useExportConfiguration] handleRevealDestination starting...', store.config.dest);
-    await filesExporterApiService.openPathAtCursor(store.config.dest);
+    const formattedDest = store.config.dest || 'Default directory';
+    const absDest = PathMappingService.resolveToAbsolute(formattedDest, store.workspaceRoot);
+    logInfo('[useExportConfiguration] handleRevealDestination starting...', [absDest]);
+    await vsCodeApiService.revealInOsExplorer(absDest);
   };
 
   const handleOpenCursorLinePath = async () => {
@@ -216,11 +228,11 @@ export function useExportConfiguration() {
     ...store,
     addPathsToConfig,
     handleSelectProfile: async (id: string) => {
-      logInfo('[useExportConfiguration] handleSelectProfile starting...', id);
+      logInfo('[useExportConfiguration] handleSelectProfile starting...', [id]);
       await store.selectProfile(id);
     },
     handleFreezeToggle: async (id: string) => {
-      logInfo('[useExportConfiguration] handleFreezeToggle starting...', id);
+      logInfo('[useExportConfiguration] handleFreezeToggle starting...', [id]);
       await store.freezeToggle(id);
     },
     handleResetConfig: () => {
@@ -228,11 +240,11 @@ export function useExportConfiguration() {
       store.resetConfig();
     },
     handleRenameProfile: async (id: string, newName: string) => {
-      logInfo('[useExportConfiguration] handleRenameProfile starting...', { id, newName });
+      logInfo('[useExportConfiguration] handleRenameProfile starting...', [{ id, newName }]);
       await store.renameProfile(id, newName);
     },
     handleDuplicateProfile: async (id: string) => {
-      logInfo('[useExportConfiguration] handleDuplicateProfile starting...', id);
+      logInfo('[useExportConfiguration] handleDuplicateProfile starting...', [id]);
       await store.duplicateProfile(id);
     },
     handleAddProfile: async () => {
@@ -241,7 +253,10 @@ export function useExportConfiguration() {
     },
     handleClearHistory: async () => {
       logInfo('[useExportConfiguration] handleClearHistory starting...');
-      await store.clearHistoryWithMode('clear-all-hard');
+      if (store.selectedProfileId !== 'default') {
+        await store.clearHistoryWithMode('remove-selected-hard');
+        await store.selectProfile('default');
+      }
     },
     handleAddOpenFiles,
     handleAddGitDiffFiles,

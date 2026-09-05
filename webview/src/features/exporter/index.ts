@@ -1,5 +1,7 @@
 export * from './components/ExportConfigurationPanel';
 export * from './components/ExporterPanel';
+export * from './components/DeleteProfileDialog';
+export * from './components/SaveLockedProfileDialog';
 export * from './components/ValidationErrorDialog';
 export * from './ExporterFeature';
 export * from './layout-ctns/TopPanelContainer';
@@ -8,6 +10,8 @@ export * from './layout-ctns/CenterPanelContainer';
 export * from './store/useExporterStore';
 export * from './hooks/use-export-configuration';
 export * from './hooks/use-exporter-execution';
-export * from './utils/log-info';
+export * from './hooks/use-history-bar';
+export * from './utils/config-dirty-checker';
+export * from './utils/date-formatter';
 export * from './utils/path-resolver';
 export * from './utils/validator.service';

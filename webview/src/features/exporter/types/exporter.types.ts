@@ -7,6 +7,8 @@ export interface ExporterModalState {
   isConflictModalOpen: boolean;
   isGuardrailModalOpen: boolean;
   isValidationModalOpen?: boolean;
+  isDeleteModalOpen?: boolean;
+  isSaveLockedModalOpen?: boolean;
   validationErrors?: string[];
   conflictExtensions: string[];
   conflictSource: string;

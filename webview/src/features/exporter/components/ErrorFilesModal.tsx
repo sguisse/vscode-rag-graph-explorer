@@ -8,7 +8,7 @@ import { Copy, RefreshCw } from 'lucide-react';
 import { blastRadiusErrorFilesIdentificatorApiService } from '@/services/api/blast-radius-error-files-identificator-api.service.gen';
 import { BlastRadiusScope } from '@/shared/services/errors/types/type-blast-radius-scope.gen';
 import { useExporterStore } from '../store/useExporterStore';
-import { logInfo } from '../utils/log-info';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 export interface ErrorFilesModalProps {
   isOpen: boolean;
@@ -25,7 +25,7 @@ export function ErrorFilesModal({ isOpen, onClose, onAddPaths }: ErrorFilesModal
   const [results, setResults] = useState<string[]>([]);
 
   const handleAnalyze = async () => {
-    logInfo('[ErrorFilesModal] handleAnalyze handler triggered', { scope, includeOutWorkspace, contentLength: content.length });
+    logInfo('[ErrorFilesModal] handleAnalyze handler triggered', [{ scope, includeOutWorkspace, contentLength: content.length }]);
     if (!content.trim()) return;
     setAnalyzing(true);
     try {
@@ -38,21 +38,21 @@ export function ErrorFilesModal({ isOpen, onClose, onAddPaths }: ErrorFilesModal
       );
       setResults(found || []);
     } catch (err) {
-      console.error('[ErrorFilesModal] Error analyzing stack trace:', err);
+      // Handled silently
     } finally {
       setAnalyzing(false);
     }
   };
 
   const handleCopyResults = () => {
-    logInfo('[ErrorFilesModal] handleCopyResults handler triggered', { resultsCount: results.length });
+    logInfo('[ErrorFilesModal] handleCopyResults handler triggered', [{ resultsCount: results.length }]);
     if (results.length > 0) {
       navigator.clipboard.writeText(results.join('\n'));
     }
   };
 
   const handleConfirmAdd = () => {
-    logInfo('[ErrorFilesModal] handleConfirmAdd handler triggered', { resultsCount: results.length });
+    logInfo('[ErrorFilesModal] handleConfirmAdd handler triggered', [{ resultsCount: results.length }]);
     if (results.length > 0) {
       onAddPaths(results);
     }
@@ -78,7 +78,7 @@ export function ErrorFilesModal({ isOpen, onClose, onAddPaths }: ErrorFilesModal
             <div className="flex-1 space-y-1 min-w-[200px]">
               <label className="text-[10px] font-bold text-muted-foreground uppercase">Stack Engine Type</label>
               <Select value={scope} onValueChange={(val) => {
-                logInfo('[ErrorFilesModal] scope changed', val);
+                logInfo('[ErrorFilesModal] scope changed', [val]);
                 setScope(val as BlastRadiusScope);
               }}>
                 <SelectTrigger className="h-7 text-xs font-mono bg-background">
@@ -99,7 +99,7 @@ export function ErrorFilesModal({ isOpen, onClose, onAddPaths }: ErrorFilesModal
                 id="cb-out-workspace"
                 checked={includeOutWorkspace}
                 onCheckedChange={(val) => {
-                  logInfo('[ErrorFilesModal] includeOutWorkspace changed', Boolean(val));
+                  logInfo('[ErrorFilesModal] includeOutWorkspace changed', [Boolean(val)]);
                   setIncludeOutWorkspace(Boolean(val));
                 }}
               />

@@ -2,7 +2,7 @@ import React from 'react';
 import { PricingService } from '../../utils/pricing-calculator';
 import { Card } from '@/components/ui/card';
 import { ExportReportData } from '@/shared/services/file-exporter/model/file-exporter-model';
-import { logInfo } from '../../utils/log-info';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 interface ReportTabProps {
   reportData: ExportReportData | null;
@@ -29,12 +29,12 @@ export const ReportTab: React.FC<ReportTabProps> = ({
 
   const handleExtensionClick = (ext: string, e: React.MouseEvent) => {
     const mode = e.metaKey || e.ctrlKey ? 'exc' : 'inc';
-    logInfo('[ReportTab] handleExtensionClick handler triggered', { ext, mode });
+    logInfo('[ReportTab] handleExtensionClick handler triggered', [{ ext, mode }]);
     onAppendExtension(ext, mode);
   };
 
   const handleSetMaxFileSize = (kb: number) => {
-    logInfo('[ReportTab] handleSetMaxFileSize handler triggered', kb);
+    logInfo('[ReportTab] handleSetMaxFileSize handler triggered', [kb]);
     onSetMaxFileSize(kb);
   };
 

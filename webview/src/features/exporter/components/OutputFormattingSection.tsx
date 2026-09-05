@@ -6,7 +6,7 @@ import { EXPORT_FORMAT_ICON_MAP, EXPORT_FORMAT_LIST, ExportFormat } from '@/shar
 import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
 import { ExportConfig } from '@/shared/services/file-exporter/model/file-exporter-model';
 import { useExporterStore } from '../store/useExporterStore';
-import { logInfo } from '../utils/log-info';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 interface OutputFormattingSectionProps {
   config: ExportConfig;
@@ -55,7 +55,6 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
       className="w-full min-w-0 shrink-0"
     >
       <div className="flex flex-col space-y-3 w-full min-w-0 font-mono text-xs">
-        {/* Format & Chunk Controls */}
         <div className="gap-2.5 grid grid-cols-1 sm:grid-cols-2 w-full min-w-0">
           <div className="space-y-1 w-full min-w-0">
             <label className="block font-semibold text-[10px] text-muted-foreground truncate">
@@ -66,7 +65,7 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
               value={config.format}
               onChange={(val) => {
                 if (val) {
-                  logInfo('[OutputFormattingSection] Format changed', val);
+                  logInfo('[OutputFormattingSection] Format changed', [val]);
                   onChangeConfig((prev) => ({ ...prev, format: val as ExportFormat }));
                 }
               }}
@@ -86,7 +85,7 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
             <Input
               value={config.max_chunk}
               onChange={(e) => {
-                logInfo('[OutputFormattingSection] Max chunk changed', e.target.value);
+                logInfo('[OutputFormattingSection] Max chunk changed', [e.target.value]);
                 onChangeConfig((prev) => ({ ...prev, max_chunk: e.target.value }));
               }}
               className={`w-full h-7 font-mono text-xs ${
@@ -99,14 +98,13 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
           </div>
         </div>
 
-        {/* Responsive Checkbox Grid with Uniform Equal Width Items */}
         <div className="gap-2 grid grid-cols-[repeat(auto-fit,minmax(110px,1fr))] pt-2 border-border/40 border-t w-full min-w-0">
           <div className="flex justify-start items-center gap-2 bg-muted/20 hover:bg-muted/40 p-1.5 border border-border/30 rounded-sm w-full min-w-0 transition-colors">
             <Checkbox
               id="cb-split-ext"
               checked={config.groupByExt}
               onCheckedChange={(val) => {
-                logInfo('[OutputFormattingSection] groupByExt changed', Boolean(val));
+                logInfo('[OutputFormattingSection] groupByExt changed', [Boolean(val)]);
                 onChangeConfig((prev) => ({ ...prev, groupByExt: Boolean(val) }));
               }}
             />
@@ -120,7 +118,7 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
               id="cb-copy-clip"
               checked={config.copyGeneratedFilesToClipboard}
               onCheckedChange={(val) => {
-                logInfo('[OutputFormattingSection] copyGeneratedFilesToClipboard changed', Boolean(val));
+                logInfo('[OutputFormattingSection] copyGeneratedFilesToClipboard changed', [Boolean(val)]);
                 onChangeConfig((prev) => ({
                   ...prev,
                   copyGeneratedFilesToClipboard: Boolean(val),
@@ -137,7 +135,7 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
               id="cb-tree-view"
               checked={config.generateTreeView}
               onCheckedChange={(val) => {
-                logInfo('[OutputFormattingSection] generateTreeView changed', Boolean(val));
+                logInfo('[OutputFormattingSection] generateTreeView changed', [Boolean(val)]);
                 onChangeConfig((prev) => ({ ...prev, generateTreeView: Boolean(val) }));
               }}
             />
@@ -151,7 +149,7 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
               id="cb-log-console"
               checked={config.logConsole}
               onCheckedChange={(val) => {
-                logInfo('[OutputFormattingSection] logConsole changed', Boolean(val));
+                logInfo('[OutputFormattingSection] logConsole changed', [Boolean(val)]);
                 onChangeConfig((prev) => ({ ...prev, logConsole: Boolean(val) }));
               }}
             />
@@ -165,7 +163,7 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
               id="cb-log-file"
               checked={config.logFile}
               onCheckedChange={(val) => {
-                logInfo('[OutputFormattingSection] logFile changed', Boolean(val));
+                logInfo('[OutputFormattingSection] logFile changed', [Boolean(val)]);
                 onChangeConfig((prev) => ({ ...prev, logFile: Boolean(val) }));
               }}
             />
