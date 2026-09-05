@@ -3,6 +3,7 @@ import { useExporterStore } from '../store/useExporterStore';
 import { filesExporterHistoryApiService } from '@/services/api/files-exporter-history-api.service.gen';
 import { filesExporterApiService } from '@/services/api/files-exporter-api.service.gen';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
+import { fileSystemApiService } from '@/services/api/file-system-api.service.gen';
 import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
 import { logInfo } from '../utils/log-info';
 import { PathMappingService } from '../utils/path-resolver';
@@ -25,7 +26,6 @@ export function useExportConfiguration() {
     logInfo('[useExportConfiguration] Initializing exporter configuration hook...');
     store.fetchInitialState();
 
-    // Fetch repo name and log context
     vsCodeApiService.getRepoName().then((repo) => {
       logInfo('[useExportConfiguration] Active repository:', repo);
     }).catch(() => {});
@@ -50,6 +50,24 @@ export function useExportConfiguration() {
       unsubscribeUpdatePaths();
     };
   }, [store.workspaceRoot]);
+
+  // Perform path existence validation whenever source paths or workspace root changes
+  useEffect(() => {
+    const displayLines = store.config.src.split('\n').map((s) => s.trim()).filter(Boolean);
+    if (displayLines.length === 0) {
+      store.setInvalidPaths([]);
+      return;
+    }
+
+    const resolvedAbsPaths = displayLines.map((line) => PathMappingService.resolveToAbsolute(line, store.workspaceRoot));
+
+    fileSystemApiService
+      .getInvalidPaths(resolvedAbsPaths, store.workspaceRoot)
+      .then((invalid) => {
+        store.setInvalidPaths(invalid || []);
+      })
+      .catch(() => {});
+  }, [store.config.src, store.workspaceRoot]);
 
   useEffect(() => {
     const displayLines = store.config.src.split('\n').map((s) => s.trim()).filter(Boolean);

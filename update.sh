@@ -5,192 +5,155 @@ set -e
 BTICK=$(printf '\x60')
 TRIPLE_TICK=$(printf '\x60\x60\x60')
 
-echo "🚀 Fixing TypeScript BadgeObject type errors in SourcePathsSection.tsx..."
+echo "🚀 Updating DestinationSection badge to Amber with non-existing directory warning tooltip..."
 
 mkdir -p webview/src/features/exporter/components
 
-cat << 'EOF' > webview/src/features/exporter/components/SourcePathsSection.tsx
-import React from 'react';
-import { Textarea } from '@/components/ui/textarea';
+cat << 'EOF' > webview/src/features/exporter/components/DestinationSection.tsx
+import React, { useState, useEffect } from 'react';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { FileCode, GitCompare, Bug, ExternalLink, Trash2 } from 'lucide-react';
+import { Copy, FolderOpen, Trash2 } from 'lucide-react';
 import { CollapsibleCard, BadgeObject } from '@/components/ui/collapsible-card';
 import { useExporterStore } from '../store/useExporterStore';
 import { PathMappingService } from '../utils/path-resolver';
+import { fileSystemApiService } from '@/services/api/file-system-api.service.gen';
 import { logInfo } from '../utils/log-info';
 
-interface SourcePathsSectionProps {
-  pathsText: string;
+interface DestinationSectionProps {
+  destDir: string;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
-  onChangePathsText: (text: string) => void;
-  onAddOpenFiles: () => void;
-  onAddGitDiffFiles: () => void;
-  onAddErrorStackFiles: () => void;
-  onOpenCursorLinePath: () => void;
-  onClearPaths: () => void;
+  onChangeDestDir: (dir: string) => void;
+  onCopyLatestFiles: () => void;
+  onRevealDestDir: () => void;
+  onClearDestDir: () => void;
 }
 
-export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
-  pathsText,
-  isOpen = true,
+export const DestinationSection: React.FC<DestinationSectionProps> = ({
+  destDir,
+  isOpen,
   onOpenChange,
-  onChangePathsText,
-  onAddOpenFiles,
-  onAddGitDiffFiles,
-  onAddErrorStackFiles,
-  onOpenCursorLinePath,
-  onClearPaths,
+  onChangeDestDir,
+  onCopyLatestFiles,
+  onRevealDestDir,
+  onClearDestDir,
 }) => {
   const workspaceRoot = useExporterStore((s) => s.workspaceRoot);
-  const lines = pathsText.split('\n').map((l) => l.trim()).filter(Boolean);
+  const [destExists, setDestExists] = useState<boolean>(true);
 
-  const summaryBadges: BadgeObject[] = lines.flatMap((line) => {
-    const clean = line.replace(/^['"]|['"]$/g, '').trim();
-    if (!clean) return [];
+  const handleCopyLatestFiles = () => {
+    logInfo('[DestinationSection] onCopyLatestFiles handler triggered', destDir);
+    onCopyLatestFiles();
+  };
 
-    const absPath = PathMappingService.resolveToAbsolute(clean, workspaceRoot);
-    const normAbs = absPath.replace(/\\/g, '/');
-    const normWs = workspaceRoot ? workspaceRoot.replace(/\\/g, '/').replace(/\/+$/, '') : '';
+  const handleRevealDestDir = () => {
+    logInfo('[DestinationSection] onRevealDestDir handler triggered', destDir);
+    onRevealDestDir();
+  };
 
-    const isExternal = Boolean(normWs && !normAbs.startsWith(normWs));
-    const isFile = Boolean(clean.includes('.') && !clean.endsWith('/') && !clean.endsWith('\\'));
+  const handleClearDestDir = () => {
+    logInfo('[DestinationSection] onClearDestDir handler triggered', destDir);
+    onClearDestDir();
+  };
 
-    const parts = normAbs.split('/').filter(Boolean);
-    let displayLabel = clean;
-    if (parts.length >= 2) {
-      displayLabel = `${parts[parts.length - 2]}/${parts[parts.length - 1]}`;
-    } else if (parts.length === 1) {
-      displayLabel = parts[0];
+  const formattedDest = destDir || 'Default directory';
+  const absDest = PathMappingService.resolveToAbsolute(formattedDest, workspaceRoot);
+
+  useEffect(() => {
+    if (!absDest || !absDest.trim()) {
+      setDestExists(false);
+      return;
     }
 
-    const tooltip = isExternal
-      ? `External Path: ${absPath}`
-      : `Workspace Path: ${absPath}`;
+    fileSystemApiService
+      .getInvalidPaths([absDest], workspaceRoot)
+      .then((invalid) => {
+        const isInvalid = Boolean(invalid && invalid.length > 0);
+        setDestExists(!isInvalid);
+      })
+      .catch(() => {
+        setDestExists(true);
+      });
+  }, [absDest, workspaceRoot]);
 
-    let className = 'bg-primary/10 text-primary border-primary/20';
+  const normDest = absDest.replace(/\\/g, '/');
+  const normWs = workspaceRoot ? workspaceRoot.replace(/\\/g, '/').replace(/\/+$/, '') : '';
+  const isExternal = Boolean(normWs && !normDest.startsWith(normWs));
 
-    if (isExternal) {
-      className = 'bg-amber-500/10 text-amber-600 border-amber-500/30 font-semibold';
-    } else if (isFile) {
-      className = 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30 font-semibold';
-    }
+  let tooltip = formattedDest;
+  if (!destExists) {
+    tooltip = `⚠️ Warning because you have defined an non existing folder. <br> It will be created automatically`;
+  } else if (isExternal) {
+    tooltip = `⚠️ Warning: You reference a destination directory outside the current workspace: ${absDest}`;
+  }
 
-    return [{
-      label: displayLabel,
+  const isWarning = !destExists || isExternal;
+
+  const badgeClassName = isWarning
+    ? 'bg-amber-500/10 text-amber-600 border-amber-500/30 font-semibold [direction:rtl] text-left w-full min-w-0 truncate'
+    : 'bg-primary/10 text-primary border-primary/20 [direction:rtl] text-left w-full min-w-0 truncate';
+
+  const summaryBadges: BadgeObject[] = [
+    {
+      label: formattedDest,
       tooltip,
-      className,
-    }];
-  });
-
-  const totalPathsBadge = (
-    <span
-      className="bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold leading-none"
-      title={`${lines.length} total ${lines.length === 1 ? 'path' : 'paths'} selected`}
-    >
-      {lines.length} {lines.length === 1 ? 'path' : 'paths'}
-    </span>
-  );
-
-  const handleAddOpenFiles = () => {
-    logInfo('[SourcePathsSection] onAddOpenFiles handler triggered');
-    onAddOpenFiles();
-  };
-
-  const handleAddGitDiffFiles = () => {
-    logInfo('[SourcePathsSection] onAddGitDiffFiles handler triggered');
-    onAddGitDiffFiles();
-  };
-
-  const handleAddErrorStackFiles = () => {
-    logInfo('[SourcePathsSection] onAddErrorStackFiles handler triggered');
-    onAddErrorStackFiles();
-  };
-
-  const handleOpenCursorLinePath = () => {
-    logInfo('[SourcePathsSection] onOpenCursorLinePath handler triggered');
-    onOpenCursorLinePath();
-  };
-
-  const handleClearPaths = () => {
-    logInfo('[SourcePathsSection] onClearPaths handler triggered');
-    onClearPaths();
-  };
+      className: badgeClassName,
+    },
+  ];
 
   return (
     <CollapsibleCard
-      id="block-sourcepaths"
-      title="📁 Source Paths"
-      tooltip="Absolute directory or single files locations targeted for aggregation and token estimation context."
+      id="block-destination"
+      title="💾 Destination Directory"
+      tooltip="Absolute distribution path folder location where structured files will be generated."
       summaryBadges={summaryBadges}
-      headerRight={totalPathsBadge}
       defaultOpen={true}
       isOpen={isOpen}
       onOpenChange={onOpenChange}
       className="w-full min-w-0 shrink-0"
     >
-      <div className="flex items-start gap-2 font-mono text-xs">
-        <Textarea
-          value={pathsText}
-          onChange={(e) => onChangePathsText(e.target.value)}
-          placeholder="Enter source directories, files, or Java package.ClassName (one per line)..."
-          rows={6}
-          className="flex-1 bg-background h-[138px] font-mono text-xs resize-y"
+      <div className="flex gap-1.5 items-center font-mono text-xs">
+        <Input
+          value={destDir}
+          onChange={(e) => onChangeDestDir(e.target.value)}
+          placeholder="/absolute/path/to/exported-files"
+          className="h-7 text-xs font-mono flex-1 bg-background"
         />
 
-        <div className="flex flex-col gap-1 shrink-0">
-          <Button
-            size="icon-xs"
-            variant="outline"
-            onClick={handleAddOpenFiles}
-            title="Add Currently Open Editor Files"
-          >
-            <FileCode size={13} />
-          </Button>
+        <Button
+          size="icon-xs"
+          variant="outline"
+          onClick={handleCopyLatestFiles}
+          title="Copy Last Exported Files to Clipboard"
+        >
+          <Copy size={13} />
+        </Button>
 
-          <Button
-            size="icon-xs"
-            variant="outline"
-            onClick={handleAddGitDiffFiles}
-            title="Add Modified Files from Git Diff"
-          >
-            <GitCompare size={13} />
-          </Button>
+        <Button
+          size="icon-xs"
+          variant="outline"
+          onClick={handleRevealDestDir}
+          title="Reveal Folder in OS Explorer"
+        >
+          <FolderOpen size={13} />
+        </Button>
 
-          <Button
-            size="icon-xs"
-            variant="outline"
-            onClick={handleAddErrorStackFiles}
-            title="Extract References from Crash Stack Trace"
-          >
-            <Bug size={13} />
-          </Button>
-
-          <Button
-            size="icon-xs"
-            variant="outline"
-            onClick={handleOpenCursorLinePath}
-            title="Open Target Path at Cursor Line"
-          >
-            <ExternalLink size={13} />
-          </Button>
-
-          <Button
-            size="icon-xs"
-            variant="outline"
-            onClick={handleClearPaths}
-            title="Clear Source Paths"
-            className="hover:text-destructive"
-          >
-            <Trash2 size={13} />
-          </Button>
-        </div>
+        <Button
+          size="icon-xs"
+          variant="outline"
+          onClick={handleClearDestDir}
+          title="Clean Destination Folder Contents"
+          className="hover:text-destructive"
+        >
+          <Trash2 size={13} />
+        </Button>
       </div>
     </CollapsibleCard>
   );
 };
 
-export default SourcePathsSection;
+export default DestinationSection;
 EOF
 
-echo "✅ fix(exporter): 🐛 resolve TypeScript BadgeObject mapping error in SourcePathsSection using flatMap!"
+echo "✅ feat(exporter): 🎨 updated DestinationSection badge to Amber with non-existing directory warning tooltip!"

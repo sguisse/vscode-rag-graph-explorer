@@ -1,7 +1,7 @@
 import React from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { FileCode, GitCompare, Bug, ExternalLink, Trash2 } from 'lucide-react';
+import { FileCode, GitCompare, Bug, ExternalLink, Trash2, X } from 'lucide-react';
 import { CollapsibleCard, BadgeObject } from '@/components/ui/collapsible-card';
 import { useExporterStore } from '../store/useExporterStore';
 import { PathMappingService } from '../utils/path-resolver';
@@ -31,7 +31,15 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
   onClearPaths,
 }) => {
   const workspaceRoot = useExporterStore((s) => s.workspaceRoot);
+  const invalidPaths = useExporterStore((s) => s.invalidPaths);
+
   const lines = pathsText.split('\n').map((l) => l.trim()).filter(Boolean);
+
+  const handleRemovePath = (lineToRemove: string) => {
+    logInfo('[SourcePathsSection] handleRemovePath triggered', lineToRemove);
+    const newLines = lines.filter((l) => l !== lineToRemove);
+    onChangePathsText(newLines.join('\n'));
+  };
 
   const summaryBadges: BadgeObject[] = lines.flatMap((line) => {
     const clean = line.replace(/^['"]|['"]$/g, '').trim();
@@ -44,31 +52,102 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
     const isExternal = Boolean(normWs && !normAbs.startsWith(normWs));
     const isFile = Boolean(clean.includes('.') && !clean.endsWith('/') && !clean.endsWith('\\'));
 
+    // Check path invalidity against backend-reported invalidPaths
+    const isInvalid = invalidPaths.some(
+      (inv) =>
+        inv === clean ||
+        inv === absPath ||
+        inv.replace(/\\/g, '/') === normAbs ||
+        inv.toLowerCase() === clean.toLowerCase()
+    );
+
     const parts = normAbs.split('/').filter(Boolean);
-    let displayLabel = clean;
+    let folderPart = '';
+    let filePart = clean;
+
     if (parts.length >= 2) {
-      displayLabel = `${parts[parts.length - 2]}/${parts[parts.length - 1]}`;
+      folderPart = `${parts[parts.length - 2]}/`;
+      filePart = parts[parts.length - 1];
     } else if (parts.length === 1) {
-      displayLabel = parts[0];
+      filePart = parts[0];
     }
 
-    const tooltip = isExternal
-      ? `External Path: ${absPath}`
-      : `Workspace Path: ${absPath}`;
+    const fullDisplay = `${folderPart}${filePart}`;
 
-    let className = 'bg-primary/10 text-primary border-primary/20';
+    // 1. Non-existing path -> Destructive color (red) with removal cross icon
+    if (isInvalid) {
+      return [
+        {
+          label: (
+            <div className="flex items-center gap-1 min-w-0 max-w-full">
+              <span className="[direction:rtl] text-left truncate min-w-0 flex-1">
+                {fullDisplay}
+              </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRemovePath(line);
+                }}
+                className="hover:bg-destructive/20 rounded p-0.5 shrink-0 transition-colors cursor-pointer"
+                title="Remove invalid path from list"
+              >
+                <X size={11} />
+              </button>
+            </div>
+          ),
+          tooltip: `Invalid Path (Does not exist on disk): ${absPath}`,
+          className:
+            'bg-destructive/10 text-destructive border-destructive/30 font-semibold max-w-[280px] sm:max-w-[1000px] min-w-0',
+        },
+      ];
+    }
 
+    // 2. External workspace existing path -> Amber color
     if (isExternal) {
-      className = 'bg-amber-500/10 text-amber-600 border-amber-500/30 font-semibold';
-    } else if (isFile) {
-      className = 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30 font-semibold';
+      return [
+        {
+          label: (
+            <span className="[direction:rtl] text-left truncate block min-w-0">
+              {fullDisplay}
+            </span>
+          ),
+          tooltip: `External Path: ${absPath}`,
+          className:
+            'bg-amber-500/10 text-amber-600 border-amber-500/30 font-semibold max-w-[280px] sm:max-w-[1000px] min-w-0',
+        },
+      ];
     }
 
-    return [{
-      label: displayLabel,
-      tooltip,
-      className,
-    }];
+    // 3. Workspace existing path ending with filename -> Full Emerald (bg, fg, border)
+    if (isFile) {
+      return [
+        {
+          label: (
+            <span className="[direction:rtl] text-left truncate block min-w-0">
+              {fullDisplay}
+            </span>
+          ),
+          tooltip: `Workspace File: ${absPath}`,
+          className:
+            'bg-emerald-500/10 text-emerald-600 border-emerald-500/30 font-semibold max-w-[280px] sm:max-w-[1000px] min-w-0',
+        },
+      ];
+    }
+
+    // 4. Workspace existing folder -> Common Blue color
+    return [
+      {
+        label: (
+          <span className="[direction:rtl] text-left truncate block min-w-0">
+            {fullDisplay}
+          </span>
+        ),
+        tooltip: `Workspace Folder: ${absPath}`,
+        className:
+          'bg-primary/10 text-primary border-primary/20 font-semibold max-w-[280px] sm:max-w-[1000px] min-w-0',
+      },
+    ];
   });
 
   const totalPathsBadge = (

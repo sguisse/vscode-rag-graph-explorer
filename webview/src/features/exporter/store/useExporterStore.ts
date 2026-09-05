@@ -46,6 +46,7 @@ export interface ExporterStoreState {
   clearTerminalLogs: () => void;
   setCompiledBashCmd: (cmd: string) => void;
   setReportData: (data: ExportReportData | null) => void;
+  setInvalidPaths: (invalidPaths: string[]) => void;
   setModalState: (updater: Partial<ExporterModalState> | ((prev: ExporterModalState) => ExporterModalState)) => void;
   setValidationState: (updater: Partial<FieldValidationState> | ((prev: FieldValidationState) => FieldValidationState)) => void;
 
@@ -112,6 +113,7 @@ export const useExporterStore = create<ExporterStoreState>((set, get) => ({
   clearTerminalLogs: () => set({ terminalLogs: '' }),
   setCompiledBashCmd: (compiledBashCmd) => set({ compiledBashCmd }),
   setReportData: (reportData) => set({ reportData }),
+  setInvalidPaths: (invalidPaths) => set({ invalidPaths }),
 
   setModalState: (updater) =>
     set((state) => ({

@@ -182,8 +182,8 @@
   --success: var(--green-0);
   --success-foreground: var(--green-7);
 
-  --destructive: var(--red-0);
-  --destructive-foreground: var(--red-6);
+  --destructive: var(--red-6);
+  --destructive-foreground: var(--red-0);
 
   --warning: var(--yellow-0);
   --warning-foreground: var(--yellow-7);
