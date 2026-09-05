@@ -6,6 +6,8 @@ export interface BadgeObject {
   label: React.ReactNode;
   tooltip?: string;
   className?: string;
+  onClick?: (e: React.MouseEvent) => void;
+  onDoubleClick?: (e: React.MouseEvent) => void;
 }
 
 export interface CollapsibleCardProps {
@@ -100,8 +102,20 @@ export const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
             {badgeItems.map((badge, idx) => (
               <span
                 key={idx}
+                onClick={(e) => {
+                  if (badge.onClick) {
+                    e.stopPropagation();
+                    badge.onClick(e);
+                  }
+                }}
+                onDoubleClick={(e) => {
+                  if (badge.onDoubleClick) {
+                    e.stopPropagation();
+                    badge.onDoubleClick(e);
+                  }
+                }}
                 className={cn(
-                  'px-1.5 py-0.5 rounded text-[10px] font-mono leading-none shadow-2xs min-w-0 truncate shrink border',
+                  'px-1.5 py-0.5 rounded text-[10px] font-mono leading-none shadow-2xs min-w-0 truncate shrink border cursor-pointer hover:opacity-85 active:scale-[0.98] transition-all',
                   badge.className || 'bg-primary/10 text-primary border-primary/20'
                 )}
                 title={badge.tooltip || (typeof badge.label === 'string' ? badge.label : undefined)}

@@ -5,6 +5,7 @@ import { FileCode, GitCompare, Bug, ExternalLink, Trash2, X } from 'lucide-react
 import { CollapsibleCard, BadgeObject } from '@/components/ui/collapsible-card';
 import { useExporterStore } from '../store/useExporterStore';
 import { PathMappingService } from '../utils/path-resolver';
+import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { logInfo } from '../utils/log-info';
 
 interface SourcePathsSectionProps {
@@ -52,7 +53,6 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
     const isExternal = Boolean(normWs && !normAbs.startsWith(normWs));
     const isFile = Boolean(clean.includes('.') && !clean.endsWith('/') && !clean.endsWith('\\'));
 
-    // Check path invalidity against backend-reported invalidPaths
     const isInvalid = invalidPaths.some(
       (inv) =>
         inv === clean ||
@@ -73,6 +73,22 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
     }
 
     const fullDisplay = `${folderPart}${filePart}`;
+
+    const onClick = () => {
+      logInfo('[SourcePathsSection] Single click on badge -> revealInExplorer', absPath);
+      vsCodeApiService.revealInExplorer(absPath);
+    };
+
+    const onDoubleClick = () => {
+      if (isFile) {
+        logInfo('[SourcePathsSection] Double click on file badge -> openFile', absPath);
+        vsCodeApiService.openFile(absPath);
+      }
+    };
+
+    const actionTooltip = isFile
+      ? 'Single-click to reveal in Explorer, Double-click to open file in editor'
+      : 'Single-click to reveal folder in Explorer';
 
     // 1. Non-existing path -> Destructive color (red) with removal cross icon
     if (isInvalid) {
@@ -115,6 +131,8 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
           tooltip: `External Path: ${absPath}`,
           className:
             'bg-amber-500/10 text-amber-600 border-amber-500/30 font-semibold max-w-[280px] sm:max-w-[1000px] min-w-0',
+        onClick,
+        onDoubleClick,
         },
       ];
     }
@@ -128,9 +146,11 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
               {fullDisplay}
             </span>
           ),
-          tooltip: `Workspace File: ${absPath}`,
+          tooltip: `Workspace File: ${absPath}<br/>(${actionTooltip})`,
           className:
             'bg-emerald-500/10 text-emerald-600 border-emerald-500/30 font-semibold max-w-[280px] sm:max-w-[1000px] min-w-0',
+        onClick,
+        onDoubleClick,
         },
       ];
     }
@@ -143,9 +163,11 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
             {fullDisplay}
           </span>
         ),
-        tooltip: `Workspace Folder: ${absPath}`,
+        tooltip: `Workspace Folder: ${absPath}<br/>(${actionTooltip})`,
         className:
           'bg-primary/10 text-primary border-primary/20 font-semibold max-w-[280px] sm:max-w-[1000px] min-w-0',
+        onClick,
+        onDoubleClick,
       },
     ];
   });

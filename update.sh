@@ -5,155 +5,436 @@ set -e
 BTICK=$(printf '\x60')
 TRIPLE_TICK=$(printf '\x60\x60\x60')
 
-echo "🚀 Updating DestinationSection badge to Amber with non-existing directory warning tooltip..."
+echo "🚀 Wiring single-click (reveal in Explorer) and double-click (open file in VS Code) for path badges..."
 
+mkdir -p webview/src/components/ui
 mkdir -p webview/src/features/exporter/components
 
-cat << 'EOF' > webview/src/features/exporter/components/DestinationSection.tsx
-import React, { useState, useEffect } from 'react';
-import { Input } from '@/components/ui/input';
+# 1. Update CollapsibleCard.tsx to support onClick and onDoubleClick event handlers on BadgeObject
+cat << 'EOF' > webview/src/components/ui/collapsible-card.tsx
+import React, { useState } from 'react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+export interface BadgeObject {
+  label: React.ReactNode;
+  tooltip?: string;
+  className?: string;
+  onClick?: (e: React.MouseEvent) => void;
+  onDoubleClick?: (e: React.MouseEvent) => void;
+}
+
+export interface CollapsibleCardProps {
+  id?: string;
+  title: React.ReactNode;
+  tooltip?: string;
+  summaryText?: string;
+  summaryBadges?: (string | BadgeObject)[];
+  defaultOpen?: boolean;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  className?: string;
+  children: React.ReactNode;
+  headerRight?: React.ReactNode;
+}
+
+export const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
+  id,
+  title,
+  tooltip,
+  summaryText,
+  summaryBadges,
+  defaultOpen = true,
+  isOpen: controlledIsOpen,
+  onOpenChange,
+  className,
+  children,
+  headerRight,
+}) => {
+  const [internalIsOpen, setInternalIsOpen] = useState(defaultOpen);
+  const isControlled = controlledIsOpen !== undefined;
+  const open = isControlled ? controlledIsOpen : internalIsOpen;
+
+  const handleToggle = () => {
+    const nextOpen = !open;
+    if (!isControlled) {
+      setInternalIsOpen(nextOpen);
+    }
+    if (onOpenChange) {
+      onOpenChange(nextOpen);
+    }
+  };
+
+  const rawBadges =
+    summaryBadges ||
+    (summaryText
+      ? summaryText
+          .split('|')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : []);
+
+  const badgeItems: BadgeObject[] = rawBadges.map((item) =>
+    typeof item === 'string' ? { label: item, tooltip: item } : item
+  );
+
+  return (
+    <div
+      id={id}
+      className={cn(
+        'bg-card border border-border/60 rounded-md w-full min-w-0 transition-all duration-150',
+        className
+      )}
+    >
+      {/* Card Header */}
+      <div
+        onClick={handleToggle}
+        title={tooltip}
+        className={cn(
+          'flex flex-col border-border/40 cursor-pointer select-none font-mono text-xs',
+          open ? 'py-1 px-2 border-b' : 'p-1'
+        )}
+      >
+        <div className="flex items-center justify-between gap-2 w-full min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0 shrink-0">
+            <span className="text-primary shrink-0">
+              {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+            </span>
+            <span className="font-bold text-foreground text-xs shrink-0">{title}</span>
+          </div>
+
+          {headerRight && (
+            <div className="shrink-0 flex items-center gap-1 ml-auto" onClick={(e) => e.stopPropagation()}>
+              {headerRight}
+            </div>
+          )}
+        </div>
+
+        {/* Collapsed Mode: Badges on a new line aligned to the left */}
+        {!open && badgeItems.length > 0 && (
+          <div className="flex flex-wrap items-center justify-start gap-1.5 w-full min-w-0 mt-1 pt-0.5">
+            {badgeItems.map((badge, idx) => (
+              <span
+                key={idx}
+                onClick={(e) => {
+                  if (badge.onClick) {
+                    e.stopPropagation();
+                    badge.onClick(e);
+                  }
+                }}
+                onDoubleClick={(e) => {
+                  if (badge.onDoubleClick) {
+                    e.stopPropagation();
+                    badge.onDoubleClick(e);
+                  }
+                }}
+                className={cn(
+                  'px-1.5 py-0.5 rounded text-[10px] font-mono leading-none shadow-2xs min-w-0 truncate shrink border cursor-pointer hover:opacity-85 active:scale-[0.98] transition-all',
+                  badge.className || 'bg-primary/10 text-primary border-primary/20'
+                )}
+                title={badge.tooltip || (typeof badge.label === 'string' ? badge.label : undefined)}
+                data-tooltip={badge.tooltip || (typeof badge.label === 'string' ? badge.label : undefined)}
+              >
+                {badge.label}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Card Content */}
+      {open && <div className="p-2 w-full min-w-0">{children}</div>}
+    </div>
+  );
+};
+
+export default CollapsibleCard;
+EOF
+
+# 2. Update SourcePathsSection.tsx to attach revealInExplorer on click and openFile on double-click
+cat << 'EOF' > webview/src/features/exporter/components/SourcePathsSection.tsx
+import React from 'react';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Copy, FolderOpen, Trash2 } from 'lucide-react';
+import { FileCode, GitCompare, Bug, ExternalLink, Trash2, X } from 'lucide-react';
 import { CollapsibleCard, BadgeObject } from '@/components/ui/collapsible-card';
 import { useExporterStore } from '../store/useExporterStore';
 import { PathMappingService } from '../utils/path-resolver';
-import { fileSystemApiService } from '@/services/api/file-system-api.service.gen';
+import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { logInfo } from '../utils/log-info';
 
-interface DestinationSectionProps {
-  destDir: string;
+interface SourcePathsSectionProps {
+  pathsText: string;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
-  onChangeDestDir: (dir: string) => void;
-  onCopyLatestFiles: () => void;
-  onRevealDestDir: () => void;
-  onClearDestDir: () => void;
+  onChangePathsText: (text: string) => void;
+  onAddOpenFiles: () => void;
+  onAddGitDiffFiles: () => void;
+  onAddErrorStackFiles: () => void;
+  onOpenCursorLinePath: () => void;
+  onClearPaths: () => void;
 }
 
-export const DestinationSection: React.FC<DestinationSectionProps> = ({
-  destDir,
-  isOpen,
+export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
+  pathsText,
+  isOpen = true,
   onOpenChange,
-  onChangeDestDir,
-  onCopyLatestFiles,
-  onRevealDestDir,
-  onClearDestDir,
+  onChangePathsText,
+  onAddOpenFiles,
+  onAddGitDiffFiles,
+  onAddErrorStackFiles,
+  onOpenCursorLinePath,
+  onClearPaths,
 }) => {
   const workspaceRoot = useExporterStore((s) => s.workspaceRoot);
-  const [destExists, setDestExists] = useState<boolean>(true);
+  const invalidPaths = useExporterStore((s) => s.invalidPaths);
 
-  const handleCopyLatestFiles = () => {
-    logInfo('[DestinationSection] onCopyLatestFiles handler triggered', destDir);
-    onCopyLatestFiles();
+  const lines = pathsText.split('\n').map((l) => l.trim()).filter(Boolean);
+
+  const handleRemovePath = (lineToRemove: string) => {
+    logInfo('[SourcePathsSection] handleRemovePath triggered', lineToRemove);
+    const newLines = lines.filter((l) => l !== lineToRemove);
+    onChangePathsText(newLines.join('\n'));
   };
 
-  const handleRevealDestDir = () => {
-    logInfo('[DestinationSection] onRevealDestDir handler triggered', destDir);
-    onRevealDestDir();
-  };
+  const summaryBadges: BadgeObject[] = lines.flatMap((line) => {
+    const clean = line.replace(/^['"]|['"]$/g, '').trim();
+    if (!clean) return [];
 
-  const handleClearDestDir = () => {
-    logInfo('[DestinationSection] onClearDestDir handler triggered', destDir);
-    onClearDestDir();
-  };
+    const absPath = PathMappingService.resolveToAbsolute(clean, workspaceRoot);
+    const normAbs = absPath.replace(/\\/g, '/');
+    const normWs = workspaceRoot ? workspaceRoot.replace(/\\/g, '/').replace(/\/+$/, '') : '';
 
-  const formattedDest = destDir || 'Default directory';
-  const absDest = PathMappingService.resolveToAbsolute(formattedDest, workspaceRoot);
+    const isExternal = Boolean(normWs && !normAbs.startsWith(normWs));
+    const isFile = Boolean(clean.includes('.') && !clean.endsWith('/') && !clean.endsWith('\\'));
 
-  useEffect(() => {
-    if (!absDest || !absDest.trim()) {
-      setDestExists(false);
-      return;
+    const isInvalid = invalidPaths.some(
+      (inv) =>
+        inv === clean ||
+        inv === absPath ||
+        inv.replace(/\\/g, '/') === normAbs ||
+        inv.toLowerCase() === clean.toLowerCase()
+    );
+
+    const parts = normAbs.split('/').filter(Boolean);
+    let folderPart = '';
+    let filePart = clean;
+
+    if (parts.length >= 2) {
+      folderPart = `${parts[parts.length - 2]}/`;
+      filePart = parts[parts.length - 1];
+    } else if (parts.length === 1) {
+      filePart = parts[0];
     }
 
-    fileSystemApiService
-      .getInvalidPaths([absDest], workspaceRoot)
-      .then((invalid) => {
-        const isInvalid = Boolean(invalid && invalid.length > 0);
-        setDestExists(!isInvalid);
-      })
-      .catch(() => {
-        setDestExists(true);
-      });
-  }, [absDest, workspaceRoot]);
+    const fullDisplay = `${folderPart}${filePart}`;
 
-  const normDest = absDest.replace(/\\/g, '/');
-  const normWs = workspaceRoot ? workspaceRoot.replace(/\\/g, '/').replace(/\/+$/, '') : '';
-  const isExternal = Boolean(normWs && !normDest.startsWith(normWs));
+    const onClick = () => {
+      logInfo('[SourcePathsSection] Single click on badge -> revealInExplorer', absPath);
+      vsCodeApiService.revealInExplorer(absPath);
+    };
 
-  let tooltip = formattedDest;
-  if (!destExists) {
-    tooltip = `⚠️ Warning because you have defined an non existing folder. <br> It will be created automatically`;
-  } else if (isExternal) {
-    tooltip = `⚠️ Warning: You reference a destination directory outside the current workspace: ${absDest}`;
-  }
+    const onDoubleClick = () => {
+      if (isFile) {
+        logInfo('[SourcePathsSection] Double click on file badge -> openFile', absPath);
+        vsCodeApiService.openFile(absPath);
+      }
+    };
 
-  const isWarning = !destExists || isExternal;
+    const actionTooltip = isFile
+      ? 'Single-click to reveal in Explorer, Double-click to open file in editor'
+      : 'Single-click to reveal folder in Explorer';
 
-  const badgeClassName = isWarning
-    ? 'bg-amber-500/10 text-amber-600 border-amber-500/30 font-semibold [direction:rtl] text-left w-full min-w-0 truncate'
-    : 'bg-primary/10 text-primary border-primary/20 [direction:rtl] text-left w-full min-w-0 truncate';
+    // 1. Non-existing path -> Destructive color (red) with removal cross icon
+    if (isInvalid) {
+      return [
+        {
+          label: (
+            <div className="flex items-center gap-1 min-w-0 max-w-full">
+              <span className="[direction:rtl] text-left truncate min-w-0 flex-1">
+                {fullDisplay}
+              </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRemovePath(line);
+                }}
+                className="hover:bg-destructive/20 rounded p-0.5 shrink-0 transition-colors cursor-pointer"
+                title="Remove invalid path from list"
+              >
+                <X size={11} />
+              </button>
+            </div>
+          ),
+          tooltip: `Invalid Path (Does not exist on disk): ${absPath}`,
+          className:
+            'bg-destructive/10 text-destructive border-destructive/30 font-semibold max-w-[280px] sm:max-w-[360px] min-w-0',
+        },
+      ];
+    }
 
-  const summaryBadges: BadgeObject[] = [
-    {
-      label: formattedDest,
-      tooltip,
-      className: badgeClassName,
-    },
-  ];
+    // 2. External workspace existing path -> Amber color
+    if (isExternal) {
+      return [
+        {
+          label: (
+            <span className="[direction:rtl] text-left truncate block min-w-0">
+              {fullDisplay}
+            </span>
+          ),
+          tooltip: `External Path: ${absPath}\n(${actionTooltip})`,
+          className:
+            'bg-amber-500/10 text-amber-600 border-amber-500/30 font-semibold max-w-[280px] sm:max-w-[360px] min-w-0',
+          onClick,
+          onDoubleClick,
+        },
+      ];
+    }
+
+    // 3. Workspace existing path ending with filename -> Full Emerald (bg, fg, border)
+    if (isFile) {
+      return [
+        {
+          label: (
+            <span className="[direction:rtl] text-left truncate block min-w-0">
+              {fullDisplay}
+            </span>
+          ),
+          tooltip: `Workspace File: ${absPath}\n(${actionTooltip})`,
+          className:
+            'bg-emerald-500/10 text-emerald-600 border-emerald-500/30 font-semibold max-w-[280px] sm:max-w-[360px] min-w-0',
+          onClick,
+          onDoubleClick,
+        },
+      ];
+    }
+
+    // 4. Workspace existing folder -> Common Blue color
+    return [
+      {
+        label: (
+          <span className="[direction:rtl] text-left truncate block min-w-0">
+            {fullDisplay}
+          </span>
+        ),
+        tooltip: `Workspace Folder: ${absPath}\n(${actionTooltip})`,
+        className:
+          'bg-primary/10 text-primary border-primary/20 font-semibold max-w-[280px] sm:max-w-[360px] min-w-0',
+        onClick,
+        onDoubleClick,
+      },
+    ];
+  });
+
+  const totalPathsBadge = (
+    <span
+      className="bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold leading-none"
+      title={`${lines.length} total ${lines.length === 1 ? 'path' : 'paths'} selected`}
+    >
+      {lines.length} {lines.length === 1 ? 'path' : 'paths'}
+    </span>
+  );
+
+  const handleAddOpenFiles = () => {
+    logInfo('[SourcePathsSection] onAddOpenFiles handler triggered');
+    onAddOpenFiles();
+  };
+
+  const handleAddGitDiffFiles = () => {
+    logInfo('[SourcePathsSection] onAddGitDiffFiles handler triggered');
+    onAddGitDiffFiles();
+  };
+
+  const handleAddErrorStackFiles = () => {
+    logInfo('[SourcePathsSection] onAddErrorStackFiles handler triggered');
+    onAddErrorStackFiles();
+  };
+
+  const handleOpenCursorLinePath = () => {
+    logInfo('[SourcePathsSection] onOpenCursorLinePath handler triggered');
+    onOpenCursorLinePath();
+  };
+
+  const handleClearPaths = () => {
+    logInfo('[SourcePathsSection] onClearPaths handler triggered');
+    onClearPaths();
+  };
 
   return (
     <CollapsibleCard
-      id="block-destination"
-      title="💾 Destination Directory"
-      tooltip="Absolute distribution path folder location where structured files will be generated."
+      id="block-sourcepaths"
+      title="📁 Source Paths"
+      tooltip="Absolute directory or single files locations targeted for aggregation and token estimation context."
       summaryBadges={summaryBadges}
+      headerRight={totalPathsBadge}
       defaultOpen={true}
       isOpen={isOpen}
       onOpenChange={onOpenChange}
       className="w-full min-w-0 shrink-0"
     >
-      <div className="flex gap-1.5 items-center font-mono text-xs">
-        <Input
-          value={destDir}
-          onChange={(e) => onChangeDestDir(e.target.value)}
-          placeholder="/absolute/path/to/exported-files"
-          className="h-7 text-xs font-mono flex-1 bg-background"
+      <div className="flex items-start gap-2 font-mono text-xs">
+        <Textarea
+          value={pathsText}
+          onChange={(e) => onChangePathsText(e.target.value)}
+          placeholder="Enter source directories, files, or Java package.ClassName (one per line)..."
+          rows={6}
+          className="flex-1 bg-background h-[138px] font-mono text-xs resize-y"
         />
 
-        <Button
-          size="icon-xs"
-          variant="outline"
-          onClick={handleCopyLatestFiles}
-          title="Copy Last Exported Files to Clipboard"
-        >
-          <Copy size={13} />
-        </Button>
+        <div className="flex flex-col gap-1 shrink-0">
+          <Button
+            size="icon-xs"
+            variant="outline"
+            onClick={handleAddOpenFiles}
+            title="Add Currently Open Editor Files"
+          >
+            <FileCode size={13} />
+          </Button>
 
-        <Button
-          size="icon-xs"
-          variant="outline"
-          onClick={handleRevealDestDir}
-          title="Reveal Folder in OS Explorer"
-        >
-          <FolderOpen size={13} />
-        </Button>
+          <Button
+            size="icon-xs"
+            variant="outline"
+            onClick={handleAddGitDiffFiles}
+            title="Add Modified Files from Git Diff"
+          >
+            <GitCompare size={13} />
+          </Button>
 
-        <Button
-          size="icon-xs"
-          variant="outline"
-          onClick={handleClearDestDir}
-          title="Clean Destination Folder Contents"
-          className="hover:text-destructive"
-        >
-          <Trash2 size={13} />
-        </Button>
+          <Button
+            size="icon-xs"
+            variant="outline"
+            onClick={handleAddErrorStackFiles}
+            title="Extract References from Crash Stack Trace"
+          >
+            <Bug size={13} />
+          </Button>
+
+          <Button
+            size="icon-xs"
+            variant="outline"
+            onClick={handleOpenCursorLinePath}
+            title="Open Target Path at Cursor Line"
+          >
+            <ExternalLink size={13} />
+          </Button>
+
+          <Button
+            size="icon-xs"
+            variant="outline"
+            onClick={handleClearPaths}
+            title="Clear Source Paths"
+            className="hover:text-destructive"
+          >
+            <Trash2 size={13} />
+          </Button>
+        </div>
       </div>
     </CollapsibleCard>
   );
 };
 
-export default DestinationSection;
+export default SourcePathsSection;
 EOF
 
-echo "✅ feat(exporter): 🎨 updated DestinationSection badge to Amber with non-existing directory warning tooltip!"
+echo "✅ feat(exporter): 🔍 path badges single-click now triggers revealInExplorer and double-click opens files in VS Code!"
