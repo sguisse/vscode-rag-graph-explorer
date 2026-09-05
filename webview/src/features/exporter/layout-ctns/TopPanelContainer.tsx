@@ -20,7 +20,7 @@ export const TopPanelContainer: React.FC = () => {
 
   return (
     <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden">
-      <ContainerPanelHeader title="Configuration History" path="workspace.top" />
+      <ContainerPanelHeader title="🕒 Configuration History" path="workspace.top" />
       <div className="flex-1 min-h-0 overflow-y-auto p-1">
         <HistoryBar
           historyList={historyList}

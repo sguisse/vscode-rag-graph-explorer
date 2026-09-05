@@ -91,7 +91,7 @@ export const ReportTab: React.FC<ReportTabProps> = ({
                     <span
                       onClick={(e) => handleExtensionClick(ext, e)}
                       className="hover:opacity-80 text-primary underline cursor-pointer"
-                      title="Click to Include, Cmd/Ctrl+Click to Exclude"
+                      data-tooltip="Click to Include, Cmd/Ctrl+Click to Exclude"
                     >
                       {ext === 'no_ext' ? 'No Extension' : ext}
                     </span>
@@ -106,7 +106,7 @@ export const ReportTab: React.FC<ReportTabProps> = ({
                           )
                         }
                         className="underline cursor-pointer"
-                        title="Click to update Max File Size"
+                        data-tooltip="Click to update Max File Size"
                       >
                         {m.size_rejected.count} ({m.size_rejected.min} - {m.size_rejected.max})
                       </span>

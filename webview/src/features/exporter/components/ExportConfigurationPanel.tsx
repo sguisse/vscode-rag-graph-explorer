@@ -63,8 +63,7 @@ export const ExportConfigurationPanel: React.FC = () => {
   const topToolbar = (
     <div className="flex justify-between items-center px-2 py-1 bg-muted/20 border-b border-border/50 font-mono text-xs w-full shrink-0">
       <div className="flex items-center gap-1.5 font-bold text-foreground truncate">
-        <span>⚙️</span>
-        <span className="truncate">Export Options & Rules</span>
+        <span></span>
       </div>
 
       <div className="flex items-center gap-0.5 shrink-0">
@@ -75,7 +74,6 @@ export const ExportConfigurationPanel: React.FC = () => {
           size="icon"
           onClick={handleCollapseAllCards}
           data-tooltip="Collapse All Cards"
-          title="Collapse All Cards"
         >
           <ChevronsUp size={12} />
         </Button>
@@ -86,7 +84,6 @@ export const ExportConfigurationPanel: React.FC = () => {
           size="icon"
           onClick={handleExpandAllCards}
           data-tooltip="Expand All Cards"
-          title="Expand All Cards"
         >
           <ChevronsDown size={12} />
         </Button>

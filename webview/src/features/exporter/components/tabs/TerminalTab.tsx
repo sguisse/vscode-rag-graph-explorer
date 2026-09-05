@@ -38,7 +38,7 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({
       <div className="space-y-1">
         <div className="flex justify-between items-center text-[11px] font-bold text-foreground">
           <span>⚙️ Bash Command Run by Exporter</span>
-          <Button size="icon-xs" variant="ghost" onClick={handleCopyBashCmd} title="Copy Command">
+          <Button size="icon-xs" variant="ghost" onClick={handleCopyBashCmd} data-tooltip="Copy Command">
             <Copy size={12} />
           </Button>
         </div>
@@ -51,10 +51,10 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({
         <div className="flex justify-between items-center text-[11px] font-bold text-foreground">
           <span>🐍 Python Script Output Console</span>
           <div className="flex gap-1">
-            <Button size="icon-xs" variant="ghost" onClick={handleCopyTerminalLogs} title="Copy Logs">
+            <Button size="icon-xs" variant="ghost" onClick={handleCopyTerminalLogs} data-tooltip="Copy Logs">
               <Copy size={12} />
             </Button>
-            <Button size="icon-xs" variant="ghost" onClick={handleClearTerminalLogs} title="Clear Terminal">
+            <Button size="icon-xs" variant="ghost" onClick={handleClearTerminalLogs} data-tooltip="Clear Terminal">
               <Trash2 size={12} />
             </Button>
           </div>
