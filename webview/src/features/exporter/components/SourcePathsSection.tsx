@@ -34,6 +34,10 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
 }) => {
   const workspaceRoot = useExporterStore((s) => s.workspaceRoot);
   const invalidPaths = useExporterStore((s) => s.invalidPaths);
+  const validationState = useExporterStore((s) => s.validationState);
+
+  const srcError = validationState.errors?.src;
+  const isInvalid = validationState.pathListInvalid || Boolean(srcError);
 
   const lines = pathsText.split(/[,\n\r]+/).map((l) => l.trim()).filter(Boolean);
 
@@ -54,7 +58,7 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
     const isExternal = Boolean(normWs && !normAbs.startsWith(normWs));
     const isFile = Boolean(clean.includes('.') && !clean.endsWith('/') && !clean.endsWith('\\'));
 
-    const isInvalid = invalidPaths.some(
+    const isInvalidPath = invalidPaths.some(
       (inv) =>
         inv === clean ||
         inv === absPath ||
@@ -94,7 +98,7 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
       : 'Single-click to copy path & reveal folder in Explorer';
 
     // 1. Non-existing path -> Destructive color (red) with removal cross icon
-    if (isInvalid) {
+    if (isInvalidPath) {
       return [
         {
           label: (
@@ -175,9 +179,21 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
     ];
   });
 
+  if (lines.length === 0 && isInvalid) {
+    summaryBadges.push({
+      label: '⚠️ Source path required',
+      tooltip: srcError || 'At least one source path is required.',
+      className: 'bg-destructive/10 text-destructive border-destructive/30 font-semibold',
+    });
+  }
+
   const totalPathsBadge = (
     <span
-      className="bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold leading-none"
+      className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold leading-none border ${
+        isInvalid
+          ? 'bg-destructive/10 text-destructive border-destructive/30'
+          : 'bg-primary/10 text-primary border-primary/20'
+      }`}
       data-tooltip={`${lines.length} total ${lines.length === 1 ? 'path' : 'paths'} selected`}
     >
       {lines.length} {lines.length === 1 ? 'path' : 'paths'}
@@ -241,7 +257,12 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
           onChange={handleChangeTextarea}
           placeholder="Enter source directories, files, or Java package.ClassName (one per line or comma-separated)..."
           rows={6}
-          className="flex-1 bg-background h-[138px] font-mono text-xs resize-y"
+          className={`flex-1 h-[138px] font-mono text-xs resize-y ${
+            isInvalid
+              ? 'bg-destructive/10 text-destructive border-destructive/30 focus-visible:ring-destructive'
+              : 'bg-background'
+          }`}
+          data-tooltip={srcError ? `⚠️ Error: ${srcError}` : undefined}
         />
 
         <div className="flex flex-col gap-1 shrink-0">

@@ -28,7 +28,11 @@ export const DestinationSection: React.FC<DestinationSectionProps> = ({
   onClearDestDir,
 }) => {
   const workspaceRoot = useExporterStore((s) => s.workspaceRoot);
+  const validationState = useExporterStore((s) => s.validationState);
   const [destExists, setDestExists] = useState<boolean>(true);
+
+  const destError = validationState.errors?.dest;
+  const isInvalid = validationState.destDirInvalid || Boolean(destError);
 
   const handleCopyLatestFiles = () => {
     logInfo('[DestinationSection] onCopyLatestFiles handler triggered', destDir);
@@ -57,8 +61,8 @@ export const DestinationSection: React.FC<DestinationSectionProps> = ({
     fileSystemApiService
       .getInvalidPaths([absDest], workspaceRoot)
       .then((invalid) => {
-        const isInvalid = Boolean(invalid && invalid.length > 0);
-        setDestExists(!isInvalid);
+        const isInvalidPath = Boolean(invalid && invalid.length > 0);
+        setDestExists(!isInvalidPath);
       })
       .catch(() => {
         setDestExists(true);
@@ -70,7 +74,9 @@ export const DestinationSection: React.FC<DestinationSectionProps> = ({
   const isExternal = Boolean(normWs && !normDest.startsWith(normWs));
 
   let tooltip = formattedDest;
-  if (!destExists) {
+  if (destError) {
+    tooltip = `⚠️ Error: ${destError}`;
+  } else if (!destExists) {
     tooltip = `⚠️ Warning because you have defined an non existing folder. <br> It will be created automatically`;
   } else if (isExternal) {
     tooltip = `⚠️ Warning: You reference a destination directory outside the current workspace: ${absDest}`;
@@ -78,9 +84,12 @@ export const DestinationSection: React.FC<DestinationSectionProps> = ({
 
   const isWarning = !destExists || isExternal;
 
-  const badgeClassName = isWarning
-    ? 'bg-amber-500/10 text-amber-600 border-amber-500/30 font-semibold [direction:rtl] text-left w-full min-w-0 truncate'
-    : 'bg-primary/10 text-primary border-primary/20 [direction:rtl] text-left w-full min-w-0 truncate';
+  let badgeClassName = 'bg-primary/10 text-primary border-primary/20 [direction:rtl] text-left w-full min-w-0 truncate';
+  if (isInvalid) {
+    badgeClassName = 'bg-destructive/10 text-destructive border-destructive/30 font-semibold [direction:rtl] text-left w-full min-w-0 truncate';
+  } else if (isWarning) {
+    badgeClassName = 'bg-amber-500/10 text-amber-600 border-amber-500/30 font-semibold [direction:rtl] text-left w-full min-w-0 truncate';
+  }
 
   const summaryBadges: BadgeObject[] = [
     {
@@ -106,7 +115,12 @@ export const DestinationSection: React.FC<DestinationSectionProps> = ({
           value={destDir}
           onChange={(e) => onChangeDestDir(e.target.value)}
           placeholder="/absolute/path/to/exported-files"
-          className="h-7 text-xs font-mono flex-1 bg-background"
+          className={`h-7 text-xs font-mono flex-1 ${
+            isInvalid
+              ? 'bg-destructive/10 text-destructive border-destructive/30 focus-visible:ring-destructive'
+              : 'bg-background'
+          }`}
+          data-tooltip={destError ? `⚠️ Error: ${destError}` : undefined}
         />
 
         <Button

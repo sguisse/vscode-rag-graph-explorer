@@ -5,6 +5,7 @@ import { CollapsibleCard, BadgeObject } from '@/components/ui/collapsible-card';
 import { EXPORT_FORMAT_ICON_MAP, EXPORT_FORMAT_LIST, ExportFormat } from '@/shared/services/codebase-exporter/types/type-export-format.gen';
 import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
 import { ExportConfig } from '@/shared/services/file-exporter/model/file-exporter-model';
+import { useExporterStore } from '../store/useExporterStore';
 import { logInfo } from '../utils/log-info';
 
 interface OutputFormattingSectionProps {
@@ -20,6 +21,9 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
   onOpenChange,
   onChangeConfig,
 }) => {
+  const validationState = useExporterStore((s) => s.validationState);
+  const maxChunkErr = validationState.errors?.max_chunk;
+
   const activeCheckboxes: string[] = [];
   if (config.groupByExt) activeCheckboxes.push('Split by Ext');
   if (config.copyGeneratedFilesToClipboard) activeCheckboxes.push('Copy to Clip');
@@ -29,7 +33,13 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
 
   const summaryBadges: BadgeObject[] = [
     { label: `Format: ${config.format.toUpperCase()}`, tooltip: `Output Format: ${config.format.toUpperCase()}` },
-    { label: `Chunk: ${config.max_chunk} KB`, tooltip: `Max Chunk Size: ${config.max_chunk} KB` },
+    {
+      label: `Chunk: ${config.max_chunk} KB`,
+      tooltip: maxChunkErr ? `⚠️ Error: ${maxChunkErr}` : `Max Chunk Size: ${config.max_chunk} KB`,
+      className: maxChunkErr
+        ? 'bg-destructive/10 text-destructive border-destructive/30 font-semibold'
+        : 'bg-primary/10 text-primary border-primary/20',
+    },
     ...activeCheckboxes.map((chk) => ({ label: chk, tooltip: `Rule enabled: ${chk}` })),
   ];
 
@@ -79,7 +89,12 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
                 logInfo('[OutputFormattingSection] Max chunk changed', e.target.value);
                 onChangeConfig((prev) => ({ ...prev, max_chunk: e.target.value }));
               }}
-              className="bg-background w-full h-7 font-mono text-xs"
+              className={`w-full h-7 font-mono text-xs ${
+                validationState.maxChunkInvalid || maxChunkErr
+                  ? 'bg-destructive/10 text-destructive border-destructive/30 focus-visible:ring-destructive'
+                  : 'bg-background'
+              }`}
+              data-tooltip={maxChunkErr ? `⚠️ Error: ${maxChunkErr}` : undefined}
             />
           </div>
         </div>

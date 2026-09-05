@@ -1,5 +1,6 @@
 import { useExporterStore } from '../store/useExporterStore';
 import { filesExporterApiService } from '@/services/api/files-exporter-api.service.gen';
+import { ExporterValidatorService } from '../utils/validator.service';
 import { logInfo } from '../utils/log-info';
 import { PathMappingService } from '../utils/path-resolver';
 
@@ -8,11 +9,48 @@ export function useExporterExecution() {
 
   const handleRunExport = async () => {
     logInfo('[useExporterExecution] handleRunExport starting...');
+
+    // Validate all configuration fields using ExporterValidatorService
+    const validationErrors: string[] = [];
+
+    const srcErr = ExporterValidatorService.validatePathList(store.config.src, store.invalidPaths);
+    if (srcErr) validationErrors.push(`Source Paths: ${srcErr}`);
+
+    const destErr = ExporterValidatorService.validateDestDir(store.config.dest);
+    if (destErr) validationErrors.push(`Destination Directory: ${destErr}`);
+
+    const maxFileErr = ExporterValidatorService.validateMaxFile(store.config.max_file);
+    if (maxFileErr) validationErrors.push(`Max File Size: ${maxFileErr}`);
+
+    const maxChunkErr = ExporterValidatorService.validateMaxChunk(store.config.max_chunk);
+    if (maxChunkErr) validationErrors.push(`Max Chunk Size: ${maxChunkErr}`);
+
+    const incPathsErr = ExporterValidatorService.validateRegexSyntax(store.config.inc_paths);
+    if (incPathsErr) validationErrors.push(`Include Paths Regex: ${incPathsErr}`);
+
+    const excPathsErr = ExporterValidatorService.validateRegexSyntax(store.config.exc_paths);
+    if (excPathsErr) validationErrors.push(`Exclude Paths Regex: ${excPathsErr}`);
+
+    const incExtErr = ExporterValidatorService.validateRegexSyntax(store.config.inc_ext);
+    if (incExtErr) validationErrors.push(`Include Extensions Regex: ${incExtErr}`);
+
+    const excExtErr = ExporterValidatorService.validateRegexSyntax(store.config.exc_ext);
+    if (excExtErr) validationErrors.push(`Exclude Extensions Regex: ${excExtErr}`);
+
+    if (validationErrors.length > 0) {
+      logInfo('[useExporterExecution] Export blocked due to validation errors', validationErrors);
+      store.setModalState({
+        isValidationModalOpen: true,
+        validationErrors,
+      });
+      return;
+    }
+
     store.setIsRunning(true);
     store.setActiveTab('terminal');
     store.appendTerminalLog(`\n🚀 [Codebase Exporter] Executing python export runner...\n`);
 
-    const displayLines = store.config.src.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
+    const displayLines = store.config.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
     const resolvedAbsPaths = displayLines.map((line) => PathMappingService.resolveToAbsolute(line, store.workspaceRoot));
 
     store.appendTerminalLog(`📂 Sources (${resolvedAbsPaths.length}): ${resolvedAbsPaths.join(', ')}\n`);
@@ -159,5 +197,7 @@ export function useExporterExecution() {
       store.setActiveTab(tab);
     },
     exchangeLinks: store.exchangeLinks,
+    modalState: store.modalState,
+    setModalState: store.setModalState,
   };
 }

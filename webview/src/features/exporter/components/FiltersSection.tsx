@@ -9,6 +9,7 @@ import { FILE_EXT_CATEGORY_GROUPS } from '../constants/exporter-constants';
 import { testFilterPatterns } from '../utils/filter-simulator';
 import { explodeTextAreaRegex, groupExtensionsText } from '../utils/regex-exploder';
 import { ExportConfig } from '@/shared/services/file-exporter/model/file-exporter-model';
+import { useExporterStore } from '../store/useExporterStore';
 import { logInfo } from '../utils/log-info';
 
 interface FiltersSectionProps {
@@ -34,6 +35,13 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
     exc_paths: 'asc',
     exc_ext: 'asc',
   });
+
+  const validationState = useExporterStore((s) => s.validationState);
+  const maxFileErr = validationState.errors?.max_file;
+  const incPathsErr = validationState.errors?.inc_paths;
+  const excPathsErr = validationState.errors?.exc_paths;
+  const incExtErr = validationState.errors?.inc_ext;
+  const excExtErr = validationState.errors?.exc_ext;
 
   const simResult = testFilterPatterns(
     filterSimulatorInput,
@@ -64,37 +72,47 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
   const summaryBadges: BadgeObject[] = [
     {
       label: `Max file: ${config.max_file} KB`,
-      tooltip: `Max file size limit: ${config.max_file} KB`,
-      className: 'bg-primary/10 text-primary border-primary/20 shrink-0 font-bold',
+      tooltip: maxFileErr ? `⚠️ Error: ${maxFileErr}` : `Max file size limit: ${config.max_file} KB`,
+      className: maxFileErr
+        ? 'bg-destructive/10 text-destructive border-destructive/30 font-semibold shrink-0'
+        : 'bg-primary/10 text-primary border-primary/20 shrink-0 font-bold',
     },
   ];
 
-  if (incPathCombined) {
+  if (incPathCombined || incPathsErr) {
     summaryBadges.push({
-      label: `Inc Path: ${incPathCombined}`,
-      tooltip: `<strong>Inc Path:</strong> <br> ${incPathTooltip}`,
-      className: 'bg-primary/10 text-primary border-primary/20 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink',
+      label: `Inc Path: ${incPathCombined || 'Invalid Regex'}`,
+      tooltip: incPathsErr ? `⚠️ Error: ${incPathsErr}` : `<strong>Inc Path:</strong> <br> ${incPathTooltip}`,
+      className: incPathsErr
+        ? 'bg-destructive/10 text-destructive border-destructive/30 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink font-semibold'
+        : 'bg-primary/10 text-primary border-primary/20 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink',
     });
   }
-  if (incExtCombined) {
+  if (incExtCombined || incExtErr) {
     summaryBadges.push({
-      label: `Inc Ext: ${incExtCombined}`,
-      tooltip: `<strong>Inc Ext:</strong> <br> ${incExtTooltip}`,
-      className: 'bg-primary/10 text-primary border-primary/20 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink',
+      label: `Inc Ext: ${incExtCombined || 'Invalid Regex'}`,
+      tooltip: incExtErr ? `⚠️ Error: ${incExtErr}` : `<strong>Inc Ext:</strong> <br> ${incExtTooltip}`,
+      className: incExtErr
+        ? 'bg-destructive/10 text-destructive border-destructive/30 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink font-semibold'
+        : 'bg-primary/10 text-primary border-primary/20 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink',
     });
   }
-  if (excPathCombined) {
+  if (excPathCombined || excPathsErr) {
     summaryBadges.push({
-      label: `Exc Path: ${excPathCombined}`,
-      tooltip: `<strong>Exc Path:</strong> <br> ${excPathTooltip}`,
-      className: 'bg-primary/10 text-primary border-primary/20 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink',
+      label: `Exc Path: ${excPathCombined || 'Invalid Regex'}`,
+      tooltip: excPathsErr ? `⚠️ Error: ${excPathsErr}` : `<strong>Exc Path:</strong> <br> ${excPathTooltip}`,
+      className: excPathsErr
+        ? 'bg-destructive/10 text-destructive border-destructive/30 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink font-semibold'
+        : 'bg-primary/10 text-primary border-primary/20 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink',
     });
   }
-  if (excExtCombined) {
+  if (excExtCombined || excExtErr) {
     summaryBadges.push({
-      label: `Exc Ext: ${excExtCombined}`,
-      tooltip: `<strong>Exc Ext:</strong> <br> ${excExtTooltip}`,
-      className: 'bg-primary/10 text-primary border-primary/20 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink',
+      label: `Exc Ext: ${excExtCombined || 'Invalid Regex'}`,
+      tooltip: excExtErr ? `⚠️ Error: ${excExtErr}` : `<strong>Exc Ext:</strong> <br> ${excExtTooltip}`,
+      className: excExtErr
+        ? 'bg-destructive/10 text-destructive border-destructive/30 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink font-semibold'
+        : 'bg-primary/10 text-primary border-primary/20 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink',
     });
   }
 
@@ -173,7 +191,12 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
             onChange={(e) =>
               onChangeConfig((prev) => ({ ...prev, max_file: e.target.value }))
             }
-            className="bg-background w-24 h-7 font-mono text-xs shrink-0"
+            className={`w-24 h-7 font-mono text-xs shrink-0 ${
+              validationState.maxFileInvalid || maxFileErr
+                ? 'bg-destructive/10 text-destructive border-destructive/30 focus-visible:ring-destructive'
+                : 'bg-background'
+            }`}
+            data-tooltip={maxFileErr ? `⚠️ Error: ${maxFileErr}` : undefined}
           /> KB
         </div>
 
@@ -224,7 +247,12 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                     onChangeConfig((prev) => ({ ...prev, inc_paths: e.target.value }))
                   }
                   rows={3}
-                  className="bg-background w-full min-w-0 font-mono text-xs resize-y"
+                  className={`w-full min-w-0 font-mono text-xs resize-y ${
+                    incPathsErr
+                      ? 'bg-destructive/10 text-destructive border-destructive/30 focus-visible:ring-destructive'
+                      : 'bg-background'
+                  }`}
+                  data-tooltip={incPathsErr ? `⚠️ Error: ${incPathsErr}` : undefined}
                 />
               </div>
 
@@ -292,7 +320,12 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                     onChangeConfig((prev) => ({ ...prev, inc_ext: e.target.value }))
                   }
                   rows={3}
-                  className="bg-background w-full min-w-0 font-mono text-xs resize-y"
+                  className={`w-full min-w-0 font-mono text-xs resize-y ${
+                    incExtErr
+                      ? 'bg-destructive/10 text-destructive border-destructive/30 focus-visible:ring-destructive'
+                      : 'bg-background'
+                  }`}
+                  data-tooltip={incExtErr ? `⚠️ Error: ${incExtErr}` : undefined}
                 />
               </div>
             </div>
@@ -343,7 +376,12 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                     onChangeConfig((prev) => ({ ...prev, exc_paths: e.target.value }))
                   }
                   rows={3}
-                  className="bg-background w-full min-w-0 font-mono text-xs resize-y"
+                  className={`w-full min-w-0 font-mono text-xs resize-y ${
+                    excPathsErr
+                      ? 'bg-destructive/10 text-destructive border-destructive/30 focus-visible:ring-destructive'
+                      : 'bg-background'
+                  }`}
+                  data-tooltip={excPathsErr ? `⚠️ Error: ${excPathsErr}` : undefined}
                 />
               </div>
 
@@ -411,7 +449,12 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                     onChangeConfig((prev) => ({ ...prev, exc_ext: e.target.value }))
                   }
                   rows={3}
-                  className="bg-background w-full min-w-0 font-mono text-xs resize-y"
+                  className={`w-full min-w-0 font-mono text-xs resize-y ${
+                    excExtErr
+                      ? 'bg-destructive/10 text-destructive border-destructive/30 focus-visible:ring-destructive'
+                      : 'bg-background'
+                  }`}
+                  data-tooltip={excExtErr ? `⚠️ Error: ${excExtErr}` : undefined}
                 />
               </div>
             </div>

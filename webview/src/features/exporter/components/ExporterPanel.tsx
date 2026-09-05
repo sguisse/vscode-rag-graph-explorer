@@ -10,6 +10,7 @@ import { TerminalTab } from './tabs/TerminalTab';
 import { HelpTab } from './tabs/HelpTab';
 import { SimulationTab } from './tabs/SimulationTab';
 import { TreeTab } from './tabs/TreeTab';
+import { ValidationErrorDialog } from './ValidationErrorDialog';
 import { filesExporterApiService } from '@/services/api/files-exporter-api.service.gen';
 import { ExporterTabId } from '../types/exporter.types';
 import { PathMappingService } from '../utils/path-resolver';
@@ -28,6 +29,8 @@ export function ExporterPanel() {
     activeTab,
     setActiveTab,
     exchangeLinks,
+    modalState,
+    setModalState,
   } = useExporterExecution();
 
   const { config, setConfig, workspaceRoot } = useExporterStore();
@@ -161,12 +164,21 @@ export function ExporterPanel() {
   );
 
   return (
-    <TopMiddleBottomPanel
-      id="panel-exporter-execution"
-      className="bg-background w-full h-full min-h-0 overflow-hidden"
-      top={topContent}
-      middle={middleContent}
-    />
+    <>
+      <TopMiddleBottomPanel
+        id="panel-exporter-execution"
+        className="bg-background w-full h-full min-h-0 overflow-hidden"
+        top={topContent}
+        middle={middleContent}
+      />
+
+      {/* Configuration Validation Error Dialog */}
+      <ValidationErrorDialog
+        isOpen={Boolean(modalState.isValidationModalOpen)}
+        errors={modalState.validationErrors || []}
+        onClose={() => setModalState({ isValidationModalOpen: false })}
+      />
+    </>
   );
 }
 

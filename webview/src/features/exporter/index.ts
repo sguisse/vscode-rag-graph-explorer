@@ -1,5 +1,6 @@
 export * from './components/ExportConfigurationPanel';
 export * from './components/ExporterPanel';
+export * from './components/ValidationErrorDialog';
 export * from './ExporterFeature';
 export * from './layout-ctns/TopPanelContainer';
 export * from './layout-ctns/LeftPanelContainer';
@@ -9,3 +10,4 @@ export * from './hooks/use-export-configuration';
 export * from './hooks/use-exporter-execution';
 export * from './utils/log-info';
 export * from './utils/path-resolver';
+export * from './utils/validator.service';

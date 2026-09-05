@@ -95,6 +95,7 @@ export const useExporterStore = create<ExporterStoreState>((set, get) => ({
     destDirInvalid: false,
     maxFileInvalid: false,
     maxChunkInvalid: false,
+    errors: {},
   },
 
   setConfig: (updater) =>

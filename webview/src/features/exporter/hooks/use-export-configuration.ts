@@ -7,13 +7,13 @@ import { fileSystemApiService } from '@/services/api/file-system-api.service.gen
 import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
 import { logInfo } from '../utils/log-info';
 import { PathMappingService } from '../utils/path-resolver';
+import { ExporterValidatorService } from '../utils/validator.service';
 
 export function useExportConfiguration() {
   const store = useExporterStore();
 
   const addPathsToConfig = (absPaths: string[]) => {
     const wsRoot = store.workspaceRoot;
-    // Split input paths on commas or newlines without splitting on spaces within paths
     const expandedList = absPaths
       .flatMap((p) => String(p).split(/[,\n\r]+/))
       .map((s) => s.trim())
@@ -61,6 +61,45 @@ export function useExportConfiguration() {
       unsubscribeUpdatePaths();
     };
   }, [store.workspaceRoot]);
+
+  // Execute real-time field validation whenever configuration or invalid paths change
+  useEffect(() => {
+    const srcErr = ExporterValidatorService.validatePathList(store.config.src, store.invalidPaths);
+    const destErr = ExporterValidatorService.validateDestDir(store.config.dest);
+    const maxFileErr = ExporterValidatorService.validateMaxFile(store.config.max_file);
+    const maxChunkErr = ExporterValidatorService.validateMaxChunk(store.config.max_chunk);
+    const incPathsErr = ExporterValidatorService.validateRegexSyntax(store.config.inc_paths);
+    const excPathsErr = ExporterValidatorService.validateRegexSyntax(store.config.exc_paths);
+    const incExtErr = ExporterValidatorService.validateRegexSyntax(store.config.inc_ext);
+    const excExtErr = ExporterValidatorService.validateRegexSyntax(store.config.exc_ext);
+
+    store.setValidationState({
+      pathListInvalid: Boolean(srcErr),
+      destDirInvalid: Boolean(destErr),
+      maxFileInvalid: Boolean(maxFileErr),
+      maxChunkInvalid: Boolean(maxChunkErr),
+      errors: {
+        src: srcErr,
+        dest: destErr,
+        max_file: maxFileErr,
+        max_chunk: maxChunkErr,
+        inc_paths: incPathsErr,
+        exc_paths: excPathsErr,
+        inc_ext: incExtErr,
+        exc_ext: excExtErr,
+      },
+    });
+  }, [
+    store.config.src,
+    store.config.dest,
+    store.config.max_file,
+    store.config.max_chunk,
+    store.config.inc_paths,
+    store.config.exc_paths,
+    store.config.inc_ext,
+    store.config.exc_ext,
+    store.invalidPaths,
+  ]);
 
   // Perform path existence validation whenever source paths or workspace root changes
   useEffect(() => {

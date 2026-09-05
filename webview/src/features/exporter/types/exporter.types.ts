@@ -6,6 +6,8 @@ export interface ExporterModalState {
   isErrorModalOpen: boolean;
   isConflictModalOpen: boolean;
   isGuardrailModalOpen: boolean;
+  isValidationModalOpen?: boolean;
+  validationErrors?: string[];
   conflictExtensions: string[];
   conflictSource: string;
   conflictTarget: string;
@@ -19,4 +21,14 @@ export interface FieldValidationState {
   destDirInvalid: boolean;
   maxFileInvalid: boolean;
   maxChunkInvalid: boolean;
+  errors: {
+    src?: string | null;
+    dest?: string | null;
+    max_file?: string | null;
+    max_chunk?: string | null;
+    inc_paths?: string | null;
+    exc_paths?: string | null;
+    inc_ext?: string | null;
+    exc_ext?: string | null;
+  };
 }

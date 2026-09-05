@@ -2,326 +2,9 @@
 set -e
 
 # Create necessary directories
-mkdir -p webview/src/features/exporter/utils
-mkdir -p webview/src/features/exporter/hooks
 mkdir -p webview/src/features/exporter/components
-mkdir -p webview/src/features/exporter/components/tabs
 
-# 1. Update path-resolver.ts to ensure PathMappingService registers and maps both short and absolute paths cleanly
-cat << 'EOF' > webview/src/features/exporter/utils/path-resolver.ts
-import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
-
-/**
- * Converts absolute workspace file or directory paths into compact display representations.
- * If the path is a Java file, formats it as package.ClassName.
- */
-export function formatPathForDisplay(absPath: string, workspaceRoot: string): string {
-  if (!absPath || !absPath.trim()) return '';
-  const cleanAbs = absPath.replace(/^['"]|['"]$/g, '').trim();
-  const normalizedAbs = cleanAbs.replace(/\\/g, '/');
-  const normalizedWs = workspaceRoot ? workspaceRoot.replace(/\\/g, '/').replace(/\/+$/, '') : '';
-
-  // Check if file/folder resides within current workspace root
-  if (normalizedWs && normalizedAbs.startsWith(normalizedWs)) {
-    let rel = normalizedAbs.slice(normalizedWs.length).replace(/^\/+/, '');
-
-    // Java package.ClassName formatting
-    if (rel.endsWith('.java')) {
-      const javaRoots = ['src/main/java/', 'src/test/java/', 'src/java/', 'java/'];
-      let pkgPath = rel;
-      for (const root of javaRoots) {
-        if (rel.includes(root)) {
-          pkgPath = rel.substring(rel.indexOf(root) + root.length);
-          break;
-        }
-      }
-      return pkgPath.replace(/\.java$/, '').replace(/\//g, '.');
-    }
-
-    return rel || '.';
-  }
-
-  return cleanAbs;
-}
-
-export class PathMappingService {
-  private static map: Map<string, string> = new Map();
-
-  /**
-   * Registers a path mapping from display string to original absolute path.
-   */
-  public static registerPath(absPath: string, workspaceRoot: string): string {
-    if (!absPath) return '';
-    const clean = absPath.trim();
-    if (!clean) return '';
-
-    const display = formatPathForDisplay(clean, workspaceRoot);
-    if (display && clean) {
-      this.map.set(display, clean);
-      this.map.set(display.toLowerCase(), clean);
-      this.map.set(clean, clean);
-      this.map.set(clean.toLowerCase(), clean);
-    }
-    return display;
-  }
-
-  /**
-   * Resolves a display string (relative, package notation, or exact text) back to its absolute path.
-   */
-  public static resolveToAbsolute(displayOrAbs: string, workspaceRoot: string): string {
-    const trimmed = displayOrAbs.trim();
-    if (!trimmed) return '';
-
-    if (this.map.has(trimmed)) {
-      return this.map.get(trimmed)!;
-    }
-    if (this.map.has(trimmed.toLowerCase())) {
-      return this.map.get(trimmed.toLowerCase())!;
-    }
-
-    // Convert Java package.ClassName back if possible
-    if (trimmed.includes('.') && !trimmed.includes('/') && !trimmed.includes('\\') && workspaceRoot) {
-      const javaRel = 'src/main/java/' + trimmed.replace(/\./g, '/') + '.java';
-      return `${workspaceRoot.replace(/[/\\]+$/, '')}/${javaRel}`;
-    }
-
-    // Relative workspace path fallback
-    if (workspaceRoot && !trimmed.startsWith('/') && !trimmed.match(/^[a-zA-Z]:/)) {
-      return `${workspaceRoot.replace(/[/\\]+$/, '')}/${trimmed}`;
-    }
-
-    return trimmed;
-  }
-
-  public static clearMap(): void {
-    this.map.clear();
-  }
-}
-EOF
-
-# 2. Update use-export-configuration.ts to split by comma/newline (preserving spaces in paths) and register display rules
-cat << 'EOF' > webview/src/features/exporter/hooks/use-export-configuration.ts
-import { useEffect } from 'react';
-import { useExporterStore } from '../store/useExporterStore';
-import { filesExporterHistoryApiService } from '@/services/api/files-exporter-history-api.service.gen';
-import { filesExporterApiService } from '@/services/api/files-exporter-api.service.gen';
-import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
-import { fileSystemApiService } from '@/services/api/file-system-api.service.gen';
-import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
-import { logInfo } from '../utils/log-info';
-import { PathMappingService } from '../utils/path-resolver';
-
-export function useExportConfiguration() {
-  const store = useExporterStore();
-
-  const addPathsToConfig = (absPaths: string[]) => {
-    const wsRoot = store.workspaceRoot;
-    // Split input paths on commas or newlines without splitting on spaces within paths
-    const expandedList = absPaths
-      .flatMap((p) => String(p).split(/[,\n\r]+/))
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    const formattedList = expandedList
-      .map((p) => PathMappingService.registerPath(p, wsRoot))
-      .filter(Boolean);
-
-    store.setConfig((prev) => {
-      const current = prev.src
-        ? prev.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean)
-        : [];
-      const combined = Array.from(new Set([...current, ...formattedList]));
-      return { ...prev, src: combined.join('\n') };
-    });
-  };
-
-  useEffect(() => {
-    logInfo('[useExportConfiguration] Initializing exporter configuration hook...');
-    store.fetchInitialState();
-
-    vsCodeApiService.getRepoName().then((repo) => {
-      logInfo('[useExportConfiguration] Active repository:', repo);
-    }).catch(() => {});
-
-    const unsubscribeSelectedPath = vsCodeHandleMessage.on('selectedPath', (msg) => {
-      if (msg.payload) {
-        logInfo('[useExportConfiguration] Received selectedPath message', msg.payload);
-        const newPaths = String(msg.payload).split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
-        addPathsToConfig(newPaths);
-      }
-    });
-
-    const unsubscribeUpdatePaths = vsCodeHandleMessage.on('updatePaths', (msg) => {
-      if (Array.isArray(msg.paths)) {
-        logInfo('[useExportConfiguration] Received updatePaths message', msg.paths);
-        const newPaths = msg.paths.flatMap((p) => String(p).split(/[,\n\r]+/)).map((s) => s.trim()).filter(Boolean);
-        addPathsToConfig(newPaths);
-      }
-    });
-
-    return () => {
-      unsubscribeSelectedPath();
-      unsubscribeUpdatePaths();
-    };
-  }, [store.workspaceRoot]);
-
-  // Perform path existence validation whenever source paths or workspace root changes
-  useEffect(() => {
-    const displayLines = store.config.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
-    if (displayLines.length === 0) {
-      store.setInvalidPaths([]);
-      return;
-    }
-
-    const resolvedAbsPaths = displayLines.map((line) => PathMappingService.resolveToAbsolute(line, store.workspaceRoot));
-
-    fileSystemApiService
-      .getInvalidPaths(resolvedAbsPaths, store.workspaceRoot)
-      .then((invalid) => {
-        store.setInvalidPaths(invalid || []);
-      })
-      .catch(() => {});
-  }, [store.config.src, store.workspaceRoot]);
-
-  useEffect(() => {
-    const displayLines = store.config.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
-    const resolvedAbsPaths = displayLines.map((line) => PathMappingService.resolveToAbsolute(line, store.workspaceRoot));
-    const paths = resolvedAbsPaths.join(',');
-
-    const cmd = `python3 files-exporter.py --src '${paths || '.'}' --dest '${store.config.dest}' --format '${store.config.format}' --max-file ${store.config.max_file} --max-chunk ${store.config.max_chunk}${
-      store.config.groupByExt ? ' --group-ext' : ''
-    }${store.config.logConsole ? ' --log-console' : ''}${store.config.generateTreeView ? ' --tree-view' : ''}`;
-    store.setCompiledBashCmd(cmd);
-  }, [store.config, store.workspaceRoot]);
-
-  const handleAddOpenFiles = async () => {
-    logInfo('[useExportConfiguration] handleAddOpenFiles starting...');
-    try {
-      const currentDisplayLines = store.config.src ? store.config.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean) : [];
-      const currentAbsPaths = currentDisplayLines.map((line) => PathMappingService.resolveToAbsolute(line, store.workspaceRoot));
-
-      const openFiles = await filesExporterApiService.getOpenEditorFiles(currentAbsPaths);
-      addPathsToConfig(openFiles);
-      filesExporterApiService.showNotification('info', `Added open editor files (${openFiles.length} total paths)`);
-    } catch (err: any) {
-      logInfo('[useExportConfiguration] Error adding open files:', err);
-    }
-  };
-
-  const handleAddGitDiffFiles = async () => {
-    logInfo('[useExportConfiguration] handleAddGitDiffFiles starting...');
-    try {
-      const currentDisplayLines = store.config.src ? store.config.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean) : [];
-      const currentAbsPaths = currentDisplayLines.map((line) => PathMappingService.resolveToAbsolute(line, store.workspaceRoot));
-
-      const gitFiles = await filesExporterApiService.getGitDiffFiles(currentAbsPaths);
-      addPathsToConfig(gitFiles);
-      filesExporterApiService.showNotification('info', `Added modified Git files (${gitFiles.length} total paths)`);
-    } catch (err: any) {
-      logInfo('[useExportConfiguration] Error adding Git diff files:', err);
-    }
-  };
-
-  const handleCopyLatestFiles = async () => {
-    logInfo('[useExportConfiguration] handleCopyLatestFiles starting...', store.config.dest);
-    try {
-      const res = await filesExporterApiService.copyLatestExportedFiles(store.config.dest);
-      filesExporterApiService.showNotification(res.success ? 'info' : 'warn', res.message);
-    } catch (err: any) {
-      logInfo('[useExportConfiguration] Error copying latest files:', err);
-    }
-  };
-
-  const handleClearDestDir = async () => {
-    logInfo('[useExportConfiguration] handleClearDestDir starting...', store.config.dest);
-    try {
-      const res = await filesExporterApiService.clearDestDirectory(store.config.dest);
-      filesExporterApiService.showNotification(res.success ? 'info' : 'warn', res.message);
-    } catch (err: any) {
-      logInfo('[useExportConfiguration] Error clearing dest dir:', err);
-    }
-  };
-
-  const handleOpenErrorModal = () => {
-    logInfo('[useExportConfiguration] handleOpenErrorModal starting...');
-    store.setModalState({ isErrorModalOpen: true });
-  };
-
-  const handleCloseErrorModal = () => {
-    logInfo('[useExportConfiguration] handleCloseErrorModal starting...');
-    store.setModalState({ isErrorModalOpen: false });
-  };
-
-  const handleOpenHistoryFile = async () => {
-    logInfo('[useExportConfiguration] handleOpenHistoryFile starting...');
-    await filesExporterHistoryApiService.openHistoryFile();
-  };
-
-  const handleRevealHistoryFolder = async () => {
-    logInfo('[useExportConfiguration] handleRevealHistoryFolder starting...');
-    await filesExporterHistoryApiService.revealHistoryFile();
-  };
-
-  const handleRevealDestination = async () => {
-    logInfo('[useExportConfiguration] handleRevealDestination starting...', store.config.dest);
-    await filesExporterApiService.openPathAtCursor(store.config.dest);
-  };
-
-  const handleOpenCursorLinePath = async () => {
-    logInfo('[useExportConfiguration] handleOpenCursorLinePath starting...');
-    const firstLine = store.config.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean)[0];
-    if (firstLine) {
-      const absPath = PathMappingService.resolveToAbsolute(firstLine, store.workspaceRoot);
-      await filesExporterApiService.openPathAtCursor(absPath);
-    }
-  };
-
-  return {
-    ...store,
-    addPathsToConfig,
-    handleSelectProfile: async (id: string) => {
-      logInfo('[useExportConfiguration] handleSelectProfile starting...', id);
-      await store.selectProfile(id);
-    },
-    handleFreezeToggle: async (id: string) => {
-      logInfo('[useExportConfiguration] handleFreezeToggle starting...', id);
-      await store.freezeToggle(id);
-    },
-    handleResetConfig: () => {
-      logInfo('[useExportConfiguration] handleResetConfig starting...');
-      store.resetConfig();
-    },
-    handleRenameProfile: async (id: string, newName: string) => {
-      logInfo('[useExportConfiguration] handleRenameProfile starting...', { id, newName });
-      await store.renameProfile(id, newName);
-    },
-    handleDuplicateProfile: async (id: string) => {
-      logInfo('[useExportConfiguration] handleDuplicateProfile starting...', id);
-      await store.duplicateProfile(id);
-    },
-    handleAddProfile: async () => {
-      logInfo('[useExportConfiguration] handleAddProfile starting...');
-      await store.addProfile();
-    },
-    handleClearHistory: async () => {
-      logInfo('[useExportConfiguration] handleClearHistory starting...');
-      await store.clearHistoryWithMode('clear-all-hard');
-    },
-    handleAddOpenFiles,
-    handleAddGitDiffFiles,
-    handleCopyLatestFiles,
-    handleClearDestDir,
-    handleOpenErrorModal,
-    handleCloseErrorModal,
-    handleOpenHistoryFile,
-    handleRevealHistoryFolder,
-    handleRevealDestination,
-    handleOpenCursorLinePath,
-  };
-}
-EOF
-
-# 3. Update SourcePathsSection.tsx to convert comma-separated inputs on edit/paste while respecting short display path conversion
+# 1. Update SourcePathsSection.tsx to show destructive red badge when in error state or empty
 cat << 'EOF' > webview/src/features/exporter/components/SourcePathsSection.tsx
 import React from 'react';
 import { Textarea } from '@/components/ui/textarea';
@@ -359,6 +42,10 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
 }) => {
   const workspaceRoot = useExporterStore((s) => s.workspaceRoot);
   const invalidPaths = useExporterStore((s) => s.invalidPaths);
+  const validationState = useExporterStore((s) => s.validationState);
+
+  const srcError = validationState.errors?.src;
+  const isInvalid = validationState.pathListInvalid || Boolean(srcError);
 
   const lines = pathsText.split(/[,\n\r]+/).map((l) => l.trim()).filter(Boolean);
 
@@ -379,7 +66,7 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
     const isExternal = Boolean(normWs && !normAbs.startsWith(normWs));
     const isFile = Boolean(clean.includes('.') && !clean.endsWith('/') && !clean.endsWith('\\'));
 
-    const isInvalid = invalidPaths.some(
+    const isInvalidPath = invalidPaths.some(
       (inv) =>
         inv === clean ||
         inv === absPath ||
@@ -419,7 +106,7 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
       : 'Single-click to copy path & reveal folder in Explorer';
 
     // 1. Non-existing path -> Destructive color (red) with removal cross icon
-    if (isInvalid) {
+    if (isInvalidPath) {
       return [
         {
           label: (
@@ -500,9 +187,21 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
     ];
   });
 
+  if (lines.length === 0 && isInvalid) {
+    summaryBadges.push({
+      label: '⚠️ Source path required',
+      tooltip: srcError || 'At least one source path is required.',
+      className: 'bg-destructive/10 text-destructive border-destructive/30 font-semibold',
+    });
+  }
+
   const totalPathsBadge = (
     <span
-      className="bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold leading-none"
+      className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold leading-none border ${
+        isInvalid
+          ? 'bg-destructive/10 text-destructive border-destructive/30'
+          : 'bg-primary/10 text-primary border-primary/20'
+      }`}
       data-tooltip={`${lines.length} total ${lines.length === 1 ? 'path' : 'paths'} selected`}
     >
       {lines.length} {lines.length === 1 ? 'path' : 'paths'}
@@ -566,7 +265,12 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
           onChange={handleChangeTextarea}
           placeholder="Enter source directories, files, or Java package.ClassName (one per line or comma-separated)..."
           rows={6}
-          className="flex-1 bg-background h-[138px] font-mono text-xs resize-y"
+          className={`flex-1 h-[138px] font-mono text-xs resize-y ${
+            isInvalid
+              ? 'bg-destructive/10 text-destructive border-destructive/30 focus-visible:ring-destructive'
+              : 'bg-background'
+          }`}
+          data-tooltip={srcError ? `⚠️ Error: ${srcError}` : undefined}
         />
 
         <div className="flex flex-col gap-1 shrink-0">
@@ -624,182 +328,850 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
 export default SourcePathsSection;
 EOF
 
-# 4. Update ExporterPanel.tsx to register paths with PathMappingService when added via tabs
-cat << 'EOF' > webview/src/features/exporter/components/ExporterPanel.tsx
-import React from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
-import { useExporterExecution } from '../hooks/use-exporter-execution';
+# 2. Update DestinationSection.tsx to style summary badges with destructive red when in error state
+cat << 'EOF' > webview/src/features/exporter/components/DestinationSection.tsx
+import React, { useState, useEffect } from 'react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Copy, FolderOpen, Trash2 } from 'lucide-react';
+import { CollapsibleCard, BadgeObject } from '@/components/ui/collapsible-card';
 import { useExporterStore } from '../store/useExporterStore';
-import { ActionToolbar } from './ActionToolbar';
-import { ReportTab } from './tabs/ReportTab';
-import { FilesTab } from './tabs/FilesTab';
-import { TerminalTab } from './tabs/TerminalTab';
-import { HelpTab } from './tabs/HelpTab';
-import { SimulationTab } from './tabs/SimulationTab';
-import { TreeTab } from './tabs/TreeTab';
-import { filesExporterApiService } from '@/services/api/files-exporter-api.service.gen';
-import { ExporterTabId } from '../types/exporter.types';
 import { PathMappingService } from '../utils/path-resolver';
+import { fileSystemApiService } from '@/services/api/file-system-api.service.gen';
 import { logInfo } from '../utils/log-info';
 
-export function ExporterPanel() {
-  const {
-    isRunning,
-    handleRunExport,
-    handleKillExport,
-    handleOpenExchangeUrl,
-    compiledBashCmd,
-    terminalLogs,
-    clearTerminalLogs,
-    reportData,
-    activeTab,
-    setActiveTab,
-    exchangeLinks,
-  } = useExporterExecution();
-
-  const { config, setConfig, workspaceRoot } = useExporterStore();
-
-  const handleTabChange = (val: string) => {
-    logInfo('[ExporterPanel] Active tab changed', val);
-    setActiveTab(val as ExporterTabId);
-  };
-
-  const topContent = (
-    <ActionToolbar
-      isRunning={isRunning}
-      onRunExport={handleRunExport}
-      onKillExport={handleKillExport}
-      onOpenExchangeUrl={handleOpenExchangeUrl}
-      exchangeLinks={exchangeLinks}
-    />
-  );
-
-  const middleContent = (
-    <Tabs
-      value={activeTab}
-      onValueChange={handleTabChange}
-      className="flex-1 flex flex-col h-full min-h-0 p-2 overflow-hidden"
-    >
-      <TabsList className="bg-muted p-1 border-b border-border flex-wrap h-auto gap-1 shrink-0">
-        <TabsTrigger value="report" className="text-xs font-mono font-bold">REPORT</TabsTrigger>
-        <TabsTrigger value="files" className="text-xs font-mono font-bold">FILES</TabsTrigger>
-        <TabsTrigger value="tree" className="text-xs font-mono font-bold">TREE MANIFEST</TabsTrigger>
-        <TabsTrigger value="terminal" className="text-xs font-mono font-bold">TERMINAL</TabsTrigger>
-        <TabsTrigger value="help" className="text-xs font-mono font-bold">HELP</TabsTrigger>
-        <TabsTrigger value="simu" className="text-xs font-mono font-bold">SIMULATION B</TabsTrigger>
-      </TabsList>
-
-      <div className="flex-1 min-h-0 overflow-y-auto mt-2">
-        <TabsContent value="report" className="h-full m-0">
-          <ReportTab
-            reportData={reportData}
-            onAppendExtension={(ext, mode) => {
-              logInfo('[ExporterPanel] onAppendExtension', { ext, mode });
-              const field = mode === 'inc' ? 'inc_ext' : 'exc_ext';
-              setConfig((prev) => ({
-                ...prev,
-                [field]: prev[field] ? `${prev[field]}\n.*\\.${ext}$` : `.*\\.${ext}$`,
-              }));
-            }}
-            onSetMaxFileSize={(kb) => {
-              logInfo('[ExporterPanel] onSetMaxFileSize', kb);
-              setConfig((prev) => ({ ...prev, max_file: String(kb) }));
-            }}
-          />
-        </TabsContent>
-
-        <TabsContent value="files" className="h-full m-0">
-          <FilesTab
-            reportData={reportData}
-            destDir={config.dest}
-            onOpenFile={(p) => {
-              logInfo('[ExporterPanel] FilesTab onOpenFile', p);
-              filesExporterApiService.openPathAtCursor(p);
-            }}
-            onRevealFile={(p) => {
-              logInfo('[ExporterPanel] FilesTab onRevealFile', p);
-              filesExporterApiService.openPathAtCursor(p);
-            }}
-          />
-        </TabsContent>
-
-        <TabsContent value="tree" className="h-full m-0">
-          <TreeTab
-            rootNode={reportData?.tree_manifest?.root || null}
-            onExcludePattern={(pattern) => {
-              logInfo('[ExporterPanel] TreeTab onExcludePattern', pattern);
-              setConfig((prev) => ({
-                ...prev,
-                exc_paths: prev.exc_paths ? `${prev.exc_paths}\n${pattern}` : pattern,
-              }));
-            }}
-            onCaptureSelectedPaths={(paths) => {
-              logInfo('[ExporterPanel] TreeTab onCaptureSelectedPaths', paths);
-              if (paths.length > 0) {
-                setConfig((prev) => {
-                  const current = prev.src ? prev.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean) : [];
-                  const flatNew = paths.flatMap((p) => p.split(/[,\n\r]+/)).map((s) => s.trim()).filter(Boolean);
-                  const formatted = flatNew.map((p) => PathMappingService.registerPath(p, workspaceRoot));
-                  return { ...prev, src: Array.from(new Set([...current, ...formatted])).join('\n') };
-                });
-              }
-            }}
-          />
-        </TabsContent>
-
-        <TabsContent value="terminal" className="h-full m-0">
-          <TerminalTab
-            compiledBashCmd={compiledBashCmd}
-            terminalLogs={terminalLogs}
-            onCopyBashCmd={() => {
-              logInfo('[ExporterPanel] TerminalTab onCopyBashCmd');
-              filesExporterApiService.showNotification('info', 'Command copied to clipboard');
-            }}
-            onCopyTerminalLogs={() => {
-              logInfo('[ExporterPanel] TerminalTab onCopyTerminalLogs');
-              filesExporterApiService.showNotification('info', 'Logs copied to clipboard');
-            }}
-            onClearTerminalLogs={() => {
-              logInfo('[ExporterPanel] TerminalTab onClearTerminalLogs');
-              clearTerminalLogs();
-            }}
-          />
-        </TabsContent>
-
-        <TabsContent value="help" className="h-full m-0">
-          <HelpTab />
-        </TabsContent>
-
-        <TabsContent value="simu" className="h-full m-0">
-          <SimulationTab
-            onInjectPaths={(paths) => {
-              logInfo('[ExporterPanel] SimulationTab onInjectPaths', paths);
-              setConfig((prev) => {
-                const current = prev.src ? prev.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean) : [];
-                const flatNew = paths.flatMap((p) => p.split(/[,\n\r]+/)).map((s) => s.trim()).filter(Boolean);
-                const formatted = flatNew.map((p) => PathMappingService.registerPath(p, workspaceRoot));
-                return { ...prev, src: Array.from(new Set([...current, ...formatted])).join('\n') };
-              });
-            }}
-          />
-        </TabsContent>
-      </div>
-    </Tabs>
-  );
-
-  return (
-    <TopMiddleBottomPanel
-      id="panel-exporter-execution"
-      className="bg-background w-full h-full min-h-0 overflow-hidden"
-      top={topContent}
-      middle={middleContent}
-    />
-  );
+interface DestinationSectionProps {
+  destDir: string;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onChangeDestDir: (dir: string) => void;
+  onCopyLatestFiles: () => void;
+  onRevealDestDir: () => void;
+  onClearDestDir: () => void;
 }
 
-export default ExporterPanel;
+export const DestinationSection: React.FC<DestinationSectionProps> = ({
+  destDir,
+  isOpen,
+  onOpenChange,
+  onChangeDestDir,
+  onCopyLatestFiles,
+  onRevealDestDir,
+  onClearDestDir,
+}) => {
+  const workspaceRoot = useExporterStore((s) => s.workspaceRoot);
+  const validationState = useExporterStore((s) => s.validationState);
+  const [destExists, setDestExists] = useState<boolean>(true);
+
+  const destError = validationState.errors?.dest;
+  const isInvalid = validationState.destDirInvalid || Boolean(destError);
+
+  const handleCopyLatestFiles = () => {
+    logInfo('[DestinationSection] onCopyLatestFiles handler triggered', destDir);
+    onCopyLatestFiles();
+  };
+
+  const handleRevealDestDir = () => {
+    logInfo('[DestinationSection] onRevealDestDir handler triggered', destDir);
+    onRevealDestDir();
+  };
+
+  const handleClearDestDir = () => {
+    logInfo('[DestinationSection] onClearDestDir handler triggered', destDir);
+    onClearDestDir();
+  };
+
+  const formattedDest = destDir || 'Default directory';
+  const absDest = PathMappingService.resolveToAbsolute(formattedDest, workspaceRoot);
+
+  useEffect(() => {
+    if (!absDest || !absDest.trim()) {
+      setDestExists(false);
+      return;
+    }
+
+    fileSystemApiService
+      .getInvalidPaths([absDest], workspaceRoot)
+      .then((invalid) => {
+        const isInvalidPath = Boolean(invalid && invalid.length > 0);
+        setDestExists(!isInvalidPath);
+      })
+      .catch(() => {
+        setDestExists(true);
+      });
+  }, [absDest, workspaceRoot]);
+
+  const normDest = absDest.replace(/\\/g, '/');
+  const normWs = workspaceRoot ? workspaceRoot.replace(/\\/g, '/').replace(/\/+$/, '') : '';
+  const isExternal = Boolean(normWs && !normDest.startsWith(normWs));
+
+  let tooltip = formattedDest;
+  if (destError) {
+    tooltip = `⚠️ Error: ${destError}`;
+  } else if (!destExists) {
+    tooltip = `⚠️ Warning because you have defined an non existing folder. <br> It will be created automatically`;
+  } else if (isExternal) {
+    tooltip = `⚠️ Warning: You reference a destination directory outside the current workspace: ${absDest}`;
+  }
+
+  const isWarning = !destExists || isExternal;
+
+  let badgeClassName = 'bg-primary/10 text-primary border-primary/20 [direction:rtl] text-left w-full min-w-0 truncate';
+  if (isInvalid) {
+    badgeClassName = 'bg-destructive/10 text-destructive border-destructive/30 font-semibold [direction:rtl] text-left w-full min-w-0 truncate';
+  } else if (isWarning) {
+    badgeClassName = 'bg-amber-500/10 text-amber-600 border-amber-500/30 font-semibold [direction:rtl] text-left w-full min-w-0 truncate';
+  }
+
+  const summaryBadges: BadgeObject[] = [
+    {
+      label: formattedDest,
+      tooltip,
+      className: badgeClassName,
+    },
+  ];
+
+  return (
+    <CollapsibleCard
+      id="block-destination"
+      title="💾 Destination Directory"
+      tooltip="Absolute distribution path folder location where structured files will be generated."
+      summaryBadges={summaryBadges}
+      defaultOpen={true}
+      isOpen={isOpen}
+      onOpenChange={onOpenChange}
+      className="w-full min-w-0 shrink-0"
+    >
+      <div className="flex gap-1.5 items-center font-mono text-xs">
+        <Input
+          value={destDir}
+          onChange={(e) => onChangeDestDir(e.target.value)}
+          placeholder="/absolute/path/to/exported-files"
+          className={`h-7 text-xs font-mono flex-1 ${
+            isInvalid
+              ? 'bg-destructive/10 text-destructive border-destructive/30 focus-visible:ring-destructive'
+              : 'bg-background'
+          }`}
+          data-tooltip={destError ? `⚠️ Error: ${destError}` : undefined}
+        />
+
+        <Button
+          size="icon-xs"
+          variant="outline"
+          onClick={handleCopyLatestFiles}
+          data-tooltip="Copy Last Exported Files to Clipboard"
+        >
+          <Copy size={13} />
+        </Button>
+
+        <Button
+          size="icon-xs"
+          variant="outline"
+          onClick={handleRevealDestDir}
+          data-tooltip="Reveal Folder in OS Explorer"
+        >
+          <FolderOpen size={13} />
+        </Button>
+
+        <Button
+          size="icon-xs"
+          variant="outline"
+          onClick={handleClearDestDir}
+          data-tooltip="Clean Destination Folder Contents"
+          className="hover:text-destructive"
+        >
+          <Trash2 size={13} />
+        </Button>
+      </div>
+    </CollapsibleCard>
+  );
+};
+
+export default DestinationSection;
 EOF
 
-echo "✅ fix: Corrected path splitting by using comma/linefeed regex (/[,\n\r]+/) without splitting on spaces, ensuring absolute path mappings and short display rules are preserved!"
-echo "💡 Next step: Execute 'cd webview && npm run build' to confirm build succeeds."
+# 3. Update FiltersSection.tsx to style summary badges with destructive red when in error state
+cat << 'EOF' > webview/src/features/exporter/components/FiltersSection.tsx
+import React, { useState } from 'react';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { ArrowDownAZ, ArrowUpAZ, UnfoldVertical, Library, Trash2, MoreVertical } from 'lucide-react';
+import { CollapsibleCard, BadgeObject } from '@/components/ui/collapsible-card';
+import { FILE_EXT_CATEGORY_GROUPS } from '../constants/exporter-constants';
+import { testFilterPatterns } from '../utils/filter-simulator';
+import { explodeTextAreaRegex, groupExtensionsText } from '../utils/regex-exploder';
+import { ExportConfig } from '@/shared/services/file-exporter/model/file-exporter-model';
+import { useExporterStore } from '../store/useExporterStore';
+import { logInfo } from '../utils/log-info';
+
+interface FiltersSectionProps {
+  config: ExportConfig;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onChangeConfig: (updater: (prev: ExportConfig) => ExportConfig) => void;
+  filterSimulatorInput: string;
+  setFilterSimulatorInput: (val: string) => void;
+}
+
+export const FiltersSection: React.FC<FiltersSectionProps> = ({
+  config,
+  isOpen,
+  onOpenChange,
+  onChangeConfig,
+  filterSimulatorInput,
+  setFilterSimulatorInput,
+}) => {
+  const [sortDirections, setSortDirections] = useState<Record<string, 'asc' | 'desc'>>({
+    inc_paths: 'asc',
+    inc_ext: 'asc',
+    exc_paths: 'asc',
+    exc_ext: 'asc',
+  });
+
+  const validationState = useExporterStore((s) => s.validationState);
+  const maxFileErr = validationState.errors?.max_file;
+  const incPathsErr = validationState.errors?.inc_paths;
+  const excPathsErr = validationState.errors?.exc_paths;
+  const incExtErr = validationState.errors?.inc_ext;
+  const excExtErr = validationState.errors?.exc_ext;
+
+  const simResult = testFilterPatterns(
+    filterSimulatorInput,
+    config.inc_paths,
+    config.exc_paths,
+    config.inc_ext,
+    config.exc_ext
+  );
+
+  const separator = '\n';
+  const incPathLines = config.inc_paths.split(separator).map((s) => s.trim()).filter(Boolean);
+  const incExtLines = config.inc_ext.split(separator).map((s) => s.trim()).filter(Boolean);
+  const excPathLines = config.exc_paths.split(separator).map((s) => s.trim()).filter(Boolean);
+  const excExtLines = config.exc_ext.split(separator).map((s) => s.trim()).filter(Boolean);
+
+  const combinedSeparator = ' 📏 ';
+  const incPathCombined = incPathLines.join(combinedSeparator);
+  const incExtCombined = incExtLines.join(combinedSeparator);
+  const excPathCombined = excPathLines.join(combinedSeparator);
+  const excExtCombined = excExtLines.join(combinedSeparator);
+
+  const tooltipSeparator = '<br>';
+  const incPathTooltip = incPathLines.join(tooltipSeparator);
+  const incExtTooltip = incExtLines.join(tooltipSeparator);
+  const excPathTooltip = excPathLines.join(tooltipSeparator);
+  const excExtTooltip = excExtLines.join(tooltipSeparator);
+
+  const summaryBadges: BadgeObject[] = [
+    {
+      label: `Max file: ${config.max_file} KB`,
+      tooltip: maxFileErr ? `⚠️ Error: ${maxFileErr}` : `Max file size limit: ${config.max_file} KB`,
+      className: maxFileErr
+        ? 'bg-destructive/10 text-destructive border-destructive/30 font-semibold shrink-0'
+        : 'bg-primary/10 text-primary border-primary/20 shrink-0 font-bold',
+    },
+  ];
+
+  if (incPathCombined || incPathsErr) {
+    summaryBadges.push({
+      label: `Inc Path: ${incPathCombined || 'Invalid Regex'}`,
+      tooltip: incPathsErr ? `⚠️ Error: ${incPathsErr}` : `<strong>Inc Path:</strong> <br> ${incPathTooltip}`,
+      className: incPathsErr
+        ? 'bg-destructive/10 text-destructive border-destructive/30 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink font-semibold'
+        : 'bg-primary/10 text-primary border-primary/20 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink',
+    });
+  }
+  if (incExtCombined || incExtErr) {
+    summaryBadges.push({
+      label: `Inc Ext: ${incExtCombined || 'Invalid Regex'}`,
+      tooltip: incExtErr ? `⚠️ Error: ${incExtErr}` : `<strong>Inc Ext:</strong> <br> ${incExtTooltip}`,
+      className: incExtErr
+        ? 'bg-destructive/10 text-destructive border-destructive/30 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink font-semibold'
+        : 'bg-primary/10 text-primary border-primary/20 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink',
+    });
+  }
+  if (excPathCombined || excPathsErr) {
+    summaryBadges.push({
+      label: `Exc Path: ${excPathCombined || 'Invalid Regex'}`,
+      tooltip: excPathsErr ? `⚠️ Error: ${excPathsErr}` : `<strong>Exc Path:</strong> <br> ${excPathTooltip}`,
+      className: excPathsErr
+        ? 'bg-destructive/10 text-destructive border-destructive/30 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink font-semibold'
+        : 'bg-primary/10 text-primary border-primary/20 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink',
+    });
+  }
+  if (excExtCombined || excExtErr) {
+    summaryBadges.push({
+      label: `Exc Ext: ${excExtCombined || 'Invalid Regex'}`,
+      tooltip: excExtErr ? `⚠️ Error: ${excExtErr}` : `<strong>Exc Ext:</strong> <br> ${excExtTooltip}`,
+      className: excExtErr
+        ? 'bg-destructive/10 text-destructive border-destructive/30 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink font-semibold'
+        : 'bg-primary/10 text-primary border-primary/20 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink',
+    });
+  }
+
+  const toggleSortLines = (field: keyof ExportConfig) => {
+    const currentDir = sortDirections[field] || 'asc';
+    const nextDir = currentDir === 'asc' ? 'desc' : 'asc';
+    setSortDirections((prev) => ({ ...prev, [field]: nextDir }));
+
+    logInfo('[FiltersSection] toggleSortLines handler triggered', { field, direction: nextDir });
+
+    onChangeConfig((prev) => {
+      const val = String(prev[field] || '');
+      const lines = val.split('\n').map((l) => l.trim()).filter(Boolean);
+
+      const commentLines = lines.filter((l) => l.startsWith('#'));
+      const activeLines = lines.filter((l) => !l.startsWith('#'));
+
+      activeLines.sort((a, b) => (nextDir === 'asc' ? a.localeCompare(b) : b.localeCompare(a)));
+
+      const combined = [...commentLines, ...activeLines];
+      return { ...prev, [field]: combined.join('\n') };
+    });
+  };
+
+  const explodeRegex = (field: keyof ExportConfig) => {
+    logInfo('[FiltersSection] explodeRegex handler triggered', field);
+    onChangeConfig((prev) => {
+      const val = String(prev[field] || '');
+      const exploded = explodeTextAreaRegex(val);
+      return { ...prev, [field]: exploded };
+    });
+  };
+
+  const groupExtensions = (field: 'inc_ext' | 'exc_ext') => {
+    logInfo('[FiltersSection] groupExtensions handler triggered', field);
+    onChangeConfig((prev) => {
+      const val = String(prev[field] || '');
+      const result = groupExtensionsText(val, FILE_EXT_CATEGORY_GROUPS);
+      return { ...prev, [field]: result.text };
+    });
+  };
+
+  const clearField = (field: keyof ExportConfig) => {
+    logInfo('[FiltersSection] clearField handler triggered', field);
+    onChangeConfig((prev) => ({ ...prev, [field]: '' }));
+  };
+
+  const appendExtensionCategory = (field: 'inc_ext' | 'exc_ext', label: string, extensions: string[]) => {
+    logInfo('[FiltersSection] appendExtensionCategory handler triggered', { field, label, extensions });
+    onChangeConfig((prev) => {
+      const current = prev[field] ? prev[field].split('\n') : [];
+      const combined = Array.from(new Set([...current, ...extensions]));
+      return { ...prev, [field]: combined.join('\n') };
+    });
+  };
+
+  return (
+    <CollapsibleCard
+      id="block-filters"
+      title="🔍 Filters & Scope Constraints"
+      tooltip="Regular Expression masks defining targeted directories and source formatting inclusions or exclusions lists."
+      summaryBadges={summaryBadges}
+      defaultOpen={true}
+      isOpen={isOpen}
+      onOpenChange={onOpenChange}
+      className="w-full min-w-0 shrink-0"
+    >
+      <div className="space-y-3 w-full min-w-0 font-mono text-xs">
+        {/* Top Constraint Controls */}
+        <div className="flex items-center gap-2 w-full min-w-0">
+          <label className="font-semibold text-[11px] text-muted-foreground whitespace-nowrap shrink-0">
+            🏋️ Max File
+          </label>
+          <Input
+            value={config.max_file}
+            onChange={(e) =>
+              onChangeConfig((prev) => ({ ...prev, max_file: e.target.value }))
+            }
+            className={`w-24 h-7 font-mono text-xs shrink-0 ${
+              validationState.maxFileInvalid || maxFileErr
+                ? 'bg-destructive/10 text-destructive border-destructive/30 focus-visible:ring-destructive'
+                : 'bg-background'
+            }`}
+            data-tooltip={maxFileErr ? `⚠️ Error: ${maxFileErr}` : undefined}
+          /> KB
+        </div>
+
+        {/* Outer Grid: Grouped Inclusions and Grouped Exclusions */}
+        <div className="gap-3 grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] w-full min-w-0">
+          {/* Grouped Inclusions */}
+          <div className="space-y-2 bg-muted/20 p-2.5 border border-border/40 rounded-md w-full min-w-0">
+            <div className="flex justify-between items-center min-w-0 font-semibold text-[11px] text-foreground">
+              <span className="truncate">✅ Inclusions</span>
+            </div>
+
+            {/* Inner Grid: Include Paths & Include Exts */}
+            <div className="gap-2.5 grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] w-full min-w-0">
+              {/* Include Paths */}
+              <div className="space-y-1 w-full min-w-0">
+                <div className="flex justify-between items-center min-w-0 font-semibold text-[10px] text-muted-foreground">
+                  <span className="truncate">Paths</span>
+                  <div className="flex gap-0.5 shrink-0">
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => toggleSortLines('inc_paths')}
+                      data-tooltip={`Sort lines (${sortDirections.inc_paths === 'asc' ? 'Ascending' : 'Descending'})`}
+                    >
+                      {sortDirections.inc_paths === 'asc' ? <ArrowDownAZ size={11} /> : <ArrowUpAZ size={11} />}
+                    </Button>
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => explodeRegex('inc_paths')}
+                      data-tooltip="Explode regex alternatives"
+                    >
+                      <UnfoldVertical size={11} />
+                    </Button>
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => clearField('inc_paths')}
+                      data-tooltip="Clear field"
+                    >
+                      <Trash2 size={11} />
+                    </Button>
+                  </div>
+                </div>
+                <Textarea
+                  value={config.inc_paths}
+                  onChange={(e) =>
+                    onChangeConfig((prev) => ({ ...prev, inc_paths: e.target.value }))
+                  }
+                  rows={3}
+                  className={`w-full min-w-0 font-mono text-xs resize-y ${
+                    incPathsErr
+                      ? 'bg-destructive/10 text-destructive border-destructive/30 focus-visible:ring-destructive'
+                      : 'bg-background'
+                  }`}
+                  data-tooltip={incPathsErr ? `⚠️ Error: ${incPathsErr}` : undefined}
+                />
+              </div>
+
+              {/* Include Extensions */}
+              <div className="space-y-1 w-full min-w-0">
+                <div className="flex justify-between items-center min-w-0 font-semibold text-[10px] text-muted-foreground">
+                  <span className="truncate">Extensions</span>
+                  <div className="flex gap-0.5 shrink-0">
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => toggleSortLines('inc_ext')}
+                      data-tooltip={`Sort lines (${sortDirections.inc_ext === 'asc' ? 'Ascending' : 'Descending'})`}
+                    >
+                      {sortDirections.inc_ext === 'asc' ? <ArrowDownAZ size={11} /> : <ArrowUpAZ size={11} />}
+                    </Button>
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => groupExtensions('inc_ext')}
+                      data-tooltip="Group extensions by category"
+                    >
+                      <Library size={11} />
+                    </Button>
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => explodeRegex('inc_ext')}
+                      data-tooltip="Explode regex alternatives"
+                    >
+                      <UnfoldVertical size={11} />
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="icon-xs" variant="ghost" data-tooltip="Category Presets">
+                          <MoreVertical size={11} />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {FILE_EXT_CATEGORY_GROUPS.filter((g) => g.includeExtsMenuEnabled).map(
+                          (grp) => (
+                            <DropdownMenuItem
+                              key={grp.label}
+                              onClick={() => appendExtensionCategory('inc_ext', grp.label, grp.extensions)}
+                            >
+                              {grp.label}
+                            </DropdownMenuItem>
+                          )
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => clearField('inc_ext')}
+                      data-tooltip="Clear field"
+                    >
+                      <Trash2 size={11} />
+                    </Button>
+                  </div>
+                </div>
+                <Textarea
+                  value={config.inc_ext}
+                  onChange={(e) =>
+                    onChangeConfig((prev) => ({ ...prev, inc_ext: e.target.value }))
+                  }
+                  rows={3}
+                  className={`w-full min-w-0 font-mono text-xs resize-y ${
+                    incExtErr
+                      ? 'bg-destructive/10 text-destructive border-destructive/30 focus-visible:ring-destructive'
+                      : 'bg-background'
+                  }`}
+                  data-tooltip={incExtErr ? `⚠️ Error: ${incExtErr}` : undefined}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Grouped Exclusions */}
+          <div className="space-y-2 bg-muted/20 p-2.5 border border-border/40 rounded-md w-full min-w-0">
+            <div className="flex justify-between items-center min-w-0 font-semibold text-[11px] text-foreground">
+              <span className="truncate">🚫 Exclusions</span>
+            </div>
+
+            {/* Inner Grid: Exclude Paths & Exclude Exts */}
+            <div className="gap-2.5 grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] w-full min-w-0">
+              {/* Exclude Paths */}
+              <div className="space-y-1 w-full min-w-0">
+                <div className="flex justify-between items-center min-w-0 font-semibold text-[10px] text-muted-foreground">
+                  <span className="truncate">Paths</span>
+                  <div className="flex gap-0.5 shrink-0">
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => toggleSortLines('exc_paths')}
+                      data-tooltip={`Sort lines (${sortDirections.exc_paths === 'asc' ? 'Ascending' : 'Descending'})`}
+                    >
+                      {sortDirections.exc_paths === 'asc' ? <ArrowDownAZ size={11} /> : <ArrowUpAZ size={11} />}
+                    </Button>
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => explodeRegex('exc_paths')}
+                      data-tooltip="Explode regex alternatives"
+                    >
+                      <UnfoldVertical size={11} />
+                    </Button>
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => clearField('exc_paths')}
+                      data-tooltip="Clear field"
+                    >
+                      <Trash2 size={11} />
+                    </Button>
+                  </div>
+                </div>
+                <Textarea
+                  value={config.exc_paths}
+                  onChange={(e) =>
+                    onChangeConfig((prev) => ({ ...prev, exc_paths: e.target.value }))
+                  }
+                  rows={3}
+                  className={`w-full min-w-0 font-mono text-xs resize-y ${
+                    excPathsErr
+                      ? 'bg-destructive/10 text-destructive border-destructive/30 focus-visible:ring-destructive'
+                      : 'bg-background'
+                  }`}
+                  data-tooltip={excPathsErr ? `⚠️ Error: ${excPathsErr}` : undefined}
+                />
+              </div>
+
+              {/* Exclude Extensions */}
+              <div className="space-y-1 w-full min-w-0">
+                <div className="flex justify-between items-center min-w-0 font-semibold text-[10px] text-muted-foreground">
+                  <span className="truncate">Extensions</span>
+                  <div className="flex gap-0.5 shrink-0">
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => toggleSortLines('exc_ext')}
+                      data-tooltip={`Sort lines (${sortDirections.exc_ext === 'asc' ? 'Ascending' : 'Descending'})`}
+                    >
+                      {sortDirections.exc_ext === 'asc' ? <ArrowDownAZ size={11} /> : <ArrowUpAZ size={11} />}
+                    </Button>
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => groupExtensions('exc_ext')}
+                      data-tooltip="Group extensions by category"
+                    >
+                      <Library size={11} />
+                    </Button>
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => explodeRegex('exc_ext')}
+                      data-tooltip="Explode regex alternatives"
+                    >
+                      <UnfoldVertical size={11} />
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="icon-xs" variant="ghost" data-tooltip="Category Presets">
+                          <MoreVertical size={11} />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {FILE_EXT_CATEGORY_GROUPS.filter((g) => g.excludeExtsMenuEnabled).map(
+                          (grp) => (
+                            <DropdownMenuItem
+                              key={grp.label}
+                              onClick={() => appendExtensionCategory('exc_ext', grp.label, grp.extensions)}
+                            >
+                              {grp.label}
+                            </DropdownMenuItem>
+                          )
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => clearField('exc_ext')}
+                      data-tooltip="Clear field"
+                    >
+                      <Trash2 size={11} />
+                    </Button>
+                  </div>
+                </div>
+                <Textarea
+                  value={config.exc_ext}
+                  onChange={(e) =>
+                    onChangeConfig((prev) => ({ ...prev, exc_ext: e.target.value }))
+                  }
+                  rows={3}
+                  className={`w-full min-w-0 font-mono text-xs resize-y ${
+                    excExtErr
+                      ? 'bg-destructive/10 text-destructive border-destructive/30 focus-visible:ring-destructive'
+                      : 'bg-background'
+                  }`}
+                  data-tooltip={excExtErr ? `⚠️ Error: ${excExtErr}` : undefined}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Filter Simulator */}
+        <div className="flex sm:flex-row flex-col items-stretch sm:items-center gap-2 bg-muted/30 p-2 border border-border rounded-md w-full min-w-0">
+          <span className="font-bold text-[11px] text-foreground truncate shrink-0">
+            🧪 Filters Simulator:
+          </span>
+          <Input
+            value={filterSimulatorInput}
+            onChange={(e) => setFilterSimulatorInput(e.target.value)}
+            placeholder="Enter test file path or name to simulate matching rules..."
+            className="flex-1 bg-background min-w-0 h-7 font-mono text-xs"
+          />
+          <div className="flex justify-end items-center gap-1.5 min-w-0 shrink-0">
+            <span className="px-1 text-base shrink-0" data-tooltip={simResult.reason}>
+              {!filterSimulatorInput.trim()
+                ? '❓'
+                : simResult.isMatched
+                ? '✅'
+                : '🚫'}
+            </span>
+            <span className="max-w-[140px] sm:max-w-[200px] font-mono text-[10px] text-muted-foreground truncate" data-tooltip={simResult.reason}>
+              {filterSimulatorInput.trim() ? simResult.reason : 'Idle'}
+            </span>
+          </div>
+        </div>
+      </div>
+    </CollapsibleCard>
+  );
+};
+
+export default FiltersSection;
+EOF
+
+# 4. Update OutputFormattingSection.tsx to style summary badges with destructive red when in error state
+cat << 'EOF' > webview/src/features/exporter/components/OutputFormattingSection.tsx
+import React from 'react';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { CollapsibleCard, BadgeObject } from '@/components/ui/collapsible-card';
+import { EXPORT_FORMAT_ICON_MAP, EXPORT_FORMAT_LIST, ExportFormat } from '@/shared/services/codebase-exporter/types/type-export-format.gen';
+import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
+import { ExportConfig } from '@/shared/services/file-exporter/model/file-exporter-model';
+import { useExporterStore } from '../store/useExporterStore';
+import { logInfo } from '../utils/log-info';
+
+interface OutputFormattingSectionProps {
+  config: ExportConfig;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onChangeConfig: (updater: (prev: ExportConfig) => ExportConfig) => void;
+}
+
+export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = ({
+  config,
+  isOpen,
+  onOpenChange,
+  onChangeConfig,
+}) => {
+  const validationState = useExporterStore((s) => s.validationState);
+  const maxChunkErr = validationState.errors?.max_chunk;
+
+  const activeCheckboxes: string[] = [];
+  if (config.groupByExt) activeCheckboxes.push('Split by Ext');
+  if (config.copyGeneratedFilesToClipboard) activeCheckboxes.push('Copy to Clip');
+  if (config.generateTreeView) activeCheckboxes.push('Tree View');
+  if (config.logConsole) activeCheckboxes.push('Log Console');
+  if (config.logFile) activeCheckboxes.push('Log File');
+
+  const summaryBadges: BadgeObject[] = [
+    { label: `Format: ${config.format.toUpperCase()}`, tooltip: `Output Format: ${config.format.toUpperCase()}` },
+    {
+      label: `Chunk: ${config.max_chunk} KB`,
+      tooltip: maxChunkErr ? `⚠️ Error: ${maxChunkErr}` : `Max Chunk Size: ${config.max_chunk} KB`,
+      className: maxChunkErr
+        ? 'bg-destructive/10 text-destructive border-destructive/30 font-semibold'
+        : 'bg-primary/10 text-primary border-primary/20',
+    },
+    ...activeCheckboxes.map((chk) => ({ label: chk, tooltip: `Rule enabled: ${chk}` })),
+  ];
+
+  return (
+    <CollapsibleCard
+      id="block-options"
+      title="⚙️ Output Formatting & Rules"
+      tooltip="Aggregated output payload formats schemas, text partitions thresholds, chunk splits and logging rules."
+      summaryBadges={summaryBadges}
+      defaultOpen={true}
+      isOpen={isOpen}
+      onOpenChange={onOpenChange}
+      className="w-full min-w-0 shrink-0"
+    >
+      <div className="flex flex-col space-y-3 w-full min-w-0 font-mono text-xs">
+        {/* Format & Chunk Controls */}
+        <div className="gap-2.5 grid grid-cols-1 sm:grid-cols-2 w-full min-w-0">
+          <div className="space-y-1 w-full min-w-0">
+            <label className="block font-semibold text-[10px] text-muted-foreground truncate">
+              Output Format
+            </label>
+            <SelectFromTypeBuilder
+              id="select-export-format"
+              value={config.format}
+              onChange={(val) => {
+                if (val) {
+                  logInfo('[OutputFormattingSection] Format changed', val);
+                  onChangeConfig((prev) => ({ ...prev, format: val as ExportFormat }));
+                }
+              }}
+              triggerClassName="!h-7 min-h-0 py-0 px-2 text-xs border-border rounded-md font-mono w-24"
+              options={EXPORT_FORMAT_LIST.map((key) => ({
+                value: key,
+                icon: EXPORT_FORMAT_ICON_MAP[key]?.icon,
+                label: EXPORT_FORMAT_ICON_MAP[key]?.label,
+              }))}
+            />
+          </div>
+
+          <div className="space-y-1 w-full min-w-0">
+            <label className="block font-semibold text-[10px] text-muted-foreground truncate">
+              Max Chunk (KB)
+            </label>
+            <Input
+              value={config.max_chunk}
+              onChange={(e) => {
+                logInfo('[OutputFormattingSection] Max chunk changed', e.target.value);
+                onChangeConfig((prev) => ({ ...prev, max_chunk: e.target.value }));
+              }}
+              className={`w-full h-7 font-mono text-xs ${
+                validationState.maxChunkInvalid || maxChunkErr
+                  ? 'bg-destructive/10 text-destructive border-destructive/30 focus-visible:ring-destructive'
+                  : 'bg-background'
+              }`}
+              data-tooltip={maxChunkErr ? `⚠️ Error: ${maxChunkErr}` : undefined}
+            />
+          </div>
+        </div>
+
+        {/* Responsive Checkbox Grid with Uniform Equal Width Items */}
+        <div className="gap-2 grid grid-cols-[repeat(auto-fit,minmax(110px,1fr))] pt-2 border-border/40 border-t w-full min-w-0">
+          <div className="flex justify-start items-center gap-2 bg-muted/20 hover:bg-muted/40 p-1.5 border border-border/30 rounded-sm w-full min-w-0 transition-colors">
+            <Checkbox
+              id="cb-split-ext"
+              checked={config.groupByExt}
+              onCheckedChange={(val) => {
+                logInfo('[OutputFormattingSection] groupByExt changed', Boolean(val));
+                onChangeConfig((prev) => ({ ...prev, groupByExt: Boolean(val) }));
+              }}
+            />
+            <label htmlFor="cb-split-ext" className="font-medium text-[10px] truncate cursor-pointer select-none">
+              Split by Ext
+            </label>
+          </div>
+
+          <div className="flex justify-start items-center gap-2 bg-muted/20 hover:bg-muted/40 p-1.5 border border-border/30 rounded-sm w-full min-w-0 transition-colors">
+            <Checkbox
+              id="cb-copy-clip"
+              checked={config.copyGeneratedFilesToClipboard}
+              onCheckedChange={(val) => {
+                logInfo('[OutputFormattingSection] copyGeneratedFilesToClipboard changed', Boolean(val));
+                onChangeConfig((prev) => ({
+                  ...prev,
+                  copyGeneratedFilesToClipboard: Boolean(val),
+                }));
+              }}
+            />
+            <label htmlFor="cb-copy-clip" className="font-medium text-[10px] truncate cursor-pointer select-none">
+              Copy to Clip
+            </label>
+          </div>
+
+          <div className="flex justify-start items-center gap-2 bg-muted/20 hover:bg-muted/40 p-1.5 border border-border/30 rounded-sm w-full min-w-0 transition-colors">
+            <Checkbox
+              id="cb-tree-view"
+              checked={config.generateTreeView}
+              onCheckedChange={(val) => {
+                logInfo('[OutputFormattingSection] generateTreeView changed', Boolean(val));
+                onChangeConfig((prev) => ({ ...prev, generateTreeView: Boolean(val) }));
+              }}
+            />
+            <label htmlFor="cb-tree-view" className="font-medium text-[10px] truncate cursor-pointer select-none">
+              Tree View
+            </label>
+          </div>
+
+          <div className="flex justify-start items-center gap-2 bg-muted/20 hover:bg-muted/40 p-1.5 border border-border/30 rounded-sm w-full min-w-0 transition-colors">
+            <Checkbox
+              id="cb-log-console"
+              checked={config.logConsole}
+              onCheckedChange={(val) => {
+                logInfo('[OutputFormattingSection] logConsole changed', Boolean(val));
+                onChangeConfig((prev) => ({ ...prev, logConsole: Boolean(val) }));
+              }}
+            />
+            <label htmlFor="cb-log-console" className="font-medium text-[10px] truncate cursor-pointer select-none">
+              Log Console
+            </label>
+          </div>
+
+          <div className="flex justify-start items-center gap-2 bg-muted/20 hover:bg-muted/40 p-1.5 border border-border/30 rounded-sm w-full min-w-0 transition-colors">
+            <Checkbox
+              id="cb-log-file"
+              checked={config.logFile}
+              onCheckedChange={(val) => {
+                logInfo('[OutputFormattingSection] logFile changed', Boolean(val));
+                onChangeConfig((prev) => ({ ...prev, logFile: Boolean(val) }));
+              }}
+            />
+            <label htmlFor="cb-log-file" className="font-medium text-[10px] truncate cursor-pointer select-none">
+              Log File
+            </label>
+          </div>
+        </div>
+      </div>
+    </CollapsibleCard>
+  );
+};
+
+export default OutputFormattingSection;
+EOF
+
+echo "✅ style: Updated collapsible card summary badges to render with destructive red styling when fields contain errors!"
+echo "💡 Next step: Run 'cd webview && npm run build' to verify compilation."
