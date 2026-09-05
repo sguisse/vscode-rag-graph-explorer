@@ -21,7 +21,7 @@ export function DeleteProfileDialog({ isOpen, profileName, onConfirm, onCancel }
         </DialogHeader>
 
         <div className="py-2 text-muted-foreground leading-relaxed">
-          Are you sure you want to delete the configuration profile <strong className="text-foreground">{profileName || 'selected'}</strong>?
+          Are you sure you want to delete the configuration profile <strong className="text-foreground">{profileName || 'selected'}</strong>&nbsp;❓
           <br /><br />
           This action cannot be undone. The default configuration will be re-selected automatically.
         </div>

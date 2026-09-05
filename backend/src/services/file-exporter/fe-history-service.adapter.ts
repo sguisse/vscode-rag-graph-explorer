@@ -4,7 +4,7 @@ import * as os from 'os';
 import { existsSync } from 'fs';
 import * as fs from 'fs/promises';
 import { AbstractServiceAdapter } from '../../core/AbstractServiceAdapter';
-import { logInfo, logError } from '../../utils/utils-log';
+import { logInfo, logError, logWarn } from '../../utils/utils-log';
 import {
   HistoryEntry,
   ExportConfig,
@@ -16,10 +16,13 @@ import {
 } from '../../../../shared/services/file-exporter/model/file-exporter-model';
 import { IFilesExporterHistoryServicePort } from '../../../../shared/services/file-exporter/port-out/fe-history-service.port';
 import { vsCodeSettingsManager } from '../../managers/VsCodeSettings.manager';
+import { serviceRegistry } from '../../core/ServiceRegistry';
+import { ServiceEnum } from '../../../../shared/config/service-enum.gen';
+import { IVsCodeServicePort } from '../../../../shared/services/vscode/port-out/vscode-service.port';
 
 export class FilesExporterHistoryAdapter extends AbstractServiceAdapter implements IFilesExporterHistoryServicePort, vscode.Disposable {
   private getHistoryFilePathResolved(): string {
-    const rawPath = vsCodeSettingsManager.getSettings().exporter.historyYamlPath || '~/.files-exporter-history.yaml';
+    const rawPath = vsCodeSettingsManager.getSettings().exporter.historyYamlPath || '~/files-exporter/.files-exporter-history.yaml';
     if (rawPath.startsWith('~')) {
       return path.join(os.homedir(), rawPath.slice(1));
     }
@@ -28,6 +31,10 @@ export class FilesExporterHistoryAdapter extends AbstractServiceAdapter implemen
 
   public async getHistoryFilePath(): Promise<string> {
     return this.getHistoryFilePathResolved();
+  }
+
+  private getVscodeService(): IVsCodeServicePort {
+    return serviceRegistry.get(ServiceEnum.VS_CODE);
   }
 
   public async getFullWrapper(currentRepo?: string): Promise<HistoryWrapper> {
@@ -247,23 +254,57 @@ export class FilesExporterHistoryAdapter extends AbstractServiceAdapter implemen
   }
 
   public async openHistoryFile(): Promise<void> {
-    const filePath = this.getHistoryFilePathResolved();
-    if (existsSync(filePath)) {
+    console.log('[FilesExporterHistoryAdapter] openHistoryFile invoked');
+    logInfo('[FilesExporterHistoryAdapter] openHistoryFile starting...');
+    try {
+      const filePath = this.getHistoryFilePathResolved();
+      const parentDir = path.dirname(filePath);
+
+      if (!existsSync(parentDir)) {
+        await fs.mkdir(parentDir, { recursive: true });
+      }
+
+      if (!existsSync(filePath)) {
+        await fs.writeFile(filePath, JSON.stringify({ config: { repo: [] }, history: [] }, null, 2), 'utf8');
+      }
+
       const doc = await vscode.workspace.openTextDocument(filePath);
       await vscode.window.showTextDocument(doc);
-    } else {
-      vscode.window.showWarningMessage('History log file does not exist yet.');
+    } catch (err: any) {
+      console.error('[FilesExporterHistoryAdapter] Error in openHistoryFile:', err);
+      logError('[FilesExporterHistoryAdapter] Error in openHistoryFile:', err);
+      throw err;
     }
   }
 
   public async revealHistoryFile(): Promise<void> {
-    const filePath = this.getHistoryFilePathResolved();
-    if (existsSync(filePath)) {
-      await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(filePath));
-    } else {
+    console.log('[FilesExporterHistoryAdapter] revealHistoryFile invoked');
+    logInfo('[FilesExporterHistoryAdapter] revealHistoryFile starting...');
+    try {
+      const filePath = this.getHistoryFilePathResolved();
+      console.log('[FilesExporterHistoryAdapter] Resolved history file path:', filePath);
+      logInfo('[FilesExporterHistoryAdapter] Resolved history file path:', [filePath]);
+
       const parentDir = path.dirname(filePath);
-      await fs.mkdir(parentDir, { recursive: true });
-      await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(parentDir));
+      if (!existsSync(parentDir)) {
+        await fs.mkdir(parentDir, { recursive: true });
+        console.log('[FilesExporterHistoryAdapter] Created parent directory:', parentDir);
+        logInfo('[FilesExporterHistoryAdapter] Created parent directory:', [parentDir]);
+      }
+
+      if (!existsSync(filePath)) {
+        await fs.writeFile(filePath, JSON.stringify({ config: { repo: [] }, history: [] }, null, 2), 'utf8');
+        console.log('[FilesExporterHistoryAdapter] Created initial history file:', filePath);
+        logInfo('[FilesExporterHistoryAdapter] Created initial history file:', [filePath]);
+      }
+
+      console.log('[FilesExporterHistoryAdapter] Revealing path in OS explorer:', filePath);
+      logInfo('[FilesExporterHistoryAdapter] Revealing path in OS explorer:', [filePath]);
+      await this.getVscodeService().revealInOsExplorer(filePath);
+    } catch (err: any) {
+      console.error('[FilesExporterHistoryAdapter] Error in revealHistoryFile:', err);
+      logError('[FilesExporterHistoryAdapter] Error in revealHistoryFile:', err);
+      throw err;
     }
   }
 

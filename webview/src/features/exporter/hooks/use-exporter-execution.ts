@@ -95,7 +95,7 @@ export function useExporterExecution() {
     if (excExtErr) validationErrors.push(`Exclude Extensions Regex: ${excExtErr}`);
 
     if (validationErrors.length > 0) {
-      logInfo('[useExporterExecution] Export blocked due to validation errors', validationErrors);
+      logInfo('[useExporterExecution] Export blocked due to validation errors', [validationErrors]);
       store.setModalState({
         isValidationModalOpen: true,
         validationErrors,
@@ -120,18 +120,7 @@ export function useExporterExecution() {
     }
 
     try {
-      store.appendTerminalLog(`💾 [1/4] Saving profile configuration...\n`);
-      try {
-        await Promise.race([
-          store.saveProfile(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Profile save timeout (3s)')), 3000)),
-        ]);
-        store.appendTerminalLog(`✅ [1/4] Profile saved.\n`);
-      } catch (saveErr: any) {
-        store.appendTerminalLog(`⚠️ [1/4] Profile save bypassed (${saveErr?.message || saveErr}). Continuing export...\n`);
-      }
-
-      store.appendTerminalLog(`📡 [2/4] Sending RPC runExport request to backend...\n`);
+      store.appendTerminalLog(`📡 [1/3] Sending RPC runExport request to backend...\n`);
       const runResponse = await filesExporterApiService.runExport({
         config: {
           ...store.config,
@@ -149,8 +138,8 @@ export function useExporterExecution() {
         return;
       }
 
-      store.appendTerminalLog(`⚡ [3/4] Python process spawned with PID ${pid}. Target Dir: ${runResponse.exportDirectory}\n`);
-      store.appendTerminalLog(`⏳ [4/4] Monitoring execution progress...\n`);
+      store.appendTerminalLog(`⚡ [2/3] Python process spawned with PID ${pid}. Target Dir: ${runResponse.exportDirectory}\n`);
+      store.appendTerminalLog(`⏳ [3/3] Monitoring execution progress...\n`);
 
       let isDone = false;
       let checkCount = 0;
