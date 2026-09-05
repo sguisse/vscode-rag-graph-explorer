@@ -1,28 +1,47 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CollapsibleCard } from '@/components/ui/collapsible-card';
+import { CollapsibleCard, BadgeObject } from '@/components/ui/collapsible-card';
 import { EXPORT_FORMAT_ICON_MAP, EXPORT_FORMAT_LIST, ExportFormat } from '@/shared/services/codebase-exporter/types/type-export-format.gen';
 import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
 import { ExportConfig } from '@/shared/services/file-exporter/model/file-exporter-model';
+import { logInfo } from '../utils/log-info';
 
 interface OutputFormattingSectionProps {
   config: ExportConfig;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
   onChangeConfig: (updater: (prev: ExportConfig) => ExportConfig) => void;
 }
 
 export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = ({
   config,
+  isOpen,
+  onOpenChange,
   onChangeConfig,
 }) => {
+  const activeCheckboxes: string[] = [];
+  if (config.groupByExt) activeCheckboxes.push('Split by Ext');
+  if (config.copyGeneratedFilesToClipboard) activeCheckboxes.push('Copy to Clip');
+  if (config.generateTreeView) activeCheckboxes.push('Tree View');
+  if (config.logConsole) activeCheckboxes.push('Log Console');
+  if (config.logFile) activeCheckboxes.push('Log File');
+
+  const summaryBadges: BadgeObject[] = [
+    { label: `Format: ${config.format.toUpperCase()}`, tooltip: `Output Format: ${config.format.toUpperCase()}` },
+    { label: `Chunk: ${config.max_chunk} KB`, tooltip: `Max Chunk Size: ${config.max_chunk} KB` },
+    ...activeCheckboxes.map((chk) => ({ label: chk, tooltip: `Rule enabled: ${chk}` })),
+  ];
+
   return (
     <CollapsibleCard
       id="block-options"
       title="⚙️ Output Formatting & Rules"
       tooltip="Aggregated output payload formats schemas, text partitions thresholds, chunk splits and logging rules."
-      summaryText={`Format: ${config.format.toUpperCase()} | Chunk: ${config.max_chunk} KB`}
+      summaryBadges={summaryBadges}
       defaultOpen={true}
+      isOpen={isOpen}
+      onOpenChange={onOpenChange}
       className="w-full min-w-0 shrink-0"
     >
       <div className="flex flex-col space-y-3 w-full min-w-0 font-mono text-xs">
@@ -33,21 +52,21 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
               Output Format
             </label>
             <SelectFromTypeBuilder
-                id="select-export-format"
-                value={config.format}
-                onChange={(val) => {
-                    if (val) {
-                    onChangeConfig((prev) => ({ ...prev, format: val as ExportFormat }));
-                    }
-                }}
-                triggerClassName="!h-7 min-h-0 py-0 px-2 text-xs border-border rounded-md font-mono w-24"
-                options={EXPORT_FORMAT_LIST.map((key) => ({
-                    value: key,
-                    icon: EXPORT_FORMAT_ICON_MAP[key]?.icon,
-                    label: EXPORT_FORMAT_ICON_MAP[key]?.label,
-                }))}
+              id="select-export-format"
+              value={config.format}
+              onChange={(val) => {
+                if (val) {
+                  logInfo('[OutputFormattingSection] Format changed', val);
+                  onChangeConfig((prev) => ({ ...prev, format: val as ExportFormat }));
+                }
+              }}
+              triggerClassName="!h-7 min-h-0 py-0 px-2 text-xs border-border rounded-md font-mono w-24"
+              options={EXPORT_FORMAT_LIST.map((key) => ({
+                value: key,
+                icon: EXPORT_FORMAT_ICON_MAP[key]?.icon,
+                label: EXPORT_FORMAT_ICON_MAP[key]?.label,
+              }))}
             />
-
           </div>
 
           <div className="space-y-1 w-full min-w-0">
@@ -56,9 +75,10 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
             </label>
             <Input
               value={config.max_chunk}
-              onChange={(e) =>
-                onChangeConfig((prev) => ({ ...prev, max_chunk: e.target.value }))
-              }
+              onChange={(e) => {
+                logInfo('[OutputFormattingSection] Max chunk changed', e.target.value);
+                onChangeConfig((prev) => ({ ...prev, max_chunk: e.target.value }));
+              }}
               className="bg-background w-full h-7 font-mono text-xs"
             />
           </div>
@@ -70,9 +90,10 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
             <Checkbox
               id="cb-split-ext"
               checked={config.groupByExt}
-              onCheckedChange={(val) =>
-                onChangeConfig((prev) => ({ ...prev, groupByExt: Boolean(val) }))
-              }
+              onCheckedChange={(val) => {
+                logInfo('[OutputFormattingSection] groupByExt changed', Boolean(val));
+                onChangeConfig((prev) => ({ ...prev, groupByExt: Boolean(val) }));
+              }}
             />
             <label htmlFor="cb-split-ext" className="font-medium text-[10px] truncate cursor-pointer select-none">
               Split by Ext
@@ -83,12 +104,13 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
             <Checkbox
               id="cb-copy-clip"
               checked={config.copyGeneratedFilesToClipboard}
-              onCheckedChange={(val) =>
+              onCheckedChange={(val) => {
+                logInfo('[OutputFormattingSection] copyGeneratedFilesToClipboard changed', Boolean(val));
                 onChangeConfig((prev) => ({
                   ...prev,
                   copyGeneratedFilesToClipboard: Boolean(val),
-                }))
-              }
+                }));
+              }}
             />
             <label htmlFor="cb-copy-clip" className="font-medium text-[10px] truncate cursor-pointer select-none">
               Copy to Clip
@@ -99,9 +121,10 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
             <Checkbox
               id="cb-tree-view"
               checked={config.generateTreeView}
-              onCheckedChange={(val) =>
-                onChangeConfig((prev) => ({ ...prev, generateTreeView: Boolean(val) }))
-              }
+              onCheckedChange={(val) => {
+                logInfo('[OutputFormattingSection] generateTreeView changed', Boolean(val));
+                onChangeConfig((prev) => ({ ...prev, generateTreeView: Boolean(val) }));
+              }}
             />
             <label htmlFor="cb-tree-view" className="font-medium text-[10px] truncate cursor-pointer select-none">
               Tree View
@@ -112,9 +135,10 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
             <Checkbox
               id="cb-log-console"
               checked={config.logConsole}
-              onCheckedChange={(val) =>
-                onChangeConfig((prev) => ({ ...prev, logConsole: Boolean(val) }))
-              }
+              onCheckedChange={(val) => {
+                logInfo('[OutputFormattingSection] logConsole changed', Boolean(val));
+                onChangeConfig((prev) => ({ ...prev, logConsole: Boolean(val) }));
+              }}
             />
             <label htmlFor="cb-log-console" className="font-medium text-[10px] truncate cursor-pointer select-none">
               Log Console
@@ -125,9 +149,10 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
             <Checkbox
               id="cb-log-file"
               checked={config.logFile}
-              onCheckedChange={(val) =>
-                onChangeConfig((prev) => ({ ...prev, logFile: Boolean(val) }))
-              }
+              onCheckedChange={(val) => {
+                logInfo('[OutputFormattingSection] logFile changed', Boolean(val));
+                onChangeConfig((prev) => ({ ...prev, logFile: Boolean(val) }));
+              }}
             />
             <label htmlFor="cb-log-file" className="font-medium text-[10px] truncate cursor-pointer select-none">
               Log File

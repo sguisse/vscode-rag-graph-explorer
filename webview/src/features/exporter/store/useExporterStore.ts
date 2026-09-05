@@ -1,53 +1,100 @@
 import { create } from 'zustand';
+import { filesExporterApiService } from '@/services/api/files-exporter-api.service.gen';
+import { filesExporterHistoryApiService } from '@/services/api/files-exporter-history-api.service.gen';
 import { DEFAULT_EXPORT_CONFIG } from '../constants/exporter-constants';
-import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
-import { ExportConfig, HistoryEntry, ExportReportData } from '@/shared/services/file-exporter/model/file-exporter-model';
-
-const STORAGE_KEY = 'tokenRazor.exporter.historyProfiles';
+import {
+  ExportConfig,
+  HistoryEntry,
+  HistoryViewMode,
+  ExportReportData,
+  FileExtCategoryGroup,
+  ExportExchangeLink,
+} from '@/shared/services/file-exporter/model/file-exporter-model';
+import { ExporterTabId, ExporterModalState, FieldValidationState } from '../types/exporter.types';
 
 export interface ExporterStoreState {
+  defaultConfig: ExportConfig;
   config: ExportConfig;
   historyList: HistoryEntry[];
   selectedProfileId: string;
+  historyViewMode: HistoryViewMode;
+  currentRepo: string;
+  workspaceRoot: string;
+  fileExtsCategoryGroups: FileExtCategoryGroup[];
+  exchangeLinks: ExportExchangeLink[];
+
   filterSimulatorInput: string;
   isRunning: boolean;
-  activeTab: string;
+  activeTab: ExporterTabId;
   terminalLogs: string;
   compiledBashCmd: string;
   reportData: ExportReportData | null;
+  invalidPaths: string[];
+  pendingPaths: string[];
+
+  modalState: ExporterModalState;
+  validationState: FieldValidationState;
 
   setConfig: (updater: ExportConfig | ((prev: ExportConfig) => ExportConfig)) => void;
   setHistoryList: (list: HistoryEntry[]) => void;
   setSelectedProfileId: (id: string) => void;
   setFilterSimulatorInput: (val: string) => void;
   setIsRunning: (running: boolean) => void;
-  setActiveTab: (tab: string) => void;
+  setActiveTab: (tab: ExporterTabId) => void;
   setTerminalLogs: (logs: string) => void;
   appendTerminalLog: (text: string) => void;
   clearTerminalLogs: () => void;
   setCompiledBashCmd: (cmd: string) => void;
   setReportData: (data: ExportReportData | null) => void;
+  setModalState: (updater: Partial<ExporterModalState> | ((prev: ExporterModalState) => ExporterModalState)) => void;
+  setValidationState: (updater: Partial<FieldValidationState> | ((prev: FieldValidationState) => FieldValidationState)) => void;
 
-  loadProfiles: () => Promise<void>;
-  saveProfiles: (profiles: HistoryEntry[]) => void;
-  handleFreezeToggle: (id: string) => void;
-  handleResetConfig: () => void;
-  handleRenameProfile: (id: string, newName: string) => void;
-  handleDuplicateProfile: (id: string) => void;
-  handleAddProfile: () => void;
-  handleClearHistory: () => void;
+  fetchInitialState: () => Promise<void>;
+  saveProfile: () => Promise<void>;
+  selectProfile: (id: string) => Promise<void>;
+  freezeToggle: (id: string) => Promise<void>;
+  resetConfig: () => void;
+  renameProfile: (id: string, newName: string) => Promise<void>;
+  duplicateProfile: (id: string) => Promise<void>;
+  addProfile: () => Promise<void>;
+  clearHistoryWithMode: (mode: 'remove-selected-hard' | 'remove-selected-soft' | 'clear-all-hard' | 'clear-all-soft') => Promise<void>;
 }
 
 export const useExporterStore = create<ExporterStoreState>((set, get) => ({
+  defaultConfig: DEFAULT_EXPORT_CONFIG,
   config: DEFAULT_EXPORT_CONFIG,
   historyList: [],
   selectedProfileId: 'default',
+  historyViewMode: 'scope-current-repo',
+  currentRepo: '',
+  workspaceRoot: '',
+  fileExtsCategoryGroups: [],
+  exchangeLinks: [],
+
   filterSimulatorInput: '',
   isRunning: false,
   activeTab: 'report',
   terminalLogs: '',
   compiledBashCmd: '',
   reportData: null,
+  invalidPaths: [],
+  pendingPaths: [],
+
+  modalState: {
+    isErrorModalOpen: false,
+    isConflictModalOpen: false,
+    isGuardrailModalOpen: false,
+    conflictExtensions: [],
+    conflictSource: '',
+    conflictTarget: '',
+  },
+
+  validationState: {
+    pathListInvalid: false,
+    destDirInvalid: false,
+    maxFileInvalid: false,
+    maxChunkInvalid: false,
+  },
 
   setConfig: (updater) =>
     set((state) => ({
@@ -56,17 +103,7 @@ export const useExporterStore = create<ExporterStoreState>((set, get) => ({
 
   setHistoryList: (historyList) => set({ historyList }),
 
-  setSelectedProfileId: (id) => {
-    const { historyList } = get();
-    set({ selectedProfileId: id });
-    if (id === 'default') {
-      set({ config: DEFAULT_EXPORT_CONFIG });
-    } else {
-      const found = historyList.find((h) => h.id === id);
-      if (found) set({ config: found.config });
-    }
-  },
-
+  setSelectedProfileId: (id) => set({ selectedProfileId: id }),
   setFilterSimulatorInput: (filterSimulatorInput) => set({ filterSimulatorInput }),
   setIsRunning: (isRunning) => set({ isRunning }),
   setActiveTab: (activeTab) => set({ activeTab }),
@@ -76,76 +113,115 @@ export const useExporterStore = create<ExporterStoreState>((set, get) => ({
   setCompiledBashCmd: (compiledBashCmd) => set({ compiledBashCmd }),
   setReportData: (reportData) => set({ reportData }),
 
-  loadProfiles: async () => {
+  setModalState: (updater) =>
+    set((state) => ({
+      modalState: typeof updater === 'function' ? updater(state.modalState) : { ...state.modalState, ...updater },
+    })),
+
+  setValidationState: (updater) =>
+    set((state) => ({
+      validationState: typeof updater === 'function' ? updater(state.validationState) : { ...state.validationState, ...updater },
+    })),
+
+  fetchInitialState: async () => {
     try {
-      const data = await vsCodeApiService.readUserPreferences(STORAGE_KEY);
-      if (Array.isArray(data?.profiles)) {
-        set({ historyList: data.profiles });
-      }
-    } catch {
-      // Preferences fallback
+      const init = await filesExporterApiService.getInitialState();
+      set({
+        defaultConfig: init.defaultConfig,
+        config: init.currentConfig,
+        historyList: init.history,
+        selectedProfileId: init.selectedId,
+        historyViewMode: init.historyViewMode,
+        currentRepo: init.currentRepo,
+        workspaceRoot: init.workspaceRoot,
+        fileExtsCategoryGroups: init.fileExtsCategoryGroups,
+        exchangeLinks: init.exchange,
+        pendingPaths: init.pendingPaths || [],
+      });
+    } catch (e) {
+      console.error('[useExporterStore] Error fetching initial state:', e);
     }
   },
 
-  saveProfiles: (profiles) => {
-    set({ historyList: profiles });
-    vsCodeApiService.saveUserPreferences(STORAGE_KEY, { profiles }).catch(() => {});
+  saveProfile: async () => {
+    const { config, selectedProfileId, currentRepo } = get();
+    try {
+      const res = await filesExporterHistoryApiService.saveHistory(config, selectedProfileId, currentRepo);
+      set({ historyList: res.history, selectedProfileId: res.selectedId });
+    } catch (e) {
+      console.error('[useExporterStore] Error saving profile:', e);
+    }
   },
 
-  handleFreezeToggle: (id) => {
-    const { historyList, saveProfiles } = get();
-    const updated = historyList.map((h) => (h.id === id ? { ...h, frozen: !h.frozen } : h));
-    saveProfiles(updated);
+  selectProfile: async (id) => {
+    const { historyList, defaultConfig } = get();
+    set({ selectedProfileId: id });
+    if (id === 'default') {
+      set({ config: defaultConfig });
+    } else {
+      const found = historyList.find((h) => h.id === id);
+      if (found) set({ config: found.config });
+    }
   },
 
-  handleResetConfig: () => {
-    const { selectedProfileId, historyList } = get();
+  freezeToggle: async (id) => {
+    const { historyList } = get();
+    const target = historyList.find((h) => h.id === id);
+    if (!target) return;
+    try {
+      const updated = await filesExporterHistoryApiService.toggleFreeze(id, !target.frozen);
+      set({ historyList: updated });
+    } catch (e) {
+      console.error('[useExporterStore] Error toggling freeze:', e);
+    }
+  },
+
+  resetConfig: () => {
+    const { selectedProfileId, historyList, defaultConfig } = get();
     if (selectedProfileId === 'default') {
-      set({ config: DEFAULT_EXPORT_CONFIG });
+      set({ config: defaultConfig });
     } else {
       const found = historyList.find((h) => h.id === selectedProfileId);
       if (found) set({ config: found.config });
     }
   },
 
-  handleRenameProfile: (id, newName) => {
-    const { historyList, saveProfiles } = get();
-    const updated = historyList.map((h) => (h.id === id ? { ...h, display: newName } : h));
-    saveProfiles(updated);
+  renameProfile: async (id, newName) => {
+    try {
+      const updated = await filesExporterHistoryApiService.updateEntryDisplay(id, newName);
+      set({ historyList: updated });
+    } catch (e) {
+      console.error('[useExporterStore] Error renaming profile:', e);
+    }
   },
 
-  handleDuplicateProfile: (id) => {
-    const { historyList, config, saveProfiles } = get();
-    const targetConfig = id === 'default' ? config : historyList.find((h) => h.id === id)?.config || config;
-    const newEntry: HistoryEntry = {
-      id: `profile-${Date.now()}`,
-      repo: 'workspace',
-      display: `Profile Copy (${new Date().toLocaleTimeString()})`,
-      frozen: false,
-      config: { ...targetConfig },
-    };
-    const updated = [newEntry, ...historyList];
-    saveProfiles(updated);
-    set({ selectedProfileId: newEntry.id });
+  duplicateProfile: async (id) => {
+    const { currentRepo } = get();
+    try {
+      const res = await filesExporterHistoryApiService.duplicateEntry(id, currentRepo);
+      set({ historyList: res.history, selectedProfileId: res.newId });
+    } catch (e) {
+      console.error('[useExporterStore] Error duplicating profile:', e);
+    }
   },
 
-  handleAddProfile: () => {
-    const { historyList, saveProfiles } = get();
-    const newEntry: HistoryEntry = {
-      id: `profile-${Date.now()}`,
-      repo: 'workspace',
-      display: `New Profile (${new Date().toLocaleTimeString()})`,
-      frozen: false,
-      config: { ...DEFAULT_EXPORT_CONFIG },
-    };
-    const updated = [newEntry, ...historyList];
-    saveProfiles(updated);
-    set({ selectedProfileId: newEntry.id, config: DEFAULT_EXPORT_CONFIG });
+  addProfile: async () => {
+    const { defaultConfig, workspaceRoot, currentRepo } = get();
+    try {
+      const res = await filesExporterHistoryApiService.addNewEntry(defaultConfig, workspaceRoot, currentRepo);
+      set({ historyList: res.history, selectedProfileId: res.newId, config: defaultConfig });
+    } catch (e) {
+      console.error('[useExporterStore] Error adding profile:', e);
+    }
   },
 
-  handleClearHistory: () => {
-    const { saveProfiles } = get();
-    saveProfiles([]);
-    set({ selectedProfileId: 'default', config: DEFAULT_EXPORT_CONFIG });
+  clearHistoryWithMode: async (mode) => {
+    const { selectedProfileId } = get();
+    try {
+      const res = await filesExporterHistoryApiService.clearHistoryWithMode({ selectedId: selectedProfileId, mode });
+      set({ historyList: res.history, selectedProfileId: res.selectedId });
+    } catch (e) {
+      console.error('[useExporterStore] Error clearing history:', e);
+    }
   },
 }));

@@ -55,7 +55,7 @@ function generateRpcMethodRegistrator() {
         const fileName = path.basename(filePath, '.ts').replace(/(-service)?\.port$/, '');
         const rpcPrefix = fileName.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
 
-        const methodRegex = /^\s*([a-zA-Z0-9_]+)\s*\(/gm;
+        const methodRegex = /^\s*(?:public\s+|async\s+)?([a-zA-Z0-9_]+)\??\s*(?:<[^>]+>)?\s*\(/gm;
         let match;
         const methods = [];
 

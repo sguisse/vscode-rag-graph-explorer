@@ -7,7 +7,7 @@ export interface RpcMessage {
 }
 
 export class RpcProtocol {
-    private pendingRequests = new Map<string, { resolve: Function; reject: Function }>();
+    private pendingRequests = new Map<string, { resolve: Function; reject: Function; timer: any }>();
     private methods = new Map<string, Function>();
 
     constructor(private postMessage: (message: RpcMessage) => void) {}
@@ -19,7 +19,14 @@ export class RpcProtocol {
     public call(method: string, ...params: any[]): Promise<any> {
         const id = Math.random().toString(36).substring(2);
         return new Promise((resolve, reject) => {
-            this.pendingRequests.set(id, { resolve, reject });
+            const timer = setTimeout(() => {
+                if (this.pendingRequests.has(id)) {
+                    this.pendingRequests.delete(id);
+                    reject(new Error(`[RpcProtocol] Timeout (15s) waiting for RPC method '${method}'`));
+                }
+            }, 15000);
+
+            this.pendingRequests.set(id, { resolve, reject, timer });
             this.postMessage({ id, method, params });
         });
     }
@@ -29,20 +36,25 @@ export class RpcProtocol {
         const { id, method, params, result, error } = message;
 
         if (id && !method && this.pendingRequests.has(id)) {
-            const { resolve, reject } = this.pendingRequests.get(id)!;
+            const { resolve, reject, timer } = this.pendingRequests.get(id)!;
+            clearTimeout(timer);
             this.pendingRequests.delete(id);
             if (error) reject(new Error(error));
             else resolve(result);
             return;
         }
 
-        if (method && this.methods.has(method)) {
-            try {
-                const fn = this.methods.get(method)!;
-                const executionResult = await fn(...(params || []));
-                if (id) this.postMessage({ id, method: '', result: executionResult });
-            } catch (err: any) {
-                if (id) this.postMessage({ id, method: '', error: err.message });
+        if (method) {
+            if (this.methods.has(method)) {
+                try {
+                    const fn = this.methods.get(method)!;
+                    const executionResult = await fn(...(params || []));
+                    if (id) this.postMessage({ id, method: '', result: executionResult });
+                } catch (err: any) {
+                    if (id) this.postMessage({ id, method: '', error: err?.message || String(err) });
+                }
+            } else if (id) {
+                this.postMessage({ id, method: '', error: `[RpcProtocol] Method '${method}' is not registered on receiver` });
             }
         }
     }

@@ -1,16 +1,25 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+
+export interface BadgeObject {
+  label: React.ReactNode;
+  tooltip?: string;
+  className?: string;
+}
 
 export interface CollapsibleCardProps {
   id?: string;
   title: React.ReactNode;
   tooltip?: string;
   summaryText?: string;
+  summaryBadges?: (string | BadgeObject)[];
   defaultOpen?: boolean;
-  children: React.ReactNode;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
   className?: string;
-  headerExtra?: React.ReactNode;
+  children: React.ReactNode;
+  headerRight?: React.ReactNode;
 }
 
 export const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
@@ -18,42 +27,96 @@ export const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
   title,
   tooltip,
   summaryText,
+  summaryBadges,
   defaultOpen = true,
+  isOpen: controlledIsOpen,
+  onOpenChange,
+  className,
   children,
-  className = '',
-  headerExtra,
+  headerRight,
 }) => {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const [internalIsOpen, setInternalIsOpen] = useState(defaultOpen);
+  const isControlled = controlledIsOpen !== undefined;
+  const open = isControlled ? controlledIsOpen : internalIsOpen;
+
+  const handleToggle = () => {
+    const nextOpen = !open;
+    if (!isControlled) {
+      setInternalIsOpen(nextOpen);
+    }
+    if (onOpenChange) {
+      onOpenChange(nextOpen);
+    }
+  };
+
+  const rawBadges =
+    summaryBadges ||
+    (summaryText
+      ? summaryText
+          .split('|')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : []);
+
+  const badgeItems: BadgeObject[] = rawBadges.map((item) =>
+    typeof item === 'string' ? { label: item, tooltip: item } : item
+  );
 
   return (
-    <Card id={id} className={`bg-card border-border/80 border rounded-md shadow-2xs overflow-hidden transition-all duration-200 ${className}`}>
+    <div
+      id={id}
+      className={cn(
+        'bg-card border border-border/60 rounded-md w-full min-w-0 transition-all duration-150',
+        className
+      )}
+    >
+      {/* Card Header */}
       <div
-        onClick={() => setIsOpen((prev) => !prev)}
-        data-tooltip={tooltip}
-        className={`flex items-center justify-between px-2.5 py-1 bg-muted/40 hover:bg-muted/70 cursor-pointer transition-colors select-none ${
-          isOpen ? 'border-b border-border/60' : 'border-b-0'
-        }`}
+        onClick={handleToggle}
+        title={tooltip}
+        className={cn(
+          'flex flex-col border-border/40 cursor-pointer select-none font-mono text-xs',
+          open ? 'py-1 px-2 border-b' : 'p-1'
+        )}
       >
-        <div className="flex items-center gap-1.5 font-mono font-semibold text-xs text-foreground truncate">
-          {isOpen ? (
-            <ChevronDown size={13} className="shrink-0 text-primary transition-transform duration-200" />
-          ) : (
-            <ChevronRight size={13} className="shrink-0 text-muted-foreground transition-transform duration-200" />
+        <div className="flex items-center justify-between gap-2 w-full min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0 shrink-0">
+            <span className="text-primary shrink-0">
+              {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+            </span>
+            <span className="font-bold text-foreground text-xs shrink-0">{title}</span>
+          </div>
+
+          {headerRight && (
+            <div className="shrink-0 flex items-center gap-1 ml-auto" onClick={(e) => e.stopPropagation()}>
+              {headerRight}
+            </div>
           )}
-          <span className="truncate">{title}</span>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          {headerExtra}
-          {!isOpen && summaryText && (
-            <span className="font-mono text-[10px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-medium truncate max-w-[200px]">
-              {summaryText}
-            </span>
-          )}
-        </div>
+        {/* Collapsed Mode: Badges on a new line aligned to the left */}
+        {!open && badgeItems.length > 0 && (
+          <div className="flex flex-wrap items-center justify-start gap-1.5 w-full min-w-0 mt-1 pt-0.5">
+            {badgeItems.map((badge, idx) => (
+              <span
+                key={idx}
+                className={cn(
+                  'px-1.5 py-0.5 rounded text-[10px] font-mono leading-none shadow-2xs min-w-0 truncate shrink border',
+                  badge.className || 'bg-primary/10 text-primary border-primary/20'
+                )}
+                title={badge.tooltip || (typeof badge.label === 'string' ? badge.label : undefined)}
+                data-tooltip={badge.tooltip || (typeof badge.label === 'string' ? badge.label : undefined)}
+              >
+                {badge.label}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
-      {isOpen && <div className="p-2.5 font-mono text-xs bg-card/60">{children}</div>}
-    </Card>
+
+      {/* Card Content */}
+      {open && <div className="p-2 w-full min-w-0">{children}</div>}
+    </div>
   );
 };
 

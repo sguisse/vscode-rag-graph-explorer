@@ -15,7 +15,7 @@ export const TopPanelContainer: React.FC = () => {
     handleAddProfile,
     handleClearHistory,
     handleOpenHistoryFile,
-    handleRevealDestination,
+    handleRevealHistoryFolder,
   } = useExportConfiguration();
 
   return (
@@ -32,7 +32,7 @@ export const TopPanelContainer: React.FC = () => {
           onDuplicateProfile={handleDuplicateProfile}
           onAddProfile={handleAddProfile}
           onOpenFile={handleOpenHistoryFile}
-          onRevealFolder={handleRevealDestination}
+          onRevealFolder={handleRevealHistoryFolder}
           onClearHistory={handleClearHistory}
         />
       </div>

@@ -2,6 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Copy } from 'lucide-react';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
+import { logInfo } from '../../utils/log-info';
 
 export const HelpTab: React.FC = () => {
   const samplePrompt = `Role: Senior Software Architect
@@ -9,6 +10,7 @@ Context: Analyze the provided codebase export attachment.
 Task: Identify modular refactoring candidates and security improvements.`;
 
   const handleCopyPrompt = () => {
+    logInfo('[HelpTab] handleCopyPrompt handler triggered');
     vsCodeApiService.copyToClipboard(samplePrompt);
   };
 

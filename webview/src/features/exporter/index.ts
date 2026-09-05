@@ -7,3 +7,5 @@ export * from './layout-ctns/CenterPanelContainer';
 export * from './store/useExporterStore';
 export * from './hooks/use-export-configuration';
 export * from './hooks/use-exporter-execution';
+export * from './utils/log-info';
+export * from './utils/path-resolver';

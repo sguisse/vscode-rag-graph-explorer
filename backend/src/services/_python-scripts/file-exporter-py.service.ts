@@ -1,17 +1,40 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
 import { PythonScriptStatus } from "../../../../shared/services/_python-scripts";
 import { ExportArgs } from "../../../../shared/services/codebase-exporter/model/export-args";
 import { pythonScriptExecutionManager } from '../../managers/PythonScriptExecution.manager';
 import { ChildProcess } from 'child_process';
 import { getWorkspaceExtentionPath, getWorkspaceRoot } from '../../utils/utils-vscode';
-
-const PYTHON_SCRIPT_PATH = path.join(getWorkspaceExtentionPath(), 'scripts', 'codebase_exporter', 'files-exporter.py');
+import { logInfo, logError, logWarn } from '../../utils/utils-log';
 
 export async function callFileExporterScript(exportArgs: ExportArgs): Promise<PythonScriptStatus> {
     const rootPath = getWorkspaceRoot();
+    const workspaceExtPath = getWorkspaceExtentionPath();
 
-    // Normalize and resolve paths using orchestrator logic
+    const candidatePaths = [
+        path.join(workspaceExtPath, 'scripts', 'codebase_exporter', 'files-exporter.py'),
+        path.join(workspaceExtPath, 'scripts', 'files-exporter.py'),
+        path.join(rootPath, 'scripts', 'codebase_exporter', 'files-exporter.py'),
+        path.join(rootPath, 'scripts', 'files-exporter.py'),
+    ];
+
+    let pythonScriptPath = '';
+    for (const candidate of candidatePaths) {
+        if (fs.existsSync(candidate)) {
+            pythonScriptPath = candidate;
+            break;
+        }
+    }
+
+    if (!pythonScriptPath) {
+        const errorMsg = `[file-exporter-py] Python script NOT FOUND. Checked candidate locations:\n` + candidatePaths.map(p => ` - ${p}`).join('\n');
+        logError(errorMsg);
+        throw new Error(errorMsg);
+    }
+
+    logInfo(`[file-exporter-py] Resolved Python script path: ${pythonScriptPath}`);
+
     const absoluteSourcesArray = makePathsAbsolute(exportArgs.paths || [], rootPath);
     const absoluteDestDirectory = makeSinglePathAbsolute(exportArgs.destDir || '', rootPath);
     const concatenatedSources = absoluteSourcesArray.join(',');
@@ -23,12 +46,23 @@ export async function callFileExporterScript(exportArgs: ExportArgs): Promise<Py
 
     const args: string[] = buildArgs(runtimeData, concatenatedSources);
 
-    // Execute via pythonScriptExecutionManager
-    const childProcess: ChildProcess = await pythonScriptExecutionManager.executeScript(PYTHON_SCRIPT_PATH, args);
+    logInfo(`[file-exporter-py] Executing Python script with args: ${args.join(' ')}`);
+
+    const childProcess: ChildProcess = await pythonScriptExecutionManager.executeScript(pythonScriptPath, args);
+
+    if (!childProcess || !childProcess.pid) {
+        const errorMsg = `[file-exporter-py] Failed to spawn child process for script: ${pythonScriptPath}`;
+        logError(errorMsg);
+        throw new Error(errorMsg);
+    }
+
+    logInfo(`[file-exporter-py] Successfully spawned Python process PID: ${childProcess.pid}`);
 
     const pythonScriptStatus = pythonScriptExecutionManager.getProcessStatus(childProcess.pid || 0);
     if (!pythonScriptStatus) {
-        throw new Error(`Failed to retrieve status for the Python script process with PID: ${childProcess.pid}`);
+        const errorMsg = `[file-exporter-py] Failed to retrieve status for process PID: ${childProcess.pid}`;
+        logError(errorMsg);
+        throw new Error(errorMsg);
     }
 
     return pythonScriptStatus;
@@ -75,7 +109,7 @@ function buildArgs(exportArgs: any, sources: string): string[] {
     if (exportArgs.generateTreeView) args.push('--tree-view');
     if (exportArgs.timestamp) args.push('--timestamp', exportArgs.timestamp);
 
-    const cleanFilters = (val: string) => val.split(/[\n,]/).map(s => s.trim()).filter(Boolean).join(',');
+    const cleanFilters = (val: string) => val ? val.split(/[\n,]/).map(s => s.trim()).filter(Boolean).join(',') : '';
 
     if (exportArgs.incPaths) args.push('--inc-paths', cleanFilters(exportArgs.incPaths));
     if (exportArgs.excPaths) args.push('--exc-paths', cleanFilters(exportArgs.excPaths));

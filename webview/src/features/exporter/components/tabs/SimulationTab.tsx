@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Rocket } from 'lucide-react';
+import { logInfo } from '../../utils/log-info';
 
 interface SimulationTabProps {
   onInjectPaths: (paths: string[]) => void;
@@ -11,6 +12,7 @@ export const SimulationTab: React.FC<SimulationTabProps> = ({ onInjectPaths }) =
   const [simuPathsText, setSimuPathsText] = useState('');
 
   const handlePush = () => {
+    logInfo('[SimulationTab] handlePush handler triggered', simuPathsText);
     const paths = simuPathsText
       .split('\n')
       .map((p) => p.trim())

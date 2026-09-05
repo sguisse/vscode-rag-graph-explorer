@@ -3,10 +3,10 @@ You are an Architect expert in development and migration of VScode Extensions, n
 </role>
 
 <context>
-I have started to migrate a native extention with sources in sandbox\sources-vscode-files-exporter.yaml in React Extension as a feature in the new extension located in 
+I have started to migrate a native extention with sources in sandbox\sources-vscode-files-exporter.yaml in React Extension as a feature in the new extension located in
 webview\src\features\exporter
-The python scripts have been migrated to scripts\codebase_exporter folder 
-the new  Architecture is different from the previous because we don't have access directly from the webview to vscode env directly, 
+The python scripts have been migrated to scripts\codebase_exporter folder
+the new  Architecture is different from the previous because we don't have access directly from the webview to vscode env directly,
 I use RPC to call a backend  in folder /backend contains services in interaction with vscode, filesystem, database, ...
 and use a shared module contains services and dto, vo, common to communicate webview and backend
 I want to keep the new layout panels organisation
@@ -17,13 +17,13 @@ I want you finalize the migration.
 For that you will start by deeply analyze the original extension provided in sandbox\sources-vscode-files-exporter.yaml to identify component and their behaviors
 Then analyze the new feature in  webview\src\features\exporter, you can also analyze the /backend and /shared to see how they works
 Then create a very detailed report in markdown file migration-plan-report-remaining-tasks.md to indicate missing functionalities in the new feature (adding component, button, handler, ...) need to be added.
-Give also the big lines to indicate to any developer how to implement it 
+Give also the big lines to indicate to any developer how to implement it
 The report should contain all remediation to be 100% compliant with the original extension but in the new ecosystem of the actual feature layout.
 To add not existing needed services you can use :
 backend\src\services\file-exporter\fe-history-service.adapter.ts  to manage file-exporter history services
 backend\src\services\file-exporter\files-exporter-service.adapter.ts  to manage others services
 Webview call backend services from webview\src\services\api via RPC
-backend\src\extension.ts  is lightweight, keep it like this, add needed stuff to external files and import function needed launched from extension.ts 
+backend\src\extension.ts  is lightweight, keep it like this, add needed stuff to external files and import function needed launched from extension.ts
 
 At the end of the report add a table with recap of tasks and their initial status to pending (pending / In Progress/ Done / error with explanation)
 Use also EMOJI for header H1, H2 and status
@@ -44,7 +44,7 @@ seperarer les objets commun du model et type dans shared
 You are an Expert Software Architect specializing in VS Code Extension development, specifically in migrating legacy native extensions to a modern React-based Webview architecture using strict RPC communication.
 
 # CONTEXT & ARCHITECTURAL CONSTRAINTS
-We are finalizing the migration of a legacy native VS Code extension (source code in `sandbox\sources-vscode-files-exporter.yaml`) to a new React-based Webview architecture. 
+We are finalizing the migration of a legacy native VS Code extension (source code in `sandbox\sources-vscode-files-exporter.yaml`) to a new React-based Webview architecture.
 
 - **Frontend (UI) & Strict Feature Pattern:** Located in `webview\src\features\exporter`. You MUST strictly adhere to the React "Feature Pattern". You must cleanly separate concerns by splitting the code into dedicated sub-directories:
   - `/components`: Pure presentational or layout components.
@@ -54,7 +54,7 @@ We are finalizing the migration of a legacy native VS Code extension (source cod
 - **Shared Domain (`/shared`):** All core business models, common types, DTOs, VOs, and interfaces used for Webview/Backend communication MUST be extracted and centralized here. Do not duplicate domain models in the frontend or backend.
 - **Python Scripts:** Already migrated to `scripts\codebase_exporter`.
 - **Backend (`/backend`):** Contains services interacting with the VS Code API, File System, Database, etc. The entry point `backend\src\extension.ts` MUST remain extremely lightweight; all logic must be extracted to external files and imported.
-- **Target Backend Adapters to use/expand:** 
+- **Target Backend Adapters to use/expand:**
   - `backend\src\services\file-exporter\fe-history-service.adapter.ts` (for history management)
   - `backend\src\services\file-exporter\files-exporter-service.adapter.ts` (for all other core services)
 - **Frontend API:** Webview calls backend services via RPC defined in `webview\src\services\api`. The Webview has NO direct access to the VS Code API.
@@ -87,11 +87,16 @@ Create the file `migration-plan-report-remaining-tasks.md` on disk. It must be h
 (Define the exact data structures, core models, DTOs, and VOs that need to be added to the `/shared` folder to support the missing features).
 
 ## 📋 5. Actionable Task Tracker
-(A Markdown table tracking every required task. Columns: `Task ID` | `Domain (UI/Backend/Shared)` | `Description` | `Status` | `Notes`. 
-Use emojis for Status: ⏳ Pending | 🚧 In Progress | ✅ Done | ❌ Error). 
+(A Markdown table tracking every required task. Columns: `Task ID` | `Domain (UI/Backend/Shared)` | `Description` | `Status` | `Notes`.
+Use emojis for Status: ⏳ Pending | 🚧 In Progress | ✅ Done | ❌ Error).
 *Note: The initial state for all tasks must be ⏳ Pending.*
 
 ## Phase 3: Execution & Continuous Tracking
 Once the Markdown file is completely written and saved to disk:
 1. Begin implementing the pending tasks one by one, strictly adhering to the architectural constraints (Feature pattern, Shared separation, lightweight extension.ts).
 2. After completing (or failing) each task, you MUST update the `migration-plan-report-remaining-tasks.md` task tracker with the new status (✅ Done or ❌ Error with explanations) before moving to the next task.
+
+
+
+/Users/mac-SGUISS21/01-work/01-projects/01-java/china-smart-assessment/smart-assessment-microservices-assessment/exported-files/export-2026-09-05_10-10-34_01.yaml
+/Users/mac-SGUISS21/01-work/01-projects/01-java/china-smart-assessment/smart-assessment-microservices-assessment/exported-files/export-2026-09-05_10-10-34_01.yaml

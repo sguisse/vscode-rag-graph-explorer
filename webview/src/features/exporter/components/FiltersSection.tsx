@@ -1,16 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ArrowDownAZ, Trash2, MoreVertical } from 'lucide-react';
-import { CollapsibleCard } from '@/components/ui/collapsible-card';
+import { ArrowDownAZ, ArrowUpAZ, UnfoldVertical, Library, Trash2, MoreVertical } from 'lucide-react';
+import { CollapsibleCard, BadgeObject } from '@/components/ui/collapsible-card';
 import { FILE_EXT_CATEGORY_GROUPS } from '../constants/exporter-constants';
 import { testFilterPatterns } from '../utils/filter-simulator';
+import { explodeTextAreaRegex, groupExtensionsText } from '../utils/regex-exploder';
 import { ExportConfig } from '@/shared/services/file-exporter/model/file-exporter-model';
+import { logInfo } from '../utils/log-info';
 
 interface FiltersSectionProps {
   config: ExportConfig;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
   onChangeConfig: (updater: (prev: ExportConfig) => ExportConfig) => void;
   filterSimulatorInput: string;
   setFilterSimulatorInput: (val: string) => void;
@@ -18,10 +22,19 @@ interface FiltersSectionProps {
 
 export const FiltersSection: React.FC<FiltersSectionProps> = ({
   config,
+  isOpen,
+  onOpenChange,
   onChangeConfig,
   filterSimulatorInput,
   setFilterSimulatorInput,
 }) => {
+  const [sortDirections, setSortDirections] = useState<Record<string, 'asc' | 'desc'>>({
+    inc_paths: 'asc',
+    inc_ext: 'asc',
+    exc_paths: 'asc',
+    exc_ext: 'asc',
+  });
+
   const simResult = testFilterPatterns(
     filterSimulatorInput,
     config.inc_paths,
@@ -30,20 +43,107 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
     config.exc_ext
   );
 
-  const sortLines = (field: keyof ExportConfig) => {
+  const separator = '\n';
+  const incPathLines = config.inc_paths.split(separator).map((s) => s.trim()).filter(Boolean);
+  const incExtLines = config.inc_ext.split(separator).map((s) => s.trim()).filter(Boolean);
+  const excPathLines = config.exc_paths.split(separator).map((s) => s.trim()).filter(Boolean);
+  const excExtLines = config.exc_ext.split(separator).map((s) => s.trim()).filter(Boolean);
+
+  const combinedSeparator = ' 📏 ';
+  const incPathCombined = incPathLines.join(combinedSeparator);
+  const incExtCombined = incExtLines.join(combinedSeparator);
+  const excPathCombined = excPathLines.join(combinedSeparator);
+  const excExtCombined = excExtLines.join(combinedSeparator);
+
+  const tooltipSeparator = '<br>';
+  const incPathTooltip = incPathLines.join(tooltipSeparator);
+  const incExtTooltip = incExtLines.join(tooltipSeparator);
+  const excPathTooltip = excPathLines.join(tooltipSeparator);
+  const excExtTooltip = excExtLines.join(tooltipSeparator);
+
+  const summaryBadges: BadgeObject[] = [
+    {
+      label: `Max file: ${config.max_file} KB`,
+      tooltip: `Max file size limit: ${config.max_file} KB`,
+      className: 'bg-primary/10 text-primary border-primary/20 shrink-0 font-bold',
+    },
+  ];
+
+  if (incPathCombined) {
+    summaryBadges.push({
+      label: `Inc Path: ${incPathCombined}`,
+      tooltip: `<strong>Inc Path:</strong> <br> ${incPathTooltip}`,
+      className: 'bg-primary/10 text-primary border-primary/20 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink',
+    });
+  }
+  if (incExtCombined) {
+    summaryBadges.push({
+      label: `Inc Ext: ${incExtCombined}`,
+      tooltip: `<strong>Inc Ext:</strong> <br> ${incExtTooltip}`,
+      className: 'bg-primary/10 text-primary border-primary/20 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink',
+    });
+  }
+  if (excPathCombined) {
+    summaryBadges.push({
+      label: `Exc Path: ${excPathCombined}`,
+      tooltip: `<strong>Exc Path:</strong> <br> ${excPathTooltip}`,
+      className: 'bg-primary/10 text-primary border-primary/20 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink',
+    });
+  }
+  if (excExtCombined) {
+    summaryBadges.push({
+      label: `Exc Ext: ${excExtCombined}`,
+      tooltip: `<strong>Exc Ext:</strong> <br> ${excExtTooltip}`,
+      className: 'bg-primary/10 text-primary border-primary/20 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink',
+    });
+  }
+
+  const toggleSortLines = (field: keyof ExportConfig) => {
+    const currentDir = sortDirections[field] || 'asc';
+    const nextDir = currentDir === 'asc' ? 'desc' : 'asc';
+    setSortDirections((prev) => ({ ...prev, [field]: nextDir }));
+
+    logInfo('[FiltersSection] toggleSortLines handler triggered', { field, direction: nextDir });
+
     onChangeConfig((prev) => {
       const val = String(prev[field] || '');
       const lines = val.split('\n').map((l) => l.trim()).filter(Boolean);
-      lines.sort((a, b) => a.localeCompare(b));
-      return { ...prev, [field]: lines.join('\n') };
+
+      const commentLines = lines.filter((l) => l.startsWith('#'));
+      const activeLines = lines.filter((l) => !l.startsWith('#'));
+
+      activeLines.sort((a, b) => (nextDir === 'asc' ? a.localeCompare(b) : b.localeCompare(a)));
+
+      const combined = [...commentLines, ...activeLines];
+      return { ...prev, [field]: combined.join('\n') };
+    });
+  };
+
+  const explodeRegex = (field: keyof ExportConfig) => {
+    logInfo('[FiltersSection] explodeRegex handler triggered', field);
+    onChangeConfig((prev) => {
+      const val = String(prev[field] || '');
+      const exploded = explodeTextAreaRegex(val);
+      return { ...prev, [field]: exploded };
+    });
+  };
+
+  const groupExtensions = (field: 'inc_ext' | 'exc_ext') => {
+    logInfo('[FiltersSection] groupExtensions handler triggered', field);
+    onChangeConfig((prev) => {
+      const val = String(prev[field] || '');
+      const result = groupExtensionsText(val, FILE_EXT_CATEGORY_GROUPS);
+      return { ...prev, [field]: result.text };
     });
   };
 
   const clearField = (field: keyof ExportConfig) => {
+    logInfo('[FiltersSection] clearField handler triggered', field);
     onChangeConfig((prev) => ({ ...prev, [field]: '' }));
   };
 
-  const appendExtensionCategory = (field: 'inc_ext' | 'exc_ext', extensions: string[]) => {
+  const appendExtensionCategory = (field: 'inc_ext' | 'exc_ext', label: string, extensions: string[]) => {
+    logInfo('[FiltersSection] appendExtensionCategory handler triggered', { field, label, extensions });
     onChangeConfig((prev) => {
       const current = prev[field] ? prev[field].split('\n') : [];
       const combined = Array.from(new Set([...current, ...extensions]));
@@ -56,8 +156,10 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
       id="block-filters"
       title="🔍 Filters & Scope Constraints"
       tooltip="Regular Expression masks defining targeted directories and source formatting inclusions or exclusions lists."
-      summaryText={`Max file: ${config.max_file} KB`}
+      summaryBadges={summaryBadges}
       defaultOpen={true}
+      isOpen={isOpen}
+      onOpenChange={onOpenChange}
       className="w-full min-w-0 shrink-0"
     >
       <div className="space-y-3 w-full min-w-0 font-mono text-xs">
@@ -90,10 +192,28 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                 <div className="flex justify-between items-center min-w-0 font-semibold text-[10px] text-muted-foreground">
                   <span className="truncate">Paths</span>
                   <div className="flex gap-0.5 shrink-0">
-                    <Button size="icon-xs" variant="ghost" onClick={() => sortLines('inc_paths')} title="Sort lines">
-                      <ArrowDownAZ size={11} />
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => toggleSortLines('inc_paths')}
+                      title={`Sort lines (${sortDirections.inc_paths === 'asc' ? 'Ascending' : 'Descending'})`}
+                    >
+                      {sortDirections.inc_paths === 'asc' ? <ArrowDownAZ size={11} /> : <ArrowUpAZ size={11} />}
                     </Button>
-                    <Button size="icon-xs" variant="ghost" onClick={() => clearField('inc_paths')} title="Clear field">
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => explodeRegex('inc_paths')}
+                      title="Explode regex alternatives"
+                    >
+                      <UnfoldVertical size={11} />
+                    </Button>
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => clearField('inc_paths')}
+                      title="Clear field"
+                    >
                       <Trash2 size={11} />
                     </Button>
                   </div>
@@ -113,8 +233,29 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                 <div className="flex justify-between items-center min-w-0 font-semibold text-[10px] text-muted-foreground">
                   <span className="truncate">Extensions</span>
                   <div className="flex gap-0.5 shrink-0">
-                    <Button size="icon-xs" variant="ghost" onClick={() => sortLines('inc_ext')} title="Sort lines">
-                      <ArrowDownAZ size={11} />
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => toggleSortLines('inc_ext')}
+                      title={`Sort lines (${sortDirections.inc_ext === 'asc' ? 'Ascending' : 'Descending'})`}
+                    >
+                      {sortDirections.inc_ext === 'asc' ? <ArrowDownAZ size={11} /> : <ArrowUpAZ size={11} />}
+                    </Button>
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => groupExtensions('inc_ext')}
+                      title="Group extensions by category"
+                    >
+                      <Library size={11} />
+                    </Button>
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => explodeRegex('inc_ext')}
+                      title="Explode regex alternatives"
+                    >
+                      <UnfoldVertical size={11} />
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -127,7 +268,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                           (grp) => (
                             <DropdownMenuItem
                               key={grp.label}
-                              onClick={() => appendExtensionCategory('inc_ext', grp.extensions)}
+                              onClick={() => appendExtensionCategory('inc_ext', grp.label, grp.extensions)}
                             >
                               {grp.label}
                             </DropdownMenuItem>
@@ -135,7 +276,12 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
-                    <Button size="icon-xs" variant="ghost" onClick={() => clearField('inc_ext')} title="Clear field">
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => clearField('inc_ext')}
+                      title="Clear field"
+                    >
                       <Trash2 size={11} />
                     </Button>
                   </div>
@@ -165,10 +311,28 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                 <div className="flex justify-between items-center min-w-0 font-semibold text-[10px] text-muted-foreground">
                   <span className="truncate">Paths</span>
                   <div className="flex gap-0.5 shrink-0">
-                    <Button size="icon-xs" variant="ghost" onClick={() => sortLines('exc_paths')} title="Sort lines">
-                      <ArrowDownAZ size={11} />
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => toggleSortLines('exc_paths')}
+                      title={`Sort lines (${sortDirections.exc_paths === 'asc' ? 'Ascending' : 'Descending'})`}
+                    >
+                      {sortDirections.exc_paths === 'asc' ? <ArrowDownAZ size={11} /> : <ArrowUpAZ size={11} />}
                     </Button>
-                    <Button size="icon-xs" variant="ghost" onClick={() => clearField('exc_paths')} title="Clear field">
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => explodeRegex('exc_paths')}
+                      title="Explode regex alternatives"
+                    >
+                      <UnfoldVertical size={11} />
+                    </Button>
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => clearField('exc_paths')}
+                      title="Clear field"
+                    >
                       <Trash2 size={11} />
                     </Button>
                   </div>
@@ -188,8 +352,29 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                 <div className="flex justify-between items-center min-w-0 font-semibold text-[10px] text-muted-foreground">
                   <span className="truncate">Extensions</span>
                   <div className="flex gap-0.5 shrink-0">
-                    <Button size="icon-xs" variant="ghost" onClick={() => sortLines('exc_ext')} title="Sort lines">
-                      <ArrowDownAZ size={11} />
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => toggleSortLines('exc_ext')}
+                      title={`Sort lines (${sortDirections.exc_ext === 'asc' ? 'Ascending' : 'Descending'})`}
+                    >
+                      {sortDirections.exc_ext === 'asc' ? <ArrowDownAZ size={11} /> : <ArrowUpAZ size={11} />}
+                    </Button>
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => groupExtensions('exc_ext')}
+                      title="Group extensions by category"
+                    >
+                      <Library size={11} />
+                    </Button>
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => explodeRegex('exc_ext')}
+                      title="Explode regex alternatives"
+                    >
+                      <UnfoldVertical size={11} />
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -202,7 +387,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                           (grp) => (
                             <DropdownMenuItem
                               key={grp.label}
-                              onClick={() => appendExtensionCategory('exc_ext', grp.extensions)}
+                              onClick={() => appendExtensionCategory('exc_ext', grp.label, grp.extensions)}
                             >
                               {grp.label}
                             </DropdownMenuItem>
@@ -210,7 +395,12 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
-                    <Button size="icon-xs" variant="ghost" onClick={() => clearField('exc_ext')} title="Clear field">
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => clearField('exc_ext')}
+                      title="Clear field"
+                    >
                       <Trash2 size={11} />
                     </Button>
                   </div>

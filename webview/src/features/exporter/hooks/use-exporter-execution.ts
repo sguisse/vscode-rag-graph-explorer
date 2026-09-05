@@ -1,113 +1,163 @@
 import { useExporterStore } from '../store/useExporterStore';
-import { codebaseExporterApiService } from '@/services/api/codebase-exporter-api.service.gen';
-import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
+import { filesExporterApiService } from '@/services/api/files-exporter-api.service.gen';
+import { logInfo } from '../utils/log-info';
+import { PathMappingService } from '../utils/path-resolver';
 
 export function useExporterExecution() {
-  const {
-    config,
-    isRunning,
-    setIsRunning,
-    appendTerminalLog,
-    setReportData,
-    compiledBashCmd,
-    terminalLogs,
-    clearTerminalLogs,
-    reportData,
-    activeTab,
-    setActiveTab,
-  } = useExporterStore();
+  const store = useExporterStore();
 
   const handleRunExport = async () => {
-    setIsRunning(true);
-    appendTerminalLog(`\n🚀 [Codebase Exporter] Executing python export runner...\n`);
-    appendTerminalLog(`📂 Sources: ${config.src.replace(/\n/g, ', ')}\n`);
-    appendTerminalLog(`💾 Target Dir: ${config.dest}\n`);
+    logInfo('[useExporterExecution] handleRunExport starting...');
+    store.setIsRunning(true);
+    store.setActiveTab('terminal');
+    store.appendTerminalLog(`\n🚀 [Codebase Exporter] Executing python export runner...\n`);
 
-    const paths = config.src.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const displayLines = store.config.src.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
+    const resolvedAbsPaths = displayLines.map((line) => PathMappingService.resolveToAbsolute(line, store.workspaceRoot));
+
+    store.appendTerminalLog(`📂 Sources (${resolvedAbsPaths.length}): ${resolvedAbsPaths.join(', ')}\n`);
+    store.appendTerminalLog(`💾 Target Dir: ${store.config.dest}\n`);
+
+    if (resolvedAbsPaths.length === 0) {
+      store.appendTerminalLog(`❌ [Validation Error] No valid source paths defined.\n`);
+      store.setIsRunning(false);
+      return;
+    }
 
     try {
-      const status = await codebaseExporterApiService.exportFiles({
-        paths,
-        timestamp,
-        destDir: config.dest,
-        format: config.format,
-        maxFile: config.max_file,
-        maxChunk: config.max_chunk,
-        groupByExt: config.groupByExt,
-        logConsole: config.logConsole,
-        logFile: config.logFile,
-        generateTreeView: config.generateTreeView,
-        incPaths: config.inc_paths,
-        excPaths: config.exc_paths,
-        incExts: config.inc_ext,
-        excExts: config.exc_ext,
+      store.appendTerminalLog(`💾 [1/4] Saving profile configuration...\n`);
+      try {
+        await Promise.race([
+          store.saveProfile(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Profile save timeout (3s)')), 3000)),
+        ]);
+        store.appendTerminalLog(`✅ [1/4] Profile saved.\n`);
+      } catch (saveErr: any) {
+        store.appendTerminalLog(`⚠️ [1/4] Profile save bypassed (${saveErr?.message || saveErr}). Continuing export...\n`);
+      }
+
+      store.appendTerminalLog(`📡 [2/4] Sending RPC runExport request to backend...\n`);
+      const runResponse = await filesExporterApiService.runExport({
+        config: {
+          ...store.config,
+          src: resolvedAbsPaths.join('\n'),
+        },
+        currentHistoryId: store.selectedProfileId,
+        paths: resolvedAbsPaths,
+        mode: 'standard',
       });
 
-      const pid = status.pythonScriptStatus.pid;
-      appendTerminalLog(`⚡ Python process spawned with PID ${pid}. Waiting for completion...\n`);
+      const pid = runResponse?.pythonScriptStatus?.pid;
+      if (!pid) {
+        store.appendTerminalLog(`❌ [Error] Backend returned invalid PID response: ${JSON.stringify(runResponse)}\n`);
+        store.setIsRunning(false);
+        return;
+      }
+
+      store.appendTerminalLog(`⚡ [3/4] Python process spawned with PID ${pid}. Target Dir: ${runResponse.exportDirectory}\n`);
+      store.appendTerminalLog(`⏳ [4/4] Monitoring execution progress...\n`);
 
       let isDone = false;
       let checkCount = 0;
-      while (!isDone && checkCount < 60) {
+      const maxChecks = 120; // 2 minutes max polling
+
+      while (!isDone && checkCount < maxChecks) {
         await new Promise((resolve) => setTimeout(resolve, 1000));
         checkCount++;
-        const currentStatus = await codebaseExporterApiService.getExportFilesStatus(pid);
-        if (!currentStatus.pythonScriptStatus.isRunning) {
-          isDone = true;
-          appendTerminalLog(`✅ Process PID ${pid} finished with exit code ${currentStatus.pythonScriptStatus.exitCode ?? 0}\n`);
 
-          try {
-            const result = await codebaseExporterApiService.getExportFilesResult(
-              pid,
-              config.dest,
-              timestamp
-            );
-            if (result.report) {
-              setReportData({
-                summary: result.report.results.summary,
-                metrics_per_extension: result.report.results.metrics_per_extension,
-                generated_files: result.report.results.generated_files,
-                estimatedInputTokens: Math.floor(Math.random() * 15000 + 5000),
-              });
-              appendTerminalLog(`📊 Export Report Loaded: ${result.report.results.summary.total_exported} files exported.\n`);
-
-              if (config.copyGeneratedFilesToClipboard) {
-                await codebaseExporterApiService.storeExportedFilesInClipboard(pid, result);
-                appendTerminalLog(`📋 Generated export files successfully stored in OS clipboard!\n`);
-              }
-            }
-          } catch (e: any) {
-            appendTerminalLog(`⚠️ Result Parsing: ${e?.message || e}\n`);
+        try {
+          const status = await filesExporterApiService.getExportStatus(pid);
+          if (!status?.pythonScriptStatus) {
+            store.appendTerminalLog(`⚠️ [Poll ${checkCount}s] Could not retrieve process status for PID ${pid}.\n`);
+            continue;
           }
+
+          if (!status.pythonScriptStatus.isRunning) {
+            isDone = true;
+            const exitCode = status.pythonScriptStatus.exitCode ?? 0;
+            if (exitCode === 0) {
+              store.appendTerminalLog(`✅ Process PID ${pid} completed successfully (exit code 0).\n`);
+            } else {
+              store.appendTerminalLog(`❌ Process PID ${pid} exited with non-zero exit code: ${exitCode}.\n`);
+            }
+
+            try {
+              store.appendTerminalLog(`📄 Reading export results and report for PID ${pid}...\n`);
+              const result = await filesExporterApiService.getExportResult(
+                pid,
+                runResponse.exportDirectory,
+                runResponse.timestamp
+              );
+              if (result?.report) {
+                store.setReportData({
+                  summary: result.report.results.summary,
+                  metrics_per_extension: result.report.results.metrics_per_extension,
+                  generated_files: result.report.results.generated_files,
+                  tree_manifest: result.report.results.tree_manifest,
+                  estimatedInputTokens: result.estimatedInputTokens,
+                });
+                const totalExported = result.report.results.summary?.total_exported ?? 0;
+                store.appendTerminalLog(`📊 Export Report Loaded: ${totalExported} files exported.\n`);
+
+                if (store.config.copyGeneratedFilesToClipboard) {
+                  await filesExporterApiService.copyLatestExportedFiles(runResponse.exportDirectory);
+                  store.appendTerminalLog(`📋 Generated export files successfully stored in OS clipboard!\n`);
+                }
+              } else {
+                store.appendTerminalLog(`⚠️ Result Parsing: Report data empty or unavailable.\n`);
+              }
+            } catch (e: any) {
+              store.appendTerminalLog(`❌ Result Parsing Error: ${e?.message || JSON.stringify(e)}\n`);
+            }
+          } else if (checkCount % 5 === 0) {
+            store.appendTerminalLog(`⏳ [Poll ${checkCount}s] Python process PID ${pid} is still running...\n`);
+          }
+        } catch (pollErr: any) {
+          store.appendTerminalLog(`⚠️ Status check error (attempt ${checkCount}): ${pollErr?.message || pollErr}\n`);
         }
       }
+
+      if (!isDone) {
+        store.appendTerminalLog(`⚠️ [Timeout] Process PID ${pid} did not finish within ${maxChecks} seconds.\n`);
+      }
     } catch (err: any) {
-      appendTerminalLog(`❌ Export Error: ${err?.message || err}\n`);
+      store.appendTerminalLog(`❌ Export Error: ${err?.message || JSON.stringify(err)}\n`);
+      if (err?.stack) {
+        store.appendTerminalLog(`🔍 Stack Trace:\n${err.stack}\n`);
+      }
     } finally {
-      setIsRunning(false);
+      store.setIsRunning(false);
     }
   };
 
-  const handleKillExport = () => {
-    setIsRunning(false);
-    appendTerminalLog(`\n🛑 Process export terminated by user.\n`);
+  const handleKillExport = async () => {
+    logInfo('[useExporterExecution] handleKillExport starting...');
+    store.setIsRunning(false);
+    store.appendTerminalLog(`\n🛑 Process export terminated by user.\n`);
   };
 
   const handleOpenExchangeUrl = (url: string) => {
-    vsCodeApiService.openUrl(url, true);
+    logInfo('[useExporterExecution] handleOpenExchangeUrl starting...', url);
+    filesExporterApiService.openBrowserTab(url, true);
   };
 
   return {
-    isRunning,
+    isRunning: store.isRunning,
     handleRunExport,
     handleKillExport,
     handleOpenExchangeUrl,
-    compiledBashCmd,
-    terminalLogs,
-    clearTerminalLogs,
-    reportData,
-    activeTab,
-    setActiveTab,
+    compiledBashCmd: store.compiledBashCmd,
+    terminalLogs: store.terminalLogs,
+    clearTerminalLogs: () => {
+      logInfo('[useExporterExecution] clearTerminalLogs starting...');
+      store.clearTerminalLogs();
+    },
+    reportData: store.reportData,
+    activeTab: store.activeTab,
+    setActiveTab: (tab: any) => {
+      logInfo('[useExporterExecution] setActiveTab starting...', tab);
+      store.setActiveTab(tab);
+    },
+    exchangeLinks: store.exchangeLinks,
   };
 }

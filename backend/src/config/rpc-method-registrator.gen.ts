@@ -21,6 +21,44 @@ export function registerRpcMethods(rpc: RpcProtocol): void {
     const blastRadiusErrorFilesIdentificatorService = serviceRegistry.get(ServiceEnum.BLAST_RADIUS_ERROR_FILES_IDENTIFICATOR);
     rpc.register(RpcMethodEnum.BLASTRADIUSERRORFILESIDENTIFICATOR_SEARCH_FILES, blastRadiusErrorFilesIdentificatorService.searchFiles.bind(blastRadiusErrorFilesIdentificatorService));
 
+    const filesExporterHistoryService = serviceRegistry.get(ServiceEnum.FILES_EXPORTER_HISTORY);
+    rpc.register(RpcMethodEnum.FEHISTORY_GET_FULL_WRAPPER, filesExporterHistoryService.getFullWrapper.bind(filesExporterHistoryService));
+    rpc.register(RpcMethodEnum.FEHISTORY_LOAD_HISTORY, filesExporterHistoryService.loadHistory.bind(filesExporterHistoryService));
+    rpc.register(RpcMethodEnum.FEHISTORY_GET_LAST_RUN_CONFIG_ID, filesExporterHistoryService.getLastRunConfigId.bind(filesExporterHistoryService));
+    rpc.register(RpcMethodEnum.FEHISTORY_SET_HISTORY_VIEW_MODE, filesExporterHistoryService.setHistoryViewMode.bind(filesExporterHistoryService));
+    rpc.register(RpcMethodEnum.FEHISTORY_SAVE_HISTORY, filesExporterHistoryService.saveHistory.bind(filesExporterHistoryService));
+    rpc.register(RpcMethodEnum.FEHISTORY_DUPLICATE_ENTRY, filesExporterHistoryService.duplicateEntry.bind(filesExporterHistoryService));
+    rpc.register(RpcMethodEnum.FEHISTORY_ADD_NEW_ENTRY, filesExporterHistoryService.addNewEntry.bind(filesExporterHistoryService));
+    rpc.register(RpcMethodEnum.FEHISTORY_TOGGLE_FREEZE, filesExporterHistoryService.toggleFreeze.bind(filesExporterHistoryService));
+    rpc.register(RpcMethodEnum.FEHISTORY_UPDATE_ENTRY_DISPLAY, filesExporterHistoryService.updateEntryDisplay.bind(filesExporterHistoryService));
+    rpc.register(RpcMethodEnum.FEHISTORY_REMOVE_ENTRY, filesExporterHistoryService.removeEntry.bind(filesExporterHistoryService));
+    rpc.register(RpcMethodEnum.FEHISTORY_CLEAR_HISTORY, filesExporterHistoryService.clearHistory.bind(filesExporterHistoryService));
+    rpc.register(RpcMethodEnum.FEHISTORY_SOFT_CLEAR_HISTORY, filesExporterHistoryService.softClearHistory.bind(filesExporterHistoryService));
+    rpc.register(RpcMethodEnum.FEHISTORY_CLEAR_HISTORY_WITH_MODE, filesExporterHistoryService.clearHistoryWithMode.bind(filesExporterHistoryService));
+    rpc.register(RpcMethodEnum.FEHISTORY_GET_HISTORY_FILE_PATH, filesExporterHistoryService.getHistoryFilePath.bind(filesExporterHistoryService));
+    rpc.register(RpcMethodEnum.FEHISTORY_OPEN_HISTORY_FILE, filesExporterHistoryService.openHistoryFile.bind(filesExporterHistoryService));
+    rpc.register(RpcMethodEnum.FEHISTORY_REVEAL_HISTORY_FILE, filesExporterHistoryService.revealHistoryFile.bind(filesExporterHistoryService));
+
+    const filesExporterService = serviceRegistry.get(ServiceEnum.FILES_EXPORTER);
+    rpc.register(RpcMethodEnum.FILEEXPORTER_GET_INITIAL_STATE, filesExporterService.getInitialState.bind(filesExporterService));
+    rpc.register(RpcMethodEnum.FILEEXPORTER_RUN_EXPORT, filesExporterService.runExport.bind(filesExporterService));
+    rpc.register(RpcMethodEnum.FILEEXPORTER_GET_EXPORT_STATUS, filesExporterService.getExportStatus.bind(filesExporterService));
+    rpc.register(RpcMethodEnum.FILEEXPORTER_GET_EXPORT_RESULT, filesExporterService.getExportResult.bind(filesExporterService));
+    rpc.register(RpcMethodEnum.FILEEXPORTER_KILL_EXPORT, filesExporterService.killExport.bind(filesExporterService));
+    rpc.register(RpcMethodEnum.FILEEXPORTER_SIMULATE_FILTERS, filesExporterService.simulateFilters.bind(filesExporterService));
+    rpc.register(RpcMethodEnum.FILEEXPORTER_GET_OPEN_EDITOR_FILES, filesExporterService.getOpenEditorFiles.bind(filesExporterService));
+    rpc.register(RpcMethodEnum.FILEEXPORTER_GET_GIT_DIFF_FILES, filesExporterService.getGitDiffFiles.bind(filesExporterService));
+    rpc.register(RpcMethodEnum.FILEEXPORTER_SYNC_SELECTED_PATHS, filesExporterService.syncSelectedPaths.bind(filesExporterService));
+    rpc.register(RpcMethodEnum.FILEEXPORTER_GET_SELECTED_PATHS, filesExporterService.getSelectedPaths.bind(filesExporterService));
+    rpc.register(RpcMethodEnum.FILEEXPORTER_CLEAR_SELECTED_PATHS, filesExporterService.clearSelectedPaths.bind(filesExporterService));
+    rpc.register(RpcMethodEnum.FILEEXPORTER_OPEN_PATH_AT_CURSOR, filesExporterService.openPathAtCursor.bind(filesExporterService));
+    rpc.register(RpcMethodEnum.FILEEXPORTER_COPY_LATEST_EXPORTED_FILES, filesExporterService.copyLatestExportedFiles.bind(filesExporterService));
+    rpc.register(RpcMethodEnum.FILEEXPORTER_COPY_SELECTED_FILES_TO_CLIPBOARD, filesExporterService.copySelectedFilesToClipboard.bind(filesExporterService));
+    rpc.register(RpcMethodEnum.FILEEXPORTER_CLEAR_DEST_DIRECTORY, filesExporterService.clearDestDirectory.bind(filesExporterService));
+    rpc.register(RpcMethodEnum.FILEEXPORTER_APPLY_FILE_FILTER, filesExporterService.applyFileFilter.bind(filesExporterService));
+    rpc.register(RpcMethodEnum.FILEEXPORTER_OPEN_BROWSER_TAB, filesExporterService.openBrowserTab.bind(filesExporterService));
+    rpc.register(RpcMethodEnum.FILEEXPORTER_SHOW_NOTIFICATION, filesExporterService.showNotification.bind(filesExporterService));
+
     const fileSystemService = serviceRegistry.get(ServiceEnum.FILE_SYSTEM);
     rpc.register(RpcMethodEnum.FILESYSTEM_EXISTS, fileSystemService.exists.bind(fileSystemService));
     rpc.register(RpcMethodEnum.FILESYSTEM_IS_DIRECTORY, fileSystemService.isDirectory.bind(fileSystemService));

@@ -4,6 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Lock, Unlock, RotateCcw, Edit2, Copy, Plus, FileText, FolderOpen, Trash2 } from 'lucide-react';
 import { HistoryEntry } from '@/shared/services/file-exporter/model/file-exporter-model';
+import { logInfo } from '../utils/log-info';
 
 interface HistoryBarProps {
   historyList: HistoryEntry[];
@@ -38,7 +39,23 @@ export const HistoryBar: React.FC<HistoryBarProps> = ({
   const selectedEntry = historyList.find((h) => h.id === selectedProfileId);
   const isDefault = selectedProfileId === 'default';
 
+  const handleSelectProfile = (id: string) => {
+    logInfo('[HistoryBar] onSelectProfile handler triggered', id);
+    onSelectProfile(id);
+  };
+
+  const handleFreezeToggle = () => {
+    logInfo('[HistoryBar] onFreezeToggle handler triggered', selectedProfileId);
+    onFreezeToggle(selectedProfileId);
+  };
+
+  const handleResetConfig = () => {
+    logInfo('[HistoryBar] onResetConfig handler triggered', selectedProfileId);
+    onResetConfig();
+  };
+
   const handleStartRename = () => {
+    logInfo('[HistoryBar] handleStartRename triggered', selectedProfileId);
     if (selectedEntry) {
       setRenameText(selectedEntry.display);
       setIsEditing(true);
@@ -46,10 +63,36 @@ export const HistoryBar: React.FC<HistoryBarProps> = ({
   };
 
   const handleConfirmRename = () => {
+    logInfo('[HistoryBar] handleConfirmRename triggered', { selectedProfileId, renameText });
     if (selectedProfileId && renameText.trim()) {
       onRenameProfile(selectedProfileId, renameText.trim());
     }
     setIsEditing(false);
+  };
+
+  const handleDuplicateProfile = () => {
+    logInfo('[HistoryBar] onDuplicateProfile handler triggered', selectedProfileId);
+    onDuplicateProfile(selectedProfileId);
+  };
+
+  const handleAddProfile = () => {
+    logInfo('[HistoryBar] onAddProfile handler triggered');
+    onAddProfile();
+  };
+
+  const handleOpenFile = () => {
+    logInfo('[HistoryBar] onOpenFile handler triggered');
+    onOpenFile();
+  };
+
+  const handleRevealFolder = () => {
+    logInfo('[HistoryBar] onRevealFolder handler triggered');
+    onRevealFolder();
+  };
+
+  const handleClearHistory = () => {
+    logInfo('[HistoryBar] onClearHistory handler triggered');
+    onClearHistory();
   };
 
   return (
@@ -71,7 +114,7 @@ export const HistoryBar: React.FC<HistoryBarProps> = ({
         <Select
           value={selectedProfileId}
           onValueChange={(val: string | null) => {
-            if (val) onSelectProfile(val);
+            if (val) handleSelectProfile(val);
           }}
         >
           <SelectTrigger className="flex-1 bg-background h-7 font-mono text-xs">
@@ -93,7 +136,7 @@ export const HistoryBar: React.FC<HistoryBarProps> = ({
           <Button
             size="icon-xs"
             variant="ghost"
-            onClick={() => onFreezeToggle(selectedProfileId)}
+            onClick={handleFreezeToggle}
             title={selectedEntry?.frozen ? 'Unfreeze Profile' : 'Freeze Profile'}
           >
             {selectedEntry?.frozen ? <Lock size={13} className="text-amber-500" /> : <Unlock size={13} />}
@@ -103,7 +146,7 @@ export const HistoryBar: React.FC<HistoryBarProps> = ({
         <Button
           size="icon-xs"
           variant="ghost"
-          onClick={onResetConfig}
+          onClick={handleResetConfig}
           title="Reset Configuration"
         >
           <RotateCcw size={13} />
@@ -123,7 +166,7 @@ export const HistoryBar: React.FC<HistoryBarProps> = ({
         <Button
           size="icon-xs"
           variant="ghost"
-          onClick={() => onDuplicateProfile(selectedProfileId)}
+          onClick={handleDuplicateProfile}
           title="Duplicate Configuration"
         >
           <Copy size={13} />
@@ -132,7 +175,7 @@ export const HistoryBar: React.FC<HistoryBarProps> = ({
         <Button
           size="icon-xs"
           variant="ghost"
-          onClick={onAddProfile}
+          onClick={handleAddProfile}
           title="New Blank Profile"
         >
           <Plus size={13} />
@@ -143,7 +186,7 @@ export const HistoryBar: React.FC<HistoryBarProps> = ({
         <Button
           size="icon-xs"
           variant="ghost"
-          onClick={onOpenFile}
+          onClick={handleOpenFile}
           title="Open History File"
         >
           <FileText size={13} />
@@ -152,7 +195,7 @@ export const HistoryBar: React.FC<HistoryBarProps> = ({
         <Button
           size="icon-xs"
           variant="ghost"
-          onClick={onRevealFolder}
+          onClick={handleRevealFolder}
           title="Reveal History Folder"
         >
           <FolderOpen size={13} />
@@ -161,7 +204,7 @@ export const HistoryBar: React.FC<HistoryBarProps> = ({
         <Button
           size="icon-xs"
           variant="ghost"
-          onClick={onClearHistory}
+          onClick={handleClearHistory}
           title="Clear History Entries"
           className="hover:text-destructive"
         >

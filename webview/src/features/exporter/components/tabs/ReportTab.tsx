@@ -2,6 +2,7 @@ import React from 'react';
 import { PricingService } from '../../utils/pricing-calculator';
 import { Card } from '@/components/ui/card';
 import { ExportReportData } from '@/shared/services/file-exporter/model/file-exporter-model';
+import { logInfo } from '../../utils/log-info';
 
 interface ReportTabProps {
   reportData: ExportReportData | null;
@@ -25,6 +26,17 @@ export const ReportTab: React.FC<ReportTabProps> = ({
   const tokens = reportData.estimatedInputTokens || 0;
   const pricing = PricingService.calculateTokenCost(tokens);
   const metrics = reportData.metrics_per_extension || {};
+
+  const handleExtensionClick = (ext: string, e: React.MouseEvent) => {
+    const mode = e.metaKey || e.ctrlKey ? 'exc' : 'inc';
+    logInfo('[ReportTab] handleExtensionClick handler triggered', { ext, mode });
+    onAppendExtension(ext, mode);
+  };
+
+  const handleSetMaxFileSize = (kb: number) => {
+    logInfo('[ReportTab] handleSetMaxFileSize handler triggered', kb);
+    onSetMaxFileSize(kb);
+  };
 
   return (
     <div className="space-y-4 bg-background p-4 font-mono text-xs">
@@ -77,9 +89,7 @@ export const ReportTab: React.FC<ReportTabProps> = ({
                 <tr key={ext} className="hover:bg-muted/40">
                   <td className="p-1.5 border border-border font-bold">
                     <span
-                      onClick={(e) =>
-                        onAppendExtension(ext, e.metaKey || e.ctrlKey ? 'exc' : 'inc')
-                      }
+                      onClick={(e) => handleExtensionClick(ext, e)}
                       className="hover:opacity-80 text-primary underline cursor-pointer"
                       title="Click to Include, Cmd/Ctrl+Click to Exclude"
                     >
@@ -91,7 +101,7 @@ export const ReportTab: React.FC<ReportTabProps> = ({
                     {m.size_rejected.count > 0 ? (
                       <span
                         onClick={() =>
-                          onSetMaxFileSize(
+                          handleSetMaxFileSize(
                             Math.ceil(parseFloat(m.size_rejected.max) * 1024)
                           )
                         }

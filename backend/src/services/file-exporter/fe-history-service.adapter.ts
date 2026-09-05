@@ -1,235 +1,271 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as os from 'os';
 import { existsSync } from 'fs';
 import * as fs from 'fs/promises';
 import { AbstractServiceAdapter } from '../../core/AbstractServiceAdapter';
-import { logInfo } from '../../utils/utils-log';
-import { HistoryEntry, ExportConfig } from '../../../../shared/services/file-exporter/model/file-exporter-model';
+import { logInfo, logError } from '../../utils/utils-log';
+import {
+  HistoryEntry,
+  ExportConfig,
+  HistoryWrapper,
+  HistoryViewMode,
+  HistorySaveResult,
+  HistoryClearRequest,
+  HistoryClearResult,
+} from '../../../../shared/services/file-exporter/model/file-exporter-model';
 import { IFilesExporterHistoryServicePort } from '../../../../shared/services/file-exporter/port-out/fe-history-service.port';
-import { VsCodeSettingsManager, vsCodeSettingsManager } from '../../managers/VsCodeSettings.manager';
+import { vsCodeSettingsManager } from '../../managers/VsCodeSettings.manager';
 
 export class FilesExporterHistoryAdapter extends AbstractServiceAdapter implements IFilesExporterHistoryServicePort, vscode.Disposable {
-    private historyFilePath: string;
+  private getHistoryFilePathResolved(): string {
+    const rawPath = vsCodeSettingsManager.getSettings().exporter.historyYamlPath || '~/.files-exporter-history.yaml';
+    if (rawPath.startsWith('~')) {
+      return path.join(os.homedir(), rawPath.slice(1));
+    }
+    return rawPath;
+  }
 
-    constructor () {
-        super();
-        this.historyFilePath = vsCodeSettingsManager.getSettings().exporter.historyYamlPath;
+  public async getHistoryFilePath(): Promise<string> {
+    return this.getHistoryFilePathResolved();
+  }
+
+  public async getFullWrapper(currentRepo?: string): Promise<HistoryWrapper> {
+    const filePath = this.getHistoryFilePathResolved();
+    let parsed: any = {};
+    if (existsSync(filePath)) {
+      try {
+        const fileData = await fs.readFile(filePath, 'utf8');
+        parsed = JSON.parse(fileData.trim() || '{}');
+      } catch (e) {
+        logError('[FilesExporterHistoryAdapter] Error parsing history file:', e);
+      }
     }
 
-    public async getFullWrapper(currentRepo?: string): Promise<any> {
-        let parsed: any = {};
-        if (existsSync(this.historyFilePath)) {
-            try {
-                const fileData = await fs.readFile(this.historyFilePath, 'utf8');
-                parsed = JSON.parse(fileData.trim() || '{}');
-            } catch (e) {}
-        }
+    if (!parsed.config) parsed.config = {};
+    if (!parsed.config.repo) parsed.config.repo = [];
+    if (!parsed.history) parsed.history = [];
 
-        if (!parsed.config) {
-            parsed.config = {};
-        }
-        if (!parsed.config.repo) {
-            parsed.config.repo = [];
-        }
-        if (!parsed.history) {
-            parsed.history = [];
-        }
-
-        if (currentRepo) {
-            let repoEntry = parsed.config.repo.find((r: any) => r.repo === currentRepo);
-            if (!repoEntry) {
-                repoEntry = {
-                    repo: currentRepo,
-                    lastRunConfigId: parsed.config.lastRunConfigId || 'default',
-                    historyViewMode: parsed.config.historyViewMode || 'scope-current-repo'
-                };
-                parsed.config.repo.push(repoEntry);
-            }
-        }
-
-        return parsed;
-    }
-
-    private async writeWrapper(wrapper: any): Promise<void> {
-        await fs.mkdir(path.dirname(this.historyFilePath), { recursive: true });
-        wrapper.history = wrapper.history.map((h: any) => ({
-            id: h.id,
-            repo: h.repo || 'unknown',
-            display: h.display,
-            frozen: h.frozen || false,
-            config: h.config
-        }));
-        await fs.writeFile(this.historyFilePath, JSON.stringify(wrapper, null, 2), 'utf8');
-    }
-
-    public async loadHistory(): Promise<HistoryEntry[]> {
-        const wrapper = await this.getFullWrapper();
-        return wrapper.history;
-    }
-
-    public async getLastRunConfigId(repo: string): Promise<string> {
-        const wrapper = await this.getFullWrapper(repo);
-        const repoEntry = wrapper.config.repo.find((r: any) => r.repo === repo);
-        return repoEntry ? repoEntry.lastRunConfigId : 'default';
-    }
-
-    public async setHistoryViewMode(mode: string, repo: string): Promise<void> {
-        const wrapper = await this.getFullWrapper(repo);
-        const repoEntry = wrapper.config.repo.find((r: any) => r.repo === repo);
-        if (repoEntry) {
-            repoEntry.historyViewMode = mode;
-        }
-        await this.writeWrapper(wrapper);
-    }
-
-    public async saveHistory(formData: any, currentHistoryId: string | undefined, repo: string): Promise<{ history: HistoryEntry[], selectedId: string }> {
-        const wrapper = await this.getFullWrapper(repo);
-        const uiConfig = this.mapFormDataToConfig(formData);
-
-        if (currentHistoryId && currentHistoryId !== 'default') {
-            const existingIndex = wrapper.history.findIndex((h: any) => h.id === currentHistoryId);
-            if (existingIndex !== -1 && !wrapper.history[existingIndex].frozen) {
-                wrapper.history[existingIndex].config = uiConfig;
-                // ✨ Fix: We DO NOT overwrite wrapper.history[existingIndex].repo here.
-                // It must retain its original creation scope.
-
-                const repoEntry = wrapper.config.repo.find((r: any) => r.repo === repo);
-                if (repoEntry) {
-                    repoEntry.lastRunConfigId = currentHistoryId;
-                }
-
-                await this.writeWrapper(wrapper);
-                return { history: wrapper.history, selectedId: currentHistoryId };
-            }
-        }
-
-        const finalSelectedId = currentHistoryId || 'default';
-        const repoEntry = wrapper.config.repo.find((r: any) => r.repo === repo);
-        if (repoEntry) {
-            repoEntry.lastRunConfigId = finalSelectedId;
-        }
-
-        await this.writeWrapper(wrapper);
-        return { history: wrapper.history, selectedId: finalSelectedId };
-    }
-
-    public async duplicateEntry(id: string, repo: string): Promise<{ history: HistoryEntry[], newId: string }> {
-        const wrapper = await this.getFullWrapper(repo);
-        const target = wrapper.history.find((h: any) => h.id === id);
-        if (!target) return { history: wrapper.history, newId: id };
-
-        const newId = new Date().toISOString() + "-copy";
-        const newEntry: HistoryEntry = {
-            id: newId,
-            repo: repo,
-            display: `${target.display} copy`,
-            frozen: false,
-            config: JSON.parse(JSON.stringify(target.config))
+    if (currentRepo) {
+      let repoEntry = parsed.config.repo.find((r: any) => r.repo === currentRepo);
+      if (!repoEntry) {
+        repoEntry = {
+          repo: currentRepo,
+          lastRunConfigId: parsed.config.lastRunConfigId || 'default',
+          historyViewMode: parsed.config.historyViewMode || 'scope-current-repo',
         };
-
-        wrapper.history = [newEntry, ...wrapper.history];
-        await this.writeWrapper(wrapper);
-        return { history: wrapper.history, newId };
+        parsed.config.repo.push(repoEntry);
+      }
     }
 
-    public async addNewEntry(defaultConfig: ExportConfig, workspaceName: string, repo: string, customName?: string): Promise<{ history: HistoryEntry[], newId: string }> {
-        const wrapper = await this.getFullWrapper(repo);
+    return parsed as HistoryWrapper;
+  }
+
+  private async writeWrapper(wrapper: any): Promise<void> {
+    const filePath = this.getHistoryFilePathResolved();
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    wrapper.history = (wrapper.history || []).map((h: any) => ({
+      id: h.id,
+      repo: h.repo || 'unknown',
+      display: h.display,
+      frozen: h.frozen || false,
+      config: h.config,
+    }));
+    await fs.writeFile(filePath, JSON.stringify(wrapper, null, 2), 'utf8');
+  }
+
+  public async loadHistory(): Promise<HistoryEntry[]> {
+    const wrapper = await this.getFullWrapper();
+    return wrapper.history;
+  }
+
+  public async getLastRunConfigId(repo: string): Promise<string> {
+    const wrapper = await this.getFullWrapper(repo);
+    const repoEntry = wrapper.config.repo.find((r: any) => r.repo === repo);
+    return repoEntry ? repoEntry.lastRunConfigId : 'default';
+  }
+
+  public async setHistoryViewMode(mode: HistoryViewMode, repo: string): Promise<void> {
+    const wrapper = await this.getFullWrapper(repo);
+    const repoEntry = wrapper.config.repo.find((r: any) => r.repo === repo);
+    if (repoEntry) {
+      repoEntry.historyViewMode = mode;
+    }
+    await this.writeWrapper(wrapper);
+  }
+
+  public async saveHistory(formData: ExportConfig, currentHistoryId: string | undefined, repo: string): Promise<HistorySaveResult> {
+    const wrapper = await this.getFullWrapper(repo);
+    const uiConfig = formData;
+
+    if (currentHistoryId && currentHistoryId !== 'default') {
+      const existingIndex = wrapper.history.findIndex((h: any) => h.id === currentHistoryId);
+      if (existingIndex !== -1 && !wrapper.history[existingIndex].frozen) {
+        wrapper.history[existingIndex].config = uiConfig;
+        const repoEntry = wrapper.config.repo.find((r: any) => r.repo === repo);
+        if (repoEntry) {
+          repoEntry.lastRunConfigId = currentHistoryId;
+        }
+        await this.writeWrapper(wrapper);
+        return { history: wrapper.history, selectedId: currentHistoryId };
+      }
+    }
+
+    const finalSelectedId = currentHistoryId || 'default';
+    const repoEntry = wrapper.config.repo.find((r: any) => r.repo === repo);
+    if (repoEntry) {
+      repoEntry.lastRunConfigId = finalSelectedId;
+    }
+
+    await this.writeWrapper(wrapper);
+    return { history: wrapper.history, selectedId: finalSelectedId };
+  }
+
+  public async duplicateEntry(id: string, repo: string): Promise<{ history: HistoryEntry[]; newId: string }> {
+    const wrapper = await this.getFullWrapper(repo);
+    const target = wrapper.history.find((h: any) => h.id === id);
+    if (!target) return { history: wrapper.history, newId: id };
+
+    const newId = new Date().toISOString() + '-copy';
+    const newEntry: HistoryEntry = {
+      id: newId,
+      repo: repo,
+      display: `${target.display} copy`,
+      frozen: false,
+      config: JSON.parse(JSON.stringify(target.config)),
+    };
+
+    wrapper.history = [newEntry, ...wrapper.history];
+    await this.writeWrapper(wrapper);
+    return { history: wrapper.history, newId };
+  }
+
+  public async addNewEntry(defaultConfig: ExportConfig, workspaceName: string, repo: string, customName?: string): Promise<{ history: HistoryEntry[]; newId: string }> {
+    const wrapper = await this.getFullWrapper(repo);
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const displayName = customName || `${pad(now.getMonth() + 1)}/${pad(now.getDate())}-${pad(now.getHours())}:${pad(now.getMinutes())} --> ${workspaceName} --> ⚙️ New config`;
+
+    const newId = now.toISOString();
+    const newEntry: HistoryEntry = {
+      id: newId,
+      repo: repo,
+      display: displayName,
+      frozen: false,
+      config: JSON.parse(JSON.stringify(defaultConfig)),
+    };
+
+    wrapper.history = [newEntry, ...wrapper.history];
+    await this.writeWrapper(wrapper);
+    return { history: wrapper.history, newId };
+  }
+
+  public async toggleFreeze(id: string, isFrozen: boolean): Promise<HistoryEntry[]> {
+    const wrapper = await this.getFullWrapper();
+    const entry = wrapper.history.find((h: any) => h.id === id);
+    if (entry) {
+      entry.frozen = isFrozen;
+      await this.writeWrapper(wrapper);
+    }
+    return wrapper.history;
+  }
+
+  public async updateEntryDisplay(id: string, newDisplay: string): Promise<HistoryEntry[]> {
+    const wrapper = await this.getFullWrapper();
+    const entry = wrapper.history.find((h: any) => h.id === id);
+    if (entry) {
+      entry.display = newDisplay;
+      await this.writeWrapper(wrapper);
+    }
+    return wrapper.history;
+  }
+
+  public async removeEntry(id: string): Promise<HistoryEntry[]> {
+    const wrapper = await this.getFullWrapper();
+    wrapper.history = wrapper.history.filter((h: any) => h.id !== id);
+
+    if (wrapper.config && wrapper.config.repo) {
+      wrapper.config.repo.forEach((r: any) => {
+        if (r.lastRunConfigId === id) {
+          r.lastRunConfigId = 'default';
+        }
+      });
+    }
+
+    await this.writeWrapper(wrapper);
+    return wrapper.history;
+  }
+
+  public async clearHistory(): Promise<void> {
+    const wrapper = await this.getFullWrapper();
+    wrapper.history = [];
+    if (wrapper.config && wrapper.config.repo) {
+      wrapper.config.repo.forEach((r: any) => {
+        r.lastRunConfigId = 'default';
+      });
+    }
+    await this.writeWrapper(wrapper);
+  }
+
+  public async softClearHistory(): Promise<void> {
+    const filePath = this.getHistoryFilePathResolved();
+    if (existsSync(filePath)) {
+      const now = new Date();
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+      const backupPath = `${filePath}.${timestamp}.del`;
+      await fs.copyFile(filePath, backupPath);
+    }
+  }
+
+  public async clearHistoryWithMode(request: HistoryClearRequest): Promise<HistoryClearResult> {
+    let backupPath: string | undefined = undefined;
+
+    if (request.mode === 'remove-selected-soft' || request.mode === 'clear-all-soft') {
+      const filePath = this.getHistoryFilePathResolved();
+      if (existsSync(filePath)) {
         const now = new Date();
         const pad = (n: number) => n.toString().padStart(2, '0');
-        const displayName = customName || `${pad(now.getMonth() + 1)}/${pad(now.getDate())}-${pad(now.getHours())}:${pad(now.getMinutes())} --> ${workspaceName} --> ⚙️ New config`;
-
-        const newId = now.toISOString();
-        const newEntry: HistoryEntry = {
-            id: newId,
-            repo: repo,
-            display: displayName,
-            frozen: false,
-            config: JSON.parse(JSON.stringify(defaultConfig))
-        };
-
-        wrapper.history = [newEntry, ...wrapper.history];
-        await this.writeWrapper(wrapper);
-        return { history: wrapper.history, newId };
+        const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+        backupPath = `${filePath}.${timestamp}.del`;
+        await fs.copyFile(filePath, backupPath);
+      }
     }
 
-    public async toggleFreeze(id: string, isFrozen: boolean): Promise<HistoryEntry[]> {
-        const wrapper = await this.getFullWrapper();
-        const entry = wrapper.history.find((h: any) => h.id === id);
-        if (entry) {
-            entry.frozen = isFrozen;
-            await this.writeWrapper(wrapper);
-        }
-        return wrapper.history;
+    if (request.mode === 'remove-selected-hard' || request.mode === 'remove-selected-soft') {
+      if (request.selectedId && request.selectedId !== 'default') {
+        const history = await this.removeEntry(request.selectedId);
+        return { history, selectedId: 'default', backupPath };
+      }
+    } else if (request.mode === 'clear-all-hard' || request.mode === 'clear-all-soft') {
+      await this.clearHistory();
+      return { history: [], selectedId: 'default', backupPath };
     }
 
-    public async updateEntryDisplay(id: string, newDisplay: string): Promise<HistoryEntry[]> {
-        const wrapper = await this.getFullWrapper();
-        const entry = wrapper.history.find((h: any) => h.id === id);
-        if (entry) {
-            entry.display = newDisplay;
-            await this.writeWrapper(wrapper);
-        }
-        return wrapper.history;
+    const history = await this.loadHistory();
+    return { history, selectedId: request.selectedId || 'default', backupPath };
+  }
+
+  public async openHistoryFile(): Promise<void> {
+    const filePath = this.getHistoryFilePathResolved();
+    if (existsSync(filePath)) {
+      const doc = await vscode.workspace.openTextDocument(filePath);
+      await vscode.window.showTextDocument(doc);
+    } else {
+      vscode.window.showWarningMessage('History log file does not exist yet.');
     }
+  }
 
-    public async removeEntry(id: string): Promise<HistoryEntry[]> {
-        const wrapper = await this.getFullWrapper();
-        wrapper.history = wrapper.history.filter((h: any) => h.id !== id);
-
-        if (wrapper.config && wrapper.config.repo) {
-            wrapper.config.repo.forEach((r: any) => {
-                if (r.lastRunConfigId === id) {
-                    r.lastRunConfigId = 'default';
-                }
-            });
-        }
-
-        await this.writeWrapper(wrapper);
-        return wrapper.history;
+  public async revealHistoryFile(): Promise<void> {
+    const filePath = this.getHistoryFilePathResolved();
+    if (existsSync(filePath)) {
+      await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(filePath));
+    } else {
+      const parentDir = path.dirname(filePath);
+      await fs.mkdir(parentDir, { recursive: true });
+      await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(parentDir));
     }
+  }
 
-    public async clearHistory(): Promise<void> {
-        const wrapper = await this.getFullWrapper();
-        wrapper.history = [];
-        if (wrapper.config && wrapper.config.repo) {
-            wrapper.config.repo.forEach((r: any) => {
-                r.lastRunConfigId = 'default';
-            });
-        }
-        await this.writeWrapper(wrapper);
-    }
-
-    public async softClearHistory(): Promise<void> {
-        if (existsSync(this.historyFilePath)) {
-            const now = new Date();
-            const pad = (n: number) => n.toString().padStart(2, '0');
-            const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_\${pad(now.getHours())}-\${pad(now.getMinutes())}-\${pad(now.getSeconds())}`;
-            const backupPath = `${this.historyFilePath}.${timestamp}.del`;
-            await fs.copyFile(this.historyFilePath, backupPath);
-        }
-    }
-
-    private mapFormDataToConfig(formData: any): ExportConfig {
-        return {
-            src: formData.paths.join(', '),
-            dest: formData.destDir,
-            format: formData.format,
-            max_file: formData.maxFile,
-            max_chunk: formData.maxChunk,
-            groupByExt: formData.groupByExt,
-            copyGeneratedFilesToClipboard: formData.copyGeneratedFilesToClipboard,
-            generateTreeView: formData.generateTreeView,
-            logConsole: formData.logConsole,
-            logFile: formData.logFile,
-            inc_paths: formData.incPaths,
-            exc_paths: formData.excPaths,
-            inc_ext: formData.incExts,
-            exc_ext: formData.excExts
-        };
-    }
-
-
-    public dispose() {
-
-    }
+  public dispose() {}
 }

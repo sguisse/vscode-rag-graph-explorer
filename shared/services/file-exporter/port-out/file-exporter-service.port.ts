@@ -1,22 +1,7 @@
-import {
-  ClipboardActionResult,
-  DestinationActionResult,
-  FilesExporterInitialState,
-  FilesExporterResult,
-  FilesExporterRunRequest,
-  FilesExporterRunResponse,
-  FilesExporterStatus,
-  FilterSimulationRequest,
-  FilterSimulationResult,
-  GeneratedFilesFilterRequest,
-  GeneratedFilesFilterResult,
-  NotificationRequest,
-  OpenBrowserRequest,
-  OpenPathRequest,
-  PathValidationResult
-} from "../model/file-exporter-model";
+import { IBackendService } from '../../../core/backend-service.port';
+import { FilesExporterInitialState, FilesExporterRunRequest, FilesExporterRunResponse, FilesExporterStatus, FilesExporterResult, FilterSimulationRequest, FilterSimulationResult, GeneratedFilesFilterRequest, GeneratedFilesFilterResult, DestinationActionResult, ClipboardActionResult, FilesExporterNotificationType } from '../model/file-exporter-model';
 
-export interface IFilesExporterServicePort {
+export interface IFilesExporterServicePort extends IBackendService {
   getInitialState(pendingPaths?: string[]): Promise<FilesExporterInitialState>;
   runExport(request: FilesExporterRunRequest): Promise<FilesExporterRunResponse>;
   getExportStatus(pid: number): Promise<FilesExporterStatus>;
@@ -24,17 +9,15 @@ export interface IFilesExporterServicePort {
   killExport(pid: number): Promise<boolean>;
   simulateFilters(request: FilterSimulationRequest): Promise<FilterSimulationResult>;
   getOpenEditorFiles(currentPaths: string[]): Promise<string[]>;
-  getGitDiffFiles(currentPaths: string[]): Promise<DestinationActionResult>;
+  getGitDiffFiles(currentPaths: string[]): Promise<string[]>;
   syncSelectedPaths(paths: string[]): Promise<void>;
   getSelectedPaths(): Promise<string[]>;
   clearSelectedPaths(): Promise<void>;
-  appendExternalPaths(paths: string[]): Promise<string[]>;
-  validatePaths(paths: string[]): Promise<PathValidationResult>;
-  openPathAtCursor(request: OpenPathRequest): Promise<DestinationActionResult>;
-  copyLatestExportedFiles(destDir: string): Promise<ClipboardActionResult>;
-  copySelectedFilesToClipboard(paths: string[], confirmed?: boolean): Promise<ClipboardActionResult>;
+  openPathAtCursor(path: string, lineNum?: number): Promise<void>;
+  copyLatestExportedFiles(destDir: string): Promise<DestinationActionResult>;
+  copySelectedFilesToClipboard(paths: string[]): Promise<ClipboardActionResult>;
   clearDestDirectory(destDir: string): Promise<DestinationActionResult>;
   applyFileFilter(request: GeneratedFilesFilterRequest): Promise<GeneratedFilesFilterResult>;
-  openBrowserTab(request: OpenBrowserRequest): Promise<void>;
-  showNotification(request: NotificationRequest): Promise<void>;
+  openBrowserTab(url: string, openInVSCode?: boolean): Promise<void>;
+  showNotification(type: FilesExporterNotificationType, text: string): Promise<void>;
 }

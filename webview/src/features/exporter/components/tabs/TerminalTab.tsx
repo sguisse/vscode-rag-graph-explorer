@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Copy, Trash2 } from 'lucide-react';
+import { logInfo } from '../../utils/log-info';
 
 interface TerminalTabProps {
   compiledBashCmd: string;
@@ -17,12 +18,27 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({
   onCopyTerminalLogs,
   onClearTerminalLogs,
 }) => {
+  const handleCopyBashCmd = () => {
+    logInfo('[TerminalTab] onCopyBashCmd handler triggered');
+    onCopyBashCmd();
+  };
+
+  const handleCopyTerminalLogs = () => {
+    logInfo('[TerminalTab] onCopyTerminalLogs handler triggered');
+    onCopyTerminalLogs();
+  };
+
+  const handleClearTerminalLogs = () => {
+    logInfo('[TerminalTab] onClearTerminalLogs handler triggered');
+    onClearTerminalLogs();
+  };
+
   return (
     <div className="p-4 space-y-4 font-mono text-xs bg-background">
       <div className="space-y-1">
         <div className="flex justify-between items-center text-[11px] font-bold text-foreground">
           <span>⚙️ Bash Command Run by Exporter</span>
-          <Button size="icon-xs" variant="ghost" onClick={onCopyBashCmd} title="Copy Command">
+          <Button size="icon-xs" variant="ghost" onClick={handleCopyBashCmd} title="Copy Command">
             <Copy size={12} />
           </Button>
         </div>
@@ -35,10 +51,10 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({
         <div className="flex justify-between items-center text-[11px] font-bold text-foreground">
           <span>🐍 Python Script Output Console</span>
           <div className="flex gap-1">
-            <Button size="icon-xs" variant="ghost" onClick={onCopyTerminalLogs} title="Copy Logs">
+            <Button size="icon-xs" variant="ghost" onClick={handleCopyTerminalLogs} title="Copy Logs">
               <Copy size={12} />
             </Button>
-            <Button size="icon-xs" variant="ghost" onClick={onClearTerminalLogs} title="Clear Terminal">
+            <Button size="icon-xs" variant="ghost" onClick={handleClearTerminalLogs} title="Clear Terminal">
               <Trash2 size={12} />
             </Button>
           </div>
