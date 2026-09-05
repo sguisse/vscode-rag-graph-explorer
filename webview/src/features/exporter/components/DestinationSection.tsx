@@ -113,7 +113,7 @@ export const DestinationSection: React.FC<DestinationSectionProps> = ({
           size="icon-xs"
           variant="outline"
           onClick={handleCopyLatestFiles}
-          title="Copy Last Exported Files to Clipboard"
+          data-tooltip="Copy Last Exported Files to Clipboard"
         >
           <Copy size={13} />
         </Button>
@@ -122,7 +122,7 @@ export const DestinationSection: React.FC<DestinationSectionProps> = ({
           size="icon-xs"
           variant="outline"
           onClick={handleRevealDestDir}
-          title="Reveal Folder in OS Explorer"
+          data-tooltip="Reveal Folder in OS Explorer"
         >
           <FolderOpen size={13} />
         </Button>
@@ -131,7 +131,7 @@ export const DestinationSection: React.FC<DestinationSectionProps> = ({
           size="icon-xs"
           variant="outline"
           onClick={handleClearDestDir}
-          title="Clean Destination Folder Contents"
+          data-tooltip="Clean Destination Folder Contents"
           className="hover:text-destructive"
         >
           <Trash2 size={13} />

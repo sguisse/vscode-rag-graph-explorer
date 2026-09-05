@@ -33,7 +33,7 @@ Task: Identify modular refactoring candidates and security improvements.`;
       <div className="space-y-2 p-3 bg-card border border-border rounded">
         <div className="flex justify-between items-center">
           <h4 className="font-bold text-foreground text-xs">💡 Sample LLM Prompt Template</h4>
-          <Button size="icon-xs" variant="outline" onClick={handleCopyPrompt} title="Copy Prompt">
+          <Button size="icon-xs" variant="outline" onClick={handleCopyPrompt} data-tooltip="Copy Prompt">
             <Copy size={12} />
           </Button>
         </div>

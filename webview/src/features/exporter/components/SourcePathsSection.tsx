@@ -109,7 +109,7 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
                   handleRemovePath(line);
                 }}
                 className="hover:bg-destructive/20 rounded p-0.5 shrink-0 transition-colors cursor-pointer"
-                title="Remove invalid path from list"
+                data-tooltip="Remove invalid path from list"
               >
                 <X size={11} />
               </button>
@@ -178,7 +178,7 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
   const totalPathsBadge = (
     <span
       className="bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold leading-none"
-      title={`${lines.length} total ${lines.length === 1 ? 'path' : 'paths'} selected`}
+      data-tooltip={`${lines.length} total ${lines.length === 1 ? 'path' : 'paths'} selected`}
     >
       {lines.length} {lines.length === 1 ? 'path' : 'paths'}
     </span>
@@ -235,7 +235,7 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
             size="icon-xs"
             variant="outline"
             onClick={handleAddOpenFiles}
-            title="Add Currently Open Editor Files"
+            data-tooltip="Add Currently Open Editor Files"
           >
             <FileCode size={13} />
           </Button>
@@ -244,7 +244,7 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
             size="icon-xs"
             variant="outline"
             onClick={handleAddGitDiffFiles}
-            title="Add Modified Files from Git Diff"
+            data-tooltip="Add Modified Files from Git Diff"
           >
             <GitCompare size={13} />
           </Button>
@@ -253,7 +253,7 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
             size="icon-xs"
             variant="outline"
             onClick={handleAddErrorStackFiles}
-            title="Extract References from Crash Stack Trace"
+            data-tooltip="Extract References from Crash Stack Trace"
           >
             <Bug size={13} />
           </Button>
@@ -262,7 +262,7 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
             size="icon-xs"
             variant="outline"
             onClick={handleOpenCursorLinePath}
-            title="Open Target Path at Cursor Line"
+            data-tooltip="Open Target Path at Cursor Line"
           >
             <ExternalLink size={13} />
           </Button>
@@ -271,7 +271,7 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
             size="icon-xs"
             variant="outline"
             onClick={handleClearPaths}
-            title="Clear Source Paths"
+            data-tooltip="Clear Source Paths"
             className="hover:text-destructive"
           >
             <Trash2 size={13} />

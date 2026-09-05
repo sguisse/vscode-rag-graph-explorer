@@ -117,7 +117,7 @@ export function TreeTab({ rootNode, onExcludePattern, onCaptureSelectedPaths }: 
               size="icon-xs"
               variant="ghost"
               onClick={() => handleRevealNode(node.absolute_path)}
-              title="Reveal in Explorer"
+              data-tooltip="Reveal in Explorer"
             >
               <FolderOpen size={11} />
             </Button>
@@ -128,7 +128,7 @@ export function TreeTab({ rootNode, onExcludePattern, onCaptureSelectedPaths }: 
                 const rel = node.name;
                 handleExcludePattern(isDir ? `.*/${rel}/.*` : `.*/${rel}$`, false);
               }}
-              title="Exclude Pattern"
+              data-tooltip="Exclude Pattern"
             >
               <Ban size={11} className="text-destructive" />
             </Button>

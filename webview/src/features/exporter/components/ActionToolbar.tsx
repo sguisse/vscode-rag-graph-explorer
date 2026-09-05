@@ -64,7 +64,7 @@ export const ActionToolbar: React.FC<ActionToolbarProps> = ({
               variant="outline"
               onClick={() => handleExchange(link.url)}
               className="h-8 gap-1.5 text-xs font-semibold cursor-pointer"
-              title={link.tooltip}
+              data-tooltip={link.tooltip}
             >
               {link.icon ? (
                 <img src={link.icon} alt={link.tooltip} className="w-4 h-4 object-contain" />

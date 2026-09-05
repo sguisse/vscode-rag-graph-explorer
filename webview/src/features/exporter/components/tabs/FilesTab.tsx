@@ -93,7 +93,7 @@ export const FilesTab: React.FC<FilesTabProps> = ({
                   size="icon-xs"
                   variant="ghost"
                   onClick={() => handleRevealFile(filePath)}
-                  title="Reveal in OS Explorer"
+                  data-tooltip="Reveal in OS Explorer"
                 >
                   <FolderOpen size={12} />
                 </Button>

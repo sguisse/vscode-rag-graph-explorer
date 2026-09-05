@@ -137,7 +137,7 @@ export const HistoryBar: React.FC<HistoryBarProps> = ({
             size="icon-xs"
             variant="ghost"
             onClick={handleFreezeToggle}
-            title={selectedEntry?.frozen ? 'Unfreeze Profile' : 'Freeze Profile'}
+            data-tooltip={selectedEntry?.frozen ? 'Unfreeze Profile' : 'Freeze Profile'}
           >
             {selectedEntry?.frozen ? <Lock size={13} className="text-amber-500" /> : <Unlock size={13} />}
           </Button>
@@ -147,7 +147,7 @@ export const HistoryBar: React.FC<HistoryBarProps> = ({
           size="icon-xs"
           variant="ghost"
           onClick={handleResetConfig}
-          title="Reset Configuration"
+          data-tooltip="Reset Configuration"
         >
           <RotateCcw size={13} />
         </Button>
@@ -157,7 +157,7 @@ export const HistoryBar: React.FC<HistoryBarProps> = ({
             size="icon-xs"
             variant="ghost"
             onClick={handleStartRename}
-            title="Rename Profile"
+            data-tooltip="Rename Profile"
           >
             <Edit2 size={13} />
           </Button>
@@ -167,7 +167,7 @@ export const HistoryBar: React.FC<HistoryBarProps> = ({
           size="icon-xs"
           variant="ghost"
           onClick={handleDuplicateProfile}
-          title="Duplicate Configuration"
+          data-tooltip="Duplicate Configuration"
         >
           <Copy size={13} />
         </Button>
@@ -176,7 +176,7 @@ export const HistoryBar: React.FC<HistoryBarProps> = ({
           size="icon-xs"
           variant="ghost"
           onClick={handleAddProfile}
-          title="New Blank Profile"
+          data-tooltip="New Blank Profile"
         >
           <Plus size={13} />
         </Button>
@@ -187,7 +187,7 @@ export const HistoryBar: React.FC<HistoryBarProps> = ({
           size="icon-xs"
           variant="ghost"
           onClick={handleOpenFile}
-          title="Open History File"
+          data-tooltip="Open History File"
         >
           <FileText size={13} />
         </Button>
@@ -196,7 +196,7 @@ export const HistoryBar: React.FC<HistoryBarProps> = ({
           size="icon-xs"
           variant="ghost"
           onClick={handleRevealFolder}
-          title="Reveal History Folder"
+          data-tooltip="Reveal History Folder"
         >
           <FolderOpen size={13} />
         </Button>
@@ -205,7 +205,7 @@ export const HistoryBar: React.FC<HistoryBarProps> = ({
           size="icon-xs"
           variant="ghost"
           onClick={handleClearHistory}
-          title="Clear History Entries"
+          data-tooltip="Clear History Entries"
           className="hover:text-destructive"
         >
           <Trash2 size={13} />

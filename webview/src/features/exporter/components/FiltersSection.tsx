@@ -196,7 +196,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                       size="icon-xs"
                       variant="ghost"
                       onClick={() => toggleSortLines('inc_paths')}
-                      title={`Sort lines (${sortDirections.inc_paths === 'asc' ? 'Ascending' : 'Descending'})`}
+                      data-tooltip={`Sort lines (${sortDirections.inc_paths === 'asc' ? 'Ascending' : 'Descending'})`}
                     >
                       {sortDirections.inc_paths === 'asc' ? <ArrowDownAZ size={11} /> : <ArrowUpAZ size={11} />}
                     </Button>
@@ -204,7 +204,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                       size="icon-xs"
                       variant="ghost"
                       onClick={() => explodeRegex('inc_paths')}
-                      title="Explode regex alternatives"
+                      data-tooltip="Explode regex alternatives"
                     >
                       <UnfoldVertical size={11} />
                     </Button>
@@ -212,7 +212,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                       size="icon-xs"
                       variant="ghost"
                       onClick={() => clearField('inc_paths')}
-                      title="Clear field"
+                      data-tooltip="Clear field"
                     >
                       <Trash2 size={11} />
                     </Button>
@@ -237,7 +237,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                       size="icon-xs"
                       variant="ghost"
                       onClick={() => toggleSortLines('inc_ext')}
-                      title={`Sort lines (${sortDirections.inc_ext === 'asc' ? 'Ascending' : 'Descending'})`}
+                      data-tooltip={`Sort lines (${sortDirections.inc_ext === 'asc' ? 'Ascending' : 'Descending'})`}
                     >
                       {sortDirections.inc_ext === 'asc' ? <ArrowDownAZ size={11} /> : <ArrowUpAZ size={11} />}
                     </Button>
@@ -245,7 +245,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                       size="icon-xs"
                       variant="ghost"
                       onClick={() => groupExtensions('inc_ext')}
-                      title="Group extensions by category"
+                      data-tooltip="Group extensions by category"
                     >
                       <Library size={11} />
                     </Button>
@@ -253,13 +253,13 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                       size="icon-xs"
                       variant="ghost"
                       onClick={() => explodeRegex('inc_ext')}
-                      title="Explode regex alternatives"
+                      data-tooltip="Explode regex alternatives"
                     >
                       <UnfoldVertical size={11} />
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="icon-xs" variant="ghost" title="Category Presets">
+                        <Button size="icon-xs" variant="ghost" data-tooltip="Category Presets">
                           <MoreVertical size={11} />
                         </Button>
                       </DropdownMenuTrigger>
@@ -280,7 +280,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                       size="icon-xs"
                       variant="ghost"
                       onClick={() => clearField('inc_ext')}
-                      title="Clear field"
+                      data-tooltip="Clear field"
                     >
                       <Trash2 size={11} />
                     </Button>
@@ -315,7 +315,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                       size="icon-xs"
                       variant="ghost"
                       onClick={() => toggleSortLines('exc_paths')}
-                      title={`Sort lines (${sortDirections.exc_paths === 'asc' ? 'Ascending' : 'Descending'})`}
+                      data-tooltip={`Sort lines (${sortDirections.exc_paths === 'asc' ? 'Ascending' : 'Descending'})`}
                     >
                       {sortDirections.exc_paths === 'asc' ? <ArrowDownAZ size={11} /> : <ArrowUpAZ size={11} />}
                     </Button>
@@ -323,7 +323,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                       size="icon-xs"
                       variant="ghost"
                       onClick={() => explodeRegex('exc_paths')}
-                      title="Explode regex alternatives"
+                      data-tooltip="Explode regex alternatives"
                     >
                       <UnfoldVertical size={11} />
                     </Button>
@@ -331,7 +331,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                       size="icon-xs"
                       variant="ghost"
                       onClick={() => clearField('exc_paths')}
-                      title="Clear field"
+                      data-tooltip="Clear field"
                     >
                       <Trash2 size={11} />
                     </Button>
@@ -356,7 +356,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                       size="icon-xs"
                       variant="ghost"
                       onClick={() => toggleSortLines('exc_ext')}
-                      title={`Sort lines (${sortDirections.exc_ext === 'asc' ? 'Ascending' : 'Descending'})`}
+                      data-tooltip={`Sort lines (${sortDirections.exc_ext === 'asc' ? 'Ascending' : 'Descending'})`}
                     >
                       {sortDirections.exc_ext === 'asc' ? <ArrowDownAZ size={11} /> : <ArrowUpAZ size={11} />}
                     </Button>
@@ -364,7 +364,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                       size="icon-xs"
                       variant="ghost"
                       onClick={() => groupExtensions('exc_ext')}
-                      title="Group extensions by category"
+                      data-tooltip="Group extensions by category"
                     >
                       <Library size={11} />
                     </Button>
@@ -372,13 +372,13 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                       size="icon-xs"
                       variant="ghost"
                       onClick={() => explodeRegex('exc_ext')}
-                      title="Explode regex alternatives"
+                      data-tooltip="Explode regex alternatives"
                     >
                       <UnfoldVertical size={11} />
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="icon-xs" variant="ghost" title="Category Presets">
+                        <Button size="icon-xs" variant="ghost" data-tooltip="Category Presets">
                           <MoreVertical size={11} />
                         </Button>
                       </DropdownMenuTrigger>
@@ -399,7 +399,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                       size="icon-xs"
                       variant="ghost"
                       onClick={() => clearField('exc_ext')}
-                      title="Clear field"
+                      data-tooltip="Clear field"
                     >
                       <Trash2 size={11} />
                     </Button>
@@ -430,14 +430,14 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
             className="flex-1 bg-background min-w-0 h-7 font-mono text-xs"
           />
           <div className="flex justify-end items-center gap-1.5 min-w-0 shrink-0">
-            <span className="px-1 text-base shrink-0" title={simResult.reason}>
+            <span className="px-1 text-base shrink-0" data-tooltip={simResult.reason}>
               {!filterSimulatorInput.trim()
                 ? '❓'
                 : simResult.isMatched
                 ? '✅'
                 : '🚫'}
             </span>
-            <span className="max-w-[140px] sm:max-w-[200px] font-mono text-[10px] text-muted-foreground truncate" title={simResult.reason}>
+            <span className="max-w-[140px] sm:max-w-[200px] font-mono text-[10px] text-muted-foreground truncate" data-tooltip={simResult.reason}>
               {filterSimulatorInput.trim() ? simResult.reason : 'Idle'}
             </span>
           </div>
