@@ -19,7 +19,7 @@ export function ExporterFeature() {
           container: <TopPanelContainer />,
           isResizable: true,
           isHiddable: true,
-          workspaceTopHeight: 78,
+          workspaceTopHeight: 70,
           maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
         },
         left: {

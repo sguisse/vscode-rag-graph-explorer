@@ -6,6 +6,7 @@ import { CollapsibleCard, BadgeObject } from '@/components/ui/collapsible-card';
 import { useExporterStore } from '../store/useExporterStore';
 import { PathMappingService } from '../utils/path-resolver';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
+import { filesExporterApiService } from '@/services/api/files-exporter-api.service.gen';
 import { logInfo } from '../utils/log-info';
 
 interface SourcePathsSectionProps {
@@ -75,8 +76,10 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
     const fullDisplay = `${folderPart}${filePart}`;
 
     const onClick = () => {
-      logInfo('[SourcePathsSection] Single click on badge -> revealInExplorer', absPath);
+      logInfo('[SourcePathsSection] Single click on badge -> revealInExplorer & copyToClipboard', absPath);
       vsCodeApiService.revealInExplorer(absPath);
+      vsCodeApiService.copyToClipboard(absPath);
+      filesExporterApiService.showNotification('info', `Path copied to clipboard: ${absPath}`);
     };
 
     const onDoubleClick = () => {
@@ -87,8 +90,8 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
     };
 
     const actionTooltip = isFile
-      ? 'Single-click to reveal in Explorer, Double-click to open file in editor'
-      : 'Single-click to reveal folder in Explorer';
+      ? 'Single-click to copy path & reveal in Explorer, Double-click to open file'
+      : 'Single-click to copy path & reveal folder in Explorer';
 
     // 1. Non-existing path -> Destructive color (red) with removal cross icon
     if (isInvalid) {
@@ -128,11 +131,11 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
               {fullDisplay}
             </span>
           ),
-          tooltip: `External Path: ${absPath}`,
+          tooltip: `External Path: ${absPath}<br/>(${actionTooltip})`,
           className:
             'bg-amber-500/10 text-amber-600 border-amber-500/30 font-semibold max-w-[280px] sm:max-w-[1000px] min-w-0',
-        onClick,
-        onDoubleClick,
+          onClick,
+          onDoubleClick,
         },
       ];
     }
@@ -149,8 +152,8 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
           tooltip: `Workspace File: ${absPath}<br/>(${actionTooltip})`,
           className:
             'bg-emerald-500/10 text-emerald-600 border-emerald-500/30 font-semibold max-w-[280px] sm:max-w-[1000px] min-w-0',
-        onClick,
-        onDoubleClick,
+          onClick,
+          onDoubleClick,
         },
       ];
     }

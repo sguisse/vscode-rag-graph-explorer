@@ -5,153 +5,10 @@ set -e
 BTICK=$(printf '\x60')
 TRIPLE_TICK=$(printf '\x60\x60\x60')
 
-echo "🚀 Wiring single-click (reveal in Explorer) and double-click (open file in VS Code) for path badges..."
+echo "🚀 Updating single-click badge handler to copy path to clipboard in addition to revealing in Explorer..."
 
-mkdir -p webview/src/components/ui
 mkdir -p webview/src/features/exporter/components
 
-# 1. Update CollapsibleCard.tsx to support onClick and onDoubleClick event handlers on BadgeObject
-cat << 'EOF' > webview/src/components/ui/collapsible-card.tsx
-import React, { useState } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
-
-export interface BadgeObject {
-  label: React.ReactNode;
-  tooltip?: string;
-  className?: string;
-  onClick?: (e: React.MouseEvent) => void;
-  onDoubleClick?: (e: React.MouseEvent) => void;
-}
-
-export interface CollapsibleCardProps {
-  id?: string;
-  title: React.ReactNode;
-  tooltip?: string;
-  summaryText?: string;
-  summaryBadges?: (string | BadgeObject)[];
-  defaultOpen?: boolean;
-  isOpen?: boolean;
-  onOpenChange?: (open: boolean) => void;
-  className?: string;
-  children: React.ReactNode;
-  headerRight?: React.ReactNode;
-}
-
-export const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
-  id,
-  title,
-  tooltip,
-  summaryText,
-  summaryBadges,
-  defaultOpen = true,
-  isOpen: controlledIsOpen,
-  onOpenChange,
-  className,
-  children,
-  headerRight,
-}) => {
-  const [internalIsOpen, setInternalIsOpen] = useState(defaultOpen);
-  const isControlled = controlledIsOpen !== undefined;
-  const open = isControlled ? controlledIsOpen : internalIsOpen;
-
-  const handleToggle = () => {
-    const nextOpen = !open;
-    if (!isControlled) {
-      setInternalIsOpen(nextOpen);
-    }
-    if (onOpenChange) {
-      onOpenChange(nextOpen);
-    }
-  };
-
-  const rawBadges =
-    summaryBadges ||
-    (summaryText
-      ? summaryText
-          .split('|')
-          .map((s) => s.trim())
-          .filter(Boolean)
-      : []);
-
-  const badgeItems: BadgeObject[] = rawBadges.map((item) =>
-    typeof item === 'string' ? { label: item, tooltip: item } : item
-  );
-
-  return (
-    <div
-      id={id}
-      className={cn(
-        'bg-card border border-border/60 rounded-md w-full min-w-0 transition-all duration-150',
-        className
-      )}
-    >
-      {/* Card Header */}
-      <div
-        onClick={handleToggle}
-        title={tooltip}
-        className={cn(
-          'flex flex-col border-border/40 cursor-pointer select-none font-mono text-xs',
-          open ? 'py-1 px-2 border-b' : 'p-1'
-        )}
-      >
-        <div className="flex items-center justify-between gap-2 w-full min-w-0">
-          <div className="flex items-center gap-1.5 min-w-0 shrink-0">
-            <span className="text-primary shrink-0">
-              {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-            </span>
-            <span className="font-bold text-foreground text-xs shrink-0">{title}</span>
-          </div>
-
-          {headerRight && (
-            <div className="shrink-0 flex items-center gap-1 ml-auto" onClick={(e) => e.stopPropagation()}>
-              {headerRight}
-            </div>
-          )}
-        </div>
-
-        {/* Collapsed Mode: Badges on a new line aligned to the left */}
-        {!open && badgeItems.length > 0 && (
-          <div className="flex flex-wrap items-center justify-start gap-1.5 w-full min-w-0 mt-1 pt-0.5">
-            {badgeItems.map((badge, idx) => (
-              <span
-                key={idx}
-                onClick={(e) => {
-                  if (badge.onClick) {
-                    e.stopPropagation();
-                    badge.onClick(e);
-                  }
-                }}
-                onDoubleClick={(e) => {
-                  if (badge.onDoubleClick) {
-                    e.stopPropagation();
-                    badge.onDoubleClick(e);
-                  }
-                }}
-                className={cn(
-                  'px-1.5 py-0.5 rounded text-[10px] font-mono leading-none shadow-2xs min-w-0 truncate shrink border cursor-pointer hover:opacity-85 active:scale-[0.98] transition-all',
-                  badge.className || 'bg-primary/10 text-primary border-primary/20'
-                )}
-                title={badge.tooltip || (typeof badge.label === 'string' ? badge.label : undefined)}
-                data-tooltip={badge.tooltip || (typeof badge.label === 'string' ? badge.label : undefined)}
-              >
-                {badge.label}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Card Content */}
-      {open && <div className="p-2 w-full min-w-0">{children}</div>}
-    </div>
-  );
-};
-
-export default CollapsibleCard;
-EOF
-
-# 2. Update SourcePathsSection.tsx to attach revealInExplorer on click and openFile on double-click
 cat << 'EOF' > webview/src/features/exporter/components/SourcePathsSection.tsx
 import React from 'react';
 import { Textarea } from '@/components/ui/textarea';
@@ -161,6 +18,7 @@ import { CollapsibleCard, BadgeObject } from '@/components/ui/collapsible-card';
 import { useExporterStore } from '../store/useExporterStore';
 import { PathMappingService } from '../utils/path-resolver';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
+import { filesExporterApiService } from '@/services/api/files-exporter-api.service.gen';
 import { logInfo } from '../utils/log-info';
 
 interface SourcePathsSectionProps {
@@ -230,8 +88,10 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
     const fullDisplay = `${folderPart}${filePart}`;
 
     const onClick = () => {
-      logInfo('[SourcePathsSection] Single click on badge -> revealInExplorer', absPath);
+      logInfo('[SourcePathsSection] Single click on badge -> revealInExplorer & copyToClipboard', absPath);
       vsCodeApiService.revealInExplorer(absPath);
+      vsCodeApiService.copyToClipboard(absPath);
+      filesExporterApiService.showNotification('info', `Path copied to clipboard: ${absPath}`);
     };
 
     const onDoubleClick = () => {
@@ -242,8 +102,8 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
     };
 
     const actionTooltip = isFile
-      ? 'Single-click to reveal in Explorer, Double-click to open file in editor'
-      : 'Single-click to reveal folder in Explorer';
+      ? 'Single-click to copy path & reveal in Explorer, Double-click to open file'
+      : 'Single-click to copy path & reveal folder in Explorer';
 
     // 1. Non-existing path -> Destructive color (red) with removal cross icon
     if (isInvalid) {
@@ -437,4 +297,4 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
 export default SourcePathsSection;
 EOF
 
-echo "✅ feat(exporter): 🔍 path badges single-click now triggers revealInExplorer and double-click opens files in VS Code!"
+echo "✅ feat(exporter): 📋 updated path badge single-click to copy path to clipboard and reveal in Explorer!"
