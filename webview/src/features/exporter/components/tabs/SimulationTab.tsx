@@ -14,7 +14,7 @@ export const SimulationTab: React.FC<SimulationTabProps> = ({ onInjectPaths }) =
   const handlePush = () => {
     logInfo('[SimulationTab] handlePush handler triggered', simuPathsText);
     const paths = simuPathsText
-      .split('\n')
+      .split(/[, \n\r]+/)
       .map((p) => p.trim())
       .filter(Boolean);
     if (paths.length > 0) {
@@ -36,7 +36,7 @@ export const SimulationTab: React.FC<SimulationTabProps> = ({ onInjectPaths }) =
       <Textarea
         value={simuPathsText}
         onChange={(e) => setSimuPathsText(e.target.value)}
-        placeholder="/mock/path/extension-b/service.ts&#10;/mock/path/extension-b/controller.ts"
+        placeholder="/mock/path/extension-b/service.ts, /mock/path/extension-b/controller.ts"
         rows={4}
         className="font-mono text-xs bg-card"
       />

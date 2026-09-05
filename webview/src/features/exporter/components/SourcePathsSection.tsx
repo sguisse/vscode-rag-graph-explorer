@@ -35,7 +35,7 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
   const workspaceRoot = useExporterStore((s) => s.workspaceRoot);
   const invalidPaths = useExporterStore((s) => s.invalidPaths);
 
-  const lines = pathsText.split('\n').map((l) => l.trim()).filter(Boolean);
+  const lines = pathsText.split(/[,\n\r]+/).map((l) => l.trim()).filter(Boolean);
 
   const handleRemovePath = (lineToRemove: string) => {
     logInfo('[SourcePathsSection] handleRemovePath triggered', lineToRemove);
@@ -209,6 +209,20 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
     onClearPaths();
   };
 
+  const handleChangeTextarea = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const rawVal = e.target.value;
+    if (rawVal.includes(',')) {
+      const splitList = rawVal
+        .split(/[,\n\r]+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const formattedList = splitList.map((p) => PathMappingService.registerPath(p, workspaceRoot));
+      onChangePathsText(Array.from(new Set(formattedList)).join('\n'));
+    } else {
+      onChangePathsText(rawVal);
+    }
+  };
+
   return (
     <CollapsibleCard
       id="block-sourcepaths"
@@ -224,8 +238,8 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
       <div className="flex items-start gap-2 font-mono text-xs">
         <Textarea
           value={pathsText}
-          onChange={(e) => onChangePathsText(e.target.value)}
-          placeholder="Enter source directories, files, or Java package.ClassName (one per line)..."
+          onChange={handleChangeTextarea}
+          placeholder="Enter source directories, files, or Java package.ClassName (one per line or comma-separated)..."
           rows={6}
           className="flex-1 bg-background h-[138px] font-mono text-xs resize-y"
         />

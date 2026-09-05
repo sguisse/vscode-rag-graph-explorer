@@ -12,6 +12,7 @@ import { SimulationTab } from './tabs/SimulationTab';
 import { TreeTab } from './tabs/TreeTab';
 import { filesExporterApiService } from '@/services/api/files-exporter-api.service.gen';
 import { ExporterTabId } from '../types/exporter.types';
+import { PathMappingService } from '../utils/path-resolver';
 import { logInfo } from '../utils/log-info';
 
 export function ExporterPanel() {
@@ -29,7 +30,7 @@ export function ExporterPanel() {
     exchangeLinks,
   } = useExporterExecution();
 
-  const { config, setConfig } = useExporterStore();
+  const { config, setConfig, workspaceRoot } = useExporterStore();
 
   const handleTabChange = (val: string) => {
     logInfo('[ExporterPanel] Active tab changed', val);
@@ -109,8 +110,10 @@ export function ExporterPanel() {
               logInfo('[ExporterPanel] TreeTab onCaptureSelectedPaths', paths);
               if (paths.length > 0) {
                 setConfig((prev) => {
-                  const current = prev.src ? prev.src.split('\n') : [];
-                  return { ...prev, src: Array.from(new Set([...current, ...paths])).join('\n') };
+                  const current = prev.src ? prev.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean) : [];
+                  const flatNew = paths.flatMap((p) => p.split(/[,\n\r]+/)).map((s) => s.trim()).filter(Boolean);
+                  const formatted = flatNew.map((p) => PathMappingService.registerPath(p, workspaceRoot));
+                  return { ...prev, src: Array.from(new Set([...current, ...formatted])).join('\n') };
                 });
               }
             }}
@@ -145,8 +148,10 @@ export function ExporterPanel() {
             onInjectPaths={(paths) => {
               logInfo('[ExporterPanel] SimulationTab onInjectPaths', paths);
               setConfig((prev) => {
-                const current = prev.src ? prev.src.split('\n') : [];
-                return { ...prev, src: Array.from(new Set([...current, ...paths])).join('\n') };
+                const current = prev.src ? prev.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean) : [];
+                const flatNew = paths.flatMap((p) => p.split(/[,\n\r]+/)).map((s) => s.trim()).filter(Boolean);
+                const formatted = flatNew.map((p) => PathMappingService.registerPath(p, workspaceRoot));
+                return { ...prev, src: Array.from(new Set([...current, ...formatted])).join('\n') };
               });
             }}
           />

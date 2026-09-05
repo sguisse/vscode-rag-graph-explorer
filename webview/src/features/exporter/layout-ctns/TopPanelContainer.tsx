@@ -7,7 +7,7 @@ export const TopPanelContainer: React.FC = () => {
   const {
     historyList,
     selectedProfileId,
-    setSelectedProfileId,
+    handleSelectProfile,
     handleFreezeToggle,
     handleResetConfig,
     handleRenameProfile,
@@ -25,7 +25,7 @@ export const TopPanelContainer: React.FC = () => {
         <HistoryBar
           historyList={historyList}
           selectedProfileId={selectedProfileId}
-          onSelectProfile={setSelectedProfileId}
+          onSelectProfile={handleSelectProfile}
           onFreezeToggle={handleFreezeToggle}
           onResetConfig={handleResetConfig}
           onRenameProfile={handleRenameProfile}

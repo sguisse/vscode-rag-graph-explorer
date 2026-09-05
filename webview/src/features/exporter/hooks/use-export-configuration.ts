@@ -13,10 +13,20 @@ export function useExportConfiguration() {
 
   const addPathsToConfig = (absPaths: string[]) => {
     const wsRoot = store.workspaceRoot;
-    const formattedList = absPaths.map((p) => PathMappingService.registerPath(p, wsRoot)).filter(Boolean);
+    // Split input paths on commas or newlines without splitting on spaces within paths
+    const expandedList = absPaths
+      .flatMap((p) => String(p).split(/[,\n\r]+/))
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const formattedList = expandedList
+      .map((p) => PathMappingService.registerPath(p, wsRoot))
+      .filter(Boolean);
 
     store.setConfig((prev) => {
-      const current = prev.src ? prev.src.split('\n').map((s) => s.trim()).filter(Boolean) : [];
+      const current = prev.src
+        ? prev.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean)
+        : [];
       const combined = Array.from(new Set([...current, ...formattedList]));
       return { ...prev, src: combined.join('\n') };
     });
@@ -33,7 +43,7 @@ export function useExportConfiguration() {
     const unsubscribeSelectedPath = vsCodeHandleMessage.on('selectedPath', (msg) => {
       if (msg.payload) {
         logInfo('[useExportConfiguration] Received selectedPath message', msg.payload);
-        const newPaths = String(msg.payload).split('\n').map((s) => s.trim()).filter(Boolean);
+        const newPaths = String(msg.payload).split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
         addPathsToConfig(newPaths);
       }
     });
@@ -41,7 +51,8 @@ export function useExportConfiguration() {
     const unsubscribeUpdatePaths = vsCodeHandleMessage.on('updatePaths', (msg) => {
       if (Array.isArray(msg.paths)) {
         logInfo('[useExportConfiguration] Received updatePaths message', msg.paths);
-        addPathsToConfig(msg.paths);
+        const newPaths = msg.paths.flatMap((p) => String(p).split(/[,\n\r]+/)).map((s) => s.trim()).filter(Boolean);
+        addPathsToConfig(newPaths);
       }
     });
 
@@ -53,7 +64,7 @@ export function useExportConfiguration() {
 
   // Perform path existence validation whenever source paths or workspace root changes
   useEffect(() => {
-    const displayLines = store.config.src.split('\n').map((s) => s.trim()).filter(Boolean);
+    const displayLines = store.config.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
     if (displayLines.length === 0) {
       store.setInvalidPaths([]);
       return;
@@ -70,7 +81,7 @@ export function useExportConfiguration() {
   }, [store.config.src, store.workspaceRoot]);
 
   useEffect(() => {
-    const displayLines = store.config.src.split('\n').map((s) => s.trim()).filter(Boolean);
+    const displayLines = store.config.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
     const resolvedAbsPaths = displayLines.map((line) => PathMappingService.resolveToAbsolute(line, store.workspaceRoot));
     const paths = resolvedAbsPaths.join(',');
 
@@ -83,7 +94,7 @@ export function useExportConfiguration() {
   const handleAddOpenFiles = async () => {
     logInfo('[useExportConfiguration] handleAddOpenFiles starting...');
     try {
-      const currentDisplayLines = store.config.src ? store.config.src.split('\n').map((s) => s.trim()).filter(Boolean) : [];
+      const currentDisplayLines = store.config.src ? store.config.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean) : [];
       const currentAbsPaths = currentDisplayLines.map((line) => PathMappingService.resolveToAbsolute(line, store.workspaceRoot));
 
       const openFiles = await filesExporterApiService.getOpenEditorFiles(currentAbsPaths);
@@ -97,7 +108,7 @@ export function useExportConfiguration() {
   const handleAddGitDiffFiles = async () => {
     logInfo('[useExportConfiguration] handleAddGitDiffFiles starting...');
     try {
-      const currentDisplayLines = store.config.src ? store.config.src.split('\n').map((s) => s.trim()).filter(Boolean) : [];
+      const currentDisplayLines = store.config.src ? store.config.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean) : [];
       const currentAbsPaths = currentDisplayLines.map((line) => PathMappingService.resolveToAbsolute(line, store.workspaceRoot));
 
       const gitFiles = await filesExporterApiService.getGitDiffFiles(currentAbsPaths);
@@ -155,7 +166,7 @@ export function useExportConfiguration() {
 
   const handleOpenCursorLinePath = async () => {
     logInfo('[useExportConfiguration] handleOpenCursorLinePath starting...');
-    const firstLine = store.config.src.split('\n').map((s) => s.trim()).filter(Boolean)[0];
+    const firstLine = store.config.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean)[0];
     if (firstLine) {
       const absPath = PathMappingService.resolveToAbsolute(firstLine, store.workspaceRoot);
       await filesExporterApiService.openPathAtCursor(absPath);
@@ -165,6 +176,10 @@ export function useExportConfiguration() {
   return {
     ...store,
     addPathsToConfig,
+    handleSelectProfile: async (id: string) => {
+      logInfo('[useExportConfiguration] handleSelectProfile starting...', id);
+      await store.selectProfile(id);
+    },
     handleFreezeToggle: async (id: string) => {
       logInfo('[useExportConfiguration] handleFreezeToggle starting...', id);
       await store.freezeToggle(id);

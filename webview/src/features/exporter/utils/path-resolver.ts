@@ -41,10 +41,15 @@ export class PathMappingService {
    */
   public static registerPath(absPath: string, workspaceRoot: string): string {
     if (!absPath) return '';
-    const display = formatPathForDisplay(absPath, workspaceRoot);
-    if (display && absPath) {
-      this.map.set(display, absPath);
-      this.map.set(display.toLowerCase(), absPath);
+    const clean = absPath.trim();
+    if (!clean) return '';
+
+    const display = formatPathForDisplay(clean, workspaceRoot);
+    if (display && clean) {
+      this.map.set(display, clean);
+      this.map.set(display.toLowerCase(), clean);
+      this.map.set(clean, clean);
+      this.map.set(clean.toLowerCase(), clean);
     }
     return display;
   }
