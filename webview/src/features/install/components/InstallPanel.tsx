@@ -13,10 +13,10 @@ import {
 import { useInstallPanel } from '../hooks/use-install-panel';
 
 const CARDS_PER_ROW = {
-  mobile: 'grid-cols-1',
-  tablet: 'md:grid-cols-2',
-  desktop: 'lg:grid-cols-3',
-  wide: 'xl:grid-cols-5',
+  mobile: 'columns-1',
+  tablet: 'md:columns-2',
+  desktop: 'lg:columns-3',
+  wide: 'xl:columns-5',
 } as const;
 
 const CARDS_GRID_LAYOUT = `${CARDS_PER_ROW.mobile} ${CARDS_PER_ROW.tablet} ${CARDS_PER_ROW.desktop} ${CARDS_PER_ROW.wide}`;
@@ -112,10 +112,10 @@ export function InstallPanel() {
   }
 
   return (
-    <div className="flex-1 space-y-4 bg-background p-3 md:p-4 min-h-0 overflow-y-auto text-foreground">
+    <div className="flex flex-col flex-1 gap-4 bg-background p-3 md:p-4 h-full min-h-0 overflow-hidden text-foreground">
 
       {/* 1. HERO BANNER */}
-      <div className={`relative bg-gradient-to-br from-primary/10 via-background to-${globalStatusStyle.text.split('-')[1]}-500/10 shadow-sm p-4 md:p-5 border ${globalStatusStyle.border} rounded-xl overflow-hidden`}>
+      <div className={`shrink-0 relative bg-gradient-to-br from-primary/10 via-background to-${globalStatusStyle.text.split('-')[1]}-500/10 shadow-sm p-4 md:p-5 border ${globalStatusStyle.border} rounded-xl overflow-hidden`}>
         <div className="z-10 relative flex md:flex-row flex-col justify-between items-start md:items-center gap-4">
           <div className="space-y-1.5 max-w-xl">
             <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 border rounded-full font-mono font-semibold ${TEXT_SIZES.heroBadge} ${globalStatusStyle.badgeBg}`}>
@@ -172,7 +172,7 @@ export function InstallPanel() {
       </div>
 
       {/* 2. FILTER & SEARCH CONTROL BAR */}
-      <div className="flex sm:flex-row flex-col justify-between items-stretch sm:items-center gap-2.5 bg-card/60 shadow-xs p-2.5 border border-border rounded-lg">
+      <div className="shrink-0 flex sm:flex-row flex-col justify-between items-stretch sm:items-center gap-2.5 bg-card/60 shadow-xs p-2.5 border border-border rounded-lg">
         <div className="flex items-center gap-2">
           <h2 className={`flex items-center gap-1.5 font-bold text-foreground ${TEXT_SIZES.sectionTitle} tracking-tight`}>
             <Activity className="text-primary" size={16} /> Component Telemetry
@@ -217,8 +217,8 @@ export function InstallPanel() {
         </div>
       </div>
 
-      {/* 3. CONDENSED CARDS GRID */}
-      <div className={`gap-3 grid ${CARDS_GRID_LAYOUT}`}>
+      {/* 3. CONDENSED CARDS MASONRY CONTAINER */}
+      <div className={`flex-1 min-h-0 overflow-y-auto gap-3 pr-1 ${CARDS_GRID_LAYOUT}`}>
         {modules.map((module) => {
           const ModIcon = module.icon;
           const isError = module.summary?.koCount > 0;
@@ -227,7 +227,7 @@ export function InstallPanel() {
           return (
             <Card
               key={module.id}
-              className={`flex flex-col bg-card shadow-xs transition-all duration-200 border-l-4 ${
+              className={`break-inside-avoid mb-3 w-full flex flex-col bg-card shadow-xs transition-all duration-200 border-l-4 ${
                 isError
                   ? 'border-l-red-500 border-red-500/30 bg-red-500/[0.02]'
                   : 'border-l-emerald-500 hover:border-primary/40'

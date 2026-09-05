@@ -46,7 +46,7 @@ export const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
             }`}
           >
             <ListTree size={13} className={activeTab === 'tree' ? 'text-primary' : ''} />
-            <span>Tree Table</span>
+            <span>Table</span>
           </Button>
 
           <Button
