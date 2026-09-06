@@ -151,14 +151,12 @@ export class FileExporterAdapter extends AbstractServiceAdapter implements IFile
       const rawPrompt = request.config.prompt || (request as any).prompt || '';
       const resolvedPrompt = isPromptActive ? rawPrompt : '';
 
-      logInfo('[DIAGNOSTIC - Backend Adapter] Prompt Resolution:', [
-        {
-          configGeneratePromptFile: request.config.generatePromptFile,
-          isPromptActive,
-          rawPromptLength: rawPrompt.length,
-          resolvedPromptLength: resolvedPrompt.length,
-        }
-      ]);
+      logInfo('[FileExporterAdapter] Prompt Resolution:', {
+        configGeneratePromptFile: request.config.generatePromptFile,
+        isPromptActive,
+        rawPromptLength: rawPrompt.length,
+        resolvedPromptLength: resolvedPrompt.length,
+      });
 
       const exportArgs = {
         config: { ...request.config, generatePromptFile: isPromptActive, prompt: resolvedPrompt },
@@ -240,10 +238,10 @@ export class FileExporterAdapter extends AbstractServiceAdapter implements IFile
 
     let estimatedInputTokens = 0;
     const exportsList = [
-      ...(report.results.codebase?.generated_files?.exports || []),
-      ...(report.results.reference?.generated_files?.exports || []),
-      ...(report.results.generated_files?.codebase?.exports || []),
-      ...(report.results.generated_files?.reference?.exports || []),
+      ...(report.results?.codebase?.generated_files?.exports || []),
+      ...(report.results?.reference?.generated_files?.exports || []),
+      ...(report.results?.generated_files?.codebase?.exports || []),
+      ...(report.results?.generated_files?.reference?.exports || []),
     ];
 
     for (const filePath of exportsList) {
@@ -257,17 +255,47 @@ export class FileExporterAdapter extends AbstractServiceAdapter implements IFile
       }
     }
 
+    // Scan output directory for any generated .log or prompt files matching the timestamp
+    const discoveredLogs: string[] = [];
+    const discoveredPrompts: string[] = [];
+
+    try {
+      if (fs.existsSync(exportDirectory)) {
+        const filesInDir = fs.readdirSync(exportDirectory);
+        for (const f of filesInDir) {
+          const fullPath = path.join(exportDirectory, f);
+          if (f.includes(timestamp) || f.startsWith('export-')) {
+            if (f.endsWith('.log') || f.includes('log')) {
+              discoveredLogs.push(fullPath);
+            } else if (f.includes('prompt')) {
+              discoveredPrompts.push(fullPath);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      logWarn('[FileExporterAdapter] Non-fatal: Error scanning exportDirectory for logs/prompts:', e);
+    }
+
+    const existingLogs = report.results?.generated_files?.logs || [];
+    const existingPrompts = report.results?.generated_files?.prompt || [];
+
+    const mergedLogs = Array.from(new Set([...existingLogs, ...discoveredLogs]));
+    const mergedPrompts = Array.from(new Set([...existingPrompts, ...discoveredPrompts]));
+
+    const generatedFiles = {
+      codebase: report.results?.generated_files?.codebase || { exports: [], reports: [] },
+      reference: report.results?.generated_files?.reference || { exports: [], reports: [] },
+      logs: mergedLogs,
+      prompt: mergedPrompts,
+    };
+
     return {
       pid,
       exportDirectory,
       timestamp,
       report,
-      generatedFiles: report.results.generated_files || {
-        codebase: { exports: [], reports: [] },
-        reference: { exports: [], reports: [] },
-        logs: [],
-        prompt: [],
-      },
+      generatedFiles,
       estimatedInputTokens,
     };
   }

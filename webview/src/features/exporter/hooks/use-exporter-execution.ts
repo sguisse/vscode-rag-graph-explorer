@@ -1,3 +1,4 @@
+import { useExporterProfiles } from "./use-exporter-profiles";
 import { useExporterStore } from '../store/useExporterStore';
 import { fileExporterApiService } from '@/services/api/file-exporter-api.service.gen';
 import { ExporterValidatorService } from '../utils/validator.service';
@@ -8,6 +9,7 @@ import { isConfigDirty } from '../utils/config-dirty-checker';
 
 export function useExporterExecution() {
   const store = useExporterStore();
+  const { addProfile, renameProfile, saveProfile, freezeToggle } = useExporterProfiles();
 
   const selectedEntry = store.historyList.find((h) => h.id === store.selectedProfileId);
   const isDefault = store.selectedProfileId === 'default';
@@ -23,9 +25,9 @@ export function useExporterExecution() {
         store.currentRepo ||
         (store.workspaceRoot ? store.workspaceRoot.split(/[/\\]/).pop() || '' : 'workspace');
       const newName = generateNewConfigName(wsName);
-      const newId = await store.addProfile(store.config);
+      const newId = await addProfile(store.config);
       if (newId) {
-        await store.renameProfile(newId, newName);
+        await renameProfile(newId, newName);
         fileExporterApiService.showNotification('info', `New profile '${newName}' created successfully!`);
       }
       return;
@@ -38,7 +40,7 @@ export function useExporterExecution() {
       return;
     }
 
-    await store.saveProfile();
+    await saveProfile();
     fileExporterApiService.showNotification('info', 'Configuration saved successfully!');
   };
 
@@ -60,9 +62,9 @@ export function useExporterExecution() {
       newName = generateDuplicateName(originalName, existingNames);
     }
 
-    const newId = await store.addProfile(store.config);
+    const newId = await addProfile(store.config);
     if (newId) {
-      await store.renameProfile(newId, newName);
+      await renameProfile(newId, newName);
     }
   };
 
@@ -70,8 +72,8 @@ export function useExporterExecution() {
     store.setModalState({ isSaveLockedModalOpen: false });
 
     if (store.selectedProfileId !== 'default') {
-      await store.freezeToggle(store.selectedProfileId);
-      await store.saveProfile();
+      await freezeToggle(store.selectedProfileId);
+      await saveProfile();
       fileExporterApiService.showNotification('info', 'Profile unlocked and configuration saved!');
     }
   };

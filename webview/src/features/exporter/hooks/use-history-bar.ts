@@ -1,3 +1,4 @@
+import { useExporterProfiles } from "./use-exporter-profiles";
 import { useState } from 'react';
 import { useExporterStore } from '../store/useExporterStore';
 import { fileExporterHistoryApiService } from '@/services/api/file-exporter-history-api.service.gen';
@@ -6,6 +7,7 @@ import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 export function useHistoryBar() {
   const store = useExporterStore();
+  const { selectProfile, freezeToggle, resetConfig, renameProfile, clearHistoryWithMode, addProfile } = useExporterProfiles();
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [isNewProfile, setIsNewProfile] = useState<boolean>(false);
   const [renameText, setRenameText] = useState<string>('');
@@ -23,19 +25,19 @@ export function useHistoryBar() {
     logInfo('[useHistoryBar] handleSelectProfile starting...', [id]);
     setIsEditing(false);
     setIsNewProfile(false);
-    await store.selectProfile(id);
+    await selectProfile(id);
   };
 
   const handleFreezeToggle = async (id: string) => {
     logInfo('[useHistoryBar] handleFreezeToggle starting...', [id]);
-    await store.freezeToggle(id);
+    await freezeToggle(id);
   };
 
   const handleResetConfig = () => {
     logInfo('[useHistoryBar] handleResetConfig starting...');
     setIsEditing(false);
     setIsNewProfile(false);
-    store.resetConfig();
+    resetConfig();
   };
 
   const handleStartRename = () => {
@@ -51,7 +53,7 @@ export function useHistoryBar() {
   const handleConfirmRename = async () => {
     logInfo('[useHistoryBar] handleConfirmRename starting...', [{ id: store.selectedProfileId, renameText }]);
     if (store.selectedProfileId && renameText.trim()) {
-      await store.renameProfile(store.selectedProfileId, renameText.trim());
+      await renameProfile(store.selectedProfileId, renameText.trim());
     }
     setIsEditing(false);
     setIsNewProfile(false);
@@ -60,8 +62,8 @@ export function useHistoryBar() {
   const handleCancelRename = async () => {
     logInfo('[useHistoryBar] handleCancelRename starting...', [{ isNewProfile, selectedId: store.selectedProfileId }]);
     if (isNewProfile) {
-      await store.clearHistoryWithMode('remove-selected-hard');
-      await store.selectProfile('default');
+      await clearHistoryWithMode('remove-selected-hard');
+      await selectProfile('default');
     }
     setIsEditing(false);
     setIsNewProfile(false);
@@ -83,9 +85,9 @@ export function useHistoryBar() {
       newName = generateDuplicateName(originalName, existingNames);
     }
 
-    const newId = await store.addProfile(store.config);
+    const newId = await addProfile(store.config);
     if (newId) {
-      await store.renameProfile(newId, newName);
+      await renameProfile(newId, newName);
       setRenameText(newName);
       setIsEditing(true);
       setIsNewProfile(true);
@@ -99,9 +101,9 @@ export function useHistoryBar() {
       (store.workspaceRoot ? store.workspaceRoot.split(/[/\\]/).pop() || '' : 'workspace');
     const newName = generateNewConfigName(wsName);
 
-    const newId = await store.addProfile();
+    const newId = await addProfile();
     if (newId) {
-      await store.renameProfile(newId, newName);
+      await renameProfile(newId, newName);
       setRenameText(newName);
       setIsEditing(true);
       setIsNewProfile(true);
@@ -119,8 +121,8 @@ export function useHistoryBar() {
     logInfo('[useHistoryBar] handleConfirmDelete starting...', [store.selectedProfileId]);
     store.setModalState({ isDeleteModalOpen: false });
     if (store.selectedProfileId !== 'default') {
-      await store.clearHistoryWithMode('remove-selected-hard');
-      await store.selectProfile('default');
+      await clearHistoryWithMode('remove-selected-hard');
+      await selectProfile('default');
     }
   };
 

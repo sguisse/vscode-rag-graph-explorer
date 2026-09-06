@@ -1,3 +1,4 @@
+import { useExporterInit } from "./use-exporter-init";
 import { useEffect } from 'react';
 import { useExporterStore } from '../store/useExporterStore';
 import { fileExporterHistoryApiService } from '@/services/api/file-exporter-history-api.service.gen';
@@ -10,6 +11,7 @@ import { PathMappingService } from '../utils/path-resolver';
 import { ExporterValidatorService } from '../utils/validator.service';
 
 export function useExportConfiguration() {
+  useExporterInit();
   const store = useExporterStore();
 
   const addPathsToConfig = (absPaths: string[]) => {
@@ -62,7 +64,7 @@ export function useExportConfiguration() {
 
   useEffect(() => {
     logInfo('[useExportConfiguration] Initializing exporter configuration hook...');
-    store.fetchInitialState();
+
 
     const unsubscribeSelectedPath = vsCodeHandleMessage.on('selectedPath', (msg) => {
       if (msg.payload) {

@@ -102,6 +102,20 @@ export function ExporterPanel() {
         className="bg-muted/60 p-1 border-b border-border shrink-0"
         left={
           <div className="flex items-center gap-1 flex-wrap">
+             <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleTabChange('prompt')}
+              className={`h-6 px-2.5 text-[11px] gap-1.5 cursor-pointer font-bold transition-all rounded-md ${
+                activeTab === 'prompt'
+                  ? 'bg-background text-foreground border border-border/60 shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-background/40 border border-transparent'
+              }`}
+            >
+              <MessageSquareText size={13} className={activeTab === 'prompt' ? 'text-primary' : ''} />
+              <span>PROMPT</span>
+            </Button>
+
             <Button
               variant="ghost"
               size="sm"
@@ -158,19 +172,7 @@ export function ExporterPanel() {
               <span>TERMINAL</span>
             </Button>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleTabChange('prompt')}
-              className={`h-6 px-2.5 text-[11px] gap-1.5 cursor-pointer font-bold transition-all rounded-md ${
-                activeTab === 'prompt'
-                  ? 'bg-background text-foreground border border-border/60 shadow-xs'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-background/40 border border-transparent'
-              }`}
-            >
-              <MessageSquareText size={13} className={activeTab === 'prompt' ? 'text-primary' : ''} />
-              <span>PROMPT</span>
-            </Button>
+
           </div>
         }
         right={
