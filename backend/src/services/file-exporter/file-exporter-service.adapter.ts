@@ -64,20 +64,30 @@ export class FileExporterAdapter extends AbstractServiceAdapter implements IFile
     const expSettings = settings.exporter;
 
     const defaultConfig: ExportConfig = {
-      src: workspacePath,
+      codebase: {
+        src: workspacePath,
+        max_file: String(expSettings.maxFileSizeKb ?? 50),
+        inc_paths: expSettings.includePathsRegex || '.*',
+        exc_paths: expSettings.excludePathsRegex || '',
+        inc_ext: expSettings.includeExtensionsRegex || '',
+        exc_ext: expSettings.excludeExtensionsRegex || '',
+      },
+      reference: {
+        src: '',
+        max_file: String(expSettings.maxFileSizeKb ?? 50),
+        inc_paths: '.*',
+        exc_paths: '',
+        inc_ext: '',
+        exc_ext: '',
+      },
       dest: path.join(workspacePath, 'exported-files'),
       format: (expSettings.defaultFormat as any) || 'yaml',
-      max_file: String(expSettings.maxFileSizeKb ?? 50),
       max_chunk: String(expSettings.maxChunkSizeKb ?? 0),
       groupByExt: Boolean(expSettings.splitChunkByFileExtension),
       copyGeneratedFilesToClipboard: Boolean(expSettings.copyGeneratedFilesToClipboard),
       generateTreeView: Boolean(expSettings.generateTreeView),
       logConsole: Boolean(expSettings.generateLogConsole),
       logFile: Boolean(expSettings.generateLogFile),
-      inc_paths: expSettings.includePathsRegex || '.*',
-      exc_paths: expSettings.excludePathsRegex || '',
-      inc_ext: expSettings.includeExtensionsRegex || '',
-      exc_ext: expSettings.excludeExtensionsRegex || '',
     };
 
     const historyWrapper = await this.getHistoryService().getFullWrapper(currentRepo);
@@ -116,46 +126,45 @@ export class FileExporterAdapter extends AbstractServiceAdapter implements IFile
 
   public async runExport(request: FilesExporterRunRequest): Promise<FilesExporterRunResponse> {
     try {
-      logInfo('[FilesExporterAdapter] Starting runExport request...', { request });
+      logInfo('[FileExporterAdapter] Starting runExport request...', { request });
       const timestamp = getFormattedTimestamp();
       const rootPath = this.getWorkspaceRootPath();
 
-      const srcPaths = request.paths && request.paths.length > 0
+      const codebaseSrcPaths = request.paths && request.paths.length > 0
         ? request.paths
-        : request.config.src.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
+        : (request.config.codebase?.src || '').split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
 
-      const absSources = srcPaths.map((p) => (path.isAbsolute(p) ? p : path.join(rootPath, p)));
+      const referenceSrcPaths = request.referencePaths && request.referencePaths.length > 0
+        ? request.referencePaths
+        : (request.config.reference?.src || '').split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
+
+      const absCodebase = codebaseSrcPaths.map((p) => (path.isAbsolute(p) ? p : path.join(rootPath, p)));
+      const absReferences = referenceSrcPaths.map((p) => (path.isAbsolute(p) ? p : path.join(rootPath, p)));
+
       let absDest = request.config.dest || path.join(rootPath, 'exported-files');
       if (!path.isAbsolute(absDest)) {
         absDest = path.join(rootPath, absDest);
       }
 
-      logInfo(`[FilesExporterAdapter] Resolved sources: ${absSources.join(', ')} -> Dest: ${absDest}`);
-
       const exportArgs = {
-        paths: absSources,
+        config: request.config,
+        paths: absCodebase,
+        referencePaths: absReferences,
+        prompt: request.prompt || '',
         timestamp,
         destDir: absDest,
         format: request.config.format,
         mode: request.mode || 'standard',
-        maxFile: request.config.max_file,
         maxChunk: request.config.max_chunk,
         groupByExt: request.config.groupByExt,
         logConsole: request.config.logConsole,
         logFile: request.config.logFile,
         generateTreeView: request.config.generateTreeView,
-        incPaths: request.config.inc_paths,
-        excPaths: request.config.exc_paths,
-        incExts: request.config.inc_ext,
-        excExts: request.config.exc_ext,
       };
 
-      logInfo('[FilesExporterAdapter] Calling callFileExporterScript...');
       const pythonScriptStatus = await callFileExporterScript(exportArgs as any);
-      logInfo(`[FilesExporterAdapter] Python script status returned PID: ${pythonScriptStatus.pid}`);
 
       const repo = this.getRepoName();
-      logInfo(`[FilesExporterAdapter] Saving history for repo: ${repo}...`);
       let historyResult;
       try {
         historyResult = await this.getHistoryService().saveHistory(
@@ -164,10 +173,10 @@ export class FileExporterAdapter extends AbstractServiceAdapter implements IFile
           repo
         );
       } catch (histErr) {
-        logWarn('[FilesExporterAdapter] Non-fatal: History save failed:', histErr);
+        logWarn('[FileExporterAdapter] Non-fatal: History save failed:', histErr);
       }
 
-      const command = `python3 files-exporter.py --src '${absSources.join(',')}' --dest '${absDest}' --format '${request.config.format}'`;
+      const command = `python3 files-exporter.py --codebase-src '${absCodebase.join(',')}' --dest '${absDest}' --format '${request.config.format}'`;
 
       return {
         exportDirectory: absDest,
@@ -177,8 +186,8 @@ export class FileExporterAdapter extends AbstractServiceAdapter implements IFile
         historyResult,
       };
     } catch (error: any) {
-      logError('[FilesExporterAdapter] Fatal error in runExport:', error);
-      throw new Error(`[FilesExporterAdapter] runExport failed: ${error?.message || error}`);
+      logError('[FileExporterAdapter] Fatal error in runExport:', error);
+      throw new Error(`[FileExporterAdapter] runExport failed: ${error?.message || error}`);
     }
   }
 
@@ -204,15 +213,26 @@ export class FileExporterAdapter extends AbstractServiceAdapter implements IFile
     const reportContent = fs.readFileSync(reportFilePath, 'utf-8');
     const report: ExportReportEnvelope = JSON.parse(reportContent);
 
-    const treePath = path.join(exportDirectory, `export-${timestamp}-tree.json`);
-    if (fs.existsSync(treePath)) {
+    const cbTreePath = path.join(exportDirectory, `export-${timestamp}-codebase-tree.json`);
+    if (fs.existsSync(cbTreePath) && report.results?.codebase) {
       try {
-        report.results.tree_manifest = JSON.parse(fs.readFileSync(treePath, 'utf-8'));
+        report.results.codebase.tree_manifest = JSON.parse(fs.readFileSync(cbTreePath, 'utf-8'));
       } catch {}
     }
 
-    const exportsList = report.results.generated_files?.exports || [];
+    const refTreePath = path.join(exportDirectory, `export-${timestamp}-reference-tree.json`);
+    if (fs.existsSync(refTreePath) && report.results?.reference) {
+      try {
+        report.results.reference.tree_manifest = JSON.parse(fs.readFileSync(refTreePath, 'utf-8'));
+      } catch {}
+    }
+
     let estimatedInputTokens = 0;
+    const exportsList = [
+      ...(report.results.codebase?.generated_files?.exports || []),
+      ...(report.results.reference?.generated_files?.exports || []),
+      ...(report.results.generated_files?.exports || []),
+    ];
 
     for (const filePath of exportsList) {
       if (fs.existsSync(filePath)) {
@@ -230,7 +250,12 @@ export class FileExporterAdapter extends AbstractServiceAdapter implements IFile
       exportDirectory,
       timestamp,
       report,
-      generatedFiles: report.results.generated_files || { exports: [], logs: [], reports: [] },
+      generatedFiles: report.results.generated_files || {
+        codebase: { exports: [], reports: [] },
+        reference: { exports: [], reports: [] },
+        logs: [],
+        prompt: [],
+      },
       estimatedInputTokens,
     };
   }
@@ -246,10 +271,10 @@ export class FileExporterAdapter extends AbstractServiceAdapter implements IFile
     const cleanFilters = (val: string) => val.split(/[\n,]/).map((s) => s.trim()).filter(Boolean).join(',');
 
     const args: string[] = ['--mode', 'filter-check', '--paths-to-check', request.input];
-    if (request.incPaths) args.push('--inc-paths', cleanFilters(request.incPaths));
-    if (request.excPaths) args.push('--exc-paths', cleanFilters(request.excPaths));
-    if (request.incExts) args.push('--inc-ext', cleanFilters(request.incExts));
-    if (request.excExts) args.push('--exc-ext', cleanFilters(request.excExts));
+    if (request.incPaths) args.push('--codebase-inc-paths', cleanFilters(request.incPaths));
+    if (request.excPaths) args.push('--codebase-exc-paths', cleanFilters(request.excPaths));
+    if (request.incExts) args.push('--codebase-inc-ext', cleanFilters(request.incExts));
+    if (request.excExts) args.push('--codebase-exc-ext', cleanFilters(request.excExts));
 
     try {
       const child = pythonScriptExecutionManager.executeScript(scriptPath, args);
@@ -404,17 +429,6 @@ export class FileExporterAdapter extends AbstractServiceAdapter implements IFile
       return { success: false, message: 'No files discovered within selected paths.', fileCount: 0 };
     }
 
-    const FIVE_MB = 5 * 1024 * 1024;
-    if (resolvedFiles.length > 50 || totalSizeBytes > FIVE_MB) {
-      return {
-        success: false,
-        message: `Payload large: ${resolvedFiles.length} files totaling ${(totalSizeBytes / (1024 * 1024)).toFixed(2)} MB.`,
-        fileCount: resolvedFiles.length,
-        totalSizeBytes,
-        requiresConfirmation: true,
-      };
-    }
-
     await callCopyFilesToClipboardScript(resolvedFiles);
     return {
       success: true,
@@ -423,6 +437,51 @@ export class FileExporterAdapter extends AbstractServiceAdapter implements IFile
       totalSizeBytes,
       files: resolvedFiles,
     };
+  }
+
+  public async copyFullContextToClipboard(codebasePaths: string[], referencePaths: string[], prompt: string): Promise<ClipboardActionResult> {
+    try {
+      const timestamp = getFormattedTimestamp();
+      const rootPath = this.getWorkspaceRootPath();
+      const absDest = path.join(rootPath, 'exported-files');
+      if (!fs.existsSync(absDest)) {
+        fs.mkdirSync(absDest, { recursive: true });
+      }
+
+      const absCodebase = codebasePaths.map((p) => (path.isAbsolute(p) ? p : path.join(rootPath, p)));
+      const absReferences = referencePaths.map((p) => (path.isAbsolute(p) ? p : path.join(rootPath, p)));
+
+      const exportArgs = {
+        paths: absCodebase,
+        referencePaths: absReferences,
+        prompt: prompt,
+        timestamp,
+        destDir: absDest,
+        format: 'yaml',
+        mode: 'standard',
+        maxChunk: '0',
+        groupByExt: false,
+        logConsole: true,
+        logFile: false,
+        generateTreeView: false,
+      };
+
+      await callFileExporterScript(exportArgs as any);
+      const copyResult = await this.copyLatestExportedFiles(absDest);
+
+      return {
+        success: copyResult.success,
+        message: copyResult.message || 'Exported and copied codebase, reference, and prompt context to clipboard!',
+        fileCount: copyResult.files?.length || 0,
+      };
+    } catch (err: any) {
+      logError('[FileExporterAdapter] Error in copyFullContextToClipboard:', err);
+      return {
+        success: false,
+        message: `Failed to copy full context: ${err?.message || err}`,
+        fileCount: 0,
+      };
+    }
   }
 
   public async clearDestDirectory(destDir: string): Promise<DestinationActionResult> {

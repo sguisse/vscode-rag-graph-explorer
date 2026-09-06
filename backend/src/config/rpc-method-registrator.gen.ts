@@ -54,6 +54,7 @@ export function registerRpcMethods(rpc: RpcProtocol): void {
     rpc.register(RpcMethodEnum.FILEEXPORTER_OPEN_PATH_AT_CURSOR, fileExporterService.openPathAtCursor.bind(fileExporterService));
     rpc.register(RpcMethodEnum.FILEEXPORTER_COPY_LATEST_EXPORTED_FILES, fileExporterService.copyLatestExportedFiles.bind(fileExporterService));
     rpc.register(RpcMethodEnum.FILEEXPORTER_COPY_SELECTED_FILES_TO_CLIPBOARD, fileExporterService.copySelectedFilesToClipboard.bind(fileExporterService));
+    rpc.register(RpcMethodEnum.FILEEXPORTER_COPY_FULL_CONTEXT_TO_CLIPBOARD, fileExporterService.copyFullContextToClipboard.bind(fileExporterService));
     rpc.register(RpcMethodEnum.FILEEXPORTER_CLEAR_DEST_DIRECTORY, fileExporterService.clearDestDirectory.bind(fileExporterService));
     rpc.register(RpcMethodEnum.FILEEXPORTER_APPLY_FILE_FILTER, fileExporterService.applyFileFilter.bind(fileExporterService));
     rpc.register(RpcMethodEnum.FILEEXPORTER_OPEN_BROWSER_TAB, fileExporterService.openBrowserTab.bind(fileExporterService));

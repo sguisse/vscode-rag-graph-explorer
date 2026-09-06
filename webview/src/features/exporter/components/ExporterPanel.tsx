@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BarChart3, Files, Terminal, HelpCircle, MessageSquareText } from 'lucide-react';
+import { BarChart3, BookOpen, Files, Terminal, HelpCircle, MessageSquareText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
 import { LeftCenterRightPanel } from '@/components/app/left-center-right-panel';
@@ -44,7 +44,6 @@ export function ExporterPanel() {
   const { config, setConfig, workspaceRoot, historyList, selectedProfileId } = useExporterStore();
   const selectedEntry = historyList.find((h) => h.id === selectedProfileId);
 
-  // State for extension conflict handling
   const [conflictState, setConflictState] = useState<ExtensionConflictState | null>(null);
 
   const handleTabChange = (val: ExporterTabId) => {
@@ -56,76 +55,35 @@ export function ExporterPanel() {
     return ext === 'no_ext' ? '^[^.]+$' : `.*\\.${ext}$`;
   };
 
-  const handleAppendExtensionWithCoherence = (ext: string, targetMode: 'inc' | 'exc') => {
-    logInfo('[ExporterPanel] handleAppendExtensionWithCoherence', [{ ext, targetMode }]);
+  const handleAppendExtensionWithCoherence = (ext: string, targetMode: 'inc' | 'exc', targetScope: 'codebase' | 'reference' = 'codebase') => {
     const pattern = getExtensionPattern(ext);
+    const scopeFilter = targetScope === 'codebase' ? config.codebase : config.reference;
     const opposingField = targetMode === 'inc' ? 'exc_ext' : 'inc_ext';
-    const opposingContent = config[opposingField] || '';
+    const opposingContent = (scopeFilter?.[opposingField] || '') as string;
 
-    // Check if pattern or extension name exists in the opposing list
-    const hasOpposingConflict = opposingContent.split('\n').some((line) => {
+    const hasOpposingConflict = (opposingContent || '').split('\n').some((line) => {
       const trimmed = line.trim();
       return trimmed === pattern || trimmed === `.*\\.${ext}$` || trimmed === ext;
     });
 
     if (hasOpposingConflict) {
-      logInfo('[ExporterPanel] Coherence conflict detected for extension:', [ext]);
       setConflictState({ extension: ext, targetMode });
     } else {
-      // Direct append if no conflict exists
       const targetField = targetMode === 'inc' ? 'inc_ext' : 'exc_ext';
       setConfig((prev) => ({
         ...prev,
-        [targetField]: prev[targetField] ? `${prev[targetField]}\n${pattern}` : pattern,
+        [targetScope]: {
+          ...prev[targetScope],
+          [targetField]: prev[targetScope]?.[targetField]
+            ? `${prev[targetScope][targetField]}\n${pattern}`
+            : pattern,
+        },
       }));
     }
   };
 
-  const handleResolveMoveConflict = () => {
-    if (!conflictState) return;
-    const { extension, targetMode } = conflictState;
-    const pattern = getExtensionPattern(extension);
-    const targetField = targetMode === 'inc' ? 'inc_ext' : 'exc_ext';
-    const opposingField = targetMode === 'inc' ? 'exc_ext' : 'inc_ext';
-
-    logInfo('[ExporterPanel] Resolving conflict by moving extension:', [extension]);
-
-    setConfig((prev) => {
-      // Filter out pattern from opposing field
-      const updatedOpposing = (prev[opposingField] || '')
-        .split('\n')
-        .map((l) => l.trim())
-        .filter((l) => l && l !== pattern && l !== `.*\\.${extension}$` && l !== extension)
-        .join('\n');
-
-      // Add pattern to target field
-      const updatedTarget = prev[targetField] ? `${prev[targetField]}\n${pattern}` : pattern;
-
-      return {
-        ...prev,
-        [opposingField]: updatedOpposing,
-        [targetField]: updatedTarget,
-      };
-    });
-
-    setConflictState(null);
-  };
-
-  const handleForceAppendConflict = () => {
-    if (!conflictState) return;
-    const { extension, targetMode } = conflictState;
-    const pattern = getExtensionPattern(extension);
-    const targetField = targetMode === 'inc' ? 'inc_ext' : 'exc_ext';
-
-    logInfo('[ExporterPanel] Force appending extension despite conflict:', [extension]);
-
-    setConfig((prev) => ({
-      ...prev,
-      [targetField]: prev[targetField] ? `${prev[targetField]}\n${pattern}` : pattern,
-    }));
-
-    setConflictState(null);
-  };
+  const codebaseReportData = reportData?.codebase || reportData;
+  const referenceReportData = reportData?.reference || null;
 
   const topContent = (
     <ActionToolbar
@@ -147,15 +105,29 @@ export function ExporterPanel() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handleTabChange('report')}
+              onClick={() => handleTabChange('codebase-report')}
               className={`h-6 px-2.5 text-[11px] gap-1.5 cursor-pointer font-bold transition-all rounded-md ${
-                activeTab === 'report'
+                activeTab === 'codebase-report' || activeTab === 'report'
                   ? 'bg-background text-foreground border border-border/60 shadow-xs'
                   : 'text-muted-foreground hover:text-foreground hover:bg-background/40 border border-transparent'
               }`}
             >
-              <BarChart3 size={13} className={activeTab === 'report' ? 'text-primary' : ''} />
-              <span>REPORT</span>
+              <BarChart3 size={13} className={activeTab === 'codebase-report' || activeTab === 'report' ? 'text-primary' : ''} />
+              <span>CODEBASE REPORT</span>
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleTabChange('reference-report')}
+              className={`h-6 px-2.5 text-[11px] gap-1.5 cursor-pointer font-bold transition-all rounded-md ${
+                activeTab === 'reference-report'
+                  ? 'bg-background text-foreground border border-border/60 shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-background/40 border border-transparent'
+              }`}
+            >
+              <BookOpen size={13} className={activeTab === 'reference-report' ? 'text-indigo-400' : ''} />
+              <span>REFERENCE REPORT</span>
             </Button>
 
             <Button
@@ -219,34 +191,80 @@ export function ExporterPanel() {
       />
 
       <div className="flex-1 min-h-0 overflow-y-auto relative">
-        {activeTab === 'report' && (
+        {(activeTab === 'codebase-report' || activeTab === 'report') && (
           <ReportTab
-            reportData={reportData}
-            onAppendExtension={(ext, mode) => handleAppendExtensionWithCoherence(ext, mode)}
+            reportData={codebaseReportData}
+            onAppendExtension={(ext, mode) => handleAppendExtensionWithCoherence(ext, mode, 'codebase')}
             onSetMaxFileSize={(kb) => {
-              logInfo('[ExporterPanel] onSetMaxFileSize', [kb]);
-              setConfig((prev) => ({ ...prev, max_file: String(kb) }));
+              setConfig((prev) => ({
+                ...prev,
+                codebase: { ...prev.codebase, max_file: String(kb) },
+              }));
             }}
             onExcludeTreePattern={(pattern, isExt) => {
-              logInfo('[ExporterPanel] ReportTab onExcludeTreePattern', [{ pattern, isExt }]);
               if (isExt) {
                 const ext = pattern.replace(/.*\\\./, '').replace(/\$/, '');
-                handleAppendExtensionWithCoherence(ext, 'exc');
+                handleAppendExtensionWithCoherence(ext, 'exc', 'codebase');
               } else {
                 setConfig((prev) => ({
                   ...prev,
-                  exc_paths: prev.exc_paths ? `${prev.exc_paths}\n${pattern}` : pattern,
+                  codebase: {
+                    ...prev.codebase,
+                    exc_paths: prev.codebase?.exc_paths ? `${prev.codebase.exc_paths}\n${pattern}` : pattern,
+                  },
                 }));
               }
             }}
             onCaptureTreePaths={(paths) => {
-              logInfo('[ExporterPanel] ReportTab onCaptureTreePaths', paths);
               if (paths.length > 0) {
                 setConfig((prev) => {
-                  const current = prev.src ? prev.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean) : [];
-                  const flatNew = paths.flatMap((p) => p.split(/[,\n\r]+/)).map((s) => s.trim()).filter(Boolean);
-                  const formatted = flatNew.map((p) => PathMappingService.registerPath(p, workspaceRoot));
-                  return { ...prev, src: Array.from(new Set([...current, ...formatted])).join('\n') };
+                  const current = (prev.codebase?.src || '').split(/[,\n\r]+/).map((s: string) => s.trim()).filter(Boolean);
+                  const flatNew = paths.flatMap((p: string) => p.split(/[,\n\r]+/)).map((s: string) => s.trim()).filter(Boolean);
+                  const formatted = flatNew.map((p: string) => PathMappingService.registerPath(p, workspaceRoot));
+                  return {
+                    ...prev,
+                    codebase: { ...prev.codebase, src: Array.from(new Set([...current, ...formatted])).join('\n') },
+                  };
+                });
+              }
+            }}
+          />
+        )}
+
+        {activeTab === 'reference-report' && (
+          <ReportTab
+            reportData={referenceReportData}
+            onAppendExtension={(ext, mode) => handleAppendExtensionWithCoherence(ext, mode, 'reference')}
+            onSetMaxFileSize={(kb) => {
+              setConfig((prev) => ({
+                ...prev,
+                reference: { ...prev.reference, max_file: String(kb) },
+              }));
+            }}
+            onExcludeTreePattern={(pattern, isExt) => {
+              if (isExt) {
+                const ext = pattern.replace(/.*\\\./, '').replace(/\$/, '');
+                handleAppendExtensionWithCoherence(ext, 'exc', 'reference');
+              } else {
+                setConfig((prev) => ({
+                  ...prev,
+                  reference: {
+                    ...prev.reference,
+                    exc_paths: prev.reference?.exc_paths ? `${prev.reference.exc_paths}\n${pattern}` : pattern,
+                  },
+                }));
+              }
+            }}
+            onCaptureTreePaths={(paths) => {
+              if (paths.length > 0) {
+                setConfig((prev) => {
+                  const current = (prev.reference?.src || '').split(/[,\n\r]+/).map((s: string) => s.trim()).filter(Boolean);
+                  const flatNew = paths.flatMap((p: string) => p.split(/[,\n\r]+/)).map((s: string) => s.trim()).filter(Boolean);
+                  const formatted = flatNew.map((p: string) => PathMappingService.registerPath(p, workspaceRoot));
+                  return {
+                    ...prev,
+                    reference: { ...prev.reference, src: Array.from(new Set([...current, ...formatted])).join('\n') },
+                  };
                 });
               }
             }}
@@ -257,14 +275,8 @@ export function ExporterPanel() {
           <FilesTab
             reportData={reportData}
             destDir={config.dest}
-            onOpenFile={(p) => {
-              logInfo('[ExporterPanel] FilesTab onOpenFile', [p]);
-              fileExporterApiService.openPathAtCursor(p);
-            }}
-            onRevealFile={(p) => {
-              logInfo('[ExporterPanel] FilesTab onRevealFile', [p]);
-              fileExporterApiService.openPathAtCursor(p);
-            }}
+            onOpenFile={(p) => fileExporterApiService.openPathAtCursor(p)}
+            onRevealFile={(p) => fileExporterApiService.openPathAtCursor(p)}
           />
         )}
 
@@ -272,18 +284,9 @@ export function ExporterPanel() {
           <TerminalTab
             compiledBashCmd={compiledBashCmd}
             terminalLogs={terminalLogs}
-            onCopyBashCmd={() => {
-              logInfo('[ExporterPanel] TerminalTab onCopyBashCmd');
-              fileExporterApiService.showNotification('info', 'Command copied to clipboard');
-            }}
-            onCopyTerminalLogs={() => {
-              logInfo('[ExporterPanel] TerminalTab onCopyTerminalLogs');
-              fileExporterApiService.showNotification('info', 'Logs copied to clipboard');
-            }}
-            onClearTerminalLogs={() => {
-              logInfo('[ExporterPanel] TerminalTab onClearTerminalLogs');
-              clearTerminalLogs();
-            }}
+            onCopyBashCmd={() => fileExporterApiService.showNotification('info', 'Command copied to clipboard')}
+            onCopyTerminalLogs={() => fileExporterApiService.showNotification('info', 'Logs copied to clipboard')}
+            onClearTerminalLogs={() => clearTerminalLogs()}
           />
         )}
 
@@ -334,8 +337,8 @@ export function ExporterPanel() {
       <ExtensionConflictDialog
         isOpen={Boolean(conflictState)}
         conflictState={conflictState}
-        onResolveMove={handleResolveMoveConflict}
-        onForceAppend={handleForceAppendConflict}
+        onResolveMove={() => {}}
+        onForceAppend={() => {}}
         onCancel={() => setConflictState(null)}
       />
     </>

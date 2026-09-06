@@ -3,8 +3,8 @@ import { ChevronsDown, ChevronsUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
 import { useExportConfiguration } from '../hooks/use-export-configuration';
-import { SourcePathsSection } from './SourcePathsSection';
-import { FiltersSection } from './FiltersSection';
+import { CodebasePathsSection } from './CodebasePathsSection';
+import { ReferencePathsSection } from './ReferencePathsSection';
 import { DestinationSection } from './DestinationSection';
 import { OutputFormattingSection } from './OutputFormattingSection';
 import { ErrorFilesModal } from './ErrorFilesModal';
@@ -29,13 +29,17 @@ export const ExportConfigurationPanel: React.FC = () => {
   } = useExportConfiguration();
 
   const [cardsOpenState, setCardsOpenState] = useState<{
-    sourcePaths: boolean;
-    filters: boolean;
+    codebasePaths: boolean;
+    codebaseFilters: boolean;
+    referencePaths: boolean;
+    referenceFilters: boolean;
     destination: boolean;
     outputFormatting: boolean;
   }>({
-    sourcePaths: true,
-    filters: true,
+    codebasePaths: true,
+    codebaseFilters: true,
+    referencePaths: true,
+    referenceFilters: true,
     destination: true,
     outputFormatting: true,
   });
@@ -43,8 +47,10 @@ export const ExportConfigurationPanel: React.FC = () => {
   const handleCollapseAllCards = () => {
     logInfo('[ExportConfigurationPanel] handleCollapseAllCards handler triggered');
     setCardsOpenState({
-      sourcePaths: false,
-      filters: false,
+      codebasePaths: false,
+      codebaseFilters: false,
+      referencePaths: false,
+      referenceFilters: false,
       destination: false,
       outputFormatting: false,
     });
@@ -53,8 +59,10 @@ export const ExportConfigurationPanel: React.FC = () => {
   const handleExpandAllCards = () => {
     logInfo('[ExportConfigurationPanel] handleExpandAllCards handler triggered');
     setCardsOpenState({
-      sourcePaths: true,
-      filters: true,
+      codebasePaths: true,
+      codebaseFilters: true,
+      referencePaths: true,
+      referenceFilters: true,
       destination: true,
       outputFormatting: true,
     });
@@ -63,7 +71,7 @@ export const ExportConfigurationPanel: React.FC = () => {
   const topToolbar = (
     <div className="flex justify-between items-center px-2 py-1 bg-muted/20 border-b border-border/50 font-mono text-xs w-full shrink-0">
       <div className="flex items-center gap-1.5 font-bold text-foreground truncate">
-        <span></span>
+        <span>⚙️ Export Configuration</span>
       </div>
 
       <div className="flex items-center gap-0.5 shrink-0">
@@ -93,23 +101,48 @@ export const ExportConfigurationPanel: React.FC = () => {
 
   const middleContent = (
     <div className="flex flex-col space-y-2 p-2 box-border min-w-0">
-      <SourcePathsSection
-        pathsText={config.src}
-        isOpen={cardsOpenState.sourcePaths}
-        onOpenChange={(open) => setCardsOpenState((prev) => ({ ...prev, sourcePaths: open }))}
-        onChangePathsText={(val) => setConfig((prev) => ({ ...prev, src: val }))}
+      <CodebasePathsSection
+        filter={config.codebase}
+        isOpen={cardsOpenState.codebasePaths}
+        onOpenChange={(open: boolean) => setCardsOpenState((prev) => ({ ...prev, codebasePaths: open }))}
+        isFiltersOpen={cardsOpenState.codebaseFilters}
+        onFiltersOpenChange={(open: boolean) => setCardsOpenState((prev) => ({ ...prev, codebaseFilters: open }))}
+        onChangeFilter={(updater) =>
+          setConfig((prev) => ({ ...prev, codebase: updater(prev.codebase) }))
+        }
+        onChangePathsText={(val: string) =>
+          setConfig((prev) => ({ ...prev, codebase: { ...prev.codebase, src: val } }))
+        }
         onAddOpenFiles={handleAddOpenFiles}
         onAddGitDiffFiles={handleAddGitDiffFiles}
         onAddErrorStackFiles={handleOpenErrorModal}
         onOpenCursorLinePath={handleOpenCursorLinePath}
-        onClearPaths={() => setConfig((prev) => ({ ...prev, src: '' }))}
+        onClearPaths={() =>
+          setConfig((prev) => ({ ...prev, codebase: { ...prev.codebase, src: '' } }))
+        }
+        filterSimulatorInput={filterSimulatorInput}
+        setFilterSimulatorInput={setFilterSimulatorInput}
       />
 
-      <FiltersSection
-        config={config}
-        isOpen={cardsOpenState.filters}
-        onOpenChange={(open) => setCardsOpenState((prev) => ({ ...prev, filters: open }))}
-        onChangeConfig={setConfig}
+      <ReferencePathsSection
+        filter={config.reference}
+        isOpen={cardsOpenState.referencePaths}
+        onOpenChange={(open: boolean) => setCardsOpenState((prev) => ({ ...prev, referencePaths: open }))}
+        isFiltersOpen={cardsOpenState.referenceFilters}
+        onFiltersOpenChange={(open: boolean) => setCardsOpenState((prev) => ({ ...prev, referenceFilters: open }))}
+        onChangeFilter={(updater) =>
+          setConfig((prev) => ({ ...prev, reference: updater(prev.reference) }))
+        }
+        onChangePathsText={(val: string) =>
+          setConfig((prev) => ({ ...prev, reference: { ...prev.reference, src: val } }))
+        }
+        onAddOpenFiles={handleAddOpenFiles}
+        onAddGitDiffFiles={handleAddGitDiffFiles}
+        onAddErrorStackFiles={handleOpenErrorModal}
+        onOpenCursorLinePath={handleOpenCursorLinePath}
+        onClearPaths={() =>
+          setConfig((prev) => ({ ...prev, reference: { ...prev.reference, src: '' } }))
+        }
         filterSimulatorInput={filterSimulatorInput}
         setFilterSimulatorInput={setFilterSimulatorInput}
       />
@@ -117,8 +150,8 @@ export const ExportConfigurationPanel: React.FC = () => {
       <DestinationSection
         destDir={config.dest}
         isOpen={cardsOpenState.destination}
-        onOpenChange={(open) => setCardsOpenState((prev) => ({ ...prev, destination: open }))}
-        onChangeDestDir={(val) => setConfig((prev) => ({ ...prev, dest: val }))}
+        onOpenChange={(open: boolean) => setCardsOpenState((prev) => ({ ...prev, destination: open }))}
+        onChangeDestDir={(val: string) => setConfig((prev) => ({ ...prev, dest: val }))}
         onCopyLatestFiles={handleCopyLatestFiles}
         onRevealDestDir={handleRevealDestination}
         onClearDestDir={handleClearDestDir}
@@ -127,7 +160,7 @@ export const ExportConfigurationPanel: React.FC = () => {
       <OutputFormattingSection
         config={config}
         isOpen={cardsOpenState.outputFormatting}
-        onOpenChange={(open) => setCardsOpenState((prev) => ({ ...prev, outputFormatting: open }))}
+        onOpenChange={(open: boolean) => setCardsOpenState((prev) => ({ ...prev, outputFormatting: open }))}
         onChangeConfig={setConfig}
       />
     </div>
@@ -145,7 +178,7 @@ export const ExportConfigurationPanel: React.FC = () => {
       <ErrorFilesModal
         isOpen={modalState.isErrorModalOpen}
         onClose={handleCloseErrorModal}
-        onAddPaths={(paths) => {
+        onAddPaths={(paths: string[]) => {
           logInfo('[ExportConfigurationPanel] ErrorFilesModal onAddPaths', paths);
           addPathsToConfig(paths);
         }}

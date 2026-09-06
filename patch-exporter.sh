@@ -1,18 +1,47 @@
+#!/usr/bin/env bash
+set -e
+
+echo "🚀 Applying Files Exporter enhancements: Scope-specific filters, reusable PathScopeSection, and dual Report tabs..."
+
+# 1. Ensure directory structures
+mkdir -p scripts/codebase_exporter
+mkdir -p shared/services/file-exporter/model
+mkdir -p shared/services/file-exporter/port-out
+mkdir -p webview/src/features/exporter/components/tabs/prompt/hooks
+mkdir -p webview/src/features/exporter/components/tabs/report/hooks
+mkdir -p webview/src/features/exporter/components
+mkdir -p webview/src/features/exporter/constants
+mkdir -p webview/src/features/exporter/utils
+mkdir -p webview/src/features/exporter/store
+mkdir -p webview/src/features/exporter/hooks
+mkdir -p webview/src/services/api
+mkdir -p backend/src/services/file-exporter
+mkdir -p backend/src/services/_python-scripts
+
+# 2. Update Shared Data Model (shared/services/file-exporter/model/file-exporter-model.ts)
+cat << 'EOF' > shared/services/file-exporter/model/file-exporter-model.ts
 import { PythonScriptStatus } from "../../_python-scripts";
 import { ExportFormat, ExportMode } from "../../codebase-exporter/types";
 
-export interface ExportFilter {
-  src: string;
-  max_file: string;
-  inc_paths: string;
-  exc_paths: string;
-  inc_ext: string;
-  exc_ext: string;
-}
-
 export interface ExportConfig {
-  codebase: ExportFilter;
-  reference: ExportFilter;
+  codebase_src: string;
+  reference_src: string;
+
+  // Codebase-specific filters
+  codebase_inc_paths: string;
+  codebase_exc_paths: string;
+  codebase_inc_ext: string;
+  codebase_exc_ext: string;
+  codebase_max_file: string;
+
+  // Reference-specific filters
+  reference_inc_paths: string;
+  reference_exc_paths: string;
+  reference_inc_ext: string;
+  reference_exc_ext: string;
+  reference_max_file: string;
+
+  // Global Output Formatting & Rules
   dest: string;
   format: ExportFormat;
   max_chunk: string;
@@ -22,15 +51,13 @@ export interface ExportConfig {
   logConsole: boolean;
   logFile: boolean;
 
-  // Legacy fallback properties for backward compatibility
+  // Optional legacy fields for profile migration compatibility
   src?: string;
   inc_paths?: string;
   exc_paths?: string;
   inc_ext?: string;
   exc_ext?: string;
   max_file?: string;
-  codebase_src?: string;
-  reference_src?: string;
 }
 
 export interface HistoryEntry {
@@ -77,18 +104,10 @@ export interface ExportSummary {
   total_regex_excluded: number;
 }
 
-export interface ScopeGeneratedFiles {
-  exports: string[];
-  reports: string[];
-}
-
 export interface GeneratedFiles {
-  codebase?: ScopeGeneratedFiles;
-  reference?: ScopeGeneratedFiles;
-  logs?: string[];
-  prompt?: string[];
-  exports?: string[];
-  reports?: string[];
+  exports: string[];
+  logs: string[];
+  reports: string[];
 }
 
 export interface TreeManifestNode {

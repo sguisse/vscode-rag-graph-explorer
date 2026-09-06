@@ -30,10 +30,10 @@ export function useExporterState() {
     const unsubscribeSelectedPath = vsCodeHandleMessage.on('selectedPath', (msg) => {
       if (msg.payload) {
         setConfig((prev) => {
-          const currentPaths = prev.src ? prev.src.split(/[, \n\r]+/) : [];
+          const currentPaths = prev.codebase_src ? prev.codebase_src.split(/[, \n\r]+/) : [];
           const newPaths = String(msg.payload).split(/[, \n\r]+/);
           const combined = Array.from(new Set([...currentPaths, ...newPaths])).map((s) => s.trim()).filter(Boolean);
-          return { ...prev, src: combined.join('\n') };
+          return { ...prev, codebase_src: combined.join('\n') };
         });
       }
     });
@@ -41,7 +41,7 @@ export function useExporterState() {
     const unsubscribeUpdatePaths = vsCodeHandleMessage.on('updatePaths', (msg) => {
       if (Array.isArray(msg.paths)) {
         const flatPaths = msg.paths.flatMap((p) => String(p).split(/[, \n\r]+/)).map((s) => s.trim()).filter(Boolean);
-        setConfig((prev) => ({ ...prev, src: flatPaths.join('\n') }));
+        setConfig((prev) => ({ ...prev, codebase_src: flatPaths.join('\n') }));
       }
     });
 
@@ -132,8 +132,8 @@ export function useExporterState() {
   };
 
   useEffect(() => {
-    const paths = config.src.split(/[, \n\r]+/).filter(Boolean).join(',');
-    const cmd = `python3 files-exporter.py --src '${paths || '.'}' --dest '${config.dest}' --format '${config.format}' --max-file ${config.max_file} --max-chunk ${config.max_chunk}${
+    const paths = (config.codebase_src || '').split(/[, \n\r]+/).filter(Boolean).join(',');
+    const cmd = `python3 files-exporter.py --codebase-src '${paths || '.'}' --dest '${config.dest}' --format '${config.format}' --max-file ${config.max_file} --max-chunk ${config.max_chunk}${
       config.groupByExt ? ' --group-ext' : ''
     }${config.logConsole ? ' --log-console' : ''}${config.generateTreeView ? ' --tree-view' : ''}`;
     setCompiledBashCmd(cmd);

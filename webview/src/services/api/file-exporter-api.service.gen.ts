@@ -67,6 +67,10 @@ class FileExporterApiService extends AbstractApiService implements IFileExporter
         return await this.rpc.call(RpcMethodEnum.FILEEXPORTER_COPY_SELECTED_FILES_TO_CLIPBOARD, paths);
     }
 
+    public async copyFullContextToClipboard(codebasePaths: string[], referencePaths: string[], prompt: string): Promise<ClipboardActionResult> {
+        return await this.rpc.call(RpcMethodEnum.FILEEXPORTER_COPY_FULL_CONTEXT_TO_CLIPBOARD, codebasePaths, referencePaths, prompt);
+    }
+
     public async clearDestDirectory(destDir: string): Promise<DestinationActionResult> {
         return await this.rpc.call(RpcMethodEnum.FILEEXPORTER_CLEAR_DEST_DIRECTORY, destDir);
     }

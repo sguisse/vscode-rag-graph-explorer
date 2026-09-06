@@ -8,25 +8,121 @@ import { CollapsibleCard, BadgeObject } from '@/components/ui/collapsible-card';
 import { FILE_EXT_CATEGORY_GROUPS } from '../constants/exporter-constants';
 import { testFilterPatterns } from '../utils/filter-simulator';
 import { explodeTextAreaRegex, groupExtensionsText } from '../utils/regex-exploder';
-import { ExportConfig } from '@/shared/services/file-exporter/model/file-exporter-model';
+import { ExportFilter } from '@/shared/services/file-exporter/model/file-exporter-model';
 import { useExporterStore } from '../store/useExporterStore';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 
-interface FiltersSectionProps {
-  config: ExportConfig;
+export type FilterScopeType = 'codebase' | 'reference';
+
+export interface FiltersSectionProps {
+  scopeType?: FilterScopeType;
+  filter: ExportFilter;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
-  onChangeConfig: (updater: (prev: ExportConfig) => ExportConfig) => void;
+  onChangeFilter: (updater: (prev: ExportFilter) => ExportFilter) => void;
   filterSimulatorInput: string;
   setFilterSimulatorInput: (val: string) => void;
 }
 
+export const getFilterSummaryBadges = (
+  filter: ExportFilter,
+  scopeType: FilterScopeType = 'codebase',
+  validationState?: any
+): BadgeObject[] => {
+  const maxFileErr = validationState?.errors?.max_file;
+  const incPathsErr = validationState?.errors?.inc_paths;
+  const excPathsErr = validationState?.errors?.exc_paths;
+  const incExtErr = validationState?.errors?.inc_ext;
+  const excExtErr = validationState?.errors?.exc_ext;
+
+  const activeFilter: ExportFilter = filter || {
+    src: '',
+    max_file: '50',
+    inc_paths: '.*',
+    exc_paths: '',
+    inc_ext: '',
+    exc_ext: '',
+  };
+
+  const defaultBadgeColor = scopeType === 'codebase'
+    ? 'bg-primary/10 text-primary border-primary/20'
+    : 'bg-indigo-500/10 text-indigo-600 border-indigo-500/30';
+
+  const separator = '\n';
+  const incPathLines = (activeFilter.inc_paths || '').split(separator).map((s) => s.trim()).filter(Boolean);
+  const incExtLines = (activeFilter.inc_ext || '').split(separator).map((s) => s.trim()).filter(Boolean);
+  const excPathLines = (activeFilter.exc_paths || '').split(separator).map((s) => s.trim()).filter(Boolean);
+  const excExtLines = (activeFilter.exc_ext || '').split(separator).map((s) => s.trim()).filter(Boolean);
+
+  const combinedSeparator = ' 📏 ';
+  const incPathCombined = incPathLines.join(combinedSeparator);
+  const incExtCombined = incExtLines.join(combinedSeparator);
+  const excPathCombined = excPathLines.join(combinedSeparator);
+  const excExtCombined = excExtLines.join(combinedSeparator);
+
+  const tooltipSeparator = '<br>';
+  const incPathTooltip = incPathLines.join(tooltipSeparator);
+  const incExtTooltip = incExtLines.join(tooltipSeparator);
+  const excPathTooltip = excPathLines.join(tooltipSeparator);
+  const excExtTooltip = excExtLines.join(tooltipSeparator);
+
+  const badges: BadgeObject[] = [
+    {
+      label: `Max file: ${activeFilter.max_file} KB`,
+      tooltip: maxFileErr ? `⚠️ Error: ${maxFileErr}` : `Max file size limit: ${activeFilter.max_file} KB`,
+      className: maxFileErr
+        ? 'bg-destructive/10 text-destructive border-destructive/30 font-semibold shrink-0'
+        : `${defaultBadgeColor} shrink-0 font-bold`,
+    },
+  ];
+
+  if (incPathCombined || incPathsErr) {
+    badges.push({
+      label: `Inc Path: ${incPathCombined || 'Invalid Regex'}`,
+      tooltip: incPathsErr ? `⚠️ Error: ${incPathsErr}` : `<strong>Inc Path:</strong> <br> ${incPathTooltip}`,
+      className: incPathsErr
+        ? 'bg-destructive/10 text-destructive border-destructive/30 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink font-semibold'
+        : `${defaultBadgeColor} max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink`,
+    });
+  }
+  if (incExtCombined || incExtErr) {
+    badges.push({
+      label: `Inc Ext: ${incExtCombined || 'Invalid Regex'}`,
+      tooltip: incExtErr ? `⚠️ Error: ${incExtErr}` : `<strong>Inc Ext:</strong> <br> ${incExtTooltip}`,
+      className: incExtErr
+        ? 'bg-destructive/10 text-destructive border-destructive/30 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink font-semibold'
+        : `${defaultBadgeColor} max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink`,
+    });
+  }
+  if (excPathCombined || excPathsErr) {
+    badges.push({
+      label: `Exc Path: ${excPathCombined || 'Invalid Regex'}`,
+      tooltip: excPathsErr ? `⚠️ Error: ${excPathsErr}` : `<strong>Exc Path:</strong> <br> ${excPathTooltip}`,
+      className: excPathsErr
+        ? 'bg-destructive/10 text-destructive border-destructive/30 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink font-semibold'
+        : `${defaultBadgeColor} max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink`,
+    });
+  }
+  if (excExtCombined || excExtErr) {
+    badges.push({
+      label: `Exc Ext: ${excExtCombined || 'Invalid Regex'}`,
+      tooltip: excExtErr ? `⚠️ Error: ${excExtErr}` : `<strong>Exc Ext:</strong> <br> ${excExtTooltip}`,
+      className: excExtErr
+        ? 'bg-destructive/10 text-destructive border-destructive/30 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink font-semibold'
+        : `${defaultBadgeColor} max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink`,
+    });
+  }
+
+  return badges;
+};
+
 export const FiltersSection: React.FC<FiltersSectionProps> = ({
-  config,
-  isOpen,
+  scopeType = 'codebase',
+  filter,
+  isOpen = true,
   onOpenChange,
-  onChangeConfig,
-  filterSimulatorInput,
+  onChangeFilter,
+  filterSimulatorInput = '',
   setFilterSimulatorInput,
 }) => {
   const [sortDirections, setSortDirections] = useState<Record<string, 'asc' | 'desc'>>({
@@ -43,153 +139,94 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
   const incExtErr = validationState.errors?.inc_ext;
   const excExtErr = validationState.errors?.exc_ext;
 
+  const activeFilter: ExportFilter = filter || {
+    src: '',
+    max_file: '50',
+    inc_paths: '.*',
+    exc_paths: '',
+    inc_ext: '',
+    exc_ext: '',
+  };
+
   const simResult = testFilterPatterns(
     filterSimulatorInput,
-    config.inc_paths,
-    config.exc_paths,
-    config.inc_ext,
-    config.exc_ext
+    activeFilter.inc_paths || '',
+    activeFilter.exc_paths || '',
+    activeFilter.inc_ext || '',
+    activeFilter.exc_ext || ''
   );
 
-  const separator = '\n';
-  const incPathLines = config.inc_paths.split(separator).map((s) => s.trim()).filter(Boolean);
-  const incExtLines = config.inc_ext.split(separator).map((s) => s.trim()).filter(Boolean);
-  const excPathLines = config.exc_paths.split(separator).map((s) => s.trim()).filter(Boolean);
-  const excExtLines = config.exc_ext.split(separator).map((s) => s.trim()).filter(Boolean);
+  const summaryBadges = getFilterSummaryBadges(filter, scopeType, validationState);
 
-  const combinedSeparator = ' 📏 ';
-  const incPathCombined = incPathLines.join(combinedSeparator);
-  const incExtCombined = incExtLines.join(combinedSeparator);
-  const excPathCombined = excPathLines.join(combinedSeparator);
-  const excExtCombined = excExtLines.join(combinedSeparator);
-
-  const tooltipSeparator = '<br>';
-  const incPathTooltip = incPathLines.join(tooltipSeparator);
-  const incExtTooltip = incExtLines.join(tooltipSeparator);
-  const excPathTooltip = excPathLines.join(tooltipSeparator);
-  const excExtTooltip = excExtLines.join(tooltipSeparator);
-
-  const summaryBadges: BadgeObject[] = [
-    {
-      label: `Max file: ${config.max_file} KB`,
-      tooltip: maxFileErr ? `⚠️ Error: ${maxFileErr}` : `Max file size limit: ${config.max_file} KB`,
-      className: maxFileErr
-        ? 'bg-destructive/10 text-destructive border-destructive/30 font-semibold shrink-0'
-        : 'bg-primary/10 text-primary border-primary/20 shrink-0 font-bold',
-    },
-  ];
-
-  if (incPathCombined || incPathsErr) {
-    summaryBadges.push({
-      label: `Inc Path: ${incPathCombined || 'Invalid Regex'}`,
-      tooltip: incPathsErr ? `⚠️ Error: ${incPathsErr}` : `<strong>Inc Path:</strong> <br> ${incPathTooltip}`,
-      className: incPathsErr
-        ? 'bg-destructive/10 text-destructive border-destructive/30 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink font-semibold'
-        : 'bg-primary/10 text-primary border-primary/20 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink',
-    });
-  }
-  if (incExtCombined || incExtErr) {
-    summaryBadges.push({
-      label: `Inc Ext: ${incExtCombined || 'Invalid Regex'}`,
-      tooltip: incExtErr ? `⚠️ Error: ${incExtErr}` : `<strong>Inc Ext:</strong> <br> ${incExtTooltip}`,
-      className: incExtErr
-        ? 'bg-destructive/10 text-destructive border-destructive/30 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink font-semibold'
-        : 'bg-primary/10 text-primary border-primary/20 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink',
-    });
-  }
-  if (excPathCombined || excPathsErr) {
-    summaryBadges.push({
-      label: `Exc Path: ${excPathCombined || 'Invalid Regex'}`,
-      tooltip: excPathsErr ? `⚠️ Error: ${excPathsErr}` : `<strong>Exc Path:</strong> <br> ${excPathTooltip}`,
-      className: excPathsErr
-        ? 'bg-destructive/10 text-destructive border-destructive/30 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink font-semibold'
-        : 'bg-primary/10 text-primary border-primary/20 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink',
-    });
-  }
-  if (excExtCombined || excExtErr) {
-    summaryBadges.push({
-      label: `Exc Ext: ${excExtCombined || 'Invalid Regex'}`,
-      tooltip: excExtErr ? `⚠️ Error: ${excExtErr}` : `<strong>Exc Ext:</strong> <br> ${excExtTooltip}`,
-      className: excExtErr
-        ? 'bg-destructive/10 text-destructive border-destructive/30 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink font-semibold'
-        : 'bg-primary/10 text-primary border-primary/20 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink',
-    });
-  }
-
-  const toggleSortLines = (field: keyof ExportConfig) => {
+  const toggleSortLines = (field: keyof ExportFilter) => {
     const currentDir = sortDirections[field] || 'asc';
     const nextDir = currentDir === 'asc' ? 'desc' : 'asc';
     setSortDirections((prev) => ({ ...prev, [field]: nextDir }));
 
     logInfo('[FiltersSection] toggleSortLines handler triggered', [{ field, direction: nextDir }]);
 
-    onChangeConfig((prev) => {
+    onChangeFilter((prev) => {
       const val = String(prev[field] || '');
       const lines = val.split('\n').map((l) => l.trim()).filter(Boolean);
-
       const commentLines = lines.filter((l) => l.startsWith('#'));
       const activeLines = lines.filter((l) => !l.startsWith('#'));
 
       activeLines.sort((a, b) => (nextDir === 'asc' ? a.localeCompare(b) : b.localeCompare(a)));
-
-      const combined = [...commentLines, ...activeLines];
-      return { ...prev, [field]: combined.join('\n') };
+      return { ...prev, [field]: [...commentLines, ...activeLines].join('\n') };
     });
   };
 
-  const explodeRegex = (field: keyof ExportConfig) => {
+  const explodeRegex = (field: keyof ExportFilter) => {
     logInfo('[FiltersSection] explodeRegex handler triggered', [field]);
-    onChangeConfig((prev) => {
-      const val = String(prev[field] || '');
-      const exploded = explodeTextAreaRegex(val);
-      return { ...prev, [field]: exploded };
-    });
+    onChangeFilter((prev) => ({
+      ...prev,
+      [field]: explodeTextAreaRegex(String(prev[field] || '')),
+    }));
   };
 
   const groupExtensions = (field: 'inc_ext' | 'exc_ext') => {
     logInfo('[FiltersSection] groupExtensions handler triggered', [field]);
-    onChangeConfig((prev) => {
-      const val = String(prev[field] || '');
-      const result = groupExtensionsText(val, FILE_EXT_CATEGORY_GROUPS);
-      return { ...prev, [field]: result.text };
-    });
+    onChangeFilter((prev) => ({
+      ...prev,
+      [field]: groupExtensionsText(String(prev[field] || ''), FILE_EXT_CATEGORY_GROUPS).text,
+    }));
   };
 
-  const clearField = (field: keyof ExportConfig) => {
+  const clearField = (field: keyof ExportFilter) => {
     logInfo('[FiltersSection] clearField handler triggered', [field]);
-    onChangeConfig((prev) => ({ ...prev, [field]: '' }));
+    onChangeFilter((prev) => ({ ...prev, [field]: '' }));
   };
 
   const appendExtensionCategory = (field: 'inc_ext' | 'exc_ext', label: string, extensions: string[]) => {
     logInfo('[FiltersSection] appendExtensionCategory handler triggered', [{ field, label, extensions }]);
-    onChangeConfig((prev) => {
+    onChangeFilter((prev) => {
       const current = prev[field] ? prev[field].split('\n') : [];
       const combined = Array.from(new Set([...current, ...extensions]));
       return { ...prev, [field]: combined.join('\n') };
     });
   };
 
+  const titlePrefix = scopeType === 'codebase' ? '🔍 Codebase' : '🔍 Reference';
+
   return (
     <CollapsibleCard
-      id="block-filters"
-      title="🔍 Filters & Scope Constraints"
+      id={`block-${scopeType}-filters`}
+      title={`${titlePrefix} Filters & Scope Constraints`}
       tooltip="Regular Expression masks defining targeted directories and source formatting inclusions or exclusions lists."
       summaryBadges={summaryBadges}
       defaultOpen={true}
       isOpen={isOpen}
       onOpenChange={onOpenChange}
-      className="w-full min-w-0 shrink-0"
+      className="w-full min-w-0 shrink-0 mt-2"
     >
       <div className="space-y-3 w-full min-w-0 font-mono text-xs">
         <div className="flex items-center gap-2 w-full min-w-0">
           <label className="font-semibold text-[11px] text-muted-foreground whitespace-nowrap shrink-0">
-            🏋️ Max File
+            🏋️ Max File ({scopeType})
           </label>
           <Input
-            value={config.max_file}
-            onChange={(e) =>
-              onChangeConfig((prev) => ({ ...prev, max_file: e.target.value }))
-            }
+            value={activeFilter.max_file}
+            onChange={(e) => onChangeFilter((prev) => ({ ...prev, max_file: e.target.value }))}
             className={`w-24 h-7 font-mono text-xs shrink-0 ${
               validationState.maxFileInvalid || maxFileErr
                 ? 'bg-destructive/10 text-destructive border-destructive/30 focus-visible:ring-destructive'
@@ -237,10 +274,8 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                   </div>
                 </div>
                 <Textarea
-                  value={config.inc_paths}
-                  onChange={(e) =>
-                    onChangeConfig((prev) => ({ ...prev, inc_paths: e.target.value }))
-                  }
+                  value={activeFilter.inc_paths || ''}
+                  onChange={(e) => onChangeFilter((prev) => ({ ...prev, inc_paths: e.target.value }))}
                   rows={3}
                   className={`w-full min-w-0 font-mono text-xs resize-y ${
                     incPathsErr
@@ -309,10 +344,8 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                   </div>
                 </div>
                 <Textarea
-                  value={config.inc_ext}
-                  onChange={(e) =>
-                    onChangeConfig((prev) => ({ ...prev, inc_ext: e.target.value }))
-                  }
+                  value={activeFilter.inc_ext || ''}
+                  onChange={(e) => onChangeFilter((prev) => ({ ...prev, inc_ext: e.target.value }))}
                   rows={3}
                   className={`w-full min-w-0 font-mono text-xs resize-y ${
                     incExtErr
@@ -362,10 +395,8 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                   </div>
                 </div>
                 <Textarea
-                  value={config.exc_paths}
-                  onChange={(e) =>
-                    onChangeConfig((prev) => ({ ...prev, exc_paths: e.target.value }))
-                  }
+                  value={activeFilter.exc_paths || ''}
+                  onChange={(e) => onChangeFilter((prev) => ({ ...prev, exc_paths: e.target.value }))}
                   rows={3}
                   className={`w-full min-w-0 font-mono text-xs resize-y ${
                     excPathsErr
@@ -434,10 +465,8 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                   </div>
                 </div>
                 <Textarea
-                  value={config.exc_ext}
-                  onChange={(e) =>
-                    onChangeConfig((prev) => ({ ...prev, exc_ext: e.target.value }))
-                  }
+                  value={activeFilter.exc_ext || ''}
+                  onChange={(e) => onChangeFilter((prev) => ({ ...prev, exc_ext: e.target.value }))}
                   rows={3}
                   className={`w-full min-w-0 font-mono text-xs resize-y ${
                     excExtErr
@@ -456,9 +485,9 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
             🧪 Filters Simulator:
           </span>
           <Input
-            value={filterSimulatorInput}
+            value={filterSimulatorInput || ''}
             onChange={(e) => setFilterSimulatorInput(e.target.value)}
-            placeholder="Enter test file path or name to simulate matching rules..."
+            placeholder={`Enter test ${scopeType} file path to simulate matching...`}
             className="flex-1 bg-background min-w-0 h-7 font-mono text-xs"
           />
           <div className="flex justify-end items-center gap-1.5 min-w-0 shrink-0">

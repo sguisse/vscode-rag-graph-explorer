@@ -14,8 +14,8 @@ export function useExportConfiguration() {
 
   const addPathsToConfig = (absPaths: string[]) => {
     const wsRoot = store.workspaceRoot;
-    const expandedList = absPaths
-      .flatMap((p) => String(p).split(/[,\n\r]+/))
+    const expandedList = (absPaths || [])
+      .flatMap((p) => String(p || '').split(/[,\n\r]+/))
       .map((s) => s.trim())
       .filter(Boolean);
 
@@ -24,11 +24,39 @@ export function useExportConfiguration() {
       .filter(Boolean);
 
     store.setConfig((prev) => {
-      const current = prev.src
-        ? prev.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean)
-        : [];
+      const current = (prev.codebase.src || '')
+        .split(/[,\n\r]+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
       const combined = Array.from(new Set([...current, ...formattedList]));
-      return { ...prev, src: combined.join('\n') };
+      return {
+        ...prev,
+        codebase: { ...prev.codebase, src: combined.join('\n') },
+      };
+    });
+  };
+
+  const addReferencePathsToConfig = (absPaths: string[]) => {
+    const wsRoot = store.workspaceRoot;
+    const expandedList = (absPaths || [])
+      .flatMap((p) => String(p || '').split(/[,\n\r]+/))
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const formattedList = expandedList
+      .map((p) => PathMappingService.registerPath(p, wsRoot))
+      .filter(Boolean);
+
+    store.setConfig((prev) => {
+      const current = (prev.reference.src || '')
+        .split(/[,\n\r]+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const combined = Array.from(new Set([...current, ...formattedList]));
+      return {
+        ...prev,
+        reference: { ...prev.reference, src: combined.join('\n') },
+      };
     });
   };
 
@@ -36,14 +64,10 @@ export function useExportConfiguration() {
     logInfo('[useExportConfiguration] Initializing exporter configuration hook...');
     store.fetchInitialState();
 
-    vsCodeApiService.getRepoName().then((repo) => {
-      logInfo('[useExportConfiguration] Active repository:', [repo]);
-    }).catch(() => {});
-
     const unsubscribeSelectedPath = vsCodeHandleMessage.on('selectedPath', (msg) => {
       if (msg.payload) {
         logInfo('[useExportConfiguration] Received selectedPath message', [msg.payload]);
-        const newPaths = String(msg.payload).split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
+        const newPaths = String(msg.payload || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
         addPathsToConfig(newPaths);
       }
     });
@@ -51,7 +75,7 @@ export function useExportConfiguration() {
     const unsubscribeUpdatePaths = vsCodeHandleMessage.on('updatePaths', (msg) => {
       if (Array.isArray(msg.paths)) {
         logInfo('[useExportConfiguration] Received updatePaths message', [msg.paths]);
-        const newPaths = msg.paths.flatMap((p) => String(p).split(/[,\n\r]+/)).map((s) => s.trim()).filter(Boolean);
+        const newPaths = msg.paths.flatMap((p) => String(p || '').split(/[,\n\r]+/)).map((s) => s.trim()).filter(Boolean);
         addPathsToConfig(newPaths);
       }
     });
@@ -62,24 +86,23 @@ export function useExportConfiguration() {
     };
   }, [store.workspaceRoot]);
 
-  // Execute real-time field validation whenever configuration or invalid paths change
   useEffect(() => {
-    const srcErr = ExporterValidatorService.validatePathList(store.config.src, store.invalidPaths);
-    const destErr = ExporterValidatorService.validateDestDir(store.config.dest);
-    const maxFileErr = ExporterValidatorService.validateMaxFile(store.config.max_file);
-    const maxChunkErr = ExporterValidatorService.validateMaxChunk(store.config.max_chunk);
-    const incPathsErr = ExporterValidatorService.validateRegexSyntax(store.config.inc_paths);
-    const excPathsErr = ExporterValidatorService.validateRegexSyntax(store.config.exc_paths);
-    const incExtErr = ExporterValidatorService.validateRegexSyntax(store.config.inc_ext);
-    const excExtErr = ExporterValidatorService.validateRegexSyntax(store.config.exc_ext);
+    const codebaseErr = ExporterValidatorService.validatePathList(store.config.codebase.src || '', store.invalidPaths);
+    const destErr = ExporterValidatorService.validateDestDir(store.config.dest || '');
+    const maxFileErr = ExporterValidatorService.validateMaxFile(store.config.codebase.max_file || '');
+    const maxChunkErr = ExporterValidatorService.validateMaxChunk(store.config.max_chunk || '');
+    const incPathsErr = ExporterValidatorService.validateRegexSyntax(store.config.codebase.inc_paths || '');
+    const excPathsErr = ExporterValidatorService.validateRegexSyntax(store.config.codebase.exc_paths || '');
+    const incExtErr = ExporterValidatorService.validateRegexSyntax(store.config.codebase.inc_ext || '');
+    const excExtErr = ExporterValidatorService.validateRegexSyntax(store.config.codebase.exc_ext || '');
 
     store.setValidationState({
-      pathListInvalid: Boolean(srcErr),
+      codebasePathListInvalid: Boolean(codebaseErr),
       destDirInvalid: Boolean(destErr),
       maxFileInvalid: Boolean(maxFileErr),
       maxChunkInvalid: Boolean(maxChunkErr),
       errors: {
-        src: srcErr,
+        codebase_src: codebaseErr,
         dest: destErr,
         max_file: maxFileErr,
         max_chunk: maxChunkErr,
@@ -90,50 +113,29 @@ export function useExportConfiguration() {
       },
     });
   }, [
-    store.config.src,
+    store.config.codebase,
+    store.config.reference,
     store.config.dest,
-    store.config.max_file,
     store.config.max_chunk,
-    store.config.inc_paths,
-    store.config.exc_paths,
-    store.config.inc_ext,
-    store.config.exc_ext,
     store.invalidPaths,
   ]);
 
-  // Perform path existence validation whenever source paths or workspace root changes
   useEffect(() => {
-    const displayLines = store.config.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
-    if (displayLines.length === 0) {
-      store.setInvalidPaths([]);
-      return;
-    }
+    const codebaseLines = (store.config.codebase.src || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
+    const refLines = (store.config.reference.src || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
 
-    const resolvedAbsPaths = displayLines.map((line) => PathMappingService.resolveToAbsolute(line, store.workspaceRoot));
+    const codebaseAbs = codebaseLines.map((l) => PathMappingService.resolveToAbsolute(l, store.workspaceRoot)).join(',');
+    const refAbs = refLines.map((l) => PathMappingService.resolveToAbsolute(l, store.workspaceRoot)).join(',');
 
-    fileSystemApiService
-      .getInvalidPaths(resolvedAbsPaths, store.workspaceRoot)
-      .then((invalid) => {
-        store.setInvalidPaths(invalid || []);
-      })
-      .catch(() => {});
-  }, [store.config.src, store.workspaceRoot]);
-
-  useEffect(() => {
-    const displayLines = store.config.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
-    const resolvedAbsPaths = displayLines.map((line) => PathMappingService.resolveToAbsolute(line, store.workspaceRoot));
-    const paths = resolvedAbsPaths.join(',');
-
-    const cmd = `python3 files-exporter.py --src '${paths || '.'}' --dest '${store.config.dest}' --format '${store.config.format}' --max-file ${store.config.max_file} --max-chunk ${store.config.max_chunk}${
+    const cmd = `python3 files-exporter.py --codebase-src '${codebaseAbs || '.'}'${refAbs ? ` --reference-src '${refAbs}'` : ''} --dest '${store.config.dest || ''}' --format '${store.config.format || 'yaml'}' --max-file ${store.config.codebase.max_file || '50'} --max-chunk ${store.config.max_chunk || '0'}${
       store.config.groupByExt ? ' --group-ext' : ''
     }${store.config.logConsole ? ' --log-console' : ''}${store.config.generateTreeView ? ' --tree-view' : ''}`;
     store.setCompiledBashCmd(cmd);
   }, [store.config, store.workspaceRoot]);
 
   const handleAddOpenFiles = async () => {
-    logInfo('[useExportConfiguration] handleAddOpenFiles starting...');
     try {
-      const currentDisplayLines = store.config.src ? store.config.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean) : [];
+      const currentDisplayLines = (store.config.codebase.src || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
       const currentAbsPaths = currentDisplayLines.map((line) => PathMappingService.resolveToAbsolute(line, store.workspaceRoot));
 
       const openFiles = await fileExporterApiService.getOpenEditorFiles(currentAbsPaths);
@@ -145,9 +147,8 @@ export function useExportConfiguration() {
   };
 
   const handleAddGitDiffFiles = async () => {
-    logInfo('[useExportConfiguration] handleAddGitDiffFiles starting...');
     try {
-      const currentDisplayLines = store.config.src ? store.config.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean) : [];
+      const currentDisplayLines = (store.config.codebase.src || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
       const currentAbsPaths = currentDisplayLines.map((line) => PathMappingService.resolveToAbsolute(line, store.workspaceRoot));
 
       const gitFiles = await fileExporterApiService.getGitDiffFiles(currentAbsPaths);
@@ -159,7 +160,6 @@ export function useExportConfiguration() {
   };
 
   const handleCopyLatestFiles = async () => {
-    logInfo('[useExportConfiguration] handleCopyLatestFiles starting...', [store.config.dest]);
     try {
       const res = await fileExporterApiService.copyLatestExportedFiles(store.config.dest);
       fileExporterApiService.showNotification(res.success ? 'info' : 'warn', res.message);
@@ -169,7 +169,6 @@ export function useExportConfiguration() {
   };
 
   const handleClearDestDir = async () => {
-    logInfo('[useExportConfiguration] handleClearDestDir starting...', [store.config.dest]);
     try {
       const res = await fileExporterApiService.clearDestDirectory(store.config.dest);
       fileExporterApiService.showNotification(res.success ? 'info' : 'warn', res.message);
@@ -178,46 +177,17 @@ export function useExportConfiguration() {
     }
   };
 
-  const handleOpenErrorModal = () => {
-    logInfo('[useExportConfiguration] handleOpenErrorModal starting...');
-    store.setModalState({ isErrorModalOpen: true });
-  };
-
-  const handleCloseErrorModal = () => {
-    logInfo('[useExportConfiguration] handleCloseErrorModal starting...');
-    store.setModalState({ isErrorModalOpen: false });
-  };
-
-  const handleOpenHistoryFile = async () => {
-    logInfo('[useExportConfiguration] handleOpenHistoryFile starting...');
-    try {
-      await fileExporterHistoryApiService.openHistoryFile();
-      logInfo('[useExportConfiguration] handleOpenHistoryFile completed');
-    } catch (err: any) {
-      logInfo('[useExportConfiguration] handleOpenHistoryFile error:', [err?.message || err]);
-    }
-  };
-
-  const handleRevealHistoryFolder = async () => {
-    logInfo('[useExportConfiguration] handleRevealHistoryFolder starting...');
-    try {
-      await fileExporterHistoryApiService.revealHistoryFile();
-      logInfo('[useExportConfiguration] handleRevealHistoryFolder completed');
-    } catch (err: any) {
-      logInfo('[useExportConfiguration] handleRevealHistoryFolder error:', [err?.message || err]);
-    }
-  };
+  const handleOpenErrorModal = () => store.setModalState({ isErrorModalOpen: true });
+  const handleCloseErrorModal = () => store.setModalState({ isErrorModalOpen: false });
 
   const handleRevealDestination = async () => {
     const formattedDest = store.config.dest || 'Default directory';
     const absDest = PathMappingService.resolveToAbsolute(formattedDest, store.workspaceRoot);
-    logInfo('[useExportConfiguration] handleRevealDestination starting...', [absDest]);
     await vsCodeApiService.revealInOsExplorer(absDest);
   };
 
   const handleOpenCursorLinePath = async () => {
-    logInfo('[useExportConfiguration] handleOpenCursorLinePath starting...');
-    const firstLine = store.config.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean)[0];
+    const firstLine = (store.config.codebase.src || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean)[0];
     if (firstLine) {
       const absPath = PathMappingService.resolveToAbsolute(firstLine, store.workspaceRoot);
       await fileExporterApiService.openPathAtCursor(absPath);
@@ -227,45 +197,13 @@ export function useExportConfiguration() {
   return {
     ...store,
     addPathsToConfig,
-    handleSelectProfile: async (id: string) => {
-      logInfo('[useExportConfiguration] handleSelectProfile starting...', [id]);
-      await store.selectProfile(id);
-    },
-    handleFreezeToggle: async (id: string) => {
-      logInfo('[useExportConfiguration] handleFreezeToggle starting...', [id]);
-      await store.freezeToggle(id);
-    },
-    handleResetConfig: () => {
-      logInfo('[useExportConfiguration] handleResetConfig starting...');
-      store.resetConfig();
-    },
-    handleRenameProfile: async (id: string, newName: string) => {
-      logInfo('[useExportConfiguration] handleRenameProfile starting...', [{ id, newName }]);
-      await store.renameProfile(id, newName);
-    },
-    handleDuplicateProfile: async (id: string) => {
-      logInfo('[useExportConfiguration] handleDuplicateProfile starting...', [id]);
-      await store.duplicateProfile(id);
-    },
-    handleAddProfile: async () => {
-      logInfo('[useExportConfiguration] handleAddProfile starting...');
-      await store.addProfile();
-    },
-    handleClearHistory: async () => {
-      logInfo('[useExportConfiguration] handleClearHistory starting...');
-      if (store.selectedProfileId !== 'default') {
-        await store.clearHistoryWithMode('remove-selected-hard');
-        await store.selectProfile('default');
-      }
-    },
+    addReferencePathsToConfig,
     handleAddOpenFiles,
     handleAddGitDiffFiles,
     handleCopyLatestFiles,
     handleClearDestDir,
     handleOpenErrorModal,
     handleCloseErrorModal,
-    handleOpenHistoryFile,
-    handleRevealHistoryFolder,
     handleRevealDestination,
     handleOpenCursorLinePath,
   };

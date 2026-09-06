@@ -3,11 +3,14 @@ import { PREDEFINED_PROMPTS_LIST, formatPredefinedPromptText } from '../data/pre
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { fileExporterApiService } from '@/services/api/file-exporter-api.service.gen';
+import { useExporterStore } from '../../../../store/useExporterStore';
 
 export function usePromptTab() {
   const defaultPrompt = PREDEFINED_PROMPTS_LIST[0];
   const [selectedPromptId, setSelectedPromptId] = useState<string>(defaultPrompt.id);
   const [promptText, setPromptText] = useState<string>(formatPredefinedPromptText(defaultPrompt));
+
+  const config = useExporterStore((s) => s.config);
 
   const handleSelectPrompt = (promptId: string) => {
     setSelectedPromptId(promptId);
@@ -19,10 +22,24 @@ export function usePromptTab() {
     }
   };
 
-  const handleCopyWithFullContext = () => {
+  const handleCopyWithFullContext = async () => {
     logInfo('[usePromptTab] Copy with full context handler triggered', [promptText]);
-    vsCodeApiService.copyToClipboard(promptText);
-    fileExporterApiService.showNotification('info', 'Prompt copied to clipboard with full context!');
+
+    const codebasePaths = (config.codebase?.src || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
+    const referencePaths = (config.reference?.src || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
+
+    try {
+      const res = await fileExporterApiService.copyFullContextToClipboard(codebasePaths, referencePaths, promptText);
+      if (res.success) {
+        fileExporterApiService.showNotification('info', res.message || 'Full context copied to clipboard!');
+      } else {
+        vsCodeApiService.copyToClipboard(promptText);
+        fileExporterApiService.showNotification('info', 'Prompt text copied to clipboard!');
+      }
+    } catch (err: any) {
+      vsCodeApiService.copyToClipboard(promptText);
+      fileExporterApiService.showNotification('info', 'Prompt text copied to clipboard!');
+    }
   };
 
   return {

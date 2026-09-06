@@ -16,6 +16,7 @@ export interface IFileExporterServicePort extends IBackendService {
   openPathAtCursor(path: string, lineNum?: number): Promise<void>;
   copyLatestExportedFiles(destDir: string): Promise<DestinationActionResult>;
   copySelectedFilesToClipboard(paths: string[]): Promise<ClipboardActionResult>;
+  copyFullContextToClipboard(codebasePaths: string[], referencePaths: string[], prompt: string): Promise<ClipboardActionResult>;
   clearDestDirectory(destDir: string): Promise<DestinationActionResult>;
   applyFileFilter(request: GeneratedFilesFilterRequest): Promise<GeneratedFilesFilterResult>;
   openBrowserTab(url: string, openInVSCode?: boolean): Promise<void>;

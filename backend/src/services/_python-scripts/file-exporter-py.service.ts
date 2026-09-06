@@ -2,13 +2,12 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { PythonScriptStatus } from "../../../../shared/services/_python-scripts";
-import { ExportArgs } from "../../../../shared/services/codebase-exporter/model/export-args";
 import { pythonScriptExecutionManager } from '../../managers/PythonScriptExecution.manager';
 import { ChildProcess } from 'child_process';
 import { getWorkspaceExtentionPath, getWorkspaceRoot } from '../../utils/utils-vscode';
-import { logInfo, logError, logWarn } from '../../utils/utils-log';
+import { logInfo, logError } from '../../utils/utils-log';
 
-export async function callFileExporterScript(exportArgs: ExportArgs): Promise<PythonScriptStatus> {
+export async function callFileExporterScript(exportArgs: any): Promise<PythonScriptStatus> {
     const rootPath = getWorkspaceRoot();
     const workspaceExtPath = getWorkspaceExtentionPath();
 
@@ -33,18 +32,16 @@ export async function callFileExporterScript(exportArgs: ExportArgs): Promise<Py
         throw new Error(errorMsg);
     }
 
-    logInfo(`[file-exporter-py] Resolved Python script path: ${pythonScriptPath}`);
-
-    const absoluteSourcesArray = makePathsAbsolute(exportArgs.paths || [], rootPath);
+    const absoluteCodebaseArray = makePathsAbsolute(exportArgs.paths || [], rootPath);
+    const absoluteReferenceArray = makePathsAbsolute(exportArgs.referencePaths || [], rootPath);
     const absoluteDestDirectory = makeSinglePathAbsolute(exportArgs.destDir || '', rootPath);
-    const concatenatedSources = absoluteSourcesArray.join(',');
 
     const runtimeData = {
         ...exportArgs,
         destDir: absoluteDestDirectory
     };
 
-    const args: string[] = buildArgs(runtimeData, concatenatedSources);
+    const args: string[] = buildArgs(runtimeData, absoluteCodebaseArray.join(','), absoluteReferenceArray.join(','));
 
     logInfo(`[file-exporter-py] Executing Python script with args: ${args.join(' ')}`);
 
@@ -55,8 +52,6 @@ export async function callFileExporterScript(exportArgs: ExportArgs): Promise<Py
         logError(errorMsg);
         throw new Error(errorMsg);
     }
-
-    logInfo(`[file-exporter-py] Successfully spawned Python process PID: ${childProcess.pid}`);
 
     const pythonScriptStatus = pythonScriptExecutionManager.getProcessStatus(childProcess.pid || 0);
     if (!pythonScriptStatus) {
@@ -70,7 +65,7 @@ export async function callFileExporterScript(exportArgs: ExportArgs): Promise<Py
 
 function makePathsAbsolute(paths: string[], workspaceRoot: string): string[] {
     return paths.map(p => {
-        let clean = p.replace(/^['"]|['"]$/g, '').trim();
+        let clean = (p || '').replace(/^['"]|['"]$/g, '').trim();
         if (!clean) return '';
         if (!path.isAbsolute(clean)) {
             return path.join(workspaceRoot, clean);
@@ -88,20 +83,25 @@ function makeSinglePathAbsolute(p: string, workspaceRoot: string): string {
     return clean;
 }
 
-function buildArgs(exportArgs: any, sources: string): string[] {
+function buildArgs(exportArgs: any, codebaseSources: string, referenceSources: string): string[] {
     if (!exportArgs.destDir || exportArgs.destDir.trim() === '') {
         throw new Error('Destination directory is not specified in export arguments.');
     }
 
-    if (!sources || sources.trim() === '') {
-        throw new Error('No source paths specified for export.');
-    }
+    const args: string[] = ['--dest', exportArgs.destDir];
 
-    const args: string[] = ['--src', sources, '--dest', exportArgs.destDir];
+    if (codebaseSources) {
+        args.push('--codebase-src', codebaseSources);
+    }
+    if (referenceSources) {
+        args.push('--reference-src', referenceSources);
+    }
+    if (exportArgs.prompt) {
+        args.push('--prompt', exportArgs.prompt);
+    }
 
     if (exportArgs.format) args.push('--format', exportArgs.format);
     if (exportArgs.mode) args.push('--mode', exportArgs.mode);
-    if (exportArgs.maxFile) args.push('--max-file', String(exportArgs.maxFile));
     if (exportArgs.maxChunk) args.push('--max-chunk', String(exportArgs.maxChunk));
     if (exportArgs.groupByExt) args.push('--group-ext');
     if (exportArgs.logConsole) args.push('--log-console');
@@ -111,10 +111,22 @@ function buildArgs(exportArgs: any, sources: string): string[] {
 
     const cleanFilters = (val: string) => val ? val.split(/[\n,]/).map(s => s.trim()).filter(Boolean).join(',') : '';
 
-    if (exportArgs.incPaths) args.push('--inc-paths', cleanFilters(exportArgs.incPaths));
-    if (exportArgs.excPaths) args.push('--exc-paths', cleanFilters(exportArgs.excPaths));
-    if (exportArgs.incExts) args.push('--inc-ext', cleanFilters(exportArgs.incExts));
-    if (exportArgs.excExts) args.push('--exc-ext', cleanFilters(exportArgs.excExts));
+    const codebase = exportArgs.config?.codebase || exportArgs.codebase || {};
+    const reference = exportArgs.config?.reference || exportArgs.reference || {};
+
+    // Codebase filters
+    if (codebase.inc_paths || exportArgs.codebaseIncPaths) args.push('--codebase-inc-paths', cleanFilters(codebase.inc_paths || exportArgs.codebaseIncPaths));
+    if (codebase.exc_paths || exportArgs.codebaseExcPaths) args.push('--codebase-exc-paths', cleanFilters(codebase.exc_paths || exportArgs.codebaseExcPaths));
+    if (codebase.inc_ext || exportArgs.codebaseIncExts) args.push('--codebase-inc-ext', cleanFilters(codebase.inc_ext || exportArgs.codebaseIncExts));
+    if (codebase.exc_ext || exportArgs.codebaseExcExts) args.push('--codebase-exc-ext', cleanFilters(codebase.exc_ext || exportArgs.codebaseExcExts));
+    if (codebase.max_file || exportArgs.codebaseMaxFile) args.push('--codebase-max-file', String(codebase.max_file || exportArgs.codebaseMaxFile));
+
+    // Reference filters
+    if (reference.inc_paths || exportArgs.referenceIncPaths) args.push('--reference-inc-paths', cleanFilters(reference.inc_paths || exportArgs.referenceIncPaths));
+    if (reference.exc_paths || exportArgs.referenceExcPaths) args.push('--reference-exc-paths', cleanFilters(reference.exc_paths || exportArgs.referenceExcPaths));
+    if (reference.inc_ext || exportArgs.referenceIncExts) args.push('--reference-inc-ext', cleanFilters(reference.inc_ext || exportArgs.referenceIncExts));
+    if (reference.exc_ext || exportArgs.referenceExcExts) args.push('--reference-exc-ext', cleanFilters(reference.exc_ext || exportArgs.referenceExcExts));
+    if (reference.max_file || exportArgs.referenceMaxFile) args.push('--reference-max-file', String(reference.max_file || exportArgs.referenceMaxFile));
 
     return args;
 }

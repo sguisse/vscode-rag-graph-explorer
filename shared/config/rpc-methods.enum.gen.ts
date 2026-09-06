@@ -39,6 +39,7 @@ export enum RpcMethodEnum {
     FILEEXPORTER_OPEN_PATH_AT_CURSOR = 'openPathAtCursor',
     FILEEXPORTER_COPY_LATEST_EXPORTED_FILES = 'copyLatestExportedFiles',
     FILEEXPORTER_COPY_SELECTED_FILES_TO_CLIPBOARD = 'copySelectedFilesToClipboard',
+    FILEEXPORTER_COPY_FULL_CONTEXT_TO_CLIPBOARD = 'copyFullContextToClipboard',
     FILEEXPORTER_CLEAR_DEST_DIRECTORY = 'clearDestDirectory',
     FILEEXPORTER_APPLY_FILE_FILTER = 'applyFileFilter',
     FILEEXPORTER_OPEN_BROWSER_TAB = 'openBrowserTab',

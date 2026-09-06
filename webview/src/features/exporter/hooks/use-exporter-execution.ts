@@ -19,7 +19,6 @@ export function useExporterExecution() {
     logInfo('[useExporterExecution] handleSaveConfig starting...');
 
     if (isDefault) {
-      logInfo('[useExporterExecution] Default configuration selected, creating new profile from current settings...');
       const wsName =
         store.currentRepo ||
         (store.workspaceRoot ? store.workspaceRoot.split(/[/\\]/).pop() || '' : 'workspace');
@@ -35,7 +34,6 @@ export function useExporterExecution() {
     const isFrozen = Boolean(selectedEntry?.frozen);
 
     if (isFrozen) {
-      logInfo('[useExporterExecution] Profile is locked, opening SaveLockedProfileDialog');
       store.setModalState({ isSaveLockedModalOpen: true });
       return;
     }
@@ -45,7 +43,6 @@ export function useExporterExecution() {
   };
 
   const handleDuplicateFromSaveModal = async () => {
-    logInfo('[useExporterExecution] handleDuplicateFromSaveModal starting...');
     store.setModalState({ isSaveLockedModalOpen: false });
 
     const id = store.selectedProfileId;
@@ -70,7 +67,6 @@ export function useExporterExecution() {
   };
 
   const handleForceSaveFromSaveModal = async () => {
-    logInfo('[useExporterExecution] handleForceSaveFromSaveModal starting...');
     store.setModalState({ isSaveLockedModalOpen: false });
 
     if (store.selectedProfileId !== 'default') {
@@ -85,29 +81,17 @@ export function useExporterExecution() {
 
     const validationErrors: string[] = [];
 
-    const srcErr = ExporterValidatorService.validatePathList(store.config.src, store.invalidPaths);
-    if (srcErr) validationErrors.push(`Source Paths: ${srcErr}`);
+    const srcErr = ExporterValidatorService.validatePathList(store.config.codebase.src || '', store.invalidPaths);
+    if (srcErr) validationErrors.push(`Codebase Paths: ${srcErr}`);
 
-    const destErr = ExporterValidatorService.validateDestDir(store.config.dest);
+    const destErr = ExporterValidatorService.validateDestDir(store.config.dest || '');
     if (destErr) validationErrors.push(`Destination Directory: ${destErr}`);
 
-    const maxFileErr = ExporterValidatorService.validateMaxFile(store.config.max_file);
+    const maxFileErr = ExporterValidatorService.validateMaxFile(store.config.codebase.max_file || '');
     if (maxFileErr) validationErrors.push(`Max File Size: ${maxFileErr}`);
 
-    const maxChunkErr = ExporterValidatorService.validateMaxChunk(store.config.max_chunk);
+    const maxChunkErr = ExporterValidatorService.validateMaxChunk(store.config.max_chunk || '');
     if (maxChunkErr) validationErrors.push(`Max Chunk Size: ${maxChunkErr}`);
-
-    const incPathsErr = ExporterValidatorService.validateRegexSyntax(store.config.inc_paths);
-    if (incPathsErr) validationErrors.push(`Include Paths Regex: ${incPathsErr}`);
-
-    const excPathsErr = ExporterValidatorService.validateRegexSyntax(store.config.exc_paths);
-    if (excPathsErr) validationErrors.push(`Exclude Paths Regex: ${excPathsErr}`);
-
-    const incExtErr = ExporterValidatorService.validateRegexSyntax(store.config.inc_ext);
-    if (incExtErr) validationErrors.push(`Include Extensions Regex: ${incExtErr}`);
-
-    const excExtErr = ExporterValidatorService.validateRegexSyntax(store.config.exc_ext);
-    if (excExtErr) validationErrors.push(`Exclude Extensions Regex: ${excExtErr}`);
 
     if (validationErrors.length > 0) {
       logInfo('[useExporterExecution] Export blocked due to validation errors', [validationErrors]);
@@ -122,39 +106,40 @@ export function useExporterExecution() {
     store.setActiveTab('terminal');
     store.appendTerminalLog(`\n🚀 [Codebase Exporter] Executing python export runner...\n`);
 
-    const displayLines = store.config.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
-    const resolvedAbsPaths = displayLines.map((line) => PathMappingService.resolveToAbsolute(line, store.workspaceRoot));
+    const codebaseLines = (store.config.codebase.src || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
+    const referenceLines = (store.config.reference.src || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
 
-    store.appendTerminalLog(`📂 Sources (${resolvedAbsPaths.length}): ${resolvedAbsPaths.join(', ')}\n`);
+    const resolvedAbsCodebase = codebaseLines.map((line) => PathMappingService.resolveToAbsolute(line, store.workspaceRoot));
+    const resolvedAbsReferences = referenceLines.map((line) => PathMappingService.resolveToAbsolute(line, store.workspaceRoot));
+
+    store.appendTerminalLog(`📂 Codebase Sources (${resolvedAbsCodebase.length}): ${resolvedAbsCodebase.join(', ')}\n`);
+    if (resolvedAbsReferences.length > 0) {
+      store.appendTerminalLog(`📚 Reference Sources (${resolvedAbsReferences.length}): ${resolvedAbsReferences.join(', ')}\n`);
+    }
     store.appendTerminalLog(`💾 Target Dir: ${store.config.dest}\n`);
 
-    if (resolvedAbsPaths.length === 0) {
-      store.appendTerminalLog(`❌ [Validation Error] No valid source paths defined.\n`);
-      store.setIsRunning(false);
-      return;
-    }
-
     try {
-      store.appendTerminalLog(`📡 [1/3] Sending RPC runExport request to backend...\n`);
+      store.appendTerminalLog(`📡 Sending RPC runExport request to backend...\n`);
       const runResponse = await fileExporterApiService.runExport({
         config: {
           ...store.config,
-          src: resolvedAbsPaths.join('\n'),
+          codebase: { ...store.config.codebase, src: resolvedAbsCodebase.join('\n') },
+          reference: { ...store.config.reference, src: resolvedAbsReferences.join('\n') },
         },
         currentHistoryId: store.selectedProfileId,
-        paths: resolvedAbsPaths,
+        paths: resolvedAbsCodebase,
+        referencePaths: resolvedAbsReferences,
         mode: 'standard',
       });
 
       const pid = runResponse?.pythonScriptStatus?.pid;
       if (!pid) {
-        store.appendTerminalLog(`❌ [Error] Backend returned invalid PID response: ${JSON.stringify(runResponse)}\n`);
+        store.appendTerminalLog(`❌ [Error] Backend returned invalid PID response.\n`);
         store.setIsRunning(false);
         return;
       }
 
-      store.appendTerminalLog(`⚡ [2/3] Python process spawned with PID ${pid}. Target Dir: ${runResponse.exportDirectory}\n`);
-      store.appendTerminalLog(`⏳ [3/3] Monitoring execution progress...\n`);
+      store.appendTerminalLog(`⚡ Python process spawned with PID ${pid}. Target Dir: ${runResponse.exportDirectory}\n`);
 
       let isDone = false;
       let checkCount = 0;
@@ -166,77 +151,40 @@ export function useExporterExecution() {
 
         try {
           const status = await fileExporterApiService.getExportStatus(pid);
-          if (!status?.pythonScriptStatus) {
-            store.appendTerminalLog(`⚠️ [Poll ${checkCount}s] Could not retrieve process status for PID ${pid}.\n`);
-            continue;
-          }
-
-          if (!status.pythonScriptStatus.isRunning) {
+          if (!status?.pythonScriptStatus?.isRunning) {
             isDone = true;
-            const exitCode = status.pythonScriptStatus.exitCode ?? 0;
-            if (exitCode === 0) {
-              store.appendTerminalLog(`✅ Process PID ${pid} completed successfully (exit code 0).\n`);
-            } else {
-              store.appendTerminalLog(`❌ Process PID ${pid} exited with non-zero exit code: ${exitCode}.\n`);
-            }
+            store.appendTerminalLog(`✅ Export completed successfully.\n`);
+            const result = await fileExporterApiService.getExportResult(
+              pid,
+              runResponse.exportDirectory,
+              runResponse.timestamp
+            );
+            if (result?.report) {
+              store.setReportData(result.report.results);
 
-            try {
-              store.appendTerminalLog(`📄 Reading export results and report for PID ${pid}...\n`);
-              const result = await fileExporterApiService.getExportResult(
-                pid,
-                runResponse.exportDirectory,
-                runResponse.timestamp
-              );
-              if (result?.report) {
-                store.setReportData({
-                  summary: result.report.results.summary,
-                  metrics_per_extension: result.report.results.metrics_per_extension,
-                  generated_files: result.report.results.generated_files,
-                  tree_manifest: result.report.results.tree_manifest,
-                  estimatedInputTokens: result.estimatedInputTokens,
-                });
-                const totalExported = result.report.results.summary?.total_exported ?? 0;
-                store.appendTerminalLog(`📊 Export Report Loaded: ${totalExported} files exported.\n`);
-
-                if (store.config.copyGeneratedFilesToClipboard) {
-                  await fileExporterApiService.copyLatestExportedFiles(runResponse.exportDirectory);
-                  store.appendTerminalLog(`📋 Generated export files successfully stored in OS clipboard!\n`);
-                }
-              } else {
-                store.appendTerminalLog(`⚠️ Result Parsing: Report data empty or unavailable.\n`);
+              if (store.config.copyGeneratedFilesToClipboard) {
+                await fileExporterApiService.copyLatestExportedFiles(runResponse.exportDirectory);
+                store.appendTerminalLog(`📋 Export files copied to clipboard!\n`);
               }
-            } catch (e: any) {
-              store.appendTerminalLog(`❌ Result Parsing Error: ${e?.message || JSON.stringify(e)}\n`);
             }
-          } else if (checkCount % 5 === 0) {
-            store.appendTerminalLog(`⏳ [Poll ${checkCount}s] Python process PID ${pid} is still running...\n`);
           }
         } catch (pollErr: any) {
-          store.appendTerminalLog(`⚠️ Status check error (attempt ${checkCount}): ${pollErr?.message || pollErr}\n`);
+          store.appendTerminalLog(`⚠️ Status check error: ${pollErr?.message || pollErr}\n`);
         }
-      }
-
-      if (!isDone) {
-        store.appendTerminalLog(`⚠️ [Timeout] Process PID ${pid} did not finish within ${maxChecks} seconds.\n`);
       }
     } catch (err: any) {
       store.appendTerminalLog(`❌ Export Error: ${err?.message || JSON.stringify(err)}\n`);
-      if (err?.stack) {
-        store.appendTerminalLog(`🔍 Stack Trace:\n${err.stack}\n`);
-      }
     } finally {
       store.setIsRunning(false);
     }
   };
 
   const handleKillExport = async () => {
-    logInfo('[useExporterExecution] handleKillExport starting...');
     store.setIsRunning(false);
-    store.appendTerminalLog(`\n🛑 Process export terminated by user.\n`);
+    store.appendTerminalLog(`\n🛑 Export process killed.\n`);
   };
 
   const handleOpenExchangeUrl = (url: string, inBrowserTab: boolean = false) => {
-    logInfo('[useExporterExecution] handleOpenExchangeUrl starting...', [{ url, inBrowserTab }]);
     fileExporterApiService.openBrowserTab(url, inBrowserTab);
   };
 
@@ -251,16 +199,10 @@ export function useExporterExecution() {
     handleOpenExchangeUrl,
     compiledBashCmd: store.compiledBashCmd,
     terminalLogs: store.terminalLogs,
-    clearTerminalLogs: () => {
-      logInfo('[useExporterExecution] clearTerminalLogs starting...');
-      store.clearTerminalLogs();
-    },
+    clearTerminalLogs: () => store.clearTerminalLogs(),
     reportData: store.reportData,
     activeTab: store.activeTab,
-    setActiveTab: (tab: any) => {
-      logInfo('[useExporterExecution] setActiveTab starting...', [tab]);
-      store.setActiveTab(tab);
-    },
+    setActiveTab: (tab: any) => store.setActiveTab(tab),
     exchangeLinks: store.exchangeLinks,
     modalState: store.modalState,
     setModalState: store.setModalState,
