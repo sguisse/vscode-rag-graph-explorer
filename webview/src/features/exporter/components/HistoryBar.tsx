@@ -169,6 +169,7 @@ export const HistoryBar: React.FC<HistoryBarProps> = ({
             onBlur={() => onConfirmRename?.()}
             className="flex-1 h-7 font-mono text-xs"
             autoFocus
+            data-tooltip="Press 'Enter' to confirm or 'Escape' to cancel edits"
           />
         ) : (
           <Select
@@ -282,8 +283,14 @@ export const HistoryBar: React.FC<HistoryBarProps> = ({
             size="icon-xs"
             variant="ghost"
             onClick={handleClearHistory}
-            disabled={isDefault}
-            data-tooltip={isDefault ? 'Default configuration cannot be deleted' : 'Delete selected profile configuration'}
+            disabled={isDefault || Boolean(selectedEntry?.frozen)}
+            data-tooltip={
+              isDefault
+                ? 'Default configuration cannot be deleted'
+                : selectedEntry?.frozen
+                ? "Locked profile can't be removed, unlock it before !"
+                : 'Delete selected profile configuration'
+            }
             className="hover:text-destructive disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <Trash2 size={13} />

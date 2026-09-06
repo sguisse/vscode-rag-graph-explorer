@@ -1,15 +1,17 @@
 import React from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { BarChart3, Files, Terminal, HelpCircle, MessageSquareText } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
+import { LeftCenterRightPanel } from '@/components/app/left-center-right-panel';
 import { useExporterExecution } from '../hooks/use-exporter-execution';
 import { useExporterStore } from '../store/useExporterStore';
 import { ActionToolbar } from './ActionToolbar';
-import { ReportTab } from './tabs/ReportTab';
+import { ExternalLinks } from './ExternalLinks';
+import { ReportTab } from './tabs/report/ReportTab';
 import { FilesTab } from './tabs/FilesTab';
 import { TerminalTab } from './tabs/TerminalTab';
 import { HelpTab } from './tabs/HelpTab';
-import { SimulationTab } from './tabs/SimulationTab';
-import { TreeTab } from './tabs/TreeTab';
+import { PromptTab } from './tabs/prompt/PromptTab';
 import { ValidationErrorDialog } from './ValidationErrorDialog';
 import { SaveLockedProfileDialog } from './SaveLockedProfileDialog';
 import { fileExporterApiService } from '@/services/api/file-exporter-api.service.gen';
@@ -41,9 +43,9 @@ export function ExporterPanel() {
   const { config, setConfig, workspaceRoot, historyList, selectedProfileId } = useExporterStore();
   const selectedEntry = historyList.find((h) => h.id === selectedProfileId);
 
-  const handleTabChange = (val: string) => {
+  const handleTabChange = (val: ExporterTabId) => {
     logInfo('[ExporterPanel] Active tab changed', [val]);
-    setActiveTab(val as ExporterTabId);
+    setActiveTab(val);
   };
 
   const topContent = (
@@ -53,28 +55,94 @@ export function ExporterPanel() {
       onSaveConfig={handleSaveConfig}
       onRunExport={handleRunExport}
       onKillExport={handleKillExport}
-      onOpenExchangeUrl={handleOpenExchangeUrl}
-      exchangeLinks={exchangeLinks}
     />
   );
 
   const middleContent = (
-    <Tabs
-      value={activeTab}
-      onValueChange={handleTabChange}
-      className="flex-1 flex flex-col h-full min-h-0 p-2 overflow-hidden"
-    >
-      <TabsList className="bg-muted p-1 border-b border-border flex-wrap h-auto gap-1 shrink-0">
-        <TabsTrigger value="report" className="text-xs font-mono font-bold">REPORT</TabsTrigger>
-        <TabsTrigger value="files" className="text-xs font-mono font-bold">FILES</TabsTrigger>
-        <TabsTrigger value="tree" className="text-xs font-mono font-bold">TREE MANIFEST</TabsTrigger>
-        <TabsTrigger value="terminal" className="text-xs font-mono font-bold">TERMINAL</TabsTrigger>
-        <TabsTrigger value="help" className="text-xs font-mono font-bold">HELP</TabsTrigger>
-        <TabsTrigger value="simu" className="text-xs font-mono font-bold">SIMULATION B</TabsTrigger>
-      </TabsList>
+    <div className="flex flex-col h-full w-full min-h-0 font-mono text-xs overflow-hidden">
+      {/* Tab Navigation Toolbar using LeftCenterRightPanel */}
+      <LeftCenterRightPanel
+        id="exporter-tab-navigation-panel"
+        className="bg-muted/60 p-1 border-b border-border shrink-0"
+        left={
+          <div className="flex items-center gap-1 flex-wrap">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleTabChange('report')}
+              className={`h-6 px-2.5 text-[11px] gap-1.5 cursor-pointer font-bold transition-all rounded-md ${
+                activeTab === 'report'
+                  ? 'bg-background text-foreground border border-border/60 shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-background/40 border border-transparent'
+              }`}
+            >
+              <BarChart3 size={13} className={activeTab === 'report' ? 'text-primary' : ''} />
+              <span>REPORT</span>
+            </Button>
 
-      <div className="flex-1 min-h-0 overflow-y-auto mt-2">
-        <TabsContent value="report" className="h-full m-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleTabChange('files')}
+              className={`h-6 px-2.5 text-[11px] gap-1.5 cursor-pointer font-bold transition-all rounded-md ${
+                activeTab === 'files'
+                  ? 'bg-background text-foreground border border-border/60 shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-background/40 border border-transparent'
+              }`}
+            >
+              <Files size={13} className={activeTab === 'files' ? 'text-primary' : ''} />
+              <span>FILES</span>
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleTabChange('terminal')}
+              className={`h-6 px-2.5 text-[11px] gap-1.5 cursor-pointer font-bold transition-all rounded-md ${
+                activeTab === 'terminal'
+                  ? 'bg-background text-foreground border border-border/60 shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-background/40 border border-transparent'
+              }`}
+            >
+              <Terminal size={13} className={activeTab === 'terminal' ? 'text-primary' : ''} />
+              <span>TERMINAL</span>
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleTabChange('prompt')}
+              className={`h-6 px-2.5 text-[11px] gap-1.5 cursor-pointer font-bold transition-all rounded-md ${
+                activeTab === 'prompt'
+                  ? 'bg-background text-foreground border border-border/60 shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-background/40 border border-transparent'
+              }`}
+            >
+              <MessageSquareText size={13} className={activeTab === 'prompt' ? 'text-primary' : ''} />
+              <span>PROMPT</span>
+            </Button>
+          </div>
+        }
+        right={
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleTabChange('help')}
+            className={`h-6 px-2.5 text-[11px] gap-1.5 cursor-pointer font-bold transition-all rounded-md ${
+              activeTab === 'help'
+                ? 'bg-background text-foreground border border-border/60 shadow-xs'
+                : 'text-muted-foreground hover:text-foreground hover:bg-background/40 border border-transparent'
+            }`}
+          >
+            <HelpCircle size={13} className={activeTab === 'help' ? 'text-primary' : ''} />
+            <span>HELP</span>
+          </Button>
+        }
+      />
+
+      {/* Tab Content Panels */}
+      <div className="flex-1 min-h-0 overflow-y-auto relative">
+        {activeTab === 'report' && (
           <ReportTab
             reportData={reportData}
             onAppendExtension={(ext, mode) => {
@@ -89,10 +157,28 @@ export function ExporterPanel() {
               logInfo('[ExporterPanel] onSetMaxFileSize', [kb]);
               setConfig((prev) => ({ ...prev, max_file: String(kb) }));
             }}
+            onExcludeTreePattern={(pattern) => {
+              logInfo('[ExporterPanel] ReportTab onExcludeTreePattern', [pattern]);
+              setConfig((prev) => ({
+                ...prev,
+                exc_paths: prev.exc_paths ? `${prev.exc_paths}\n${pattern}` : pattern,
+              }));
+            }}
+            onCaptureTreePaths={(paths) => {
+              logInfo('[ExporterPanel] ReportTab onCaptureTreePaths', paths);
+              if (paths.length > 0) {
+                setConfig((prev) => {
+                  const current = prev.src ? prev.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean) : [];
+                  const flatNew = paths.flatMap((p) => p.split(/[,\n\r]+/)).map((s) => s.trim()).filter(Boolean);
+                  const formatted = flatNew.map((p) => PathMappingService.registerPath(p, workspaceRoot));
+                  return { ...prev, src: Array.from(new Set([...current, ...formatted])).join('\n') };
+                });
+              }
+            }}
           />
-        </TabsContent>
+        )}
 
-        <TabsContent value="files" className="h-full m-0">
+        {activeTab === 'files' && (
           <FilesTab
             reportData={reportData}
             destDir={config.dest}
@@ -105,33 +191,9 @@ export function ExporterPanel() {
               fileExporterApiService.openPathAtCursor(p);
             }}
           />
-        </TabsContent>
+        )}
 
-        <TabsContent value="tree" className="h-full m-0">
-          <TreeTab
-            rootNode={reportData?.tree_manifest?.root || null}
-            onExcludePattern={(pattern) => {
-              logInfo('[ExporterPanel] TreeTab onExcludePattern', [pattern]);
-              setConfig((prev) => ({
-                ...prev,
-                exc_paths: prev.exc_paths ? `${prev.exc_paths}\n${pattern}` : pattern,
-              }));
-            }}
-            onCaptureSelectedPaths={(paths) => {
-              logInfo('[ExporterPanel] TreeTab onCaptureSelectedPaths', paths);
-              if (paths.length > 0) {
-                setConfig((prev) => {
-                  const current = prev.src ? prev.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean) : [];
-                  const flatNew = paths.flatMap((p) => p.split(/[,\n\r]+/)).map((s) => s.trim()).filter(Boolean);
-                  const formatted = flatNew.map((p) => PathMappingService.registerPath(p, workspaceRoot));
-                  return { ...prev, src: Array.from(new Set([...current, ...formatted])).join('\n') };
-                });
-              }
-            }}
-          />
-        </TabsContent>
-
-        <TabsContent value="terminal" className="h-full m-0">
+        {activeTab === 'terminal' && (
           <TerminalTab
             compiledBashCmd={compiledBashCmd}
             terminalLogs={terminalLogs}
@@ -148,27 +210,26 @@ export function ExporterPanel() {
               clearTerminalLogs();
             }}
           />
-        </TabsContent>
+        )}
 
-        <TabsContent value="help" className="h-full m-0">
-          <HelpTab />
-        </TabsContent>
+        {activeTab === 'prompt' && <PromptTab />}
 
-        <TabsContent value="simu" className="h-full m-0">
-          <SimulationTab
-            onInjectPaths={(paths) => {
-              logInfo('[ExporterPanel] SimulationTab onInjectPaths', paths);
-              setConfig((prev) => {
-                const current = prev.src ? prev.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean) : [];
-                const flatNew = paths.flatMap((p) => p.split(/[,\n\r]+/)).map((s) => s.trim()).filter(Boolean);
-                const formatted = flatNew.map((p) => PathMappingService.registerPath(p, workspaceRoot));
-                return { ...prev, src: Array.from(new Set([...current, ...formatted])).join('\n') };
-              });
-            }}
-          />
-        </TabsContent>
+        {activeTab === 'help' && <HelpTab />}
       </div>
-    </Tabs>
+    </div>
+  );
+
+  const bottomContent = (
+    <LeftCenterRightPanel
+      id="exporter-footer-panel"
+      className="p-2 bg-card border-t border-border font-mono text-xs shrink-0"
+      right={
+        <ExternalLinks
+          exchangeLinks={exchangeLinks}
+          onOpenExchangeUrl={handleOpenExchangeUrl}
+        />
+      }
+    />
   );
 
   return (
@@ -178,6 +239,7 @@ export function ExporterPanel() {
         className="bg-background w-full h-full min-h-0 overflow-hidden"
         top={topContent}
         middle={middleContent}
+        bottom={bottomContent}
       />
 
       <ValidationErrorDialog

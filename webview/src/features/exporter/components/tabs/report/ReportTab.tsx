@@ -1,15 +1,3 @@
-#!/usr/bin/env bash
-
-# Exit immediately if a command exits with a non-zero status
-set -e
-
-echo "🚀 Setting initial split width to 50% in ReportTab..."
-
-# 1. Ensure target directory exists
-mkdir -p webview/src/features/exporter/components/tabs/report
-
-# 2. Update ReportTab.tsx with 50% initial container width calculation
-cat << 'EOF' > webview/src/features/exporter/components/tabs/report/ReportTab.tsx
 import React, { useRef, useState, useEffect } from 'react';
 import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
 import { ResizableContainer } from '@/components/app/container/resizable-container';
@@ -101,6 +89,3 @@ export const ReportTab: React.FC<ReportTabProps> = ({
 };
 
 export default ReportTab;
-EOF
-
-echo "✅ feat: Configured ReportTab horizontal split width to 50% at initial mount!"

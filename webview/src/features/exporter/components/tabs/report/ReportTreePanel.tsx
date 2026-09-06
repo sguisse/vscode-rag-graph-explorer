@@ -1,74 +1,34 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Folder, FileCode, ChevronRight, ChevronDown, FolderOpen, Ban, Search, X } from 'lucide-react';
 import { TreeManifestNode } from '@/shared/services/file-exporter/model/file-exporter-model';
-import { fileExporterApiService } from '@/services/api/file-exporter-api.service.gen';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
+import { useReportTree } from './hooks/use-report-tree';
 
-export interface TreeTabProps {
+export interface ReportTreePanelProps {
   rootNode: TreeManifestNode | null;
-  onExcludePattern: (pattern: string, isExt: boolean) => void;
-  onCaptureSelectedPaths: (paths: string[]) => void;
+  onExcludePattern?: (pattern: string, isExt: boolean) => void;
+  onCaptureSelectedPaths?: (paths: string[]) => void;
 }
 
-export function TreeTab({ rootNode, onExcludePattern, onCaptureSelectedPaths }: TreeTabProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [useRegex, setUseRegex] = useState(false);
-  const [viewMode, setViewMode] = useState<'standard' | 'extension'>('standard');
-  const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({});
-  const [checkedKeys, setCheckedKeys] = useState<Record<string, boolean>>({});
-
-  const toggleExpand = (pathKey: string) => {
-    logInfo('[TreeTab] toggleExpand handler triggered', [pathKey]);
-    setExpandedKeys((prev) => ({ ...prev, [pathKey]: !prev[pathKey] }));
-  };
-
-  const toggleCheck = (pathKey: string, node: TreeManifestNode) => {
-    logInfo('[TreeTab] toggleCheck handler triggered', [pathKey]);
-    const isChecked = !checkedKeys[pathKey];
-    const newChecked = { ...checkedKeys };
-
-    const updateChildChecks = (n: TreeManifestNode) => {
-      newChecked[n.absolute_path] = isChecked;
-      if (n.children) {
-        Object.values(n.children).forEach(updateChildChecks);
-      }
-    };
-
-    updateChildChecks(node);
-    setCheckedKeys(newChecked);
-  };
-
-  const handleOpenFile = (path: string) => {
-    logInfo('[TreeTab] handleOpenFile handler triggered', [path]);
-    fileExporterApiService.openPathAtCursor(path);
-  };
-
-  const handleRevealNode = (path: string) => {
-    logInfo('[TreeTab] handleRevealNode handler triggered', [path]);
-    fileExporterApiService.openPathAtCursor(path);
-  };
-
-  const handleExcludePattern = (pattern: string, isExt: boolean) => {
-    logInfo('[TreeTab] handleExcludePattern handler triggered', [{ pattern, isExt }]);
-    onExcludePattern(pattern, isExt);
-  };
-
-  const handleToggleViewMode = () => {
-    const nextMode = viewMode === 'standard' ? 'extension' : 'standard';
-    logInfo('[TreeTab] handleToggleViewMode handler triggered', [nextMode]);
-    setViewMode(nextMode);
-  };
-
-  const handleCaptureSelected = () => {
-    logInfo('[TreeTab] handleCaptureSelected handler triggered');
-    const selected = Object.entries(checkedKeys)
-      .filter(([_, v]) => v)
-      .map(([k]) => k);
-    onCaptureSelectedPaths(selected);
-  };
+export function ReportTreePanel({ rootNode, onExcludePattern, onCaptureSelectedPaths }: ReportTreePanelProps) {
+  const {
+    searchQuery,
+    setSearchQuery,
+    useRegex,
+    viewMode,
+    expandedKeys,
+    checkedKeys,
+    toggleExpand,
+    toggleCheck,
+    handleOpenFile,
+    handleRevealNode,
+    handleExcludePattern,
+    handleToggleViewMode,
+    handleCaptureSelected,
+  } = useReportTree({ onExcludePattern, onCaptureSelectedPaths });
 
   const renderNode = (node: TreeManifestNode, depth: number = 0): React.ReactNode => {
     const isDir = node.type === 'directory';
@@ -87,11 +47,11 @@ export function TreeTab({ rootNode, onExcludePattern, onCaptureSelectedPaths }: 
     return (
       <div key={node.absolute_path} className="font-mono text-xs select-none">
         <div
-          className="flex items-center gap-1.5 hover:bg-muted/40 px-2 py-0.5 rounded transition-colors"
+          className="flex items-center gap-1.5 hover:bg-muted/40 px-2 py-0.5 rounded transition-colors group"
           style={{ paddingLeft: `${depth * 16 + 8}px` }}
         >
           {isDir ? (
-            <button onClick={() => toggleExpand(node.absolute_path)} className="text-muted-foreground p-0 h-4 w-4">
+            <button onClick={() => toggleExpand(node.absolute_path)} className="text-muted-foreground p-0 h-4 w-4 cursor-pointer">
               {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
             </button>
           ) : (
@@ -144,21 +104,25 @@ export function TreeTab({ rootNode, onExcludePattern, onCaptureSelectedPaths }: 
 
   if (!rootNode) {
     return (
-      <div className="p-8 text-center text-muted-foreground font-mono text-xs italic">
+      <div className="p-8 text-center text-muted-foreground font-mono text-xs italic border border-border rounded-md bg-card">
         No tree manifest generated. Enable Tree View setting and run export.
       </div>
     );
   }
 
   return (
-    <div className="space-y-3 bg-background p-4 font-mono text-xs">
-      <div className="flex flex-wrap items-center justify-between gap-2 bg-card p-2 border border-border rounded">
-        <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+    <div className="space-y-3 bg-card border border-border rounded-md p-3 font-mono text-xs h-full flex flex-col min-h-0">
+      <div className="font-bold text-foreground text-xs">
+        🌳 Tree Manifest
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2 bg-muted/30 p-2 border border-border rounded shrink-0">
+        <div className="flex items-center gap-2 flex-1 min-w-[180px]">
           <Search size={13} className="text-muted-foreground shrink-0" />
           <Input
             value={searchQuery}
             onChange={(e) => {
-              logInfo('[TreeTab] searchQuery changed', [e.target.value]);
+              logInfo('[ReportTreePanel] searchQuery changed', [e.target.value]);
               setSearchQuery(e.target.value);
             }}
             placeholder="Search manifest nodes..."
@@ -166,7 +130,7 @@ export function TreeTab({ rootNode, onExcludePattern, onCaptureSelectedPaths }: 
           />
           {searchQuery && (
             <Button size="icon-xs" variant="ghost" onClick={() => {
-              logInfo('[TreeTab] searchQuery cleared');
+              logInfo('[ReportTreePanel] searchQuery cleared');
               setSearchQuery('');
             }}>
               <X size={12} />
@@ -193,9 +157,11 @@ export function TreeTab({ rootNode, onExcludePattern, onCaptureSelectedPaths }: 
         </div>
       </div>
 
-      <div className="p-2 bg-card border border-border rounded max-h-[450px] overflow-y-auto space-y-0.5">
+      <div className="p-2 bg-background border border-border rounded flex-1 min-h-0 overflow-y-auto space-y-0.5">
         {renderNode(rootNode)}
       </div>
     </div>
   );
 }
+
+export default ReportTreePanel;

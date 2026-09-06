@@ -1,6 +1,6 @@
 import { ExportConfig, HistoryEntry, ExportReportData } from '@/shared/services/file-exporter/model/file-exporter-model';
 
-export type ExporterTabId = 'report' | 'files' | 'terminal' | 'help' | 'simu' | 'tree';
+export type ExporterTabId = 'report' | 'files' | 'terminal' | 'prompt' | 'help';
 
 export interface ExporterModalState {
   isErrorModalOpen: boolean;

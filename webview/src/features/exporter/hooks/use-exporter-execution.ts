@@ -17,6 +17,21 @@ export function useExporterExecution() {
 
   const handleSaveConfig = async () => {
     logInfo('[useExporterExecution] handleSaveConfig starting...');
+
+    if (isDefault) {
+      logInfo('[useExporterExecution] Default configuration selected, creating new profile from current settings...');
+      const wsName =
+        store.currentRepo ||
+        (store.workspaceRoot ? store.workspaceRoot.split(/[/\\]/).pop() || '' : 'workspace');
+      const newName = generateNewConfigName(wsName);
+      const newId = await store.addProfile(store.config);
+      if (newId) {
+        await store.renameProfile(newId, newName);
+        fileExporterApiService.showNotification('info', `New profile '${newName}' created successfully!`);
+      }
+      return;
+    }
+
     const isFrozen = Boolean(selectedEntry?.frozen);
 
     if (isFrozen) {

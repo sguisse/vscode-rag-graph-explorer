@@ -1,5 +1,6 @@
 export * from './components/ExportConfigurationPanel';
 export * from './components/ExporterPanel';
+export * from './components/ExternalLinks';
 export * from './components/DeleteProfileDialog';
 export * from './components/SaveLockedProfileDialog';
 export * from './components/ValidationErrorDialog';
