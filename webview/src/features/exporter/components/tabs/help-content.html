@@ -1,0 +1,208 @@
+<div class="space-y-4 p-4 font-mono text-xs text-foreground bg-background leading-relaxed select-none">
+
+    <div class="p-3 bg-primary/10 border border-primary/20 rounded-md font-bold text-primary flex items-center justify-between text-xs">
+        <span class="flex items-center gap-2">📖 User Guide & Cheat Sheet</span>
+        <span class="text-[10px] bg-primary/20 px-2 py-0.5 rounded text-primary border border-primary/30">Files Exporter v1.5</span>
+    </div>
+
+    <div class="p-3 bg-card border-l-4 border-l-primary border border-border/60 rounded-r-md text-muted-foreground leading-normal">
+        <strong class="text-foreground">Welcome to Files Exporter!</strong> This tool aggregates and serializes multiple workspace files into unified multi-format text structures (chunks) ideal for LLM context injection, compliance auditing, or static code reviews.
+    </div>
+
+    <div class="space-y-1.5">
+        <h3 class="font-bold text-primary text-xs flex items-center gap-1.5">🛑 Prerequisites</h3>
+        <ul class="list-disc list-inside space-y-1 text-muted-foreground pl-2 text-[11px]">
+            <li><strong class="text-foreground">Python3:</strong> You must have Python 3 installed on your system. It is needed to run the local Python scripts for file processing.</li>
+        </ul>
+    </div>
+
+    <div class="space-y-1.5">
+        <h3 class="font-bold text-primary text-xs flex items-center gap-1.5">➡️ Core Workflows</h3>
+        <ul class="list-disc list-inside space-y-1 text-muted-foreground pl-2 text-[11px]">
+            <li><strong class="text-foreground">Source Specification:</strong> Paste multi-line absolute or relative folders/files paths inside the <em>Source Paths</em> text area. You can drop paths separated by commas, semicolons, or newlines.</li>
+            <li><strong class="text-foreground">Adaptive Configuration Profiles:</strong> Profiles are auto-saved on execution. Use Freeze/Unfreeze icons to lock a stable configuration against modifications or dynamic variable overwrites.</li>
+            <li><strong class="text-foreground">Verification:</strong> The workspace background engine checks for invalid locations and values, which will instantly flash in pastel red to block broken build runs.</li>
+        </ul>
+    </div>
+
+    <div class="space-y-2">
+        <h3 class="font-bold text-primary text-xs flex items-center gap-1.5">🎯 Advanced Filtering Regex Specifications</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="p-3 bg-card border border-border/60 rounded-md space-y-1">
+                <strong class="text-emerald-500 font-bold block">✅ Path Inclusion / Exclusion Rules</strong>
+                <p class="text-muted-foreground text-[11px]">Evaluated line-by-line relative to the target directory root:</p>
+                <div class="p-2 bg-muted/40 border border-border/40 rounded text-[11px] font-mono leading-tight space-y-0.5">
+                    <div><code class="text-primary">.*/node_modules/.*</code> → Skips dependency trees</div>
+                    <div><code class="text-primary">.*/(src|lib)/.*</code> → Targets business logic only</div>
+                </div>
+            </div>
+            <div class="p-3 bg-card border border-border/60 rounded-md space-y-1">
+                <strong class="text-emerald-500 font-bold block">🟢 Extension Inclusion / Exclusion Rules</strong>
+                <p class="text-muted-foreground text-[11px]">Matches explicit file signatures before executing read routines:</p>
+                <div class="p-2 bg-muted/40 border border-border/40 rounded text-[11px] font-mono leading-tight space-y-0.5">
+                    <div><code class="text-primary">.*\.(ts|js|py)$</code> → Allows specific languages</div>
+                    <div><code class="text-primary">.*\.(png|jpg|exe|zip)$</code> → Disallows binaries</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="space-y-2">
+        <h3 class="font-bold text-primary text-xs flex items-center gap-1.5">📦 Optimization Parameters</h3>
+        <div class="overflow-x-auto border border-border/60 rounded-md">
+            <table class="w-full text-left border-collapse text-[11px]">
+                <thead>
+                    <tr class="bg-muted font-bold text-primary border-b border-border/60">
+                        <th class="p-2 border-r border-border/60 w-1/4">Parameter</th>
+                        <th class="p-2 border-r border-border/60">Functional Specification</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-border/40 bg-card">
+                    <tr class="hover:bg-muted/30 transition-colors">
+                        <td class="p-2 border-r border-border/40 font-bold text-foreground">Max File (KB)</td>
+                        <td class="p-2 border-r border-border/40 text-muted-foreground">
+                            Explicitly rejects single source files that cross this size limit. Safeguards memory allocation.<br>
+                            Size of the file extension excluded are displayed in the report table in column <strong class="text-foreground">Size Rejected</strong> with min and max file size. To let you readjust the filter rules or increase the limit if needed.
+                        </td>
+                    </tr>
+                    <tr class="hover:bg-muted/30 transition-colors">
+                        <td class="p-2 border-r border-border/40 font-bold text-foreground">Max Chunk (KB)</td>
+                        <td class="p-2 border-r border-border/40 text-muted-foreground">
+                            Automatically cuts output documents when hitting size bounds and generates indexed part files (e.g., _01.yaml). Set to 0 for unlimited.
+                            <ul class="list-disc list-inside mt-1 space-y-0.5 pl-1 font-mono text-[10px] text-foreground">
+                                <li>export-2026-06-08_12-28-10_01.yaml</li>
+                                <li>export-2026-06-08_12-28-10_02.yaml</li>
+                                <li>export-2026-06-08_12-28-10_03.yaml</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    <tr class="hover:bg-muted/30 transition-colors">
+                        <td class="p-2 border-r border-border/40 font-bold text-foreground">Split by Ext</td>
+                        <td class="p-2 border-r border-border/40 text-muted-foreground">
+                            Isolates data streams and forces discrete output files whenever the underlying source code type transitions.
+                            <ul class="list-disc list-inside mt-1 space-y-0.5 pl-1 font-mono text-[10px]">
+                                <li class="text-amber-500 font-semibold">export-2026-06-08_12-28-10_<strong>java</strong>_01.xml</li>
+                                <li class="text-amber-500 font-semibold">export-2026-06-08_12-28-10_<strong>java</strong>_02.xml</li>
+                                <li class="text-indigo-400 font-semibold">export-2026-06-08_12-28-10_<strong>properties</strong>_01.xml</li>
+                                <li class="text-emerald-500 font-semibold">export-2026-06-08_12-28-10_<strong>md</strong>_01.xml</li>
+                                <li class="text-emerald-500 font-semibold">export-2026-06-08_12-28-10_<strong>md</strong>_02.xml</li>
+                            </ul>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="space-y-3">
+        <h3 class="font-bold text-primary text-xs flex items-center gap-1.5">💡 Pro-Tips</h3>
+
+        <div class="p-3 bg-card border border-border/60 rounded-md space-y-1.5">
+            <strong class="text-foreground font-bold flex items-center gap-1">📋 Clipboard Sync</strong>
+            <ul class="list-disc list-inside space-y-1 text-muted-foreground text-[11px] pl-1">
+                <li>Navigate to the <strong class="text-foreground">TERMINAL</strong> tab to review the compiled shell command built dynamically from your screen selections.</li>
+                <li>Click 📋 to copy and run headless exports outside of VS Code via standard automation task runners.</li>
+            </ul>
+        </div>
+
+        <div class="p-3 bg-card border border-border/60 rounded-md space-y-2">
+            <strong class="text-foreground font-bold flex items-center gap-1">🤖 Work with LLM Clients outside VS Code / IntelliJ (Gemini, ChatGPT, ...)</strong>
+            <ul class="list-disc list-inside space-y-1.5 text-muted-foreground text-[11px] pl-1">
+                <li>Select only folders/files needed by LLM to create/adapt/analyze your code/documentation to limit context size (tokens 💰/🌱) and improve performance.</li>
+                <li>Disable ◻️ <strong class="text-foreground">Split by ext</strong> to prevent automatic file splitting based on file extensions.</li>
+                <li>Select '<strong class="text-foreground">YAML</strong>' as <strong class="text-foreground">Output Format</strong> for better compatibility with LLM clients.</li>
+                <li>After '<strong class="text-foreground">Run Export</strong>', go to <strong class="text-foreground">FILES</strong> tab to open the OS file explorer directly on the generated file with 📂.</li>
+                <li>Drag & Drop the file in LLM chat to include it in context attachments.</li>
+                <li>Then you can use this sample <strong class="text-foreground">prompt template</strong> (or in '<em>Gems</em>' for Gemini):
+                    <button id="btn-copy-sample-prompt" class="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-muted hover:bg-muted/80 text-primary border border-border transition-colors cursor-pointer align-middle">
+                        📋 Copy Prompt
+                    </button>
+                    <ul id="sample-prompt-content" class="mt-2 space-y-1.5 bg-muted/30 p-2.5 border border-border/40 rounded text-[11px] text-foreground">
+                        <li><strong>Role:</strong>
+                            <ul class="list-disc list-inside pl-3 text-muted-foreground">
+                                <li>You act as an expert <strong class="text-primary">Software Architect and Senior Developer</strong> specializing in <strong class="text-primary">VS Code Extensions and JavaScript/Webview development.</strong></li>
+                            </ul>
+                        </li>
+                        <li><strong>Context:</strong>
+                            <ul class="list-disc list-inside pl-3 text-muted-foreground">
+                                <li>Deeply analyze the provided partial codebase in the attachment (file named: "<strong>xxxxxxx</strong>") to understand its current tab system, component structure, and state management.</li>
+                                <li>Read also the related technical documentation in the attachment (file named: "<strong>xxxxxxx</strong>") to strictly follow and respect during your code generation.</li>
+                            </ul>
+                        </li>
+                        <li><strong>Expected:</strong>
+                            <ul class="list-disc list-inside pl-3 text-muted-foreground">
+                                <li><strong class="text-primary">[[ Create a new tab component named "Help" inside 'src/webview/components/help-tab.js' that renders the application's user guide in clean HTML/JSX.</strong></li>
+                                <li><strong class="text-primary">Integrate this new "Help" tab into the existing Webview layout. This requires modifying other related files to inject the new tab alongside existing ones without breaking or overwriting them. ]]</strong></li>
+                            </ul>
+                        </li>
+                        <li><strong>Output:</strong>
+                            <button id="btn-copy-output-rules" class="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-muted hover:bg-muted/80 text-primary border border-border transition-colors cursor-pointer align-middle">
+                                📋 Copy Output Rules
+                            </button>
+                            <ul id="sample-output-rules-content" class="mt-2 space-y-1 text-muted-foreground pl-3 list-disc">
+                                <li>All code, comment, label, doc are provided in English.</li>
+                                <li>Does not give any theoretical explanation, introduction or textual conclusion outside of the script. Output ONLY the Bash script block.</li>
+                                <li>Provide the entire output as a <strong class="text-foreground">SINGLE</strong>, self-contained, and production-ready Bash script ('*.sh') actionable at the workspace root.</li>
+                                <li>The script must manage the creation of the necessary folders ('mkdir -p').</li>
+                                <li>For the <strong class="text-foreground">NEW</strong> file, use a full 'cat &lt;&lt; 'EOF' &gt; path/to/file' block. No snippets, no truncation comments, no "...".</li>
+                                <li>For the <strong class="text-foreground">EXISTING</strong> related files, DO NOT overwrite them completely. Instead, write precise automated modification commands (using sed, awk, or robust line-matching replacements) to inject only the necessary delta. If update is too complicated, prefer full file content! If user includes "/full", force providing full file content.</li>
+                                <li><strong class="text-destructive">CRITICAL (MARKDOWN &amp; BACKTICK ESCAPE PROTOCOL)</strong>: Safely manage syntax conflict between triple-backticks of LLM chat Markdown and backticks/template literals in script. Declare safe ASCII representation variables at script start: <code>BTICK=$(printf '\x60')</code> or <code>TRIPLE_TICK=$(printf '\x60\x60\x60')</code>. Use these variables inside your generation or cat blocks instead of outputting raw backticks.</li>
+                                <li>Ensure that the script is 100% compliant, complete, and directly executable locally after 'chmod +x'.</li>
+                                <li>At the end of the script:
+                                    <ul class="list-disc list-inside pl-3 space-y-0.5">
+                                        <li>You should provide a summary of changes in one short line started with an emoji.<br>
+                                            - Like : <em>echo "✅ feat/fix: Hovering over the KILL capsule now correctly shows the interactive hand pointer cursor!"</em>
+                                        </li>
+                                        <li>You can also add command to rebuild the project like "npm run compile", "mvn clean install", ... depending on project type.</li>
+                                        <li>If you detect needed missing referenced file(s) in your context, prevent you to finalize the code generation, provide the list of missing files and ask the user to provide them before you can continue.</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+                <li>Then copy/paste the generated Bash script into a file named '<strong class="text-foreground">patch.sh</strong>' in workspace root and execute it!</li>
+                <li>Refresh workspace if needed to see changes.</li>
+            </ul>
+        </div>
+
+        <div class="p-3 bg-card border border-border/60 rounded-md space-y-2">
+            <strong class="text-foreground font-bold flex items-center gap-1">📓 Work with NotebookLM</strong>
+            <ul class="list-disc list-inside space-y-1 text-muted-foreground text-[11px] pl-1">
+                <li>Select only folders/files needed to limit context size and improve performance.</li>
+                <li>Enable ☑️ <strong class="text-foreground">Split by Ext</strong> to force automatic file splitting based on file extensions.</li>
+                <li>Select '<strong class="text-foreground">TXT</strong>' as <strong class="text-foreground">Output Format</strong> for compatibility with NotebookLM.</li>
+                <li>After '<strong class="text-foreground">Run Export</strong>', click on 📂 at right of <strong class="text-foreground">Destination Directory</strong> to open OS file explorer.</li>
+                <li>Drag & Drop files into NotebookLM sources list.</li>
+                <li>Then you can apply any prompt and use available tools on injected files content.</li>
+                <li>For reminder actually (2026/06/10), only the following file types are supported by NotebookLM:
+                    <ul class="list-disc list-inside pl-3 space-y-0.5 mt-1 text-[10px]">
+                        <li><strong class="text-foreground">Text &amp; Data:</strong> txt, md, csv</li>
+                        <li><strong class="text-foreground">Documents &amp; Presentations:</strong> pdf, docx, pptx, epub</li>
+                        <li><strong class="text-foreground">Audio:</strong> aac, aif, aifc, aiff, amr, au, cda, m4a, mid, mp3, ogg, opus, ra, ram, snd, wav, wma</li>
+                        <li><strong class="text-foreground">Video:</strong> 3g2, 3gp, avi, mp4, mpeg</li>
+                        <li><strong class="text-foreground">Images:</strong> avif, bmp, gif, ico, jp2, png, webp, tif, tiff, heic, heif, jpeg, jpg, jpe</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        <div class="p-3 bg-card border border-border/60 rounded-md space-y-1.5">
+            <strong class="text-foreground font-bold flex items-center gap-1">🔗 Information Resources & Icon Sources</strong>
+            <ul class="list-disc list-inside space-y-1 text-muted-foreground text-[11px] pl-1">
+                <li><a href="https://github.com/sguisse/vscode-files-exporter/blob/main/user-guide.md" target="_blank" class="text-primary underline hover:opacity-80">Files Exporter - User Guide</a></li>
+                <li><a href="https://github.com/sguisse/vscode-files-exporter/blob/main/scenario.md" target="_blank" class="text-primary underline hover:opacity-80">Sample complete Use-Case: How to add a new feature to your application</a></li>
+                <li><a href="https://github.com/sguisse/vscode-files-exporter/blob/main/faq.md" target="_blank" class="text-primary underline hover:opacity-80">FAQ</a></li>
+                <li>To use for settings, config, development:
+                    <ul class="list-disc list-inside pl-3 space-y-0.5">
+                        <li><a href="https://zonalogo.com/" target="_blank" class="text-primary underline hover:opacity-80">Zonalogo - Find other brand icons to use in exchange config</a></li>
+                        <li><a href="https://simpleicons.org/" target="_blank" class="text-primary underline hover:opacity-80">SimpleIcons - 3446 SVG icons for popular brands</a></li>
+                        <li><a href="https://github.com/microsoft/vscode-codicons" target="_blank" class="text-primary underline hover:opacity-80">VSCode specific icons - codicons</a></li>
+                        <li><a href="https://primer.style/octicons/" target="_blank" class="text-primary underline hover:opacity-80">Octicons - A scalable set of icons handcrafted by GitHub</a></li>
+                        <li><a href="https://icon-sets.iconify.design/" target="_blank" class="text-primary underline hover:opacity-80">Iconify Design - Search 295307 icons from 212 icon sets...</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
