@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Folder, FileCode, ChevronRight, ChevronDown, FolderOpen, Ban, Search, X } from 'lucide-react';
 import { TreeManifestNode } from '@/shared/services/file-exporter/model/file-exporter-model';
-import { filesExporterApiService } from '@/services/api/files-exporter-api.service.gen';
+import { fileExporterApiService } from '@/services/api/file-exporter-api.service.gen';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 export interface TreeTabProps {
@@ -43,12 +43,12 @@ export function TreeTab({ rootNode, onExcludePattern, onCaptureSelectedPaths }: 
 
   const handleOpenFile = (path: string) => {
     logInfo('[TreeTab] handleOpenFile handler triggered', [path]);
-    filesExporterApiService.openPathAtCursor(path);
+    fileExporterApiService.openPathAtCursor(path);
   };
 
   const handleRevealNode = (path: string) => {
     logInfo('[TreeTab] handleRevealNode handler triggered', [path]);
-    filesExporterApiService.openPathAtCursor(path);
+    fileExporterApiService.openPathAtCursor(path);
   };
 
   const handleExcludePattern = (pattern: string, isExt: boolean) => {

@@ -1,5 +1,5 @@
 import { useExporterStore } from '../store/useExporterStore';
-import { filesExporterApiService } from '@/services/api/files-exporter-api.service.gen';
+import { fileExporterApiService } from '@/services/api/file-exporter-api.service.gen';
 import { ExporterValidatorService } from '../utils/validator.service';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { PathMappingService } from '../utils/path-resolver';
@@ -26,7 +26,7 @@ export function useExporterExecution() {
     }
 
     await store.saveProfile();
-    filesExporterApiService.showNotification('info', 'Configuration saved successfully!');
+    fileExporterApiService.showNotification('info', 'Configuration saved successfully!');
   };
 
   const handleDuplicateFromSaveModal = async () => {
@@ -61,7 +61,7 @@ export function useExporterExecution() {
     if (store.selectedProfileId !== 'default') {
       await store.freezeToggle(store.selectedProfileId);
       await store.saveProfile();
-      filesExporterApiService.showNotification('info', 'Profile unlocked and configuration saved!');
+      fileExporterApiService.showNotification('info', 'Profile unlocked and configuration saved!');
     }
   };
 
@@ -121,7 +121,7 @@ export function useExporterExecution() {
 
     try {
       store.appendTerminalLog(`📡 [1/3] Sending RPC runExport request to backend...\n`);
-      const runResponse = await filesExporterApiService.runExport({
+      const runResponse = await fileExporterApiService.runExport({
         config: {
           ...store.config,
           src: resolvedAbsPaths.join('\n'),
@@ -150,7 +150,7 @@ export function useExporterExecution() {
         checkCount++;
 
         try {
-          const status = await filesExporterApiService.getExportStatus(pid);
+          const status = await fileExporterApiService.getExportStatus(pid);
           if (!status?.pythonScriptStatus) {
             store.appendTerminalLog(`⚠️ [Poll ${checkCount}s] Could not retrieve process status for PID ${pid}.\n`);
             continue;
@@ -167,7 +167,7 @@ export function useExporterExecution() {
 
             try {
               store.appendTerminalLog(`📄 Reading export results and report for PID ${pid}...\n`);
-              const result = await filesExporterApiService.getExportResult(
+              const result = await fileExporterApiService.getExportResult(
                 pid,
                 runResponse.exportDirectory,
                 runResponse.timestamp
@@ -184,7 +184,7 @@ export function useExporterExecution() {
                 store.appendTerminalLog(`📊 Export Report Loaded: ${totalExported} files exported.\n`);
 
                 if (store.config.copyGeneratedFilesToClipboard) {
-                  await filesExporterApiService.copyLatestExportedFiles(runResponse.exportDirectory);
+                  await fileExporterApiService.copyLatestExportedFiles(runResponse.exportDirectory);
                   store.appendTerminalLog(`📋 Generated export files successfully stored in OS clipboard!\n`);
                 }
               } else {
@@ -222,7 +222,7 @@ export function useExporterExecution() {
 
   const handleOpenExchangeUrl = (url: string) => {
     logInfo('[useExporterExecution] handleOpenExchangeUrl starting...', [url]);
-    filesExporterApiService.openBrowserTab(url, true);
+    fileExporterApiService.openBrowserTab(url, true);
   };
 
   return {

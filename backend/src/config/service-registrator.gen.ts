@@ -7,8 +7,8 @@ import { ServiceEnum } from '../../../shared/config/service-enum.gen';
 
 import { CodebaseExporterAdapter } from '../services/codebase-exporter/codebase-exporter-service.adapter';
 import { BlastRadiusErrorFilesIdentificatorAdapter } from '../services/errors/blast-radius-error-files-identificator-service.adapter';
-import { FilesExporterHistoryAdapter } from '../services/file-exporter/fe-history-service.adapter';
-import { FilesExporterAdapter } from '../services/file-exporter/files-exporter-service.adapter';
+import { FileExporterHistoryAdapter } from '../services/file-exporter/file-exporter-history-service.adapter';
+import { FileExporterAdapter } from '../services/file-exporter/file-exporter-service.adapter';
 import { FileSystemAdapter } from '../services/file-system/file-system-service.adapter';
 import { GitServiceAdapter } from '../services/git/git-service.adapter';
 import { GraphRagExplorerAdapter } from '../services/graph-rag-explorer/grag-explorer-service.adapter';
@@ -23,8 +23,8 @@ import { UrlServiceAdapter } from '../services/url/url-service.adapter';
 import { VsCodeServiceAdapter } from '../services/vscode/vscode-service.adapter';
 import { ICodebaseExporterServicePort } from '../../../shared/services/codebase-exporter/port-out/codebase-exporter-service.port';
 import { IBlastRadiusErrorFilesIdentificatorServicePort } from '../../../shared/services/errors/port-out/blast-radius-error-files-identificator-service.port';
-import { IFilesExporterHistoryServicePort } from '../../../shared/services/file-exporter/port-out/fe-history-service.port';
-import { IFilesExporterServicePort } from '../../../shared/services/file-exporter/port-out/file-exporter-service.port';
+import { IFileExporterHistoryServicePort } from '../../../shared/services/file-exporter/port-out/file-exporter-history-service.port';
+import { IFileExporterServicePort } from '../../../shared/services/file-exporter/port-out/file-exporter-service.port';
 import { IFileSystemServicePort } from '../../../shared/services/file-system/port-out/file-system-service.port';
 import { IGitServicePort } from '../../../shared/services/git/port-out/git-service.port';
 import { IGraphRagExplorerServicePort } from '../../../shared/services/graph-rag-explorer/port-out/grag-explorer-service.port';
@@ -41,8 +41,8 @@ import { IVsCodeServicePort } from '../../../shared/services/vscode/port-out/vsc
 export interface BackendServicesMap {
     [ServiceEnum.CODEBASE_EXPORTER]: ICodebaseExporterServicePort;
     [ServiceEnum.BLAST_RADIUS_ERROR_FILES_IDENTIFICATOR]: IBlastRadiusErrorFilesIdentificatorServicePort;
-    [ServiceEnum.FILES_EXPORTER_HISTORY]: IFilesExporterHistoryServicePort;
-    [ServiceEnum.FILES_EXPORTER]: IFilesExporterServicePort;
+    [ServiceEnum.FILE_EXPORTER_HISTORY]: IFileExporterHistoryServicePort;
+    [ServiceEnum.FILE_EXPORTER]: IFileExporterServicePort;
     [ServiceEnum.FILE_SYSTEM]: IFileSystemServicePort;
     [ServiceEnum.GIT]: IGitServicePort;
     [ServiceEnum.GRAPH_RAG_EXPLORER]: IGraphRagExplorerServicePort;
@@ -69,13 +69,13 @@ export function registerServices(context: vscode.ExtensionContext): void {
     serviceRegistry.register(ServiceEnum.BLAST_RADIUS_ERROR_FILES_IDENTIFICATOR, blastRadiusErrorFilesIdentificatorService);
     context.subscriptions.push(blastRadiusErrorFilesIdentificatorService);
 
-    const filesExporterHistoryService = new FilesExporterHistoryAdapter();
-    serviceRegistry.register(ServiceEnum.FILES_EXPORTER_HISTORY, filesExporterHistoryService);
-    context.subscriptions.push(filesExporterHistoryService);
+    const fileExporterHistoryService = new FileExporterHistoryAdapter();
+    serviceRegistry.register(ServiceEnum.FILE_EXPORTER_HISTORY, fileExporterHistoryService);
+    context.subscriptions.push(fileExporterHistoryService);
 
-    const filesExporterService = new FilesExporterAdapter();
-    serviceRegistry.register(ServiceEnum.FILES_EXPORTER, filesExporterService);
-    context.subscriptions.push(filesExporterService);
+    const fileExporterService = new FileExporterAdapter();
+    serviceRegistry.register(ServiceEnum.FILE_EXPORTER, fileExporterService);
+    context.subscriptions.push(fileExporterService);
 
     const fileSystemService = new FileSystemAdapter();
     serviceRegistry.register(ServiceEnum.FILE_SYSTEM, fileSystemService);

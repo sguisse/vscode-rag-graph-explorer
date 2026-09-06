@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useExporterStore } from '../store/useExporterStore';
-import { filesExporterHistoryApiService } from '@/services/api/files-exporter-history-api.service.gen';
-import { filesExporterApiService } from '@/services/api/files-exporter-api.service.gen';
+import { fileExporterHistoryApiService } from '@/services/api/file-exporter-history-api.service.gen';
+import { fileExporterApiService } from '@/services/api/file-exporter-api.service.gen';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { fileSystemApiService } from '@/services/api/file-system-api.service.gen';
 import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
@@ -136,9 +136,9 @@ export function useExportConfiguration() {
       const currentDisplayLines = store.config.src ? store.config.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean) : [];
       const currentAbsPaths = currentDisplayLines.map((line) => PathMappingService.resolveToAbsolute(line, store.workspaceRoot));
 
-      const openFiles = await filesExporterApiService.getOpenEditorFiles(currentAbsPaths);
+      const openFiles = await fileExporterApiService.getOpenEditorFiles(currentAbsPaths);
       addPathsToConfig(openFiles);
-      filesExporterApiService.showNotification('info', `Added open editor files (${openFiles.length} total paths)`);
+      fileExporterApiService.showNotification('info', `Added open editor files (${openFiles.length} total paths)`);
     } catch (err: any) {
       logInfo('[useExportConfiguration] Error adding open files:', [err]);
     }
@@ -150,9 +150,9 @@ export function useExportConfiguration() {
       const currentDisplayLines = store.config.src ? store.config.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean) : [];
       const currentAbsPaths = currentDisplayLines.map((line) => PathMappingService.resolveToAbsolute(line, store.workspaceRoot));
 
-      const gitFiles = await filesExporterApiService.getGitDiffFiles(currentAbsPaths);
+      const gitFiles = await fileExporterApiService.getGitDiffFiles(currentAbsPaths);
       addPathsToConfig(gitFiles);
-      filesExporterApiService.showNotification('info', `Added modified Git files (${gitFiles.length} total paths)`);
+      fileExporterApiService.showNotification('info', `Added modified Git files (${gitFiles.length} total paths)`);
     } catch (err: any) {
       logInfo('[useExportConfiguration] Error adding Git diff files:', [err]);
     }
@@ -161,8 +161,8 @@ export function useExportConfiguration() {
   const handleCopyLatestFiles = async () => {
     logInfo('[useExportConfiguration] handleCopyLatestFiles starting...', [store.config.dest]);
     try {
-      const res = await filesExporterApiService.copyLatestExportedFiles(store.config.dest);
-      filesExporterApiService.showNotification(res.success ? 'info' : 'warn', res.message);
+      const res = await fileExporterApiService.copyLatestExportedFiles(store.config.dest);
+      fileExporterApiService.showNotification(res.success ? 'info' : 'warn', res.message);
     } catch (err: any) {
       logInfo('[useExportConfiguration] Error copying latest files:', [err]);
     }
@@ -171,8 +171,8 @@ export function useExportConfiguration() {
   const handleClearDestDir = async () => {
     logInfo('[useExportConfiguration] handleClearDestDir starting...', [store.config.dest]);
     try {
-      const res = await filesExporterApiService.clearDestDirectory(store.config.dest);
-      filesExporterApiService.showNotification(res.success ? 'info' : 'warn', res.message);
+      const res = await fileExporterApiService.clearDestDirectory(store.config.dest);
+      fileExporterApiService.showNotification(res.success ? 'info' : 'warn', res.message);
     } catch (err: any) {
       logInfo('[useExportConfiguration] Error clearing dest dir:', [err]);
     }
@@ -191,7 +191,7 @@ export function useExportConfiguration() {
   const handleOpenHistoryFile = async () => {
     logInfo('[useExportConfiguration] handleOpenHistoryFile starting...');
     try {
-      await filesExporterHistoryApiService.openHistoryFile();
+      await fileExporterHistoryApiService.openHistoryFile();
       logInfo('[useExportConfiguration] handleOpenHistoryFile completed');
     } catch (err: any) {
       logInfo('[useExportConfiguration] handleOpenHistoryFile error:', [err?.message || err]);
@@ -201,7 +201,7 @@ export function useExportConfiguration() {
   const handleRevealHistoryFolder = async () => {
     logInfo('[useExportConfiguration] handleRevealHistoryFolder starting...');
     try {
-      await filesExporterHistoryApiService.revealHistoryFile();
+      await fileExporterHistoryApiService.revealHistoryFile();
       logInfo('[useExportConfiguration] handleRevealHistoryFolder completed');
     } catch (err: any) {
       logInfo('[useExportConfiguration] handleRevealHistoryFolder error:', [err?.message || err]);
@@ -220,7 +220,7 @@ export function useExportConfiguration() {
     const firstLine = store.config.src.split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean)[0];
     if (firstLine) {
       const absPath = PathMappingService.resolveToAbsolute(firstLine, store.workspaceRoot);
-      await filesExporterApiService.openPathAtCursor(absPath);
+      await fileExporterApiService.openPathAtCursor(absPath);
     }
   };
 

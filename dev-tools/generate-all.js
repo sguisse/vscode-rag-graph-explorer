@@ -1,4 +1,5 @@
 const path = require('path');
+const fs = require('fs');
 
 console.log('🚀 Starting full code generation pipeline...\n');
 

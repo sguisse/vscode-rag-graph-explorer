@@ -2,7 +2,7 @@
 // Rebuild using: npm run generate:webview-api-services
 
 import { RpcMethodEnum } from '@/shared/config/rpc-methods.enum.gen';
-import { AbstractApiService } from './abstract-api.service';
+import { AbstractApiService } from '@/services/abstract-api.service';
 import { IImageServicePort } from '@/shared/services/image/port-out/image-service.port';
 
 class ImageApiService extends AbstractApiService implements IImageServicePort {

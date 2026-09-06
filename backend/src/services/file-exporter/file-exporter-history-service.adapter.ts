@@ -14,13 +14,13 @@ import {
   HistoryClearRequest,
   HistoryClearResult,
 } from '../../../../shared/services/file-exporter/model/file-exporter-model';
-import { IFilesExporterHistoryServicePort } from '../../../../shared/services/file-exporter/port-out/fe-history-service.port';
+import { IFileExporterHistoryServicePort } from '../../../../shared/services/file-exporter/port-out/file-exporter-history-service.port';
 import { vsCodeSettingsManager } from '../../managers/VsCodeSettings.manager';
 import { serviceRegistry } from '../../core/ServiceRegistry';
 import { ServiceEnum } from '../../../../shared/config/service-enum.gen';
 import { IVsCodeServicePort } from '../../../../shared/services/vscode/port-out/vscode-service.port';
 
-export class FilesExporterHistoryAdapter extends AbstractServiceAdapter implements IFilesExporterHistoryServicePort, vscode.Disposable {
+export class FileExporterHistoryAdapter extends AbstractServiceAdapter implements IFileExporterHistoryServicePort, vscode.Disposable {
   private getHistoryFilePathResolved(): string {
     const rawPath = vsCodeSettingsManager.getSettings().exporter.historyYamlPath || '~/files-exporter/.files-exporter-history.yaml';
     if (rawPath.startsWith('~')) {

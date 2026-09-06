@@ -1,7 +1,7 @@
 import { IBackendService } from '../../../core/backend-service.port';
 import { FilesExporterInitialState, FilesExporterRunRequest, FilesExporterRunResponse, FilesExporterStatus, FilesExporterResult, FilterSimulationRequest, FilterSimulationResult, GeneratedFilesFilterRequest, GeneratedFilesFilterResult, DestinationActionResult, ClipboardActionResult, FilesExporterNotificationType } from '../model/file-exporter-model';
 
-export interface IFilesExporterServicePort extends IBackendService {
+export interface IFileExporterServicePort extends IBackendService {
   getInitialState(pendingPaths?: string[]): Promise<FilesExporterInitialState>;
   runExport(request: FilesExporterRunRequest): Promise<FilesExporterRunResponse>;
   getExportStatus(pid: number): Promise<FilesExporterStatus>;

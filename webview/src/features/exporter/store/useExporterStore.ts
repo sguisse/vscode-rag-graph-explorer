@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { filesExporterApiService } from '@/services/api/files-exporter-api.service.gen';
-import { filesExporterHistoryApiService } from '@/services/api/files-exporter-history-api.service.gen';
+import { fileExporterApiService } from '@/services/api/file-exporter-api.service.gen';
+import { fileExporterHistoryApiService } from '@/services/api/file-exporter-history-api.service.gen';
 import { DEFAULT_EXPORT_CONFIG } from '../constants/exporter-constants';
 import {
   ExportConfig,
@@ -148,7 +148,7 @@ export const useExporterStore = create<ExporterStoreState>((set, get) => ({
 
   fetchInitialState: async () => {
     try {
-      const init = await filesExporterApiService.getInitialState();
+      const init = await fileExporterApiService.getInitialState();
       set({
         defaultConfig: init.defaultConfig,
         config: init.currentConfig,
@@ -169,7 +169,7 @@ export const useExporterStore = create<ExporterStoreState>((set, get) => ({
   saveProfile: async () => {
     const { config, selectedProfileId, currentRepo } = get();
     try {
-      const res = await filesExporterHistoryApiService.saveHistory(config, selectedProfileId, currentRepo);
+      const res = await fileExporterHistoryApiService.saveHistory(config, selectedProfileId, currentRepo);
       set({ historyList: res.history, selectedProfileId: res.selectedId });
     } catch (e) {
       console.error('[useExporterStore] Error saving profile:', e);
@@ -192,7 +192,7 @@ export const useExporterStore = create<ExporterStoreState>((set, get) => ({
     const target = historyList.find((h) => h.id === id);
     if (!target) return;
     try {
-      const updated = await filesExporterHistoryApiService.toggleFreeze(id, !target.frozen);
+      const updated = await fileExporterHistoryApiService.toggleFreeze(id, !target.frozen);
       set({ historyList: updated });
     } catch (e) {
       console.error('[useExporterStore] Error toggling freeze:', e);
@@ -211,7 +211,7 @@ export const useExporterStore = create<ExporterStoreState>((set, get) => ({
 
   renameProfile: async (id, newName) => {
     try {
-      const updated = await filesExporterHistoryApiService.updateEntryDisplay(id, newName);
+      const updated = await fileExporterHistoryApiService.updateEntryDisplay(id, newName);
       set({ historyList: updated });
     } catch (e) {
       console.error('[useExporterStore] Error renaming profile:', e);
@@ -221,7 +221,7 @@ export const useExporterStore = create<ExporterStoreState>((set, get) => ({
   duplicateProfile: async (id) => {
     const { currentRepo } = get();
     try {
-      const res = await filesExporterHistoryApiService.duplicateEntry(id, currentRepo);
+      const res = await fileExporterHistoryApiService.duplicateEntry(id, currentRepo);
       set({ historyList: res.history, selectedProfileId: res.newId });
       return res.newId;
     } catch (e) {
@@ -234,7 +234,7 @@ export const useExporterStore = create<ExporterStoreState>((set, get) => ({
     const { defaultConfig, workspaceRoot, currentRepo } = get();
     const targetConfig = customConfig || defaultConfig;
     try {
-      const res = await filesExporterHistoryApiService.addNewEntry(targetConfig, workspaceRoot, currentRepo);
+      const res = await fileExporterHistoryApiService.addNewEntry(targetConfig, workspaceRoot, currentRepo);
       set({ historyList: res.history, selectedProfileId: res.newId, config: targetConfig });
       return res.newId;
     } catch (e) {
@@ -249,7 +249,7 @@ export const useExporterStore = create<ExporterStoreState>((set, get) => ({
       return;
     }
     try {
-      const res = await filesExporterHistoryApiService.clearHistoryWithMode({ selectedId: selectedProfileId, mode });
+      const res = await fileExporterHistoryApiService.clearHistoryWithMode({ selectedId: selectedProfileId, mode });
       if (res && Array.isArray(res.history)) {
         set({ historyList: res.history, selectedProfileId: res.selectedId || 'default' });
         if (!res.selectedId || res.selectedId === 'default') {

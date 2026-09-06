@@ -2,7 +2,7 @@
 // Rebuild using: npm run generate:webview-api-services
 
 import { RpcMethodEnum } from '@/shared/config/rpc-methods.enum.gen';
-import { AbstractApiService } from './abstract-api.service';
+import { AbstractApiService } from '@/services/abstract-api.service';
 import { IChatRequestDto } from '@/shared/services/llm-chat/model/dto/chat-request.dto';
 import { IChatResponseDto, IChatStreamChunkDto, ILlmHealthResultDto } from '@/shared/services/llm-chat/model/dto/chat-response.dto';
 import { LlmProvider } from '@/shared/services/llm-chat/types/llm-provider.enum';

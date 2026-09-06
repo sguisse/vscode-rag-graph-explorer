@@ -12,7 +12,7 @@ import { SimulationTab } from './tabs/SimulationTab';
 import { TreeTab } from './tabs/TreeTab';
 import { ValidationErrorDialog } from './ValidationErrorDialog';
 import { SaveLockedProfileDialog } from './SaveLockedProfileDialog';
-import { filesExporterApiService } from '@/services/api/files-exporter-api.service.gen';
+import { fileExporterApiService } from '@/services/api/file-exporter-api.service.gen';
 import { ExporterTabId } from '../types/exporter.types';
 import { PathMappingService } from '../utils/path-resolver';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
@@ -98,11 +98,11 @@ export function ExporterPanel() {
             destDir={config.dest}
             onOpenFile={(p) => {
               logInfo('[ExporterPanel] FilesTab onOpenFile', [p]);
-              filesExporterApiService.openPathAtCursor(p);
+              fileExporterApiService.openPathAtCursor(p);
             }}
             onRevealFile={(p) => {
               logInfo('[ExporterPanel] FilesTab onRevealFile', [p]);
-              filesExporterApiService.openPathAtCursor(p);
+              fileExporterApiService.openPathAtCursor(p);
             }}
           />
         </TabsContent>
@@ -137,11 +137,11 @@ export function ExporterPanel() {
             terminalLogs={terminalLogs}
             onCopyBashCmd={() => {
               logInfo('[ExporterPanel] TerminalTab onCopyBashCmd');
-              filesExporterApiService.showNotification('info', 'Command copied to clipboard');
+              fileExporterApiService.showNotification('info', 'Command copied to clipboard');
             }}
             onCopyTerminalLogs={() => {
               logInfo('[ExporterPanel] TerminalTab onCopyTerminalLogs');
-              filesExporterApiService.showNotification('info', 'Logs copied to clipboard');
+              fileExporterApiService.showNotification('info', 'Logs copied to clipboard');
             }}
             onClearTerminalLogs={() => {
               logInfo('[ExporterPanel] TerminalTab onClearTerminalLogs');

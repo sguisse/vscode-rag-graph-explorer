@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useExporterStore } from '../store/useExporterStore';
-import { filesExporterHistoryApiService } from '@/services/api/files-exporter-history-api.service.gen';
+import { fileExporterHistoryApiService } from '@/services/api/file-exporter-history-api.service.gen';
 import { generateNewConfigName, generateDuplicateName } from '../utils/date-formatter';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 
@@ -132,7 +132,7 @@ export function useHistoryBar() {
   const handleOpenFile = async () => {
     logInfo('[useHistoryBar] handleOpenFile starting...');
     try {
-      await filesExporterHistoryApiService.openHistoryFile();
+      await fileExporterHistoryApiService.openHistoryFile();
       logInfo('[useHistoryBar] handleOpenFile completed');
     } catch (err: any) {
       logInfo('[useHistoryBar] handleOpenFile error:', [err?.message || err]);
@@ -142,7 +142,7 @@ export function useHistoryBar() {
   const handleRevealFolder = async () => {
     logInfo('[useHistoryBar] handleRevealFolder starting...');
     try {
-      await filesExporterHistoryApiService.revealHistoryFile();
+      await fileExporterHistoryApiService.revealHistoryFile();
       logInfo('[useHistoryBar] handleRevealFolder completed');
     } catch (err: any) {
       logInfo('[useHistoryBar] handleRevealFolder error:', [err?.message || err]);

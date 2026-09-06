@@ -6,7 +6,7 @@ import { CollapsibleCard, BadgeObject } from '@/components/ui/collapsible-card';
 import { useExporterStore } from '../store/useExporterStore';
 import { PathMappingService } from '../utils/path-resolver';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
-import { filesExporterApiService } from '@/services/api/files-exporter-api.service.gen';
+import { fileExporterApiService } from '@/services/api/file-exporter-api.service.gen';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 interface SourcePathsSectionProps {
@@ -83,7 +83,7 @@ export const SourcePathsSection: React.FC<SourcePathsSectionProps> = ({
       logInfo('[SourcePathsSection] Single click on badge -> revealInExplorer & copyToClipboard', [absPath]);
       vsCodeApiService.revealInExplorer(absPath);
       vsCodeApiService.copyToClipboard(absPath);
-      filesExporterApiService.showNotification('info', `Path copied to clipboard: ${absPath}`);
+      fileExporterApiService.showNotification('info', `Path copied to clipboard: ${absPath}`);
     };
 
     const onDoubleClick = () => {

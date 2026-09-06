@@ -2,11 +2,11 @@
 // Rebuild using: npm run generate:webview-api-services
 
 import { RpcMethodEnum } from '@/shared/config/rpc-methods.enum.gen';
-import { AbstractApiService } from './abstract-api.service';
+import { AbstractApiService } from '@/services/abstract-api.service';
 import { FilesExporterInitialState, FilesExporterRunRequest, FilesExporterRunResponse, FilesExporterStatus, FilesExporterResult, FilterSimulationRequest, FilterSimulationResult, GeneratedFilesFilterRequest, GeneratedFilesFilterResult, DestinationActionResult, ClipboardActionResult, FilesExporterNotificationType } from '@/shared/services/file-exporter/model/file-exporter-model';
-import { IFilesExporterServicePort } from '@/shared/services/file-exporter/port-out/file-exporter-service.port';
+import { IFileExporterServicePort } from '@/shared/services/file-exporter/port-out/file-exporter-service.port';
 
-class FilesExporterApiService extends AbstractApiService implements IFilesExporterServicePort {
+class FileExporterApiService extends AbstractApiService implements IFileExporterServicePort {
     constructor() {
         super();
     }
@@ -84,4 +84,4 @@ class FilesExporterApiService extends AbstractApiService implements IFilesExport
     }
 }
 
-export const filesExporterApiService = new FilesExporterApiService();
+export const fileExporterApiService = new FileExporterApiService();

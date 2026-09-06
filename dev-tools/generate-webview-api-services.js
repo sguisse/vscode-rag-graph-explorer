@@ -6,6 +6,9 @@ const sharedDir = path.join(rootDir, 'shared');
 const sharedServicesDir = path.join(sharedDir, 'services');
 const outputDir = path.join(rootDir, 'webview/src/services/api');
 
+console.log(`🧹 Clean up: Removing previously generated services files from ${outputDir}...`);
+fs.rmSync(outputDir, { recursive: true, force: true });
+
 function findPortFiles(dir, fileList = []) {
     if (!fs.existsSync(dir)) return fileList;
     const files = fs.readdirSync(dir);
@@ -187,7 +190,7 @@ function generateWebviewApiServices() {
 // Rebuild using: npm run generate:webview-api-services
 
 import { RpcMethodEnum } from '@/shared/config/rpc-methods.enum.gen';
-import { AbstractApiService } from './abstract-api.service';
+import { AbstractApiService } from '@/services/abstract-api.service';
 ${convertedImports.join('\n')}
 
 class ${className} extends AbstractApiService implements ${portInterfaceName} {

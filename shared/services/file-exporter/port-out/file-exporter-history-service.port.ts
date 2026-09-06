@@ -1,7 +1,7 @@
 import { IBackendService } from '../../../core/backend-service.port';
 import { HistoryWrapper, HistoryEntry, HistoryViewMode, ExportConfig, HistorySaveResult, HistoryClearRequest, HistoryClearResult } from '../model/file-exporter-model';
 
-export interface IFilesExporterHistoryServicePort extends IBackendService {
+export interface IFileExporterHistoryServicePort extends IBackendService {
   getFullWrapper(currentRepo?: string): Promise<HistoryWrapper>;
   loadHistory(): Promise<HistoryEntry[]>;
   getLastRunConfigId(repo: string): Promise<string>;

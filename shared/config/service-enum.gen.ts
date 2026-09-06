@@ -4,8 +4,8 @@
 export enum ServiceEnum {
     CODEBASE_EXPORTER = 'CodebaseExporterService',
     BLAST_RADIUS_ERROR_FILES_IDENTIFICATOR = 'BlastRadiusErrorFilesIdentificatorService',
-    FILES_EXPORTER_HISTORY = 'FilesExporterHistoryService',
-    FILES_EXPORTER = 'FilesExporterService',
+    FILE_EXPORTER_HISTORY = 'FileExporterHistoryService',
+    FILE_EXPORTER = 'FileExporterService',
     FILE_SYSTEM = 'FileSystemService',
     GIT = 'GitService',
     GRAPH_RAG_EXPLORER = 'GraphRagExplorerService',

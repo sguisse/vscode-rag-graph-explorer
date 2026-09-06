@@ -2,7 +2,7 @@
 // Rebuild using: npm run generate:webview-api-services
 
 import { RpcMethodEnum } from '@/shared/config/rpc-methods.enum.gen';
-import { AbstractApiService } from './abstract-api.service';
+import { AbstractApiService } from '@/services/abstract-api.service';
 import { INeo4jServicePort } from '@/shared/services/neo4j/port-out/neo4j-service.port';
 
 class Neo4jApiService extends AbstractApiService implements INeo4jServicePort {

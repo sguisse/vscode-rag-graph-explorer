@@ -10,8 +10,8 @@ import { vsCodeSettingsManager } from '../../managers/VsCodeSettings.manager';
 import { pythonScriptExecutionManager } from '../../managers/PythonScriptExecution.manager';
 import { serviceRegistry } from '../../core/ServiceRegistry';
 import { ServiceEnum } from '../../../../shared/config/service-enum.gen';
-import { IFilesExporterServicePort } from '../../../../shared/services/file-exporter/port-out/file-exporter-service.port';
-import { IFilesExporterHistoryServicePort } from '../../../../shared/services/file-exporter/port-out/fe-history-service.port';
+import { IFileExporterServicePort } from '../../../../shared/services/file-exporter/port-out/file-exporter-service.port';
+import { IFileExporterHistoryServicePort } from '../../../../shared/services/file-exporter/port-out/file-exporter-history-service.port';
 import { callFileExporterScript } from '../_python-scripts/file-exporter-py.service';
 import { callCopyFilesToClipboardScript } from '../_python-scripts/copy-files-to-clipboard-py.service';
 import { getFormattedTimestamp } from '../../utils/utils-datetime';
@@ -32,15 +32,15 @@ import {
   FilesExporterNotificationType,
 } from '../../../../shared/services/file-exporter/model/file-exporter-model';
 
-export class FilesExporterAdapter extends AbstractServiceAdapter implements IFilesExporterServicePort, vscode.Disposable {
+export class FileExporterAdapter extends AbstractServiceAdapter implements IFileExporterServicePort, vscode.Disposable {
   private selectedPathsState: string[] = [];
 
   constructor() {
     super();
   }
 
-  private getHistoryService(): IFilesExporterHistoryServicePort {
-    return serviceRegistry.get(ServiceEnum.FILES_EXPORTER_HISTORY);
+  private getHistoryService(): IFileExporterHistoryServicePort {
+    return serviceRegistry.get(ServiceEnum.FILE_EXPORTER_HISTORY);
   }
 
   private getWorkspaceRootPath(): string {
