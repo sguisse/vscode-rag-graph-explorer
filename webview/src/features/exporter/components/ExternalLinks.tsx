@@ -12,7 +12,7 @@ export interface ExchangeLink {
 
 interface ExternalLinksProps {
   exchangeLinks?: ExchangeLink[];
-  onOpenExchangeUrl?: (url: string) => void;
+  onOpenExchangeUrl?: (url: string, inBrowserTab?: boolean) => void;
 }
 
 export const ExternalLinks: React.FC<ExternalLinksProps> = ({
@@ -46,12 +46,18 @@ export const ExternalLinks: React.FC<ExternalLinksProps> = ({
     };
   }, [exchangeLinks]);
 
-  const handleExchange = (url: string) => {
-    logInfo('[ExternalLinks] handleExchange click', [url]);
+  const handleExchange = (url: string, e: React.MouseEvent) => {
+    const inBrowserTab = e.metaKey || e.ctrlKey;
+    logInfo('[ExternalLinks] handleExchange click', [{ url, inBrowserTab }]);
+
     if (onOpenExchangeUrl) {
-      onOpenExchangeUrl(url);
-    } else if (typeof window !== 'undefined' && url) {
-      window.open(url, '_blank', 'noopener,noreferrer');
+      onOpenExchangeUrl(url, inBrowserTab);
+    } else {
+      if (inBrowserTab) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      } else {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
     }
   };
 
@@ -68,32 +74,29 @@ export const ExternalLinks: React.FC<ExternalLinksProps> = ({
       {exchangeLinks.map((link, idx) => {
         const resolvedSrc = resolvedIconUrls[idx];
         const hasIcon = Boolean(resolvedSrc) && !failedIcons[idx];
-        const tooltipText = link.tooltip
-          ? `🔗 ${link.tooltip} (${link.url})`
-          : `🔗 ${link.url}`;
+        const label = link.tooltip || 'Exchange';
+        const tooltipText = `🔗 ${label} (${link.url})<br/>• Click: Open in External Browser<br/>• Cmd/Ctrl + Click: Open in VS Code Browser Tab`;
 
         return (
           <Button
             key={idx}
             size="sm"
             variant="outline"
-            onClick={() => handleExchange(link.url)}
+            onClick={(e) => handleExchange(link.url, e)}
             className="h-7 px-2 gap-1.5 text-[11px] font-semibold cursor-pointer hover:bg-muted/60 transition-colors"
             data-tooltip={tooltipText}
           >
             {hasIcon ? (
               <img
                 src={resolvedSrc}
-                alt={link.tooltip || 'Exchange'}
+                alt={label}
                 onError={() => handleImageError(idx)}
                 className="w-3.5 h-3.5 object-contain shrink-0"
               />
             ) : (
               <ExternalLink size={12} className="shrink-0 text-muted-foreground" />
             )}
-            <span className="truncate max-w-[120px]">
-              {link.tooltip || 'Exchange'}
-            </span>
+            <span className="truncate max-w-[120px]">{label}</span>
             <ExternalLink size={10} className="shrink-0 opacity-50 ml-0.5" />
           </Button>
         );

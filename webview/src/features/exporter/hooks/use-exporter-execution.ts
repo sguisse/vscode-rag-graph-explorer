@@ -235,9 +235,9 @@ export function useExporterExecution() {
     store.appendTerminalLog(`\n🛑 Process export terminated by user.\n`);
   };
 
-  const handleOpenExchangeUrl = (url: string) => {
-    logInfo('[useExporterExecution] handleOpenExchangeUrl starting...', [url]);
-    fileExporterApiService.openBrowserTab(url, true);
+  const handleOpenExchangeUrl = (url: string, inBrowserTab: boolean = false) => {
+    logInfo('[useExporterExecution] handleOpenExchangeUrl starting...', [{ url, inBrowserTab }]);
+    fileExporterApiService.openBrowserTab(url, inBrowserTab);
   };
 
   return {

@@ -46,17 +46,17 @@ export const ExtensionConflictDialog: React.FC<ExtensionConflictDialogProps> = (
             <span>Extension Rule Conflict Detected</span>
           </DialogTitle>
           <DialogDescription className="text-muted-foreground text-xs pt-1 leading-relaxed">
-            Extension <strong class="text-primary">.{extension}</strong> is already present in the{' '}
-            <strong class="text-foreground">{opposingLabel}</strong> list. Adding it to the{' '}
-            <strong class="text-foreground">{targetLabel}</strong> list will cause an incoherent filter conflict.
+            Extension <strong className="text-primary">.{extension}</strong> is already present in the{' '}
+            <strong className="text-foreground">{opposingLabel}</strong> list. Adding it to the{' '}
+            <strong className="text-foreground">{targetLabel}</strong> list will cause an incoherent filter conflict.
           </DialogDescription>
         </DialogHeader>
 
         <div className="p-3 bg-muted/40 border border-border rounded-md space-y-1.5 my-2">
           <div className="font-semibold text-foreground text-[11px]">Conflict Details:</div>
           <div className="text-muted-foreground text-[11px]">
-            • Current Location: <span class="text-amber-600 dark:text-amber-400 font-bold">{opposingLabel}</span><br />
-            • Target Action: <span class="text-emerald-500 font-bold">Add to {targetLabel}</span>
+            • Current Location: <span className="text-amber-600 dark:text-amber-400 font-bold">{opposingLabel}</span><br />
+            • Target Action: <span className="text-emerald-500 font-bold">Add to {targetLabel}</span>
           </div>
         </div>
 
