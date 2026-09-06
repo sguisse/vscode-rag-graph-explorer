@@ -176,12 +176,9 @@ export class FileExporterAdapter extends AbstractServiceAdapter implements IFile
         logWarn('[FileExporterAdapter] Non-fatal: History save failed:', histErr);
       }
 
-      const command = `python3 files-exporter.py --codebase-src '${absCodebase.join(',')}' --dest '${absDest}' --format '${request.config.format}'`;
-
       return {
         exportDirectory: absDest,
         timestamp,
-        command,
         pythonScriptStatus,
         historyResult,
       };

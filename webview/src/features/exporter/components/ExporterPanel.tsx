@@ -8,7 +8,7 @@ import { useExporterStore } from '../store/useExporterStore';
 import { ActionToolbar } from './ActionToolbar';
 import { ExternalLinks } from './ExternalLinks';
 import { ReportTab } from './tabs/report/ReportTab';
-import { FilesTab } from './tabs/FilesTab';
+import { FilesTab } from './tabs/files/FilesTab';
 import { TerminalTab } from './tabs/TerminalTab';
 import { HelpTab } from './tabs/HelpTab';
 import { PromptTab } from './tabs/prompt/PromptTab';

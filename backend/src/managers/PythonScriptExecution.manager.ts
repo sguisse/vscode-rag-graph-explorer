@@ -9,6 +9,25 @@ import { vsCodeSettingsManager } from './VsCodeSettings.manager';
 
 const PID_PYTHON_PATH_LOCATION = 'pids_python';
 
+/**
+ * Safely wraps argument values in single quotes ('...') so special Bash characters
+ * (| ( ) ? $ * \ ^ +) are treated as literal strings during terminal execution.
+ */
+function escapeBashArg(arg: string): string {
+    if (arg === undefined || arg === null) return "''";
+    // Flags without spaces or special characters remain as-is
+    if (/^--?[a-zA-Z0-9-]+$/.test(arg)) {
+        return arg;
+    }
+    let clean = arg;
+    if ((clean.startsWith("'") && clean.endsWith("'")) || (clean.startsWith('"') && clean.endsWith('"'))) {
+        clean = clean.slice(1, -1);
+    }
+    // Escape internal single quotes for Bash: ' -> '\''
+    const escaped = clean.replace(/'/g, "'\\''");
+    return `'${escaped}'`;
+}
+
 export class PythonScriptExecutionManager {
     private static instance: PythonScriptExecutionManager;
     private pidsDir: string;
@@ -20,12 +39,12 @@ export class PythonScriptExecutionManager {
     private startTimes: Map<number, Date> = new Map();
     private scriptOrigins: Map<number, string> = new Map();
     private processTimeouts: Map<number, number> = new Map();
+    private processCommands: Map<number, string> = new Map();
     private finishedProcesses: Map<number, PythonScriptStatus> = new Map();
 
-    // Cap finished process history to avoid unbounded memory growth
     private readonly MAX_FINISHED_PROCESSES = 100;
     private readonly MAX_PROCESS_TIMEOUT_IN_MS = 10000;
-    private readonly TIMEOUT_CHECK_INTERVAL_MS = 1000; // Check active processes every 1 second
+    private readonly TIMEOUT_CHECK_INTERVAL_MS = 1000;
 
     private constructor() {
         this.pidsDir = path.join(getWorkspaceExtentionPath(), PID_PYTHON_PATH_LOCATION);
@@ -63,12 +82,9 @@ export class PythonScriptExecutionManager {
         return path.join(this.pidsDir, `${pid}.pid`);
     }
 
-    /**
-     * Plays a target sound file cross-platform. Sound is disabled if soundPath is empty.
-     */
     private playCompletionSound(soundPath: string): void {
         const cleanPath = soundPath ? soundPath.trim() : '';
-        if (!cleanPath) return; // Sound disabled
+        if (!cleanPath) return;
 
         try {
             const platform = process.platform;
@@ -83,28 +99,20 @@ export class PythonScriptExecutionManager {
                 childProcess.exec(`paplay "${escaped}" || aplay "${escaped}" || printf "\\a"`);
             }
         } catch (err) {
-            // Fail silently if playback fails
+            // Fail silently
         }
     }
 
-    /**
-     * Starts the periodic cron checker for process timeouts.
-     */
     private startTimeoutChecker(): void {
         this.timeoutCheckInterval = setInterval(() => {
             this.checkActiveProcessesTimeout();
         }, this.TIMEOUT_CHECK_INTERVAL_MS);
 
-        // Allow Node.js event loop to exit cleanly if this timer is the only active handle
         if (this.timeoutCheckInterval && typeof this.timeoutCheckInterval.unref === 'function') {
             this.timeoutCheckInterval.unref();
         }
     }
 
-    /**
-     * Checks all running active processes against custom timeout or default getProcessTimeout().
-     * Kills any process that has exceeded its allowed run time.
-     */
     private checkActiveProcessesTimeout(): void {
         const now = Date.now();
         const defaultTimeoutMs = this.getProcessTimeout();
@@ -127,7 +135,8 @@ export class PythonScriptExecutionManager {
                     endTime: new Date(),
                     isRunning: false,
                     exitCode: -1,
-                    message: timeoutMsg
+                    message: timeoutMsg,
+                    command: this.processCommands.get(pid)
                 });
 
                 this.killPid(pid);
@@ -135,9 +144,6 @@ export class PythonScriptExecutionManager {
         }
     }
 
-    /**
-     * Helper to safely store finished status while capping max history size.
-     */
     private recordFinishedProcess(status: PythonScriptStatus): void {
         if (this.finishedProcesses.size >= this.MAX_FINISHED_PROCESSES) {
             const oldestPid = this.finishedProcesses.keys().next().value;
@@ -145,12 +151,13 @@ export class PythonScriptExecutionManager {
                 this.finishedProcesses.delete(oldestPid);
             }
         }
-        this.finishedProcesses.set(status.pid, status);
+        const cmd = status.command || (status.pid ? this.processCommands.get(status.pid) : undefined);
+        this.finishedProcesses.set(status.pid, {
+            ...status,
+            command: cmd
+        });
     }
 
-    /**
-     * Attaches line-buffered stream readers to route stdout/stderr to log(origin, message).
-     */
     private bindStreamLogging(stream: NodeJS.ReadableStream | null, origin: string): void {
         if (!stream) return;
 
@@ -158,8 +165,6 @@ export class PythonScriptExecutionManager {
         stream.on('data', (chunk: Buffer | string) => {
             buffer += chunk.toString('utf-8');
             const lines = buffer.split(/\r?\n/);
-
-            // Keep incomplete last line in the buffer
             buffer = lines.pop() ?? '';
 
             for (const line of lines) {
@@ -176,14 +181,11 @@ export class PythonScriptExecutionManager {
         });
     }
 
-    /**
-     * Registers an active process in memory, records its start time,
-     * and sets up exit listeners to transition it to finishedProcesses upon completion.
-     */
     public registerProcess(
         child: childProcess.ChildProcess,
         scriptOrigin?: string,
-        timeout?: number
+        timeout?: number,
+        command?: string
     ): number | undefined {
         const pid = child.pid;
         if (!pid) return undefined;
@@ -194,6 +196,10 @@ export class PythonScriptExecutionManager {
         this.activeProcesses.set(pid, child);
         this.startTimes.set(pid, startTime);
         this.scriptOrigins.set(pid, origin);
+        if (command) {
+            this.processCommands.set(pid, command);
+        }
+
         if (timeout && timeout > 0) {
             this.processTimeouts.set(pid, timeout);
         }
@@ -205,7 +211,6 @@ export class PythonScriptExecutionManager {
             // Ignore file write issues
         }
 
-        // Route live output streams
         this.bindStreamLogging(child.stdout, origin);
         this.bindStreamLogging(child.stderr, `${origin}:ERR`);
 
@@ -213,7 +218,6 @@ export class PythonScriptExecutionManager {
             this.unregisterPid(pid);
         };
 
-        // Transition active process -> finishedProcesses on EXIT
         child.once('exit', (code, signal) => {
             const endTime = new Date();
             const exitMsg = `Process exited with code ${code ?? 'N/A'}${signal ? ` (signal: ${signal})` : ''}`;
@@ -226,14 +230,14 @@ export class PythonScriptExecutionManager {
                     endTime,
                     isRunning: false,
                     exitCode: code ?? (signal ? -1 : 0),
-                    message: exitMsg
+                    message: exitMsg,
+                    command: this.processCommands.get(pid) || command
                 });
             }
 
             cleanup();
         });
 
-        // Transition active process -> finishedProcesses on ERROR
         child.once('error', (err) => {
             const endTime = new Date();
             const errorMsg = `Process error: ${err.message}`;
@@ -246,7 +250,8 @@ export class PythonScriptExecutionManager {
                     endTime,
                     isRunning: false,
                     exitCode: 1,
-                    message: errorMsg
+                    message: errorMsg,
+                    command: this.processCommands.get(pid) || command
                 });
             }
 
@@ -261,6 +266,7 @@ export class PythonScriptExecutionManager {
         this.startTimes.delete(pid);
         this.scriptOrigins.delete(pid);
         this.processTimeouts.delete(pid);
+        this.processCommands.delete(pid);
 
         const pidFile = this.getPidFilePath(pid);
         if (fs.existsSync(pidFile)) {
@@ -272,44 +278,29 @@ export class PythonScriptExecutionManager {
         }
     }
 
-    // ─── Query Methods for Process Status ─────────────────────────────────────
-
-    /**
-     * Gets the active ChildProcess instance by PID if it is currently running.
-     */
     public getProcessInstance(pid: number): childProcess.ChildProcess | undefined {
         return this.activeProcesses.get(pid);
     }
 
-    /**
-     * Gets the status of any process (active or finished) by PID.
-     */
     public getProcessStatus(pid: number): PythonScriptStatus | undefined {
         if (this.activeProcesses.has(pid)) {
             return {
                 pid,
                 startTime: this.startTimes.get(pid) || new Date(),
-                isRunning: true
+                isRunning: true,
+                command: this.processCommands.get(pid)
             };
         }
         return this.finishedProcesses.get(pid);
     }
 
-    /**
-     * Returns an array of all recently finished process statuses.
-     */
     public getFinishedProcesses(): PythonScriptStatus[] {
         return Array.from(this.finishedProcesses.values());
     }
 
-    /**
-     * Clears the historical finished process store.
-     */
     public clearFinishedProcesses(): void {
         this.finishedProcesses.clear();
     }
-
-    // ─── Execution Methods ───────────────────────────────────────────────────
 
     public executeScript(
         scriptPath: string,
@@ -320,10 +311,13 @@ export class PythonScriptExecutionManager {
         const isWindows = process.platform === 'win32';
         const pythonBinary = isWindows ? 'python' : 'python3';
 
-        // Pass -u flag to python for unbuffered stdout/stderr
-        const fullArgs = ['-u', scriptPath, ...args];
+        const absScriptPath = path.isAbsolute(scriptPath) ? scriptPath : path.resolve(scriptPath);
+        const fullArgs = ['-u', absScriptPath, ...args];
 
-        // Ensure PYTHONUNBUFFERED is set in spawn environment
+        // Format all argument values strictly in single-quotes for safe shell execution
+        const formattedArgs = args.map(escapeBashArg);
+        const commandStr = `${pythonBinary} ${escapeBashArg(absScriptPath)} ${formattedArgs.join(' ')}`;
+
         const spawnOptions: childProcess.SpawnOptions = {
             ...options,
             env: {
@@ -334,18 +328,17 @@ export class PythonScriptExecutionManager {
         };
 
         logInfo(`Executing Python script: ${pythonBinary} ${fullArgs.map(arg => arg.replace(/,/g, ',\n')).join('\n')}`,
-               { scriptPath, args, options: spawnOptions, timeout });
+               { scriptPath: absScriptPath, args, options: spawnOptions, timeout });
 
-        const origin = path.basename(scriptPath);
+        const origin = path.basename(absScriptPath);
         const startTime = Date.now();
 
-        const child = this.spawnPythonProcess(pythonBinary, fullArgs, spawnOptions, origin, timeout);
+        const child = this.spawnPythonProcess(pythonBinary, fullArgs, spawnOptions, origin, timeout, commandStr);
 
-        // Play notification sound exclusively for executeScript calls exceeding processSoundDelay
         child.once('exit', () => {
-            const settings = vsCodeSettingsManager.getSettings(); //[cite: 4]
-            const soundPath = settings.processSoundPath?.trim(); //[cite: 4]
-            const soundDelay = settings.processSoundDelay; //[cite: 4]
+            const settings = vsCodeSettingsManager.getSettings();
+            const soundPath = settings.processSoundPath?.trim();
+            const soundDelay = settings.processSoundDelay;
 
             if (soundPath && soundDelay > 0) {
                 const elapsedMs = Date.now() - startTime;
@@ -363,10 +356,16 @@ export class PythonScriptExecutionManager {
         args: string[],
         options: childProcess.SpawnOptions = {},
         origin?: string,
-        timeout?: number
+        timeout?: number,
+        command?: string
     ): childProcess.ChildProcess {
         const child = childProcess.spawn(pythonBinary, args, options);
-        this.registerProcess(child, origin, timeout);
+        let cmd = command;
+        if (!cmd) {
+            const formattedArgs = args.map(escapeBashArg);
+            cmd = `${pythonBinary} ${formattedArgs.join(' ')}`;
+        }
+        this.registerProcess(child, origin, timeout, cmd);
         return child;
     }
 
@@ -388,7 +387,7 @@ export class PythonScriptExecutionManager {
                 process.kill(pid, signal);
                 killed = true;
             } catch (err) {
-                // Process already dead
+                // Process dead
             }
         }
 
@@ -401,7 +400,7 @@ export class PythonScriptExecutionManager {
             try {
                 child.kill(signal);
             } catch (err) {
-                // Process already dead
+                // Process dead
             }
         }
 
@@ -410,7 +409,7 @@ export class PythonScriptExecutionManager {
             try {
                 process.kill(pid, signal);
             } catch (err) {
-                // Process already dead
+                // Process dead
             }
             this.unregisterPid(pid);
         }
@@ -430,7 +429,7 @@ export class PythonScriptExecutionManager {
                 }
             }
         } catch (err) {
-            // Ignore directory read errors
+            // Directory read error
         }
     }
 
@@ -453,7 +452,7 @@ export class PythonScriptExecutionManager {
                 }
             }
         } catch (err) {
-            // Ignore directory read errors
+            // Directory read error
         }
         return activePids;
     }

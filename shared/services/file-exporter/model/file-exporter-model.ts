@@ -171,7 +171,6 @@ export interface HistorySaveResult {
 export interface FilesExporterRunResponse {
   exportDirectory: string;
   timestamp: string;
-  command: string;
   pythonScriptStatus: PythonScriptStatus;
   historyResult?: HistorySaveResult;
 }

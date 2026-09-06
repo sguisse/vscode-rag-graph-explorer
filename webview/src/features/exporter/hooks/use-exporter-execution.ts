@@ -132,6 +132,10 @@ export function useExporterExecution() {
         mode: 'standard',
       });
 
+      if (runResponse?.pythonScriptStatus?.command) {
+        store.setCompiledBashCmd(runResponse.pythonScriptStatus.command);
+      }
+
       const pid = runResponse?.pythonScriptStatus?.pid;
       if (!pid) {
         store.appendTerminalLog(`❌ [Error] Backend returned invalid PID response.\n`);
@@ -151,6 +155,10 @@ export function useExporterExecution() {
 
         try {
           const status = await fileExporterApiService.getExportStatus(pid);
+          if (status?.pythonScriptStatus?.command) {
+            store.setCompiledBashCmd(status.pythonScriptStatus.command);
+          }
+
           if (!status?.pythonScriptStatus?.isRunning) {
             isDone = true;
             store.appendTerminalLog(`✅ Export completed successfully.\n`);

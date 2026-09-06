@@ -88,45 +88,49 @@ function buildArgs(exportArgs: any, codebaseSources: string, referenceSources: s
         throw new Error('Destination directory is not specified in export arguments.');
     }
 
-    const args: string[] = ['--dest', exportArgs.destDir];
+    const args: string[] = [];
 
-    if (codebaseSources) {
-        args.push('--codebase-src', codebaseSources);
-    }
-    if (referenceSources) {
-        args.push('--reference-src', referenceSources);
-    }
-    if (exportArgs.prompt) {
-        args.push('--prompt', exportArgs.prompt);
-    }
-
-    if (exportArgs.format) args.push('--format', exportArgs.format);
+    // 1. Execution Mode
     if (exportArgs.mode) args.push('--mode', exportArgs.mode);
-    if (exportArgs.maxChunk) args.push('--max-chunk', String(exportArgs.maxChunk));
-    if (exportArgs.groupByExt) args.push('--group-ext');
-    if (exportArgs.logConsole) args.push('--log-console');
-    if (exportArgs.logFile) args.push('--log-file');
-    if (exportArgs.generateTreeView) args.push('--tree-view');
+
+    // 2. Timestamp
     if (exportArgs.timestamp) args.push('--timestamp', exportArgs.timestamp);
 
-    const cleanFilters = (val: string) => val ? val.split(/[\n,]/).map(s => s.trim()).filter(Boolean).join(',') : '';
+    // 3. Destination Directory
+    args.push('--dest', exportArgs.destDir);
 
+    const cleanFilters = (val: string) => val ? val.split(/[\n,]/).map(s => s.trim()).filter(Boolean).join(',') : '';
     const codebase = exportArgs.config?.codebase || exportArgs.codebase || {};
     const reference = exportArgs.config?.reference || exportArgs.reference || {};
 
-    // Codebase filters
+    // 4. Codebase Options & Filters
+    if (codebaseSources) args.push('--codebase-src', codebaseSources);
+    if (codebase.max_file || exportArgs.codebaseMaxFile) args.push('--codebase-max-file', String(codebase.max_file || exportArgs.codebaseMaxFile));
     if (codebase.inc_paths || exportArgs.codebaseIncPaths) args.push('--codebase-inc-paths', cleanFilters(codebase.inc_paths || exportArgs.codebaseIncPaths));
     if (codebase.exc_paths || exportArgs.codebaseExcPaths) args.push('--codebase-exc-paths', cleanFilters(codebase.exc_paths || exportArgs.codebaseExcPaths));
     if (codebase.inc_ext || exportArgs.codebaseIncExts) args.push('--codebase-inc-ext', cleanFilters(codebase.inc_ext || exportArgs.codebaseIncExts));
     if (codebase.exc_ext || exportArgs.codebaseExcExts) args.push('--codebase-exc-ext', cleanFilters(codebase.exc_ext || exportArgs.codebaseExcExts));
-    if (codebase.max_file || exportArgs.codebaseMaxFile) args.push('--codebase-max-file', String(codebase.max_file || exportArgs.codebaseMaxFile));
 
-    // Reference filters
+    // 5. Reference Options & Filters
+    if (referenceSources) args.push('--reference-src', referenceSources);
+    if (reference.max_file || exportArgs.referenceMaxFile) args.push('--reference-max-file', String(reference.max_file || exportArgs.referenceMaxFile));
     if (reference.inc_paths || exportArgs.referenceIncPaths) args.push('--reference-inc-paths', cleanFilters(reference.inc_paths || exportArgs.referenceIncPaths));
     if (reference.exc_paths || exportArgs.referenceExcPaths) args.push('--reference-exc-paths', cleanFilters(reference.exc_paths || exportArgs.referenceExcPaths));
     if (reference.inc_ext || exportArgs.referenceIncExts) args.push('--reference-inc-ext', cleanFilters(reference.inc_ext || exportArgs.referenceIncExts));
     if (reference.exc_ext || exportArgs.referenceExcExts) args.push('--reference-exc-ext', cleanFilters(reference.exc_ext || exportArgs.referenceExcExts));
-    if (reference.max_file || exportArgs.referenceMaxFile) args.push('--reference-max-file', String(reference.max_file || exportArgs.referenceMaxFile));
+
+    // 6. Output Formatting & Chunks
+    if (exportArgs.format) args.push('--format', exportArgs.format);
+    if (exportArgs.maxChunk !== undefined && exportArgs.maxChunk !== '') args.push('--max-chunk', String(exportArgs.maxChunk));
+    if (exportArgs.groupByExt) args.push('--group-ext');
+
+    // 7. Logging & Generation Flags
+    if (exportArgs.logConsole) args.push('--log-console');
+    if (exportArgs.logFile) args.push('--log-file');
+    if (exportArgs.generateTreeView) args.push('--tree-view');
+
+    // 8. Custom Prompt
+    if (exportArgs.prompt) args.push('--prompt', exportArgs.prompt);
 
     return args;
 }

@@ -7,4 +7,5 @@ export interface PythonScriptStatus {
     endTime?: Date;
     exitCode?: number;
     message?: string;
+    command?: string;
 }

@@ -75,7 +75,7 @@ export function useExportConfiguration() {
     const unsubscribeUpdatePaths = vsCodeHandleMessage.on('updatePaths', (msg) => {
       if (Array.isArray(msg.paths)) {
         logInfo('[useExportConfiguration] Received updatePaths message', [msg.paths]);
-        const newPaths = msg.paths.flatMap((p) => String(p || '').split(/[,\n\r]+/)).map((s) => s.trim()).filter(Boolean);
+        const newPaths = msg.paths.flatMap((p) => String(p || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean));
         addPathsToConfig(newPaths);
       }
     });
@@ -119,19 +119,6 @@ export function useExportConfiguration() {
     store.config.max_chunk,
     store.invalidPaths,
   ]);
-
-  useEffect(() => {
-    const codebaseLines = (store.config.codebase.src || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
-    const refLines = (store.config.reference.src || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
-
-    const codebaseAbs = codebaseLines.map((l) => PathMappingService.resolveToAbsolute(l, store.workspaceRoot)).join(',');
-    const refAbs = refLines.map((l) => PathMappingService.resolveToAbsolute(l, store.workspaceRoot)).join(',');
-
-    const cmd = `python3 files-exporter.py --codebase-src '${codebaseAbs || '.'}'${refAbs ? ` --reference-src '${refAbs}'` : ''} --dest '${store.config.dest || ''}' --format '${store.config.format || 'yaml'}' --max-file ${store.config.codebase.max_file || '50'} --max-chunk ${store.config.max_chunk || '0'}${
-      store.config.groupByExt ? ' --group-ext' : ''
-    }${store.config.logConsole ? ' --log-console' : ''}${store.config.generateTreeView ? ' --tree-view' : ''}`;
-    store.setCompiledBashCmd(cmd);
-  }, [store.config, store.workspaceRoot]);
 
   const handleAddOpenFiles = async () => {
     try {

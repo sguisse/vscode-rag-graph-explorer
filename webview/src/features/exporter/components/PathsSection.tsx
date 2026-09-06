@@ -167,12 +167,7 @@ export const PathsSection: React.FC<PathsSectionProps> = ({
   if (!isOpen) {
     const filterBadges = getFilterSummaryBadges(filter, scopeType, validationState);
     if (filterBadges.length > 0) {
-      filterBadges.forEach((badge, idx) => {
-        summaryBadges.push({
-          ...badge,
-          newLine: idx === 0 ? true : badge.newLine,
-        });
-      });
+      summaryBadges.push(...filterBadges);
     }
   }
 
