@@ -157,11 +157,12 @@ export function ExporterPanel() {
               logInfo('[ExporterPanel] onSetMaxFileSize', [kb]);
               setConfig((prev) => ({ ...prev, max_file: String(kb) }));
             }}
-            onExcludeTreePattern={(pattern) => {
-              logInfo('[ExporterPanel] ReportTab onExcludeTreePattern', [pattern]);
+            onExcludeTreePattern={(pattern, isExt) => {
+              logInfo('[ExporterPanel] ReportTab onExcludeTreePattern', [{ pattern, isExt }]);
+              const field = isExt ? 'exc_ext' : 'exc_paths';
               setConfig((prev) => ({
                 ...prev,
-                exc_paths: prev.exc_paths ? `${prev.exc_paths}\n${pattern}` : pattern,
+                [field]: prev[field] ? `${prev[field]}\n${pattern}` : pattern,
               }));
             }}
             onCaptureTreePaths={(paths) => {
