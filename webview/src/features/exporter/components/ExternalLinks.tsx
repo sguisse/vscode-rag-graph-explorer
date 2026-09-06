@@ -1,66 +1,103 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ExternalLink } from 'lucide-react';
-import { ExportExchangeLink } from '@/shared/services/file-exporter/model/file-exporter-model';
+import { resolveIconUrlAsync } from '@/lib/utils-image';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 
+export interface ExchangeLink {
+  icon?: string;
+  tooltip?: string;
+  url: string;
+}
+
 interface ExternalLinksProps {
-  exchangeLinks?: ExportExchangeLink[];
-  onOpenExchangeUrl: (url: string) => void;
+  exchangeLinks?: ExchangeLink[];
+  onOpenExchangeUrl?: (url: string) => void;
 }
 
 export const ExternalLinks: React.FC<ExternalLinksProps> = ({
   exchangeLinks = [],
   onOpenExchangeUrl,
 }) => {
+  const [resolvedIconUrls, setResolvedIconUrls] = useState<Record<number, string>>({});
+  const [failedIcons, setFailedIcons] = useState<Record<number, boolean>>({});
+
+  useEffect(() => {
+    let isMounted = true;
+
+    exchangeLinks.forEach((link, idx) => {
+      if (link.icon) {
+        resolveIconUrlAsync(link.icon)
+          .then((url) => {
+            if (isMounted && url) {
+              setResolvedIconUrls((prev) => ({ ...prev, [idx]: url }));
+            }
+          })
+          .catch(() => {
+            if (isMounted) {
+              setFailedIcons((prev) => ({ ...prev, [idx]: true }));
+            }
+          });
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [exchangeLinks]);
+
   const handleExchange = (url: string) => {
-    logInfo('[ExternalLinks] onOpenExchangeUrl handler triggered', [url]);
-    onOpenExchangeUrl(url);
+    logInfo('[ExternalLinks] handleExchange click', [url]);
+    if (onOpenExchangeUrl) {
+      onOpenExchangeUrl(url);
+    } else if (typeof window !== 'undefined' && url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
   };
 
+  const handleImageError = (idx: number) => {
+    setFailedIcons((prev) => ({ ...prev, [idx]: true }));
+  };
+
+  if (!exchangeLinks || exchangeLinks.length === 0) {
+    return null;
+  }
+
   return (
-    <div className="flex items-center gap-2">
-      {exchangeLinks && exchangeLinks.length > 0 ? (
-        exchangeLinks.map((link, idx) => (
+    <div className="flex items-center gap-1.5 flex-wrap font-mono text-xs">
+      {exchangeLinks.map((link, idx) => {
+        const resolvedSrc = resolvedIconUrls[idx];
+        const hasIcon = Boolean(resolvedSrc) && !failedIcons[idx];
+        const tooltipText = link.tooltip
+          ? `🔗 ${link.tooltip} (${link.url})`
+          : `🔗 ${link.url}`;
+
+        return (
           <Button
             key={idx}
             size="sm"
             variant="outline"
             onClick={() => handleExchange(link.url)}
-            className="h-8 gap-1.5 text-xs font-semibold cursor-pointer"
-            data-tooltip={link.tooltip}
+            className="h-7 px-2 gap-1.5 text-[11px] font-semibold cursor-pointer hover:bg-muted/60 transition-colors"
+            data-tooltip={tooltipText}
           >
-            {link.icon ? (
-              <img src={link.icon} alt={link.tooltip || 'Exchange'} className="w-4 h-4 object-contain" />
+            {hasIcon ? (
+              <img
+                src={resolvedSrc}
+                alt={link.tooltip || 'Exchange'}
+                onError={() => handleImageError(idx)}
+                className="w-3.5 h-3.5 object-contain shrink-0"
+              />
             ) : (
-              <ExternalLink size={12} />
+              <ExternalLink size={12} className="shrink-0 text-muted-foreground" />
             )}
-            {link.tooltip || 'Exchange'}
+            <span className="truncate max-w-[120px]">
+              {link.tooltip || 'Exchange'}
+            </span>
+            <ExternalLink size={10} className="shrink-0 opacity-50 ml-0.5" />
           </Button>
-        ))
-      ) : (
-        <>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleExchange('https://gemini.google.com/')}
-            className="h-8 gap-1.5 text-xs font-semibold cursor-pointer"
-          >
-            <ExternalLink size={12} />
-            Gemini
-          </Button>
-
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleExchange('https://notebooklm.google.com/')}
-            className="h-8 gap-1.5 text-xs font-semibold cursor-pointer"
-          >
-            <ExternalLink size={12} />
-            NotebookLM
-          </Button>
-        </>
-      )}
+        );
+      })}
     </div>
   );
 };

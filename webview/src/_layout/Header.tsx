@@ -156,65 +156,61 @@ export function Header({
   );
 
   const centerContent = (
-    <div className="flex flex-col justify-center items-center gap-1 w-full min-w-0">
-      {/* Top Row inside Center Content */}
-      <div className="flex flex-1 justify-start items-center gap-2 w-full">
-        <div className="flex items-center gap-2 shrink-0">
-          <span style={{ paddingLeft: `${DefaultContainersSize.sidebarLeftWidth - headerLeftWidth}px` }}>
-            <ToggleButton
-              id="toggle-sidebar-left"
-              isSelected={!!containers.sidebarLeft?.visible}
-              onToggle={() => toggleContainerVisible('sidebarLeft')}
-              tooltipText="Toggle Sidebar Left"
-              icon={<Layers size={14} />}
-            />
-          </span>
-        </div>
-
-
-        {canGoBack && (
-          <Button
-            size="icon"
-            variant="ghost"
-            className="mr-0.5 w-5 h-5 text-muted-foreground hover:text-foreground cursor-pointer"
-            onClick={handleGoBack}
-            title="Go Back"
-          >
-            <ArrowLeft size={12} />
-          </Button>
-        )}
-
-        {breadcrumbStack.map((crumb, idx) => {
-          const isLast = idx === breadcrumbStack.length - 1;
-          const isHome = crumb.pathname === '/';
-
-          return (
-            <React.Fragment key={`${crumb.pathname}-${idx}`}>
-              {idx > 0 && <ChevronRight size={11} className="text-muted-foreground shrink-0" />}
-              {isHome ? (
-                <button
-                  onClick={handleHomeClick}
-                  className="flex items-center gap-1 font-medium text-muted-foreground hover:text-foreground cursor-pointer"
-                  title="Navigate to Home"
-                >
-                  <Home size={12} />
-                </button>
-              ) : isLast ? (
-                <span className="bg-primary/10 px-1.5 py-0.2 border border-primary/20 rounded font-bold text-primary">
-                  {crumb.label}
-                </span>
-              ) : (
-                <button
-                  onClick={() => handleBreadcrumbClick(crumb.pathname, crumb.search)}
-                  className="text-muted-foreground hover:text-foreground underline cursor-pointer"
-                >
-                  {crumb.label}
-                </button>
-              )}
-            </React.Fragment>
-          );
-        })}
+    <div className="flex-1 w-full h-full flex items-center justify-start gap-2 min-w-0">
+      <div className="flex items-center gap-2 shrink-0">
+        <span style={{ paddingLeft: `${DefaultContainersSize.sidebarLeftWidth - headerLeftWidth}px` }}>
+          <ToggleButton
+            id="toggle-sidebar-left"
+            isSelected={!!containers.sidebarLeft?.visible}
+            onToggle={() => toggleContainerVisible('sidebarLeft')}
+            tooltipText="Toggle Sidebar Left"
+            icon={<Layers size={14} />}
+          />
+        </span>
       </div>
+
+      {canGoBack && (
+        <Button
+          size="icon"
+          variant="ghost"
+          className="mr-0.5 w-5 h-5 text-muted-foreground hover:text-foreground cursor-pointer shrink-0"
+          onClick={handleGoBack}
+          title="Go Back"
+        >
+          <ArrowLeft size={12} />
+        </Button>
+      )}
+
+      {breadcrumbStack.map((crumb, idx) => {
+        const isLast = idx === breadcrumbStack.length - 1;
+        const isHome = crumb.pathname === '/';
+
+        return (
+          <React.Fragment key={`${crumb.pathname}-${idx}`}>
+            {idx > 0 && <ChevronRight size={11} className="text-muted-foreground shrink-0" />}
+            {isHome ? (
+              <button
+                onClick={handleHomeClick}
+                className="flex items-center gap-1 font-medium text-muted-foreground hover:text-foreground cursor-pointer shrink-0"
+                title="Navigate to Home"
+              >
+                <Home size={12} />
+              </button>
+            ) : isLast ? (
+              <span className="bg-primary/10 px-1.5 py-0.2 border border-primary/20 rounded font-bold text-primary truncate">
+                {crumb.label}
+              </span>
+            ) : (
+              <button
+                onClick={() => handleBreadcrumbClick(crumb.pathname, crumb.search)}
+                className="text-muted-foreground hover:text-foreground underline cursor-pointer truncate"
+              >
+                {crumb.label}
+              </button>
+            )}
+          </React.Fragment>
+        );
+      })}
     </div>
   );
 
@@ -232,14 +228,14 @@ export function Header({
         align="center"
         workflowData={dataWorkflow}
         onSelectStep={handleSelectStep}
-        >
+      >
         <Button
-            variant="outline"
-            size="icon"
-            className="flex items-center gap-1.5 hover:bg-primary/10 px-2 border-border h-6 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
-            data-tooltip="View Pipeline Workflow"
+          variant="outline"
+          size="icon"
+          className="flex items-center gap-1.5 hover:bg-primary/10 px-2 border-border h-6 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+          data-tooltip="View Pipeline Workflow"
         >
-            <Workflow size={13} className="text-primary" />
+          <Workflow size={13} className="text-primary" />
         </Button>
       </WorkflowPopup>
 

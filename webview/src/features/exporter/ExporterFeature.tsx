@@ -27,6 +27,7 @@ export function ExporterFeature() {
           container: <LeftPanelContainer />,
           isResizable: true,
           isHiddable: true,
+          workspaceLeftWidth: 550,
           maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Workspace' },
         },
         center: {

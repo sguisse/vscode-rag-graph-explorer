@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BarChart3, Files, Terminal, HelpCircle, MessageSquareText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
@@ -14,6 +14,7 @@ import { HelpTab } from './tabs/HelpTab';
 import { PromptTab } from './tabs/prompt/PromptTab';
 import { ValidationErrorDialog } from './ValidationErrorDialog';
 import { SaveLockedProfileDialog } from './SaveLockedProfileDialog';
+import { ExtensionConflictDialog, ExtensionConflictState } from './ExtensionConflictDialog';
 import { fileExporterApiService } from '@/services/api/file-exporter-api.service.gen';
 import { ExporterTabId } from '../types/exporter.types';
 import { PathMappingService } from '../utils/path-resolver';
@@ -43,9 +44,87 @@ export function ExporterPanel() {
   const { config, setConfig, workspaceRoot, historyList, selectedProfileId } = useExporterStore();
   const selectedEntry = historyList.find((h) => h.id === selectedProfileId);
 
+  // State for extension conflict handling
+  const [conflictState, setConflictState] = useState<ExtensionConflictState | null>(null);
+
   const handleTabChange = (val: ExporterTabId) => {
     logInfo('[ExporterPanel] Active tab changed', [val]);
     setActiveTab(val);
+  };
+
+  const getExtensionPattern = (ext: string) => {
+    return ext === 'no_ext' ? '^[^.]+$' : `.*\\.${ext}$`;
+  };
+
+  const handleAppendExtensionWithCoherence = (ext: string, targetMode: 'inc' | 'exc') => {
+    logInfo('[ExporterPanel] handleAppendExtensionWithCoherence', [{ ext, targetMode }]);
+    const pattern = getExtensionPattern(ext);
+    const opposingField = targetMode === 'inc' ? 'exc_ext' : 'inc_ext';
+    const opposingContent = config[opposingField] || '';
+
+    // Check if pattern or extension name exists in the opposing list
+    const hasOpposingConflict = opposingContent.split('\n').some((line) => {
+      const trimmed = line.trim();
+      return trimmed === pattern || trimmed === `.*\\.${ext}$` || trimmed === ext;
+    });
+
+    if (hasOpposingConflict) {
+      logInfo('[ExporterPanel] Coherence conflict detected for extension:', [ext]);
+      setConflictState({ extension: ext, targetMode });
+    } else {
+      // Direct append if no conflict exists
+      const targetField = targetMode === 'inc' ? 'inc_ext' : 'exc_ext';
+      setConfig((prev) => ({
+        ...prev,
+        [targetField]: prev[targetField] ? `${prev[targetField]}\n${pattern}` : pattern,
+      }));
+    }
+  };
+
+  const handleResolveMoveConflict = () => {
+    if (!conflictState) return;
+    const { extension, targetMode } = conflictState;
+    const pattern = getExtensionPattern(extension);
+    const targetField = targetMode === 'inc' ? 'inc_ext' : 'exc_ext';
+    const opposingField = targetMode === 'inc' ? 'exc_ext' : 'inc_ext';
+
+    logInfo('[ExporterPanel] Resolving conflict by moving extension:', [extension]);
+
+    setConfig((prev) => {
+      // Filter out pattern from opposing field
+      const updatedOpposing = (prev[opposingField] || '')
+        .split('\n')
+        .map((l) => l.trim())
+        .filter((l) => l && l !== pattern && l !== `.*\\.${extension}$` && l !== extension)
+        .join('\n');
+
+      // Add pattern to target field
+      const updatedTarget = prev[targetField] ? `${prev[targetField]}\n${pattern}` : pattern;
+
+      return {
+        ...prev,
+        [opposingField]: updatedOpposing,
+        [targetField]: updatedTarget,
+      };
+    });
+
+    setConflictState(null);
+  };
+
+  const handleForceAppendConflict = () => {
+    if (!conflictState) return;
+    const { extension, targetMode } = conflictState;
+    const pattern = getExtensionPattern(extension);
+    const targetField = targetMode === 'inc' ? 'inc_ext' : 'exc_ext';
+
+    logInfo('[ExporterPanel] Force appending extension despite conflict:', [extension]);
+
+    setConfig((prev) => ({
+      ...prev,
+      [targetField]: prev[targetField] ? `${prev[targetField]}\n${pattern}` : pattern,
+    }));
+
+    setConflictState(null);
   };
 
   const topContent = (
@@ -60,7 +139,6 @@ export function ExporterPanel() {
 
   const middleContent = (
     <div className="flex flex-col h-full w-full min-h-0 font-mono text-xs overflow-hidden">
-      {/* Tab Navigation Toolbar using LeftCenterRightPanel */}
       <LeftCenterRightPanel
         id="exporter-tab-navigation-panel"
         className="bg-muted/60 p-1 border-b border-border shrink-0"
@@ -140,30 +218,26 @@ export function ExporterPanel() {
         }
       />
 
-      {/* Tab Content Panels */}
       <div className="flex-1 min-h-0 overflow-y-auto relative">
         {activeTab === 'report' && (
           <ReportTab
             reportData={reportData}
-            onAppendExtension={(ext, mode) => {
-              logInfo('[ExporterPanel] onAppendExtension', [{ ext, mode }]);
-              const field = mode === 'inc' ? 'inc_ext' : 'exc_ext';
-              setConfig((prev) => ({
-                ...prev,
-                [field]: prev[field] ? `${prev[field]}\n.*\\.${ext}$` : `.*\\.${ext}$`,
-              }));
-            }}
+            onAppendExtension={(ext, mode) => handleAppendExtensionWithCoherence(ext, mode)}
             onSetMaxFileSize={(kb) => {
               logInfo('[ExporterPanel] onSetMaxFileSize', [kb]);
               setConfig((prev) => ({ ...prev, max_file: String(kb) }));
             }}
             onExcludeTreePattern={(pattern, isExt) => {
               logInfo('[ExporterPanel] ReportTab onExcludeTreePattern', [{ pattern, isExt }]);
-              const field = isExt ? 'exc_ext' : 'exc_paths';
-              setConfig((prev) => ({
-                ...prev,
-                [field]: prev[field] ? `${prev[field]}\n${pattern}` : pattern,
-              }));
+              if (isExt) {
+                const ext = pattern.replace(/.*\\\./, '').replace(/\$/, '');
+                handleAppendExtensionWithCoherence(ext, 'exc');
+              } else {
+                setConfig((prev) => ({
+                  ...prev,
+                  exc_paths: prev.exc_paths ? `${prev.exc_paths}\n${pattern}` : pattern,
+                }));
+              }
             }}
             onCaptureTreePaths={(paths) => {
               logInfo('[ExporterPanel] ReportTab onCaptureTreePaths', paths);
@@ -255,6 +329,14 @@ export function ExporterPanel() {
         onDuplicate={handleDuplicateFromSaveModal}
         onForceSave={handleForceSaveFromSaveModal}
         onCancel={() => setModalState({ isSaveLockedModalOpen: false })}
+      />
+
+      <ExtensionConflictDialog
+        isOpen={Boolean(conflictState)}
+        conflictState={conflictState}
+        onResolveMove={handleResolveMoveConflict}
+        onForceAppend={handleForceAppendConflict}
+        onCancel={() => setConflictState(null)}
       />
     </>
   );

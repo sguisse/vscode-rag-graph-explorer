@@ -1,38 +1,51 @@
-import React from "react";
-import { cn } from "../../lib/utils";
+import React from 'react';
+import { cn } from '@/lib/utils';
 
-export interface LeftCenterRightPanelProps extends React.HTMLAttributes<HTMLDivElement> {
-  id: string;
+export interface LeftCenterRightPanelProps {
+  id?: string;
+  className?: string;
+  style?: React.CSSProperties;
   left?: React.ReactNode;
   center?: React.ReactNode;
   right?: React.ReactNode;
-  leftId?: string;
-  centerId?: string;
-  rightId?: string;
 }
 
-export function LeftCenterRightPanel({
+export const LeftCenterRightPanel: React.FC<LeftCenterRightPanelProps> = ({
   id,
+  className,
+  style,
   left,
   center,
   right,
-  leftId,
-  centerId,
-  rightId,
-  className,
-  ...props
-}: LeftCenterRightPanelProps) {
+}) => {
   return (
-    <div id={id} className={cn("flex justify-between items-center w-full min-w-0", className)} {...props}>
-      <div id={leftId ?? `${id}-left`} className="empty:hidden flex-1 flex items-center justify-start gap-2 min-w-0">
-        {left}
-      </div>
-      <div id={centerId ?? `${id}-center`} className="empty:hidden flex-1 flex items-center justify-center px-2 min-w-0">
-        {center}
-      </div>
-      <div id={rightId ?? `${id}-right`} className="empty:hidden flex-1 flex items-center justify-end gap-2 min-w-0 ml-auto">
-        {right}
-      </div>
+    <div
+      id={id}
+      style={style}
+      className={cn(
+        'flex items-center justify-between w-full min-w-0 gap-2 overflow-hidden',
+        className
+      )}
+    >
+      {left && (
+        <div className="shrink-0 flex items-center gap-1.5">
+          {left}
+        </div>
+      )}
+
+      {center && (
+        <div className="flex-1 min-w-0 h-full flex items-center justify-center">
+          {center}
+        </div>
+      )}
+
+      {right && (
+        <div className="shrink-0 flex items-center gap-1.5 ml-auto">
+          {right}
+        </div>
+      )}
     </div>
   );
-}
+};
+
+export default LeftCenterRightPanel;
