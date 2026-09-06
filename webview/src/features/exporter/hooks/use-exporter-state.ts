@@ -30,7 +30,7 @@ export function useExporterState() {
     const unsubscribeSelectedPath = vsCodeHandleMessage.on('selectedPath', (msg) => {
       if (msg.payload) {
         setConfig((prev) => {
-          const currentPaths = prev.codebase_src ? prev.codebase_src.split(/[, \n\r]+/) : [];
+          const currentPaths = prev.codebase?.src ? prev.codebase?.src.split(/[, \n\r]+/) : [];
           const newPaths = String(msg.payload).split(/[, \n\r]+/);
           const combined = Array.from(new Set([...currentPaths, ...newPaths])).map((s) => s.trim()).filter(Boolean);
           return { ...prev, codebase_src: combined.join('\n') };
@@ -132,8 +132,8 @@ export function useExporterState() {
   };
 
   useEffect(() => {
-    const paths = (config.codebase_src || '').split(/[, \n\r]+/).filter(Boolean).join(',');
-    const cmd = `python3 files-exporter.py --codebase-src '${paths || '.'}' --dest '${config.dest}' --format '${config.format}' --max-file ${config.max_file} --max-chunk ${config.max_chunk}${
+    const paths = (config.codebase?.src || '').split(/[, \n\r]+/).filter(Boolean).join(',');
+    const cmd = `python3 files-exporter.py --codebase-src '${paths || '.'}' --dest '${config.dest}' --format '${config.format}' --max-file ${config.codebase?.max_file} --max-chunk ${config.max_chunk}${
       config.groupByExt ? ' --group-ext' : ''
     }${config.logConsole ? ' --log-console' : ''}${config.generateTreeView ? ' --tree-view' : ''}`;
     setCompiledBashCmd(cmd);

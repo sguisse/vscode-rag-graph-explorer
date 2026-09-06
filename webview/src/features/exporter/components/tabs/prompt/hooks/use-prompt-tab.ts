@@ -7,10 +7,29 @@ import { useExporterStore } from '../../../../store/useExporterStore';
 
 export function usePromptTab() {
   const defaultPrompt = PREDEFINED_PROMPTS_LIST[0];
-  const [selectedPromptId, setSelectedPromptId] = useState<string>(defaultPrompt.id);
-  const [promptText, setPromptText] = useState<string>(formatPredefinedPromptText(defaultPrompt));
+  const defaultTemplate = formatPredefinedPromptText(defaultPrompt);
 
-  const config = useExporterStore((s) => s.config);
+  // Single Source of Truth: Read prompt text directly from store.config.prompt
+  const promptText = useExporterStore((s: any) => {
+    const val = s.config?.prompt;
+    return val !== undefined && val !== null ? val : defaultTemplate;
+  });
+
+  const setConfig = useExporterStore((s: any) => s.setConfig);
+  const config = useExporterStore((s: any) => s.config);
+
+  const [selectedPromptId, setSelectedPromptId] = useState<string>(defaultPrompt.id);
+
+  // Directly update store.config.prompt without local state duplication
+  const setPromptText = (text: string) => {
+    setConfig((prev: any) => ({
+      ...prev,
+      prompt: text,
+    }));
+    if (typeof (useExporterStore.getState() as any).setPrompt === 'function') {
+      (useExporterStore.getState() as any).setPrompt(text);
+    }
+  };
 
   const handleSelectPrompt = (promptId: string) => {
     setSelectedPromptId(promptId);
@@ -25,12 +44,18 @@ export function usePromptTab() {
   const handleCopyWithFullContext = async () => {
     logInfo('[usePromptTab] Copy with full context handler triggered', [promptText]);
 
-    const codebasePaths = (config.codebase?.src || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
-    const referencePaths = (config.reference?.src || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
+    const codebasePaths = (config?.codebase?.src || '')
+      .split(/[,\n\r]+/)
+      .map((s: string) => s.trim())
+      .filter(Boolean);
+    const referencePaths = (config?.reference?.src || '')
+      .split(/[,\n\r]+/)
+      .map((s: string) => s.trim())
+      .filter(Boolean);
 
     try {
       const res = await fileExporterApiService.copyFullContextToClipboard(codebasePaths, referencePaths, promptText);
-      if (res.success) {
+      if (res?.success) {
         fileExporterApiService.showNotification('info', res.message || 'Full context copied to clipboard!');
       } else {
         vsCodeApiService.copyToClipboard(promptText);

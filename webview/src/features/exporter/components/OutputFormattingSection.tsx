@@ -22,7 +22,10 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
   onChangeConfig,
 }) => {
   const validationState = useExporterStore((s) => s.validationState);
-  const maxChunkErr = validationState.errors?.max_chunk;
+  const maxChunkErr = validationState?.errors?.max_chunk;
+
+  // STRICT BOOLEAN RESOLUTION: if undefined from legacy profiles, default to true.
+  const isPromptFileEnabled = config.generatePromptFile !== false;
 
   const activeCheckboxes: string[] = [];
   if (config.groupByExt) activeCheckboxes.push('Split by Ext');
@@ -30,12 +33,13 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
   if (config.generateTreeView) activeCheckboxes.push('Tree View');
   if (config.logConsole) activeCheckboxes.push('Log Console');
   if (config.logFile) activeCheckboxes.push('Log File');
+  if (isPromptFileEnabled) activeCheckboxes.push('Prompt File');
 
   const summaryBadges: BadgeObject[] = [
-    { label: `Format: ${config.format.toUpperCase()}`, tooltip: `Output Format: ${config.format.toUpperCase()}` },
+    { label: `Format: ${(config.format || 'yaml').toUpperCase()}`, tooltip: `Output Format: ${(config.format || 'yaml').toUpperCase()}` },
     {
-      label: `Chunk: ${config.max_chunk} KB`,
-      tooltip: maxChunkErr ? `⚠️ Error: ${maxChunkErr}` : `Max Chunk Size: ${config.max_chunk} KB`,
+      label: `Chunk: ${config.max_chunk || '0'} KB`,
+      tooltip: maxChunkErr ? `⚠️ Error: ${maxChunkErr}` : `Max Chunk Size: ${config.max_chunk || '0'} KB`,
       className: maxChunkErr
         ? 'bg-destructive/10 text-destructive border-destructive/30 font-semibold'
         : 'bg-primary/10 text-primary border-primary/20',
@@ -62,7 +66,7 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
             </label>
             <SelectFromTypeBuilder
               id="select-export-format"
-              value={config.format}
+              value={config.format || 'yaml'}
               onChange={(val) => {
                 if (val) {
                   logInfo('[OutputFormattingSection] Format changed', [val]);
@@ -83,13 +87,13 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
               Max Chunk (KB)
             </label>
             <Input
-              value={config.max_chunk}
+              value={config.max_chunk || ''}
               onChange={(e) => {
                 logInfo('[OutputFormattingSection] Max chunk changed', [e.target.value]);
                 onChangeConfig((prev) => ({ ...prev, max_chunk: e.target.value }));
               }}
               className={`w-full h-7 font-mono text-xs ${
-                validationState.maxChunkInvalid || maxChunkErr
+                validationState?.maxChunkInvalid || maxChunkErr
                   ? 'bg-destructive/10 text-destructive border-destructive/30 focus-visible:ring-destructive'
                   : 'bg-background'
               }`}
@@ -102,7 +106,7 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
           <div className="flex justify-start items-center gap-2 bg-muted/20 hover:bg-muted/40 p-1.5 border border-border/30 rounded-sm w-full min-w-0 transition-colors">
             <Checkbox
               id="cb-split-ext"
-              checked={config.groupByExt}
+              checked={Boolean(config.groupByExt)}
               onCheckedChange={(val) => {
                 logInfo('[OutputFormattingSection] groupByExt changed', [Boolean(val)]);
                 onChangeConfig((prev) => ({ ...prev, groupByExt: Boolean(val) }));
@@ -116,7 +120,7 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
           <div className="flex justify-start items-center gap-2 bg-muted/20 hover:bg-muted/40 p-1.5 border border-border/30 rounded-sm w-full min-w-0 transition-colors">
             <Checkbox
               id="cb-copy-clip"
-              checked={config.copyGeneratedFilesToClipboard}
+              checked={Boolean(config.copyGeneratedFilesToClipboard)}
               onCheckedChange={(val) => {
                 logInfo('[OutputFormattingSection] copyGeneratedFilesToClipboard changed', [Boolean(val)]);
                 onChangeConfig((prev) => ({
@@ -133,7 +137,7 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
           <div className="flex justify-start items-center gap-2 bg-muted/20 hover:bg-muted/40 p-1.5 border border-border/30 rounded-sm w-full min-w-0 transition-colors">
             <Checkbox
               id="cb-tree-view"
-              checked={config.generateTreeView}
+              checked={Boolean(config.generateTreeView)}
               onCheckedChange={(val) => {
                 logInfo('[OutputFormattingSection] generateTreeView changed', [Boolean(val)]);
                 onChangeConfig((prev) => ({ ...prev, generateTreeView: Boolean(val) }));
@@ -147,7 +151,7 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
           <div className="flex justify-start items-center gap-2 bg-muted/20 hover:bg-muted/40 p-1.5 border border-border/30 rounded-sm w-full min-w-0 transition-colors">
             <Checkbox
               id="cb-log-console"
-              checked={config.logConsole}
+              checked={Boolean(config.logConsole)}
               onCheckedChange={(val) => {
                 logInfo('[OutputFormattingSection] logConsole changed', [Boolean(val)]);
                 onChangeConfig((prev) => ({ ...prev, logConsole: Boolean(val) }));
@@ -161,7 +165,7 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
           <div className="flex justify-start items-center gap-2 bg-muted/20 hover:bg-muted/40 p-1.5 border border-border/30 rounded-sm w-full min-w-0 transition-colors">
             <Checkbox
               id="cb-log-file"
-              checked={config.logFile}
+              checked={Boolean(config.logFile)}
               onCheckedChange={(val) => {
                 logInfo('[OutputFormattingSection] logFile changed', [Boolean(val)]);
                 onChangeConfig((prev) => ({ ...prev, logFile: Boolean(val) }));
@@ -169,6 +173,31 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
             />
             <label htmlFor="cb-log-file" className="font-medium text-[10px] truncate cursor-pointer select-none">
               Log File
+            </label>
+          </div>
+
+          <div className="flex justify-start items-center gap-2 bg-muted/20 hover:bg-muted/40 p-1.5 border border-border/30 rounded-sm w-full min-w-0 transition-colors">
+            <Checkbox
+              id="cb-prompt-file"
+              checked={isPromptFileEnabled}
+              onCheckedChange={(val) => {
+                const isChecked = val === true;
+                logInfo('[OutputFormattingSection] generatePromptFile changed', [isChecked]);
+
+                // 1. Standard Prop Update
+                onChangeConfig((prev) => ({ ...prev, generatePromptFile: isChecked }));
+
+                // 2. Aggressive Store Bypass (Guarantees state update regardless of wrapper drop logic)
+                useExporterStore.setState((state) => ({
+                  config: {
+                    ...state.config,
+                    generatePromptFile: isChecked
+                  }
+                }));
+              }}
+            />
+            <label htmlFor="cb-prompt-file" className="font-medium text-[10px] truncate cursor-pointer select-none">
+              Prompt File
             </label>
           </div>
         </div>

@@ -21,16 +21,8 @@ export interface ExportConfig {
   generateTreeView: boolean;
   logConsole: boolean;
   logFile: boolean;
-
-  // Legacy fallback properties for backward compatibility
-  src?: string;
-  inc_paths?: string;
-  exc_paths?: string;
-  inc_ext?: string;
-  exc_ext?: string;
-  max_file?: string;
-  codebase_src?: string;
-  reference_src?: string;
+  generatePromptFile: boolean;
+  prompt?: string;
 }
 
 export interface HistoryEntry {
@@ -87,8 +79,6 @@ export interface GeneratedFiles {
   reference?: ScopeGeneratedFiles;
   logs?: string[];
   prompt?: string[];
-  exports?: string[];
-  reports?: string[];
 }
 
 export interface TreeManifestNode {
@@ -107,7 +97,7 @@ export interface TreeManifest {
 export interface SingleScopeReportData {
   summary?: ExportSummary;
   metrics_per_extension?: Record<string, ExtensionMetrics>;
-  generated_files?: GeneratedFiles;
+  generated_files?: ScopeGeneratedFiles;
   estimatedInputTokens?: number;
   tree_manifest?: TreeManifest;
 }
@@ -158,9 +148,8 @@ export interface FilesExporterRunRequest {
   config: ExportConfig;
   currentHistoryId?: string;
   mode?: ExportMode;
-  paths?: string[];
+  codebasePaths?: string[];
   referencePaths?: string[];
-  prompt?: string;
 }
 
 export interface HistorySaveResult {

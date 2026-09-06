@@ -63,6 +63,7 @@ export function normalizeExportConfig(rawConfig: any): ExportConfig {
     generateTreeView: Boolean(rawConfig.generateTreeView),
     logConsole: Boolean(rawConfig.logConsole),
     logFile: Boolean(rawConfig.logFile),
+    generatePromptFile: true,
   };
 }
 
@@ -156,7 +157,8 @@ export const useExporterStore = create<ExporterStoreState>((set, get) => ({
     errors: {},
   },
 
-  setConfig: (updater) =>
+  setPrompt: (prompt: string) => set((state) => ({ prompt, config: { ...state.config, prompt } })),
+    setConfig: (updater) =>
     set((state) => ({
       config: typeof updater === 'function' ? normalizeExportConfig(updater(state.config)) : normalizeExportConfig(updater),
     })),

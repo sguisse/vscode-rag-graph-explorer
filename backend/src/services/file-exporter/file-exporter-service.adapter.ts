@@ -88,6 +88,7 @@ export class FileExporterAdapter extends AbstractServiceAdapter implements IFile
       generateTreeView: Boolean(expSettings.generateTreeView),
       logConsole: Boolean(expSettings.generateLogConsole),
       logFile: Boolean(expSettings.generateLogFile),
+      generatePromptFile: Boolean((expSettings as any).generatePromptFile ?? true),
     };
 
     const historyWrapper = await this.getHistoryService().getFullWrapper(currentRepo);
@@ -130,8 +131,8 @@ export class FileExporterAdapter extends AbstractServiceAdapter implements IFile
       const timestamp = getFormattedTimestamp();
       const rootPath = this.getWorkspaceRootPath();
 
-      const codebaseSrcPaths = request.paths && request.paths.length > 0
-        ? request.paths
+      const codebaseSrcPaths = request.codebasePaths && request.codebasePaths.length > 0
+        ? request.codebasePaths
         : (request.config.codebase?.src || '').split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
 
       const referenceSrcPaths = request.referencePaths && request.referencePaths.length > 0
@@ -146,11 +147,24 @@ export class FileExporterAdapter extends AbstractServiceAdapter implements IFile
         absDest = path.join(rootPath, absDest);
       }
 
+      const isPromptActive = request.config.generatePromptFile !== false;
+      const rawPrompt = request.config.prompt || (request as any).prompt || '';
+      const resolvedPrompt = isPromptActive ? rawPrompt : '';
+
+      logInfo('[DIAGNOSTIC - Backend Adapter] Prompt Resolution:', [
+        {
+          configGeneratePromptFile: request.config.generatePromptFile,
+          isPromptActive,
+          rawPromptLength: rawPrompt.length,
+          resolvedPromptLength: resolvedPrompt.length,
+        }
+      ]);
+
       const exportArgs = {
-        config: request.config,
+        config: { ...request.config, generatePromptFile: isPromptActive, prompt: resolvedPrompt },
         paths: absCodebase,
         referencePaths: absReferences,
-        prompt: request.prompt || '',
+        prompt: resolvedPrompt,
         timestamp,
         destDir: absDest,
         format: request.config.format,
@@ -228,7 +242,8 @@ export class FileExporterAdapter extends AbstractServiceAdapter implements IFile
     const exportsList = [
       ...(report.results.codebase?.generated_files?.exports || []),
       ...(report.results.reference?.generated_files?.exports || []),
-      ...(report.results.generated_files?.exports || []),
+      ...(report.results.generated_files?.codebase?.exports || []),
+      ...(report.results.generated_files?.reference?.exports || []),
     ];
 
     for (const filePath of exportsList) {
@@ -449,6 +464,7 @@ export class FileExporterAdapter extends AbstractServiceAdapter implements IFile
       const absReferences = referencePaths.map((p) => (path.isAbsolute(p) ? p : path.join(rootPath, p)));
 
       const exportArgs = {
+        config: { generatePromptFile: true, prompt },
         paths: absCodebase,
         referencePaths: absReferences,
         prompt: prompt,

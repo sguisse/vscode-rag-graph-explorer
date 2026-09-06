@@ -129,8 +129,13 @@ function buildArgs(exportArgs: any, codebaseSources: string, referenceSources: s
     if (exportArgs.logFile) args.push('--log-file');
     if (exportArgs.generateTreeView) args.push('--tree-view');
 
-    // 8. Custom Prompt
-    if (exportArgs.prompt) args.push('--prompt', exportArgs.prompt);
+    // 8. Custom Prompt Argument
+    const promptStr = (exportArgs.prompt || exportArgs.config?.prompt || '').trim();
+    const isPromptActive = exportArgs.config?.generatePromptFile !== false;
+
+    if (isPromptActive) {
+        args.push('--prompt', promptStr);
+    }
 
     return args;
 }

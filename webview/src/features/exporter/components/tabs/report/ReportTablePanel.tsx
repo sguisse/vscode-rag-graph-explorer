@@ -1,11 +1,11 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
-import { ExportReportData } from '@/shared/services/file-exporter/model/file-exporter-model';
+import { ExportReportData, SingleScopeReportData } from '@/shared/services/file-exporter/model/file-exporter-model';
 import { useReportTable, SortColumnKey, ExtensionMetricRow } from './hooks/use-report-table';
 
 interface ReportTablePanelProps {
-  reportData: ExportReportData | null;
+  reportData: ExportReportData | SingleScopeReportData | null;
   onAppendExtension?: (ext: string, mode: 'inc' | 'exc') => void;
   onSetMaxFileSize?: (kb: number) => void;
 }

@@ -118,16 +118,32 @@ export function useExporterExecution() {
     }
     store.appendTerminalLog(`💾 Target Dir: ${store.config.dest}\n`);
 
+    // Extract prompt from all potential state paths
+    const storeObj = store as Record<string, any>;
+    const rawPrompt = store.config.prompt || storeObj.prompt || storeObj.promptInstruction || '';
+    const isPromptCheckboxChecked = store.config.generatePromptFile !== false;
+    const effectivePrompt = isPromptCheckboxChecked ? rawPrompt : '';
+
+    if (isPromptCheckboxChecked) {
+      store.appendTerminalLog(`📝 Prompt File active (${effectivePrompt.length} chars)\n`);
+    } else {
+      store.appendTerminalLog(`ℹ️ Prompt File checkbox inactive\n`);
+    }
+
     try {
+      const payloadConfig = {
+        ...store.config,
+        generatePromptFile: isPromptCheckboxChecked,
+        prompt: effectivePrompt,
+        codebase: { ...store.config.codebase, src: resolvedAbsCodebase.join('\n') },
+        reference: { ...store.config.reference, src: resolvedAbsReferences.join('\n') },
+      };
+
       store.appendTerminalLog(`📡 Sending RPC runExport request to backend...\n`);
       const runResponse = await fileExporterApiService.runExport({
-        config: {
-          ...store.config,
-          codebase: { ...store.config.codebase, src: resolvedAbsCodebase.join('\n') },
-          reference: { ...store.config.reference, src: resolvedAbsReferences.join('\n') },
-        },
+        config: payloadConfig,
         currentHistoryId: store.selectedProfileId,
-        paths: resolvedAbsCodebase,
+        codebasePaths: resolvedAbsCodebase,
         referencePaths: resolvedAbsReferences,
         mode: 'standard',
       });

@@ -10,12 +10,11 @@ import { vsCodeSettingsManager } from './VsCodeSettings.manager';
 const PID_PYTHON_PATH_LOCATION = 'pids_python';
 
 /**
- * Safely wraps argument values in single quotes ('...') so special Bash characters
- * (| ( ) ? $ * \ ^ +) are treated as literal strings during terminal execution.
+ * Safely quotes arguments for Bash execution. Uses ANSI-C $'...' quoting for multi-line
+ * or special strings so terminal copy-paste never fails.
  */
 function escapeBashArg(arg: string): string {
     if (arg === undefined || arg === null) return "''";
-    // Flags without spaces or special characters remain as-is
     if (/^--?[a-zA-Z0-9-]+$/.test(arg)) {
         return arg;
     }
@@ -23,7 +22,16 @@ function escapeBashArg(arg: string): string {
     if ((clean.startsWith("'") && clean.endsWith("'")) || (clean.startsWith('"') && clean.endsWith('"'))) {
         clean = clean.slice(1, -1);
     }
-    // Escape internal single quotes for Bash: ' -> '\''
+
+    if (clean.includes('\n') || clean.includes('\r')) {
+        const escaped = clean
+            .replace(/\\/g, '\\\\')
+            .replace(/'/g, "\\'")
+            .replace(/\r?\n/g, '\\n')
+            .replace(/\t/g, '\\t');
+        return `$'${escaped}'`;
+    }
+
     const escaped = clean.replace(/'/g, "'\\''");
     return `'${escaped}'`;
 }
@@ -314,7 +322,6 @@ export class PythonScriptExecutionManager {
         const absScriptPath = path.isAbsolute(scriptPath) ? scriptPath : path.resolve(scriptPath);
         const fullArgs = ['-u', absScriptPath, ...args];
 
-        // Format all argument values strictly in single-quotes for safe shell execution
         const formattedArgs = args.map(escapeBashArg);
         const commandStr = `${pythonBinary} ${escapeBashArg(absScriptPath)} ${formattedArgs.join(' ')}`;
 

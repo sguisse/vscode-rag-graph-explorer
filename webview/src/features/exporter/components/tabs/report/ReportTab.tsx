@@ -2,13 +2,13 @@ import React, { useRef, useState, useEffect } from 'react';
 import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
 import { ResizableContainer } from '@/components/app/container/resizable-container';
 import { useResizable } from '@/components/app/container/hooks/use-resizable';
-import { ExportReportData } from '@/shared/services/file-exporter/model/file-exporter-model';
+import { ExportReportData, SingleScopeReportData } from '@/shared/services/file-exporter/model/file-exporter-model';
 import { TokenEstimationPanel } from './TokenEstimationPanel';
 import { ReportTablePanel } from './ReportTablePanel';
 import { ReportTreePanel } from './ReportTreePanel';
 
 export interface ReportTabProps {
-  reportData: ExportReportData | null;
+  reportData: ExportReportData | SingleScopeReportData | null;
   onAppendExtension?: (ext: string, mode: 'inc' | 'exc') => void;
   onSetMaxFileSize?: (kb: number) => void;
   onExcludeTreePattern?: (pattern: string, isExt: boolean) => void;

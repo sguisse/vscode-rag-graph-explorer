@@ -29,6 +29,7 @@ export const DEFAULT_EXPORT_CONFIG: ExportConfig = {
   generateTreeView: true,
   logConsole: true,
   logFile: false,
+    generatePromptFile: true,
 };
 
 export interface FileCategoryGroup {

@@ -1,6 +1,17 @@
-import React, { useState, useMemo } from 'react';
-import { ExportReportData } from '@/shared/services/file-exporter/model/file-exporter-model';
-import { logInfo } from '@/services/view/log-view.service.wrapper';
+import { useState, useMemo } from 'react';
+import {
+  ExportReportData,
+  SingleScopeReportData,
+  ExtensionMetrics,
+} from '@/shared/services/file-exporter/model/file-exporter-model';
+
+export type SortColumnKey = 'ext' | 'exported' | 'rejected' | 'excluded';
+export type SortDirection = 'asc' | 'desc';
+
+export interface SortRule {
+  key: SortColumnKey;
+  dir: SortDirection;
+}
 
 export interface ExtensionMetricRow {
   ext: string;
@@ -13,139 +24,139 @@ export interface ExtensionMetricRow {
   regex_excluded: number;
 }
 
-export type SortColumnKey = 'ext' | 'exported' | 'rejected' | 'excluded';
-
-export interface SortRule {
-  key: SortColumnKey;
-  dir: 'asc' | 'desc';
-}
-
-interface UseReportTableProps {
-  reportData: ExportReportData | null;
+export interface UseReportTableProps {
+  reportData: ExportReportData | SingleScopeReportData | null;
   onAppendExtension?: (ext: string, mode: 'inc' | 'exc') => void;
   onSetMaxFileSize?: (kb: number) => void;
 }
 
-export function useReportTable({ reportData, onAppendExtension, onSetMaxFileSize }: UseReportTableProps) {
-  // Default multi-sort priority: Exported, Size Rejected, Excluded
+export function useReportTable({
+  reportData,
+  onAppendExtension,
+  onSetMaxFileSize,
+}: UseReportTableProps) {
   const [sortRules, setSortRules] = useState<SortRule[]>([
     { key: 'exported', dir: 'desc' },
-    { key: 'rejected', dir: 'desc' },
-    { key: 'excluded', dir: 'desc' },
   ]);
 
-  const rawData = useMemo<ExtensionMetricRow[]>(() => {
-    const metrics = reportData?.metrics_per_extension || {};
-    return Object.entries(metrics).map(([ext, m]) => {
-      const exported = typeof m.exported === 'number' ? m.exported : parseInt(String(m.exported || 0), 10) || 0;
-      const excluded = typeof m.regex_excluded === 'number' ? m.regex_excluded : parseInt(String(m.regex_excluded || 0), 10) || 0;
+  const metricsList = useMemo<ExtensionMetricRow[]>(() => {
+    if (!reportData) return [];
+
+    const rawMetrics: Record<string, ExtensionMetrics | unknown> =
+      reportData.metrics_per_extension || {};
+
+    const list: ExtensionMetricRow[] = Object.entries(rawMetrics).map(([ext, val]) => {
+      const m = (val || {}) as ExtensionMetrics;
+      const exported =
+        typeof m.exported === 'number'
+          ? m.exported
+          : parseInt(String(m.exported || 0), 10) || 0;
+      const excluded =
+        typeof m.regex_excluded === 'number'
+          ? m.regex_excluded
+          : parseInt(String(m.regex_excluded || 0), 10) || 0;
+
       return {
         ext,
         exported,
-        size_rejected: m.size_rejected || { count: 0, min: '0', max: '0' },
         regex_excluded: excluded,
+        size_rejected: m.size_rejected || { count: 0, min: '0', max: '0' },
       };
     });
-  }, [reportData]);
 
-  const totals = useMemo(() => {
-    const nbExtensions = rawData.length;
-    let sumExported = 0;
-    let sumRejected = 0;
-    let sumExcluded = 0;
+    if (sortRules.length === 0) return list;
 
-    for (const row of rawData) {
-      sumExported += row.exported;
-      sumRejected += row.size_rejected.count;
-      sumExcluded += row.regex_excluded;
-    }
-
-    return {
-      nbExtensions,
-      sumExported,
-      sumRejected,
-      sumExcluded,
-    };
-  }, [rawData]);
-
-  const sortedData = useMemo(() => {
-    if (sortRules.length === 0) return rawData;
-
-    return [...rawData].sort((a, b) => {
+    return [...list].sort((a, b) => {
       for (const rule of sortRules) {
         let valA: number | string = 0;
         let valB: number | string = 0;
 
-        if (rule.key === 'ext') {
-          valA = a.ext.toLowerCase();
-          valB = b.ext.toLowerCase();
-        } else if (rule.key === 'exported') {
-          valA = a.exported;
-          valB = b.exported;
-        } else if (rule.key === 'rejected') {
-          valA = a.size_rejected.count;
-          valB = b.size_rejected.count;
-        } else if (rule.key === 'excluded') {
-          valA = a.regex_excluded;
-          valB = b.regex_excluded;
+        switch (rule.key) {
+          case 'ext':
+            valA = a.ext.toLowerCase();
+            valB = b.ext.toLowerCase();
+            break;
+          case 'exported':
+            valA = a.exported;
+            valB = b.exported;
+            break;
+          case 'rejected':
+            valA = a.size_rejected.count;
+            valB = b.size_rejected.count;
+            break;
+          case 'excluded':
+            valA = a.regex_excluded;
+            valB = b.regex_excluded;
+            break;
         }
 
-        if (valA !== valB) {
-          if (typeof valA === 'string' && typeof valB === 'string') {
-            const comp = valA.localeCompare(valB);
-            return rule.dir === 'asc' ? comp : -comp;
-          }
-          const comp = (valA as number) - (valB as number);
-          return rule.dir === 'asc' ? comp : -comp;
-        }
+        if (valA < valB) return rule.dir === 'asc' ? -1 : 1;
+        if (valA > valB) return rule.dir === 'asc' ? 1 : -1;
       }
       return 0;
     });
-  }, [rawData, sortRules]);
+  }, [reportData, sortRules]);
 
-  const handleSortToggle = (key: SortColumnKey, isMulti: boolean = false) => {
+  const totals = useMemo(() => {
+    let sumExported = 0;
+    let sumRejected = 0;
+    let sumExcluded = 0;
+
+    for (const item of metricsList) {
+      sumExported += item.exported;
+      sumRejected += item.size_rejected.count;
+      sumExcluded += item.regex_excluded;
+    }
+
+    return {
+      nbExtensions: metricsList.length,
+      sumExported,
+      sumRejected,
+      sumExcluded,
+    };
+  }, [metricsList]);
+
+  const handleSortToggle = (key: SortColumnKey, isShiftPressed: boolean) => {
     setSortRules((prev) => {
-      const existingIndex = prev.findIndex((r) => r.key === key);
-      if (isMulti) {
-        if (existingIndex >= 0) {
-          const currentDir = prev[existingIndex].dir;
-          if (currentDir === 'asc') {
-            const next = [...prev];
-            next[existingIndex] = { key, dir: 'desc' };
-            return next;
-          } else {
-            return prev.filter((r) => r.key !== key);
-          }
-        } else {
-          return [...prev, { key, dir: 'asc' }];
-        }
-      } else {
-        if (existingIndex === 0) {
-          const currentDir = prev[0].dir;
+      const existingIdx = prev.findIndex((r) => r.key === key);
+
+      if (!isShiftPressed) {
+        if (existingIdx !== -1) {
+          const currentDir = prev[existingIdx].dir;
           return [{ key, dir: currentDir === 'asc' ? 'desc' : 'asc' }];
         }
         return [{ key, dir: 'desc' }];
       }
+
+      if (existingIdx !== -1) {
+        const next = [...prev];
+        const currentDir = next[existingIdx].dir;
+        if (currentDir === 'asc') {
+          next[existingIdx] = { key, dir: 'desc' };
+        } else {
+          next.splice(existingIdx, 1);
+        }
+        return next;
+      }
+
+      return [...prev, { key, dir: 'desc' }];
     });
   };
 
   const handleExtensionClick = (ext: string, e: React.MouseEvent) => {
+    if (!onAppendExtension) return;
     const mode = e.metaKey || e.ctrlKey ? 'exc' : 'inc';
-    logInfo('[ReportTablePanel] handleExtensionClick handler triggered', [{ ext, mode }]);
-    if (onAppendExtension) {
-      onAppendExtension(ext, mode);
-    }
+    onAppendExtension(ext, mode);
   };
 
-  const handleMaxFileSizeClick = (kb: number) => {
-    logInfo('[ReportTablePanel] handleMaxFileSizeClick handler triggered', [kb]);
+  const handleMaxFileSizeClick = (maxKb: number) => {
     if (onSetMaxFileSize) {
-      onSetMaxFileSize(kb);
+      onSetMaxFileSize(maxKb);
     }
   };
 
   return {
-    metricsList: sortedData,
+    metricsList,
     totals,
     sortRules,
     handleSortToggle,
