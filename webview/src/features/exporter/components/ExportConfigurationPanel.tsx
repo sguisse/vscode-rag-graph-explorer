@@ -1,6 +1,4 @@
-import React, { useState } from 'react';
-import { ChevronsDown, ChevronsUp } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React, { useState, useImperativeHandle, forwardRef } from 'react';
 import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
 import { useExportConfiguration } from '../hooks/use-export-configuration';
 import { CodebasePathsSection } from './CodebasePathsSection';
@@ -10,7 +8,20 @@ import { OutputFormattingSection } from './OutputFormattingSection';
 import { ErrorFilesModal } from './ErrorFilesModal';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 
-export const ExportConfigurationPanel: React.FC = () => {
+export interface ExportConfigurationPanelHandle {
+  collapseAll: () => void;
+  expandAll: () => void;
+}
+
+export interface ExportConfigurationPanelProps {
+  onCollapseAll?: () => void;
+  onExpandAll?: () => void;
+}
+
+export const ExportConfigurationPanel = forwardRef<
+  ExportConfigurationPanelHandle,
+  ExportConfigurationPanelProps
+>((_props, ref) => {
   const {
     config,
     setConfig,
@@ -68,36 +79,10 @@ export const ExportConfigurationPanel: React.FC = () => {
     });
   };
 
-  const topToolbar = (
-    <div className="flex justify-between items-center px-2 py-1 bg-muted/20 border-b border-border/50 font-mono text-xs w-full shrink-0">
-      <div className="flex items-center gap-1.5 font-bold text-foreground truncate">
-
-      </div>
-
-      <div className="flex items-center gap-0.5 shrink-0">
-        <Button
-          id="btn-collapse-all-exporter-cards"
-          className="hover:bg-muted rounded w-6 h-6 text-muted-foreground hover:text-foreground transition-colors"
-          variant="ghost"
-          size="icon"
-          onClick={handleCollapseAllCards}
-          data-tooltip="Collapse All Cards"
-        >
-          <ChevronsUp size={12} />
-        </Button>
-        <Button
-          id="btn-expand-all-exporter-cards"
-          className="hover:bg-muted rounded w-6 h-6 text-muted-foreground hover:text-foreground transition-colors"
-          variant="ghost"
-          size="icon"
-          onClick={handleExpandAllCards}
-          data-tooltip="Expand All Cards"
-        >
-          <ChevronsDown size={12} />
-        </Button>
-      </div>
-    </div>
-  );
+  useImperativeHandle(ref, () => ({
+    collapseAll: handleCollapseAllCards,
+    expandAll: handleExpandAllCards,
+  }));
 
   const middleContent = (
     <div className="flex flex-col space-y-2 p-2 box-border min-w-0">
@@ -171,7 +156,6 @@ export const ExportConfigurationPanel: React.FC = () => {
       <TopMiddleBottomPanel
         id="panel-exporter-configuration"
         className="bg-background w-full h-full min-h-0 overflow-hidden"
-        top={topToolbar}
         middle={middleContent}
       />
 
@@ -185,6 +169,8 @@ export const ExportConfigurationPanel: React.FC = () => {
       />
     </>
   );
-};
+});
+
+ExportConfigurationPanel.displayName = 'ExportConfigurationPanel';
 
 export default ExportConfigurationPanel;

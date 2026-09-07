@@ -1,8 +1,23 @@
 {
-    "servers": {
+    "inputs": [
+    {
+      "id": "leanix_token",
+      "type": "promptString",
+      "description": "Enter your LeanIX API Token",
+      "password": true
+    }
+  ],"servers": {
         "jqassistant-graph-rag": {
             "type": "http",
             "url": "http://127.0.0.1:8800/mcp/"
-        }
+        },
+        "leanix": {
+            "type": "http",
+            "url": "https://mcp.leanix.net/services/mcp-server/v1/mcp",
+            "headers": {
+            "Authorization": "Bearer ${input:leanix_token}"
+            }
+          }
+
     }
 }

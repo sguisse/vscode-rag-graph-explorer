@@ -1,13 +1,25 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { ContainerPanelHeader } from '@/_layout/ContainerPanelHeader';
-import { ExportConfigurationPanel } from '../components/ExportConfigurationPanel';
+import { ExportConfigurationPanel, ExportConfigurationPanelHandle } from '../components/ExportConfigurationPanel';
+import { ExportPanelHeaderRight } from '../components/ExportPanelHeader';
 
 export const LeftPanelContainer: React.FC = () => {
+  const panelRef = useRef<ExportConfigurationPanelHandle>(null);
+
   return (
     <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden">
-      <ContainerPanelHeader title="⚙️ Export Configuration" path="workspace.left" />
+      <ContainerPanelHeader
+        title="⚙️ Export Configuration"
+        path="workspace.left"
+        headerRight={
+          <ExportPanelHeaderRight
+            onCollapseAll={() => panelRef.current?.collapseAll()}
+            onExpandAll={() => panelRef.current?.expandAll()}
+          />
+        }
+      />
       <div className="flex-1 min-h-0 overflow-hidden">
-        <ExportConfigurationPanel />
+        <ExportConfigurationPanel ref={panelRef} />
       </div>
     </div>
   );

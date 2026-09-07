@@ -107,8 +107,8 @@ export const ExternalLinks: React.FC<ExternalLinksProps> = ({
     const codebaseCount = codebaseExports.length;
     const referenceCount = referenceExports.length;
 
-    const codebaseFilesList = codebaseExports.map((f) => f.split(/[\\/]/).pop() || f).join('\n');
-    const referenceFilesList = referenceExports.map((f) => f.split(/[\\/]/).pop() || f).join('\n');
+    const codebaseFilesList = codebaseExports.map((f) => f.split(/[\\/]/).pop() || f).join('\n    ');
+    const referenceFilesList = referenceExports.map((f) => f.split(/[\\/]/).pop() || f).join('\n    ');
     const promptFileName = promptFiles.length > 0 ? (promptFiles[0].split(/[\\/]/).pop() || promptFiles[0]) : '';
 
     let contextText = mustachePromptTemplate.data.context || '';

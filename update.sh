@@ -1,202 +1,264 @@
 #!/usr/bin/env bash
 set -e
 
+# Ensure output directories exist
 mkdir -p webview/src/features/exporter/components
+mkdir -p webview/src/features/exporter/layout-ctns
 
-cat << 'EOF' > webview/src/features/exporter/components/ExternalLinks.tsx
-import React, { useState, useEffect } from 'react';
+# Create dedicated ExportPanelHeader component
+cat << 'EOF' > webview/src/features/exporter/components/ExportPanelHeader.tsx
+import React from 'react';
+import { ChevronsDown, ChevronsUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, Copy, FileText } from 'lucide-react';
-import { resolveIconUrlAsync } from '@/lib/utils-image';
-import { logInfo } from '@/services/view/log-view.service.wrapper';
-import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
-import { fileExporterApiService } from '@/services/api/file-exporter-api.service.gen';
-import { useExporterStore } from '../store/useExporterStore';
-import { LeftCenterRightPanel } from '@/components/app/left-center-right-panel';
-import {
-  formatPredefinedPromptText,
-  PREDEFINED_PROMPTS_LIST,
-  PredefinedPromptItem,
-} from './tabs/prompt/data/predefined-prompts';
-import { FilesExporterResult } from '@/shared/services/file-exporter/model/file-exporter-model';
 
-export interface ExchangeLink {
-  icon?: string;
-  tooltip?: string;
-  url: string;
+export interface ExportPanelHeaderRightProps {
+  onCollapseAll?: () => void;
+  onExpandAll?: () => void;
 }
 
-interface ExternalLinksProps {
-  exchangeLinks?: ExchangeLink[];
-  onOpenExchangeUrl?: (url: string, inBrowserTab?: boolean) => void;
-}
-
-export const ExternalLinks: React.FC<ExternalLinksProps> = ({
-  exchangeLinks = [],
-  onOpenExchangeUrl,
+export const ExportPanelHeaderRight: React.FC<ExportPanelHeaderRightProps> = ({
+  onCollapseAll,
+  onExpandAll,
 }) => {
-  const [resolvedIconUrls, setResolvedIconUrls] = useState<Record<number, string>>({});
-  const [failedIcons, setFailedIcons] = useState<Record<number, boolean>>({});
-
-  useEffect(() => {
-    let isMounted = true;
-
-    exchangeLinks.forEach((link, idx) => {
-      if (link.icon) {
-        resolveIconUrlAsync(link.icon)
-          .then((url) => {
-            if (isMounted && url) {
-              setResolvedIconUrls((prev) => ({ ...prev, [idx]: url }));
-            }
-          })
-          .catch(() => {
-            if (isMounted) {
-              setFailedIcons((prev) => ({ ...prev, [idx]: true }));
-            }
-          });
-      }
-    });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [exchangeLinks]);
-
-  const handleExchange = (url: string, e: React.MouseEvent) => {
-    const inBrowserTab = e.metaKey || e.ctrlKey;
-    logInfo('[ExternalLinks] handleExchange click', [{ url, inBrowserTab }]);
-
-    if (onOpenExchangeUrl) {
-      onOpenExchangeUrl(url, inBrowserTab);
-    } else {
-      window.open(url, '_blank', 'noopener,noreferrer');
-    }
-  };
-
-  const handleCopyFullContext = async () => {
-    logInfo('[ExternalLinks] handleCopyWithFullContext click');
-    try {
-      const destDir = useExporterStore.getState().config?.dest || '';
-      const res = await fileExporterApiService.copyLatestExportedFiles(destDir);
-      if (res?.success) {
-        fileExporterApiService.showNotification('info', res.message || 'Full context copied to clipboard!');
-      } else {
-        fileExporterApiService.showNotification('error', res.message || 'Failed to copy full context to clipboard!');
-      }
-    } catch (err: any) {
-      fileExporterApiService.showNotification('error', err.message || 'Failed to copy full context to clipboard!');
-    }
-  };
-
-  const handleCopyExternalPrompt = async () => {
-    logInfo('[ExternalLinks] handleCopyExternalPrompt click');
-    const mustachePromptTemplate = PREDEFINED_PROMPTS_LIST.find((item) => item.id === 'prompt-4-external-use-bash-replace');
-    if (!mustachePromptTemplate) {
-      fileExporterApiService.showNotification('error', 'Prompt template not found!');
-      return;
-    }
-
-    const state = useExporterStore.getState();
-    const exportResult: FilesExporterResult | null = state.lastExportResult;
-
-    if (!exportResult) {
-      fileExporterApiService.showNotification('error', 'No export result found. Please run an export before copying the external prompt!');
-      return;
-    }
-
-    logInfo('[ExternalLinks] handleCopyExternalPrompt exportResult', [exportResult]);
-
-    const codebaseExports = exportResult?.generatedFiles?.codebase?.exports || exportResult?.report?.results?.generated_files?.codebase?.exports || [];
-    const referenceExports = exportResult?.generatedFiles?.reference?.exports || exportResult?.report?.results?.generated_files?.reference?.exports || [];
-    const promptFiles = exportResult?.generatedFiles?.prompt || exportResult?.report?.results?.generated_files?.prompt || [];
-
-    const codebaseCount = codebaseExports.length;
-    const referenceCount = referenceExports.length;
-
-    const codebaseFilesList = codebaseExports.map((f) => f.split(/[\\/]/).pop() || f).join('\n');
-    const referenceFilesList = referenceExports.map((f) => f.split(/[\\/]/).pop() || f).join('\n');
-    const promptFileName = promptFiles.length > 0 ? (promptFiles[0].split(/[\\/]/).pop() || promptFiles[0]) : '';
-
-    let contextText = mustachePromptTemplate.data.context || '';
-    contextText = contextText
-      .replace(/\{\{\s*REFERENCE_FILES_COUNT\s*\}\}/g, String(referenceCount))
-      .replace(/\{\{\s*REFERENCE_FILES\s*\}\}/g, referenceFilesList)
-      .replace(/\{\{\s*CODEBASE_FILES_COUNT\s*\}\}/g, String(codebaseCount))
-      .replace(/\{\{\s*CODEBASE_FILES\s*\}\}/g, codebaseFilesList)
-      .replace(/\{\{\s*PROMPT_FILE\s*\}\}/g, promptFileName);
-
-    const clonedTemplate: PredefinedPromptItem = {
-      ...mustachePromptTemplate,
-      data: {
-        ...mustachePromptTemplate.data,
-        context: contextText,
-      },
-    };
-
-    const finalPrompt = formatPredefinedPromptText(clonedTemplate);
-
-    vsCodeApiService.copyToClipboard(finalPrompt);
-    fileExporterApiService.showNotification('info', 'Prompt 4 External usage copied to clipboard!');
-  };
-
-  const handleImageError = (idx: number) => {
-    setFailedIcons((prev) => ({ ...prev, [idx]: true }));
-  };
-
-  const leftContent = (
-    <div id="app-logo-title" className="flex items-start gap-2">
-      <Button className="h-7 px-4 gap-1.5 text-xs font-bold cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground" data-tooltip="Copy full context (codebase, references, prompt), as is, of the latest exported files to clipboard" onClick="{handleCopyFullContext}" size="sm">
-        <Copy size="{13}"/>
-        <span>Full context</span>
-      </Button>
-
-      <Button className="h-7 px-2 gap-1.5 text-[11px] font-semibold cursor-pointer hover:bg-muted/60 transition-colors" data-tooltip="Copy a prompt template to specifically use with external tool, <br" onClick="{handleCopyExternalPrompt}" size="sm" variant="outline"/> this prompt will include an output addon to provide results in a Bash code block"
+  return (
+    <div className="flex items-center gap-0.5 shrink-0">
+      <Button
+        id="btn-collapse-all-exporter-cards"
+        className="hover:bg-muted rounded w-6 h-6 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+        variant="ghost"
+        size="icon"
+        onClick={onCollapseAll}
+        data-tooltip="Collapse All Cards"
       >
-        <FileText className="shrink-0 text-primary" size="{12}"/>
-        <span>Prompt 4 External</span>
+        <ChevronsUp size={12} />
+      </Button>
+      <Button
+        id="btn-expand-all-exporter-cards"
+        className="hover:bg-muted rounded w-6 h-6 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+        variant="ghost"
+        size="icon"
+        onClick={onExpandAll}
+        data-tooltip="Expand All Cards"
+      >
+        <ChevronsDown size={12} />
       </Button>
     </div>
   );
+};
 
-  const rightContent = (
-    <div className="flex items-center gap-0.5">
-      {exchangeLinks.map((link, idx) => {
-        const resolvedSrc = resolvedIconUrls[idx];
-        const hasIcon = Boolean(resolvedSrc) && !failedIcons[idx];
-        const label = link.tooltip || 'Exchange';
-        const tooltipText = `🔗 ${label} (${link.url})<br/>• Click: Open in External Browser<br/>• Cmd/Ctrl + Click: Open in VS Code Browser Tab`;
+export default ExportPanelHeaderRight;
+EOF
 
-        return (
-          <Button key="{idx}" onClick="{(e)" size="sm" variant="outline"> handleExchange(link.url, e)}
-            className="h-7 px-2 gap-1.5 text-[11px] font-semibold cursor-pointer hover:bg-muted/60 transition-colors"
-            data-tooltip={tooltipText}
-          >
-            {hasIcon ? (
-              <img
-                src={resolvedSrc}
-                alt={label}
-                onError={() => handleImageError(idx)}
-                className="w-3.5 h-3.5 object-contain shrink-0"
-              />
-            ) : (
-              <ExternalLink className="shrink-0 text-muted-foreground" size="{12}"/>
-            )}
-            <span className="truncate max-w-[300px]">{label}</span>
-            <ExternalLink className="shrink-0 opacity-50 ml-0.5" size="{10}"/>
-          </Button>
-        );
-      })}
+# Update ExportConfigurationPanel to expose collapse/expand handlers via ref and remove local top toolbar
+cat << 'EOF' > webview/src/features/exporter/components/ExportConfigurationPanel.tsx
+import React, { useState, useImperativeHandle, forwardRef } from 'react';
+import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
+import { useExportConfiguration } from '../hooks/use-export-configuration';
+import { CodebasePathsSection } from './CodebasePathsSection';
+import { ReferencePathsSection } from './ReferencePathsSection';
+import { DestinationSection } from './DestinationSection';
+import { OutputFormattingSection } from './OutputFormattingSection';
+import { ErrorFilesModal } from './ErrorFilesModal';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
+
+export interface ExportConfigurationPanelHandle {
+  collapseAll: () => void;
+  expandAll: () => void;
+}
+
+export interface ExportConfigurationPanelProps {
+  onCollapseAll?: () => void;
+  onExpandAll?: () => void;
+}
+
+export const ExportConfigurationPanel = forwardRef<
+  ExportConfigurationPanelHandle,
+  ExportConfigurationPanelProps
+>((_props, ref) => {
+  const {
+    config,
+    setConfig,
+    filterSimulatorInput,
+    setFilterSimulatorInput,
+    modalState,
+    handleRevealDestination,
+    handleOpenCursorLinePath,
+    handleAddOpenFiles,
+    handleAddGitDiffFiles,
+    handleOpenErrorModal,
+    handleCloseErrorModal,
+    handleCopyLatestFiles,
+    handleClearDestDir,
+    addPathsToConfig,
+  } = useExportConfiguration();
+
+  const [cardsOpenState, setCardsOpenState] = useState<{
+    codebasePaths: boolean;
+    codebaseFilters: boolean;
+    referencePaths: boolean;
+    referenceFilters: boolean;
+    destination: boolean;
+    outputFormatting: boolean;
+  }>({
+    codebasePaths: false,
+    codebaseFilters: false,
+    referencePaths: false,
+    referenceFilters: false,
+    destination: false,
+    outputFormatting: true,
+  });
+
+  const handleCollapseAllCards = () => {
+    logInfo('[ExportConfigurationPanel] handleCollapseAllCards handler triggered');
+    setCardsOpenState({
+      codebasePaths: false,
+      codebaseFilters: false,
+      referencePaths: false,
+      referenceFilters: false,
+      destination: false,
+      outputFormatting: false,
+    });
+  };
+
+  const handleExpandAllCards = () => {
+    logInfo('[ExportConfigurationPanel] handleExpandAllCards handler triggered');
+    setCardsOpenState({
+      codebasePaths: true,
+      codebaseFilters: true,
+      referencePaths: true,
+      referenceFilters: true,
+      destination: true,
+      outputFormatting: true,
+    });
+  };
+
+  useImperativeHandle(ref, () => ({
+    collapseAll: handleCollapseAllCards,
+    expandAll: handleExpandAllCards,
+  }));
+
+  const middleContent = (
+    <div className="flex flex-col space-y-2 p-2 box-border min-w-0">
+      <CodebasePathsSection
+        filter={config.codebase}
+        isOpen={cardsOpenState.codebasePaths}
+        onOpenChange={(open: boolean) => setCardsOpenState((prev) => ({ ...prev, codebasePaths: open }))}
+        isFiltersOpen={cardsOpenState.codebaseFilters}
+        onFiltersOpenChange={(open: boolean) => setCardsOpenState((prev) => ({ ...prev, codebaseFilters: open }))}
+        onChangeFilter={(updater) =>
+          setConfig((prev) => ({ ...prev, codebase: updater(prev.codebase) }))
+        }
+        onChangePathsText={(val: string) =>
+          setConfig((prev) => ({ ...prev, codebase: { ...prev.codebase, src: val } }))
+        }
+        onAddOpenFiles={handleAddOpenFiles}
+        onAddGitDiffFiles={handleAddGitDiffFiles}
+        onAddErrorStackFiles={handleOpenErrorModal}
+        onOpenCursorLinePath={handleOpenCursorLinePath}
+        onClearPaths={() =>
+          setConfig((prev) => ({ ...prev, codebase: { ...prev.codebase, src: '' } }))
+        }
+        filterSimulatorInput={filterSimulatorInput}
+        setFilterSimulatorInput={setFilterSimulatorInput}
+      />
+
+      <ReferencePathsSection
+        filter={config.reference}
+        isOpen={cardsOpenState.referencePaths}
+        onOpenChange={(open: boolean) => setCardsOpenState((prev) => ({ ...prev, referencePaths: open }))}
+        isFiltersOpen={cardsOpenState.referenceFilters}
+        onFiltersOpenChange={(open: boolean) => setCardsOpenState((prev) => ({ ...prev, referenceFilters: open }))}
+        onChangeFilter={(updater) =>
+          setConfig((prev) => ({ ...prev, reference: updater(prev.reference) }))
+        }
+        onChangePathsText={(val: string) =>
+          setConfig((prev) => ({ ...prev, reference: { ...prev.reference, src: val } }))
+        }
+        onAddOpenFiles={handleAddOpenFiles}
+        onAddGitDiffFiles={handleAddGitDiffFiles}
+        onAddErrorStackFiles={handleOpenErrorModal}
+        onOpenCursorLinePath={handleOpenCursorLinePath}
+        onClearPaths={() =>
+          setConfig((prev) => ({ ...prev, reference: { ...prev.reference, src: '' } }))
+        }
+        filterSimulatorInput={filterSimulatorInput}
+        setFilterSimulatorInput={setFilterSimulatorInput}
+      />
+
+      <DestinationSection
+        destDir={config.dest}
+        isOpen={cardsOpenState.destination}
+        onOpenChange={(open: boolean) => setCardsOpenState((prev) => ({ ...prev, destination: open }))}
+        onChangeDestDir={(val: string) => setConfig((prev) => ({ ...prev, dest: val }))}
+        onCopyLatestFiles={handleCopyLatestFiles}
+        onRevealDestDir={handleRevealDestination}
+        onClearDestDir={handleClearDestDir}
+      />
+
+      <OutputFormattingSection
+        config={config}
+        isOpen={cardsOpenState.outputFormatting}
+        onOpenChange={(open: boolean) => setCardsOpenState((prev) => ({ ...prev, outputFormatting: open }))}
+        onChangeConfig={setConfig}
+      />
     </div>
   );
 
   return (
-    <LeftCenterRightPanel center="{<" className="font-mono text-xs" left="{leftContent}"></>}
-      right={rightContent}
-    />
+    <>
+      <TopMiddleBottomPanel
+        id="panel-exporter-configuration"
+        className="bg-background w-full h-full min-h-0 overflow-hidden"
+        middle={middleContent}
+      />
+
+      <ErrorFilesModal
+        isOpen={modalState.isErrorModalOpen}
+        onClose={handleCloseErrorModal}
+        onAddPaths={(paths: string[]) => {
+          logInfo('[ExportConfigurationPanel] ErrorFilesModal onAddPaths', paths);
+          addPathsToConfig(paths);
+        }}
+      />
+    </>
+  );
+});
+
+ExportConfigurationPanel.displayName = 'ExportConfigurationPanel';
+
+export default ExportConfigurationPanel;
+EOF
+
+# Update LeftPanelContainer to render ExportPanelHeaderRight inside ContainerPanelHeader's headerRight slot
+cat << 'EOF' > webview/src/features/exporter/layout-ctns/LeftPanelContainer.tsx
+import React, { useRef } from 'react';
+import { ContainerPanelHeader } from '@/_layout/ContainerPanelHeader';
+import { ExportConfigurationPanel, ExportConfigurationPanelHandle } from '../components/ExportConfigurationPanel';
+import { ExportPanelHeaderRight } from '../components/ExportPanelHeader';
+
+export const LeftPanelContainer: React.FC = () => {
+  const panelRef = useRef<ExportConfigurationPanelHandle>(null);
+
+  return (
+    <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden">
+      <ContainerPanelHeader
+        title="⚙️ Export Configuration"
+        path="workspace.left"
+        headerRight={
+          <ExportPanelHeaderRight
+            onCollapseAll={() => panelRef.current?.collapseAll()}
+            onExpandAll={() => panelRef.current?.expandAll()}
+          />
+        }
+      />
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <ExportConfigurationPanel ref={panelRef} />
+      </div>
+    </div>
   );
 };
 
-export default ExternalLinks;
+export default LeftPanelContainer;
 EOF
 
-echo "✅ fix(exporter): Fixed JSX syntax in ExternalLinks.tsx!"
+echo "✅ refactor: Export configuration collapse/expand toolbar icons moved to LeftPanelContainer header!"
