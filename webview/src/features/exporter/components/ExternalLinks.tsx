@@ -5,6 +5,14 @@ import { resolveIconUrlAsync } from '@/lib/utils-image';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { fileExporterApiService } from '@/services/api/file-exporter-api.service.gen';
+import { useExporterStore } from '../store/useExporterStore';
+import { LeftCenterRightPanel } from '@/components/app/left-center-right-panel';
+import {
+  formatPredefinedPromptText,
+  PREDEFINED_PROMPTS_LIST,
+  PredefinedPromptItem,
+} from './tabs/prompt/data/predefined-prompts';
+import { FilesExporterResult } from '@/shared/services/file-exporter/model/file-exporter-model';
 
 export interface ExchangeLink {
   icon?: string;
@@ -59,53 +67,96 @@ export const ExternalLinks: React.FC<ExternalLinksProps> = ({
     }
   };
 
-  const handleCopyExternalPrompt = () => {
+  const handleCopyFullContext = async () => {
+    logInfo('[ExternalLinks] handleCopyWithFullContext click');
+    try {
+      const destDir = useExporterStore.getState().config?.dest || '';
+      const res = await fileExporterApiService.copyLatestExportedFiles(destDir);
+      if (res?.success) {
+        fileExporterApiService.showNotification('info', res.message || 'Full context copied to clipboard!');
+      } else {
+        fileExporterApiService.showNotification('error', res.message || 'Failed to copy full context to clipboard!');
+      }
+    } catch (err: any) {
+      fileExporterApiService.showNotification('error', err.message || 'Failed to copy full context to clipboard!');
+    }
+  };
+
+  const handleCopyExternalPrompt = async () => {
     logInfo('[ExternalLinks] handleCopyExternalPrompt click');
-    const mustachePromptTemplate = `### 🎭 Role
-  {{ ROLE_AGENT }}
+    const mustachePromptTemplate = PREDEFINED_PROMPTS_LIST.find((item) => item.id === 'prompt-4-external-use-bash-replace');
+    if (!mustachePromptTemplate) {
+      fileExporterApiService.showNotification('error', 'Prompt template not found!');
+      return;
+    }
 
-### 🗣 Tone
-  {{ TONE }}
+    const state = useExporterStore.getState();
+    const exportResult: FilesExporterResult | null = state.lastExportResult;
 
-### 🛠️ Global Context & Scope
-  You must load and respect the following attachment file which contains rules as the foundation of the project.
-    {{ GLOBAL_CONTEXT_SCOPE }}
+    if (!exportResult) {
+      fileExporterApiService.showNotification('error', 'No export result found. Please run an export before copying the external prompt!');
+      return;
+    }
 
-### 🧠 Task Context & Scope
-  You have to load the following attachment file which contains the codebase to analyse as implied in the task.
-    {{ TASK_CONTEXT_SCOPE }}
+    logInfo('[ExternalLinks] handleCopyExternalPrompt exportResult', [exportResult]);
 
-### 🎯 Expected Deliverables
-  {{ EXPECTED_DELIVERABLES }}
+    const codebaseExports = exportResult?.generatedFiles?.codebase?.exports || exportResult?.report?.results?.generated_files?.codebase?.exports || [];
+    const referenceExports = exportResult?.generatedFiles?.reference?.exports || exportResult?.report?.results?.generated_files?.reference?.exports || [];
+    const promptFiles = exportResult?.generatedFiles?.prompt || exportResult?.report?.results?.generated_files?.prompt || [];
 
-### 🧭 Output Format & Constraints
-  {{ OUTPUT_FORMAT_CONSTRAINTS }}
+    const codebaseCount = codebaseExports.length;
+    const referenceCount = referenceExports.length;
 
-### 💡 Reference / Samples
-  {{ REFERENCE_SAMPLES }}`;
+    const codebaseFilesList = codebaseExports.map((f) => f.split(/[\\/]/).pop() || f).join('\n');
+    const referenceFilesList = referenceExports.map((f) => f.split(/[\\/]/).pop() || f).join('\n');
+    const promptFileName = promptFiles.length > 0 ? (promptFiles[0].split(/[\\/]/).pop() || promptFiles[0]) : '';
 
-    vsCodeApiService.copyToClipboard(mustachePromptTemplate);
-    fileExporterApiService.showNotification('info', 'Externalized template prompt copied to clipboard!');
+    let contextText = mustachePromptTemplate.data.context || '';
+    contextText = contextText
+      .replace(/\{\{\s*REFERENCE_FILES_COUNT\s*\}\}/g, String(referenceCount))
+      .replace(/\{\{\s*REFERENCE_FILES\s*\}\}/g, referenceFilesList)
+      .replace(/\{\{\s*CODEBASE_FILES_COUNT\s*\}\}/g, String(codebaseCount))
+      .replace(/\{\{\s*CODEBASE_FILES\s*\}\}/g, codebaseFilesList)
+      .replace(/\{\{\s*PROMPT_FILE\s*\}\}/g, promptFileName);
+
+    const clonedTemplate: PredefinedPromptItem = {
+      ...mustachePromptTemplate,
+      data: {
+        ...mustachePromptTemplate.data,
+        context: contextText,
+      },
+    };
+
+    const finalPrompt = formatPredefinedPromptText(clonedTemplate);
+
+    vsCodeApiService.copyToClipboard(finalPrompt);
+    fileExporterApiService.showNotification('info', 'Prompt 4 External usage copied to clipboard!');
   };
 
   const handleImageError = (idx: number) => {
     setFailedIcons((prev) => ({ ...prev, [idx]: true }));
   };
 
-  return (
-    <div className="flex items-center gap-1.5 flex-wrap font-mono text-xs">
-      <Button
-        size="sm"
-        variant="outline"
-        onClick={handleCopyExternalPrompt}
-        className="h-7 px-2 gap-1.5 text-[11px] font-semibold cursor-pointer hover:bg-muted/60 transition-colors"
-        data-tooltip="Copy externalized prompt template with Mustache placeholders"
-      >
-        <FileText size={12} className="shrink-0 text-primary" />
-        <span>Copy External Prompt</span>
-        <Copy size={10} className="shrink-0 opacity-50 ml-0.5" />
+  const leftContent = (
+    <div id="app-logo-title" className="flex items-start gap-2">
+      <Button className="h-7 px-4 gap-1.5 text-xs font-bold cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground"
+              data-tooltip="Copy full context (codebase, references, prompt), as is, of the latest exported files to clipboard"
+              onClick={handleCopyFullContext} size="sm">
+        <Copy size="{13}"/>
+        <span>Full context</span>
       </Button>
 
+      <Button className="h-7 px-2 gap-1.5 text-[11px] font-semibold cursor-pointer hover:bg-muted/60 transition-colors"
+              data-tooltip="Copy a prompt template to specifically use with external tool, <br/> this prompt will include an output addon to provide results in a Bash code block"
+              onClick={handleCopyExternalPrompt} size="sm" variant="outline">
+        <FileText className="shrink-0 text-primary" size="{12}"/>
+        <span>Prompt 4 External</span>
+      </Button>
+    </div>
+  );
+
+  const rightContent = (
+    <div className="flex items-center gap-0.5">
       {exchangeLinks.map((link, idx) => {
         const resolvedSrc = resolvedIconUrls[idx];
         const hasIcon = Boolean(resolvedSrc) && !failedIcons[idx];
@@ -113,13 +164,11 @@ export const ExternalLinks: React.FC<ExternalLinksProps> = ({
         const tooltipText = `🔗 ${label} (${link.url})<br/>• Click: Open in External Browser<br/>• Cmd/Ctrl + Click: Open in VS Code Browser Tab`;
 
         return (
-          <Button
-            key={idx}
-            size="sm"
-            variant="outline"
-            onClick={(e) => handleExchange(link.url, e)}
-            className="h-7 px-2 gap-1.5 text-[11px] font-semibold cursor-pointer hover:bg-muted/60 transition-colors"
-            data-tooltip={tooltipText}
+          <Button key="{idx}"
+                  onClick={(e) => handleExchange(link.url, e)}
+                  size="sm" variant="outline"
+                  className="h-7 px-2 gap-1.5 text-[11px] font-semibold cursor-pointer hover:bg-muted/60 transition-colors"
+                  data-tooltip={tooltipText}
           >
             {hasIcon ? (
               <img
@@ -129,14 +178,21 @@ export const ExternalLinks: React.FC<ExternalLinksProps> = ({
                 className="w-3.5 h-3.5 object-contain shrink-0"
               />
             ) : (
-              <ExternalLink size={12} className="shrink-0 text-muted-foreground" />
+              <ExternalLink className="shrink-0 text-muted-foreground" size="{12}"/>
             )}
-            <span className="truncate max-w-[120px]">{label}</span>
-            <ExternalLink size={10} className="shrink-0 opacity-50 ml-0.5" />
+            <span className="truncate max-w-[300px]">{label}</span>
+            <ExternalLink className="shrink-0 opacity-50 ml-0.5" size="{10}"/>
           </Button>
         );
       })}
     </div>
+  );
+
+  return (
+    <LeftCenterRightPanel
+      left={leftContent}
+      right={rightContent}
+    />
   );
 };
 

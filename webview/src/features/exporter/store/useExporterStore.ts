@@ -8,6 +8,7 @@ import {
   ExportReportData,
   FileExtCategoryGroup,
   ExportExchangeLink,
+  FilesExporterResult,
 } from '@/shared/services/file-exporter/model/file-exporter-model';
 import { ExporterTabId, ExporterModalState, FieldValidationState } from '../types/exporter.types';
 
@@ -32,6 +33,11 @@ export interface ExporterStoreState {
   invalidPaths: string[];
   pendingPaths: string[];
 
+  // Execution tracking
+  lastPid: number;
+  lastTimestamp: string;
+  lastExportResult: FilesExporterResult | null;
+
   modalState: ExporterModalState;
   validationState: FieldValidationState;
 
@@ -50,6 +56,9 @@ export interface ExporterStoreState {
   setCompiledBashCmd: (cmd: string) => void;
   setReportData: (data: ExportReportData | null) => void;
   setInvalidPaths: (invalidPaths: string[]) => void;
+  setLastPid: (pid: number) => void;
+  setLastTimestamp: (ts: string) => void;
+  setLastExportResult: (res: FilesExporterResult | null) => void;
   setModalState: (updater: Partial<ExporterModalState> | ((prev: ExporterModalState) => ExporterModalState)) => void;
   setValidationState: (updater: Partial<FieldValidationState> | ((prev: FieldValidationState) => FieldValidationState)) => void;
   setInitialData: (data: Partial<ExporterStoreState>) => void;
@@ -75,6 +84,10 @@ export const useExporterStore = create<ExporterStoreState>((set) => ({
   reportData: null,
   invalidPaths: [],
   pendingPaths: [],
+
+  lastPid: 0,
+  lastTimestamp: '',
+  lastExportResult: null,
 
   modalState: {
     isErrorModalOpen: false,
@@ -119,6 +132,9 @@ export const useExporterStore = create<ExporterStoreState>((set) => ({
   setCompiledBashCmd: (compiledBashCmd) => set({ compiledBashCmd }),
   setReportData: (reportData) => set({ reportData }),
   setInvalidPaths: (invalidPaths) => set({ invalidPaths }),
+  setLastPid: (lastPid) => set({ lastPid }),
+  setLastTimestamp: (lastTimestamp) => set({ lastTimestamp }),
+  setLastExportResult: (lastExportResult) => set({ lastExportResult }),
 
   setModalState: (updater) =>
     set((state) => ({

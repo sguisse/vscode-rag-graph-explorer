@@ -161,6 +161,9 @@ export function useExporterExecution() {
         return;
       }
 
+      store.setLastPid(pid);
+      store.setLastTimestamp(runResponse.timestamp);
+
       store.appendTerminalLog(`⚡ Python process spawned with PID ${pid}. Target Dir: ${runResponse.exportDirectory}\n`);
 
       let isDone = false;
@@ -187,6 +190,7 @@ export function useExporterExecution() {
             );
             if (result?.report) {
               store.setReportData(result.report.results);
+              store.setLastExportResult(result);
 
               if (store.config.copyGeneratedFilesToClipboard) {
                 await fileExporterApiService.copyLatestExportedFiles(runResponse.exportDirectory);

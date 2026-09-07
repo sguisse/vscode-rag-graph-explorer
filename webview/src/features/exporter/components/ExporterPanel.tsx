@@ -303,7 +303,7 @@ export function ExporterPanel() {
     <LeftCenterRightPanel
       id="exporter-footer-panel"
       className="p-2 bg-card border-t border-border font-mono text-xs shrink-0"
-      right={
+      center={
         <ExternalLinks
           exchangeLinks={exchangeLinks}
           onOpenExchangeUrl={handleOpenExchangeUrl}

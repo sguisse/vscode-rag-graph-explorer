@@ -44,26 +44,16 @@ export function usePromptTab() {
   const handleCopyWithFullContext = async () => {
     logInfo('[usePromptTab] Copy with full context handler triggered', [promptText]);
 
-    const codebasePaths = (config?.codebase?.src || '')
-      .split(/[,\n\r]+/)
-      .map((s: string) => s.trim())
-      .filter(Boolean);
-    const referencePaths = (config?.reference?.src || '')
-      .split(/[,\n\r]+/)
-      .map((s: string) => s.trim())
-      .filter(Boolean);
-
     try {
-      const res = await fileExporterApiService.copyFullContextToClipboard(codebasePaths, referencePaths, promptText);
+      const destDir = config?.destDir || '';
+      const res = await fileExporterApiService.copyLatestExportedFiles(destDir);
       if (res?.success) {
         fileExporterApiService.showNotification('info', res.message || 'Full context copied to clipboard!');
       } else {
-        vsCodeApiService.copyToClipboard(promptText);
-        fileExporterApiService.showNotification('info', 'Prompt text copied to clipboard!');
+        fileExporterApiService.showNotification('error', res.message || 'Failed to copy full context to clipboard!');
       }
     } catch (err: any) {
-      vsCodeApiService.copyToClipboard(promptText);
-      fileExporterApiService.showNotification('info', 'Prompt text copied to clipboard!');
+        fileExporterApiService.showNotification('error', err.message || 'Failed to copy full context to clipboard!');
     }
   };
 

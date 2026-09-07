@@ -4,7 +4,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Copy, Sparkles } from 'lucide-react';
 import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
-import { LeftCenterRightPanel } from '@/components/app/left-center-right-panel';
 import { usePromptTab } from './hooks/use-prompt-tab';
 
 export const PromptTab: React.FC = () => {
@@ -13,7 +12,6 @@ export const PromptTab: React.FC = () => {
     promptText,
     setPromptText,
     handleSelectPrompt,
-    handleCopyWithFullContext,
     predefinedPrompts,
   } = usePromptTab();
 
@@ -47,40 +45,23 @@ export const PromptTab: React.FC = () => {
 
   const middleContent = (
     <div className="p-2 h-full min-h-0 flex flex-col font-mono text-xs bg-background">
-        <Textarea
+      <Textarea
         value={promptText}
         onChange={(e) => setPromptText(e.target.value)}
         placeholder="Select a predefined prompt or compose your custom LLM prompt..."
         className="flex-1 w-full h-full font-mono text-xs bg-card resize-none border-border focus-visible:ring-1 pr-9"
         spellCheck={false}
-        />
-        <Button
+      />
+      <Button
         size="icon-xs"
         variant="ghost"
         onClick={() => navigator.clipboard.writeText(promptText)}
         data-tooltip="copy prompt content"
         className="absolute right-2.5 h-7 w-7 text-muted-foreground hover:text-foreground"
-        >
+      >
         <Copy size={15} />
-        </Button>
+      </Button>
     </div>
-  );
-
-  const bottomContent = (
-    <LeftCenterRightPanel
-      id="panel-prompt-footer"
-      className="p-2 bg-card border-t border-border font-mono text-xs shrink-0"
-      right={
-        <Button
-          size="sm"
-          onClick={handleCopyWithFullContext}
-          className="h-7 px-4 gap-1.5 text-xs font-bold cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground"
-        >
-          <Copy size={13} />
-          <span>Copy with full context</span>
-        </Button>
-      }
-    />
   );
 
   return (
@@ -89,7 +70,6 @@ export const PromptTab: React.FC = () => {
       className="w-full h-full min-h-0 overflow-hidden bg-background font-mono text-xs"
       top={topContent}
       middle={middleContent}
-      bottom={bottomContent}
     />
   );
 };
