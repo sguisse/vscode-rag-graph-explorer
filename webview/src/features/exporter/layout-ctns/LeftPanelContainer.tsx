@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { ContainerPanelHeader } from '@/_layout/ContainerPanelHeader';
 import { ExportConfigurationPanel, ExportConfigurationPanelHandle } from '../components/ExportConfigurationPanel';
-import { ExportPanelHeaderRight } from '../components/ExportPanelHeader';
+import { ExportConfigurationPanelHeaderRight } from '../components/ExportConfigurationPanelHeader';
 
 export const LeftPanelContainer: React.FC = () => {
   const panelRef = useRef<ExportConfigurationPanelHandle>(null);
@@ -12,7 +12,7 @@ export const LeftPanelContainer: React.FC = () => {
         title="⚙️ Export Configuration"
         path="workspace.left"
         headerRight={
-          <ExportPanelHeaderRight
+          <ExportConfigurationPanelHeaderRight
             onCollapseAll={() => panelRef.current?.collapseAll()}
             onExpandAll={() => panelRef.current?.expandAll()}
           />

@@ -1,13 +1,14 @@
 import React from 'react';
 import { ChevronsDown, ChevronsUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ToolbarSeparator } from '@/components/app/toolbar-separator';
 
-export interface ExportPanelHeaderRightProps {
+export interface ExportConfigurationPanelHeaderRightProps {
   onCollapseAll?: () => void;
   onExpandAll?: () => void;
 }
 
-export const ExportPanelHeaderRight: React.FC<ExportPanelHeaderRightProps> = ({
+export const ExportConfigurationPanelHeaderRight: React.FC<ExportConfigurationPanelHeaderRightProps> = ({
   onCollapseAll,
   onExpandAll,
 }) => {
@@ -33,8 +34,10 @@ export const ExportPanelHeaderRight: React.FC<ExportPanelHeaderRightProps> = ({
       >
         <ChevronsDown size={12} />
       </Button>
+
+      <ToolbarSeparator />
     </div>
   );
 };
 
-export default ExportPanelHeaderRight;
+export default ExportConfigurationPanelHeaderRight;

@@ -5,18 +5,18 @@ set -e
 mkdir -p webview/src/features/exporter/components
 mkdir -p webview/src/features/exporter/layout-ctns
 
-# Create dedicated ExportPanelHeader component
-cat << 'EOF' > webview/src/features/exporter/components/ExportPanelHeader.tsx
+# Create dedicated ExportConfigurationPanelHeader component
+cat << 'EOF' > webview/src/features/exporter/components/ExportConfigurationPanelHeader.tsx
 import React from 'react';
 import { ChevronsDown, ChevronsUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-export interface ExportPanelHeaderRightProps {
+export interface ExportConfigurationPanelHeaderRightProps {
   onCollapseAll?: () => void;
   onExpandAll?: () => void;
 }
 
-export const ExportPanelHeaderRight: React.FC<ExportPanelHeaderRightProps> = ({
+export const ExportConfigurationPanelHeaderRight: React.FC<ExportConfigurationPanelHeaderRightProps> = ({
   onCollapseAll,
   onExpandAll,
 }) => {
@@ -46,7 +46,7 @@ export const ExportPanelHeaderRight: React.FC<ExportPanelHeaderRightProps> = ({
   );
 };
 
-export default ExportPanelHeaderRight;
+export default ExportConfigurationPanelHeaderRight;
 EOF
 
 # Update ExportConfigurationPanel to expose collapse/expand handlers via ref and remove local top toolbar
@@ -229,12 +229,12 @@ ExportConfigurationPanel.displayName = 'ExportConfigurationPanel';
 export default ExportConfigurationPanel;
 EOF
 
-# Update LeftPanelContainer to render ExportPanelHeaderRight inside ContainerPanelHeader's headerRight slot
+# Update LeftPanelContainer to render ExportConfigurationPanelHeaderRight inside ContainerPanelHeader's headerRight slot
 cat << 'EOF' > webview/src/features/exporter/layout-ctns/LeftPanelContainer.tsx
 import React, { useRef } from 'react';
 import { ContainerPanelHeader } from '@/_layout/ContainerPanelHeader';
 import { ExportConfigurationPanel, ExportConfigurationPanelHandle } from '../components/ExportConfigurationPanel';
-import { ExportPanelHeaderRight } from '../components/ExportPanelHeader';
+import { ExportConfigurationPanelHeaderRight } from '../components/ExportConfigurationPanelHeader';
 
 export const LeftPanelContainer: React.FC = () => {
   const panelRef = useRef<ExportConfigurationPanelHandle>(null);
@@ -245,7 +245,7 @@ export const LeftPanelContainer: React.FC = () => {
         title="⚙️ Export Configuration"
         path="workspace.left"
         headerRight={
-          <ExportPanelHeaderRight
+          <ExportConfigurationPanelHeaderRight
             onCollapseAll={() => panelRef.current?.collapseAll()}
             onExpandAll={() => panelRef.current?.expandAll()}
           />
