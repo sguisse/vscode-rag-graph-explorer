@@ -124,7 +124,7 @@ export const GeneratedFilesPanel: React.FC<GeneratedFilesPanelProps> = ({
     <div className="p-2.5 bg-card border-t border-border font-mono text-xs shrink-0 space-y-1.5 select-none">
       <div className="font-bold text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
         <span>📄 Manifests report and tree</span>
-        <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.2 rounded font-bold border border-primary/20">
+        <span className={`text-[10px] ${textColor}/10 ${textColor} px-1.5 py-0.2 rounded font-bold border border-primary/20`}>
           {reportsList.length}
         </span>
       </div>
@@ -142,13 +142,13 @@ export const GeneratedFilesPanel: React.FC<GeneratedFilesPanelProps> = ({
                 key={filePath}
                 className="flex items-center gap-1.5 bg-muted/40 hover:bg-muted/80 px-2 py-1 border border-border/60 rounded text-[11px] transition-colors group"
               >
-                <FileJson size={13} className="text-indigo-400 shrink-0" />
+                <FileJson size={13} className={`shrink-0 ${iconColor}`} />
                 <span
                   onClick={() => {
                     logInfo(`[GeneratedFilesPanel:${scopeType}] handleOpenReport`, [filePath]);
                     onOpenFile(filePath);
                   }}
-                  className="font-bold text-primary hover:underline cursor-pointer truncate max-w-[500px]"
+                  className={`font-bold ${textColor} hover:underline cursor-pointer truncate max-w-[500px]`}
                   title={filePath}
                 >
                   {fileName}

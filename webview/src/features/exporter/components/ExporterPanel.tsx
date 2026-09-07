@@ -82,7 +82,7 @@ export function ExporterPanel() {
     }
   };
 
-  const codebaseReportData = reportData?.codebase || reportData;
+  const codebaseReportData = reportData?.codebase || null;
   const referenceReportData = reportData?.reference || null;
 
   const topContent = (
@@ -121,12 +121,12 @@ export function ExporterPanel() {
               size="sm"
               onClick={() => handleTabChange('codebase-report')}
               className={`h-6 px-2.5 text-[11px] gap-1.5 cursor-pointer font-bold transition-all rounded-md ${
-                activeTab === 'codebase-report' || activeTab === 'report'
+                activeTab === 'codebase-report'
                   ? 'bg-background text-foreground border border-border/60 shadow-xs'
                   : 'text-muted-foreground hover:text-foreground hover:bg-background/40 border border-transparent'
               }`}
             >
-              <BarChart3 size={13} className={activeTab === 'codebase-report' || activeTab === 'report' ? 'text-primary' : ''} />
+              <BarChart3 size={13} className={activeTab === 'codebase-report' ? 'text-primary' : ''} />
               <span>CODEBASE REPORT</span>
             </Button>
 
@@ -193,7 +193,7 @@ export function ExporterPanel() {
       />
 
       <div className="flex-1 min-h-0 overflow-y-auto relative">
-        {(activeTab === 'codebase-report' || activeTab === 'report') && (
+        {(activeTab === 'codebase-report') && (
           <ReportTab
             reportData={codebaseReportData}
             onAppendExtension={(ext, mode) => handleAppendExtensionWithCoherence(ext, mode, 'codebase')}

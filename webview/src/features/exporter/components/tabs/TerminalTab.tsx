@@ -310,8 +310,8 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({
     >
       <CollapsibleCard
         id="block-terminal-bash-cmd"
-        title="⚙️ Bash Command Run by Exporter"
-        tooltip="Dynamic shell execution command string generated from active UI configuration parameters."
+        title="⚙️ Bash Command Run by Exporter (Reusable in OS Terminal)"
+        tooltip="Shell execution command string generated from active UI configuration parameters."
         headerRight={bashHeaderRight}
         isOpen={isBashCardOpen}
         onOpenChange={setIsBashCardOpen}
@@ -328,7 +328,7 @@ export const TerminalTab: React.FC<TerminalTabProps> = ({
     <div className="h-full w-full min-h-0 flex flex-col pt-1 overflow-hidden flex-1">
       <CollapsibleCard
         id="block-terminal-python-console"
-        title="🐍 Python Script Output Console"
+        title="🐍 Python Export Script Output Console"
         tooltip="Real-time standard execution stream and output logs from backend exporter scripts."
         headerRight={consoleHeaderRight}
         isOpen={isConsoleCardOpen}

@@ -36,11 +36,11 @@ export const ExportConfigurationPanel: React.FC = () => {
     destination: boolean;
     outputFormatting: boolean;
   }>({
-    codebasePaths: true,
-    codebaseFilters: true,
-    referencePaths: true,
-    referenceFilters: true,
-    destination: true,
+    codebasePaths: false,
+    codebaseFilters: false,
+    referencePaths: false,
+    referenceFilters: false,
+    destination: false,
     outputFormatting: true,
   });
 
@@ -71,7 +71,7 @@ export const ExportConfigurationPanel: React.FC = () => {
   const topToolbar = (
     <div className="flex justify-between items-center px-2 py-1 bg-muted/20 border-b border-border/50 font-mono text-xs w-full shrink-0">
       <div className="flex items-center gap-1.5 font-bold text-foreground truncate">
-        <span>⚙️ Export Configuration</span>
+
       </div>
 
       <div className="flex items-center gap-0.5 shrink-0">

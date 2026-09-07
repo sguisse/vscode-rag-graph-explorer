@@ -6,8 +6,8 @@ import { fileExporterApiService } from '@/services/api/file-exporter-api.service
 import { useExporterStore } from '../../../../store/useExporterStore';
 
 export function usePromptTab() {
-  const defaultPrompt = PREDEFINED_PROMPTS_LIST[0];
-  const defaultTemplate = formatPredefinedPromptText(defaultPrompt);
+  const defaultPrompt = ''; //PREDEFINED_PROMPTS_LIST[0];
+  const defaultTemplate = ''; //formatPredefinedPromptText(defaultPrompt);
 
   // Single Source of Truth: Read prompt text directly from store.config.prompt
   const promptText = useExporterStore((s: any) => {
@@ -18,7 +18,7 @@ export function usePromptTab() {
   const setConfig = useExporterStore((s: any) => s.setConfig);
   const config = useExporterStore((s: any) => s.config);
 
-  const [selectedPromptId, setSelectedPromptId] = useState<string>(defaultPrompt.id);
+  const [selectedPromptId, setSelectedPromptId] = useState<string>('');
 
   // Directly update store.config.prompt without local state duplication
   const setPromptText = (text: string) => {

@@ -135,10 +135,10 @@ export const FilesTab: React.FC<FilesTabProps> = ({
                 key={file.path}
                 className="flex items-center gap-1.5 bg-muted/40 hover:bg-muted/80 px-2 py-1 border border-border/60 rounded text-[11px] transition-colors group"
               >
-                <FileJson size={13} className="text-indigo-400 shrink-0" />
+                <FileJson size={13} className="text-primary shrink-0" />
                 <span
                   onClick={() => handleOpenFile(file.path)}
-                  className="font-bold text-primary hover:underline cursor-pointer truncate max-w-[240px]"
+                  className="font-bold text-primary hover:underline cursor-pointer truncate max-w-[500px]"
                   title={file.path}
                 >
                   {fileName}

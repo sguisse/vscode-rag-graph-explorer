@@ -120,41 +120,56 @@ class StreamExporter:
         self.fmt = fmt
         self.out_file = out_file
         self.first_file = True
+        self.bytes_written = 0
+
+    def _write(self, text):
+        self.out_file.write(text)
+        self.bytes_written += len(text.encode('utf-8'))
 
     def start(self):
         if self.fmt == 'json':
-            self.out_file.write('{\n  "files": [\n')
+            self._write('{\n  "files": [\n')
         elif self.fmt == 'xml':
-            self.out_file.write('<?xml version="1.0" encoding="UTF-8"?>\n<export>\n  <files>\n')
+            self._write('<?xml version="1.0" encoding="UTF-8"?>\n<export>\n  <files>\n')
         elif self.fmt in ['yaml', 'yml']:
-            self.out_file.write('files:\n')
+            self._write('files:\n')
 
-    def write_file(self, fname, ext, folder, content, rel_path):
+    def estimate_file_bytes(self, fname, ext, folder, content, rel_path):
+        """Estimates output bytes for chunk size boundary checks prior to writing."""
+        dummy_str = self.format_file_block(fname, ext, folder, content, rel_path)
+        return len(dummy_str.encode('utf-8'))
+
+    def format_file_block(self, fname, ext, folder, content, rel_path):
+        lines = []
         if self.fmt == 'txt':
-            self.out_file.write(f"{'=' * 162}\n{rel_path}\n--->\n\n{content}\n<---\n\n")
+            lines.append(f"{'=' * 162}\n{rel_path}\n--->\n\n{content}\n<---\n\n")
         elif self.fmt == 'json':
-            if not self.first_file:
-                self.out_file.write(',\n')
+            prefix = ',\n' if not self.first_file else ''
             obj = {"filename": fname, "extension": ext, "path": folder, "content": content}
-            self.out_file.write("    " + json.dumps(obj).replace('\n', '\n    '))
+            lines.append(prefix + "    " + json.dumps(obj).replace('\n', '\n    '))
         elif self.fmt == 'xml':
             safe_content = content.replace(']]>', ']]]]><![CDATA[>')
-            self.out_file.write(f"    <file>\n      <filename>{fname}</filename>\n")
-            self.out_file.write(f"      <extension>{ext}</extension>\n      <path>{folder}</path>\n")
-            self.out_file.write(f"      <content><![CDATA[{safe_content}]]></content>\n    </file>\n")
+            lines.append(f"    <file>\n      <filename>{fname}</filename>\n")
+            lines.append(f"      <extension>{ext}</extension>\n      <path>{folder}</path>\n")
+            lines.append(f"      <content><![CDATA[{safe_content}]]></content>\n    </file>\n")
         elif self.fmt in ['yaml', 'yml']:
-            self.out_file.write(f"  - filename: {json.dumps(fname)}\n    extension: {json.dumps(ext)}\n")
-            self.out_file.write(f"    path: {json.dumps(folder)}\n    content: |-\n")
+            lines.append(f"  - filename: {json.dumps(fname)}\n    extension: {json.dumps(ext)}\n")
+            lines.append(f"    path: {json.dumps(folder)}\n    content: |-\n")
             for line in content.splitlines():
-                self.out_file.write(f"      {line}\n")
-            self.out_file.write("\n")
+                lines.append(f"      {line}\n")
+            lines.append("\n")
+        return "".join(lines)
+
+    def write_file(self, fname, ext, folder, content, rel_path):
+        block_text = self.format_file_block(fname, ext, folder, content, rel_path)
+        self._write(block_text)
         self.first_file = False
 
     def end(self):
         if self.fmt == 'json':
-            self.out_file.write('\n  ]\n}\n')
+            self._write('\n  ]\n}\n')
         elif self.fmt == 'xml':
-            self.out_file.write('  </files>\n</export>\n')
+            self._write('  </files>\n</export>\n')
 
 class FileScanner:
     def __init__(self, scope_name, target_sources, filters, max_file_kb=50.0):
@@ -189,6 +204,22 @@ class FileScanner:
             self.exporters[ext_key] = {'file': out_file, 'exporter': exporter, 'idx': 1}
         return self.exporters[ext_key]
 
+    def _rotate_chunk_if_needed(self, ext, incoming_bytes):
+        if MAX_OUTPUT_SIZE_BYTES <= 0:
+            return
+
+        ext_key = ext if GROUP_BY_EXT else "default"
+        exp_data = self._get_exporter(ext)
+
+        # If current chunk already has data and adding incoming bytes exceeds threshold, close and roll to next chunk index
+        if not exp_data['exporter'].first_file and (exp_data['exporter'].bytes_written + incoming_bytes) > MAX_OUTPUT_SIZE_BYTES:
+            exp_data['exporter'].end()
+            exp_data['file'].close()
+
+            next_idx = exp_data['idx'] + 1
+            out_file, new_exporter = self._open_new_chunk(next_idx, ext_key if GROUP_BY_EXT else "")
+            self.exporters[ext_key] = {'file': out_file, 'exporter': new_exporter, 'idx': next_idx}
+
     def process_file(self, fp, rel_fp, file_name, abs_f):
         fname, ext_dot = os.path.splitext(file_name)
         ext = ext_dot.lstrip('.')
@@ -208,13 +239,19 @@ class FileScanner:
             self.g_exc[ext] += 1
             return
 
-        ext_key = ext if GROUP_BY_EXT else "default"
-        exp_data = self._get_exporter(ext)
-
         try:
             with open(fp, "r", encoding="utf-8", errors="replace") as f:
                 content = f.read()
-            self.exporters[ext_key]['exporter'].write_file(fname, ext, abs_f, content, rel_fp)
+
+            ext_key = ext if GROUP_BY_EXT else "default"
+            exp_data = self._get_exporter(ext)
+
+            estimated_bytes = exp_data['exporter'].estimate_file_bytes(fname, ext, abs_f, content, rel_fp)
+            self._rotate_chunk_if_needed(ext, estimated_bytes)
+
+            # Retrieve active exporter reference post potential rotation
+            exp_data = self._get_exporter(ext)
+            exp_data['exporter'].write_file(fname, ext, abs_f, content, rel_fp)
 
             self.g_exts[ext] += 1
             self.g_fold.add(abs_f)
@@ -300,6 +337,7 @@ def export_prompt_file(prompt_text):
     if not prompt_text or not prompt_text.strip():
         return None
     prompt_filepath = os.path.join(DEST_DIR, f"export-{TIMESTAMP}-prompt.{OUTPUT_FORMAT}")
+    log(f"\n--- Prompt File ---", emoji="✍️")
     with open(prompt_filepath, "w", encoding="utf-8") as f:
         if OUTPUT_FORMAT in ['yaml', 'yml']:
             f.write("prompt: |-\n")

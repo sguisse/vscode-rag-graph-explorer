@@ -30,7 +30,9 @@ export const PromptTab: React.FC = () => {
         }}
       >
         <SelectTrigger className="flex-1 h-7 font-mono text-xs bg-background">
-          <SelectValue placeholder="Select Predefined Prompt Template..." />
+          <SelectValue placeholder="Select Predefined Prompt Template...">
+            {predefinedPrompts.find((p) => p.id === selectedPromptId)?.name || 'Select Predefined Prompt Template...'}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           {predefinedPrompts.map((p) => (
@@ -45,13 +47,22 @@ export const PromptTab: React.FC = () => {
 
   const middleContent = (
     <div className="p-2 h-full min-h-0 flex flex-col font-mono text-xs bg-background">
-      <Textarea
+        <Textarea
         value={promptText}
         onChange={(e) => setPromptText(e.target.value)}
         placeholder="Select a predefined prompt or compose your custom LLM prompt..."
-        className="flex-1 w-full h-full font-mono text-xs bg-card resize-none border-border focus-visible:ring-1"
+        className="flex-1 w-full h-full font-mono text-xs bg-card resize-none border-border focus-visible:ring-1 pr-9"
         spellCheck={false}
-      />
+        />
+        <Button
+        size="icon-xs"
+        variant="ghost"
+        onClick={() => navigator.clipboard.writeText(promptText)}
+        data-tooltip="copy prompt content"
+        className="absolute right-2.5 h-7 w-7 text-muted-foreground hover:text-foreground"
+        >
+        <Copy size={15} />
+        </Button>
     </div>
   );
 

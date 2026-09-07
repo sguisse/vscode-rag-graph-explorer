@@ -1,3 +1,15 @@
+- id: custom-prompt-01
+  name: "✍️ Custom Prompt"
+  data:
+    mode: role
+    roleOrAgent: "You act as an expert ..."
+    tone: "Surgical, concise, zero fluff"
+    context: |-
+      - Feature ...
+    expected: ""
+    output: |-
+      - ...
+    samples: ""
 - id: vscode-extension-react-dev-01
   name: "🔥 01 - VS Code Extension React Development"
   data:
