@@ -99,12 +99,56 @@ export const DestinationSection: React.FC<DestinationSectionProps> = ({
     },
   ];
 
+  const headerRightToolbar = (
+    <div className="flex items-center gap-1">
+      <Button
+        size="icon-xs"
+        variant="ghost"
+        onClick={(e) => {
+          e.stopPropagation();
+          handleCopyLatestFiles();
+        }}
+        data-tooltip="Copy Last Exported Files to Clipboard"
+        className="h-5 w-5 cursor-pointer hover:bg-accent"
+      >
+        <Copy size={12} />
+      </Button>
+
+      <Button
+        size="icon-xs"
+        variant="ghost"
+        onClick={(e) => {
+          e.stopPropagation();
+          handleRevealDestDir();
+        }}
+        data-tooltip="Reveal Folder in OS Explorer"
+        className="h-5 w-5 cursor-pointer hover:bg-accent"
+      >
+        <FolderOpen size={12} />
+      </Button>
+
+      <Button
+        size="icon-xs"
+        variant="ghost"
+        onClick={(e) => {
+          e.stopPropagation();
+          handleClearDestDir();
+        }}
+        data-tooltip="Clean Destination Folder Contents"
+        className="h-5 w-5 hover:text-destructive cursor-pointer"
+      >
+        <Trash2 size={12} />
+      </Button>
+    </div>
+  );
+
   return (
     <CollapsibleCard
       id="block-destination"
       title="💾 Destination Directory"
       tooltip="Absolute distribution path folder location where structured files will be generated."
       summaryBadges={summaryBadges}
+      headerRight={headerRightToolbar}
       defaultOpen={false}
       isOpen={isOpen}
       onOpenChange={onOpenChange}
@@ -122,34 +166,6 @@ export const DestinationSection: React.FC<DestinationSectionProps> = ({
           }`}
           data-tooltip={destError ? `⚠️ Error: ${destError}` : undefined}
         />
-
-        <Button
-          size="icon-xs"
-          variant="outline"
-          onClick={handleCopyLatestFiles}
-          data-tooltip="Copy Last Exported Files to Clipboard"
-        >
-          <Copy size={13} />
-        </Button>
-
-        <Button
-          size="icon-xs"
-          variant="outline"
-          onClick={handleRevealDestDir}
-          data-tooltip="Reveal Folder in OS Explorer"
-        >
-          <FolderOpen size={13} />
-        </Button>
-
-        <Button
-          size="icon-xs"
-          variant="outline"
-          onClick={handleClearDestDir}
-          data-tooltip="Clean Destination Folder Contents"
-          className="hover:text-destructive"
-        >
-          <Trash2 size={13} />
-        </Button>
       </div>
     </CollapsibleCard>
   );

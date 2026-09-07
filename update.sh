@@ -1,264 +1,185 @@
 #!/usr/bin/env bash
 set -e
 
-# Ensure output directories exist
+# Ensure output directory exists
 mkdir -p webview/src/features/exporter/components
-mkdir -p webview/src/features/exporter/layout-ctns
 
-# Create dedicated ExportConfigurationPanelHeader component
-cat << 'EOF' > webview/src/features/exporter/components/ExportConfigurationPanelHeader.tsx
-import React from 'react';
-import { ChevronsDown, ChevronsUp } from 'lucide-react';
+# Rewrite DestinationSection.tsx to move icon buttons into the CollapsibleCard header
+cat << 'EOF' > webview/src/features/exporter/components/DestinationSection.tsx
+import React, { useState, useEffect } from 'react';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-
-export interface ExportConfigurationPanelHeaderRightProps {
-  onCollapseAll?: () => void;
-  onExpandAll?: () => void;
-}
-
-export const ExportConfigurationPanelHeaderRight: React.FC<ExportConfigurationPanelHeaderRightProps> = ({
-  onCollapseAll,
-  onExpandAll,
-}) => {
-  return (
-    <div className="flex items-center gap-0.5 shrink-0">
-      <Button
-        id="btn-collapse-all-exporter-cards"
-        className="hover:bg-muted rounded w-6 h-6 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-        variant="ghost"
-        size="icon"
-        onClick={onCollapseAll}
-        data-tooltip="Collapse All Cards"
-      >
-        <ChevronsUp size={12} />
-      </Button>
-      <Button
-        id="btn-expand-all-exporter-cards"
-        className="hover:bg-muted rounded w-6 h-6 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-        variant="ghost"
-        size="icon"
-        onClick={onExpandAll}
-        data-tooltip="Expand All Cards"
-      >
-        <ChevronsDown size={12} />
-      </Button>
-    </div>
-  );
-};
-
-export default ExportConfigurationPanelHeaderRight;
-EOF
-
-# Update ExportConfigurationPanel to expose collapse/expand handlers via ref and remove local top toolbar
-cat << 'EOF' > webview/src/features/exporter/components/ExportConfigurationPanel.tsx
-import React, { useState, useImperativeHandle, forwardRef } from 'react';
-import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
-import { useExportConfiguration } from '../hooks/use-export-configuration';
-import { CodebasePathsSection } from './CodebasePathsSection';
-import { ReferencePathsSection } from './ReferencePathsSection';
-import { DestinationSection } from './DestinationSection';
-import { OutputFormattingSection } from './OutputFormattingSection';
-import { ErrorFilesModal } from './ErrorFilesModal';
+import { Copy, FolderOpen, Trash2 } from 'lucide-react';
+import { CollapsibleCard, BadgeObject } from '@/components/ui/collapsible-card';
+import { useExporterStore } from '../store/useExporterStore';
+import { PathMappingService } from '../utils/path-resolver';
+import { fileSystemApiService } from '@/services/api/file-system-api.service.gen';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 
-export interface ExportConfigurationPanelHandle {
-  collapseAll: () => void;
-  expandAll: () => void;
+interface DestinationSectionProps {
+  destDir: string;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onChangeDestDir: (dir: string) => void;
+  onCopyLatestFiles: () => void;
+  onRevealDestDir: () => void;
+  onClearDestDir: () => void;
 }
 
-export interface ExportConfigurationPanelProps {
-  onCollapseAll?: () => void;
-  onExpandAll?: () => void;
-}
+export const DestinationSection: React.FC<DestinationSectionProps> = ({
+  destDir,
+  isOpen,
+  onOpenChange,
+  onChangeDestDir,
+  onCopyLatestFiles,
+  onRevealDestDir,
+  onClearDestDir,
+}) => {
+  const workspaceRoot = useExporterStore((s) => s.workspaceRoot);
+  const validationState = useExporterStore((s) => s.validationState);
+  const [destExists, setDestExists] = useState<boolean>(true);
 
-export const ExportConfigurationPanel = forwardRef<
-  ExportConfigurationPanelHandle,
-  ExportConfigurationPanelProps
->((_props, ref) => {
-  const {
-    config,
-    setConfig,
-    filterSimulatorInput,
-    setFilterSimulatorInput,
-    modalState,
-    handleRevealDestination,
-    handleOpenCursorLinePath,
-    handleAddOpenFiles,
-    handleAddGitDiffFiles,
-    handleOpenErrorModal,
-    handleCloseErrorModal,
-    handleCopyLatestFiles,
-    handleClearDestDir,
-    addPathsToConfig,
-  } = useExportConfiguration();
+  const destError = validationState.errors?.dest;
+  const isInvalid = validationState.destDirInvalid || Boolean(destError);
 
-  const [cardsOpenState, setCardsOpenState] = useState<{
-    codebasePaths: boolean;
-    codebaseFilters: boolean;
-    referencePaths: boolean;
-    referenceFilters: boolean;
-    destination: boolean;
-    outputFormatting: boolean;
-  }>({
-    codebasePaths: false,
-    codebaseFilters: false,
-    referencePaths: false,
-    referenceFilters: false,
-    destination: false,
-    outputFormatting: true,
-  });
-
-  const handleCollapseAllCards = () => {
-    logInfo('[ExportConfigurationPanel] handleCollapseAllCards handler triggered');
-    setCardsOpenState({
-      codebasePaths: false,
-      codebaseFilters: false,
-      referencePaths: false,
-      referenceFilters: false,
-      destination: false,
-      outputFormatting: false,
-    });
+  const handleCopyLatestFiles = () => {
+    logInfo('[DestinationSection] onCopyLatestFiles handler triggered', [destDir]);
+    onCopyLatestFiles();
   };
 
-  const handleExpandAllCards = () => {
-    logInfo('[ExportConfigurationPanel] handleExpandAllCards handler triggered');
-    setCardsOpenState({
-      codebasePaths: true,
-      codebaseFilters: true,
-      referencePaths: true,
-      referenceFilters: true,
-      destination: true,
-      outputFormatting: true,
-    });
+  const handleRevealDestDir = () => {
+    logInfo('[DestinationSection] onRevealDestDir handler triggered', [destDir]);
+    onRevealDestDir();
   };
 
-  useImperativeHandle(ref, () => ({
-    collapseAll: handleCollapseAllCards,
-    expandAll: handleExpandAllCards,
-  }));
+  const handleClearDestDir = () => {
+    logInfo('[DestinationSection] onClearDestDir handler triggered', [destDir]);
+    onClearDestDir();
+  };
 
-  const middleContent = (
-    <div className="flex flex-col space-y-2 p-2 box-border min-w-0">
-      <CodebasePathsSection
-        filter={config.codebase}
-        isOpen={cardsOpenState.codebasePaths}
-        onOpenChange={(open: boolean) => setCardsOpenState((prev) => ({ ...prev, codebasePaths: open }))}
-        isFiltersOpen={cardsOpenState.codebaseFilters}
-        onFiltersOpenChange={(open: boolean) => setCardsOpenState((prev) => ({ ...prev, codebaseFilters: open }))}
-        onChangeFilter={(updater) =>
-          setConfig((prev) => ({ ...prev, codebase: updater(prev.codebase) }))
-        }
-        onChangePathsText={(val: string) =>
-          setConfig((prev) => ({ ...prev, codebase: { ...prev.codebase, src: val } }))
-        }
-        onAddOpenFiles={handleAddOpenFiles}
-        onAddGitDiffFiles={handleAddGitDiffFiles}
-        onAddErrorStackFiles={handleOpenErrorModal}
-        onOpenCursorLinePath={handleOpenCursorLinePath}
-        onClearPaths={() =>
-          setConfig((prev) => ({ ...prev, codebase: { ...prev.codebase, src: '' } }))
-        }
-        filterSimulatorInput={filterSimulatorInput}
-        setFilterSimulatorInput={setFilterSimulatorInput}
-      />
+  const formattedDest = destDir || 'Default directory';
+  const absDest = PathMappingService.resolveToAbsolute(formattedDest, workspaceRoot);
 
-      <ReferencePathsSection
-        filter={config.reference}
-        isOpen={cardsOpenState.referencePaths}
-        onOpenChange={(open: boolean) => setCardsOpenState((prev) => ({ ...prev, referencePaths: open }))}
-        isFiltersOpen={cardsOpenState.referenceFilters}
-        onFiltersOpenChange={(open: boolean) => setCardsOpenState((prev) => ({ ...prev, referenceFilters: open }))}
-        onChangeFilter={(updater) =>
-          setConfig((prev) => ({ ...prev, reference: updater(prev.reference) }))
-        }
-        onChangePathsText={(val: string) =>
-          setConfig((prev) => ({ ...prev, reference: { ...prev.reference, src: val } }))
-        }
-        onAddOpenFiles={handleAddOpenFiles}
-        onAddGitDiffFiles={handleAddGitDiffFiles}
-        onAddErrorStackFiles={handleOpenErrorModal}
-        onOpenCursorLinePath={handleOpenCursorLinePath}
-        onClearPaths={() =>
-          setConfig((prev) => ({ ...prev, reference: { ...prev.reference, src: '' } }))
-        }
-        filterSimulatorInput={filterSimulatorInput}
-        setFilterSimulatorInput={setFilterSimulatorInput}
-      />
+  useEffect(() => {
+    if (!absDest || !absDest.trim()) {
+      setDestExists(false);
+      return;
+    }
 
-      <DestinationSection
-        destDir={config.dest}
-        isOpen={cardsOpenState.destination}
-        onOpenChange={(open: boolean) => setCardsOpenState((prev) => ({ ...prev, destination: open }))}
-        onChangeDestDir={(val: string) => setConfig((prev) => ({ ...prev, dest: val }))}
-        onCopyLatestFiles={handleCopyLatestFiles}
-        onRevealDestDir={handleRevealDestination}
-        onClearDestDir={handleClearDestDir}
-      />
+    fileSystemApiService
+      .getInvalidPaths([absDest], workspaceRoot)
+      .then((invalid) => {
+        const isInvalidPath = Boolean(invalid && invalid.length > 0);
+        setDestExists(!isInvalidPath);
+      })
+      .catch(() => {
+        setDestExists(true);
+      });
+  }, [absDest, workspaceRoot]);
 
-      <OutputFormattingSection
-        config={config}
-        isOpen={cardsOpenState.outputFormatting}
-        onOpenChange={(open: boolean) => setCardsOpenState((prev) => ({ ...prev, outputFormatting: open }))}
-        onChangeConfig={setConfig}
-      />
-    </div>
-  );
+  const normDest = absDest.replace(/\\/g, '/');
+  const normWs = workspaceRoot ? workspaceRoot.replace(/\\/g, '/').replace(/\/+$/, '') : '';
+  const isExternal = Boolean(normWs && !normDest.startsWith(normWs));
 
-  return (
-    <>
-      <TopMiddleBottomPanel
-        id="panel-exporter-configuration"
-        className="bg-background w-full h-full min-h-0 overflow-hidden"
-        middle={middleContent}
-      />
+  let tooltip = formattedDest;
+  if (destError) {
+    tooltip = `⚠️ Error: ${destError}`;
+  } else if (!destExists) {
+    tooltip = `⚠️ Warning because you have defined an non existing folder. <br> It will be created automatically`;
+  } else if (isExternal) {
+    tooltip = `⚠️ Warning: You reference a destination directory outside the current workspace: ${absDest}`;
+  }
 
-      <ErrorFilesModal
-        isOpen={modalState.isErrorModalOpen}
-        onClose={handleCloseErrorModal}
-        onAddPaths={(paths: string[]) => {
-          logInfo('[ExportConfigurationPanel] ErrorFilesModal onAddPaths', paths);
-          addPathsToConfig(paths);
+  const isWarning = !destExists || isExternal;
+
+  let badgeClassName = 'bg-primary/10 text-primary border-primary/20 [direction:rtl] text-left w-full min-w-0 truncate';
+  if (isInvalid) {
+    badgeClassName = 'bg-destructive/10 text-destructive border-destructive/30 font-semibold [direction:rtl] text-left w-full min-w-0 truncate';
+  } else if (isWarning) {
+    badgeClassName = 'bg-amber-500/10 text-amber-600 border-amber-500/30 font-semibold [direction:rtl] text-left w-full min-w-0 truncate';
+  }
+
+  const summaryBadges: BadgeObject[] = [
+    {
+      label: formattedDest,
+      tooltip,
+      className: badgeClassName,
+    },
+  ];
+
+  const headerRight = (
+    <div className="flex items-center gap-1">
+      <Button
+        size="icon-xs"
+        variant="ghost"
+        onClick={(e) => {
+          e.stopPropagation();
+          handleCopyLatestFiles();
         }}
-      />
-    </>
+        data-tooltip="Copy Last Exported Files to Clipboard"
+        className="h-5 w-5 cursor-pointer hover:bg-accent"
+      >
+        <Copy size={12} />
+      </Button>
+
+      <Button
+        size="icon-xs"
+        variant="ghost"
+        onClick={(e) => {
+          e.stopPropagation();
+          handleRevealDestDir();
+        }}
+        data-tooltip="Reveal Folder in OS Explorer"
+        className="h-5 w-5 cursor-pointer hover:bg-accent"
+      >
+        <FolderOpen size={12} />
+      </Button>
+
+      <Button
+        size="icon-xs"
+        variant="ghost"
+        onClick={(e) => {
+          e.stopPropagation();
+          handleClearDestDir();
+        }}
+        data-tooltip="Clean Destination Folder Contents"
+        className="h-5 w-5 hover:text-destructive cursor-pointer"
+      >
+        <Trash2 size={12} />
+      </Button>
+    </div>
   );
-});
-
-ExportConfigurationPanel.displayName = 'ExportConfigurationPanel';
-
-export default ExportConfigurationPanel;
-EOF
-
-# Update LeftPanelContainer to render ExportConfigurationPanelHeaderRight inside ContainerPanelHeader's headerRight slot
-cat << 'EOF' > webview/src/features/exporter/layout-ctns/LeftPanelContainer.tsx
-import React, { useRef } from 'react';
-import { ContainerPanelHeader } from '@/_layout/ContainerPanelHeader';
-import { ExportConfigurationPanel, ExportConfigurationPanelHandle } from '../components/ExportConfigurationPanel';
-import { ExportConfigurationPanelHeaderRight } from '../components/ExportConfigurationPanelHeader';
-
-export const LeftPanelContainer: React.FC = () => {
-  const panelRef = useRef<ExportConfigurationPanelHandle>(null);
 
   return (
-    <div className="flex flex-col bg-card w-full min-w-0 h-full min-h-0 overflow-hidden">
-      <ContainerPanelHeader
-        title="⚙️ Export Configuration"
-        path="workspace.left"
-        headerRight={
-          <ExportConfigurationPanelHeaderRight
-            onCollapseAll={() => panelRef.current?.collapseAll()}
-            onExpandAll={() => panelRef.current?.expandAll()}
-          />
-        }
-      />
-      <div className="flex-1 min-h-0 overflow-hidden">
-        <ExportConfigurationPanel ref={panelRef} />
+    <CollapsibleCard
+      id="block-destination"
+      title="💾 Destination Directory"
+      tooltip="Absolute distribution path folder location where structured files will be generated."
+      summaryBadges={summaryBadges}
+      headerRight={headerRight}
+      defaultOpen={false}
+      isOpen={isOpen}
+      onOpenChange={onOpenChange}
+      className="w-full min-w-0 shrink-0"
+    >
+      <div className="flex gap-1.5 items-center font-mono text-xs">
+        <Input
+          value={destDir}
+          onChange={(e) => onChangeDestDir(e.target.value)}
+          placeholder="/absolute/path/to/exported-files"
+          className={`h-7 text-xs font-mono flex-1 ${
+            isInvalid
+              ? 'bg-destructive/10 text-destructive border-destructive/30 focus-visible:ring-destructive'
+              : 'bg-background'
+          }`}
+          data-tooltip={destError ? `⚠️ Error: ${destError}` : undefined}
+        />
       </div>
-    </div>
+    </CollapsibleCard>
   );
 };
 
-export default LeftPanelContainer;
+export default DestinationSection;
 EOF
 
-echo "✅ refactor: Export configuration collapse/expand toolbar icons moved to LeftPanelContainer header!"
+echo "✅ refactor: Moved action buttons into the card header in DestinationSection!"
