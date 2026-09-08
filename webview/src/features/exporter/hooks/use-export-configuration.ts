@@ -129,34 +129,38 @@ export function useExportConfiguration() {
 
     // Codebase scope listeners
     const unsubscribeCodebaseAdd = vsCodeBackendMessageHandler.on(EXPORTER_CODEBASE_ADD_PATHS, (msg) => {
-      if (msg.payload) {
-        logInfo(`[useExportConfiguration] Received ${msg.command} message`, [msg.payload]);
-        const newPaths = String(msg.payload || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
+      const rawPayload = msg.payload || msg.payload.paths;
+      logInfo(`[useExportConfiguration] Received ${msg.command} message`, [rawPayload]);
+      if (rawPayload) {
+        const newPaths = String(rawPayload).split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
         addPathsInConfig(newPaths, 'codebase');
       }
     });
 
     const unsubscribeCodebaseExclude = vsCodeBackendMessageHandler.on(EXPORTER_CODEBASE_EXCLUDE_PATHS, (msg) => {
-      if (msg.payload) {
-        logInfo(`[useExportConfiguration] Received ${msg.command} message`, [msg.payload]);
-        const paths = String(msg.payload || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
+      const rawPayload = msg.payload || msg.payload.paths;
+      logInfo(`[useExportConfiguration] Received ${msg.command} message`, [rawPayload]);
+      if (rawPayload) {
+        const paths = String(rawPayload).split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
         addExcludePathsInConfig(paths, 'codebase');
       }
     });
 
     // Reference scope listeners
     const unsubscribeReferenceAdd = vsCodeBackendMessageHandler.on(EXPORTER_REFERENCE_ADD_PATHS, (msg) => {
-      if (msg.payload) {
-        logInfo(`[useExportConfiguration] Received ${msg.command} message`, [msg.payload]);
-        const newPaths = String(msg.payload || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
+      const rawPayload = msg.payload || msg.payload.paths;
+      logInfo(`[useExportConfiguration] Received ${msg.command} message`, [rawPayload]);
+      if (rawPayload) {
+        const newPaths = String(rawPayload).split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
         addPathsInConfig(newPaths, 'reference');
       }
     });
 
     const unsubscribeReferenceExclude = vsCodeBackendMessageHandler.on(EXPORTER_REFERENCE_EXCLUDE_PATHS, (msg) => {
-      if (msg.payload) {
-        logInfo(`[useExportConfiguration] Received ${msg.command} message`, [msg.payload]);
-        const paths = String(msg.payload || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
+      const rawPayload = msg.payload || msg.payload.paths;
+      logInfo(`[useExportConfiguration] Received ${msg.command} message`, [rawPayload]);
+      if (rawPayload) {
+        const paths = String(rawPayload).split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
         addExcludePathsInConfig(paths, 'reference');
       }
     });

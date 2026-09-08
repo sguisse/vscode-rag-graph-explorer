@@ -89,6 +89,7 @@ function createTokenRazorExporterPathsCommand(openTool: () => void, command: VsC
         if (currentWebviewPanel && selectedPath.length > 0) {
             currentWebviewPanel.webview.postMessage({
                 command: command,
+                payload: selectedPath,
                 paths: selectedPath
             });
         }
