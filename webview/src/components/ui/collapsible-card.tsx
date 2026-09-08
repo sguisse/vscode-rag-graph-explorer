@@ -75,7 +75,7 @@ export const CollapsibleCard: React.FC<CollapsibleCardProps> = ({
       {/* Card Header */}
       <div
         onClick={handleToggle}
-        title={tooltip}
+        data-tooltip={tooltip}
         className={cn(
           'flex flex-col border-border/40 cursor-pointer select-none font-mono text-xs',
           open ? 'py-1 px-2 border-b' : 'p-1'
