@@ -83,6 +83,31 @@ export const PathsSection: React.FC<PathsSectionProps> = ({
     onChangePathsText(newLines.join('\n'));
   };
 
+  const handleFocusFilterField = (fieldKey: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onOpenChange) onOpenChange(true);
+    if (onFiltersOpenChange) onFiltersOpenChange(true);
+
+    setTimeout(() => {
+      let targetId = '';
+      if (fieldKey === 'max_file') targetId = `input-${scopeType}-max-file`;
+      else if (fieldKey === 'inc_paths') targetId = `textarea-${scopeType}-inc-paths`;
+      else if (fieldKey === 'inc_ext') targetId = `textarea-${scopeType}-inc-ext`;
+      else if (fieldKey === 'exc_paths') targetId = `textarea-${scopeType}-exc-paths`;
+      else if (fieldKey === 'exc_ext') targetId = `textarea-${scopeType}-exc-ext`;
+
+      if (targetId) {
+        const el = document.getElementById(targetId);
+        if (el) {
+          el.focus();
+          if ('select' in el && typeof (el as any).select === 'function') {
+            (el as HTMLInputElement).select();
+          }
+        }
+      }
+    }, 100);
+  };
+
   const pathBadges: BadgeObject[] = lines.flatMap((line) => {
     const clean = line.replace(/^['"]|['"]$/g, '').trim();
     if (!clean) return [];
@@ -179,7 +204,7 @@ export const PathsSection: React.FC<PathsSectionProps> = ({
   const summaryBadges: BadgeObject[] = [...pathBadges];
 
   if (!isOpen) {
-    const filterBadges = getFilterSummaryBadges(filter, scopeType, validationState);
+    const filterBadges = getFilterSummaryBadges(filter, scopeType, validationState, handleFocusFilterField);
     if (filterBadges.length > 0) {
       if (pathBadges.length > 0) {
         summaryBadges.push({
@@ -190,19 +215,6 @@ export const PathsSection: React.FC<PathsSectionProps> = ({
 
       filterBadges.forEach((badge) => {
         summaryBadges.push(badge);
-
-        const labelStr = typeof badge.label === 'string' ? badge.label : '';
-        const tooltipStr = typeof badge.tooltip === 'string' ? badge.tooltip : '';
-        const isMaxBadge =
-          labelStr.toLowerCase().includes('max') ||
-          tooltipStr.toLowerCase().includes('max');
-
-        if (isMaxBadge) {
-          summaryBadges.push({
-            label: '',
-            className: 'basis-full h-0 w-full border-0 p-0 m-0 pointer-events-none opacity-0 invisible',
-          });
-        }
       });
     }
   }

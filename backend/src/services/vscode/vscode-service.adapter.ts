@@ -4,7 +4,7 @@ import { getAppNormalizedNameFromPackageJson, getCurrentExtensionContext, getWor
 import { LogLevel } from '../../../../shared/services/vscode/types';
 import { logMessageFromRemote as logMessageDelegate } from './delegate/logger.delegate';
 import { getExtensionSettings as getExtensionSettingsDelegate } from './delegate/get-extension-settings.delegate';
-import { showRichNotificationDelegate, RichNotificationOptions, RichNotificationService } from './delegate/rich-notification.delegate';
+import { showRichNotificationDelegate, RichNotificationOptions } from './delegate/rich-notification.delegate';
 import { VsCodeSettings } from '../../../../shared/services/vscode/model/VsCodeSettings.gen';
 import { AbstractServiceAdapter } from '../../core/AbstractServiceAdapter';
 import { logChannel, logError, logInfo, logWarn } from '../../utils/utils-log';
@@ -33,6 +33,20 @@ export class VsCodeServiceAdapter extends AbstractServiceAdapter implements IVsC
         callback?: (command: string, payload: any) => void
     ): Promise<void> {
         showRichNotificationDelegate(fallbackText, options, callback);
+    }
+
+    public async openSettings(settingKey?: string): Promise<void> {
+        logInfo(`[VsCodeServiceAdapter] openSettings invoked with key: ${settingKey}`);
+        try {
+            if (settingKey) {
+                await vscode.commands.executeCommand('workbench.action.openSettings', settingKey);
+            } else {
+                await vscode.commands.executeCommand('workbench.action.openSettings');
+            }
+        } catch (err) {
+            logError(`[VsCodeServiceAdapter] Failed to open settings: ${err}`);
+            throw err;
+        }
     }
 
     public async openUrl(url: string, inExternalBrowser: boolean): Promise<void> {

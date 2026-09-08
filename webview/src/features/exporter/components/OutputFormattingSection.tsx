@@ -27,6 +27,52 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
   // STRICT BOOLEAN RESOLUTION: if undefined from legacy profiles, default to true.
   const isPromptFileEnabled = config.generatePromptFile !== false;
 
+  const handleFocusField = (elementId: string, e: React.MouseEvent, isSelect = false) => {
+    e.stopPropagation();
+    if (onOpenChange) onOpenChange(true);
+
+    const attemptFocus = (retries = 15) => {
+      const root = document.getElementById(elementId);
+      if (!root) {
+        if (retries > 0) setTimeout(() => attemptFocus(retries - 1), 40);
+        return;
+      }
+
+      // Resolve the interactive child element if root is a wrapper div
+      const target = root.matches('button, input, [role="combobox"]')
+        ? root
+        : (root.querySelector('button, input, [role="combobox"]') as HTMLElement) || root;
+
+      if (target) {
+        try {
+          target.focus({ focusVisible: true });
+        } catch {
+          target.focus();
+        }
+
+        if ('select' in target && typeof (target as any).select === 'function') {
+          (target as HTMLInputElement).select();
+        }
+
+        if (isSelect) {
+          // Open the Radix Select dropdown natively
+          target.click();
+        }
+      }
+    };
+
+    setTimeout(() => attemptFocus(), 60);
+  };
+
+  const chkIdMap: Record<string, string> = {
+    'Split by Ext': 'cb-split-ext',
+    'Copy to Clip': 'cb-copy-clip',
+    'Tree View': 'cb-tree-view',
+    'Log Console': 'cb-log-console',
+    'Log File': 'cb-log-file',
+    'Prompt File': 'cb-prompt-file',
+  };
+
   const activeCheckboxes: string[] = [];
   if (config.groupByExt) activeCheckboxes.push('Split by Ext');
   if (config.copyGeneratedFilesToClipboard) activeCheckboxes.push('Copy to Clip');
@@ -36,15 +82,26 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
   if (isPromptFileEnabled) activeCheckboxes.push('Prompt File');
 
   const summaryBadges: BadgeObject[] = [
-    { label: `Format: ${(config.format || 'yaml').toUpperCase()}`, tooltip: `Output Format: ${(config.format || 'yaml').toUpperCase()}` },
+    {
+      label: `Format: ${(config.format || 'yaml').toUpperCase()}`,
+      tooltip: `Output Format: ${(config.format || 'yaml').toUpperCase()}`,
+      className: 'bg-primary/10 text-primary border-primary/20 cursor-pointer hover:bg-primary/20',
+      onClick: (e) => handleFocusField('select-export-format', e, true),
+    },
     {
       label: `Chunk: ${config.max_chunk || '0'} KB`,
       tooltip: maxChunkErr ? `⚠️ Error: ${maxChunkErr}` : `Max Chunk Size: ${config.max_chunk || '0'} KB`,
       className: maxChunkErr
-        ? 'bg-destructive/10 text-destructive border-destructive/30 font-semibold'
-        : 'bg-primary/10 text-primary border-primary/20',
+        ? 'bg-destructive/10 text-destructive border-destructive/30 font-semibold cursor-pointer'
+        : 'bg-primary/10 text-primary border-primary/20 cursor-pointer hover:bg-primary/20',
+      onClick: (e) => handleFocusField('input-max-chunk', e),
     },
-    ...activeCheckboxes.map((chk) => ({ label: chk, tooltip: `Rule enabled: ${chk}` })),
+    ...activeCheckboxes.map((chk) => ({
+      label: chk,
+      tooltip: `Rule enabled: ${chk}`,
+      className: 'bg-primary/10 text-primary border-primary/20 cursor-pointer hover:bg-primary/20',
+      onClick: (e: React.MouseEvent) => handleFocusField(chkIdMap[chk] || 'cb-split-ext', e),
+    })),
   ];
 
   return (
@@ -73,7 +130,7 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
                   onChangeConfig((prev) => ({ ...prev, format: val as ExportFormat }));
                 }
               }}
-              triggerClassName="!h-7 min-h-0 py-0 px-2 text-xs border-border rounded-md font-mono w-24"
+              triggerClassName="!h-7 min-h-0 py-0 px-2 text-xs border-border rounded-md font-mono w-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 data-[state=open]:ring-2 data-[state=open]:ring-ring data-[state=open]:ring-offset-1 transition-all"
               options={EXPORT_FORMAT_LIST.map((key) => ({
                 value: key,
                 icon: EXPORT_FORMAT_ICON_MAP[key]?.icon,
@@ -87,6 +144,7 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
               Max Chunk (KB)
             </label>
             <Input
+              id="input-max-chunk"
               value={config.max_chunk || ''}
               onChange={(e) => {
                 logInfo('[OutputFormattingSection] Max chunk changed', [e.target.value]);
@@ -103,7 +161,7 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
         </div>
 
         <div className="gap-2 grid grid-cols-[repeat(auto-fit,minmax(110px,1fr))] pt-2 border-border/40 border-t w-full min-w-0">
-          <div className="flex justify-start items-center gap-2 bg-muted/20 hover:bg-muted/40 p-1.5 border border-border/30 rounded-sm w-full min-w-0 transition-colors">
+          <div className="flex justify-start items-center gap-2 bg-muted/20 hover:bg-muted/40 p-1.5 border border-border/30 rounded-sm w-full min-w-0 transition-colors focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-1 focus-within:ring-offset-background">
             <Checkbox
               id="cb-split-ext"
               checked={Boolean(config.groupByExt)}
@@ -117,7 +175,7 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
             </label>
           </div>
 
-          <div className="flex justify-start items-center gap-2 bg-muted/20 hover:bg-muted/40 p-1.5 border border-border/30 rounded-sm w-full min-w-0 transition-colors">
+          <div className="flex justify-start items-center gap-2 bg-muted/20 hover:bg-muted/40 p-1.5 border border-border/30 rounded-sm w-full min-w-0 transition-colors focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-1 focus-within:ring-offset-background">
             <Checkbox
               id="cb-copy-clip"
               checked={Boolean(config.copyGeneratedFilesToClipboard)}
@@ -134,7 +192,7 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
             </label>
           </div>
 
-          <div className="flex justify-start items-center gap-2 bg-muted/20 hover:bg-muted/40 p-1.5 border border-border/30 rounded-sm w-full min-w-0 transition-colors">
+          <div className="flex justify-start items-center gap-2 bg-muted/20 hover:bg-muted/40 p-1.5 border border-border/30 rounded-sm w-full min-w-0 transition-colors focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-1 focus-within:ring-offset-background">
             <Checkbox
               id="cb-tree-view"
               checked={Boolean(config.generateTreeView)}
@@ -148,7 +206,7 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
             </label>
           </div>
 
-          <div className="flex justify-start items-center gap-2 bg-muted/20 hover:bg-muted/40 p-1.5 border border-border/30 rounded-sm w-full min-w-0 transition-colors">
+          <div className="flex justify-start items-center gap-2 bg-muted/20 hover:bg-muted/40 p-1.5 border border-border/30 rounded-sm w-full min-w-0 transition-colors focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-1 focus-within:ring-offset-background">
             <Checkbox
               id="cb-log-console"
               checked={Boolean(config.logConsole)}
@@ -162,7 +220,7 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
             </label>
           </div>
 
-          <div className="flex justify-start items-center gap-2 bg-muted/20 hover:bg-muted/40 p-1.5 border border-border/30 rounded-sm w-full min-w-0 transition-colors">
+          <div className="flex justify-start items-center gap-2 bg-muted/20 hover:bg-muted/40 p-1.5 border border-border/30 rounded-sm w-full min-w-0 transition-colors focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-1 focus-within:ring-offset-background">
             <Checkbox
               id="cb-log-file"
               checked={Boolean(config.logFile)}
@@ -176,7 +234,7 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
             </label>
           </div>
 
-          <div className="flex justify-start items-center gap-2 bg-muted/20 hover:bg-muted/40 p-1.5 border border-border/30 rounded-sm w-full min-w-0 transition-colors">
+          <div className="flex justify-start items-center gap-2 bg-muted/20 hover:bg-muted/40 p-1.5 border border-border/30 rounded-sm w-full min-w-0 transition-colors focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-1 focus-within:ring-offset-background">
             <Checkbox
               id="cb-prompt-file"
               checked={isPromptFileEnabled}

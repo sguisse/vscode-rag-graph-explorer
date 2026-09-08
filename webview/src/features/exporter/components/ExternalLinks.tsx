@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, Copy, FileText } from 'lucide-react';
+import { ExternalLink, Copy, FileText, Settings } from 'lucide-react';
 import { resolveIconUrlAsync } from '@/lib/utils-image';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
@@ -65,6 +65,11 @@ export const ExternalLinks: React.FC<ExternalLinksProps> = ({
     } else {
       window.open(url, '_blank', 'noopener,noreferrer');
     }
+  };
+
+  const handleOpenSettings = () => {
+    logInfo('[ExternalLinks] handleOpenSettings click -> tokenRazor.exporter.exchange');
+    vsCodeApiService.openSettings('tokenRazor.exporter.exchange');
   };
 
   const handleCopyFullContext = async () => {
@@ -142,14 +147,14 @@ export const ExternalLinks: React.FC<ExternalLinksProps> = ({
       <Button className="h-7 px-4 gap-1.5 text-xs font-bold cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground"
               data-tooltip="Copy full context (codebase, references, prompt), as is, of the latest exported files to clipboard"
               onClick={handleCopyFullContext} size="sm">
-        <Copy size="{13}"/>
+        <Copy size={13}/>
         <span>Full context</span>
       </Button>
 
       <Button className="h-7 px-2 gap-1.5 text-[11px] font-semibold cursor-pointer hover:bg-muted/60 transition-colors"
               data-tooltip="Copy a prompt template to specifically use with external tool, <br/> this prompt will include an output addon to provide results in a Bash code block"
               onClick={handleCopyExternalPrompt} size="sm" variant="outline">
-        <FileText className="shrink-0 text-primary" size="{12}"/>
+        <FileText className="shrink-0 text-primary" size={12}/>
         <span>Prompt 4 External</span>
       </Button>
     </div>
@@ -164,7 +169,7 @@ export const ExternalLinks: React.FC<ExternalLinksProps> = ({
         const tooltipText = `🔗 ${label} (${link.url})<br/>• Click: Open in External Browser<br/>• Cmd/Ctrl + Click: Open in VS Code Browser Tab`;
 
         return (
-          <Button key="{idx}"
+          <Button key={idx}
                   onClick={(e) => handleExchange(link.url, e)}
                   size="sm" variant="outline"
                   className="h-7 px-2 gap-1.5 text-[11px] font-semibold cursor-pointer hover:bg-muted/60 transition-colors"
@@ -178,13 +183,23 @@ export const ExternalLinks: React.FC<ExternalLinksProps> = ({
                 className="w-3.5 h-3.5 object-contain shrink-0"
               />
             ) : (
-              <ExternalLink className="shrink-0 text-muted-foreground" size="{12}"/>
+              <ExternalLink className="shrink-0 text-muted-foreground" size={12}/>
             )}
             <span className="truncate max-w-[300px]">{label}</span>
-            <ExternalLink className="shrink-0 opacity-50 ml-0.5" size="{10}"/>
+            <ExternalLink className="shrink-0 opacity-50 ml-0.5" size={10}/>
           </Button>
         );
       })}
+
+      <Button
+        size="icon-xs"
+        variant="outline"
+        onClick={handleOpenSettings}
+        className="h-7 w-7 p-0 ml-1 cursor-pointer hover:bg-muted/60 transition-colors shrink-0"
+        data-tooltip="Configure Exporter Exchange Links in VS Code Settings (tokenRazor.exporter.exchange)"
+      >
+        <Settings size={13} className="text-muted-foreground hover:text-foreground" />
+      </Button>
     </div>
   );
 

@@ -49,6 +49,20 @@ export const DestinationSection: React.FC<DestinationSectionProps> = ({
     onClearDestDir();
   };
 
+  const handleBadgeClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onOpenChange) onOpenChange(true);
+    setTimeout(() => {
+      const el = document.getElementById('input-dest-dir');
+      if (el) {
+        el.focus();
+        if ('select' in el && typeof (el as any).select === 'function') {
+          (el as HTMLInputElement).select();
+        }
+      }
+    }, 100);
+  };
+
   const formattedDest = destDir || 'Default directory';
   const absDest = PathMappingService.resolveToAbsolute(formattedDest, workspaceRoot);
 
@@ -84,11 +98,11 @@ export const DestinationSection: React.FC<DestinationSectionProps> = ({
 
   const isWarning = !destExists || isExternal;
 
-  let badgeClassName = 'bg-primary/10 text-primary border-primary/20 [direction:rtl] text-left w-full min-w-0 truncate';
+  let badgeClassName = 'bg-primary/10 text-primary border-primary/20 [direction:rtl] text-left w-full min-w-0 truncate cursor-pointer hover:bg-primary/20';
   if (isInvalid) {
-    badgeClassName = 'bg-destructive/10 text-destructive border-destructive/30 font-semibold [direction:rtl] text-left w-full min-w-0 truncate';
+    badgeClassName = 'bg-destructive/10 text-destructive border-destructive/30 font-semibold [direction:rtl] text-left w-full min-w-0 truncate cursor-pointer';
   } else if (isWarning) {
-    badgeClassName = 'bg-amber-500/10 text-amber-600 border-amber-500/30 font-semibold [direction:rtl] text-left w-full min-w-0 truncate';
+    badgeClassName = 'bg-amber-500/10 text-amber-600 border-amber-500/30 font-semibold [direction:rtl] text-left w-full min-w-0 truncate cursor-pointer hover:bg-amber-500/20';
   }
 
   const summaryBadges: BadgeObject[] = [
@@ -96,6 +110,7 @@ export const DestinationSection: React.FC<DestinationSectionProps> = ({
       label: formattedDest,
       tooltip,
       className: badgeClassName,
+      onClick: handleBadgeClick,
     },
   ];
 
@@ -156,6 +171,7 @@ export const DestinationSection: React.FC<DestinationSectionProps> = ({
     >
       <div className="flex gap-1.5 items-center font-mono text-xs">
         <Input
+          id="input-dest-dir"
           value={destDir}
           onChange={(e) => onChangeDestDir(e.target.value)}
           placeholder="/absolute/path/to/exported-files"

@@ -27,7 +27,8 @@ export interface FiltersSectionProps {
 export const getFilterSummaryBadges = (
   filter: ExportFilter,
   scopeType: FilterScopeType = 'codebase',
-  validationState?: any
+  validationState?: any,
+  onFocusField?: (fieldKey: string, e: React.MouseEvent) => void
 ): BadgeObject[] => {
   const maxFileErr = validationState?.errors?.max_file;
   const incPathsErr = validationState?.errors?.inc_paths;
@@ -45,8 +46,8 @@ export const getFilterSummaryBadges = (
   };
 
   const defaultBadgeColor = scopeType === 'codebase'
-    ? 'bg-primary/10 text-primary border-primary/20'
-    : 'bg-indigo-500/10 text-indigo-600 border-indigo-500/30';
+    ? 'bg-primary/10 text-primary border-primary/20 cursor-pointer hover:bg-primary/20'
+    : 'bg-indigo-500/10 text-indigo-600 border-indigo-500/30 cursor-pointer hover:bg-indigo-500/20';
 
   const separator = '\n';
   const incPathLines = (activeFilter.inc_paths || '').split(separator).map((s) => s.trim()).filter(Boolean);
@@ -66,54 +67,109 @@ export const getFilterSummaryBadges = (
   const excPathTooltip = excPathLines.join(tooltipSeparator);
   const excExtTooltip = excExtLines.join(tooltipSeparator);
 
-  const badges: BadgeObject[] = [
+  const rawBadges: BadgeObject[] = [
     {
       label: `Max file: ${activeFilter.max_file} KB`,
       tooltip: maxFileErr ? `⚠️ Error: ${maxFileErr}` : `Max file size limit: ${activeFilter.max_file} KB`,
       className: maxFileErr
-        ? 'bg-destructive/10 text-destructive border-destructive/30 font-semibold shrink-0'
+        ? 'bg-destructive/10 text-destructive border-destructive/30 font-semibold shrink-0 cursor-pointer'
         : `${defaultBadgeColor} shrink-0 font-bold`,
+      onClick: (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onFocusField?.('max_file', e);
+      },
     },
   ];
 
   if (incPathCombined || incPathsErr) {
-    badges.push({
+    rawBadges.push({
       label: `Inc Path: ${incPathCombined || 'Invalid Regex'}`,
       tooltip: incPathsErr ? `⚠️ Error: ${incPathsErr}` : `<strong>Inc Path:</strong> <br> ${incPathTooltip}`,
       className: incPathsErr
-        ? 'bg-destructive/10 text-destructive border-destructive/30 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink font-semibold'
+        ? 'bg-destructive/10 text-destructive border-destructive/30 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink font-semibold cursor-pointer'
         : `${defaultBadgeColor} max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink`,
+      onClick: (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onFocusField?.('inc_paths', e);
+      },
     });
   }
   if (incExtCombined || incExtErr) {
-    badges.push({
+    rawBadges.push({
       label: `Inc Ext: ${incExtCombined || 'Invalid Regex'}`,
       tooltip: incExtErr ? `⚠️ Error: ${incExtErr}` : `<strong>Inc Ext:</strong> <br> ${incExtTooltip}`,
       className: incExtErr
-        ? 'bg-destructive/10 text-destructive border-destructive/30 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink font-semibold'
+        ? 'bg-destructive/10 text-destructive border-destructive/30 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink font-semibold cursor-pointer'
         : `${defaultBadgeColor} max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink`,
+      onClick: (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onFocusField?.('inc_ext', e);
+      },
     });
   }
   if (excPathCombined || excPathsErr) {
-    badges.push({
+    rawBadges.push({
       label: `Exc Path: ${excPathCombined || 'Invalid Regex'}`,
       tooltip: excPathsErr ? `⚠️ Error: ${excPathsErr}` : `<strong>Exc Path:</strong> <br> ${excPathTooltip}`,
       className: excPathsErr
-        ? 'bg-destructive/10 text-destructive border-destructive/30 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink font-semibold'
+        ? 'bg-destructive/10 text-destructive border-destructive/30 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink font-semibold cursor-pointer'
         : `${defaultBadgeColor} max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink`,
+      onClick: (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onFocusField?.('exc_paths', e);
+      },
     });
   }
   if (excExtCombined || excExtErr) {
-    badges.push({
+    rawBadges.push({
       label: `Exc Ext: ${excExtCombined || 'Invalid Regex'}`,
       tooltip: excExtErr ? `⚠️ Error: ${excExtErr}` : `<strong>Exc Ext:</strong> <br> ${excExtTooltip}`,
       className: excExtErr
-        ? 'bg-destructive/10 text-destructive border-destructive/30 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink font-semibold'
+        ? 'bg-destructive/10 text-destructive border-destructive/30 max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink font-semibold cursor-pointer'
         : `${defaultBadgeColor} max-w-[280px] sm:max-w-[1000px] min-w-0 truncate shrink`,
+      onClick: (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onFocusField?.('exc_ext', e);
+      },
     });
   }
 
-  return badges;
+  const LINE_BREAK: BadgeObject = {
+    label: '',
+    className: 'basis-full h-0 w-full border-0 p-0 m-0 pointer-events-none opacity-0 invisible',
+  };
+
+  const formattedBadges: BadgeObject[] = [];
+  let incCount = 0;
+  let excCount = 0;
+
+  rawBadges.forEach((badge) => {
+    const labelStr = typeof badge.label === 'string' ? badge.label : '';
+
+    const isMaxBadge = labelStr.toLowerCase().includes('max');
+    const isIncBadge = labelStr.toLowerCase().includes('inc path') || labelStr.toLowerCase().includes('inc ext');
+    const isExcBadge = labelStr.toLowerCase().includes('exc path') || labelStr.toLowerCase().includes('exc ext');
+
+    if (isMaxBadge) {
+      formattedBadges.push(badge);
+      if (rawBadges.length > 1) {
+        formattedBadges.push(LINE_BREAK);
+      }
+    } else if (isIncBadge) {
+      formattedBadges.push(badge);
+      incCount++;
+    } else if (isExcBadge) {
+      if (excCount === 0 && incCount > 0) {
+        formattedBadges.push(LINE_BREAK);
+      }
+      formattedBadges.push(badge);
+      excCount++;
+    } else {
+      formattedBadges.push(badge);
+    }
+  });
+
+  return formattedBadges;
 };
 
 export const FiltersSection: React.FC<FiltersSectionProps> = ({
@@ -148,6 +204,29 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
     exc_ext: '',
   };
 
+  const handleFocusSelfField = (fieldKey: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onOpenChange) onOpenChange(true);
+    setTimeout(() => {
+      let targetId = '';
+      if (fieldKey === 'max_file') targetId = `input-${scopeType}-max-file`;
+      else if (fieldKey === 'inc_paths') targetId = `textarea-${scopeType}-inc-paths`;
+      else if (fieldKey === 'inc_ext') targetId = `textarea-${scopeType}-inc-ext`;
+      else if (fieldKey === 'exc_paths') targetId = `textarea-${scopeType}-exc-paths`;
+      else if (fieldKey === 'exc_ext') targetId = `textarea-${scopeType}-exc-ext`;
+
+      if (targetId) {
+        const el = document.getElementById(targetId);
+        if (el) {
+          el.focus();
+          if ('select' in el && typeof (el as any).select === 'function') {
+            (el as HTMLInputElement).select();
+          }
+        }
+      }
+    }, 100);
+  };
+
   const simResult = testFilterPatterns(
     filterSimulatorInput,
     activeFilter.inc_paths || '',
@@ -156,7 +235,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
     activeFilter.exc_ext || ''
   );
 
-  const summaryBadges = getFilterSummaryBadges(filter, scopeType, validationState);
+  const summaryBadges = getFilterSummaryBadges(filter, scopeType, validationState, handleFocusSelfField);
 
   const toggleSortLines = (field: keyof ExportFilter) => {
     const currentDir = sortDirections[field] || 'asc';
@@ -226,6 +305,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
             🏋️ {scopePrefix} Max File
           </label>
           <Input
+            id={`input-${scopeType}-max-file`}
             value={activeFilter.max_file}
             onChange={(e) => onChangeFilter((prev) => ({ ...prev, max_file: e.target.value }))}
             className={`w-24 h-7 font-mono text-xs shrink-0 ${
@@ -275,6 +355,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                   </div>
                 </div>
                 <Textarea
+                  id={`textarea-${scopeType}-inc-paths`}
                   value={activeFilter.inc_paths || ''}
                   onChange={(e) => onChangeFilter((prev) => ({ ...prev, inc_paths: e.target.value }))}
                   rows={3}
@@ -345,6 +426,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                   </div>
                 </div>
                 <Textarea
+                  id={`textarea-${scopeType}-inc-ext`}
                   value={activeFilter.inc_ext || ''}
                   onChange={(e) => onChangeFilter((prev) => ({ ...prev, inc_ext: e.target.value }))}
                   rows={3}
@@ -396,6 +478,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                   </div>
                 </div>
                 <Textarea
+                  id={`textarea-${scopeType}-exc-paths`}
                   value={activeFilter.exc_paths || ''}
                   onChange={(e) => onChangeFilter((prev) => ({ ...prev, exc_paths: e.target.value }))}
                   rows={3}
@@ -466,6 +549,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                   </div>
                 </div>
                 <Textarea
+                  id={`textarea-${scopeType}-exc-ext`}
                   value={activeFilter.exc_ext || ''}
                   onChange={(e) => onChangeFilter((prev) => ({ ...prev, exc_ext: e.target.value }))}
                   rows={3}
