@@ -126,7 +126,7 @@ export function HomePanel() {
           </div>
         </div>
 
-        <div className="-top-0 -right-0 absolute opacity-60 pointer-events-none select-none">
+        <div className="-top-0 -right-0 absolute opacity-85 pointer-events-none select-none">
           {logoMaxUrl && (
             <img
               className="w-90 h-90 object-contain"

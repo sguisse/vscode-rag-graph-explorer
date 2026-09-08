@@ -31,6 +31,14 @@ export interface PathsSectionProps {
   onClearPaths: () => void;
   filterSimulatorInput: string;
   setFilterSimulatorInput: (val: string) => void;
+
+  // Header action visibility toggles
+  showAddOpenFiles?: boolean;
+  showAddGitDiffFiles?: boolean;
+  showAddErrorStackFiles?: boolean;
+  showOpenCursorLinePath?: boolean;
+  showClearPaths?: boolean;
+  extraHeaderActions?: React.ReactNode;
 }
 
 export const PathsSection: React.FC<PathsSectionProps> = ({
@@ -51,6 +59,12 @@ export const PathsSection: React.FC<PathsSectionProps> = ({
   onClearPaths,
   filterSimulatorInput = '',
   setFilterSimulatorInput,
+  showAddOpenFiles = true,
+  showAddGitDiffFiles = true,
+  showAddErrorStackFiles = true,
+  showOpenCursorLinePath = true,
+  showClearPaths = true,
+  extraHeaderActions,
 }) => {
   const workspaceRoot = useExporterStore((s) => s.workspaceRoot);
   const invalidPaths = useExporterStore((s) => s.invalidPaths);
@@ -167,23 +181,129 @@ export const PathsSection: React.FC<PathsSectionProps> = ({
   if (!isOpen) {
     const filterBadges = getFilterSummaryBadges(filter, scopeType, validationState);
     if (filterBadges.length > 0) {
-      summaryBadges.push(...filterBadges);
+      if (pathBadges.length > 0) {
+        summaryBadges.push({
+          label: '',
+          className: 'basis-full h-0 w-full border-0 p-0 m-0 pointer-events-none opacity-0 invisible',
+        });
+      }
+
+      filterBadges.forEach((badge) => {
+        summaryBadges.push(badge);
+
+        const labelStr = typeof badge.label === 'string' ? badge.label : '';
+        const tooltipStr = typeof badge.tooltip === 'string' ? badge.tooltip : '';
+        const isMaxBadge =
+          labelStr.toLowerCase().includes('max') ||
+          tooltipStr.toLowerCase().includes('max');
+
+        if (isMaxBadge) {
+          summaryBadges.push({
+            label: '',
+            className: 'basis-full h-0 w-full border-0 p-0 m-0 pointer-events-none opacity-0 invisible',
+          });
+        }
+      });
     }
   }
 
-  const totalPathsBadge = (
-    <span
-      className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold leading-none border ${
-        isInvalid
-          ? 'bg-destructive/10 text-destructive border-destructive/30'
-          : scopeType === 'codebase'
-          ? 'bg-primary/10 text-primary border-primary/20'
-          : 'bg-indigo-500/10 text-indigo-600 border-indigo-500/30'
-      }`}
-      data-tooltip={`${lines.length} total ${scopeType} ${lines.length === 1 ? 'path' : 'paths'} selected`}
-    >
-      {lines.length} {lines.length === 1 ? 'path' : 'paths'}
-    </span>
+  const cardTitle = (
+    <div className="flex items-center gap-2">
+      <span>{title}</span>
+      <span
+        className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold leading-none border ${
+          isInvalid
+            ? 'bg-destructive/10 text-destructive border-destructive/30'
+            : scopeType === 'codebase'
+            ? 'bg-primary/10 text-primary border-primary/20'
+            : 'bg-indigo-500/10 text-indigo-600 border-indigo-500/30'
+        }`}
+        data-tooltip={`${lines.length} total ${scopeType} ${lines.length === 1 ? 'path' : 'paths'} selected`}
+      >
+        {lines.length}
+      </span>
+    </div>
+  );
+
+  const headerRight = (
+    <div className="flex items-center gap-1">
+      {showAddOpenFiles && (
+        <Button
+          size="icon-xs"
+          variant="ghost"
+          onClick={(e) => {
+            e.stopPropagation();
+            onAddOpenFiles();
+          }}
+          data-tooltip="Add Currently Open Editor Files"
+          className="h-5 w-5 cursor-pointer hover:bg-accent"
+        >
+          <FileCode size={12} />
+        </Button>
+      )}
+
+      {showAddGitDiffFiles && (
+        <Button
+          size="icon-xs"
+          variant="ghost"
+          onClick={(e) => {
+            e.stopPropagation();
+            onAddGitDiffFiles();
+          }}
+          data-tooltip="Add Modified Files from Git Diff"
+          className="h-5 w-5 cursor-pointer hover:bg-accent"
+        >
+          <GitCompare size={12} />
+        </Button>
+      )}
+
+      {showAddErrorStackFiles && (
+        <Button
+          size="icon-xs"
+          variant="ghost"
+          onClick={(e) => {
+            e.stopPropagation();
+            onAddErrorStackFiles();
+          }}
+          data-tooltip="Extract References from Crash Stack Trace"
+          className="h-5 w-5 cursor-pointer hover:bg-accent"
+        >
+          <Bug size={12} />
+        </Button>
+      )}
+
+      {showOpenCursorLinePath && (
+        <Button
+          size="icon-xs"
+          variant="ghost"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenCursorLinePath();
+          }}
+          data-tooltip="Open Target Path at Cursor Line"
+          className="h-5 w-5 cursor-pointer hover:bg-accent"
+        >
+          <ExternalLink size={12} />
+        </Button>
+      )}
+
+      {extraHeaderActions}
+
+      {showClearPaths && (
+        <Button
+          size="icon-xs"
+          variant="ghost"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClearPaths();
+          }}
+          data-tooltip={`Clear ${scopeType} Paths`}
+          className="h-5 w-5 hover:text-destructive cursor-pointer"
+        >
+          <Trash2 size={12} />
+        </Button>
+      )}
+    </div>
   );
 
   const handleChangeTextarea = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -201,10 +321,10 @@ export const PathsSection: React.FC<PathsSectionProps> = ({
     <div className="space-y-2 w-full min-w-0">
       <CollapsibleCard
         id={`block-${scopeType}-paths`}
-        title={title}
+        title={cardTitle}
         tooltip={tooltip}
         summaryBadges={summaryBadges}
-        headerRight={totalPathsBadge}
+        headerRight={headerRight}
         defaultOpen={false}
         isOpen={isOpen}
         onOpenChange={onOpenChange}
@@ -216,35 +336,13 @@ export const PathsSection: React.FC<PathsSectionProps> = ({
             onChange={handleChangeTextarea}
             placeholder={`Enter ${scopeType} directories, files, or Java package.ClassName (one per line or comma-separated)...`}
             rows={scopeType === 'codebase' ? 5 : 4}
-            className={`flex-1 ${scopeType === 'codebase' ? 'h-[136px]' : 'h-[136px]'} font-mono text-xs resize-y ${
+            className={`w-full ${scopeType === 'codebase' ? 'h-[136px]' : 'h-[136px]'} font-mono text-xs resize-y ${
               isInvalid
                 ? 'bg-destructive/10 text-destructive border-destructive/30 focus-visible:ring-destructive'
                 : 'bg-background'
             }`}
             data-tooltip={pathError ? `⚠️ Error: ${pathError}` : undefined}
           />
-
-          <div className="flex flex-col gap-1 shrink-0">
-            <Button size="icon-xs" variant="outline" onClick={onAddOpenFiles} data-tooltip="Add Currently Open Editor Files">
-              <FileCode size={13} />
-            </Button>
-
-            <Button size="icon-xs" variant="outline" onClick={onAddGitDiffFiles} data-tooltip="Add Modified Files from Git Diff">
-              <GitCompare size={13} />
-            </Button>
-
-            <Button size="icon-xs" variant="outline" onClick={onAddErrorStackFiles} data-tooltip="Extract References from Crash Stack Trace">
-              <Bug size={13} />
-            </Button>
-
-            <Button size="icon-xs" variant="outline" onClick={onOpenCursorLinePath} data-tooltip="Open Target Path at Cursor Line">
-              <ExternalLink size={13} />
-            </Button>
-
-            <Button size="icon-xs" variant="outline" onClick={onClearPaths} data-tooltip={`Clear ${scopeType} Paths`} className="hover:text-destructive">
-              <Trash2 size={13} />
-            </Button>
-          </div>
         </div>
 
         <FiltersSection

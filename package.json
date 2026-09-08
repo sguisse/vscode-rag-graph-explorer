@@ -2,7 +2,7 @@
   "name": "token-razor",
   "license": "MIT",
   "displayName": "Token Razor",
-  "description": "Tool used to build LLM Context from source code and documentation, and to explore the relationships between entities in a graph to limit the token usage.",
+  "description": "Surgically select codebase files from dependency graphs to build token-optimized LLM context.",
   "version": "1.5.0",
   "publisher": "sguisse",
   "engines": {
@@ -24,27 +24,41 @@
         }
       },
       {
-        "command": "tokenRazor.graphRagExplorer.addFromExplorer",
-        "title": "Token Razor - 02 --> ➕ Add selected file to Graph RAG Explorer"
+        "command": "tokenRazor.exporter.codebase.addPaths",
+        "title": "Token Razor - 02 Exporter --> ➕ Codebase Sources Paths"
       },
       {
-        "command": "tokenRazor.exporter.addFromExplorer",
-        "title": "Token Razor - Codebase Exporter --> ➕ Sources Paths"
+        "command": "tokenRazor.exporter.codebase.excludePaths",
+        "title": "Token Razor - 03 Exporter --> 🚫 Codebase Exclude paths"
       },
       {
-        "command": "tokenRazor.exporter.excludeFromExplorer",
-        "title": "Token Razor - Codebase Exporter --> 🚫 Exclude paths"
+        "command": "tokenRazor.exporter.reference.addPaths",
+        "title": "Token Razor - 04 Exporter --> ➕ Reference Sources Paths"
       },
       {
-        "command": "tokenRazor.exporter.exportSelectedPaths",
-        "title": "Token Razor - Codebase Exporter --> 📥 Export selected paths",
+        "command": "tokenRazor.exporter.reference.excludePaths",
+        "title": "Token Razor - 05 Exporter --> 🚫 Reference Exclude paths"
+      },
+      {
+        "command": "tokenRazor.explorer.addPaths",
+        "title": "Token Razor - 06 Explorer --> 🔬 Add selected files Paths to Explore"
+      },
+      {
+        "command": "tokenRazor.exporter.exportSelectedPathsToClipboard",
+        "title": "Token Razor - 07 --> 📥 Export selected paths content (as aggregate)",
         "icon": "$(export)"
       },
       {
         "command": "tokenRazor.exporter.copySelectedFilesToClipboard",
-        "title": "Token Razor - Codebase Exporter --> 📋 Copy selected files",
+        "title": "Token Razor - 08 --> 📑 Copy selected files (To paste outside of vscode) ",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "tokenRazor.exporter.copySelectedPathsToClipboard",
+        "title": "Token Razor - 09 --> 🔗 Copy selected paths (absolute)",
         "icon": "$(copy)"
       }
+
     ],
     "menus": {
       "editor/title": [
@@ -59,26 +73,41 @@
           "group": "navigation@0"
         },
         {
-          "command": "tokenRazor.graphRagExplorer.addFromExplorer",
-          "group": "navigation@0",
-          "when": "tokenRazor.isToolOpened"
-        },
-        {
-          "command": "tokenRazor.exporter.addFromExplorer",
-          "group": "navigation@1"
-        },
-        {
-          "command": "tokenRazor.exporter.excludeFromExplorer",
+          "command": "tokenRazor.exporter.codebase.addPaths",
           "group": "navigation@1",
           "when": "tokenRazor.isToolOpened"
         },
         {
-          "command": "tokenRazor.exporter.exportSelectedPaths",
-          "group": "navigation@1"
+          "command": "tokenRazor.exporter.codebase.excludePaths",
+          "group": "navigation@1",
+          "when": "tokenRazor.isToolOpened"
+        },
+        {
+          "command": "tokenRazor.exporter.reference.addPaths",
+          "group": "navigation@1",
+          "when": "tokenRazor.isToolOpened"
+        },
+        {
+          "command": "tokenRazor.exporter.reference.excludePaths",
+          "group": "navigation@1",
+          "when": "tokenRazor.isToolOpened"
+        },
+        {
+          "command": "tokenRazor.explorer.addPaths",
+          "group": "navigation@2",
+          "when": "tokenRazor.isToolOpened"
+        },
+        {
+          "command": "tokenRazor.exporter.exportSelectedPathsToClipboard",
+          "group": "navigation@3"
         },
         {
           "command": "tokenRazor.exporter.copySelectedFilesToClipboard",
-          "group": "navigation@1"
+          "group": "navigation@3"
+        },
+        {
+          "command": "tokenRazor.exporter.copySelectedPathsToClipboard",
+          "group": "navigation@3"
         }
       ]
     },

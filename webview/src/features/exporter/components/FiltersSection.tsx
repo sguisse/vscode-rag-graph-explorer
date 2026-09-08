@@ -206,7 +206,9 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
     });
   };
 
+  const scopePrefix = scopeType === 'codebase' ? 'Codebase' : 'Reference';
   const titlePrefix = scopeType === 'codebase' ? '🔍 Codebase' : '🔍 Reference';
+  const labelTextColor = scopeType === 'codebase' ? 'text-primary' : 'text-indigo-600';
 
   return (
     <CollapsibleCard
@@ -221,8 +223,8 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
     >
       <div className="space-y-3 w-full min-w-0 font-mono text-xs">
         <div className="flex items-center gap-2 w-full min-w-0">
-          <label className="font-semibold text-[11px] text-muted-foreground whitespace-nowrap shrink-0">
-            🏋️ Max File ({scopeType})
+          <label className={`font-semibold text-[11px] whitespace-nowrap shrink-0 ${labelTextColor}`}>
+            🏋️ {scopePrefix} Max File
           </label>
           <Input
             value={activeFilter.max_file}
@@ -238,14 +240,14 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
 
         <div className="gap-3 grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] w-full min-w-0">
           <div className="space-y-2 bg-muted/20 p-2.5 border border-border/40 rounded-md w-full min-w-0">
-            <div className="flex justify-between items-center min-w-0 font-semibold text-[11px] text-foreground">
-              <span className="truncate">✅ Inclusions</span>
+            <div className="flex justify-between items-center min-w-0 font-semibold text-[11px]">
+              <span className={`truncate ${labelTextColor}`}>✅ {scopePrefix} Inclusions</span>
             </div>
 
             <div className="gap-2.5 grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] w-full min-w-0">
               <div className="space-y-1 w-full min-w-0">
-                <div className="flex justify-between items-center min-w-0 font-semibold text-[10px] text-muted-foreground">
-                  <span className="truncate">Paths</span>
+                <div className="flex justify-between items-center min-w-0 font-semibold text-[10px]">
+                  <span className={`truncate ${labelTextColor}`}>Paths</span>
                   <div className="flex gap-0.5 shrink-0">
                     <Button
                       size="icon-xs"
@@ -287,8 +289,8 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
               </div>
 
               <div className="space-y-1 w-full min-w-0">
-                <div className="flex justify-between items-center min-w-0 font-semibold text-[10px] text-muted-foreground">
-                  <span className="truncate">Extensions</span>
+                <div className="flex justify-between items-center min-w-0 font-semibold text-[10px]">
+                  <span className={`truncate ${labelTextColor}`}>Extensions</span>
                   <div className="flex gap-0.5 shrink-0">
                     <Button
                       size="icon-xs"
@@ -359,14 +361,14 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
           </div>
 
           <div className="space-y-2 bg-muted/20 p-2.5 border border-border/40 rounded-md w-full min-w-0">
-            <div className="flex justify-between items-center min-w-0 font-semibold text-[11px] text-foreground">
-              <span className="truncate">🚫 Exclusions</span>
+            <div className="flex justify-between items-center min-w-0 font-semibold text-[11px]">
+              <span className={`truncate ${labelTextColor}`}>🚫 {scopePrefix} Exclusions</span>
             </div>
 
             <div className="gap-2.5 grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] w-full min-w-0">
               <div className="space-y-1 w-full min-w-0">
-                <div className="flex justify-between items-center min-w-0 font-semibold text-[10px] text-muted-foreground">
-                  <span className="truncate">Paths</span>
+                <div className="flex justify-between items-center min-w-0 font-semibold text-[10px]">
+                  <span className={`truncate ${labelTextColor}`}>Paths</span>
                   <div className="flex gap-0.5 shrink-0">
                     <Button
                       size="icon-xs"
@@ -408,8 +410,8 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
               </div>
 
               <div className="space-y-1 w-full min-w-0">
-                <div className="flex justify-between items-center min-w-0 font-semibold text-[10px] text-muted-foreground">
-                  <span className="truncate">Extensions</span>
+                <div className="flex justify-between items-center min-w-0 font-semibold text-[10px]">
+                  <span className={`truncate ${labelTextColor}`}>Extensions</span>
                   <div className="flex gap-0.5 shrink-0">
                     <Button
                       size="icon-xs"
@@ -481,7 +483,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
         </div>
 
         <div className="flex sm:flex-row flex-col items-stretch sm:items-center gap-2 bg-muted/30 p-2 border border-border rounded-md w-full min-w-0">
-          <span className="font-bold text-[11px] text-foreground truncate shrink-0">
+          <span className={`font-bold text-[11px] truncate shrink-0 ${labelTextColor}`}>
             🧪 Filters Simulator:
           </span>
           <Input
