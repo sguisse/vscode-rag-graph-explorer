@@ -4,7 +4,7 @@ import { router } from '@/router';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { vsCodeApiService } from "@/services/api/vs-code-api.service.gen";
 import { VsCodeSettings } from '@/shared/services/vscode/model/VsCodeSettings.gen';
-import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
+import { vsCodeBackendMessageHandler } from '@/services/listener/vscode-backend-message.handler';
 import { initSessionPersistence } from '@/features/sdlc/core/vscode-sync/session-persistence.manager';
 import { useAppContextStore } from '@/store/useAppContextStore';
 
@@ -23,7 +23,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const unsubscribeStatus = vsCodeHandleMessage.on('updateStatus', (message) => {
+    const unsubscribeStatus = vsCodeBackendMessageHandler.on('updateStatus', (message) => {
       console.info(`Status received from extension: ${message.payload}`);
       if (message.payload) {
         setStatus(message.payload);

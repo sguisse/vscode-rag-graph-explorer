@@ -5,6 +5,7 @@ import { RpcMethodEnum } from '@/shared/config/rpc-methods.enum.gen';
 import { AbstractApiService } from '@/services/abstract-api.service';
 import { LogLevel } from '@/shared/services/vscode/types';
 import { VsCodeSettings } from '@/shared/services/vscode/model/VsCodeSettings.gen';
+import { RichNotificationOptions } from '@/shared/services/vscode/model/vscode-rich-notification';
 import { IVsCodeServicePort } from '@/shared/services/vscode/port-out/vscode-service.port';
 
 class VsCodeApiService extends AbstractApiService implements IVsCodeServicePort {
@@ -26,6 +27,10 @@ class VsCodeApiService extends AbstractApiService implements IVsCodeServicePort 
 
     public async getExtensionSettings(): Promise<VsCodeSettings> {
         return await this.rpc.call(RpcMethodEnum.VSCODE_GET_EXTENSION_SETTINGS);
+    }
+
+    public async showRichNotification(fallbackText: string, options?: RichNotificationOptions, callback?: (command: string, payload: any) => void): Promise<void> {
+        return await this.rpc.call(RpcMethodEnum.VSCODE_SHOW_RICH_NOTIFICATION, fallbackText, options, callback);
     }
 
     public async openUrl(url: string, inExternalBrowser: boolean): Promise<void> {

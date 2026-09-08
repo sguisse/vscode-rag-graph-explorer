@@ -79,6 +79,7 @@ export enum RpcMethodEnum {
     VSCODE_GET_WORKSPACE_ROOT_PATH = 'getWorkspaceRootPath',
     VSCODE_LOG_MESSAGE = 'logMessage',
     VSCODE_GET_EXTENSION_SETTINGS = 'getExtensionSettings',
+    VSCODE_SHOW_RICH_NOTIFICATION = 'showRichNotification',
     VSCODE_OPEN_URL = 'openUrl',
     VSCODE_OPEN_FILE = 'openFile',
     VSCODE_REVEAL_IN_EXPLORER = 'revealInExplorer',

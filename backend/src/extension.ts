@@ -9,6 +9,7 @@ import { vsCodeSettingsManager } from './managers/VsCodeSettings.manager';
 import { getAppDisplayNameFromPackageJson, getAppNormalizedNameFromPackageJson, getWorkspaceRoot } from './utils/utils-vscode';
 import { workspaceInstallationManager } from './managers/WorkspaceInstallation.manager';
 import { pythonScriptExecutionManager } from './managers/PythonScriptExecution.manager';
+import { registerVsCodeSubMenuitemCommands } from './extension-commands';
 
 export let EXTENSION_BASE_CONFIG_NAME: string;
 export let currentWebviewPanel: vscode.WebviewPanel | undefined = undefined;
@@ -23,25 +24,12 @@ export function activate(extentionContext: vscode.ExtensionContext) {
 
     workspaceInstallationManager.syncScripts(extentionContext);
 
+     // Register the command to open the tool via Menuitem or Command Palette
     const openToolCmd = createOpenToolCommand(extentionContext);
     const registeredOpenToolCmd = vscode.commands.registerCommand(`${EXTENSION_BASE_CONFIG_NAME}.openTool`, openToolCmd);
     extentionContext.subscriptions.push(registeredOpenToolCmd);
 
-    const addFromExplorerCmd = createAddFromExplorerCommand(openToolCmd);
-    const registeredAddFromExplorerCmd = vscode.commands.registerCommand(`${EXTENSION_BASE_CONFIG_NAME}.graphRagExplorer.addFromExplorer`, addFromExplorerCmd);
-    extentionContext.subscriptions.push(registeredAddFromExplorerCmd);
-
-    const exporterAddFromExplorerCmd = vscode.commands.registerCommand(`${EXTENSION_BASE_CONFIG_NAME}.exporter.addFromExplorer`, createExporterAddCommand(openToolCmd));
-    const exporterExcludeFromExplorerCmd = vscode.commands.registerCommand(`${EXTENSION_BASE_CONFIG_NAME}.exporter.excludeFromExplorer`, createExporterExcludeCommand());
-    const exporterExportSelectedPathsCmd = vscode.commands.registerCommand(`${EXTENSION_BASE_CONFIG_NAME}.exporter.exportSelectedPaths`, createExporterExportSelectedPathsCommand());
-    const exporterCopyFilesCmd = vscode.commands.registerCommand(`${EXTENSION_BASE_CONFIG_NAME}.exporter.copySelectedFilesToClipboard`, createExporterCopyFilesCommand());
-
-    extentionContext.subscriptions.push(
-        exporterAddFromExplorerCmd,
-        exporterExcludeFromExplorerCmd,
-        exporterExportSelectedPathsCmd,
-        exporterCopyFilesCmd
-    );
+    registerVsCodeSubMenuitemCommands(openToolCmd, extentionContext);
 
     logInfo('Extension activated successfully with dedicated exporter commands.');
 }
@@ -71,83 +59,6 @@ function createOpenToolCommand(extentionContext: vscode.ExtensionContext) {
         if (vsCodeSettingsManager.getSettings().codebaseScanEachTimeAppIsDisplayed) {
             runPythonScan("deep");
         }
-    };
-}
-
-function createAddFromExplorerCommand(openTool: () => void) {
-    return (uri?: vscode.Uri, uris?: vscode.Uri[]) => {
-        let paths: string[] = [];
-        if (uris && uris.length > 0) {
-            paths = uris.map((u) => u.fsPath);
-        } else if (uri) {
-            paths = [uri.fsPath];
-        } else if (vscode.window.activeTextEditor) {
-            paths = [vscode.window.activeTextEditor.document.uri.fsPath];
-        }
-
-        const selectedPath = paths.join('\n');
-        logInfo(`Add from explorer command triggered for path(s):\n${selectedPath}`);
-
-        if (!currentWebviewPanel) {
-            openTool();
-        } else {
-            currentWebviewPanel.reveal(vscode.ViewColumn.One);
-        }
-
-        if (currentWebviewPanel && selectedPath) {
-            currentWebviewPanel.webview.postMessage({
-                command: 'selectedPath',
-                payload: selectedPath
-            });
-        }
-    };
-}
-
-function createExporterAddCommand(openTool: () => void) {
-    return (uri?: vscode.Uri, uris?: vscode.Uri[]) => {
-        let paths: string[] = [];
-        if (uris && uris.length > 0) {
-            paths = uris.map((u) => u.fsPath);
-        } else if (uri) {
-            paths = [uri.fsPath];
-        }
-        if (!currentWebviewPanel) {
-            openTool();
-        } else {
-            currentWebviewPanel.reveal(vscode.ViewColumn.One);
-        }
-        if (currentWebviewPanel && paths.length > 0) {
-            currentWebviewPanel.webview.postMessage({
-                command: 'updatePaths',
-                paths: paths
-            });
-        }
-    };
-}
-
-function createExporterExcludeCommand() {
-    return (uri?: vscode.Uri, uris?: vscode.Uri[]) => {
-        const targetUri = uri || (uris && uris[0]);
-        if (currentWebviewPanel && targetUri) {
-            currentWebviewPanel.webview.postMessage({
-                command: 'excludeExplorerPathSelection',
-                path: targetUri.fsPath
-            });
-        }
-    };
-}
-
-function createExporterExportSelectedPathsCommand() {
-    return (uri?: vscode.Uri, uris?: vscode.Uri[]) => {
-        const selectedUris = uris || (uri ? [uri] : []);
-        logInfo(`[Exporter] Headless export requested for ${selectedUris.length} paths.`);
-    };
-}
-
-function createExporterCopyFilesCommand() {
-    return (uri?: vscode.Uri, uris?: vscode.Uri[]) => {
-        const selectedUris = uris || (uri ? [uri] : []);
-        logInfo(`[Exporter] Copy files to clipboard requested for ${selectedUris.length} paths.`);
     };
 }
 

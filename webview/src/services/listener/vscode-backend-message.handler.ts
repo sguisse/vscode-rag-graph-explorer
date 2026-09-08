@@ -1,25 +1,29 @@
-export interface BackendEventMessage<T = any> {
-    command: string;
-    payload?: T;
-    config?: T;
-    [key: string]: any;
-}
+import { BackendEventMessage } from '../../../../shared/services/vscode/model/vscode-message-payload';
 
 export type EventCallback<T = any> = (message: BackendEventMessage<T>) => void;
 
-export class VsCodeHandleMessage {
-    private static instance: VsCodeHandleMessage;
+
+/**
+ * Messages are throws from the backend to the webview, in backend/src/extension-commands.ts
+ * with `currentWebviewPanel.webview.postMessage({command: command, paths: selectedPath});` for example
+ * and this class handles them in the webview (cf vsCodeBackendMessageHandler.on('selectedPath', (msg) => { if (msg.payload) { ... } })).
+ * It allows subscribing to specific commands and receiving their payloads.
+ * It also allows emitting events locally across all subscribed webview listeners.
+ * This is a singleton class, ensuring only one instance handles all backend messages.
+ */
+export class VsCodeBackendMessageHandler {
+    private static instance: VsCodeBackendMessageHandler;
     private listeners = new Map<string, Set<EventCallback>>();
 
     private constructor() {
         this.initMessageListener();
     }
 
-    public static getInstance(): VsCodeHandleMessage {
-        if (!VsCodeHandleMessage.instance) {
-            VsCodeHandleMessage.instance = new VsCodeHandleMessage();
+    public static getInstance(): VsCodeBackendMessageHandler {
+        if (!VsCodeBackendMessageHandler.instance) {
+            VsCodeBackendMessageHandler.instance = new VsCodeBackendMessageHandler();
         }
-        return VsCodeHandleMessage.instance;
+        return VsCodeBackendMessageHandler.instance;
     }
 
     private initMessageListener(): void {
@@ -77,4 +81,4 @@ export class VsCodeHandleMessage {
     }
 }
 
-export const vsCodeHandleMessage = VsCodeHandleMessage.getInstance();
+export const vsCodeBackendMessageHandler = VsCodeBackendMessageHandler.getInstance();

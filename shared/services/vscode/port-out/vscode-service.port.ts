@@ -1,11 +1,17 @@
 import { LogLevel } from '../types';
 import { VsCodeSettings } from '../model/VsCodeSettings.gen';
+import { RichNotificationOptions } from '../model/vscode-rich-notification';
 
 export interface IVsCodeServicePort {
     getRepoName(): Promise<string>;
     getWorkspaceRootPath(): Promise<string>;
     logMessage(level: LogLevel, message: string, details?: any): Promise<void>;
     getExtensionSettings(): Promise<VsCodeSettings>;
+    showRichNotification(
+        fallbackText: string,
+        options?: RichNotificationOptions,
+        callback?: (command: string, payload: any) => void
+    ): Promise<void>;
     openUrl(url: string, inExternalBrowser: boolean): Promise<void>;
     openFile(targetPath: string): Promise<void>;
     revealInExplorer(targetPath: string): Promise<void>;

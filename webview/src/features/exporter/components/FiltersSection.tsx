@@ -207,13 +207,12 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
   };
 
   const scopePrefix = scopeType === 'codebase' ? 'Codebase' : 'Reference';
-  const titlePrefix = scopeType === 'codebase' ? '🔍 Codebase' : '🔍 Reference';
   const labelTextColor = scopeType === 'codebase' ? 'text-primary' : 'text-indigo-600';
 
   return (
     <CollapsibleCard
       id={`block-${scopeType}-filters`}
-      title={`${titlePrefix} Filters & Scope Constraints`}
+      title={`🔍 ${scopePrefix} Filters & Scope Constraints`}
       tooltip="Regular Expression masks defining targeted directories and source formatting inclusions or exclusions lists."
       summaryBadges={summaryBadges}
       defaultOpen={false}

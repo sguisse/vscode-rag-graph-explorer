@@ -50,7 +50,7 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
   return (
     <CollapsibleCard
       id="block-options"
-      title="⚙️ Output Formatting & Rules"
+      title="📦 Output Formatting & Rules"
       tooltip="Aggregated output payload formats schemas, text partitions thresholds, chunk splits and logging rules."
       summaryBadges={summaryBadges}
       defaultOpen={false}

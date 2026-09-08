@@ -3,7 +3,7 @@ import { useLayoutStore } from '@/store/useLayoutStore';
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { ContainerPanelHeader } from '@/_layout/ContainerPanelHeader';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
-import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
+import { vsCodeBackendMessageHandler } from '@/services/listener/vscode-backend-message.handler';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { GraphPanel } from '../wksp-cnt-graph/GraphPanel';
 import {
@@ -99,7 +99,7 @@ export function CenterPanelContainer() {
       const targetFile = codebase.files.find((f) => f.id === nodeId);
       const pathToAdd = targetFile?.path || nodeId;
       logInfo(`Cmd+Clicked graph item: ${nodeId}. Appending path to context paths panel: ${pathToAdd}`);
-      vsCodeHandleMessage.emit('addPathToTop', { command: 'addPathToTop', payload: pathToAdd });
+      vsCodeBackendMessageHandler.emit('addPathToTop', { command: 'addPathToTop', payload: pathToAdd });
     },
     [codebase.files]
   );

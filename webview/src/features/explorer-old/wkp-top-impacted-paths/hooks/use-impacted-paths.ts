@@ -1,6 +1,6 @@
 // webview/src/features/explorer-old/wkp-top-impacted-paths/hooks/use-impacted-paths.ts
 import { useEffect, useCallback, useRef } from 'react';
-import { vsCodeHandleMessage } from '@/services/listener/vscode-message.handler';
+import { vsCodeBackendMessageHandler } from '@/services/listener/vscode-backend-message.handler';
 import { getPathsChangeImpacts } from '@/services/view/graph-view.service';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
@@ -172,14 +172,14 @@ export function useImpactedPaths(options: UseImpactedPathsOptions = {}) {
   }, [effectiveUpstreamDepth, effectiveDownstreamDepth, fetchImpacts, paths]);
 
   useEffect(() => {
-    const unsubscribeStatus = vsCodeHandleMessage.on('selectedPath', (message) => {
+    const unsubscribeStatus = vsCodeBackendMessageHandler.on('selectedPath', (message) => {
       logInfo(`[useImpactedPaths] selectedPath event received: ${message.payload}`);
       if (message.payload) {
         handlePathsChange(message.payload);
       }
     });
 
-    const unsubscribeAddPath = vsCodeHandleMessage.on('addPathToTop', (message) => {
+    const unsubscribeAddPath = vsCodeBackendMessageHandler.on('addPathToTop', (message) => {
       logInfo(`[useImpactedPaths] addPathToTop event received: ${message.payload}`);
       if (message.payload) {
         appendOrReplacePath(message.payload);

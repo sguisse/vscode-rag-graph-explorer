@@ -2,8 +2,9 @@ import * as vscode from 'vscode';
 import { IVsCodeServicePort } from '../../../../shared/services/vscode/port-out/vscode-service.port';
 import { getAppNormalizedNameFromPackageJson, getCurrentExtensionContext, getWorkspaceRoot } from '../../utils/utils-vscode';
 import { LogLevel } from '../../../../shared/services/vscode/types';
-import { logMessageFromRemote as logMessageDelegate} from './delegate/logger.delegate';
-import { getExtensionSettings as getExtensionSettingsDelegate} from './delegate/get-extension-settings.delegate';
+import { logMessageFromRemote as logMessageDelegate } from './delegate/logger.delegate';
+import { getExtensionSettings as getExtensionSettingsDelegate } from './delegate/get-extension-settings.delegate';
+import { showRichNotificationDelegate, RichNotificationOptions, RichNotificationService } from './delegate/rich-notification.delegate';
 import { VsCodeSettings } from '../../../../shared/services/vscode/model/VsCodeSettings.gen';
 import { AbstractServiceAdapter } from '../../core/AbstractServiceAdapter';
 import { logChannel, logError, logInfo, logWarn } from '../../utils/utils-log';
@@ -24,6 +25,14 @@ export class VsCodeServiceAdapter extends AbstractServiceAdapter implements IVsC
 
     public async getExtensionSettings(): Promise<VsCodeSettings> {
         return getExtensionSettingsDelegate(getCurrentExtensionContext());
+    }
+
+    public async showRichNotification(
+        fallbackText: string,
+        options?: RichNotificationOptions,
+        callback?: (command: string, payload: any) => void
+    ): Promise<void> {
+        showRichNotificationDelegate(fallbackText, options, callback);
     }
 
     public async openUrl(url: string, inExternalBrowser: boolean): Promise<void> {
@@ -110,12 +119,10 @@ export class VsCodeServiceAdapter extends AbstractServiceAdapter implements IVsC
                 const normFull = path.normalize(fullPath).toLowerCase();
                 const normRoot = rootPath ? path.normalize(rootPath).toLowerCase() : '';
 
-                // If path is inside the active workspace root, open in VS Code Explorer
                 if (normRoot && normFull.startsWith(normRoot)) {
                     logInfo(`[VsCodeServiceAdapter] Path is within workspace root, revealing in VS Code Explorer: ${fullPath}`);
                     await this.revealInExplorer(fullPath);
                 } else {
-                    // Otherwise open in OS native explorer (Finder/Explorer/xdg-open)
                     logInfo(`[VsCodeServiceAdapter] Path is outside workspace root, opening in OS native explorer: ${fullPath}`);
                     const platform = os.platform();
                     const stat = fs.statSync(fullPath);

@@ -255,7 +255,6 @@ export class FileExporterAdapter extends AbstractServiceAdapter implements IFile
       }
     }
 
-    // Scan output directory for any generated .log or prompt files matching the timestamp
     const discoveredLogs: string[] = [];
     const discoveredPrompts: string[] = [];
 
@@ -507,7 +506,19 @@ export class FileExporterAdapter extends AbstractServiceAdapter implements IFile
         generateTreeView: false,
       };
 
-      await callFileExporterScript(exportArgs as any);
+      const pythonScriptStatus = await callFileExporterScript(exportArgs as any);
+
+      // Await child process termination before attempting to copy generated files
+      if (pythonScriptStatus?.pid) {
+        const childProcess = pythonScriptExecutionManager.getProcessInstance(pythonScriptStatus.pid);
+        if (childProcess) {
+          await new Promise<void>((resolve) => {
+            childProcess.once('exit', () => resolve());
+            childProcess.once('error', () => resolve());
+          });
+        }
+      }
+
       const copyResult = await this.copyLatestExportedFiles(absDest);
 
       return {

@@ -118,6 +118,7 @@ export function registerRpcMethods(rpc: RpcProtocol): void {
     rpc.register(RpcMethodEnum.VSCODE_GET_WORKSPACE_ROOT_PATH, vsCodeService.getWorkspaceRootPath.bind(vsCodeService));
     rpc.register(RpcMethodEnum.VSCODE_LOG_MESSAGE, vsCodeService.logMessage.bind(vsCodeService));
     rpc.register(RpcMethodEnum.VSCODE_GET_EXTENSION_SETTINGS, vsCodeService.getExtensionSettings.bind(vsCodeService));
+    rpc.register(RpcMethodEnum.VSCODE_SHOW_RICH_NOTIFICATION, vsCodeService.showRichNotification.bind(vsCodeService));
     rpc.register(RpcMethodEnum.VSCODE_OPEN_URL, vsCodeService.openUrl.bind(vsCodeService));
     rpc.register(RpcMethodEnum.VSCODE_OPEN_FILE, vsCodeService.openFile.bind(vsCodeService));
     rpc.register(RpcMethodEnum.VSCODE_REVEAL_IN_EXPLORER, vsCodeService.revealInExplorer.bind(vsCodeService));
