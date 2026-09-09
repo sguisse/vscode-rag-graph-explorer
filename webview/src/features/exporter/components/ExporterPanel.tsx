@@ -7,7 +7,7 @@ import { useExporterExecution } from '../hooks/use-exporter-execution';
 import { useExporterStore } from '../store/useExporterStore';
 import { ActionToolbar } from './ActionToolbar';
 import { ExternalLinks } from './ExternalLinks';
-import { TokenEstimationPanel } from './TokenEstimationPanel';
+import { TokenEstimationPanel } from './tabs/report/TokenEstimationPanel';
 import { ReportTab } from './tabs/report/ReportTab';
 import { FilesTab } from './tabs/files/FilesTab';
 import { TerminalTab } from './tabs/terminal/TerminalTab';
@@ -92,6 +92,9 @@ export function ExporterPanel() {
     ? (activeReportData?.summary?.total_size || 0)
     : ((codebaseReportData?.summary?.total_size || 0) + (referenceReportData?.summary?.total_size || 0));
   const estimatedInputTokens = Math.ceil(totalSizeBytes / 4);
+
+  const codebaseFilesCount = codebaseReportData?.summary?.total_exported || 0;
+  const referenceFilesCount = referenceReportData?.summary?.total_exported || 0;
 
   const topContent = (
     <ActionToolbar
@@ -327,7 +330,11 @@ export function ExporterPanel() {
       className="shrink-0"
       top={
         <div className="px-2 pb-0">
-          <TokenEstimationPanel tokens={estimatedInputTokens} />
+          <TokenEstimationPanel
+            tokens={estimatedInputTokens}
+            codebaseFilesCount={codebaseFilesCount}
+            referenceFilesCount={referenceFilesCount}
+          />
         </div>
       }
       middle={

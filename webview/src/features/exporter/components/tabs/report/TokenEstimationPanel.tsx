@@ -1,7 +1,7 @@
 import React from 'react';
 import { ChevronDown, ChevronRight, Cpu } from 'lucide-react';
 import { CollapsibleCard } from '@/components/ui/collapsible-card';
-import { useTokenEstimation } from './tabs/report/hooks/use-token-estimation';
+import { useTokenEstimation } from './hooks/use-token-estimation';
 
 interface TokenEstimationPanelProps {
   tokens?: number;
