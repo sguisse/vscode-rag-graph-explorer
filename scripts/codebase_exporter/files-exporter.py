@@ -134,34 +134,33 @@ class StreamExporter:
         elif self.fmt in ['yaml', 'yml']:
             self._write('files:\n')
 
-    def estimate_file_bytes(self, fname, ext, folder, content, rel_path):
-        """Estimates output bytes for chunk size boundary checks prior to writing."""
-        dummy_str = self.format_file_block(fname, ext, folder, content, rel_path)
+    def estimate_file_bytes(self, fname, ext, folder, content, rel_path, size=0):
+        dummy_str = self.format_file_block(fname, ext, folder, content, rel_path, size)
         return len(dummy_str.encode('utf-8'))
 
-    def format_file_block(self, fname, ext, folder, content, rel_path):
+    def format_file_block(self, fname, ext, folder, content, rel_path, size=0):
         lines = []
         if self.fmt == 'txt':
-            lines.append(f"{'=' * 162}\n{rel_path}\n--->\n\n{content}\n<---\n\n")
+            lines.append(f"{'=' * 162}\n{rel_path} ({size} B)\n--->\n\n{content}\n<---\n\n")
         elif self.fmt == 'json':
             prefix = ',\n' if not self.first_file else ''
-            obj = {"filename": fname, "extension": ext, "path": folder, "content": content}
+            obj = {"filename": fname, "extension": ext, "size": size, "path": folder, "content": content}
             lines.append(prefix + "    " + json.dumps(obj).replace('\n', '\n    '))
         elif self.fmt == 'xml':
             safe_content = content.replace(']]>', ']]]]><![CDATA[>')
             lines.append(f"    <file>\n      <filename>{fname}</filename>\n")
-            lines.append(f"      <extension>{ext}</extension>\n      <path>{folder}</path>\n")
+            lines.append(f"      <extension>{ext}</extension>\n      <size>{size}</size>\n      <path>{folder}</path>\n")
             lines.append(f"      <content><![CDATA[{safe_content}]]></content>\n    </file>\n")
         elif self.fmt in ['yaml', 'yml']:
-            lines.append(f"  - filename: {json.dumps(fname)}\n    extension: {json.dumps(ext)}\n")
+            lines.append(f"  - filename: {json.dumps(fname)}\n    extension: {json.dumps(ext)}\n    size: {size}\n")
             lines.append(f"    path: {json.dumps(folder)}\n    content: |-\n")
             for line in content.splitlines():
                 lines.append(f"      {line}\n")
             lines.append("\n")
         return "".join(lines)
 
-    def write_file(self, fname, ext, folder, content, rel_path):
-        block_text = self.format_file_block(fname, ext, folder, content, rel_path)
+    def write_file(self, fname, ext, folder, content, rel_path, size=0):
+        block_text = self.format_file_block(fname, ext, folder, content, rel_path, size)
         self._write(block_text)
         self.first_file = False
 
@@ -180,10 +179,12 @@ class FileScanner:
         self.exporters = {}
         self.g_fold = set()
         self.g_exts = defaultdict(int)
+        self.g_sizes = defaultdict(int)
         self.g_rej = defaultdict(int)
         self.g_exc = defaultdict(int)
         self.g_bnd = defaultdict(lambda: {'min': float('inf'), 'max': 0})
         self.processed_manifest = []
+        self.processed_manifest_sizes = {}
 
     def _open_new_chunk(self, index, ext=""):
         ext_part = f"_{ext}" if GROUP_BY_EXT and ext else ""
@@ -211,7 +212,6 @@ class FileScanner:
         ext_key = ext if GROUP_BY_EXT else "default"
         exp_data = self._get_exporter(ext)
 
-        # If current chunk already has data and adding incoming bytes exceeds threshold, close and roll to next chunk index
         if not exp_data['exporter'].first_file and (exp_data['exporter'].bytes_written + incoming_bytes) > MAX_OUTPUT_SIZE_BYTES:
             exp_data['exporter'].end()
             exp_data['file'].close()
@@ -224,16 +224,16 @@ class FileScanner:
         fname, ext_dot = os.path.splitext(file_name)
         ext = ext_dot.lstrip('.')
 
-        if self.max_file_bytes > 0:
-            try:
-                sz = os.path.getsize(fp)
-                if sz > self.max_file_bytes:
-                    self.g_rej[ext] += 1
-                    self.g_bnd[ext]['min'] = min(self.g_bnd[ext]['min'], sz)
-                    self.g_bnd[ext]['max'] = max(self.g_bnd[ext]['max'], sz)
-                    return
-            except OSError:
+        sz = 0
+        try:
+            sz = os.path.getsize(fp)
+            if self.max_file_bytes > 0 and sz > self.max_file_bytes:
+                self.g_rej[ext] += 1
+                self.g_bnd[ext]['min'] = min(self.g_bnd[ext]['min'], sz)
+                self.g_bnd[ext]['max'] = max(self.g_bnd[ext]['max'], sz)
                 return
+        except OSError:
+            return
 
         if not is_file_allowed(rel_fp, file_name, self.filters):
             self.g_exc[ext] += 1
@@ -246,16 +246,18 @@ class FileScanner:
             ext_key = ext if GROUP_BY_EXT else "default"
             exp_data = self._get_exporter(ext)
 
-            estimated_bytes = exp_data['exporter'].estimate_file_bytes(fname, ext, abs_f, content, rel_fp)
+            estimated_bytes = exp_data['exporter'].estimate_file_bytes(fname, ext, abs_f, content, rel_fp, sz)
             self._rotate_chunk_if_needed(ext, estimated_bytes)
 
-            # Retrieve active exporter reference post potential rotation
             exp_data = self._get_exporter(ext)
-            exp_data['exporter'].write_file(fname, ext, abs_f, content, rel_fp)
+            exp_data['exporter'].write_file(fname, ext, abs_f, content, rel_fp, sz)
 
             self.g_exts[ext] += 1
+            self.g_sizes[ext] += sz
             self.g_fold.add(abs_f)
-            self.processed_manifest.append(os.path.abspath(fp))
+            abs_p = os.path.abspath(fp)
+            self.processed_manifest.append(abs_p)
+            self.processed_manifest_sizes[abs_p] = sz
         except Exception as e:
             log(f"[{self.scope_name}] Failed to read {rel_fp}: {e}", emoji="⚠️")
 
@@ -284,11 +286,13 @@ class FileScanner:
             exp_data['exporter'].end()
             exp_data['file'].close()
             chunks += exp_data['idx']
-        return len(self.g_fold), dict(self.g_exts), dict(self.g_rej), dict(self.g_bnd), dict(self.g_exc), chunks
+        return len(self.g_fold), dict(self.g_exts), dict(self.g_sizes), dict(self.g_rej), dict(self.g_bnd), dict(self.g_exc), chunks, dict(self.processed_manifest_sizes)
 
-def create_tree_manifest(scope_name, processed_manifest):
+def create_tree_manifest(scope_name, processed_manifest, processed_manifest_sizes=None):
     if not processed_manifest:
         return None, None
+    if processed_manifest_sizes is None:
+        processed_manifest_sizes = {}
     try:
         common = os.path.commonpath(processed_manifest)
         if os.path.isfile(common):
@@ -311,14 +315,19 @@ def create_tree_manifest(scope_name, processed_manifest):
                 if i == len(parts) - 1:
                     fname, ext_dot = os.path.splitext(part)
                     current["children"][part] = {
-                        "name": fname, "extension": ext_dot.lstrip('.'),
-                        "type": "file", "absolute_path": path
+                        "name": fname,
+                        "extension": ext_dot.lstrip('.'),
+                        "type": "file",
+                        "size": processed_manifest_sizes.get(path, 0),
+                        "absolute_path": path
                     }
                 else:
                     if part not in current["children"]:
                         current["children"][part] = {
-                            "name": part, "type": "directory",
-                            "absolute_path": os.path.join(current["absolute_path"], part), "children": {}
+                            "name": part,
+                            "type": "directory",
+                            "absolute_path": os.path.join(current["absolute_path"], part),
+                            "children": {}
                         }
                     current = current["children"][part]
 
@@ -402,23 +411,25 @@ def run_scope_export(scope_name, sources, filters, max_file_kb):
     log(f"\n--- Scanning Scope: {scope_name.upper()} ---", emoji="🚀")
     scanner = FileScanner(scope_name, split_sources, filters, max_file_kb=max_file_kb)
     scanner.run_scan()
-    folders_cnt, ext_cnts, rej_cnts, bounds, exc_cnts, chunks = scanner.finalize()
+    folders_cnt, ext_cnts, ext_sizes, rej_cnts, bounds, exc_cnts, chunks, manifest_sizes = scanner.finalize()
 
     tree_path, tree_manifest_data = None, None
     if GENERATE_TREE_VIEW:
-        tree_path, tree_manifest_data = create_tree_manifest(scope_name, scanner.processed_manifest)
+        tree_path, tree_manifest_data = create_tree_manifest(scope_name, scanner.processed_manifest, manifest_sizes)
 
     scope_report_data = {
         "summary": {
             "folders_scanned": folders_cnt,
             "chunks_generated": chunks,
             "total_exported": sum(ext_cnts.values()),
+            "total_size": sum(ext_sizes.values()),
             "total_size_rejected": sum(rej_cnts.values()),
             "total_regex_excluded": sum(exc_cnts.values()),
         },
         "metrics_per_extension": {
             ext: {
                 "exported": ext_cnts.get(ext, 0),
+                "size": ext_sizes.get(ext, 0),
                 "size_rejected": {
                     "count": rej_cnts.get(ext, 0),
                     "min": format_size(bounds[ext]['min']) if rej_cnts.get(ext, 0) > 0 else "0KB",

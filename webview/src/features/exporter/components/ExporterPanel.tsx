@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BarChart3, BookOpen, Files, Terminal, HelpCircle, MessageSquareText } from 'lucide-react';
+import { BarChart3, BookOpen, Files, Terminal, HelpCircle, MessageSquareText, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
 import { LeftCenterRightPanel } from '@/components/app/left-center-right-panel';
@@ -7,11 +7,13 @@ import { useExporterExecution } from '../hooks/use-exporter-execution';
 import { useExporterStore } from '../store/useExporterStore';
 import { ActionToolbar } from './ActionToolbar';
 import { ExternalLinks } from './ExternalLinks';
+import { TokenEstimationPanel } from './tabs/report/TokenEstimationPanel';
 import { ReportTab } from './tabs/report/ReportTab';
 import { FilesTab } from './tabs/files/FilesTab';
-import { TerminalTab } from './tabs/TerminalTab';
-import { HelpTab } from './tabs/HelpTab';
+import { TerminalTab } from './tabs/terminal/TerminalTab';
+import { HelpTab } from '@/features/exporter/components/tabs/help/HelpTab';
 import { PromptTab } from './tabs/prompt/PromptTab';
+import { LlmResponseTab } from './tabs/llm-response/LlmResponseTab';
 import { ValidationErrorDialog } from './ValidationErrorDialog';
 import { SaveLockedProfileDialog } from './SaveLockedProfileDialog';
 import { ExtensionConflictDialog, ExtensionConflictState } from './ExtensionConflictDialog';
@@ -85,6 +87,12 @@ export function ExporterPanel() {
   const codebaseReportData = reportData?.codebase || null;
   const referenceReportData = reportData?.reference || null;
 
+  const activeReportData = activeTab === 'reference-report' ? referenceReportData : codebaseReportData;
+  const totalSizeBytes = (activeTab === 'codebase-report' || activeTab === 'reference-report')
+    ? (activeReportData?.summary?.total_size || 0)
+    : ((codebaseReportData?.summary?.total_size || 0) + (referenceReportData?.summary?.total_size || 0));
+  const estimatedInputTokens = Math.ceil(totalSizeBytes / 4);
+
   const topContent = (
     <ActionToolbar
       isRunning={isRunning}
@@ -102,7 +110,7 @@ export function ExporterPanel() {
         className="bg-muted/60 p-1 border-b border-border shrink-0"
         left={
           <div className="flex items-center gap-1 flex-wrap">
-             <Button
+            <Button
               variant="ghost"
               size="sm"
               onClick={() => handleTabChange('prompt')}
@@ -172,7 +180,19 @@ export function ExporterPanel() {
               <span>TERMINAL</span>
             </Button>
 
-
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleTabChange('llm-response')}
+              className={`h-6 px-2.5 text-[11px] gap-1.5 cursor-pointer font-bold transition-all rounded-md ${
+                activeTab === 'llm-response'
+                  ? 'bg-background text-foreground border border-border/60 shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-background/40 border border-transparent'
+              }`}
+            >
+              <Bot size={13} className={activeTab === 'llm-response' ? 'text-primary' : ''} />
+              <span>LLM RESPONSE</span>
+            </Button>
           </div>
         }
         right={
@@ -193,7 +213,7 @@ export function ExporterPanel() {
       />
 
       <div className="flex-1 min-h-0 overflow-y-auto relative">
-        {(activeTab === 'codebase-report') && (
+        {activeTab === 'codebase-report' && (
           <ReportTab
             reportData={codebaseReportData}
             onAppendExtension={(ext, mode) => handleAppendExtensionWithCoherence(ext, mode, 'codebase')}
@@ -292,6 +312,8 @@ export function ExporterPanel() {
           />
         )}
 
+        {activeTab === 'llm-response' && <LlmResponseTab />}
+
         {activeTab === 'prompt' && <PromptTab />}
 
         {activeTab === 'help' && <HelpTab />}
@@ -300,13 +322,24 @@ export function ExporterPanel() {
   );
 
   const bottomContent = (
-    <LeftCenterRightPanel
-      id="exporter-footer-panel"
-      className="p-2 bg-card border-t border-border font-mono text-xs shrink-0"
-      center={
-        <ExternalLinks
-          exchangeLinks={exchangeLinks}
-          onOpenExchangeUrl={handleOpenExchangeUrl}
+    <TopMiddleBottomPanel
+      id="exporter-footer-wrapper"
+      className="shrink-0"
+      top={
+        <div className="px-2 pb-0">
+          <TokenEstimationPanel tokens={estimatedInputTokens} />
+        </div>
+      }
+      middle={
+        <LeftCenterRightPanel
+          id="exporter-footer-panel"
+          className="p-2 bg-card font-mono text-xs shrink-0"
+          center={
+            <ExternalLinks
+              exchangeLinks={exchangeLinks}
+              onOpenExchangeUrl={handleOpenExchangeUrl}
+            />
+          }
         />
       }
     />

@@ -10,6 +10,7 @@ import { testFilterPatterns } from '../utils/filter-simulator';
 import { explodeTextAreaRegex, groupExtensionsText } from '../utils/regex-exploder';
 import { ExportFilter } from '@/shared/services/file-exporter/model/file-exporter-model';
 import { useExporterStore } from '../store/useExporterStore';
+import { useExporterValidation, ValidationFieldName } from '../hooks/use-exporter-validation';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 export type FilterScopeType = 'codebase' | 'reference';
@@ -30,11 +31,11 @@ export const getFilterSummaryBadges = (
   validationState?: any,
   onFocusField?: (fieldKey: string, e: React.MouseEvent) => void
 ): BadgeObject[] => {
-  const maxFileErr = validationState?.errors?.max_file;
-  const incPathsErr = validationState?.errors?.inc_paths;
-  const excPathsErr = validationState?.errors?.exc_paths;
-  const incExtErr = validationState?.errors?.inc_ext;
-  const excExtErr = validationState?.errors?.exc_ext;
+  const maxFileErr = validationState?.errors?.[`${scopeType}_max_file`];
+  const incPathsErr = validationState?.errors?.[`${scopeType}_inc_paths`];
+  const excPathsErr = validationState?.errors?.[`${scopeType}_exc_paths`];
+  const incExtErr = validationState?.errors?.[`${scopeType}_inc_ext`];
+  const excExtErr = validationState?.errors?.[`${scopeType}_exc_ext`];
 
   const activeFilter: ExportFilter = filter || {
     src: '',
@@ -181,6 +182,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
   filterSimulatorInput = '',
   setFilterSimulatorInput,
 }) => {
+  const { handleBlur } = useExporterValidation();
   const [sortDirections, setSortDirections] = useState<Record<string, 'asc' | 'desc'>>({
     inc_paths: 'asc',
     inc_ext: 'asc',
@@ -189,11 +191,11 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
   });
 
   const validationState = useExporterStore((s) => s.validationState);
-  const maxFileErr = validationState.errors?.max_file;
-  const incPathsErr = validationState.errors?.inc_paths;
-  const excPathsErr = validationState.errors?.exc_paths;
-  const incExtErr = validationState.errors?.inc_ext;
-  const excExtErr = validationState.errors?.exc_ext;
+  const maxFileErr = validationState.errors?.[`${scopeType}_max_file`];
+  const incPathsErr = validationState.errors?.[`${scopeType}_inc_paths`];
+  const excPathsErr = validationState.errors?.[`${scopeType}_exc_paths`];
+  const incExtErr = validationState.errors?.[`${scopeType}_inc_ext`];
+  const excExtErr = validationState.errors?.[`${scopeType}_exc_ext`];
 
   const activeFilter: ExportFilter = filter || {
     src: '',
@@ -308,8 +310,9 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
             id={`input-${scopeType}-max-file`}
             value={activeFilter.max_file}
             onChange={(e) => onChangeFilter((prev) => ({ ...prev, max_file: e.target.value }))}
+            onBlur={() => handleBlur(`${scopeType}_max_file` as ValidationFieldName)}
             className={`w-24 h-7 font-mono text-xs shrink-0 ${
-              validationState.maxFileInvalid || maxFileErr
+              maxFileErr
                 ? 'bg-destructive/10 text-destructive border-destructive/30 focus-visible:ring-destructive'
                 : 'bg-background'
             }`}
@@ -358,6 +361,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                   id={`textarea-${scopeType}-inc-paths`}
                   value={activeFilter.inc_paths || ''}
                   onChange={(e) => onChangeFilter((prev) => ({ ...prev, inc_paths: e.target.value }))}
+                  onBlur={() => handleBlur(`${scopeType}_inc_paths` as ValidationFieldName)}
                   rows={3}
                   className={`w-full min-w-0 font-mono text-xs resize-y ${
                     incPathsErr
@@ -429,6 +433,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                   id={`textarea-${scopeType}-inc-ext`}
                   value={activeFilter.inc_ext || ''}
                   onChange={(e) => onChangeFilter((prev) => ({ ...prev, inc_ext: e.target.value }))}
+                  onBlur={() => handleBlur(`${scopeType}_inc_ext` as ValidationFieldName)}
                   rows={3}
                   className={`w-full min-w-0 font-mono text-xs resize-y ${
                     incExtErr
@@ -481,6 +486,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                   id={`textarea-${scopeType}-exc-paths`}
                   value={activeFilter.exc_paths || ''}
                   onChange={(e) => onChangeFilter((prev) => ({ ...prev, exc_paths: e.target.value }))}
+                  onBlur={() => handleBlur(`${scopeType}_exc_paths` as ValidationFieldName)}
                   rows={3}
                   className={`w-full min-w-0 font-mono text-xs resize-y ${
                     excPathsErr
@@ -552,6 +558,7 @@ export const FiltersSection: React.FC<FiltersSectionProps> = ({
                   id={`textarea-${scopeType}-exc-ext`}
                   value={activeFilter.exc_ext || ''}
                   onChange={(e) => onChangeFilter((prev) => ({ ...prev, exc_ext: e.target.value }))}
+                  onBlur={() => handleBlur(`${scopeType}_exc_ext` as ValidationFieldName)}
                   rows={3}
                   className={`w-full min-w-0 font-mono text-xs resize-y ${
                     excExtErr

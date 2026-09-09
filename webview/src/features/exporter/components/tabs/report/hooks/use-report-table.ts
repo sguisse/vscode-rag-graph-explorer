@@ -5,7 +5,7 @@ import {
   ExtensionMetrics,
 } from '@/shared/services/file-exporter/model/file-exporter-model';
 
-export type SortColumnKey = 'ext' | 'exported' | 'rejected' | 'excluded';
+export type SortColumnKey = 'ext' | 'exported' | 'size' | 'rejected' | 'excluded';
 export type SortDirection = 'asc' | 'desc';
 
 export interface SortRule {
@@ -16,6 +16,7 @@ export interface SortRule {
 export interface ExtensionMetricRow {
   ext: string;
   exported: number;
+  size: number;
   size_rejected: {
     count: number;
     min: string;
@@ -30,6 +31,13 @@ export interface UseReportTableProps {
   onSetMaxFileSize?: (kb: number) => void;
 }
 
+export function formatBytes(bytes: number = 0): string {
+  if (bytes <= 0) return '0 B';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export function useReportTable({
   reportData,
   onAppendExtension,
@@ -37,6 +45,9 @@ export function useReportTable({
 }: UseReportTableProps) {
   const [sortRules, setSortRules] = useState<SortRule[]>([
     { key: 'exported', dir: 'desc' },
+    { key: 'size', dir: 'desc' },
+    { key: 'rejected', dir: 'desc' },
+    { key: 'excluded', dir: 'desc' },
   ]);
 
   const metricsList = useMemo<ExtensionMetricRow[]>(() => {
@@ -46,11 +57,15 @@ export function useReportTable({
       reportData.metrics_per_extension || {};
 
     const list: ExtensionMetricRow[] = Object.entries(rawMetrics).map(([ext, val]) => {
-      const m = (val || {}) as ExtensionMetrics;
+      const m = (val || {}) as ExtensionMetrics & { size?: number };
       const exported =
         typeof m.exported === 'number'
           ? m.exported
           : parseInt(String(m.exported || 0), 10) || 0;
+      const size =
+        typeof m.size === 'number'
+          ? m.size
+          : parseInt(String(m.size || 0), 10) || 0;
       const excluded =
         typeof m.regex_excluded === 'number'
           ? m.regex_excluded
@@ -59,6 +74,7 @@ export function useReportTable({
       return {
         ext,
         exported,
+        size,
         regex_excluded: excluded,
         size_rejected: m.size_rejected || { count: 0, min: '0', max: '0' },
       };
@@ -80,6 +96,10 @@ export function useReportTable({
             valA = a.exported;
             valB = b.exported;
             break;
+          case 'size':
+            valA = a.size;
+            valB = b.size;
+            break;
           case 'rejected':
             valA = a.size_rejected.count;
             valB = b.size_rejected.count;
@@ -99,11 +119,13 @@ export function useReportTable({
 
   const totals = useMemo(() => {
     let sumExported = 0;
+    let sumSize = 0;
     let sumRejected = 0;
     let sumExcluded = 0;
 
     for (const item of metricsList) {
       sumExported += item.exported;
+      sumSize += item.size;
       sumRejected += item.size_rejected.count;
       sumExcluded += item.regex_excluded;
     }
@@ -111,6 +133,7 @@ export function useReportTable({
     return {
       nbExtensions: metricsList.length,
       sumExported,
+      sumSize,
       sumRejected,
       sumExcluded,
     };

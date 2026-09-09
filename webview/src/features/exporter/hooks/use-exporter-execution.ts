@@ -1,7 +1,7 @@
 import { useExporterProfiles } from "./use-exporter-profiles";
 import { useExporterStore } from '../store/useExporterStore';
+import { useExporterValidation } from './use-exporter-validation';
 import { fileExporterApiService } from '@/services/api/file-exporter-api.service.gen';
-import { ExporterValidatorService } from '../utils/validator.service';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { PathMappingService } from '../utils/path-resolver';
 import { generateNewConfigName, generateDuplicateName } from '../utils/date-formatter';
@@ -10,6 +10,7 @@ import { isConfigDirty } from '../utils/config-dirty-checker';
 export function useExporterExecution() {
   const store = useExporterStore();
   const { addProfile, renameProfile, saveProfile, freezeToggle } = useExporterProfiles();
+  const { validateAllConfig, markAllTouched } = useExporterValidation();
 
   const selectedEntry = store.historyList.find((h) => h.id === store.selectedProfileId);
   const isDefault = store.selectedProfileId === 'default';
@@ -81,25 +82,15 @@ export function useExporterExecution() {
   const handleRunExport = async () => {
     logInfo('[useExporterExecution] handleRunExport starting...');
 
-    const validationErrors: string[] = [];
+    await markAllTouched();
 
-    const srcErr = ExporterValidatorService.validatePathList(store.config.codebase.src || '', store.invalidPaths);
-    if (srcErr) validationErrors.push(`Codebase Paths: ${srcErr}`);
+    const { errorList } = validateAllConfig(store.config, store.invalidPaths);
 
-    const destErr = ExporterValidatorService.validateDestDir(store.config.dest || '');
-    if (destErr) validationErrors.push(`Destination Directory: ${destErr}`);
-
-    const maxFileErr = ExporterValidatorService.validateMaxFile(store.config.codebase.max_file || '');
-    if (maxFileErr) validationErrors.push(`Max File Size: ${maxFileErr}`);
-
-    const maxChunkErr = ExporterValidatorService.validateMaxChunk(store.config.max_chunk || '');
-    if (maxChunkErr) validationErrors.push(`Max Chunk Size: ${maxChunkErr}`);
-
-    if (validationErrors.length > 0) {
-      logInfo('[useExporterExecution] Export blocked due to validation errors', [validationErrors]);
+    if (errorList.length > 0) {
+      logInfo('[useExporterExecution] Export blocked due to validation errors', [errorList]);
       store.setModalState({
         isValidationModalOpen: true,
-        validationErrors,
+        validationErrors: errorList,
       });
       return;
     }
@@ -120,7 +111,6 @@ export function useExporterExecution() {
     }
     store.appendTerminalLog(`💾 Target Dir: ${store.config.dest}\n`);
 
-    // Extract prompt from all potential state paths
     const storeObj = store as Record<string, any>;
     const rawPrompt = store.config.prompt || storeObj.prompt || storeObj.promptInstruction || '';
     const isPromptCheckboxChecked = store.config.generatePromptFile !== false;

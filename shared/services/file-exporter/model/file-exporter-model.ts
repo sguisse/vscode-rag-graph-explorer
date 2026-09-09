@@ -65,6 +65,7 @@ export interface ExportSummary {
   folders_scanned: number;
   chunks_generated: number;
   total_exported: number;
+  total_size: number;
   total_size_rejected: number;
   total_regex_excluded: number;
 }

@@ -6,6 +6,7 @@ import { EXPORT_FORMAT_ICON_MAP, EXPORT_FORMAT_LIST, ExportFormat } from '@/shar
 import { SelectFromTypeBuilder } from '@/components/app/ui-utils';
 import { ExportConfig } from '@/shared/services/file-exporter/model/file-exporter-model';
 import { useExporterStore } from '../store/useExporterStore';
+import { useExporterValidation } from '../hooks/use-exporter-validation';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 
 interface OutputFormattingSectionProps {
@@ -22,9 +23,9 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
   onChangeConfig,
 }) => {
   const validationState = useExporterStore((s) => s.validationState);
+  const { handleBlur } = useExporterValidation();
   const maxChunkErr = validationState?.errors?.max_chunk;
 
-  // STRICT BOOLEAN RESOLUTION: if undefined from legacy profiles, default to true.
   const isPromptFileEnabled = config.generatePromptFile !== false;
 
   const handleFocusField = (elementId: string, e: React.MouseEvent, isSelect = false) => {
@@ -38,14 +39,13 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
         return;
       }
 
-      // Resolve the interactive child element if root is a wrapper div
       const target = root.matches('button, input, [role="combobox"]')
         ? root
         : (root.querySelector('button, input, [role="combobox"]') as HTMLElement) || root;
 
       if (target) {
         try {
-          target.focus({ focusVisible: true });
+          target.focus({ preventScroll: true });
         } catch {
           target.focus();
         }
@@ -55,7 +55,6 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
         }
 
         if (isSelect) {
-          // Open the Radix Select dropdown natively
           target.click();
         }
       }
@@ -150,6 +149,7 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
                 logInfo('[OutputFormattingSection] Max chunk changed', [e.target.value]);
                 onChangeConfig((prev) => ({ ...prev, max_chunk: e.target.value }));
               }}
+              onBlur={() => handleBlur('max_chunk')}
               className={`w-full h-7 font-mono text-xs ${
                 validationState?.maxChunkInvalid || maxChunkErr
                   ? 'bg-destructive/10 text-destructive border-destructive/30 focus-visible:ring-destructive'
@@ -242,15 +242,13 @@ export const OutputFormattingSection: React.FC<OutputFormattingSectionProps> = (
                 const isChecked = val === true;
                 logInfo('[OutputFormattingSection] generatePromptFile changed', [isChecked]);
 
-                // 1. Standard Prop Update
                 onChangeConfig((prev) => ({ ...prev, generatePromptFile: isChecked }));
 
-                // 2. Aggressive Store Bypass (Guarantees state update regardless of wrapper drop logic)
                 useExporterStore.setState((state) => ({
                   config: {
                     ...state.config,
-                    generatePromptFile: isChecked
-                  }
+                    generatePromptFile: isChecked,
+                  },
                 }));
               }}
             />

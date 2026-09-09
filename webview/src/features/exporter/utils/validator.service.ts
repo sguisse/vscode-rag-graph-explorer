@@ -1,14 +1,14 @@
 export const ExporterValidatorService = {
   validateRegexSyntax(val: string): string | null {
     if (!val || !val.trim()) return null;
-    const lines = val.split('\n');
-    for (const line of lines) {
-      const trimmed = line.trim();
+    const patterns = val.split(/[\n,;]+/);
+    for (const p of patterns) {
+      const trimmed = p.trim();
       if (trimmed && !trimmed.startsWith('#')) {
         try {
           new RegExp(trimmed);
-        } catch (e) {
-          return `Invalid regex on line: "${trimmed}"`;
+        } catch (e: any) {
+          return `Invalid regex "${trimmed}": ${e?.message || 'Syntax error'}`;
         }
       }
     }

@@ -14,6 +14,34 @@ export interface ExtensionGroup {
   items: ExtensionItem[];
 }
 
+export type ViewMode = 'standard' | 'extension' | 'heavy';
+export type ExtSortKey = 'name' | 'size';
+export type SortDirection = 'asc' | 'desc';
+
+export function formatBytes(bytes: number = 0): string {
+  if (bytes <= 0) return '0 B';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+export function getNodeTotalSize(node: TreeManifestNode): number {
+  if (node.type === 'file') return (node as TreeManifestNode & { size?: number }).size || 0;
+  if (!node.children) return 0;
+  let total = 0;
+  for (const child of Object.values(node.children)) {
+    total += getNodeTotalSize(child);
+  }
+  return total;
+}
+
+export function getGroupTotalSize(grp: ExtensionGroup): number {
+  return grp.items.reduce((acc, item) => {
+    const s = (item.node as TreeManifestNode & { size?: number }).size || 0;
+    return acc + s;
+  }, 0);
+}
+
 export function getRealFileNameAndExtension(node: TreeManifestNode): { fileName: string; ext: string } {
   let fileName = node.name || '';
   if (node.absolute_path) {
@@ -79,7 +107,6 @@ export function groupFilesByExtension(files: TreeManifestNode[]): ExtensionGroup
     });
   }
 
-  groups.sort((a, b) => a.ext.localeCompare(b.ext));
   return groups;
 }
 
@@ -118,19 +145,52 @@ interface UseReportTreeProps {
 export function useReportTree({ rootNode = null, onExcludePattern, onCaptureSelectedPaths }: UseReportTreeProps = {}) {
   const [searchQuery, setSearchQuery] = useState('');
   const [useRegex, setUseRegex] = useState(false);
-  const [viewMode, setViewMode] = useState<'standard' | 'extension'>('standard');
+  const [viewMode, setViewMode] = useState<ViewMode>('standard');
+  const [extSortKey, setExtSortKey] = useState<ExtSortKey>('name');
+  const [extSortDir, setExtSortDir] = useState<SortDirection>('asc');
   const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({});
   const [checkedKeys, setCheckedKeys] = useState<Record<string, boolean>>({});
 
   const allFiles = useMemo(() => collectAllFiles(rootNode), [rootNode]);
   const allNodes = useMemo(() => collectAllNodes(rootNode), [rootNode]);
-  const extensionGroups = useMemo(() => groupFilesByExtension(allFiles), [allFiles]);
+
+  const rawExtensionGroups = useMemo(() => groupFilesByExtension(allFiles), [allFiles]);
+
+  const extensionGroups = useMemo(() => {
+    return [...rawExtensionGroups].sort((a, b) => {
+      if (extSortKey === 'name') {
+        const comp = a.ext.localeCompare(b.ext);
+        return extSortDir === 'asc' ? comp : -comp;
+      } else {
+        const sizeA = getGroupTotalSize(a);
+        const sizeB = getGroupTotalSize(b);
+        const comp = sizeA - sizeB;
+        return extSortDir === 'asc' ? comp : -comp;
+      }
+    });
+  }, [rawExtensionGroups, extSortKey, extSortDir]);
+
+  const heavyFiles = useMemo(() => {
+    let filtered = [...allFiles];
+    if (searchQuery.trim()) {
+      filtered = filtered.filter((node) => {
+        const { fileName } = getRealFileNameAndExtension(node);
+        return useRegex
+          ? new RegExp(searchQuery, 'i').test(fileName)
+          : fileName.toLowerCase().includes(searchQuery.toLowerCase());
+      });
+    }
+    return filtered.sort((a, b) => {
+      const sizeA = (a as TreeManifestNode & { size?: number }).size || 0;
+      const sizeB = (b as TreeManifestNode & { size?: number }).size || 0;
+      return sizeB - sizeA;
+    });
+  }, [allFiles, searchQuery, useRegex]);
 
   const allFilePathsSet = useMemo(() => {
     return new Set(allFiles.map((f) => f.absolute_path));
   }, [allFiles]);
 
-  // Filter selection to only leaf nodes (file nodes) for counting and path capture
   const checkedPaths = useMemo(() => {
     return Object.entries(checkedKeys)
       .filter(([path, isChecked]) => isChecked && allFilePathsSet.has(path))
@@ -196,9 +256,29 @@ export function useReportTree({ rootNode = null, onExcludePattern, onCaptureSele
   };
 
   const handleToggleViewMode = () => {
-    const nextMode = viewMode === 'standard' ? 'extension' : 'standard';
+    const modes: ViewMode[] = ['standard', 'extension', 'heavy'];
+    const nextIdx = (modes.indexOf(viewMode) + 1) % modes.length;
+    const nextMode = modes[nextIdx];
     logInfo('[ReportTreePanel] handleToggleViewMode handler triggered', [nextMode]);
     setViewMode(nextMode);
+  };
+
+  const handleToggleExtSortByName = () => {
+    if (extSortKey === 'name') {
+      setExtSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setExtSortKey('name');
+      setExtSortDir('asc');
+    }
+  };
+
+  const handleToggleExtSortBySize = () => {
+    if (extSortKey === 'size') {
+      setExtSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setExtSortKey('size');
+      setExtSortDir('desc');
+    }
   };
 
   const handleExpandAll = () => {
@@ -218,7 +298,7 @@ export function useReportTree({ rootNode = null, onExcludePattern, onCaptureSele
           newExpanded[groupKey] = true;
         }
       }
-    } else {
+    } else if (viewMode === 'standard') {
       const selectedSet = new Set(checkedPaths);
       for (const node of allNodes) {
         if (node.type === 'directory') {
@@ -254,7 +334,7 @@ export function useReportTree({ rootNode = null, onExcludePattern, onCaptureSele
           newExpanded[groupKey] = false;
         }
       }
-    } else {
+    } else if (viewMode === 'standard') {
       const selectedSet = new Set(checkedPaths);
       for (const node of allNodes) {
         if (node.type === 'directory') {
@@ -286,10 +366,13 @@ export function useReportTree({ rootNode = null, onExcludePattern, onCaptureSele
     useRegex,
     setUseRegex,
     viewMode,
+    extSortKey,
+    extSortDir,
     expandedKeys,
     checkedKeys,
     checkedPaths,
     extensionGroups,
+    heavyFiles,
     toggleExpand,
     toggleCheck,
     toggleGroupCheck,
@@ -298,6 +381,8 @@ export function useReportTree({ rootNode = null, onExcludePattern, onCaptureSele
     handleExcludePattern,
     handleExcludeExtension,
     handleToggleViewMode,
+    handleToggleExtSortByName,
+    handleToggleExtSortBySize,
     handleExpandAll,
     handleCollapseAll,
     handleCaptureSelected,

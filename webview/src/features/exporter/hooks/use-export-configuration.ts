@@ -1,13 +1,12 @@
 import { useEffect } from 'react';
 import { useExporterStore } from '../store/useExporterStore';
+import { useExporterValidation } from './use-exporter-validation';
 import { fileExporterHistoryApiService } from '@/services/api/file-exporter-history-api.service.gen';
 import { fileExporterApiService } from '@/services/api/file-exporter-api.service.gen';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
-import { fileSystemApiService } from '@/services/api/file-system-api.service.gen';
 import { vsCodeBackendMessageHandler } from '@/services/listener/vscode-backend-message.handler';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { PathMappingService } from '../utils/path-resolver';
-import { ExporterValidatorService } from '../utils/validator.service';
 import { normalizeExportConfig } from '../utils/exporter-config.normalizer';
 import {
   EXPORTER_CODEBASE_ADD_PATHS,
@@ -20,8 +19,9 @@ export type ExporterScope = 'codebase' | 'reference';
 
 export function useExportConfiguration() {
   const store = useExporterStore();
+  const validation = useExporterValidation();
 
-  // Mutualized helper to append paths to specified scope (codebase or reference)
+  // Helper to append paths to specified scope
   const addPathsInConfig = (absPaths: string[], scope: ExporterScope = 'codebase') => {
     const wsRoot = store.workspaceRoot;
     const expandedList = (absPaths || [])
@@ -46,7 +46,7 @@ export function useExportConfiguration() {
     });
   };
 
-  // Mutualized helper to append exclude regex patterns to specified scope (codebase or reference)
+  // Helper to append exclude regex patterns to specified scope
   const addExcludePathsInConfig = (absPaths: string[], scope: ExporterScope = 'codebase') => {
     const wsRootPath = store.workspaceRoot ? store.workspaceRoot.replace(/\\/g, '/').replace(/\/+$/, '') : '';
 
@@ -173,40 +173,6 @@ export function useExportConfiguration() {
     };
   }, [store.workspaceRoot]);
 
-  useEffect(() => {
-    const codebaseErr = ExporterValidatorService.validatePathList(store.config.codebase.src || '', store.invalidPaths);
-    const destErr = ExporterValidatorService.validateDestDir(store.config.dest || '');
-    const maxFileErr = ExporterValidatorService.validateMaxFile(store.config.codebase.max_file || '');
-    const maxChunkErr = ExporterValidatorService.validateMaxChunk(store.config.max_chunk || '');
-    const incPathsErr = ExporterValidatorService.validateRegexSyntax(store.config.codebase.inc_paths || '');
-    const excPathsErr = ExporterValidatorService.validateRegexSyntax(store.config.codebase.exc_paths || '');
-    const incExtErr = ExporterValidatorService.validateRegexSyntax(store.config.codebase.inc_ext || '');
-    const excExtErr = ExporterValidatorService.validateRegexSyntax(store.config.codebase.exc_ext || '');
-
-    store.setValidationState({
-      codebasePathListInvalid: Boolean(codebaseErr),
-      destDirInvalid: Boolean(destErr),
-      maxFileInvalid: Boolean(maxFileErr),
-      maxChunkInvalid: Boolean(maxChunkErr),
-      errors: {
-        codebase_src: codebaseErr,
-        dest: destErr,
-        max_file: maxFileErr,
-        max_chunk: maxChunkErr,
-        inc_paths: incPathsErr,
-        exc_paths: excPathsErr,
-        inc_ext: incExtErr,
-        exc_ext: excExtErr,
-      },
-    });
-  }, [
-    store.config.codebase,
-    store.config.reference,
-    store.config.dest,
-    store.config.max_chunk,
-    store.invalidPaths,
-  ]);
-
   const handleAddOpenFiles = async () => {
     try {
       const currentDisplayLines = (store.config.codebase.src || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
@@ -270,6 +236,7 @@ export function useExportConfiguration() {
 
   return {
     ...store,
+    validation,
     addPathsToConfig: (absPaths: string[], scope: ExporterScope = 'codebase') => addPathsInConfig(absPaths, scope),
     addReferencePathsToConfig: (absPaths: string[]) => addPathsInConfig(absPaths, 'reference'),
     addExcludePathsInConfig: (absPaths: string[], scope: ExporterScope = 'codebase') => addExcludePathsInConfig(absPaths, scope),

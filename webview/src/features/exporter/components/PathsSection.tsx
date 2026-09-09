@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { FileCode, GitCompare, Bug, ExternalLink, Trash2, X } from 'lucide-react';
 import { CollapsibleCard, BadgeObject } from '@/components/ui/collapsible-card';
 import { useExporterStore } from '../store/useExporterStore';
+import { useExporterValidation } from '../hooks/use-exporter-validation';
 import { PathMappingService } from '../utils/path-resolver';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { fileExporterApiService } from '@/services/api/file-exporter-api.service.gen';
@@ -32,7 +33,6 @@ export interface PathsSectionProps {
   filterSimulatorInput: string;
   setFilterSimulatorInput: (val: string) => void;
 
-  // Header action visibility toggles
   showAddOpenFiles?: boolean;
   showAddGitDiffFiles?: boolean;
   showAddErrorStackFiles?: boolean;
@@ -69,6 +69,7 @@ export const PathsSection: React.FC<PathsSectionProps> = ({
   const workspaceRoot = useExporterStore((s) => s.workspaceRoot);
   const invalidPaths = useExporterStore((s) => s.invalidPaths);
   const validationState = useExporterStore((s) => s.validationState);
+  const { handleBlur } = useExporterValidation();
 
   const errKey = scopeType === 'codebase' ? 'codebase_src' : 'reference_src';
   const pathError = validationState.errors?.[errKey as keyof typeof validationState.errors];
@@ -346,6 +347,7 @@ export const PathsSection: React.FC<PathsSectionProps> = ({
           <Textarea
             value={pathsText}
             onChange={handleChangeTextarea}
+            onBlur={() => handleBlur(scopeType === 'codebase' ? 'codebase_src' : 'reference_src')}
             placeholder={`Enter ${scopeType} directories, files, or Java package.ClassName (one per line or comma-separated)...`}
             rows={scopeType === 'codebase' ? 5 : 4}
             className={`w-full ${scopeType === 'codebase' ? 'h-[136px]' : 'h-[136px]'} font-mono text-xs resize-y ${

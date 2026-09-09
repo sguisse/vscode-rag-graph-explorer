@@ -2,7 +2,7 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { ExportReportData, SingleScopeReportData } from '@/shared/services/file-exporter/model/file-exporter-model';
-import { useReportTable, SortColumnKey, ExtensionMetricRow } from './hooks/use-report-table';
+import { useReportTable, SortColumnKey, ExtensionMetricRow, formatBytes } from './hooks/use-report-table';
 
 interface ReportTablePanelProps {
   reportData: ExportReportData | SingleScopeReportData | null;
@@ -48,16 +48,12 @@ export const ReportTablePanel: React.FC<ReportTablePanelProps> = ({
     const isExcluded = Number(row.regex_excluded) > 0;
     const isRejected = row.size_rejected.count > 0;
 
-    // Prioritization coloration:
-    // 3. Excluded rows should be with destructive color (highest priority)
     if (isExcluded) {
       return 'bg-destructive/15 text-destructive font-semibold hover:bg-destructive/25 transition-colors';
     }
-    // 2. Rejected rows should be with amber color (medium priority)
     if (isRejected) {
       return 'bg-amber-500/15 text-amber-700 dark:text-amber-400 font-semibold hover:bg-amber-500/25 transition-colors';
     }
-    // 1. Even/odd zebra color (lowest priority) - enhanced contrast
     return index % 2 === 0
       ? 'bg-card hover:bg-muted/50 transition-colors'
       : 'bg-muted/70 hover:bg-muted transition-colors';
@@ -97,6 +93,16 @@ export const ReportTablePanel: React.FC<ReportTablePanelProps> = ({
                 </div>
               </th>
               <th
+                onClick={(e) => handleSortToggle('size', e.shiftKey)}
+                className="p-1.5 border-r border-border cursor-pointer hover:bg-muted-foreground/10 select-none"
+                data-tooltip="Click to sort total size (Shift+Click for multi-sort)"
+              >
+                <div className="flex items-center justify-between gap-1">
+                  <span>Size</span>
+                  {getSortIcon('size')}
+                </div>
+              </th>
+              <th
                 onClick={(e) => handleSortToggle('rejected', e.shiftKey)}
                 className="p-1.5 border-r border-border cursor-pointer hover:bg-muted-foreground/10 select-none"
                 data-tooltip="Click to sort rejected count (Shift+Click for multi-sort)"
@@ -121,7 +127,7 @@ export const ReportTablePanel: React.FC<ReportTablePanelProps> = ({
           <tbody>
             {metricsList.length === 0 ? (
               <tr>
-                <td colSpan={4} className="p-4 text-center italic text-muted-foreground">
+                <td colSpan={5} className="p-4 text-center italic text-muted-foreground">
                   No metrics available per extension.
                 </td>
               </tr>
@@ -138,6 +144,7 @@ export const ReportTablePanel: React.FC<ReportTablePanelProps> = ({
                     </span>
                   </td>
                   <td className="p-1.5 border-r border-border/50">{row.exported || '-'}</td>
+                  <td className="p-1.5 border-r border-border/50">{formatBytes(row.size)}</td>
                   <td className="p-1.5 border-r border-border/50">
                     {row.size_rejected.count > 0 ? (
                       <span
@@ -166,6 +173,7 @@ export const ReportTablePanel: React.FC<ReportTablePanelProps> = ({
                 Total ({totals.nbExtensions} {totals.nbExtensions === 1 ? 'ext' : 'exts'})
               </td>
               <td className="p-1.5 border-r border-border/50">{totals.sumExported}</td>
+              <td className="p-1.5 border-r border-border/50">{formatBytes(totals.sumSize)}</td>
               <td className="p-1.5 border-r border-border/50 text-amber-600 dark:text-amber-400">
                 {totals.sumRejected}
               </td>

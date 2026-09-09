@@ -3,7 +3,6 @@ import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
 import { ResizableContainer } from '@/components/app/container/resizable-container';
 import { useResizable } from '@/components/app/container/hooks/use-resizable';
 import { ExportReportData, SingleScopeReportData } from '@/shared/services/file-exporter/model/file-exporter-model';
-import { TokenEstimationPanel } from './TokenEstimationPanel';
 import { ReportTablePanel } from './ReportTablePanel';
 import { ReportTreePanel } from './ReportTreePanel';
 
@@ -44,12 +43,6 @@ export const ReportTab: React.FC<ReportTabProps> = ({
     );
   }
 
-  const topContent = (
-    <div className="p-2 pb-1">
-      <TokenEstimationPanel tokens={reportData.estimatedInputTokens || 0} />
-    </div>
-  );
-
   const middleContent = (
     <div ref={containerRef} className="p-2 pt-1 flex flex-row h-full min-h-0 w-full overflow-hidden">
       <ResizableContainer
@@ -82,7 +75,6 @@ export const ReportTab: React.FC<ReportTabProps> = ({
     <TopMiddleBottomPanel
       id="panel-exporter-report-tab"
       className="w-full h-full min-h-0 overflow-hidden bg-background font-mono text-xs"
-      top={topContent}
       middle={middleContent}
     />
   );
