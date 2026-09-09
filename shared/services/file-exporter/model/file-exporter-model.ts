@@ -245,3 +245,12 @@ export interface HistoryWrapper {
   config: HistoryWrapperConfig;
   history: HistoryEntry[];
 }
+
+export interface BashExecutionResult {
+  terminalLogs: string;
+  result: 'success' | 'failed' | 'warning';
+  message: string;
+  nbFilesUpdated: number;
+  nbFilesCreated: number;
+  gitCommitMessage: string;
+}

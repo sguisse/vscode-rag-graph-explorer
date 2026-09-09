@@ -12,6 +12,8 @@ import {
 } from '@/shared/services/file-exporter/model/file-exporter-model';
 import { ExporterTabId, ExporterModalState, FieldValidationState } from '../types/exporter.types';
 
+export type LlmResponseSubTab = 'apply' | 'inspect';
+
 export interface ExporterStoreState {
   defaultConfig: ExportConfig;
   config: ExportConfig;
@@ -41,6 +43,15 @@ export interface ExporterStoreState {
   modalState: ExporterModalState;
   validationState: FieldValidationState;
 
+  // LLM Response State Slice
+  llmSubTab: LlmResponseSubTab;
+  llmResponseText: string;
+  llmShScript: string;
+  llmExecutionLog: string;
+  llmImpactedFilesCount: number;
+  llmGitCommitMessage: string;
+  llmIsExecuting: boolean;
+
   // Atomic setters
   setPrompt: (prompt: string) => void;
   setConfig: (updater: ExportConfig | ((prev: ExportConfig) => ExportConfig)) => void;
@@ -61,6 +72,15 @@ export interface ExporterStoreState {
   setLastExportResult: (res: FilesExporterResult | null) => void;
   setModalState: (updater: Partial<ExporterModalState> | ((prev: ExporterModalState) => ExporterModalState)) => void;
   setValidationState: (updater: Partial<FieldValidationState> | ((prev: FieldValidationState) => FieldValidationState)) => void;
+
+  setLlmSubTab: (subTab: LlmResponseSubTab) => void;
+  setLlmResponseText: (text: string) => void;
+  setLlmShScript: (script: string) => void;
+  setLlmExecutionLog: (log: string) => void;
+  setLlmImpactedFilesCount: (count: number) => void;
+  setLlmGitCommitMessage: (msg: string) => void;
+  setLlmIsExecuting: (executing: boolean) => void;
+
   setInitialData: (data: Partial<ExporterStoreState>) => void;
 }
 
@@ -75,16 +95,14 @@ export const useExporterStore = create<ExporterStoreState>((set) => ({
   workspaceRoot: '',
   fileExtsCategoryGroups: [],
   exchangeLinks: [],
-
   filterSimulatorInput: '',
   isRunning: false,
-  activeTab: 'codebase-report',
+  activeTab: 'prompt',
   terminalLogs: '',
   compiledBashCmd: '',
   reportData: null,
   invalidPaths: [],
   pendingPaths: [],
-
   lastPid: 0,
   lastTimestamp: '',
   lastExportResult: null,
@@ -99,7 +117,6 @@ export const useExporterStore = create<ExporterStoreState>((set) => ({
     conflictSource: '',
     conflictTarget: '',
   },
-
   validationState: {
     codebasePathListInvalid: false,
     referencePathListInvalid: false,
@@ -109,17 +126,25 @@ export const useExporterStore = create<ExporterStoreState>((set) => ({
     errors: {},
   },
 
+  // LLM Response State Slice
+  llmSubTab: 'apply',
+  llmResponseText: '',
+  llmShScript: '',
+  llmExecutionLog: '',
+  llmImpactedFilesCount: 0,
+  llmGitCommitMessage: '',
+  llmIsExecuting: false,
+
+  // Actions
   setPrompt: (prompt: string) =>
     set((state) => ({
       prompt,
-      config: { ...state.config, prompt },
+      config: normalizeExportConfig({ ...state.config, prompt }),
     })),
-
   setConfig: (updater) =>
     set((state) => ({
       config: typeof updater === 'function' ? normalizeExportConfig(updater(state.config)) : normalizeExportConfig(updater),
     })),
-
   setHistoryList: (historyList) => set({ historyList }),
   setSelectedProfileId: (selectedProfileId) => set({ selectedProfileId }),
   setHistoryViewMode: (historyViewMode) => set({ historyViewMode }),
@@ -135,16 +160,16 @@ export const useExporterStore = create<ExporterStoreState>((set) => ({
   setLastPid: (lastPid) => set({ lastPid }),
   setLastTimestamp: (lastTimestamp) => set({ lastTimestamp }),
   setLastExportResult: (lastExportResult) => set({ lastExportResult }),
+  setModalState: (updater) => set((state) => ({ modalState: typeof updater === 'function' ? updater(state.modalState) : { ...state.modalState, ...updater } })),
+  setValidationState: (updater) => set((state) => ({ validationState: typeof updater === 'function' ? updater(state.validationState) : { ...state.validationState, ...updater } })),
 
-  setModalState: (updater) =>
-    set((state) => ({
-      modalState: typeof updater === 'function' ? updater(state.modalState) : { ...state.modalState, ...updater },
-    })),
-
-  setValidationState: (updater) =>
-    set((state) => ({
-      validationState: typeof updater === 'function' ? updater(state.validationState) : { ...state.validationState, ...updater },
-    })),
+  setLlmSubTab: (llmSubTab) => set({ llmSubTab }),
+  setLlmResponseText: (llmResponseText) => set({ llmResponseText }),
+  setLlmShScript: (llmShScript) => set({ llmShScript }),
+  setLlmExecutionLog: (llmExecutionLog) => set({ llmExecutionLog }),
+  setLlmImpactedFilesCount: (llmImpactedFilesCount) => set({ llmImpactedFilesCount }),
+  setLlmGitCommitMessage: (llmGitCommitMessage) => set({ llmGitCommitMessage }),
+  setLlmIsExecuting: (llmIsExecuting) => set({ llmIsExecuting }),
 
   setInitialData: (data) => set((state) => ({ ...state, ...data })),
 }));

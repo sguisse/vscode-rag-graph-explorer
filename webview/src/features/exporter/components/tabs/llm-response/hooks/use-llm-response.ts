@@ -1,16 +1,26 @@
-import { useState } from 'react';
+import { useExporterStore, LlmResponseSubTab } from '../../../../store/useExporterStore';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { fileExporterApiService } from '@/services/api/file-exporter-api.service.gen';
+import { BashExecutionResult } from '@/shared/services/file-exporter/model/file-exporter-model';
 
-export type LlmResponseSubTab = 'apply' | 'inspect';
+export type { LlmResponseSubTab };
 
 export function useLlmResponse() {
-  const [subTab, setSubTab] = useState<LlmResponseSubTab>('apply');
-  const [llmResponse, setLlmResponse] = useState<string>('');
-  const [shScript, setShScript] = useState<string>('');
-  const [executionLog, setExecutionLog] = useState<string>('');
-  const [impactedFiles, setImpactedFiles] = useState<string[]>([]);
+  const subTab = useExporterStore((s) => s.llmSubTab);
+  const setSubTab = useExporterStore((s) => s.setLlmSubTab);
+  const llmResponse = useExporterStore((s) => s.llmResponseText);
+  const setLlmResponse = useExporterStore((s) => s.setLlmResponseText);
+  const shScript = useExporterStore((s) => s.llmShScript);
+  const setShScript = useExporterStore((s) => s.setLlmShScript);
+  const executionLog = useExporterStore((s) => s.llmExecutionLog);
+  const setExecutionLog = useExporterStore((s) => s.setLlmExecutionLog);
+  const impactedFilesCount = useExporterStore((s) => s.llmImpactedFilesCount);
+  const setImpactedFilesCount = useExporterStore((s) => s.setLlmImpactedFilesCount);
+  const gitCommitMessage = useExporterStore((s) => s.llmGitCommitMessage);
+  const setGitCommitMessage = useExporterStore((s) => s.setLlmGitCommitMessage);
+  const isExecuting = useExporterStore((s) => s.llmIsExecuting);
+  const setIsExecuting = useExporterStore((s) => s.setLlmIsExecuting);
 
   const handlePasteLlmResponse = async () => {
     logInfo('[useLlmResponse] handlePasteLlmResponse handler triggered');
@@ -39,23 +49,49 @@ export function useLlmResponse() {
     fileExporterApiService.showNotification('info', 'Shell script extracted successfully!');
   };
 
-  const handleApplyShScript = () => {
-    logInfo('[useLlmResponse] handleApplyShScript handler triggered', [{ scriptLength: shScript.length }]);
-    if (!shScript.trim() && !llmResponse.trim()) {
+  const handleApplyShScript = async () => {
+    let scriptToApply = shScript.trim();
+    if (!scriptToApply) {
+      const match = llmResponse.match(/```(?:bash|sh|shell)?\s*\n([\s\S]*?)```/) ||
+                    llmResponse.match(/~~~~(?:bash|sh|shell)?\s*\n([\s\S]*?)~~~~/);
+      scriptToApply = match ? match[1].trim() : llmResponse.trim();
+    }
+
+    logInfo('[useLlmResponse] handleApplyShScript handler triggered', [{ scriptLength: scriptToApply.length }]);
+    if (!scriptToApply) {
       fileExporterApiService.showNotification('warn', 'No script available to apply!');
       return;
     }
 
-    const sampleLog = `🚀 [LLM Response Executor] Applying extracted shell script...\n` +
-      `--------------------------------------------------\n` +
-      `✅ Created/Updated: src/components/NewFeature.tsx\n` +
-      `✅ Updated: src/store/useAppStore.ts\n` +
-      `--------------------------------------------------\n` +
-      `🎉 Execution completed successfully. 2 files impacted.`;
-    setExecutionLog(sampleLog);
-    setImpactedFiles(['src/components/NewFeature.tsx', 'src/store/useAppStore.ts']);
-    fileExporterApiService.showNotification('info', 'Shell script execution started!');
-    setSubTab('inspect');
+    setIsExecuting(true);
+    fileExporterApiService.showNotification('info', 'Executing codebase update script...');
+
+    try {
+      const res: BashExecutionResult = await fileExporterApiService.executeBashCodebaseUpdate(scriptToApply);
+      logInfo('[useLlmResponse] executeBashCodebaseUpdate result received', [res]);
+
+      setExecutionLog(res.terminalLogs || res.message || '');
+      setGitCommitMessage(res.gitCommitMessage || '');
+      const totalImpacted = (res.nbFilesCreated || 0) + (res.nbFilesUpdated || 0);
+      setImpactedFilesCount(totalImpacted);
+
+      if (res.result === 'success') {
+        fileExporterApiService.showNotification('info', res.message || 'Codebase update applied successfully!');
+      } else if (res.result === 'warning') {
+        fileExporterApiService.showNotification('warn', res.message || 'Codebase update completed with warnings.');
+      } else {
+        fileExporterApiService.showNotification('error', res.message || 'Codebase update failed.');
+      }
+
+      setSubTab('inspect');
+    } catch (err: any) {
+      logInfo('[useLlmResponse] executeBashCodebaseUpdate error', [err]);
+      fileExporterApiService.showNotification('error', `Failed to execute update: ${err?.message || err}`);
+      setExecutionLog(`❌ Execution error: ${err?.message || err}`);
+      setSubTab('inspect');
+    } finally {
+      setIsExecuting(false);
+    }
   };
 
   const handleCopyExecutionResult = () => {
@@ -67,7 +103,7 @@ export function useLlmResponse() {
   };
 
   const handleCreateProfileFromImpacted = () => {
-    logInfo('[useLlmResponse] handleCreateProfileFromImpacted handler triggered', [{ filesCount: impactedFiles.length }]);
+    logInfo('[useLlmResponse] handleCreateProfileFromImpacted handler triggered', [{ count: impactedFilesCount }]);
     fileExporterApiService.showNotification('info', 'New profile created from impacted files!');
   };
 
@@ -78,7 +114,10 @@ export function useLlmResponse() {
     setLlmResponse,
     shScript,
     executionLog,
-    impactedFiles,
+    impactedFilesCount,
+    gitCommitMessage,
+    setGitCommitMessage,
+    isExecuting,
     handlePasteLlmResponse,
     handleExtractShScript,
     handleApplyShScript,

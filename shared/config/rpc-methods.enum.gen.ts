@@ -44,6 +44,7 @@ export enum RpcMethodEnum {
     FILEEXPORTER_APPLY_FILE_FILTER = 'applyFileFilter',
     FILEEXPORTER_OPEN_BROWSER_TAB = 'openBrowserTab',
     FILEEXPORTER_SHOW_NOTIFICATION = 'showNotification',
+    FILEEXPORTER_EXECUTE_BASH_CODEBASE_UPDATE = 'executeBashCodebaseUpdate',
     FILESYSTEM_EXISTS = 'exists',
     FILESYSTEM_IS_DIRECTORY = 'isDirectory',
     FILESYSTEM_CLEAR_DIRECTORY = 'clearDirectory',

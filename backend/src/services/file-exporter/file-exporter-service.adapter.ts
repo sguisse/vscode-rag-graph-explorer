@@ -30,6 +30,7 @@ import {
   ExportConfig,
   ExportReportEnvelope,
   FilesExporterNotificationType,
+  BashExecutionResult,
 } from '../../../../shared/services/file-exporter/model/file-exporter-model';
 
 export class FileExporterAdapter extends AbstractServiceAdapter implements IFileExporterServicePort, vscode.Disposable {
@@ -508,7 +509,6 @@ export class FileExporterAdapter extends AbstractServiceAdapter implements IFile
 
       const pythonScriptStatus = await callFileExporterScript(exportArgs as any);
 
-      // Await child process termination before attempting to copy generated files
       if (pythonScriptStatus?.pid) {
         const childProcess = pythonScriptExecutionManager.getProcessInstance(pythonScriptStatus.pid);
         if (childProcess) {
@@ -588,6 +588,160 @@ export class FileExporterAdapter extends AbstractServiceAdapter implements IFile
     if (type === 'error') vscode.window.showErrorMessage(text);
     else if (type === 'warn') vscode.window.showWarningMessage(text);
     else vscode.window.showInformationMessage(text);
+  }
+
+  public async executeBashCodebaseUpdate(bash: string): Promise<BashExecutionResult> {
+    const wsPath = this.getWorkspaceRootPath();
+    const scriptPath = path.join(wsPath, 'update_codebase_with_llm_result.sh');
+
+    logInfo(`[FileExporterAdapter] executeBashCodebaseUpdate starting... (${bash.length} chars)`);
+
+    fs.writeFileSync(scriptPath, bash, { encoding: 'utf8', mode: 0o755 });
+
+    const filePathRegex = />\s*['"]?([a-zA-Z0-9_.\-\/]+)['"]?/g;
+    const detectedFiles = new Set<string>();
+    let match: RegExpExecArray | null;
+    while ((match = filePathRegex.exec(bash)) !== null) {
+      const candidate = match[1].trim();
+      if (candidate && !candidate.startsWith('/dev/null') && !candidate.endsWith('.sh') && candidate !== 'EOF') {
+        const abs = path.isAbsolute(candidate) ? candidate : path.join(wsPath, candidate);
+        detectedFiles.add(abs);
+      }
+    }
+
+    const preExistenceMap = new Map<string, boolean>();
+    const preContentMap = new Map<string, string>();
+    detectedFiles.forEach((f) => {
+      const exists = fs.existsSync(f);
+      preExistenceMap.set(f, exists);
+      if (exists) {
+        try {
+          preContentMap.set(f, fs.readFileSync(f, 'utf8'));
+        } catch {}
+      }
+    });
+
+    let gitStatusBefore = '';
+    try {
+      gitStatusBefore = execSync('git status --porcelain', { cwd: wsPath, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    } catch {}
+
+    let terminalLogs = '';
+    let execError = false;
+
+    try {
+      const output = execSync(`bash "${scriptPath}"`, {
+        cwd: wsPath,
+        encoding: 'utf8',
+        maxBuffer: 10 * 1024 * 1024,
+      });
+      terminalLogs = output;
+    } catch (err: any) {
+      execError = true;
+      terminalLogs = (err.stdout || '') + '\n' + (err.stderr || '') + '\n' + (err.message || '');
+    }
+
+    let nbFilesCreated = 0;
+    let nbFilesUpdated = 0;
+
+    let gitStatusAfter = '';
+    try {
+      gitStatusAfter = execSync('git status --porcelain', { cwd: wsPath, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    } catch {}
+
+    if (gitStatusAfter) {
+      const beforeLines = new Set(gitStatusBefore.split('\n').map((l) => l.trim()).filter(Boolean));
+      const afterLines = gitStatusAfter.split('\n').map((l) => l.trim()).filter(Boolean);
+
+      const newGitLines = afterLines.filter((l) => !beforeLines.has(l));
+      for (const line of newGitLines) {
+        const statusCode = line.substring(0, 2);
+        if (statusCode.includes('?') || statusCode.includes('A')) {
+          nbFilesCreated++;
+        } else if (statusCode.includes('M')) {
+          nbFilesUpdated++;
+        }
+      }
+    }
+
+    if (nbFilesCreated === 0 && nbFilesUpdated === 0) {
+      detectedFiles.forEach((f) => {
+        const preExisted = preExistenceMap.get(f) ?? false;
+        const nowExists = fs.existsSync(f);
+        if (!preExisted && nowExists) {
+          nbFilesCreated++;
+        } else if (preExisted && nowExists) {
+          try {
+            const nowContent = fs.readFileSync(f, 'utf8');
+            if (nowContent !== preContentMap.get(f)) {
+              nbFilesUpdated++;
+            }
+          } catch {}
+        }
+      });
+    }
+
+    let gitCommitMessage = '';
+    const logLines = terminalLogs.split('\n').map((l) => l.trim()).filter(Boolean);
+    const scriptLines = bash.split('\n').map((l) => l.trim()).filter(Boolean);
+
+    const extractCommitFromLine = (line: string): string => {
+      const echoMatch = line.match(/^echo\s+["']?([^"']+)["']?$/i);
+      if (echoMatch) {
+        const msg = echoMatch[1].trim();
+        if (msg.includes('✅') || msg.includes('🐛') || msg.includes('✨') || msg.toLowerCase().startsWith('feat') || msg.toLowerCase().startsWith('fix')) {
+          return msg;
+        }
+      }
+      const commitMatch = line.match(/git\s+commit\s+-m\s+["']([^"']+)["']/i);
+      if (commitMatch) {
+        return commitMatch[1].trim();
+      }
+      if (line.includes('✅') || line.includes('🐛') || line.includes('✨')) {
+        return line.replace(/^echo\s+/, '').replace(/^["']|["']$/g, '').trim();
+      }
+      return '';
+    };
+
+    for (let i = logLines.length - 1; i >= 0; i--) {
+      const msg = extractCommitFromLine(logLines[i]);
+      if (msg) {
+        gitCommitMessage = msg;
+        break;
+      }
+    }
+
+    if (!gitCommitMessage) {
+      for (let i = scriptLines.length - 1; i >= 0; i--) {
+        const msg = extractCommitFromLine(scriptLines[i]);
+        if (msg) {
+          gitCommitMessage = msg;
+          break;
+        }
+      }
+    }
+
+    let result: 'success' | 'failed' | 'warning' = 'success';
+    let message = 'Bash script executed successfully.';
+
+    if (execError) {
+      result = 'failed';
+      message = 'Bash script execution failed with errors.';
+    } else if (nbFilesCreated === 0 && nbFilesUpdated === 0) {
+      result = 'warning';
+      message = 'Bash script executed, but no files were created or modified.';
+    } else {
+      message = `Bash script executed successfully. ${nbFilesCreated} file(s) created, ${nbFilesUpdated} file(s) updated.`;
+    }
+
+    return {
+      terminalLogs,
+      result,
+      message,
+      nbFilesUpdated,
+      nbFilesCreated,
+      gitCommitMessage,
+    };
   }
 
   public dispose() {}

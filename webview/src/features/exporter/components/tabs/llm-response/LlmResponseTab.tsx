@@ -14,7 +14,10 @@ export const LlmResponseTab: React.FC = () => {
     llmResponse,
     setLlmResponse,
     executionLog,
-    impactedFiles,
+    impactedFilesCount,
+    gitCommitMessage,
+    setGitCommitMessage,
+    isExecuting,
     handlePasteLlmResponse,
     handleExtractShScript,
     handleApplyShScript,
@@ -65,6 +68,7 @@ export const LlmResponseTab: React.FC = () => {
       {subTab === 'apply' && (
         <ApplyResponsePanel
           llmResponse={llmResponse}
+          isExecuting={isExecuting}
           onChangeLlmResponse={setLlmResponse}
           onPaste={handlePasteLlmResponse}
           onExtractSh={handleExtractShScript}
@@ -74,7 +78,9 @@ export const LlmResponseTab: React.FC = () => {
       {subTab === 'inspect' && (
         <InspectResultsPanel
           executionLog={executionLog}
-          impactedFilesCount={impactedFiles.length}
+          impactedFilesCount={impactedFilesCount}
+          gitCommitMessage={gitCommitMessage}
+          onChangeGitCommitMessage={setGitCommitMessage}
           onCopyResult={handleCopyExecutionResult}
           onCreateProfile={handleCreateProfileFromImpacted}
         />

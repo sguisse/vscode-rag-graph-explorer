@@ -10,7 +10,7 @@ try {
     require('./generate-rpc-methods-enum.js');
     require('./generate-service-registrator.js');
     require('./generate-rpc-method-registrator.js');
-    require('./generate-webview-api-services.js');
+    //require('./generate-webview-api-services.js');
     require('./generate-types.js');
 
     console.log('\n✨ All 8 code generation tasks completed successfully!');

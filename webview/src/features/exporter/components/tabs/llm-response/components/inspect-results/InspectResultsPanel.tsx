@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,6 +11,8 @@ import { logInfo } from '@/services/view/log-view.service.wrapper';
 interface InspectResultsPanelProps {
   executionLog: string;
   impactedFilesCount?: number;
+  gitCommitMessage?: string;
+  onChangeGitCommitMessage?: (msg: string) => void;
   onCopyResult: () => void;
   onCreateProfile: () => void;
   onCopyCommitMessage?: (message: string) => void;
@@ -21,23 +23,23 @@ interface InspectResultsPanelProps {
 export const InspectResultsPanel: React.FC<InspectResultsPanelProps> = ({
   executionLog,
   impactedFilesCount = 0,
+  gitCommitMessage = '',
+  onChangeGitCommitMessage,
   onCopyResult,
   onCreateProfile,
   onCopyCommitMessage,
   onGitStage,
   onGitCommit,
 }) => {
-  const [commitMessage, setCommitMessage] = useState<string>('');
-
   const handleCopyCommitMessage = () => {
-    logInfo('[InspectResultsPanel] handleCopyCommitMessage triggered', [commitMessage]);
-    if (commitMessage) {
-      vsCodeApiService.copyToClipboard(commitMessage);
+    logInfo('[InspectResultsPanel] handleCopyCommitMessage triggered', [gitCommitMessage]);
+    if (gitCommitMessage) {
+      vsCodeApiService.copyToClipboard(gitCommitMessage);
       fileExporterApiService.showNotification('info', 'Git commit message copied to clipboard!');
     } else {
       fileExporterApiService.showNotification('warn', 'Git commit message is empty!');
     }
-    if (onCopyCommitMessage) onCopyCommitMessage(commitMessage);
+    if (onCopyCommitMessage) onCopyCommitMessage(gitCommitMessage);
   };
 
   const handleGitStage = () => {
@@ -47,13 +49,13 @@ export const InspectResultsPanel: React.FC<InspectResultsPanelProps> = ({
   };
 
   const handleGitCommit = () => {
-    logInfo('[InspectResultsPanel] handleGitCommit triggered', [commitMessage]);
-    if (!commitMessage.trim()) {
+    logInfo('[InspectResultsPanel] handleGitCommit triggered', [gitCommitMessage]);
+    if (!gitCommitMessage.trim()) {
       fileExporterApiService.showNotification('warn', 'Git commit message is empty!');
       return;
     }
-    fileExporterApiService.showNotification('info', `Git commit requested with message: "${commitMessage}"`);
-    if (onGitCommit) onGitCommit(commitMessage);
+    fileExporterApiService.showNotification('info', `Git commit requested with message: "${gitCommitMessage}"`);
+    if (onGitCommit) onGitCommit(gitCommitMessage);
   };
 
   const middleContent = (
@@ -120,8 +122,8 @@ export const InspectResultsPanel: React.FC<InspectResultsPanelProps> = ({
           </div>
         </div>
         <Textarea
-          value={commitMessage}
-          onChange={(e) => setCommitMessage(e.target.value)}
+          value={gitCommitMessage}
+          onChange={(e) => onChangeGitCommitMessage?.(e.target.value)}
           placeholder="Enter git commit message..."
           rows={2}
           className="w-full font-mono text-xs bg-background resize-y min-h-[38px] py-1 px-2"

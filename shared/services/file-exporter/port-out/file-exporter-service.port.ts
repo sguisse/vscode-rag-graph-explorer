@@ -1,5 +1,19 @@
 import { IBackendService } from '../../../core/backend-service.port';
-import { FilesExporterInitialState, FilesExporterRunRequest, FilesExporterRunResponse, FilesExporterStatus, FilesExporterResult, FilterSimulationRequest, FilterSimulationResult, GeneratedFilesFilterRequest, GeneratedFilesFilterResult, DestinationActionResult, ClipboardActionResult, FilesExporterNotificationType } from '../model/file-exporter-model';
+import {
+  FilesExporterInitialState,
+  FilesExporterRunRequest,
+  FilesExporterRunResponse,
+  FilesExporterStatus,
+  FilesExporterResult,
+  FilterSimulationRequest,
+  FilterSimulationResult,
+  GeneratedFilesFilterRequest,
+  GeneratedFilesFilterResult,
+  DestinationActionResult,
+  ClipboardActionResult,
+  FilesExporterNotificationType,
+  BashExecutionResult,
+} from '../model/file-exporter-model';
 
 export interface IFileExporterServicePort extends IBackendService {
   getInitialState(pendingPaths?: string[]): Promise<FilesExporterInitialState>;
@@ -21,4 +35,5 @@ export interface IFileExporterServicePort extends IBackendService {
   applyFileFilter(request: GeneratedFilesFilterRequest): Promise<GeneratedFilesFilterResult>;
   openBrowserTab(url: string, openInVSCode?: boolean): Promise<void>;
   showNotification(type: FilesExporterNotificationType, text: string): Promise<void>;
+  executeBashCodebaseUpdate(bash: string): Promise<BashExecutionResult>;
 }

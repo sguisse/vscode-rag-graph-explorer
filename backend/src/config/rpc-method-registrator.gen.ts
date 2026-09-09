@@ -59,6 +59,7 @@ export function registerRpcMethods(rpc: RpcProtocol): void {
     rpc.register(RpcMethodEnum.FILEEXPORTER_APPLY_FILE_FILTER, fileExporterService.applyFileFilter.bind(fileExporterService));
     rpc.register(RpcMethodEnum.FILEEXPORTER_OPEN_BROWSER_TAB, fileExporterService.openBrowserTab.bind(fileExporterService));
     rpc.register(RpcMethodEnum.FILEEXPORTER_SHOW_NOTIFICATION, fileExporterService.showNotification.bind(fileExporterService));
+    rpc.register(RpcMethodEnum.FILEEXPORTER_EXECUTE_BASH_CODEBASE_UPDATE, fileExporterService.executeBashCodebaseUpdate.bind(fileExporterService));
 
     const fileSystemService = serviceRegistry.get(ServiceEnum.FILE_SYSTEM);
     rpc.register(RpcMethodEnum.FILESYSTEM_EXISTS, fileSystemService.exists.bind(fileSystemService));
