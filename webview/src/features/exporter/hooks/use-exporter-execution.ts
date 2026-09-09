@@ -222,7 +222,7 @@ export function useExporterExecution() {
     clearTerminalLogs: () => store.clearTerminalLogs(),
     reportData: store.reportData,
     activeTab: store.activeTab,
-    setActiveTab: (tab: any) => store.setActiveTab(tab),
+    setActiveTab: store.setActiveTab,
     exchangeLinks: store.exchangeLinks,
     modalState: store.modalState,
     setModalState: store.setModalState,

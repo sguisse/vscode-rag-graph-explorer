@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BarChart3, BookOpen, Files, Terminal, HelpCircle, MessageSquareText, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
@@ -47,6 +47,10 @@ export function ExporterPanel() {
   const selectedEntry = historyList.find((h) => h.id === selectedProfileId);
 
   const [conflictState, setConflictState] = useState<ExtensionConflictState | null>(null);
+
+  useEffect(() => {
+    setActiveTab('prompt');
+  }, [setActiveTab]);
 
   const handleTabChange = (val: ExporterTabId) => {
     logInfo('[ExporterPanel] Active tab changed', [val]);

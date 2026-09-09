@@ -5,6 +5,7 @@ import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { CodebaseData } from '@/shared/services/graph-rag-explorer';
 import { useCodebaseDomainState, CodebaseDomainState } from '../../../store/useCodebaseDomainState';
+import { EXPLORER_ADD_PATHS } from '@/shared/config/vscode-message-command.constants';
 
 export interface UseImpactedPathsOptions {
   defaultCodebase?: CodebaseData;
@@ -100,6 +101,39 @@ export function useImpactedPaths(options: UseImpactedPathsOptions = {}) {
     [setPaths, updatePath, fetchImpacts]
   );
 
+  const appendPaths = useCallback(
+    (rawPayload: any) => {
+      const payloadStr = typeof rawPayload === 'string'
+        ? rawPayload
+        : rawPayload?.payload || rawPayload?.paths || '';
+
+      if (!payloadStr || typeof payloadStr !== 'string') return;
+
+      const incomingPaths = payloadStr
+        .split(/[,\n\r]+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      if (incomingPaths.length === 0) return;
+
+      const currentPathsStr = useCodebaseDomainState.getState().paths || '';
+      const existingPaths = currentPathsStr
+        .split('\n')
+        .map((l) => l.trim())
+        .filter(Boolean);
+
+      const combined = Array.from(new Set([...incomingPaths, ...existingPaths]));
+      const updatedPathsStr = combined.join('\n');
+
+      logInfo(`[useImpactedPaths] Appending ${incomingPaths.length} path(s). Total: ${combined.length}`);
+
+      setPaths(updatedPathsStr);
+      updatePath(updatedPathsStr);
+      fetchImpacts(updatedPathsStr, depthRef.current.upstreamDepth, depthRef.current.downstreamDepth);
+    },
+    [setPaths, updatePath, fetchImpacts]
+  );
+
   const buildDefaultCypherQueryParameters = useCallback(async () => {
     const currentStoreState = useCodebaseDomainState.getState();
     const activePaths = currentStoreState.paths || '';
@@ -119,26 +153,6 @@ export function useImpactedPaths(options: UseImpactedPathsOptions = {}) {
     logInfo(`[useImpactedPaths] Cypher parameters generated:\n${cypherParams}`);
     await vsCodeApiService.copyToClipboard(cypherParams);
   }, []);
-
-  const appendOrReplacePath = useCallback(
-    (newPath: string) => {
-      setPaths((prev: string) => {
-        let updated = newPath.trim();
-        if (prev.trim()) {
-          const existingLines = prev.split('\n').map((l) => l.trim()).filter(Boolean);
-          if (!existingLines.includes(newPath.trim())) {
-            updated = `${newPath.trim()}\n${prev.trim()}`;
-          } else {
-            updated = prev;
-          }
-        }
-        updatePath(updated);
-        fetchImpacts(updated, depthRef.current.upstreamDepth, depthRef.current.downstreamDepth);
-        return updated;
-      });
-    },
-    [setPaths, updatePath, fetchImpacts]
-  );
 
   const setUpstreamDepth = useCallback(
     (val: number) => {
@@ -172,17 +186,19 @@ export function useImpactedPaths(options: UseImpactedPathsOptions = {}) {
   }, [effectiveUpstreamDepth, effectiveDownstreamDepth, fetchImpacts, paths]);
 
   useEffect(() => {
-    const unsubscribeStatus = vsCodeBackendMessageHandler.on('selectedPath', (message) => {
-      logInfo(`[useImpactedPaths] selectedPath event received: ${message.payload}`);
-      if (message.payload) {
-        handlePathsChange(message.payload);
+    const unsubscribeStatus = vsCodeBackendMessageHandler.on(EXPLORER_ADD_PATHS, (message) => {
+      const rawPayload = message?.payload || message;
+      logInfo(`[useImpactedPaths] EXPLORER_ADD_PATHS event received:`, [rawPayload]);
+      if (rawPayload) {
+        appendPaths(rawPayload);
       }
     });
 
     const unsubscribeAddPath = vsCodeBackendMessageHandler.on('addPathToTop', (message) => {
-      logInfo(`[useImpactedPaths] addPathToTop event received: ${message.payload}`);
-      if (message.payload) {
-        appendOrReplacePath(message.payload);
+      const rawPayload = message?.payload || message;
+      logInfo(`[useImpactedPaths] addPathToTop event received:`, [rawPayload]);
+      if (rawPayload) {
+        appendPaths(rawPayload);
       }
     });
 
@@ -190,7 +206,7 @@ export function useImpactedPaths(options: UseImpactedPathsOptions = {}) {
       unsubscribeStatus();
       unsubscribeAddPath();
     };
-  }, [handlePathsChange, appendOrReplacePath]);
+  }, [appendPaths]);
 
   const handleTextareaChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -212,7 +228,7 @@ export function useImpactedPaths(options: UseImpactedPathsOptions = {}) {
     setCodebaseData,
     handleTextareaChange,
     handlePathsChange,
-    appendOrReplacePath,
+    appendOrReplacePath: appendPaths,
     fetchImpacts,
     buildDefaultCypherQueryParameters,
   };
