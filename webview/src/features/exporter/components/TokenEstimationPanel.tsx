@@ -1,7 +1,7 @@
 import React from 'react';
 import { ChevronDown, ChevronRight, Cpu } from 'lucide-react';
 import { CollapsibleCard } from '@/components/ui/collapsible-card';
-import { useTokenEstimation } from './hooks/use-token-estimation';
+import { useTokenEstimation } from './tabs/report/hooks/use-token-estimation';
 
 interface TokenEstimationPanelProps {
   tokens?: number;
@@ -30,7 +30,7 @@ export const TokenEstimationPanel: React.FC<TokenEstimationPanelProps> = ({ toke
               <th className="p-1.5 border-r border-border w-1/3">LLM Vendor</th>
               <th className="p-1.5 border-r border-border w-1/3">Model</th>
               <th className="p-1.5 w-1/3">
-                Estimation cost (fake for now !!!!), cost will be change in the futur
+                ⚠️ Estimation cost (fake for now !!!!), <br/>Cost will be implemented soon !
               </th>
             </tr>
           </thead>

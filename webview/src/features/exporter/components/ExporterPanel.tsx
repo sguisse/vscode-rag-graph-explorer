@@ -7,7 +7,7 @@ import { useExporterExecution } from '../hooks/use-exporter-execution';
 import { useExporterStore } from '../store/useExporterStore';
 import { ActionToolbar } from './ActionToolbar';
 import { ExternalLinks } from './ExternalLinks';
-import { TokenEstimationPanel } from './tabs/report/TokenEstimationPanel';
+import { TokenEstimationPanel } from './TokenEstimationPanel';
 import { ReportTab } from './tabs/report/ReportTab';
 import { FilesTab } from './tabs/files/FilesTab';
 import { TerminalTab } from './tabs/terminal/TerminalTab';
