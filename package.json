@@ -3,7 +3,7 @@
   "license": "MIT",
   "displayName": "Token Razor",
   "description": "Surgically select codebase files from dependency graphs to build token-optimized LLM context.",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "publisher": "sguisse",
   "engines": {
     "vscode": "^1.125.0"
