@@ -31,7 +31,8 @@
     "assets",
     "scripts",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "node_modules/@github"
   ],
   "activationEvents": [],
   "contributes": {
@@ -955,6 +956,12 @@
     "@github/copilot-sdk": "^1.0.11",
     "neo4j-driver": "^6.2.0",
     "js-yaml": "^5.4.1"
+  },
+  "optionalDependencies": {
+    "@github/copilot-darwin-arm64": "^1.0.11",
+    "@github/copilot-darwin-x64": "^1.0.11",
+    "@github/copilot-linux-x64": "^1.0.11",
+    "@github/copilot-win32-x64": "^1.0.11"
   },
   "devDependencies": {
     "@modyfi/vite-plugin-yaml": "^1.1.1",

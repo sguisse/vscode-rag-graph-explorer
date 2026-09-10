@@ -34,13 +34,14 @@ if [ -n "$(git status --porcelain)" ]; then
     fi
 fi
 
-# ─── 2. Workspace Preparation ───────────────────────────────────────────────────
+# ─── 2. Clean & Install Dependencies ──────────────────────────────────────────
+echo "🧹 Cleaning previous build artifacts..."
+rm -rf dist-backend dist-webview *.vsix
 
-echo "📦 Verifying and installing Node.js dependencies..."
-npm install
+echo "📦 Installing Node.js dependencies..."
+npm run install:all
 
 # ─── 3. Semantic Versioning ─────────────────────────────────────────────────────
-
 echo "📈 Select semantic version bump type for the release:"
 echo "  1) Patch (0.0.x) - Backwards-compatible bug fixes"
 echo "  2) Minor (0.x.0) - Backwards-compatible new features"
@@ -70,22 +71,22 @@ case $V_BUMP in
         ;;
 esac
 
-# ─── 4. Packaging and Publishing ────────────────────────────────────────────────
-
+# ─── 4. Packaging ──────────────────────────────────────────────────────────────
 echo "🛠️ Packaging the VSIX bundle (executing pre-publish scripts)..."
 # Uses npx to ensure we use the latest official Microsoft vsce compiler without global installs
 npx @vscode/vsce package
 
+
+# ─── 5. Publishing ──────────────────────────────────────────────────────────────
 echo "🌐 Publishing to the Visual Studio Code Marketplace..."
 # If this is your first time publishing, vsce will halt and prompt for your Azure DevOps PAT.
 # https://dev.azure.com/sebguisse/_usersSettings/tokens
-#npx @vscode/vsce publish --pat ${AZURE_DEVOPS_EXT_PAT}
+#npx @vscode/vsce publish --pat "$AZURE_DEVOPS_EXT_PAT"
 
-# ─── 5. Finalization ────────────────────────────────────────────────────────────
 
-# Push the newly created version tag to the remote repository if a version bump occurred
+# ─── 6. Finalization ────────────────────────────────────────────────────────────
 if [[ "$V_BUMP" -ne 4 ]]; then
-    echo "☁️ Pushing new version tag to remote Git repository..."
+    echo "☁️ Pushing version tag to remote Git repository..."
     git push --follow-tags
 fi
 
