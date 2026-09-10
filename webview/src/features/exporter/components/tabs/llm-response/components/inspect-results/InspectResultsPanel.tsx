@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Copy, Terminal, BookmarkPlus, GitCompare, GitCommit, FileCode, FileJson, FileText, Trash2 } from 'lucide-react';
+import { Copy, Terminal, BookmarkPlus, GitCompare, GitCommit, FileCode, FileJson, FileText, Trash2, FolderGit2 } from 'lucide-react';
 import { CollapsibleCard, BadgeObject } from '@/components/ui/collapsible-card';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { fileExporterApiService } from '@/services/api/file-exporter-api.service.gen';
@@ -119,6 +119,11 @@ export const InspectResultsPanel: React.FC<InspectResultsPanelProps> = ({
     if (onGitCommit) onGitCommit(gitCommitMessage);
   };
 
+  const handleOpenSourceControl = () => {
+    logInfo('[InspectResultsPanel] handleOpenSourceControl triggered');
+    vsCodeApiService.openSourceControl();
+  };
+
   const firstCommitLine = gitCommitMessage.trim().split('\n')[0] || 'No commit message';
   const commitBadges: BadgeObject[] = [
     {
@@ -138,6 +143,15 @@ export const InspectResultsPanel: React.FC<InspectResultsPanelProps> = ({
         className="h-5 w-5 cursor-pointer hover:bg-muted text-muted-foreground hover:text-foreground"
       >
         <Copy size={12} />
+      </Button>
+      <Button
+        size="icon-xs"
+        variant="ghost"
+        onClick={handleOpenSourceControl}
+        data-tooltip="Open VS Code Source Control View"
+        className="h-5 w-5 cursor-pointer hover:bg-muted text-muted-foreground hover:text-foreground"
+      >
+        <FolderGit2 size={12} />
       </Button>
       <Button
         size="icon-xs"
@@ -307,7 +321,7 @@ export const InspectResultsPanel: React.FC<InspectResultsPanelProps> = ({
                         key={filePath}
                         data-tooltip={`${formatPathWithBreakpoints(filePath, "Removed File:<br />", 44)}`}
                         onClick={() => {
-                          vsCodeApiService.revealInExplorer(filePath); // Attempt to reveal in explorer even if removed, to verify effective removal !!
+                          vsCodeApiService.revealInExplorer(filePath);
                           vsCodeApiService.copyToClipboard(filePath);
                           fileExporterApiService.showNotification('info', `Path copied to clipboard: ${filePath}`);
                         }}

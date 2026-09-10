@@ -1,247 +1,379 @@
 #!/usr/bin/env bash
 set -e
 
-# Ensure dev-tools folder exists
-mkdir -p dev-tools
+# Target component path
+TARGET_FILE="webview/src/features/exporter/components/tabs/llm-response/components/inspect-results/InspectResultsPanel.tsx"
 
-# Write complete generator script to dev-tools/generate-webview-api-services.js
-cat << 'EOF' > dev-tools/generate-webview-api-services.js
-const fs = require('fs');
-const path = require('path');
-
-const rootDir = path.resolve(__dirname, '../');
-const sharedDir = path.join(rootDir, 'shared');
-const sharedServicesDir = path.join(sharedDir, 'services');
-const outputDir = path.join(rootDir, 'webview/src/services/api');
-
-console.log(`🧹 Clean up: Removing previously generated services files from ${outputDir}...`);
-fs.rmSync(outputDir, { recursive: true, force: true });
-
-function findPortFiles(dir, fileList = []) {
-    if (!fs.existsSync(dir)) return fileList;
-    const files = fs.readdirSync(dir);
-    for (const file of files) {
-        const filePath = path.join(dir, file);
-        const stat = fs.statSync(filePath);
-        if (stat.isDirectory()) {
-            findPortFiles(filePath, fileList);
-        } else if (file.endsWith('-service.port.ts') || file.endsWith('.port.ts')) {
-            fileList.push(filePath);
-        }
-    }
-    return fileList;
-}
-
-function camelToUpperSnake(str) {
-    return str
-        .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
-        .replace(/[-_\s]+/g, '_')
-        .toUpperCase();
-}
-
-function camelToKebab(str) {
-    return str
-        .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
-        .replace(/[-_\s]+/g, '-')
-        .toLowerCase();
-}
-
-function parseParamNames(rawParams) {
-    if (!rawParams || !rawParams.trim()) return [];
-
-    const params = [];
-    let current = '';
-    let depthAngle = 0;
-    let depthParen = 0;
-    let depthCurly = 0;
-    let depthSquare = 0;
-
-    for (let i = 0; i < rawParams.length; i++) {
-        const char = rawParams[i];
-        if (char === '<') depthAngle++;
-        else if (char === '>') depthAngle--;
-        else if (char === '(') depthParen++;
-        else if (char === ')') depthParen--;
-        else if (char === '{') depthCurly++;
-        else if (char === '}') depthCurly--;
-        else if (char === '[') depthSquare++;
-        else if (char === ']') depthSquare--;
-
-        if (char === ',' && depthAngle === 0 && depthParen === 0 && depthCurly === 0 && depthSquare === 0) {
-            params.push(current.trim());
-            current = '';
-        } else {
-            current += char;
-        }
-    }
-    if (current.trim()) {
-        params.push(current.trim());
-    }
-
-    return params
-        .map(p => p.replace(/\s+/g, ' '))
-        .map(p => p.split(':')[0].trim().replace(/\?$/, ''))
-        .filter(Boolean);
-}
-
-function resolveSharedImport(importBlock, portFilePath) {
-    const match = importBlock.match(/import\s+([\s\S]+?)\s+from\s+['"]([^'"]+)['"]/);
-    if (!match) return null;
-
-    const importedItems = match[1].replace(/\s+/g, ' ').trim();
-    const rawPath = match[2];
-
-    if (importedItems.includes('IBackendService')) return null;
-
-    const portFileDir = path.dirname(portFilePath);
-    const absoluteImportPath = path.resolve(portFileDir, rawPath);
-    const relToShared = path.relative(sharedDir, absoluteImportPath).replace(/\\/g, '/').replace(/\.ts$/, '');
-
-    return `import ${importedItems} from '@/shared/${relToShared}';`;
-}
-
-function extractImports(content, filePath) {
-    const importRegex = /import\s+[\s\S]+?\s+from\s+['"][^'"]+['"];?/g;
-    const matches = content.match(importRegex) || [];
-    const convertedImports = [];
-
-    for (const match of matches) {
-        const converted = resolveSharedImport(match, filePath);
-        if (converted) {
-            convertedImports.push(converted);
-        }
-    }
-
-    return convertedImports;
-}
-
-function generateWebviewApiServices() {
-    const portFiles = findPortFiles(sharedServicesDir);
-
-    for (const filePath of portFiles) {
-        const content = fs.readFileSync(filePath, 'utf-8');
-        const fileName = path.basename(filePath, '.ts').replace(/(-service)?\.port$/, '');
-        const rpcPrefix = fileName.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-
-        const interfaceMatch = content.match(/export\s+interface\s+I([A-Za-z0-9]+)ServicePort/);
-        let serviceBaseName = '';
-        if (interfaceMatch) {
-            serviceBaseName = interfaceMatch[1];
-        } else {
-            serviceBaseName = fileName.split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('');
-        }
-
-        const portInterfaceName = interfaceMatch ? `I${serviceBaseName}ServicePort` : `I${serviceBaseName}Port`;
-        const className = `${serviceBaseName}ApiService`;
-        const instanceName = `${serviceBaseName.charAt(0).toLowerCase()}${serviceBaseName.slice(1)}ApiService`;
-        const outFileName = `${camelToKebab(serviceBaseName)}-api.service.gen.ts`;
-
-        const convertedImports = extractImports(content, filePath);
-
-        const portRelPath = path.relative(sharedDir, filePath).replace(/\\/g, '/').replace(/\.ts$/, '');
-        convertedImports.push(`import { ${portInterfaceName} } from '@/shared/${portRelPath}';`);
-
-        const methodHeaderRegex = /^\s*(?:public\s+|async\s+)?([a-zA-Z0-9_]+)\??\s*(?:<[^>]+>)?\s*\(([\s\S]*?)\)\s*:\s*/gm;
-        let match;
-        const methodDeclarations = [];
-
-        while ((match = methodHeaderRegex.exec(content)) !== null) {
-            const methodName = match[1];
-            const rawParams = match[2].trim();
-            const startIndex = methodHeaderRegex.lastIndex;
-
-            let depthAngle = 0;
-            let depthParen = 0;
-            let depthCurly = 0;
-            let depthSquare = 0;
-            let rawReturnType = '';
-            let endIndex = startIndex;
-
-            for (let i = startIndex; i < content.length; i++) {
-                const char = content[i];
-                if (char === '<') depthAngle++;
-                else if (char === '>') depthAngle--;
-                else if (char === '(') depthParen++;
-                else if (char === ')') depthParen--;
-                else if (char === '{') depthCurly++;
-                else if (char === '}') depthCurly--;
-                else if (char === '[') depthSquare++;
-                else if (char === ']') depthSquare--;
-
-                if (char === ';' && depthAngle === 0 && depthParen === 0 && depthCurly === 0 && depthSquare === 0) {
-                    endIndex = i;
-                    break;
-                }
-                rawReturnType += char;
-            }
-
-            methodHeaderRegex.lastIndex = endIndex + 1;
-
-            rawReturnType = rawReturnType.trim();
-            if (!rawReturnType) continue;
-
-            const methodUpperSnake = camelToUpperSnake(methodName);
-            const rpcEnumKey = `${rpcPrefix}_${methodUpperSnake}`;
-
-            const paramNames = parseParamNames(rawParams);
-
-            let returnType = rawReturnType;
-            if (!returnType.startsWith('Promise<')) {
-                returnType = `Promise<${returnType}>`;
-            }
-
-            const cleanParamsSingleLine = rawParams.replace(/\s+/g, ' ');
-
-            const rpcCallArgs = [
-                `RpcMethodEnum.${rpcEnumKey}`,
-                ...paramNames
-            ].join(', ');
-
-            const methodCode = `    public async ${methodName}(${cleanParamsSingleLine}): ${returnType} {\n        return await this.rpc.call(${rpcCallArgs});\n    }`;
-            methodDeclarations.push(methodCode);
-        }
-
-        const fileContent = `// AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY.
-// Rebuild using: npm run generate:webview-api-services
-
-import { RpcMethodEnum } from '@/shared/config/rpc-methods.enum.gen';
-import { AbstractApiService } from '@/services/abstract-api.service';
-${convertedImports.join('\n')}
-
-class ${className} extends AbstractApiService implements ${portInterfaceName} {
-    constructor() {
-        super();
-    }
-
-${methodDeclarations.join('\n\n')}
-}
-
-export const ${instanceName} = new ${className}();
-`;
-
-        fs.mkdirSync(outputDir, { recursive: true });
-        const targetFilePath = path.join(outputDir, outFileName);
-        fs.writeFileSync(targetFilePath, fileContent, 'utf-8');
-        console.log(`✅ Successfully generated Webview API Service at:\n   ${targetFilePath}`);
-    }
-}
-
-generateWebviewApiServices();
-EOF
-
-# Execute service generator script
-node dev-tools/generate-webview-api-services.js
-
-# Patch implicit 'any' parameter in hook if the file exists
-HOOK_FILE="webview/src/features/exporter/hooks/use-export-configuration.ts"
-if [ -f "$HOOK_FILE" ]; then
-    node -e '
-      const fs = require("fs");
-      const path = "webview/src/features/exporter/hooks/use-export-configuration.ts";
-      let content = fs.readFileSync(path, "utf8");
-      content = content.replace(/\.map\(\(h\)\s*=>/g, ".map((h: any) =>");
-      fs.writeFileSync(path, content, "utf8");
-    '
+if [ ! -f "$TARGET_FILE" ]; then
+    echo "❌ Error: Could not find target file at $TARGET_FILE"
+    exit 1
 fi
 
-echo "✅ fix: Updated generator script to capture multiline/type imports and regenerated all Webview API services!"
+cat << 'EOF' > "$TARGET_FILE"
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Copy, Terminal, BookmarkPlus, GitCompare, GitCommit, FileCode, FileJson, FileText, Trash2, FolderGit2 } from 'lucide-react';
+import { CollapsibleCard, BadgeObject } from '@/components/ui/collapsible-card';
+import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
+import { fileExporterApiService } from '@/services/api/file-exporter-api.service.gen';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
+import { formatPathWithBreakpoints } from '@/features/exporter/utils/path-resolver';
+
+interface InspectResultsPanelProps {
+  executionLog: string;
+  resultStatus?: 'success' | 'failed' | 'warning' | '';
+  filePathsUpdated?: string[];
+  filePathsCreated?: string[];
+  filePathsRemoved?: string[];
+  gitCommitMessage?: string;
+  onChangeGitCommitMessage?: (msg: string) => void;
+  onCopyResult: () => void;
+  onCreateProfile: () => void;
+  onCopyCommitMessage?: (message: string) => void;
+  onGitStage?: () => void;
+  onGitCommit?: (message: string) => void;
+}
+
+const renderFileIcon = (filePath: string, isRemoved = false) => {
+  if (isRemoved) {
+    return <Trash2 size={13} className="text-destructive shrink-0" />;
+  }
+  const ext = filePath.split('.').pop()?.toLowerCase() || '';
+  if (['ts', 'tsx', 'js', 'jsx', 'java', 'py', 'go', 'c', 'cpp', 'rs'].includes(ext)) {
+    return <FileCode size={13} className="text-emerald-500 shrink-0" />;
+  }
+  if (['json', 'yaml', 'yml', 'xml', 'properties', 'toml', 'env'].includes(ext)) {
+    return <FileJson size={13} className="text-amber-500 shrink-0" />;
+  }
+  return <FileText size={13} className="text-primary shrink-0" />;
+};
+
+export const InspectResultsPanel: React.FC<InspectResultsPanelProps> = ({
+  executionLog,
+  resultStatus = '',
+  filePathsUpdated = [],
+  filePathsCreated = [],
+  filePathsRemoved = [],
+  gitCommitMessage = '',
+  onChangeGitCommitMessage,
+  onCopyResult,
+  onCreateProfile,
+  onCopyCommitMessage,
+  onGitStage,
+  onGitCommit,
+}) => {
+  const [isResultOpen, setIsResultOpen] = useState<boolean>(true);
+  const [isCommitOpen, setIsCommitOpen] = useState<boolean>(false);
+  const [isImpactedOpen, setIsImpactedOpen] = useState<boolean>(true);
+
+  let statusBadgeClass = 'bg-muted/20 text-muted-foreground border-border/40';
+  let statusLabel = 'Idle';
+  if (resultStatus === 'success') {
+    statusBadgeClass = 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30 font-bold';
+    statusLabel = '✅ Success';
+  } else if (resultStatus === 'warning') {
+    statusBadgeClass = 'bg-amber-500/10 text-amber-600 border-amber-500/30 font-bold';
+    statusLabel = '⚠️ Warning';
+  } else if (resultStatus === 'failed') {
+    statusBadgeClass = 'bg-destructive/10 text-destructive border-destructive/30 font-bold';
+    statusLabel = '❌ Failed';
+  }
+
+  const executionTitle = (
+    <div className="flex items-center gap-2">
+      <span>🖥️ Execution Result</span>
+      <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono leading-none border ${statusBadgeClass}`}>
+        {statusLabel}
+      </span>
+    </div>
+  );
+
+  const resultHeaderRight = (
+    <Button
+      size="icon-xs"
+      variant="ghost"
+      onClick={(e) => {
+        e.stopPropagation();
+        onCopyResult();
+      }}
+      data-tooltip="Copy Execution Result to Clipboard"
+      className="h-5 w-5 cursor-pointer hover:bg-muted text-muted-foreground hover:text-foreground"
+    >
+      <Copy size={12} />
+    </Button>
+  );
+
+  const handleCopyCommitMessage = () => {
+    logInfo('[InspectResultsPanel] handleCopyCommitMessage triggered', [gitCommitMessage]);
+    if (gitCommitMessage) {
+      vsCodeApiService.copyToClipboard(gitCommitMessage);
+      fileExporterApiService.showNotification('info', 'Git commit message copied to clipboard!');
+    } else {
+      fileExporterApiService.showNotification('warn', 'Git commit message is empty!');
+    }
+    if (onCopyCommitMessage) onCopyCommitMessage(gitCommitMessage);
+  };
+
+  const handleGitStage = () => {
+    logInfo('[InspectResultsPanel] handleGitStage triggered');
+    fileExporterApiService.showNotification('info', 'Git stage changes requested');
+    if (onGitStage) onGitStage();
+  };
+
+  const handleGitCommit = () => {
+    logInfo('[InspectResultsPanel] handleGitCommit triggered', [gitCommitMessage]);
+    if (!gitCommitMessage.trim()) {
+      fileExporterApiService.showNotification('warn', 'Git commit message is empty!');
+      return;
+    }
+    fileExporterApiService.showNotification('info', `Git commit requested with message: "${gitCommitMessage}"`);
+    if (onGitCommit) onGitCommit(gitCommitMessage);
+  };
+
+  const handleOpenSourceControl = () => {
+    logInfo('[InspectResultsPanel] handleOpenSourceControl triggered');
+    vsCodeApiService.openSourceControl();
+  };
+
+  const firstCommitLine = gitCommitMessage.trim().split('\n')[0] || 'No commit message';
+  const commitBadges: BadgeObject[] = [
+    {
+      label: firstCommitLine,
+      tooltip: `Git commit message: ${gitCommitMessage || 'Empty'}`,
+      className: 'bg-primary/10 text-primary border-primary/20 w-full min-w-0 truncate cursor-pointer hover:bg-primary/20',
+    },
+  ];
+
+  const commitHeaderRight = (
+    <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+      <Button
+        size="icon-xs"
+        variant="ghost"
+        onClick={handleOpenSourceControl}
+        data-tooltip="Open VS Code Source Control View"
+        className="h-5 w-5 cursor-pointer hover:bg-muted text-muted-foreground hover:text-foreground"
+      >
+        <FolderGit2 size={12} />
+      </Button>
+      <Button
+        size="icon-xs"
+        variant="ghost"
+        onClick={handleCopyCommitMessage}
+        data-tooltip="Copy Git Commit Message to Clipboard"
+        className="h-5 w-5 cursor-pointer hover:bg-muted text-muted-foreground hover:text-foreground"
+      >
+        <Copy size={12} />
+      </Button>
+      <Button
+        size="icon-xs"
+        variant="ghost"
+        onClick={handleGitStage}
+        data-tooltip="Stage Git Changes"
+        className="h-5 w-5 cursor-pointer hover:bg-muted text-muted-foreground hover:text-foreground"
+      >
+        <GitCompare size={12} />
+      </Button>
+      <Button
+        size="icon-xs"
+        variant="ghost"
+        onClick={handleGitCommit}
+        data-tooltip="Commit Modifications with Git Message"
+        className="h-5 w-5 cursor-pointer hover:bg-muted text-muted-foreground hover:text-foreground"
+      >
+        <GitCommit size={12} />
+      </Button>
+    </div>
+  );
+
+  const impactedTitle = (
+    <div className="flex items-center gap-2">
+      <span>📂 Impacted Files</span>
+      <span className="px-1.5 py-0.5 rounded text-[10px] font-mono leading-none border bg-primary/10 text-primary border-primary/20 font-bold">
+        {filePathsUpdated.length} updated / {filePathsCreated.length} created / {filePathsRemoved.length} removed
+      </span>
+    </div>
+  );
+
+  return (
+    <div className="p-2 h-full min-h-0 flex flex-col font-mono text-xs gap-2 overflow-hidden">
+      {/* Card 1: Execution Result */}
+      <CollapsibleCard
+        id="block-execution-result"
+        title={executionTitle}
+        tooltip="Standard terminal logs stream from bash codebase update script."
+        headerRight={resultHeaderRight}
+        isOpen={isResultOpen}
+        onOpenChange={setIsResultOpen}
+        className={`w-full min-w-0 ${isResultOpen ? 'flex-1 min-h-0 flex flex-col' : 'shrink-0'}`}
+      >
+        <div className="bg-black text-emerald-400 border border-border/60 rounded p-2 flex-1 min-h-0 h-full overflow-y-auto overflow-x-hidden font-mono text-xs leading-relaxed whitespace-pre-wrap break-all select-text">
+          {executionLog || (
+            <span className="text-slate-500 italic select-none">
+              No execution results yet. Apply a script from "Apply Response" tab to view output.
+            </span>
+          )}
+        </div>
+      </CollapsibleCard>
+
+      {/* Card 2: Git Commit Message */}
+      <CollapsibleCard
+        id="block-git-commit-message"
+        title="💬 Git Commit Message"
+        tooltip="Git commit message parsed from script execution or entered manually."
+        summaryBadges={commitBadges}
+        headerRight={commitHeaderRight}
+        isOpen={isCommitOpen}
+        onOpenChange={setIsCommitOpen}
+        className="w-full min-w-0 shrink-0"
+      >
+        <Textarea
+          value={gitCommitMessage}
+          onChange={(e) => onChangeGitCommitMessage?.(e.target.value)}
+          placeholder="Enter git commit message..."
+          rows={2}
+          className="w-full font-mono text-xs bg-background resize-y min-h-[48px] py-1 px-2"
+        />
+      </CollapsibleCard>
+
+      {/* Card 3: Impacted Files */}
+      <CollapsibleCard
+        id="block-impacted-files"
+        title={impactedTitle}
+        tooltip="Files modified, newly generated, or removed by the applied LLM execution script."
+        isOpen={isImpactedOpen}
+        onOpenChange={setIsImpactedOpen}
+        className="w-full min-w-0 shrink-0"
+      >
+        <div className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 p-1 font-mono text-xs">
+            {/* Column 1: Files Updated */}
+            <div className="space-y-1 bg-muted/20 p-2 border border-border/40 rounded-md">
+              <div className="font-bold text-[11px] text-amber-600 dark:text-amber-400 border-b border-border/40 pb-1 flex items-center justify-between">
+                <span>✏️ Files Updated ({filePathsUpdated.length})</span>
+              </div>
+              {filePathsUpdated.length === 0 ? (
+                <div className="py-2 text-[11px] text-muted-foreground italic">No updated files.</div>
+              ) : (
+                <div className="space-y-0.5 max-h-[160px] overflow-y-auto">
+                  {filePathsUpdated.map((filePath) => {
+                    const fileName = filePath.split(/[\\/]/).pop() || filePath;
+                    return (
+                      <div
+                        key={filePath}
+                        data-tooltip={formatPathWithBreakpoints(filePath)}
+                        onClick={() => {
+                          vsCodeApiService.revealInExplorer(filePath);
+                          vsCodeApiService.copyToClipboard(filePath);
+                          fileExporterApiService.showNotification('info', `Path copied to clipboard: ${filePath}`);
+                        }}
+                        onDoubleClick={() => {
+                          vsCodeApiService.revealInExplorer(filePath);
+                          vsCodeApiService.openFile(filePath);
+                        }}
+                        className="flex items-center gap-1.5 p-1 rounded hover:bg-muted/60 cursor-pointer transition-colors group truncate"
+                      >
+                        {renderFileIcon(filePath)}
+                        <span className="font-semibold text-primary truncate hover:underline">{fileName}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Column 2: Files Created */}
+            <div className="space-y-1 bg-muted/20 p-2 border border-border/40 rounded-md">
+              <div className="font-bold text-[11px] text-emerald-600 dark:text-emerald-400 border-b border-border/40 pb-1 flex items-center justify-between">
+                <span>➕ Files Created ({filePathsCreated.length})</span>
+              </div>
+              {filePathsCreated.length === 0 ? (
+                <div className="py-2 text-[11px] text-muted-foreground italic">No newly created files.</div>
+              ) : (
+                <div className="space-y-0.5 max-h-[160px] overflow-y-auto">
+                  {filePathsCreated.map((filePath) => {
+                    const fileName = filePath.split(/[\\/]/).pop() || filePath;
+                    return (
+                      <div
+                        key={filePath}
+                        data-tooltip={formatPathWithBreakpoints(filePath)}
+                        onClick={() => {
+                          vsCodeApiService.revealInExplorer(filePath);
+                          vsCodeApiService.copyToClipboard(filePath);
+                          fileExporterApiService.showNotification('info', `Path copied to clipboard: ${filePath}`);
+                        }}
+                        onDoubleClick={() => {
+                          vsCodeApiService.revealInExplorer(filePath);
+                          vsCodeApiService.openFile(filePath);
+                        }}
+                        className="flex items-center gap-1.5 p-1 rounded hover:bg-muted/60 cursor-pointer transition-colors group truncate"
+                      >
+                        {renderFileIcon(filePath)}
+                        <span className="font-semibold text-primary truncate hover:underline">{fileName}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Column 3: Files Removed */}
+            <div className="space-y-1 bg-muted/20 p-2 border border-border/40 rounded-md">
+              <div className="font-bold text-[11px] text-destructive border-b border-border/40 pb-1 flex items-center justify-between">
+                <span>🗑️ Files Removed ({filePathsRemoved.length})</span>
+              </div>
+              {filePathsRemoved.length === 0 ? (
+                <div className="py-2 text-[11px] text-muted-foreground italic">No removed files.</div>
+              ) : (
+                <div className="space-y-0.5 max-h-[160px] overflow-y-auto">
+                  {filePathsRemoved.map((filePath) => {
+                    const fileName = filePath.split(/[\\/]/).pop() || filePath;
+                    return (
+                      <div
+                        key={filePath}
+                        data-tooltip={`${formatPathWithBreakpoints(filePath, "Removed File:<br />", 44)}`}
+                        onClick={() => {
+                          vsCodeApiService.revealInExplorer(filePath);
+                          vsCodeApiService.copyToClipboard(filePath);
+                          fileExporterApiService.showNotification('info', `Path copied to clipboard: ${filePath}`);
+                        }}
+                        className="flex items-center gap-1.5 p-1 rounded hover:bg-muted/60 cursor-pointer transition-colors group truncate"
+                      >
+                        {renderFileIcon(filePath, true)}
+                        <span className="font-semibold text-destructive line-through truncate">{fileName}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-2 border-t border-border/60">
+            <div className="text-muted-foreground text-[11px]">
+              <span className="font-bold"><strong>
+                💡 Token Saver</strong>: Identify impacted scope before submitting.
+                   Only <strong>{(filePathsUpdated.length + filePathsRemoved.length)} file(s) from codebase </strong> are needed for this request—providing.</span><br/>
+              <span className="font-bold pl-27">Only relevant files reduces input tokens.</span>
+               <br/>
+            </div>
+            <Button
+              size="sm"
+              onClick={onCreateProfile}
+              className="h-7 text-xs font-bold gap-1.5 cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground"
+              data-tooltip="Create profile targeting only impacted files"
+            >
+              <BookmarkPlus size={13} />
+              <span>Create Profile from Impacted Files</span>
+            </Button>
+          </div>
+        </div>
+      </CollapsibleCard>
+    </div>
+  );
+};
+
+export default InspectResultsPanel;
+EOF
+
+echo "✅ feat: Added Source Control icon button to Git Commit header calling vsCodeApiService.openSourceControl()!"
