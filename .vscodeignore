@@ -10,3 +10,14 @@ webview/vite.config.ts
 webview/index.html
 webview/node_modules/**
 node_modules/**
+esbuild.js
+vsc-extension-quickstart.md
+*.vsix
+sandbox/**
+documentation/**
+exported-files/**
+dev-tools/**
+config/**
+.history/**
+.github/**
+.idea/**
