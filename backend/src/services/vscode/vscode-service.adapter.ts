@@ -49,6 +49,16 @@ export class VsCodeServiceAdapter extends AbstractServiceAdapter implements IVsC
         }
     }
 
+    public async openSourceControl(): Promise<void> {
+        logInfo(`[VsCodeServiceAdapter] openSourceControl invoked`);
+        try {
+                await vscode.commands.executeCommand('workbench.view.scm');
+        } catch (err) {
+            logError(`[VsCodeServiceAdapter] Failed to open source control: ${err}`);
+            throw err;
+        }
+    }
+
     public async openUrl(url: string, inExternalBrowser: boolean): Promise<void> {
         if (inExternalBrowser) {
             await vscode.env.openExternal(vscode.Uri.parse(url));

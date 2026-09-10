@@ -15,8 +15,14 @@ export function useLlmResponse() {
   const setShScript = useExporterStore((s) => s.setLlmShScript);
   const executionLog = useExporterStore((s) => s.llmExecutionLog);
   const setExecutionLog = useExporterStore((s) => s.setLlmExecutionLog);
-  const impactedFilesCount = useExporterStore((s) => s.llmImpactedFilesCount);
-  const setImpactedFilesCount = useExporterStore((s) => s.setLlmImpactedFilesCount);
+  const resultStatus = useExporterStore((s) => s.llmResultStatus);
+  const setResultStatus = useExporterStore((s) => s.setLlmResultStatus);
+  const filePathsUpdated = useExporterStore((s) => s.llmFilePathsUpdated);
+  const setFilePathsUpdated = useExporterStore((s) => s.setLlmFilePathsUpdated);
+  const filePathsCreated = useExporterStore((s) => s.llmFilePathsCreated);
+  const setFilePathsCreated = useExporterStore((s) => s.setLlmFilePathsCreated);
+  const filePathsRemoved = useExporterStore((s) => s.llmFilePathsRemoved);
+  const setFilePathsRemoved = useExporterStore((s) => s.setLlmFilePathsRemoved);
   const gitCommitMessage = useExporterStore((s) => s.llmGitCommitMessage);
   const setGitCommitMessage = useExporterStore((s) => s.setLlmGitCommitMessage);
   const isExecuting = useExporterStore((s) => s.llmIsExecuting);
@@ -72,8 +78,10 @@ export function useLlmResponse() {
 
       setExecutionLog(res.terminalLogs || res.message || '');
       setGitCommitMessage(res.gitCommitMessage || '');
-      const totalImpacted = (res.nbFilesCreated || 0) + (res.nbFilesUpdated || 0);
-      setImpactedFilesCount(totalImpacted);
+      setFilePathsUpdated(res.filePathsUpdated || []);
+      setFilePathsCreated(res.filePathsCreated || []);
+      setFilePathsRemoved(res.filePathsRemoved || []);
+      setResultStatus(res.result || 'success');
 
       if (res.result === 'success') {
         fileExporterApiService.showNotification('info', res.message || 'Codebase update applied successfully!');
@@ -88,6 +96,7 @@ export function useLlmResponse() {
       logInfo('[useLlmResponse] executeBashCodebaseUpdate error', [err]);
       fileExporterApiService.showNotification('error', `Failed to execute update: ${err?.message || err}`);
       setExecutionLog(`❌ Execution error: ${err?.message || err}`);
+      setResultStatus('failed');
       setSubTab('inspect');
     } finally {
       setIsExecuting(false);
@@ -103,7 +112,9 @@ export function useLlmResponse() {
   };
 
   const handleCreateProfileFromImpacted = () => {
-    logInfo('[useLlmResponse] handleCreateProfileFromImpacted handler triggered', [{ count: impactedFilesCount }]);
+    logInfo('[useLlmResponse] handleCreateProfileFromImpacted handler triggered', [
+      { updated: filePathsUpdated.length, created: filePathsCreated.length, removed: filePathsRemoved.length },
+    ]);
     fileExporterApiService.showNotification('info', 'New profile created from impacted files!');
   };
 
@@ -114,7 +125,10 @@ export function useLlmResponse() {
     setLlmResponse,
     shScript,
     executionLog,
-    impactedFilesCount,
+    resultStatus,
+    filePathsUpdated,
+    filePathsCreated,
+    filePathsRemoved,
     gitCommitMessage,
     setGitCommitMessage,
     isExecuting,

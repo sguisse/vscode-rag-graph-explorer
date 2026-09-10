@@ -48,7 +48,10 @@ export interface ExporterStoreState {
   llmResponseText: string;
   llmShScript: string;
   llmExecutionLog: string;
-  llmImpactedFilesCount: number;
+  llmResultStatus: 'success' | 'failed' | 'warning' | '';
+  llmFilePathsUpdated: string[];
+  llmFilePathsCreated: string[];
+  llmFilePathsRemoved: string[];
   llmGitCommitMessage: string;
   llmIsExecuting: boolean;
 
@@ -77,7 +80,10 @@ export interface ExporterStoreState {
   setLlmResponseText: (text: string) => void;
   setLlmShScript: (script: string) => void;
   setLlmExecutionLog: (log: string) => void;
-  setLlmImpactedFilesCount: (count: number) => void;
+  setLlmResultStatus: (status: 'success' | 'failed' | 'warning' | '') => void;
+  setLlmFilePathsUpdated: (paths: string[]) => void;
+  setLlmFilePathsCreated: (paths: string[]) => void;
+  setLlmFilePathsRemoved: (paths: string[]) => void;
   setLlmGitCommitMessage: (msg: string) => void;
   setLlmIsExecuting: (executing: boolean) => void;
 
@@ -131,7 +137,10 @@ export const useExporterStore = create<ExporterStoreState>((set) => ({
   llmResponseText: '',
   llmShScript: '',
   llmExecutionLog: '',
-  llmImpactedFilesCount: 0,
+  llmResultStatus: '',
+  llmFilePathsUpdated: [],
+  llmFilePathsCreated: [],
+  llmFilePathsRemoved: [],
   llmGitCommitMessage: '',
   llmIsExecuting: false,
 
@@ -167,7 +176,10 @@ export const useExporterStore = create<ExporterStoreState>((set) => ({
   setLlmResponseText: (llmResponseText) => set({ llmResponseText }),
   setLlmShScript: (llmShScript) => set({ llmShScript }),
   setLlmExecutionLog: (llmExecutionLog) => set({ llmExecutionLog }),
-  setLlmImpactedFilesCount: (llmImpactedFilesCount) => set({ llmImpactedFilesCount }),
+  setLlmResultStatus: (llmResultStatus) => set({ llmResultStatus }),
+  setLlmFilePathsUpdated: (llmFilePathsUpdated) => set({ llmFilePathsUpdated }),
+  setLlmFilePathsCreated: (llmFilePathsCreated) => set({ llmFilePathsCreated }),
+  setLlmFilePathsRemoved: (llmFilePathsRemoved) => set({ llmFilePathsRemoved }),
   setLlmGitCommitMessage: (llmGitCommitMessage) => set({ llmGitCommitMessage }),
   setLlmIsExecuting: (llmIsExecuting) => set({ llmIsExecuting }),
 

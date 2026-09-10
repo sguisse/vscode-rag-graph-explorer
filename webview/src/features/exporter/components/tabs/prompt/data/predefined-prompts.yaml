@@ -133,13 +133,19 @@
       - Directory Management: Explicitly create required directories using `mkdir -p path/to/dir`.
 
       - File Modification Strategy:
-        - NEW FILES: Write the complete content using heredocs: `cat << 'EOF' > path/to/file`.
-        - EXISTING FILES:
+        - NEW FILES:
+          - Add echo logs for each new file creation. `echo "➕ Creating new file: 'path/to/file'"`
+          - Write the complete content using heredocs: `cat << 'EOF' > path/to/file`.
+        - EXISTING FILES TO MODIFY:
+          - Add echo logs for each file modification. `echo "✏️ Modifying existing file: 'path/to/file'"`
           - Provide the FULL updated file via `cat << 'EOF' > path/to/file` if ANY of the following apply:
             1. The user included `/full` in their prompt.
             2. The file is under 300 lines of code.
             3. Changes alter structural layouts, imports, or >20% of file content.
           - Use targeted Python standard library inline scripts (`python3 -c "..."`) or Node.js inline scripts inside the Bash file ONLY for minor, surgical delta modifications on large files where full rewrites are impractical. Avoid fragile `sed` or `awk` commands.
+        - EXISTING FILES TO REMOVE:
+          - Add echo logs for each file removal. `echo "🗑️ Removing existing file: 'path/to/file'"`
+          - Use `rm -f path/to/file` to delete the file.
 
       - Escaping & Formatting Rules:
         - Do NOT use snippets, placeholders, incomplete blocks, or truncation comments (e.g., `// ... rest of code`).

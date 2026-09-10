@@ -33,6 +33,45 @@ export function formatPathForDisplay(absPath: string, workspaceRoot: string): st
   return cleanAbs;
 }
 
+/**
+ * Splits the path at every / separator by inserting a <br /> tag (or standard \n line break for raw tooltips) without exceeding 44 characters per line.
+ * Used for Tooltip
+ */
+export function formatPathWithBreakpoints(
+  filePath: string,
+  prefix: string = "",
+  maxCharsPerLine: number = 44
+): string {
+  // Split on slash while retaining the trailing slash for readability
+  const segments = filePath.split('/');
+
+  let currentLine = prefix;
+  const resultLines: string[] = [];
+
+  segments.forEach((segment, index) => {
+    // Append '/' to all segments except the final filename
+    const formattedSegment = index < segments.length - 1 ? `${segment}/` : segment;
+
+    // Check if adding this segment exceeds the 44-character line limit
+    if ((currentLine + formattedSegment).length > maxCharsPerLine) {
+      if (currentLine.trim()) {
+        resultLines.push(currentLine);
+      }
+      currentLine = formattedSegment;
+    } else {
+      currentLine += formattedSegment;
+    }
+  });
+
+  if (currentLine) {
+    resultLines.push(currentLine);
+  }
+
+  return resultLines.join('<br />');
+}
+
+
+
 export class PathMappingService {
   private static map: Map<string, string> = new Map();
 

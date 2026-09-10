@@ -250,7 +250,8 @@ export interface BashExecutionResult {
   terminalLogs: string;
   result: 'success' | 'failed' | 'warning';
   message: string;
-  nbFilesUpdated: number;
-  nbFilesCreated: number;
+  filePathsUpdated: string[];
+  filePathsCreated: string[];
+  filePathsRemoved: string[];
   gitCommitMessage: string;
 }

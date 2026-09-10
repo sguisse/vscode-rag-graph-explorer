@@ -14,7 +14,10 @@ export const LlmResponseTab: React.FC = () => {
     llmResponse,
     setLlmResponse,
     executionLog,
-    impactedFilesCount,
+    resultStatus,
+    filePathsUpdated,
+    filePathsCreated,
+    filePathsRemoved,
     gitCommitMessage,
     setGitCommitMessage,
     isExecuting,
@@ -78,7 +81,10 @@ export const LlmResponseTab: React.FC = () => {
       {subTab === 'inspect' && (
         <InspectResultsPanel
           executionLog={executionLog}
-          impactedFilesCount={impactedFilesCount}
+          resultStatus={resultStatus}
+          filePathsUpdated={filePathsUpdated}
+          filePathsCreated={filePathsCreated}
+          filePathsRemoved={filePathsRemoved}
           gitCommitMessage={gitCommitMessage}
           onChangeGitCommitMessage={setGitCommitMessage}
           onCopyResult={handleCopyExecutionResult}
