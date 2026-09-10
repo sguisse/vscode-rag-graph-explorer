@@ -1,14 +1,7 @@
 import os
 import platform
 
-MODULE_NAME = "llm_copilot"
-
-# Boolean flag to force installation/re-download of Copilot CLI into .token-razor
-FORCE_INSTALL: bool = True
-
-def get_copilot_binary_name() -> str:
-    """Returns the OS-specific binary name for GitHub Copilot CLI."""
-    return "copilot.exe" if os.name == "nt" else "copilot"
+MODULE_NAME = "node_llm_copilot_sdk"
 
 def get_platform_target() -> str:
     """Detects system platform and architecture identifier."""

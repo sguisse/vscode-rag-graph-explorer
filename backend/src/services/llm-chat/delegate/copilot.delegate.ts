@@ -1,7 +1,6 @@
 import { CopilotClient, approveAll } from '@github/copilot-sdk';
 import * as path from 'path';
 import * as fs from 'fs';
-import * as cp from 'child_process';
 import { ILlmProviderDelegate } from './llm-provider.delegate.interface';
 import {
   LlmProvider,
@@ -53,29 +52,25 @@ export class CopilotDelegate implements ILlmProviderDelegate {
       if (fs.existsSync(localToolPath)) {
         foundPath = localToolPath;
       } else {
-        const nodeModulesPath = extentionContext.asAbsolutePath(
-          path.join('node_modules', '@github', `copilot-${platformTarget}`, binName)
-        );
-        if (fs.existsSync(nodeModulesPath)) {
+        const nodeModulesPath = extentionContext ? extentionContext.asAbsolutePath(
+          path.join('node_modules', '@github', `copilot-sdk-${platformTarget}`, binName)
+        ) : undefined;
+
+        if (nodeModulesPath && fs.existsSync(nodeModulesPath)) {
           foundPath = nodeModulesPath;
-        } else {
-          foundPath = binName;
         }
       }
 
-      CopilotDelegate.cliBinaryPath = foundPath;
-      process.env.COPILOT_CLI_PATH = foundPath;
-      logInfo(`[CopilotDelegate] Resolved Copilot CLI binary path: ${foundPath}`);
-
-      try {
-        const versionOutput = cp.execFileSync(foundPath, ['-version'], { encoding: 'utf-8' }).trim();
-        logInfo(`[CopilotDelegate] Copilot CLI version output: ${versionOutput}`);
-      } catch (err: any) {
-        logError(`[CopilotDelegate] Failed to execute Copilot CLI version check: ${err?.message || err}`);
+      if (foundPath) {
+        CopilotDelegate.cliBinaryPath = foundPath;
+        process.env.COPILOT_CLI_PATH = foundPath;
+        logInfo(`[CopilotDelegate] Resolved Copilot SDK binary path: ${foundPath}`);
+      } else {
+        logError(`[CopilotDelegate] Copilot SDK binary not found in local workspace tools (.token-razor) or extension node_modules.`);
       }
     }
 
-    return CopilotDelegate.cliBinaryPath;
+    return CopilotDelegate.cliBinaryPath || undefined;
   }
 
   private get client(): CopilotClient {
@@ -96,7 +91,7 @@ export class CopilotDelegate implements ILlmProviderDelegate {
         try {
           const timeout = new Promise<never>((_, reject) =>
             setTimeout(
-              () => reject(new Error('Délai dépassé lors du démarrage du CLI Copilot (10s)')),
+              () => reject(new Error('Timeout starting Copilot SDK (10s)')),
               10000
             )
           );

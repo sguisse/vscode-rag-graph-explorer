@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import cast
 import shutil
 import os
@@ -7,6 +8,7 @@ from install.registry import InstallerRegistry
 from install.modules.java.jqassistant.context import JQAssistantContext
 from install.modules.system.neo4j.check import SystemNeo4jChecker
 from core.VsCodeSettings_gen import vsCodeSettings
+from core.utils import info, success, error, warn
 
 @InstallerRegistry.register_checker
 class JQAssistantChecker(BaseCheckModule):
@@ -42,7 +44,7 @@ class JQAssistantChecker(BaseCheckModule):
         base_cmd = "jqassistant.cmd" if os.name == 'nt' else "jqassistant.sh"
 
         global_bin = shutil.which(base_cmd) or shutil.which("jqassistant")
-        sandbox_root = f"{self.context.tools_dir}/java/jqassistant/jqassistant-{version}"
+        sandbox_root = f"{self.jqa.tools_dir}/jqassistant-{version}"
         local_bin = self._find_sandboxed_binary(sandbox_root, base_cmd)
 
         if global_bin or local_bin:
@@ -56,18 +58,21 @@ class JQAssistantChecker(BaseCheckModule):
 
     def check_workspace_raw_outputs_dir(self):
         self.steps_count += 1
-        if os.path.exists(f"{self.context.raw_outputs_dir}/java"):
+        raw_outputs_dir = f"{self.jqa.raw_outputs_dir}"
+
+        if os.path.exists(raw_outputs_dir):
             self.status["raw_outputs_java"] = {"status": "✅"}
         else:
             self.status["raw_outputs_java"] = {
                 "status": "❌",
-                "message": "Java analysis target subdirectory raw outputs path layout is missing."
+                "message": f"Java analysis target subdirectory raw outputs path layout is missing : {raw_outputs_dir}",
+                "path": f"{raw_outputs_dir}"
             }
             self.ko_count += 1
 
     def check_sandboxed_config(self):
         self.steps_count += 1
-        if os.path.exists(f"{self.context.tools_dir}/java/jqassistant/config/.jqassistant.yml"):
+        if os.path.exists(f"{self.jqa.config_dir}/.jqassistant.yml"):
             self.status["jqassistant_custom_config"] = {"status": "✅"}
         else:
             self.status["jqassistant_custom_config"] = {
@@ -78,7 +83,7 @@ class JQAssistantChecker(BaseCheckModule):
 
     def check_sandboxed_rules(self):
         self.steps_count += 1
-        rules_dir = f"{self.context.tools_dir}/java/jqassistant/config/rules"
+        rules_dir = f"{self.jqa.rules_dir}"
         if os.path.exists(rules_dir) and any(f.endswith(".xml") for f in os.listdir(rules_dir)):
             self.status["jqassistant_custom_rules"] = {"status": "✅"}
         else:

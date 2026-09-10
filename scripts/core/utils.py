@@ -42,7 +42,9 @@ def _linkify_match(match: re.Match) -> str:
     href = resource
     if resource.startswith('/'):
         href = f"file://{resource}"
-    return f'<a href="{href}" target="_blank" rel="noopener noreferrer" class="text-blue-400 underline hover:text-blue-300 break-all">{resource}</a>'
+
+    #return f'<a href="{href}" target="_blank" rel="noopener noreferrer" class="text-blue-400 underline hover:text-blue-300 break-all">{resource}</a>'
+    return f'{resource}'
 
 def _log(level: str, component: str, message: str):
     global CURRENT_FILE_INDEX

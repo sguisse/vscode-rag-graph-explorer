@@ -3,14 +3,15 @@ from typing import Optional
 from install.base import BaseInstallModule
 from install.registry import InstallerRegistry
 from core.utils import execute_tracked_command
-from install.modules.node.dependency_cruiser.constants import (
+from install.modules.node.sdk_copilot.constants import (
     MODULE_NAME,
+    get_platform_target
 )
 from install.modules.node.context import NodeContext
-from install.modules.node.dependency_cruiser.check import NodeDependencyCruiserChecker
+from install.modules.node.sdk_copilot.check import LlmSdkCopilotChecker
 
 @InstallerRegistry.register_installer
-class NodeDependencyCruiserInstaller(BaseInstallModule):
+class LlmSdkCopilotInstaller(BaseInstallModule):
     def __init__(self, context):
         super().__init__(context)
         self.node_ctx = NodeContext(context)
@@ -18,15 +19,16 @@ class NodeDependencyCruiserInstaller(BaseInstallModule):
     @property
     def name(self) -> str: return MODULE_NAME
 
-    def provisioning_dependency_cruiser(self):
+    def provisioning_sdk_copilot(self):
         target_env = self.node_ctx.node_env_path
-        execute_tracked_command(["npm", "install", "dependency-cruiser@18.0.0"], "dc_install", cwd=target_env)
+        execute_tracked_command(["npm", "install", "@github/copilot-sdk@1.0.13"], "sdk_copilot_install", cwd=target_env)
+
 
     def execute_all_installations(self, installStatus: Optional[dict] = None) -> None:
         """Selectively runs configurations."""
-        checker = NodeDependencyCruiserChecker(self.context)
+        checker = LlmSdkCopilotChecker(self.context)
         if installStatus is None:
             installStatus = checker.execute_all_checks()
 
-        if installStatus.get("dependency_cruiser", {}).get("status") != "✅":
-            self.provisioning_dependency_cruiser()
+        if installStatus.get("sdk_copilot", {}).get("status") != "✅":
+            self.provisioning_sdk_copilot()
