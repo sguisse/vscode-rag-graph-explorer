@@ -29,6 +29,7 @@
     "dist-backend",
     "dist-webview",
     "assets",
+    "scripts",
     "README.md",
     "LICENSE"
   ],
