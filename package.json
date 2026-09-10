@@ -25,6 +25,13 @@
   ],
   "icon": "assets/logo-max-light.png",
   "main": "./dist-backend/backend/src/extension.js",
+  "files": [
+    "dist-backend",
+    "dist-webview",
+    "assets",
+    "README.md",
+    "LICENSE"
+  ],
   "activationEvents": [],
   "contributes": {
     "commands": [
