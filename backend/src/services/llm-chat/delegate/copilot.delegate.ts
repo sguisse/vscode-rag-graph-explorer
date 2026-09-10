@@ -1,6 +1,7 @@
 import { CopilotClient, approveAll } from '@github/copilot-sdk';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as cp from 'child_process';
 import { ILlmProviderDelegate } from './llm-provider.delegate.interface';
 import {
   LlmProvider,
@@ -13,7 +14,7 @@ import {
 } from '../../../../../shared/services/llm-chat';
 import { getCurrentExtensionContext, getWorkspaceRoot } from '../../../utils/utils-vscode';
 import { vsCodeSettingsManager } from '../../../managers/VsCodeSettings.manager';
-import { logInfo } from '../../../utils/utils-log';
+import { logError, logInfo } from '../../../utils/utils-log';
 
 export class CopilotDelegate implements ILlmProviderDelegate {
   readonly provider = LlmProvider.COPILOT;
@@ -65,6 +66,13 @@ export class CopilotDelegate implements ILlmProviderDelegate {
       CopilotDelegate.cliBinaryPath = foundPath;
       process.env.COPILOT_CLI_PATH = foundPath;
       logInfo(`[CopilotDelegate] Resolved Copilot CLI binary path: ${foundPath}`);
+
+      try {
+        const versionOutput = cp.execFileSync(foundPath, ['-version'], { encoding: 'utf-8' }).trim();
+        logInfo(`[CopilotDelegate] Copilot CLI version output: ${versionOutput}`);
+      } catch (err: any) {
+        logError(`[CopilotDelegate] Failed to execute Copilot CLI version check: ${err?.message || err}`);
+      }
     }
 
     return CopilotDelegate.cliBinaryPath;
