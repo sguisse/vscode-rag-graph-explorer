@@ -31,8 +31,7 @@
     "assets",
     "scripts",
     "README.md",
-    "LICENSE",
-    "node_modules/@github"
+    "LICENSE"
   ],
   "activationEvents": [],
   "contributes": {
