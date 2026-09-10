@@ -3,7 +3,7 @@
 
 import { RpcMethodEnum } from '@/shared/config/rpc-methods.enum.gen';
 import { AbstractApiService } from '@/services/abstract-api.service';
-import { GitDiffResult } from '@/shared/services/git/model/git-model';
+import type { GitDiffResult } from '@/shared/services/git/model/git-model';
 import { IGitServicePort } from '@/shared/services/git/port-out/git-service.port';
 
 class GitApiService extends AbstractApiService implements IGitServicePort {

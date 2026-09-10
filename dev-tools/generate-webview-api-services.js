@@ -76,20 +76,35 @@ function parseParamNames(rawParams) {
         .filter(Boolean);
 }
 
-function resolveSharedImport(importLine, portFilePath) {
-    const match = importLine.match(/import\s+(?:type\s+)?({[^}]+}|[^*'{}\s]+)\s+from\s+['"]([^'"]+)['"]/);
+function resolveSharedImport(importBlock, portFilePath) {
+    const match = importBlock.match(/import\s+([\s\S]+?)\s+from\s+['"]([^'"]+)['"]/);
     if (!match) return null;
 
-    const importedItems = match[1];
+    const importedItems = match[1].replace(/\s+/g, ' ').trim();
     const rawPath = match[2];
 
     if (importedItems.includes('IBackendService')) return null;
 
     const portFileDir = path.dirname(portFilePath);
     const absoluteImportPath = path.resolve(portFileDir, rawPath);
-    const relToShared = path.relative(sharedDir, absoluteImportPath).replace(/\\/g, '/');
+    const relToShared = path.relative(sharedDir, absoluteImportPath).replace(/\\/g, '/').replace(/\.ts$/, '');
 
     return `import ${importedItems} from '@/shared/${relToShared}';`;
+}
+
+function extractImports(content, filePath) {
+    const importRegex = /import\s+[\s\S]+?\s+from\s+['"][^'"]+['"];?/g;
+    const matches = content.match(importRegex) || [];
+    const convertedImports = [];
+
+    for (const match of matches) {
+        const converted = resolveSharedImport(match, filePath);
+        if (converted) {
+            convertedImports.push(converted);
+        }
+    }
+
+    return convertedImports;
 }
 
 function generateWebviewApiServices() {
@@ -113,14 +128,7 @@ function generateWebviewApiServices() {
         const instanceName = `${serviceBaseName.charAt(0).toLowerCase()}${serviceBaseName.slice(1)}ApiService`;
         const outFileName = `${camelToKebab(serviceBaseName)}-api.service.gen.ts`;
 
-        const lines = content.split('\n');
-        const convertedImports = [];
-        for (const line of lines) {
-            if (line.trim().startsWith('import ')) {
-                const converted = resolveSharedImport(line, filePath);
-                if (converted) convertedImports.push(converted);
-            }
-        }
+        const convertedImports = extractImports(content, filePath);
 
         const portRelPath = path.relative(sharedDir, filePath).replace(/\\/g, '/').replace(/\.ts$/, '');
         convertedImports.push(`import { ${portInterfaceName} } from '@/shared/${portRelPath}';`);
@@ -134,7 +142,6 @@ function generateWebviewApiServices() {
             const rawParams = match[2].trim();
             const startIndex = methodHeaderRegex.lastIndex;
 
-            // Character-by-character scanner to parse return type up to the outer method-terminating semicolon
             let depthAngle = 0;
             let depthParen = 0;
             let depthCurly = 0;

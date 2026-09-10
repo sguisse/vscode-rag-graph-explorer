@@ -1,452 +1,247 @@
 #!/usr/bin/env bash
 set -e
 
-mkdir -p webview/src/features/exporter/hooks
-mkdir -p webview/src/features/exporter/components
+# Ensure dev-tools folder exists
+mkdir -p dev-tools
 
-# 1. Update use-export-configuration hook to accept target scope parameter
-cat << 'EOF' > webview/src/features/exporter/hooks/use-export-configuration.ts
-import { useEffect } from 'react';
-import { useExporterStore } from '../store/useExporterStore';
-import { useExporterValidation } from './use-exporter-validation';
-import { fileExporterHistoryApiService } from '@/services/api/file-exporter-history-api.service.gen';
-import { fileExporterApiService } from '@/services/api/file-exporter-api.service.gen';
-import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
-import { vsCodeBackendMessageHandler } from '@/services/listener/vscode-backend-message.handler';
-import { logInfo } from '@/services/view/log-view.service.wrapper';
-import { PathMappingService } from '../utils/path-resolver';
-import { normalizeExportConfig } from '../utils/exporter-config.normalizer';
-import {
-  EXPORTER_CODEBASE_ADD_PATHS,
-  EXPORTER_CODEBASE_EXCLUDE_PATHS,
-  EXPORTER_REFERENCE_ADD_PATHS,
-  EXPORTER_REFERENCE_EXCLUDE_PATHS,
-} from "@/shared/config/vscode-message-command.constants";
+# Write complete generator script to dev-tools/generate-webview-api-services.js
+cat << 'EOF' > dev-tools/generate-webview-api-services.js
+const fs = require('fs');
+const path = require('path');
 
-export type ExporterScope = 'codebase' | 'reference';
+const rootDir = path.resolve(__dirname, '../');
+const sharedDir = path.join(rootDir, 'shared');
+const sharedServicesDir = path.join(sharedDir, 'services');
+const outputDir = path.join(rootDir, 'webview/src/services/api');
 
-export function useExportConfiguration() {
-  const store = useExporterStore();
-  const validation = useExporterValidation();
+console.log(`🧹 Clean up: Removing previously generated services files from ${outputDir}...`);
+fs.rmSync(outputDir, { recursive: true, force: true });
 
-  // Helper to append paths to specified scope
-  const addPathsInConfig = (absPaths: string[], scope: ExporterScope = 'codebase') => {
-    const wsRoot = store.workspaceRoot;
-    const expandedList = (absPaths || [])
-      .flatMap((p) => String(p || '').split(/[,\n\r]+/))
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    const formattedList = expandedList
-      .map((p) => PathMappingService.registerPath(p, wsRoot))
-      .filter(Boolean);
-
-    store.setConfig((prev) => {
-      const current = (prev[scope]?.src || '')
-        .split(/[,\n\r]+/)
-        .map((s) => s.trim())
-        .filter(Boolean);
-      const combined = Array.from(new Set([...current, ...formattedList]));
-      return {
-        ...prev,
-        [scope]: { ...prev[scope], src: combined.join('\n') },
-      };
-    });
-  };
-
-  // Helper to append exclude regex patterns to specified scope
-  const addExcludePathsInConfig = (absPaths: string[], scope: ExporterScope = 'codebase') => {
-    const wsRootPath = store.workspaceRoot ? store.workspaceRoot.replace(/\\/g, '/').replace(/\/+$/, '') : '';
-
-    const newEntries: string[] = [];
-
-    (absPaths || []).forEach((rawPath) => {
-      if (!rawPath || !rawPath.trim()) return;
-      const cleanRaw = rawPath.trim().replace(/\\/g, '/');
-      let relativePath = cleanRaw;
-      if (wsRootPath && cleanRaw.startsWith(wsRootPath)) {
-        relativePath = cleanRaw.slice(wsRootPath.length);
-      }
-      relativePath = relativePath.replace(/^\/+/, '');
-      const escapedPath = relativePath.replace(/[-\\^\$*+?.()|[\]{}]/g, '\\$&');
-
-      let isFolder = true;
-      if (cleanRaw.includes('.')) {
-        const lastSegment = cleanRaw.split('/').pop();
-        if (lastSegment && lastSegment.includes('.')) isFolder = false;
-      }
-
-      const regexEntry = isFolder ? `.*/${escapedPath}/.*` : `.*/${escapedPath}$`;
-      newEntries.push(regexEntry);
-    });
-
-    if (newEntries.length === 0) return;
-
-    store.setConfig((prev) => {
-      const currentLines = (prev[scope]?.exc_paths || '')
-        .split('\n')
-        .map((s) => s.trim())
-        .filter(Boolean);
-
-      const combined = Array.from(new Set([...currentLines, ...newEntries]));
-
-      return {
-        ...prev,
-        [scope]: {
-          ...prev[scope],
-          exc_paths: combined.join('\n'),
-        },
-      };
-    });
-
-    const scopeLabel = scope === 'codebase' ? 'Codebase' : 'Reference';
-    fileExporterApiService.showNotification('info', `Added ${newEntries.length} pattern(s) to ${scopeLabel} Exclude Paths`);
-  };
-
-  useEffect(() => {
-    logInfo('[useExportConfiguration] Initializing exporter configuration and message listeners...');
-
-    const init = async () => {
-      try {
-        const res = await fileExporterApiService.getInitialState();
-        const normDefault = normalizeExportConfig(res.defaultConfig);
-        const normCurrent = normalizeExportConfig(res.currentConfig);
-        const normHistory = (res.history || []).map((h) => ({
-          ...h,
-          config: normalizeExportConfig(h.config),
-        }));
-
-        store.setInitialData({
-          defaultConfig: normDefault,
-          config: normCurrent,
-          historyList: normHistory,
-          selectedProfileId: res.selectedId,
-          historyViewMode: res.historyViewMode,
-          currentRepo: res.currentRepo,
-          workspaceRoot: res.workspaceRoot,
-          fileExtsCategoryGroups: res.fileExtsCategoryGroups,
-          exchangeLinks: res.exchange,
-          pendingPaths: res.pendingPaths || [],
-        });
-      } catch (e) {
-        console.error('[useExportConfiguration] Error initializing exporter state:', e);
-      }
-    };
-
-    init();
-
-    // Codebase scope listeners
-    const unsubscribeCodebaseAdd = vsCodeBackendMessageHandler.on(EXPORTER_CODEBASE_ADD_PATHS, (msg) => {
-      const rawPayload = msg.payload || msg.payload?.paths;
-      logInfo(`[useExportConfiguration] Received ${msg.command} message`, [rawPayload]);
-      if (rawPayload) {
-        const newPaths = String(rawPayload).split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
-        addPathsInConfig(newPaths, 'codebase');
-      }
-    });
-
-    const unsubscribeCodebaseExclude = vsCodeBackendMessageHandler.on(EXPORTER_CODEBASE_EXCLUDE_PATHS, (msg) => {
-      const rawPayload = msg.payload || msg.payload?.paths;
-      logInfo(`[useExportConfiguration] Received ${msg.command} message`, [rawPayload]);
-      if (rawPayload) {
-        const paths = String(rawPayload).split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
-        addExcludePathsInConfig(paths, 'codebase');
-      }
-    });
-
-    // Reference scope listeners
-    const unsubscribeReferenceAdd = vsCodeBackendMessageHandler.on(EXPORTER_REFERENCE_ADD_PATHS, (msg) => {
-      const rawPayload = msg.payload || msg.payload?.paths;
-      logInfo(`[useExportConfiguration] Received ${msg.command} message`, [rawPayload]);
-      if (rawPayload) {
-        const newPaths = String(rawPayload).split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
-        addPathsInConfig(newPaths, 'reference');
-      }
-    });
-
-    const unsubscribeReferenceExclude = vsCodeBackendMessageHandler.on(EXPORTER_REFERENCE_EXCLUDE_PATHS, (msg) => {
-      const rawPayload = msg.payload || msg.payload?.paths;
-      logInfo(`[useExportConfiguration] Received ${msg.command} message`, [rawPayload]);
-      if (rawPayload) {
-        const paths = String(rawPayload).split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
-        addExcludePathsInConfig(paths, 'reference');
-      }
-    });
-
-    return () => {
-      unsubscribeCodebaseAdd();
-      unsubscribeCodebaseExclude();
-      unsubscribeReferenceAdd();
-      unsubscribeReferenceExclude();
-    };
-  }, [store.workspaceRoot]);
-
-  const handleAddOpenFiles = async (scope: ExporterScope = 'codebase') => {
-    try {
-      const currentDisplayLines = (store.config[scope]?.src || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
-      const currentAbsPaths = currentDisplayLines.map((line) => PathMappingService.resolveToAbsolute(line, store.workspaceRoot));
-
-      const openFiles = await fileExporterApiService.getOpenEditorFiles(currentAbsPaths);
-      addPathsInConfig(openFiles, scope);
-      const scopeLabel = scope === 'codebase' ? 'Codebase' : 'Reference';
-      fileExporterApiService.showNotification('info', `Added open editor files to ${scopeLabel} (${openFiles.length} total paths)`);
-    } catch (err: any) {
-      logInfo(`[useExportConfiguration] Error adding open files to ${scope}:`, [err]);
+function findPortFiles(dir, fileList = []) {
+    if (!fs.existsSync(dir)) return fileList;
+    const files = fs.readdirSync(dir);
+    for (const file of files) {
+        const filePath = path.join(dir, file);
+        const stat = fs.statSync(filePath);
+        if (stat.isDirectory()) {
+            findPortFiles(filePath, fileList);
+        } else if (file.endsWith('-service.port.ts') || file.endsWith('.port.ts')) {
+            fileList.push(filePath);
+        }
     }
-  };
-
-  const handleAddGitDiffFiles = async (scope: ExporterScope = 'codebase') => {
-    try {
-      const currentDisplayLines = (store.config[scope]?.src || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
-      const currentAbsPaths = currentDisplayLines.map((line) => PathMappingService.resolveToAbsolute(line, store.workspaceRoot));
-
-      const gitFiles = await fileExporterApiService.getGitDiffFiles(currentAbsPaths);
-      addPathsInConfig(gitFiles, scope);
-      const scopeLabel = scope === 'codebase' ? 'Codebase' : 'Reference';
-      fileExporterApiService.showNotification('info', `Added modified Git files to ${scopeLabel} (${gitFiles.length} total paths)`);
-    } catch (err: any) {
-      logInfo(`[useExportConfiguration] Error adding Git diff files to ${scope}:`, [err]);
-    }
-  };
-
-  const handleCopyLatestFiles = async () => {
-    try {
-      const res = await fileExporterApiService.copyLatestExportedFiles(store.config.dest);
-      fileExporterApiService.showNotification(res.success ? 'info' : 'warn', res.message);
-    } catch (err: any) {
-      logInfo('[useExportConfiguration] Error copying latest files:', [err]);
-    }
-  };
-
-  const handleClearDestDir = async () => {
-    try {
-      const res = await fileExporterApiService.clearDestDirectory(store.config.dest);
-      fileExporterApiService.showNotification(res.success ? 'info' : 'warn', res.message);
-    } catch (err: any) {
-      logInfo('[useExportConfiguration] Error clearing dest dir:', [err]);
-    }
-  };
-
-  const handleOpenErrorModal = () => store.setModalState({ isErrorModalOpen: true });
-  const handleCloseErrorModal = () => store.setModalState({ isErrorModalOpen: false });
-
-  const handleRevealDestination = async () => {
-    const formattedDest = store.config.dest || 'Default directory';
-    const absDest = PathMappingService.resolveToAbsolute(formattedDest, store.workspaceRoot);
-    await vsCodeApiService.revealInOsExplorer(absDest);
-  };
-
-  const handleOpenCursorLinePath = async (scope: ExporterScope = 'codebase') => {
-    const firstLine = (store.config[scope]?.src || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean)[0];
-    if (firstLine) {
-      const absPath = PathMappingService.resolveToAbsolute(firstLine, store.workspaceRoot);
-      await fileExporterApiService.openPathAtCursor(absPath);
-    }
-  };
-
-  return {
-    ...store,
-    validation,
-    addPathsToConfig: (absPaths: string[], scope: ExporterScope = 'codebase') => addPathsInConfig(absPaths, scope),
-    addReferencePathsToConfig: (absPaths: string[]) => addPathsInConfig(absPaths, 'reference'),
-    addExcludePathsInConfig: (absPaths: string[], scope: ExporterScope = 'codebase') => addExcludePathsInConfig(absPaths, scope),
-    handleAddOpenFiles,
-    handleAddGitDiffFiles,
-    handleCopyLatestFiles,
-    handleClearDestDir,
-    handleOpenErrorModal,
-    handleCloseErrorModal,
-    handleRevealDestination,
-    handleOpenCursorLinePath,
-  };
+    return fileList;
 }
+
+function camelToUpperSnake(str) {
+    return str
+        .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+        .replace(/[-_\s]+/g, '_')
+        .toUpperCase();
+}
+
+function camelToKebab(str) {
+    return str
+        .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+        .replace(/[-_\s]+/g, '-')
+        .toLowerCase();
+}
+
+function parseParamNames(rawParams) {
+    if (!rawParams || !rawParams.trim()) return [];
+
+    const params = [];
+    let current = '';
+    let depthAngle = 0;
+    let depthParen = 0;
+    let depthCurly = 0;
+    let depthSquare = 0;
+
+    for (let i = 0; i < rawParams.length; i++) {
+        const char = rawParams[i];
+        if (char === '<') depthAngle++;
+        else if (char === '>') depthAngle--;
+        else if (char === '(') depthParen++;
+        else if (char === ')') depthParen--;
+        else if (char === '{') depthCurly++;
+        else if (char === '}') depthCurly--;
+        else if (char === '[') depthSquare++;
+        else if (char === ']') depthSquare--;
+
+        if (char === ',' && depthAngle === 0 && depthParen === 0 && depthCurly === 0 && depthSquare === 0) {
+            params.push(current.trim());
+            current = '';
+        } else {
+            current += char;
+        }
+    }
+    if (current.trim()) {
+        params.push(current.trim());
+    }
+
+    return params
+        .map(p => p.replace(/\s+/g, ' '))
+        .map(p => p.split(':')[0].trim().replace(/\?$/, ''))
+        .filter(Boolean);
+}
+
+function resolveSharedImport(importBlock, portFilePath) {
+    const match = importBlock.match(/import\s+([\s\S]+?)\s+from\s+['"]([^'"]+)['"]/);
+    if (!match) return null;
+
+    const importedItems = match[1].replace(/\s+/g, ' ').trim();
+    const rawPath = match[2];
+
+    if (importedItems.includes('IBackendService')) return null;
+
+    const portFileDir = path.dirname(portFilePath);
+    const absoluteImportPath = path.resolve(portFileDir, rawPath);
+    const relToShared = path.relative(sharedDir, absoluteImportPath).replace(/\\/g, '/').replace(/\.ts$/, '');
+
+    return `import ${importedItems} from '@/shared/${relToShared}';`;
+}
+
+function extractImports(content, filePath) {
+    const importRegex = /import\s+[\s\S]+?\s+from\s+['"][^'"]+['"];?/g;
+    const matches = content.match(importRegex) || [];
+    const convertedImports = [];
+
+    for (const match of matches) {
+        const converted = resolveSharedImport(match, filePath);
+        if (converted) {
+            convertedImports.push(converted);
+        }
+    }
+
+    return convertedImports;
+}
+
+function generateWebviewApiServices() {
+    const portFiles = findPortFiles(sharedServicesDir);
+
+    for (const filePath of portFiles) {
+        const content = fs.readFileSync(filePath, 'utf-8');
+        const fileName = path.basename(filePath, '.ts').replace(/(-service)?\.port$/, '');
+        const rpcPrefix = fileName.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+
+        const interfaceMatch = content.match(/export\s+interface\s+I([A-Za-z0-9]+)ServicePort/);
+        let serviceBaseName = '';
+        if (interfaceMatch) {
+            serviceBaseName = interfaceMatch[1];
+        } else {
+            serviceBaseName = fileName.split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('');
+        }
+
+        const portInterfaceName = interfaceMatch ? `I${serviceBaseName}ServicePort` : `I${serviceBaseName}Port`;
+        const className = `${serviceBaseName}ApiService`;
+        const instanceName = `${serviceBaseName.charAt(0).toLowerCase()}${serviceBaseName.slice(1)}ApiService`;
+        const outFileName = `${camelToKebab(serviceBaseName)}-api.service.gen.ts`;
+
+        const convertedImports = extractImports(content, filePath);
+
+        const portRelPath = path.relative(sharedDir, filePath).replace(/\\/g, '/').replace(/\.ts$/, '');
+        convertedImports.push(`import { ${portInterfaceName} } from '@/shared/${portRelPath}';`);
+
+        const methodHeaderRegex = /^\s*(?:public\s+|async\s+)?([a-zA-Z0-9_]+)\??\s*(?:<[^>]+>)?\s*\(([\s\S]*?)\)\s*:\s*/gm;
+        let match;
+        const methodDeclarations = [];
+
+        while ((match = methodHeaderRegex.exec(content)) !== null) {
+            const methodName = match[1];
+            const rawParams = match[2].trim();
+            const startIndex = methodHeaderRegex.lastIndex;
+
+            let depthAngle = 0;
+            let depthParen = 0;
+            let depthCurly = 0;
+            let depthSquare = 0;
+            let rawReturnType = '';
+            let endIndex = startIndex;
+
+            for (let i = startIndex; i < content.length; i++) {
+                const char = content[i];
+                if (char === '<') depthAngle++;
+                else if (char === '>') depthAngle--;
+                else if (char === '(') depthParen++;
+                else if (char === ')') depthParen--;
+                else if (char === '{') depthCurly++;
+                else if (char === '}') depthCurly--;
+                else if (char === '[') depthSquare++;
+                else if (char === ']') depthSquare--;
+
+                if (char === ';' && depthAngle === 0 && depthParen === 0 && depthCurly === 0 && depthSquare === 0) {
+                    endIndex = i;
+                    break;
+                }
+                rawReturnType += char;
+            }
+
+            methodHeaderRegex.lastIndex = endIndex + 1;
+
+            rawReturnType = rawReturnType.trim();
+            if (!rawReturnType) continue;
+
+            const methodUpperSnake = camelToUpperSnake(methodName);
+            const rpcEnumKey = `${rpcPrefix}_${methodUpperSnake}`;
+
+            const paramNames = parseParamNames(rawParams);
+
+            let returnType = rawReturnType;
+            if (!returnType.startsWith('Promise<')) {
+                returnType = `Promise<${returnType}>`;
+            }
+
+            const cleanParamsSingleLine = rawParams.replace(/\s+/g, ' ');
+
+            const rpcCallArgs = [
+                `RpcMethodEnum.${rpcEnumKey}`,
+                ...paramNames
+            ].join(', ');
+
+            const methodCode = `    public async ${methodName}(${cleanParamsSingleLine}): ${returnType} {\n        return await this.rpc.call(${rpcCallArgs});\n    }`;
+            methodDeclarations.push(methodCode);
+        }
+
+        const fileContent = `// AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY.
+// Rebuild using: npm run generate:webview-api-services
+
+import { RpcMethodEnum } from '@/shared/config/rpc-methods.enum.gen';
+import { AbstractApiService } from '@/services/abstract-api.service';
+${convertedImports.join('\n')}
+
+class ${className} extends AbstractApiService implements ${portInterfaceName} {
+    constructor() {
+        super();
+    }
+
+${methodDeclarations.join('\n\n')}
+}
+
+export const ${instanceName} = new ${className}();
+`;
+
+        fs.mkdirSync(outputDir, { recursive: true });
+        const targetFilePath = path.join(outputDir, outFileName);
+        fs.writeFileSync(targetFilePath, fileContent, 'utf-8');
+        console.log(`✅ Successfully generated Webview API Service at:\n   ${targetFilePath}`);
+    }
+}
+
+generateWebviewApiServices();
 EOF
 
-# 2. Update ExportConfigurationPanel to bind section scope to header action buttons
-cat << 'EOF' > webview/src/features/exporter/components/ExportConfigurationPanel.tsx
-import React, { useState, useImperativeHandle, forwardRef } from 'react';
-import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
-import { useExportConfiguration, ExporterScope } from '../hooks/use-export-configuration';
-import { CodebasePathsSection } from './CodebasePathsSection';
-import { ReferencePathsSection } from './ReferencePathsSection';
-import { DestinationSection } from './DestinationSection';
-import { OutputFormattingSection } from './OutputFormattingSection';
-import { ErrorFilesModal } from './ErrorFilesModal';
-import { logInfo } from '@/services/view/log-view.service.wrapper';
+# Execute service generator script
+node dev-tools/generate-webview-api-services.js
 
-export interface ExportConfigurationPanelHandle {
-  collapseAll: () => void;
-  expandAll: () => void;
-}
+# Patch implicit 'any' parameter in hook if the file exists
+HOOK_FILE="webview/src/features/exporter/hooks/use-export-configuration.ts"
+if [ -f "$HOOK_FILE" ]; then
+    node -e '
+      const fs = require("fs");
+      const path = "webview/src/features/exporter/hooks/use-export-configuration.ts";
+      let content = fs.readFileSync(path, "utf8");
+      content = content.replace(/\.map\(\(h\)\s*=>/g, ".map((h: any) =>");
+      fs.writeFileSync(path, content, "utf8");
+    '
+fi
 
-export interface ExportConfigurationPanelProps {
-  onCollapseAll?: () => void;
-  onExpandAll?: () => void;
-}
-
-export const ExportConfigurationPanel = forwardRef<
-  ExportConfigurationPanelHandle,
-  ExportConfigurationPanelProps
->((_props, ref) => {
-  const {
-    config,
-    setConfig,
-    filterSimulatorInput,
-    setFilterSimulatorInput,
-    modalState,
-    handleRevealDestination,
-    handleOpenCursorLinePath,
-    handleAddOpenFiles,
-    handleAddGitDiffFiles,
-    handleOpenErrorModal,
-    handleCloseErrorModal,
-    handleCopyLatestFiles,
-    handleClearDestDir,
-    addPathsToConfig,
-  } = useExportConfiguration();
-
-  const [errorModalScope, setErrorModalScope] = useState<ExporterScope>('codebase');
-
-  const [cardsOpenState, setCardsOpenState] = useState<{
-    codebasePaths: boolean;
-    codebaseFilters: boolean;
-    referencePaths: boolean;
-    referenceFilters: boolean;
-    destination: boolean;
-    outputFormatting: boolean;
-  }>({
-    codebasePaths: false,
-    codebaseFilters: false,
-    referencePaths: false,
-    referenceFilters: false,
-    destination: false,
-    outputFormatting: true,
-  });
-
-  const handleCollapseAllCards = () => {
-    logInfo('[ExportConfigurationPanel] handleCollapseAllCards handler triggered');
-    setCardsOpenState({
-      codebasePaths: false,
-      codebaseFilters: false,
-      referencePaths: false,
-      referenceFilters: false,
-      destination: false,
-      outputFormatting: false,
-    });
-  };
-
-  const handleExpandAllCards = () => {
-    logInfo('[ExportConfigurationPanel] handleExpandAllCards handler triggered');
-    setCardsOpenState({
-      codebasePaths: true,
-      codebaseFilters: true,
-      referencePaths: true,
-      referenceFilters: true,
-      destination: true,
-      outputFormatting: true,
-    });
-  };
-
-  const handleOpenErrorModalForScope = (scope: ExporterScope = 'codebase') => {
-    setErrorModalScope(scope);
-    handleOpenErrorModal();
-  };
-
-  useImperativeHandle(ref, () => ({
-    collapseAll: handleCollapseAllCards,
-    expandAll: handleExpandAllCards,
-  }));
-
-  const middleContent = (
-    <div className="flex flex-col space-y-2 p-2 box-border min-w-0">
-      <CodebasePathsSection
-        filter={config.codebase}
-        isOpen={cardsOpenState.codebasePaths}
-        onOpenChange={(open: boolean) => setCardsOpenState((prev) => ({ ...prev, codebasePaths: open }))}
-        isFiltersOpen={cardsOpenState.codebaseFilters}
-        onFiltersOpenChange={(open: boolean) => setCardsOpenState((prev) => ({ ...prev, codebaseFilters: open }))}
-        onChangeFilter={(updater) =>
-          setConfig((prev) => ({ ...prev, codebase: updater(prev.codebase) }))
-        }
-        onChangePathsText={(val: string) =>
-          setConfig((prev) => ({ ...prev, codebase: { ...prev.codebase, src: val } }))
-        }
-        onAddOpenFiles={() => handleAddOpenFiles('codebase')}
-        onAddGitDiffFiles={() => handleAddGitDiffFiles('codebase')}
-        onAddErrorStackFiles={() => handleOpenErrorModalForScope('codebase')}
-        onOpenCursorLinePath={() => handleOpenCursorLinePath('codebase')}
-        onClearPaths={() =>
-          setConfig((prev) => ({ ...prev, codebase: { ...prev.codebase, src: '' } }))
-        }
-        filterSimulatorInput={filterSimulatorInput}
-        setFilterSimulatorInput={setFilterSimulatorInput}
-      />
-
-      <ReferencePathsSection
-        filter={config.reference}
-        isOpen={cardsOpenState.referencePaths}
-        onOpenChange={(open: boolean) => setCardsOpenState((prev) => ({ ...prev, referencePaths: open }))}
-        isFiltersOpen={cardsOpenState.referenceFilters}
-        onFiltersOpenChange={(open: boolean) => setCardsOpenState((prev) => ({ ...prev, referenceFilters: open }))}
-        onChangeFilter={(updater) =>
-          setConfig((prev) => ({ ...prev, reference: updater(prev.reference) }))
-        }
-        onChangePathsText={(val: string) =>
-          setConfig((prev) => ({ ...prev, reference: { ...prev.reference, src: val } }))
-        }
-        onAddOpenFiles={() => handleAddOpenFiles('reference')}
-        onAddGitDiffFiles={() => handleAddGitDiffFiles('reference')}
-        onAddErrorStackFiles={() => handleOpenErrorModalForScope('reference')}
-        onOpenCursorLinePath={() => handleOpenCursorLinePath('reference')}
-        onClearPaths={() =>
-          setConfig((prev) => ({ ...prev, reference: { ...prev.reference, src: '' } }))
-        }
-        filterSimulatorInput={filterSimulatorInput}
-        setFilterSimulatorInput={setFilterSimulatorInput}
-      />
-
-      <DestinationSection
-        destDir={config.dest}
-        isOpen={cardsOpenState.destination}
-        onOpenChange={(open: boolean) => setCardsOpenState((prev) => ({ ...prev, destination: open }))}
-        onChangeDestDir={(val: string) => setConfig((prev) => ({ ...prev, dest: val }))}
-        onCopyLatestFiles={handleCopyLatestFiles}
-        onRevealDestDir={handleRevealDestination}
-        onClearDestDir={handleClearDestDir}
-      />
-
-      <OutputFormattingSection
-        config={config}
-        isOpen={cardsOpenState.outputFormatting}
-        onOpenChange={(open: boolean) => setCardsOpenState((prev) => ({ ...prev, outputFormatting: open }))}
-        onChangeConfig={setConfig}
-      />
-    </div>
-  );
-
-  return (
-    <>
-      <TopMiddleBottomPanel
-        id="panel-exporter-configuration"
-        className="bg-background w-full h-full min-h-0 overflow-hidden"
-        middle={middleContent}
-      />
-
-      <ErrorFilesModal
-        isOpen={modalState.isErrorModalOpen}
-        onClose={handleCloseErrorModal}
-        onAddPaths={(paths: string[]) => {
-          logInfo('[ExportConfigurationPanel] ErrorFilesModal onAddPaths', [paths, errorModalScope]);
-          addPathsToConfig(paths, errorModalScope);
-        }}
-      />
-    </>
-  );
-});
-
-ExportConfigurationPanel.displayName = 'ExportConfigurationPanel';
-
-export default ExportConfigurationPanel;
-EOF
-
-echo "✅ fix: Corrected action handlers for ReferencePathsSection to target reference scope instead of codebase!"
+echo "✅ fix: Updated generator script to capture multiline/type imports and regenerated all Webview API services!"

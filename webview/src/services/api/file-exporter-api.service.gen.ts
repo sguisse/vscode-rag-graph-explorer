@@ -3,7 +3,7 @@
 
 import { RpcMethodEnum } from '@/shared/config/rpc-methods.enum.gen';
 import { AbstractApiService } from '@/services/abstract-api.service';
-import { FilesExporterInitialState, FilesExporterRunRequest, FilesExporterRunResponse, FilesExporterStatus, FilesExporterResult, FilterSimulationRequest, FilterSimulationResult, GeneratedFilesFilterRequest, GeneratedFilesFilterResult, DestinationActionResult, ClipboardActionResult, FilesExporterNotificationType, BashExecutionResult } from '@/shared/services/file-exporter/model/file-exporter-model';
+import { FilesExporterInitialState, FilesExporterRunRequest, FilesExporterRunResponse, FilesExporterStatus, FilesExporterResult, FilterSimulationRequest, FilterSimulationResult, GeneratedFilesFilterRequest, GeneratedFilesFilterResult, DestinationActionResult, ClipboardActionResult, FilesExporterNotificationType, BashExecutionResult, } from '@/shared/services/file-exporter/model/file-exporter-model';
 import { IFileExporterServicePort } from '@/shared/services/file-exporter/port-out/file-exporter-service.port';
 
 class FileExporterApiService extends AbstractApiService implements IFileExporterServicePort {

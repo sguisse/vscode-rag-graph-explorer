@@ -13,7 +13,7 @@ export interface IVsCodeServicePort {
         callback?: (command: string, payload: any) => void
     ): Promise<void>;
     openSettings(settingKey?: string): Promise<void>;
-    openSourceControl(): Promise<void>
+    openSourceControl(): Promise<void>;
     openUrl(url: string, inExternalBrowser: boolean): Promise<void>;
     openFile(targetPath: string): Promise<void>;
     revealInExplorer(targetPath: string): Promise<void>;

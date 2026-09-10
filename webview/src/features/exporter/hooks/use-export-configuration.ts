@@ -103,7 +103,7 @@ export function useExportConfiguration() {
         const res = await fileExporterApiService.getInitialState();
         const normDefault = normalizeExportConfig(res.defaultConfig);
         const normCurrent = normalizeExportConfig(res.currentConfig);
-        const normHistory = (res.history || []).map((h) => ({
+        const normHistory = (res.history || []).map((h: any) => ({
           ...h,
           config: normalizeExportConfig(h.config),
         }));
