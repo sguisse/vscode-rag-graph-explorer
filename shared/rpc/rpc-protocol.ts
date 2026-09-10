@@ -1,3 +1,5 @@
+import { getRpcTimeout } from './rpc-timeout';
+
 export interface RpcMessage {
     id?: string;
     method: string;
@@ -18,13 +20,15 @@ export class RpcProtocol {
 
     public call(method: string, ...params: any[]): Promise<any> {
         const id = Math.random().toString(36).substring(2);
+        const timeoutMs = getRpcTimeout(method);
+
         return new Promise((resolve, reject) => {
             const timer = setTimeout(() => {
                 if (this.pendingRequests.has(id)) {
                     this.pendingRequests.delete(id);
-                    reject(new Error(`[RpcProtocol] Timeout (15s) waiting for RPC method '${method}'`));
+                    reject(new Error(`[RpcProtocol] Timeout (${timeoutMs / 1000}s) waiting for RPC method '${method}'`));
                 }
-            }, 15000);
+            }, timeoutMs);
 
             this.pendingRequests.set(id, { resolve, reject, timer });
             this.postMessage({ id, method, params });

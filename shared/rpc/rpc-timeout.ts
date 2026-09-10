@@ -1,13 +1,3 @@
-#!/usr/bin/env bash
-set -e
-
-echo "🚀 Updating shared/rpc/rpc-timeout.ts to use RpcMethodEnum..."
-
-# Ensure target directory exists
-mkdir -p shared/rpc
-
-# Update shared/rpc/rpc-timeout.ts with enum keys
-cat << 'EOF' > shared/rpc/rpc-timeout.ts
 import { RpcMethodEnum } from "../config/rpc-methods.enum.gen";
 
 export const DEFAULT_RPC_TIMEOUT = 15000;
@@ -18,7 +8,7 @@ export const DEFAULT_RPC_TIMEOUT = 15000;
 export const RPC_METHOD_TIMEOUTS: Partial<Record<RpcMethodEnum, number>> = {
     [RpcMethodEnum.LLMCHAT_EXECUTE_CHAT]: 120000, // 2 minutes for LLM execution
     [RpcMethodEnum.LLMCHAT_STREAM_CHAT]: 120000,  // 2 minutes for LLM streaming initialization
-    [RpcMethodEnum.LLMCHAT_LIST_MODELS]: 30000,   // 30 seconds for listing models
+    [RpcMethodEnum.LLMCHAT_LIST_AVAILABLE_MODELS]: 30000,   // 30 seconds for listing models
     [RpcMethodEnum.LLMCHAT_HEALTH_CHECK]: 30000,  // 30 seconds for health check
 };
 
@@ -29,9 +19,3 @@ export const RPC_METHOD_TIMEOUTS: Partial<Record<RpcMethodEnum, number>> = {
 export function getRpcTimeout(method: string): number {
     return (RPC_METHOD_TIMEOUTS as Record<string, number>)[method] ?? DEFAULT_RPC_TIMEOUT;
 }
-EOF
-
-echo "⚙️ Rebuilding project backend..."
-npm run build:backend
-
-echo "✅ refactor(rpc): Updated RPC timeout map in shared/rpc/rpc-timeout.ts to use strongly-typed RpcMethodEnum keys!"

@@ -11,7 +11,8 @@ import {
   IChatStreamChunkDto,
   ILlmHealthResultDto,
 } from '../../../../../shared/services/llm-chat';
-import { getCurrentExtensionContext } from '../../../utils/utils-vscode';
+import { getCurrentExtensionContext, getWorkspaceRoot } from '../../../utils/utils-vscode';
+import { vsCodeSettingsManager } from '../../../managers/VsCodeSettings.manager';
 import { logInfo } from '../../../utils/utils-log';
 
 export class CopilotDelegate implements ILlmProviderDelegate {
@@ -28,15 +29,42 @@ export class CopilotDelegate implements ILlmProviderDelegate {
   private resolveNativeCliPath(): string | undefined {
     if (!CopilotDelegate.cliBinaryPath) {
       const extentionContext = getCurrentExtensionContext();
+      const isWin = process.platform === 'win32';
+      const binName = isWin ? 'copilot.exe' : 'copilot';
       const isArm64 = process.arch === 'arm64';
+      const arch = isArm64 ? 'arm64' : 'x64';
       const platform = process.platform;
+      const platformTarget = `${platform}-${arch}`;
 
-      const cliBinaryPath = extentionContext.asAbsolutePath(
-        path.join('node_modules', `@github/copilot-${platform}-${isArm64 ? 'arm64' : 'x64'}`, 'copilot')
+      const workspaceRoot = getWorkspaceRoot();
+      const backendWorkspacePath = vsCodeSettingsManager.getSettings().backendWorkspacePath || '.token-razor';
+      const localToolPath = path.join(
+        workspaceRoot,
+        backendWorkspacePath,
+        'tools',
+        'copilot',
+        platformTarget,
+        binName
       );
 
-      CopilotDelegate.cliBinaryPath = cliBinaryPath;
-      process.env.COPILOT_CLI_PATH = cliBinaryPath;
+      let foundPath: string | undefined;
+
+      if (fs.existsSync(localToolPath)) {
+        foundPath = localToolPath;
+      } else {
+        const nodeModulesPath = extentionContext.asAbsolutePath(
+          path.join('node_modules', '@github', `copilot-${platformTarget}`, binName)
+        );
+        if (fs.existsSync(nodeModulesPath)) {
+          foundPath = nodeModulesPath;
+        } else {
+          foundPath = binName;
+        }
+      }
+
+      CopilotDelegate.cliBinaryPath = foundPath;
+      process.env.COPILOT_CLI_PATH = foundPath;
+      logInfo(`[CopilotDelegate] Resolved Copilot CLI binary path: ${foundPath}`);
     }
 
     return CopilotDelegate.cliBinaryPath;
