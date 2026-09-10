@@ -1,6 +1,6 @@
 import React, { useState, useImperativeHandle, forwardRef } from 'react';
 import { TopMiddleBottomPanel } from '@/components/app/top-middle-bottom-panel';
-import { useExportConfiguration } from '../hooks/use-export-configuration';
+import { useExportConfiguration, ExporterScope } from '../hooks/use-export-configuration';
 import { CodebasePathsSection } from './CodebasePathsSection';
 import { ReferencePathsSection } from './ReferencePathsSection';
 import { DestinationSection } from './DestinationSection';
@@ -38,6 +38,8 @@ export const ExportConfigurationPanel = forwardRef<
     handleClearDestDir,
     addPathsToConfig,
   } = useExportConfiguration();
+
+  const [errorModalScope, setErrorModalScope] = useState<ExporterScope>('codebase');
 
   const [cardsOpenState, setCardsOpenState] = useState<{
     codebasePaths: boolean;
@@ -79,6 +81,11 @@ export const ExportConfigurationPanel = forwardRef<
     });
   };
 
+  const handleOpenErrorModalForScope = (scope: ExporterScope = 'codebase') => {
+    setErrorModalScope(scope);
+    handleOpenErrorModal();
+  };
+
   useImperativeHandle(ref, () => ({
     collapseAll: handleCollapseAllCards,
     expandAll: handleExpandAllCards,
@@ -98,10 +105,10 @@ export const ExportConfigurationPanel = forwardRef<
         onChangePathsText={(val: string) =>
           setConfig((prev) => ({ ...prev, codebase: { ...prev.codebase, src: val } }))
         }
-        onAddOpenFiles={handleAddOpenFiles}
-        onAddGitDiffFiles={handleAddGitDiffFiles}
-        onAddErrorStackFiles={handleOpenErrorModal}
-        onOpenCursorLinePath={handleOpenCursorLinePath}
+        onAddOpenFiles={() => handleAddOpenFiles('codebase')}
+        onAddGitDiffFiles={() => handleAddGitDiffFiles('codebase')}
+        onAddErrorStackFiles={() => handleOpenErrorModalForScope('codebase')}
+        onOpenCursorLinePath={() => handleOpenCursorLinePath('codebase')}
         onClearPaths={() =>
           setConfig((prev) => ({ ...prev, codebase: { ...prev.codebase, src: '' } }))
         }
@@ -121,10 +128,10 @@ export const ExportConfigurationPanel = forwardRef<
         onChangePathsText={(val: string) =>
           setConfig((prev) => ({ ...prev, reference: { ...prev.reference, src: val } }))
         }
-        onAddOpenFiles={handleAddOpenFiles}
-        onAddGitDiffFiles={handleAddGitDiffFiles}
-        onAddErrorStackFiles={handleOpenErrorModal}
-        onOpenCursorLinePath={handleOpenCursorLinePath}
+        onAddOpenFiles={() => handleAddOpenFiles('reference')}
+        onAddGitDiffFiles={() => handleAddGitDiffFiles('reference')}
+        onAddErrorStackFiles={() => handleOpenErrorModalForScope('reference')}
+        onOpenCursorLinePath={() => handleOpenCursorLinePath('reference')}
         onClearPaths={() =>
           setConfig((prev) => ({ ...prev, reference: { ...prev.reference, src: '' } }))
         }
@@ -163,8 +170,8 @@ export const ExportConfigurationPanel = forwardRef<
         isOpen={modalState.isErrorModalOpen}
         onClose={handleCloseErrorModal}
         onAddPaths={(paths: string[]) => {
-          logInfo('[ExportConfigurationPanel] ErrorFilesModal onAddPaths', paths);
-          addPathsToConfig(paths);
+          logInfo('[ExportConfigurationPanel] ErrorFilesModal onAddPaths', [paths, errorModalScope]);
+          addPathsToConfig(paths, errorModalScope);
         }}
       />
     </>

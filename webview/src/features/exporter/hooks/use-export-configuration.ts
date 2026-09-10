@@ -129,7 +129,7 @@ export function useExportConfiguration() {
 
     // Codebase scope listeners
     const unsubscribeCodebaseAdd = vsCodeBackendMessageHandler.on(EXPORTER_CODEBASE_ADD_PATHS, (msg) => {
-      const rawPayload = msg.payload || msg.payload.paths;
+      const rawPayload = msg.payload || msg.payload?.paths;
       logInfo(`[useExportConfiguration] Received ${msg.command} message`, [rawPayload]);
       if (rawPayload) {
         const newPaths = String(rawPayload).split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
@@ -138,7 +138,7 @@ export function useExportConfiguration() {
     });
 
     const unsubscribeCodebaseExclude = vsCodeBackendMessageHandler.on(EXPORTER_CODEBASE_EXCLUDE_PATHS, (msg) => {
-      const rawPayload = msg.payload || msg.payload.paths;
+      const rawPayload = msg.payload || msg.payload?.paths;
       logInfo(`[useExportConfiguration] Received ${msg.command} message`, [rawPayload]);
       if (rawPayload) {
         const paths = String(rawPayload).split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
@@ -148,7 +148,7 @@ export function useExportConfiguration() {
 
     // Reference scope listeners
     const unsubscribeReferenceAdd = vsCodeBackendMessageHandler.on(EXPORTER_REFERENCE_ADD_PATHS, (msg) => {
-      const rawPayload = msg.payload || msg.payload.paths;
+      const rawPayload = msg.payload || msg.payload?.paths;
       logInfo(`[useExportConfiguration] Received ${msg.command} message`, [rawPayload]);
       if (rawPayload) {
         const newPaths = String(rawPayload).split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
@@ -157,7 +157,7 @@ export function useExportConfiguration() {
     });
 
     const unsubscribeReferenceExclude = vsCodeBackendMessageHandler.on(EXPORTER_REFERENCE_EXCLUDE_PATHS, (msg) => {
-      const rawPayload = msg.payload || msg.payload.paths;
+      const rawPayload = msg.payload || msg.payload?.paths;
       logInfo(`[useExportConfiguration] Received ${msg.command} message`, [rawPayload]);
       if (rawPayload) {
         const paths = String(rawPayload).split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
@@ -173,29 +173,31 @@ export function useExportConfiguration() {
     };
   }, [store.workspaceRoot]);
 
-  const handleAddOpenFiles = async () => {
+  const handleAddOpenFiles = async (scope: ExporterScope = 'codebase') => {
     try {
-      const currentDisplayLines = (store.config.codebase.src || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
+      const currentDisplayLines = (store.config[scope]?.src || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
       const currentAbsPaths = currentDisplayLines.map((line) => PathMappingService.resolveToAbsolute(line, store.workspaceRoot));
 
       const openFiles = await fileExporterApiService.getOpenEditorFiles(currentAbsPaths);
-      addPathsInConfig(openFiles, 'codebase');
-      fileExporterApiService.showNotification('info', `Added open editor files (${openFiles.length} total paths)`);
+      addPathsInConfig(openFiles, scope);
+      const scopeLabel = scope === 'codebase' ? 'Codebase' : 'Reference';
+      fileExporterApiService.showNotification('info', `Added open editor files to ${scopeLabel} (${openFiles.length} total paths)`);
     } catch (err: any) {
-      logInfo('[useExportConfiguration] Error adding open files:', [err]);
+      logInfo(`[useExportConfiguration] Error adding open files to ${scope}:`, [err]);
     }
   };
 
-  const handleAddGitDiffFiles = async () => {
+  const handleAddGitDiffFiles = async (scope: ExporterScope = 'codebase') => {
     try {
-      const currentDisplayLines = (store.config.codebase.src || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
+      const currentDisplayLines = (store.config[scope]?.src || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean);
       const currentAbsPaths = currentDisplayLines.map((line) => PathMappingService.resolveToAbsolute(line, store.workspaceRoot));
 
       const gitFiles = await fileExporterApiService.getGitDiffFiles(currentAbsPaths);
-      addPathsInConfig(gitFiles, 'codebase');
-      fileExporterApiService.showNotification('info', `Added modified Git files (${gitFiles.length} total paths)`);
+      addPathsInConfig(gitFiles, scope);
+      const scopeLabel = scope === 'codebase' ? 'Codebase' : 'Reference';
+      fileExporterApiService.showNotification('info', `Added modified Git files to ${scopeLabel} (${gitFiles.length} total paths)`);
     } catch (err: any) {
-      logInfo('[useExportConfiguration] Error adding Git diff files:', [err]);
+      logInfo(`[useExportConfiguration] Error adding Git diff files to ${scope}:`, [err]);
     }
   };
 
@@ -226,8 +228,8 @@ export function useExportConfiguration() {
     await vsCodeApiService.revealInOsExplorer(absDest);
   };
 
-  const handleOpenCursorLinePath = async () => {
-    const firstLine = (store.config.codebase.src || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean)[0];
+  const handleOpenCursorLinePath = async (scope: ExporterScope = 'codebase') => {
+    const firstLine = (store.config[scope]?.src || '').split(/[,\n\r]+/).map((s) => s.trim()).filter(Boolean)[0];
     if (firstLine) {
       const absPath = PathMappingService.resolveToAbsolute(firstLine, store.workspaceRoot);
       await fileExporterApiService.openPathAtCursor(absPath);
