@@ -11,7 +11,7 @@
         "--disable-extensions"
       ],
       "outFiles": [
-        "${workspaceFolder}/dist-backend/**/*.js"
+        "${workspaceFolder}/dist-backend/*.js"
       ],
       "sourceMaps": true,
       "smartStep": true,

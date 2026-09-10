@@ -1,37 +1,76 @@
 #!/usr/bin/env bash
 set -e
 
-echo "🚀 Updating shared/rpc/rpc-timeout.ts to use RpcMethodEnum..."
+echo "🚀 Installing esbuild dependency..."
+npm install --save-dev esbuild
 
-# Ensure target directory exists
-mkdir -p shared/rpc
+echo "📦 Creating backend esbuild configuration (dev-tools/esbuild.js)..."
+mkdir -p dev-tools
 
-# Update shared/rpc/rpc-timeout.ts with enum keys
-cat << 'EOF' > shared/rpc/rpc-timeout.ts
-import { RpcMethodEnum } from "../config/rpc-methods.enum.gen";
+cat << 'EOF' > dev-tools/esbuild.js
+const esbuild = require('esbuild');
 
-export const DEFAULT_RPC_TIMEOUT = 15000;
+const isWatch = process.argv.includes('--watch');
 
-/**
- * Method-specific RPC timeout definitions (in milliseconds).
- */
-export const RPC_METHOD_TIMEOUTS: Partial<Record<RpcMethodEnum, number>> = {
-    [RpcMethodEnum.LLMCHAT_EXECUTE_CHAT]: 120000, // 2 minutes for LLM execution
-    [RpcMethodEnum.LLMCHAT_STREAM_CHAT]: 120000,  // 2 minutes for LLM streaming initialization
-    [RpcMethodEnum.LLMCHAT_LIST_MODELS]: 30000,   // 30 seconds for listing models
-    [RpcMethodEnum.LLMCHAT_HEALTH_CHECK]: 30000,  // 30 seconds for health check
+/** @type {import('esbuild').BuildOptions} */
+const buildOptions = {
+  entryPoints: ['backend/src/extension.ts'],
+  bundle: true,
+  outfile: 'dist-backend/extension.js',
+  external: ['vscode'],
+  format: 'cjs',
+  platform: 'node',
+  target: 'node18',
+  sourcemap: true,
+  minify: false,
+  logLevel: 'info',
 };
 
-/**
- * Retrieves the timeout for a given RPC method name.
- * Falls back to DEFAULT_RPC_TIMEOUT (15s) if not specified in the map.
- */
-export function getRpcTimeout(method: string): number {
-    return (RPC_METHOD_TIMEOUTS as Record<string, number>)[method] ?? DEFAULT_RPC_TIMEOUT;
+async function run() {
+  if (isWatch) {
+    const ctx = await esbuild.context(buildOptions);
+    await ctx.watch();
+    console.log('⚡ Watching backend for changes...');
+  } else {
+    await esbuild.build(buildOptions);
+    console.log('✅ Backend successfully bundled into dist-backend/extension.js');
+  }
 }
+
+run().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
 EOF
 
-echo "⚙️ Rebuilding project backend..."
-npm run build:backend
+echo "⚙️ Updating root package.json entry point and scripts..."
+node -e '
+const fs = require("fs");
+const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
 
-echo "✅ refactor(rpc): Updated RPC timeout map in shared/rpc/rpc-timeout.ts to use strongly-typed RpcMethodEnum keys!"
+pkg.main = "./dist-backend/extension.js";
+pkg.scripts["build:backend"] = "npm run generate:code && node dev-tools/esbuild.js";
+pkg.scripts["watch:backend"] = "node dev-tools/esbuild.js --watch";
+
+fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
+'
+
+echo "⚙️ Updating .vscode/launch.json outFiles..."
+node -e '
+const fs = require("fs");
+const launchPath = ".vscode/launch.json";
+
+if (fs.existsSync(launchPath)) {
+  const launch = JSON.parse(fs.readFileSync(launchPath, "utf-8"));
+  if (launch.configurations && launch.configurations[0]) {
+    launch.configurations[0].outFiles = ["${workspaceFolder}/dist-backend/*.js"];
+  }
+  fs.writeFileSync(launchPath, JSON.stringify(launch, null, 2));
+}
+'
+
+echo "🧹 Cleaning and compiling project..."
+rm -rf dist-backend dist-webview
+npm run build
+
+echo "✅ fix(vsix): Configured esbuild backend bundler to resolve missing node_modules and ESM module loading crashes!"

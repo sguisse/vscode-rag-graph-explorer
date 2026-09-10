@@ -24,7 +24,7 @@
     "Other"
   ],
   "icon": "assets/logo-max-light.png",
-  "main": "./dist-backend/backend/src/extension.js",
+  "main": "./dist-backend/extension.js",
   "files": [
     "dist-backend",
     "dist-webview",
@@ -944,22 +944,23 @@
     "install:all": "npm install && npm install --prefix webview",
     "vscode:prepublish": "npm run build",
     "generate:code": "node dev-tools/generate-all.js",
-    "build:backend": "npm run generate:code && tsc -p backend/tsconfig.json",
+    "build:backend": "npm run generate:code && node backend/esbuild.js",
     "build:webview": "cd webview && npm run build",
     "build": "npm run build:backend && npm run build:webview",
-    "watch:backend": "tsc -watch -p backend/tsconfig.json",
+    "watch:backend": "node backend/esbuild.js --watch",
     "watch:webview": "cd webview && npm run dev",
     "compile": "npm run build"
   },
   "dependencies": {
-    "@github/copilot-sdk": "^1.0.13",
-    "neo4j-driver": "^6.2.0",
-    "js-yaml": "^5.4.1"
+    "js-yaml": "^5.4.1",
+    "neo4j-driver": "^6.2.0"
   },
   "devDependencies": {
+    "@github/copilot-sdk": "^1.0.13",
     "@modyfi/vite-plugin-yaml": "^1.1.1",
     "@types/node": "^26.1.2",
     "@types/vscode": "^1.125.0",
+    "esbuild": "^0.28.2",
     "typescript": "^5.3.3"
   },
   "allowScripts": {
