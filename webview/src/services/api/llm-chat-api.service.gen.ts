@@ -6,7 +6,7 @@ import { AbstractApiService } from '@/services/abstract-api.service';
 import { IChatRequestDto } from '@/shared/services/llm-chat/model/dto/chat-request.dto';
 import { IChatResponseDto, IChatStreamChunkDto, ILlmHealthResultDto } from '@/shared/services/llm-chat/model/dto/chat-response.dto';
 import { LlmProvider } from '@/shared/services/llm-chat/types/llm-provider.enum';
-import { ILlmModelInfo } from '@/shared/services/llm-chat/model/value-objects/llm-model.vo';
+import { LlmModelInfo } from '@/shared/services/llm-chat/model/value-objects/llm-model.vo';
 import { ILlmChatServicePort } from '@/shared/services/llm-chat/port-out/llm-chat-service.port';
 
 class LlmChatApiService extends AbstractApiService implements ILlmChatServicePort {
@@ -22,7 +22,7 @@ class LlmChatApiService extends AbstractApiService implements ILlmChatServicePor
         return await this.rpc.call(RpcMethodEnum.LLMCHAT_STREAM_CHAT, request, onChunk);
     }
 
-    public async listAvailableModels(provider?: LlmProvider): Promise<ILlmModelInfo[]> {
+    public async listAvailableModels(provider?: LlmProvider): Promise<LlmModelInfo[]> {
         return await this.rpc.call(RpcMethodEnum.LLMCHAT_LIST_AVAILABLE_MODELS, provider);
     }
 

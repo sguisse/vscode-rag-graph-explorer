@@ -5,7 +5,7 @@ import {
   IChatRequestDto,
   IChatResponseDto,
   IChatStreamChunkDto,
-  ILlmModelInfo,
+  LlmModelInfo,
   ILlmHealthResultDto,
   LlmProvider,
   LlmConfigVO,
@@ -105,7 +105,7 @@ export class LlmChatServiceAdapter implements ILlmChatServicePort {
     });
   }
 
-  public async listAvailableModels(provider?: LlmProvider): Promise<ILlmModelInfo[]> {
+  public async listAvailableModels(provider?: LlmProvider): Promise<LlmModelInfo[]> {
     log(ORIGIN, 'Listing available LLM models', { provider: provider || 'all' });
     if (provider) {
       const delegate = LlmDelegateFactory.getDelegate(provider);

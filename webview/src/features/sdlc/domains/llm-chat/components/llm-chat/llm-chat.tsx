@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CollapsibleCard } from '@/components/app/collapsible-card';
 import { X, Info, Send, Copy, Check, Zap } from 'lucide-react';
-import { LlmProvider, ILlmModelInfo } from '@/shared/services/llm-chat';
+import { LlmProvider, LlmModelInfo } from '@/shared/services/llm-chat';
 import { useLlmChat } from '@/features/sdlc/domains/llm-chat/hooks/use-llm-chat';
 import { computeCostRating } from '@/features/sdlc/domains/llm-chat/hooks/use-llm-models-info';
 import { useLlmModelsInfoModal } from '@/features/sdlc/domains/llm-chat/hooks/use-llm-models-info-modal';
@@ -48,12 +48,12 @@ export const LLMChat: React.FC = () => {
    * Helper to format model specifications in small text in parenthesis:
    * (max input tokens, cost level [1-5], tools, vision, thinking, effort, streaming)
    */
-  const renderModelSpecsBadge = (m: ILlmModelInfo) => {
+  const renderModelSpecsBadge = (m: LlmModelInfo) => {
     const cost = computeCostRating(m);
     const limits = m.capabilities?.limits;
     const supports = m.capabilities?.supports;
 
-    const maxInput = limits?.max_prompt_tokens ?? limits?.max_context_window_tokens ?? m.contextWindow;
+    const maxInput = limits?.max_prompt_tokens ?? limits?.max_context_window_tokens ?? m.context_window;
     const maxInputText = maxInput
       ? maxInput >= 1000000
         ? `${(maxInput / 1000000).toFixed(1)}M in`
@@ -68,7 +68,7 @@ export const LLMChat: React.FC = () => {
     if (supports?.vision) specs.push('vision');
     if (supports?.adaptive_thinking || supports?.max_thinking_budget) specs.push('thinking');
     if (
-      (m.supportedReasoningEfforts && m.supportedReasoningEfforts.length > 0) ||
+      (m.supported_reasoning_efforts && m.supported_reasoning_efforts.length > 0) ||
       (supports?.reasoning_effort && supports.reasoning_effort.length > 0)
     ) {
       specs.push('effort');
@@ -122,7 +122,7 @@ export const LLMChat: React.FC = () => {
           </SelectTrigger>
           <SelectContent className="max-w-[550px] z-[10000]">
             {enabledModels.map((m) => {
-              const isCustomModel = m.capabilities?.family === 'custom' || m.modelPickerCategory === 'custom';
+              const isCustomModel = m.capabilities?.family === 'custom' || m.model_picker_category === 'custom';
               return (
                 <SelectItem key={m.id} value={m.id}>
                   <div className="flex flex-wrap items-center gap-1.5 font-mono text-xs truncate">

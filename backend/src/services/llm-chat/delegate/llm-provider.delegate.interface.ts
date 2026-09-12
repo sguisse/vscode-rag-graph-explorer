@@ -1,6 +1,6 @@
 import {
   LlmProvider,
-  ILlmModelInfo,
+  LlmModelInfo,
   LlmConfigVO,
   ChatPromptVO,
   IChatResponseDto,
@@ -24,7 +24,7 @@ export interface ILlmProviderDelegate {
     onChunk: (chunk: IChatStreamChunkDto) => void
   ): Promise<IChatResponseDto>;
 
-  listModels(config?: LlmConfigVO): Promise<ILlmModelInfo[]>;
+  listModels(config?: LlmConfigVO): Promise<LlmModelInfo[]>;
 
   healthCheck(baseUrl?: string): Promise<ILlmHealthResultDto>;
 }

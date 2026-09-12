@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import { LlmProvider } from '@/shared/services/llm-chat';
-import { useLlmModelsInfo, ModelTableRow, SortField } from '@/features/sdlc/domains/llm-chat/hooks/use-llm-models-info';
+import {
+  useLlmModelsInfo,
+  ModelTableRow,
+  SortField,
+  SortRule,
+  INITIAL_SORT_RULES,
+} from '@/features/sdlc/domains/llm-chat/hooks/use-llm-models-info';
 import { useExplorerStore } from '@/features/sdlc/domains/llm-chat/store/useLlmDomainState';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -13,6 +19,93 @@ interface LLMModelsInfoProps {
   initialProvider?: LlmProvider | 'all';
   onSelectModel?: (provider: LlmProvider, modelId: string) => void;
 }
+
+export interface ModelTableColumnDef {
+  key: string;
+  field: SortField;
+  label: React.ReactNode;
+  defaultWidth: number;
+}
+
+export { INITIAL_SORT_RULES };
+
+export const MODEL_TABLE_COLUMNS: ModelTableColumnDef[] = [
+  { key: 'enabled', field: 'enabled', label: '☐', defaultWidth: 55 },
+  { key: 'provider', field: 'provider', label: 'Prov.', defaultWidth: 95 },
+  { key: 'name', field: 'name', label: 'Model', defaultWidth: 210 },
+  { key: 'cost', field: 'cost', label: 'Cost', defaultWidth: 100 },
+  { key: 'category', field: 'category', label: 'Category', defaultWidth: 120 },
+  {
+    key: 'contextWindow',
+    field: 'contextWindow',
+    label: (
+      <>
+        <span className="block">Max</span>
+        <span>Context</span>
+      </>
+    ),
+    defaultWidth: 95,
+  },
+  {
+    key: 'maxPrompt',
+    field: 'maxPrompt',
+    label: (
+      <>
+        <span className="block">Max</span>
+        <span>Prompt</span>
+      </>
+    ),
+    defaultWidth: 95,
+  },
+  {
+    key: 'maxOutput',
+    field: 'maxOutput',
+    label: (
+      <>
+        <span className="block">Max</span>
+        <span>Output</span>
+      </>
+    ),
+    defaultWidth: 95,
+  },
+  {
+    key: 'adaptiveThinking',
+    field: 'adaptiveThinking',
+    label: (
+      <>
+        <span className="block">Adaptive</span>
+        <span>Thinking</span>
+      </>
+    ),
+    defaultWidth: 80,
+  },
+  {
+    key: 'reasoningEffort',
+    field: 'reasoningEffort',
+    label: (
+      <>
+        <span className="block">Reasoning</span>
+        <span>Effort</span>
+      </>
+    ),
+    defaultWidth: 160,
+  },
+  { key: 'tools', field: 'tools', label: 'Tools', defaultWidth: 65 },
+  { key: 'vision', field: 'vision', label: 'Vision', defaultWidth: 65 },
+  { key: 'tokenizer', field: 'tokenizer', label: 'Tokenizer', defaultWidth: 105 },
+  { key: 'streaming', field: 'streaming', label: 'Streaming', defaultWidth: 75 },
+  {
+    key: 'structuredOutputs',
+    field: 'structuredOutputs',
+    label: (
+      <>
+        <span className="block">Structured</span>
+        <span>Outputs</span>
+      </>
+    ),
+    defaultWidth: 85,
+  },
+];
 
 export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
   initialProvider = 'all',
@@ -37,23 +130,12 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
   const setLlmSelectedModel = useExplorerStore((s) => s.setLlmSelectedModel);
   const currentSelectedModel = useExplorerStore((s) => s.llmSelectedModel);
 
-  const [colWidths, setColWidths] = useState<Record<string, number>>({
-    provider: 95,
-    name: 210,
-    cost: 100,
-    category: 120,
-    contextWindow: 95,
-    maxPrompt: 95,
-    maxOutput: 95,
-    adaptiveThinking: 80,
-    reasoningEffort: 160,
-    tools: 65,
-    vision: 65,
-    tokenizer: 105,
-    streaming: 75,
-    structuredOutputs: 85,
-    tokenPricing: 420,
-  });
+  const [colWidths, setColWidths] = useState<Record<string, number>>(() =>
+    MODEL_TABLE_COLUMNS.reduce<Record<string, number>>((acc, col) => {
+      acc[col.key] = col.defaultWidth;
+      return acc;
+    }, {})
+  );
 
   const handleColumnResize = (colKey: string, startX: number, startWidth: number) => {
     const onMouseMove = (e: MouseEvent) => {
@@ -120,12 +202,22 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
   };
 
   const getStickyHeaderClassAndStyle = (colKey: string) => {
-    if (colKey === 'provider') {
+    if (colKey === 'enabled') {
       return {
         className: 'sticky left-0 bg-muted/90 z-20',
         style: {
+          width: `${colWidths.enabled}px`,
+          minWidth: `${colWidths.enabled}px`,
+        },
+      };
+    }
+    if (colKey === 'provider') {
+      return {
+        className: 'sticky bg-muted/90 z-20',
+        style: {
           width: `${colWidths.provider}px`,
           minWidth: `${colWidths.provider}px`,
+          left: `${colWidths.enabled}px`,
         },
       };
     }
@@ -135,7 +227,7 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
         style: {
           width: `${colWidths.name}px`,
           minWidth: `${colWidths.name}px`,
-          left: `${colWidths.provider}px`,
+          left: `${colWidths.enabled + colWidths.provider}px`,
         },
       };
     }
@@ -153,6 +245,7 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
 
     return (
       <th
+        key={colKey}
         style={style}
         className={`relative p-2 font-bold text-muted-foreground select-none align-middle ${className}`}
       >
@@ -173,19 +266,31 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
   const formatTokens = (val?: number) => (val ? `${(val / 1000).toFixed(0)}k` : '-');
 
   const renderTableRow = (row: ModelTableRow, depth = 0) => {
-    const isCustomFamily = row.capabilities?.family === 'custom' || row.modelPickerCategory === 'custom';
+    const isCustomFamily = row.capabilities?.family === 'custom' || row.model_picker_category === 'custom';
     const isExpanded = Boolean(expandedRowIds[row.id]);
     const hasSubRows = Boolean(row.subRows && row.subRows.length > 0);
     const isSelectedModel = row.rowType === 'model' && row.id === currentSelectedModel;
     const isNotEnabled = Boolean(row.policy?.state && row.policy.state.toLowerCase() !== 'enabled');
+    const isEnabled = !isNotEnabled;
 
     if (row.rowType === 'detail') {
       return (
         <React.Fragment key={row.id}>
           <tr className="bg-muted/15 hover:bg-muted/30 transition-colors">
             <td
-              style={{ width: `${colWidths.provider}px`, minWidth: `${colWidths.provider}px` }}
-              className="left-0 z-10 sticky bg-background/95 backdrop-blur p-2 font-mono text-xs align-middle"
+              style={{ width: `${colWidths.enabled}px`, minWidth: `${colWidths.enabled}px` }}
+              className="left-0 z-10 sticky bg-background/95 backdrop-blur p-2 font-mono text-xs text-center align-middle"
+            >
+              <span className="text-[10px] text-muted-foreground">-</span>
+            </td>
+
+            <td
+              style={{
+                width: `${colWidths.provider}px`,
+                minWidth: `${colWidths.provider}px`,
+                left: `${colWidths.enabled}px`,
+              }}
+              className="z-10 sticky bg-background/95 backdrop-blur p-2 font-mono text-xs align-middle"
             >
               <span className="text-[10px] text-muted-foreground">-</span>
             </td>
@@ -194,7 +299,7 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
               style={{
                 width: `${colWidths.name}px`,
                 minWidth: `${colWidths.name}px`,
-                left: `${colWidths.provider}px`,
+                left: `${colWidths.enabled + colWidths.provider}px`,
               }}
               className="z-10 sticky bg-background/95 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] backdrop-blur p-2 font-mono text-xs align-middle"
             >
@@ -206,7 +311,7 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
               </div>
             </td>
 
-            <td colSpan={13} className="p-2 font-mono text-[11px] text-foreground align-middle">
+            <td colSpan={MODEL_TABLE_COLUMNS.length - 3} className="p-2 font-mono text-[11px] text-foreground align-middle">
               <span className="block font-mono text-[11px] text-muted-foreground truncate">
                 {row.tokenPricingText || row.detailsText}
               </span>
@@ -218,7 +323,7 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
 
     let rowTextStyle = 'text-foreground';
     if (isNotEnabled) {
-      rowTextStyle = 'font-bold text-destructive';
+      rowTextStyle = 'text-muted-foreground';
     } else if (row.hasPromo) {
       rowTextStyle = 'font-bold text-emerald-600 dark:text-emerald-400';
     } else if (isCustomFamily) {
@@ -226,7 +331,7 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
     }
 
     const stickyCellBg = isNotEnabled
-      ? 'bg-destructive/30 backdrop-blur text-destructive'
+      ? 'bg-destructive/10 backdrop-blur'
       : isSelectedModel
       ? 'bg-primary/10 backdrop-blur'
       : 'bg-background/95 backdrop-blur';
@@ -239,7 +344,7 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
           onClick={() => handleModelSelect(row)}
           className={`transition-colors cursor-pointer ${
             isNotEnabled
-              ? 'bg-destructive/20 hover:bg-destructive/30 text-destructive font-semibold'
+              ? 'bg-destructive/10 hover:bg-destructive/20'
               : isSelectedModel
               ? 'bg-primary/15 hover:bg-primary/20 ring-1 ring-inset ring-primary/40'
               : 'bg-card/50 hover:bg-muted/40'
@@ -247,10 +352,21 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
           data-tooltip={isNotEnabled ? `Disabled by Policy (${row.policy?.state || 'disabled'})` : 'Click to select this model for LLM Chat'}
         >
           <td
-            style={{ width: `${colWidths.provider}px`, minWidth: `${colWidths.provider}px` }}
-            className={`left-0 z-10 sticky ${stickyCellBg} p-2 font-mono text-xs align-middle`}
+            style={{ width: `${colWidths.enabled}px`, minWidth: `${colWidths.enabled}px` }}
+            className={`left-0 z-10 sticky ${stickyCellBg} p-2 font-mono text-xs text-center align-middle`}
           >
-            <span className={`px-1.5 py-0.5 border rounded font-mono text-[10px] uppercase ${isNotEnabled ? 'border-destructive/50 bg-destructive/30 text-destructive font-bold' : 'bg-muted border-border ' + rowTextStyle}`}>
+            <Checkbox checked={isEnabled} disabled className="pointer-events-none" />
+          </td>
+
+          <td
+            style={{
+              width: `${colWidths.provider}px`,
+              minWidth: `${colWidths.provider}px`,
+              left: `${colWidths.enabled}px`,
+            }}
+            className={`z-10 sticky ${stickyCellBg} p-2 font-mono text-xs align-middle`}
+          >
+            <span className={`px-1.5 py-0.5 border rounded font-mono text-[10px] uppercase ${isNotEnabled ? 'border-destructive/30 bg-destructive/15 text-muted-foreground font-semibold' : 'bg-muted border-border ' + rowTextStyle}`}>
               {row.provider || 'N/A'}
             </span>
           </td>
@@ -259,7 +375,7 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
             style={{
               width: `${colWidths.name}px`,
               minWidth: `${colWidths.name}px`,
-              left: `${colWidths.provider}px`,
+              left: `${colWidths.enabled + colWidths.provider}px`,
             }}
             className={`z-10 sticky ${stickyCellBg} shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] p-2 font-mono text-xs align-middle`}
           >
@@ -287,7 +403,10 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
                   <Check size={10} className="stroke-[3]" />
                 </span>
               )}
-              <span className={`font-medium truncate block ${rowTextStyle}`}>
+              <span
+                className={`font-medium truncate block ${rowTextStyle}`}
+                data-tooltip={row.id}
+              >
                 {row.name}
               </span>
             </div>
@@ -314,7 +433,7 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
           </td>
 
           <td style={{ width: `${colWidths.contextWindow}px` }} className="p-2 font-mono text-xs align-middle">
-            <span className={`font-mono text-xs ${rowTextStyle}`}>{formatTokens(row.contextWindow)}</span>
+            <span className={`font-mono text-xs ${rowTextStyle}`}>{formatTokens(row.context_window)}</span>
           </td>
 
           <td style={{ width: `${colWidths.maxPrompt}px` }} className="p-2 font-mono text-xs align-middle">
@@ -383,12 +502,6 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
 
           <td style={{ width: `${colWidths.structuredOutputs}px` }} className="p-2 font-mono text-xs text-center align-middle">
             <Checkbox checked={row.structuredOutputs} disabled className="pointer-events-none" />
-          </td>
-
-          <td style={{ width: `${colWidths.tokenPricing}px` }} className="p-2 font-mono text-xs align-middle">
-            <span className={`font-mono text-[11px] truncate block ${rowTextStyle}`}>
-              {row.tokenPricingText}
-            </span>
           </td>
         </tr>
 
@@ -474,33 +587,21 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
         <table className="w-full text-left border-collapse table-fixed">
           <thead className="top-0 z-20 sticky bg-muted/90 backdrop-blur border-border border-b font-mono text-[11px] uppercase">
             <tr>
-              {renderHeaderCell('Provider', 'provider', 'provider')}
-              {renderHeaderCell('Model Name', 'name', 'name')}
-              {renderHeaderCell('Cost', 'cost', 'cost')}
-              {renderHeaderCell('Category', 'category', 'category')}
-              {renderHeaderCell(<><span className="block">Max</span><span>Context</span></>, 'contextWindow', 'contextWindow')}
-              {renderHeaderCell(<><span className="block">Max</span><span>Prompt</span></>, 'maxPrompt', 'maxPrompt')}
-              {renderHeaderCell(<><span className="block">Max</span><span>Output</span></>, 'maxOutput', 'maxOutput')}
-              {renderHeaderCell(<><span className="block">Adaptive</span><span>Thinking</span></>, 'adaptiveThinking', 'adaptiveThinking')}
-              {renderHeaderCell(<><span className="block">Reasoning</span><span>Effort</span></>, 'reasoningEffort', 'reasoningEffort')}
-              {renderHeaderCell('Tools', 'tools', 'tools')}
-              {renderHeaderCell('Vision', 'vision', 'vision')}
-              {renderHeaderCell('Tokenizer', 'tokenizer', 'tokenizer')}
-              {renderHeaderCell('Streaming', 'streaming', 'streaming')}
-              {renderHeaderCell(<><span className="block">Structured</span><span>Outputs</span></>, 'structuredOutputs', 'structuredOutputs')}
-              {renderHeaderCell('Token Pricing', 'tokenPricing', 'tokenPricing')}
+              {MODEL_TABLE_COLUMNS.map((col) =>
+                renderHeaderCell(col.label, col.field, col.key)
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-border/60">
             {loading ? (
               <tr>
-                <td colSpan={15} className="p-8 text-muted-foreground text-xs text-center italic">
+                <td colSpan={MODEL_TABLE_COLUMNS.length} className="p-8 text-muted-foreground text-xs text-center italic">
                   Loading LLM Models metadata...
                 </td>
               </tr>
             ) : tableData.length === 0 ? (
               <tr>
-                <td colSpan={15} className="p-8 text-muted-foreground text-xs text-center italic">
+                <td colSpan={MODEL_TABLE_COLUMNS.length} className="p-8 text-muted-foreground text-xs text-center italic">
                   No models matched your selection.
                 </td>
               </tr>

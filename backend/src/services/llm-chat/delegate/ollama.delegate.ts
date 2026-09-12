@@ -1,7 +1,7 @@
 import { ILlmProviderDelegate } from './llm-provider.delegate.interface';
 import {
   LlmProvider,
-  ILlmModelInfo,
+  LlmModelInfo,
   LlmConfigVO,
   ChatPromptVO,
   IChatResponseDto,
@@ -207,14 +207,14 @@ export class OllamaDelegate implements ILlmProviderDelegate {
     }
   }
 
-  public async listModels(config?: LlmConfigVO): Promise<ILlmModelInfo[]> {
+  public async listModels(config?: LlmConfigVO): Promise<LlmModelInfo[]> {
     const baseUrl = config?.baseUrl || 'http://localhost:11434';
     log(ORIGIN, 'Fetching list of models from Ollama daemon', { baseUrl });
     try {
       const res = await fetch(`${baseUrl}/api/tags`);
       if (!res.ok) return [];
       const data = (await res.json()) as { models?: Array<{ name: string; details?: { family?: string } }> };
-      const models: ILlmModelInfo[] = (data.models || []).map((m) => ({
+      const models: LlmModelInfo[] = (data.models || []).map((m) => ({
         id: m.name,
         name: m.name,
         provider: this.provider,
@@ -228,7 +228,7 @@ export class OllamaDelegate implements ILlmProviderDelegate {
       return models;
     } catch (err: any) {
       log(ORIGIN, 'Failed to fetch Ollama models from API, returning fallbacks', { error: err?.message });
-      const fallbackModels: ILlmModelInfo[] = [
+      const fallbackModels: LlmModelInfo[] = [
         { id: 'deepseek-coder:6.7b', name: 'deepseek-coder:6.7b', provider: this.provider },
         { id: 'llama3:8b', name: 'llama3:8b', provider: this.provider },
       ];

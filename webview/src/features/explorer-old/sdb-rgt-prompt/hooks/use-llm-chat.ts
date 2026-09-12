@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   LlmProvider,
   IChatMessageDto,
-  ILlmModelInfo,
+  LlmModelInfo,
   IFileContextDto,
 } from '@/shared/services/llm-chat';
 import { llmChatApiService } from '@/services/api/llm-chat-api.service.gen';
@@ -95,7 +95,7 @@ export function useLlmChat() {
   const setFilePathInput = useExplorerStore((s) => s.setLlmFilePathInput);
   const setLlmExpandedCards = useExplorerStore((s) => s.setLlmExpandedCards);
 
-  const [models, setModels] = useState<ILlmModelInfo[]>([]);
+  const [models, setModels] = useState<LlmModelInfo[]>([]);
   const [systemPrompt] = useState<string>('You are an expert Graph RAG Assistant.');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isReadingFile, setIsReadingFile] = useState<boolean>(false);

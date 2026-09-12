@@ -311,7 +311,7 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
 
           {/* Max Context */}
           <td style={{ width: `${colWidths.contextWindow}px` }} className="p-2 font-mono text-xs align-middle">
-            <span className={`font-mono text-xs ${rowTextStyle}`}>{formatTokens(row.contextWindow)}</span>
+            <span className={`font-mono text-xs ${rowTextStyle}`}>{formatTokens(row.context_window)}</span>
           </td>
 
           {/* Max Prompt */}
@@ -490,7 +490,7 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
               {renderHeaderCell('Model Name', 'name', 'name')}
               {renderHeaderCell('Cost', 'cost', 'cost')}
               {renderHeaderCell('Category', 'category', 'category')}
-              {renderHeaderCell(<><span className="block">Max</span><span>Context</span></>, 'contextWindow', 'contextWindow')}
+              {renderHeaderCell(<><span className="block">Max</span><span>Context</span></>, 'context_window', 'contextWindow')}
               {renderHeaderCell(<><span className="block">Max</span><span>Prompt</span></>, 'maxPrompt', 'maxPrompt')}
               {renderHeaderCell(<><span className="block">Max</span><span>Output</span></>, 'maxOutput', 'maxOutput')}
               {renderHeaderCell(<><span className="block">Adaptive</span><span>Thinking</span></>, 'adaptiveThinking', 'adaptiveThinking')}

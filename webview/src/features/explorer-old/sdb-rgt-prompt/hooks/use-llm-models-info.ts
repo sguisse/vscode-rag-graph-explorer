@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ILlmModelInfo, LlmProvider } from '@/shared/services/llm-chat';
+import { LlmModelInfo, LlmProvider } from '@/shared/services/llm-chat';
 import { llmChatApiService } from '@/services/api/llm-chat-api.service.gen';
 
 export type SortField =
@@ -7,7 +7,7 @@ export type SortField =
   | 'name'
   | 'cost'
   | 'category'
-  | 'contextWindow'
+  | 'context_window'
   | 'maxPrompt'
   | 'maxOutput'
   | 'adaptiveThinking'
@@ -26,7 +26,7 @@ export interface SortRule {
   order: SortOrder;
 }
 
-export interface ModelTableRow extends ILlmModelInfo {
+export interface ModelTableRow extends LlmModelInfo {
   rowType: 'model' | 'detail';
   detailsText: string;
   categoryText: string;
@@ -48,60 +48,60 @@ export interface ModelTableRow extends ILlmModelInfo {
   subRows?: ModelTableRow[];
 }
 
-export function computeCostRating(m: ILlmModelInfo): number {
-  if (m.billing?.tokenPrices) {
-    const inputPrice = m.billing.tokenPrices.inputPrice ?? 0;
-    if (inputPrice === 0) return 1;
-    if (inputPrice <= 100) return 2;
-    if (inputPrice <= 250) return 3;
-    if (inputPrice <= 450) return 4;
+export function computeCostRating(m: LlmModelInfo): number {
+  if (m.billing?.token_prices) {
+    const input_price = m.billing.token_prices.input_price ?? 0;
+    if (input_price === 0) return 1;
+    if (input_price <= 100) return 2;
+    if (input_price <= 250) return 3;
+    if (input_price <= 450) return 4;
     return 5;
   }
 
-  if (m.modelPickerPriceCategory === 'low') return 1;
-  if (m.modelPickerPriceCategory === 'medium') return 3;
-  if (m.modelPickerPriceCategory === 'high') return 5;
+  if (m.model_picker_price_category === 'low') return 1;
+  if (m.model_picker_price_category === 'medium') return 3;
+  if (m.model_picker_price_category === 'high') return 5;
 
   return 2;
 }
 
-export function formatTokenPricing(m: ILlmModelInfo): string {
-  const tp = m.billing?.tokenPrices;
+export function formatTokenPricing(m: LlmModelInfo): string {
+  const tp = m.billing?.token_prices;
   if (!tp) return '-';
 
   const parts = [
-    `Input: $${tp.inputPrice ?? 0}/1M`,
-    `Output: $${tp.outputPrice ?? 0}/1M`,
-    `Cache Read: $${tp.cacheReadPrice ?? 0}/1M`,
-    `Cache Write: $${tp.cacheWritePrice ?? 0}/1M`,
+    `Input: $${tp.input_price ?? 0}/1M`,
+    `Output: $${tp.output_price ?? 0}/1M`,
+    `Cache Read: $${tp.cache_read_price ?? 0}/1M`,
+    `Cache Write: $${tp.cache_write_price ?? 0}/1M`,
   ];
 
   return parts.join(' | ');
 }
 
-export function formatPromoTooltip(m: ILlmModelInfo): string {
+export function formatPromoTooltip(m: LlmModelInfo): string {
   const p = m.billing?.promo;
-  const tp = m.billing?.tokenPrices;
+  const tp = m.billing?.token_prices;
   const lines: string[] = [];
 
   if (p) {
     if (p.id) lines.push(`<b>Promo ID:</b> ${p.id}`);
-    if (p.discountPercent !== undefined) lines.push(`<b>Discount:</b> ${p.discountPercent}%`);
+    if (p.discount_percent !== undefined) lines.push(`<b>Discount:</b> ${p.discount_percent}%`);
     if (p.message) lines.push(`<b>Message:</b> ${p.message}`);
-    if (p.endsAt) lines.push(`<b>Ends At:</b> ${p.endsAt}`);
+    if (p.ends_at) lines.push(`<b>Ends At:</b> ${p.ends_at}`);
   }
 
-  if (tp?.longContext) {
-    const lc = tp.longContext;
-    lines.push(`<b>Long Context Max:</b> ${(lc.contextMax ? lc.contextMax / 1000 : 0)}k`);
-    lines.push(`<b>Long Context Input:</b> $${lc.inputPrice ?? 0}/1M`);
-    lines.push(`<b>Long Context Output:</b> $${lc.outputPrice ?? 0}/1M`);
+  if (tp?.long_context) {
+    const lc = tp.long_context;
+    lines.push(`<b>Long Context Max:</b> ${(lc.context_max ? lc.context_max / 1000 : 0)}k`);
+    lines.push(`<b>Long Context Input:</b> $${lc.input_price ?? 0}/1M`);
+    lines.push(`<b>Long Context Output:</b> $${lc.output_price ?? 0}/1M`);
   }
 
   return lines.join('<br/>');
 }
 
-export function formatVisionTooltip(m: ILlmModelInfo): string {
+export function formatVisionTooltip(m: LlmModelInfo): string {
   const v = m.capabilities?.limits?.vision;
   if (!v) return '';
   const lines: string[] = [];
@@ -119,7 +119,7 @@ export function formatVisionTooltip(m: ILlmModelInfo): string {
 
 export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
   const [selectedProvider, setSelectedProvider] = useState<string>(initialProvider);
-  const [models, setModels] = useState<ILlmModelInfo[]>([]);
+  const [models, setModels] = useState<LlmModelInfo[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [sortRules, setSortRules] = useState<SortRule[]>([
     { field: 'provider', order: 'asc' },
@@ -210,8 +210,8 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
       const hasPromo = Boolean(m.billing?.promo);
 
       const adaptiveThinking = sup?.adaptive_thinking || '';
-      const reasoningEfforts = m.supportedReasoningEfforts || sup?.reasoning_effort || [];
-      const categoryText = m.modelPickerCategory || '-';
+      const reasoningEfforts = m.supported_reasoning_efforts || sup?.reasoning_effort || [];
+      const categoryText = m.model_picker_category || '-';
 
       const subRows: ModelTableRow[] = [];
 
@@ -267,8 +267,8 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
         });
       }
 
-      if (m.billing?.tokenPrices) {
-        const tp = m.billing.tokenPrices;
+      if (m.billing?.token_prices) {
+        const tp = m.billing.token_prices;
         subRows.push({
           ...m,
           subRows: undefined,
@@ -287,14 +287,14 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
           tokenizer: '-',
           streaming: false,
           structuredOutputs: false,
-          tokenPricingText: `Input: $${tp.inputPrice ?? 0}/1M | Output: $${tp.outputPrice ?? 0}/1M | Cache Read: $${tp.cacheReadPrice ?? 0}/1M | Cache Write: $${tp.cacheWritePrice ?? 0}/1M`,
+          tokenPricingText: `Input: $${tp.input_price ?? 0}/1M | Output: $${tp.output_price ?? 0}/1M | Cache Read: $${tp.cache_read_price ?? 0}/1M | Cache Write: $${tp.cache_write_price ?? 0}/1M`,
           promoTooltipText: '',
           hasPromo: false,
           detailsText: 'Standard token prices',
         });
 
-        if (tp.longContext) {
-          const lc = tp.longContext;
+        if (tp.long_context) {
+          const lc = tp.long_context;
           subRows.push({
             ...m,
             subRows: undefined,
@@ -313,7 +313,7 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
             tokenizer: '-',
             streaming: false,
             structuredOutputs: false,
-            tokenPricingText: `Context Max: ${(lc.contextMax ? lc.contextMax / 1000 : 0)}k | Input: $${lc.inputPrice ?? 0}/1M | Output: $${lc.outputPrice ?? 0}/1M | Cache Write: $${lc.cacheWritePrice ?? 0}/1M`,
+            tokenPricingText: `Context Max: ${(lc.context_max ? lc.context_max / 1000 : 0)}k | Input: $${lc.input_price ?? 0}/1M | Output: $${lc.output_price ?? 0}/1M | Cache Write: $${lc.cache_write_price ?? 0}/1M`,
             promoTooltipText: '',
             hasPromo: false,
             detailsText: 'Long context token prices',
@@ -341,7 +341,7 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
           tokenizer: '-',
           streaming: false,
           structuredOutputs: false,
-          tokenPricingText: `ID: ${p.id || 'Active'} | Discount: ${p.discountPercent}% | ${p.message || ''} | Ends At: ${p.endsAt || 'N/A'}`,
+          tokenPricingText: `ID: ${p.id || 'Active'} | Discount: ${p.discount_percent}% | ${p.message || ''} | Ends At: ${p.ends_at || 'N/A'}`,
           promoTooltipText: '',
           hasPromo: false,
           detailsText: 'Promo details',
@@ -408,9 +408,9 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
             valA = (a.categoryText || '').toLowerCase();
             valB = (b.categoryText || '').toLowerCase();
             break;
-          case 'contextWindow':
-            valA = a.contextWindow ?? 0;
-            valB = b.contextWindow ?? 0;
+          case 'context_window':
+            valA = a.context_window ?? 0;
+            valB = b.context_window ?? 0;
             break;
           case 'maxPrompt':
             valA = a.maxPromptTokens ?? 0;

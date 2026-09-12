@@ -5,7 +5,10 @@ import * as cp from 'child_process';
 import { ILlmProviderDelegate } from '../llm-provider.delegate.interface';
 import {
   LlmProvider,
-  ILlmModelInfo,
+  LlmModelInfo,
+  LlmModelBilling,
+  ILlmTokenPrices,
+  LlmModelPromo,
   LlmConfigVO,
   ChatPromptVO,
   IChatResponseDto,
@@ -20,10 +23,9 @@ import { CopilotAccountInfo } from './copilot-account-info.model';
 
 type ForceResolveMode = 'COPILOT_CLI' | 'DEVELOPMENT_NODE_MODULE' | 'PLUGIN_INSTALL_LOCATION' | null;
 
-// Configuration constant to force a specific path strategy or standard workflow (null)
-const FORCE_RESOLVE_NATIVE_CLI: ForceResolveMode = null;
+const FORCE_RESOLVE_NATIVE_CLI: ForceResolveMode = null; // Set to 'COPILOT_CLI', 'DEVELOPMENT_NODE_MODULE', or 'PLUGIN_INSTALL_LOCATION' to force a specific resolution strategy, or null for default behavior.
 
-const LOG_FULL_MODELS_LIST_INFO = true; // Set to true to log the full list of models retrieved from Copilot SDK or REST API
+const LOG_FULL_MODELS_LIST_INFO = true;
 
 export class CopilotDelegate implements ILlmProviderDelegate {
   readonly provider = LlmProvider.COPILOT;
@@ -33,16 +35,14 @@ export class CopilotDelegate implements ILlmProviderDelegate {
   private static cliBinaryPath: string | null = null;
 
   public constructor() {
+    logInfo(`[CopilotDelegate] Initializing CopilotDelegate...`);
+    CopilotDelegate.cliBinaryPath = null;
     this.resolveNativeCliPath();
   }
 
-  /**
-   * Main orchestrator for CLI binary path resolution.
-   */
   private resolveNativeCliPath(): string | undefined {
     log('CopilotDelegate', `resolveNativeCliPath start (Force Mode: ${FORCE_RESOLVE_NATIVE_CLI ?? 'None'})...`);
 
-    // Return cached path if already resolved, only if no force mode is specified
     if (CopilotDelegate.cliBinaryPath && FORCE_RESOLVE_NATIVE_CLI === null) {
       log('CopilotDelegate', `resolveNativeCliPath cached path found: ${CopilotDelegate.cliBinaryPath}`);
       return CopilotDelegate.cliBinaryPath;
@@ -106,6 +106,7 @@ export class CopilotDelegate implements ILlmProviderDelegate {
 
     try {
       const systemPath = cp.execSync(checkCommand, { encoding: 'utf-8' }).trim().split('\n')[0];
+      logInfo(`[CopilotDelegate] Checking system PATH for Copilot CLI: ${systemPath}`);
       if (systemPath && fs.existsSync(systemPath)) {
         logInfo(`[CopilotDelegate] System CLI found at: ${systemPath}`);
         return systemPath;
@@ -130,6 +131,9 @@ export class CopilotDelegate implements ILlmProviderDelegate {
       const devPath = extensionContext.asAbsolutePath(
         path.join('node_modules', '@github', `copilot-sdk-${platformTarget}`, 'prebuilds', platformTarget, binName)
       );
+
+      logInfo(`[CopilotDelegate] Checking dev node_modules path: ${devPath}`);
+
       if (fs.existsSync(devPath)) {
         return devPath;
       }
@@ -151,6 +155,8 @@ export class CopilotDelegate implements ILlmProviderDelegate {
       const pluginPath = path.join(
         workspaceRoot,
         backendWorkspacePath,
+        'target',
+        'graph_rag_explorer',
         'tools',
         'node',
         'node_modules',
@@ -160,6 +166,8 @@ export class CopilotDelegate implements ILlmProviderDelegate {
         platformTarget,
         binName
       );
+
+      logInfo(`[CopilotDelegate] Checking plugin install path: ${pluginPath}`);
 
       if (fs.existsSync(pluginPath)) {
         return pluginPath;
@@ -190,11 +198,24 @@ export class CopilotDelegate implements ILlmProviderDelegate {
    * Helper to verify binary functionality.
    */
   private verifyCliBinary(binPath: string): void {
-    try {
-      const versionOutput = cp.execFileSync(binPath, ['-version'], { encoding: 'utf-8' }).trim();
-      logInfo(`[CopilotDelegate] Copilot SDK version output: ${versionOutput}`);
-    } catch (err: any) {
-      logError(`[CopilotDelegate] Failed to execute Copilot SDK version check: ${err?.message || err}`);
+    if (!binPath.includes('copilot-sdk')) {
+      try {
+        const versionOutput = cp.execFileSync(binPath, ['-version'], { encoding: 'utf-8' }).trim();
+        logInfo(`[CopilotDelegate] Copilot version output: ${versionOutput}`);
+      } catch (err: any) {
+        logError(`[CopilotDelegate] Failed to execute Copilot version check: ${err?.message || err}`);
+      }
+    } else {
+      try {
+        const result = cp.execFileSync(binPath, [], { encoding: 'utf-8' }).trim();
+        logInfo(`[CopilotDelegate] Copilot SDK server output: ${result}`);
+      } catch (err: any) {
+        if (err?.message?.includes('SDK server mode requires --server or --headless')) {
+          logInfo(`[CopilotDelegate] Normally failed to execute Copilot SDK version check: ${err?.message || err}`);
+        } else {
+          logError(`[CopilotDelegate] Unexpected error executing Copilot SDK binary: ${err?.message || err}`);
+        }
+      }
     }
   }
 
@@ -203,7 +224,7 @@ export class CopilotDelegate implements ILlmProviderDelegate {
    * 1. VS Code Extension absolute installation path
    * 2. Active Workspace tools folder (.token-razor/copilot-models-custom.json)
    */
-  private loadCustomModels(): Partial<ILlmModelInfo>[] {
+  private loadCustomModels(): Partial<LlmModelInfo>[] {
     const candidatePaths: string[] = [];
 
     // 1. VS Code Extension absolute path (if running inside extension context)
@@ -234,7 +255,7 @@ export class CopilotDelegate implements ILlmProviderDelegate {
       try {
         if (fs.existsSync(customJsonPath)) {
           const fileContent = fs.readFileSync(customJsonPath, 'utf-8');
-          const parsedModels: Partial<ILlmModelInfo>[] = JSON.parse(fileContent);
+          const parsedModels: Partial<LlmModelInfo>[] = JSON.parse(fileContent);
           logInfo(`[CopilotDelegate] '${parsedModels.length}' Custom models JSON loaded from: ${customJsonPath}`);
           return parsedModels;
         }
@@ -284,6 +305,7 @@ export class CopilotDelegate implements ILlmProviderDelegate {
         options.cliPath = cliPath;
       }
 
+      logInfo(`[CopilotDelegate] Initializing CopilotClient with options: ${JSON.stringify(options)}`);
       CopilotDelegate.clientInstance = new CopilotClient(options as any);
     }
     return CopilotDelegate.clientInstance;
@@ -320,7 +342,7 @@ export class CopilotDelegate implements ILlmProviderDelegate {
    * Dedicated Method 1: Fetches available models via the direct REST API endpoint.
    * Adapts base URL dynamically using AccountInfo endpoints if available.
    */
-  public async fetchModelsFromRestApi(token: string, baseUrl?: string): Promise<ILlmModelInfo[]> {
+  public async fetchModelsFromRestApi(token: string, baseUrl?: string): Promise<LlmModelInfo[]> {
     const targetHost = baseUrl || 'https://api.business.githubcopilot.com';
     const url = `${targetHost}/models`;
     logInfo(`[CopilotDelegate] Querying REST API for models: ${url}`);
@@ -342,7 +364,7 @@ export class CopilotDelegate implements ILlmProviderDelegate {
     const body = (await response.json()) as { data?: any[] };
     const rawModels = body.data || [];
 
-    logInfo(`[CopilotDelegate] Successfully retrieved ${rawModels.length} models via REST API.`);
+    logInfo(`[CopilotDelegate] Successfully retrieved ${rawModels.length} models via REST API.`, rawModels[0]);
 
     return this.mapRawModelsToModelInfo(rawModels, 'Model administered via GitHub Copilot REST API');
   }
@@ -350,7 +372,7 @@ export class CopilotDelegate implements ILlmProviderDelegate {
   /**
    * Dedicated Method 2: Fetches available models via the Copilot SDK client instance.
    */
-  public async fetchModelsFromSdk(): Promise<ILlmModelInfo[]> {
+  public async fetchModelsFromSdk(): Promise<LlmModelInfo[]> {
     await this.ensureStarted();
     const rawModels: any[] = await this.client.listModels();
     logInfo(`[CopilotDelegate] Total models found from SDK: ${rawModels.length}`, rawModels);
@@ -359,12 +381,12 @@ export class CopilotDelegate implements ILlmProviderDelegate {
   }
 
   /**
-   * Helper method to map raw model objects from REST API, SDK, or Custom JSON into standard ILlmModelInfo interfaces.
+   * Helper method to map raw model objects from REST API, SDK, or Custom JSON into standard LlmModelInfo interfaces.
    */
   private mapRawModelsToModelInfo(
     rawModels: any[],
     defaultDescription: string = 'Model administered via GitHub Copilot'
-  ): ILlmModelInfo[] {
+  ): LlmModelInfo[] {
     return rawModels.map((m: any) => {
       // If policy or policy.state does not exist, initialize policy with state set to 'disabled'
       const isStateEnabled = m.policy?.state && String(m.policy.state).toLowerCase() === 'enabled';
@@ -373,22 +395,79 @@ export class CopilotDelegate implements ILlmProviderDelegate {
         state: isStateEnabled ? 'enabled' : 'disabled',
       };
 
-      const model = {
+      logInfo(`[CopilotDelegate] Model origin mapped: ${m.id} - ${m.name} | Details: ${JSON.stringify(m)}`);
+
+      const rawBilling = m.billing;
+      let billing: LlmModelBilling | undefined = undefined;
+
+      if (rawBilling) {
+        const rawTp = rawBilling.token_prices || rawBilling.tokenPrices;
+        let tokenPrices: ILlmTokenPrices | undefined = undefined;
+
+        if (rawTp) {
+          const rawDefault = rawTp.default || rawTp;
+          const rawLc = rawTp.long_context || rawTp.longContext;
+
+          tokenPrices = {
+            input_price: rawDefault.input_price ?? rawDefault.inputPrice,
+            output_price: rawDefault.output_price ?? rawDefault.outputPrice,
+            cache_price: rawDefault.cache_price ?? rawDefault.cachePrice,
+            cache_read_price: rawDefault.cache_read_price ?? rawDefault.cacheReadPrice,
+            cache_write_price: rawDefault.cache_write_price ?? rawDefault.cacheWritePrice,
+            cache_write_1h_price: rawDefault.cache_write_1h_price ?? rawDefault.cacheWrite1hPrice,
+            context_max: rawDefault.context_max ?? rawDefault.contextMax,
+            max_prompt_tokens: rawDefault.max_prompt_tokens ?? rawDefault.maxPromptTokens,
+            batch_size: rawTp.batch_size ?? rawTp.batchSize,
+            long_context: rawLc ? {
+              input_price: rawLc.input_price ?? rawLc.inputPrice,
+              output_price: rawLc.output_price ?? rawLc.outputPrice,
+              cache_price: rawLc.cache_price ?? rawLc.cachePrice,
+              cache_read_price: rawLc.cache_read_price ?? rawLc.cacheReadPrice,
+              cache_write_price: rawLc.cache_write_price ?? rawLc.cacheWritePrice,
+              cache_write_1h_price: rawLc.cache_write_1h_price ?? rawLc.cacheWrite1hPrice,
+              context_max: rawLc.context_max ?? rawLc.contextMax,
+              max_prompt_tokens: rawLc.max_prompt_tokens ?? rawLc.maxPromptTokens,
+            } : undefined,
+          };
+        }
+
+        const rawPromo = rawBilling.promo;
+        const promo: LlmModelPromo | undefined = rawPromo ? {
+          id: rawPromo.id,
+          discount_percent: rawPromo.discount_percent ?? rawPromo.discountPercent,
+          ends_at: rawPromo.ends_at ?? rawPromo.endsAt,
+          message: rawPromo.message,
+        } : undefined;
+
+        billing = {
+          discount_percent: rawBilling.discount_percent ?? rawBilling.discountPercent,
+          token_prices: tokenPrices,
+          promo,
+        };
+      }
+
+      const model: LlmModelInfo = {
         id: m.id || m.name,
         name: m.name || m.id,
         provider: this.provider,
-        contextWindow: m.capabilities?.limits?.max_context_window_tokens ?? m.contextWindow ?? 128000,
+        object: m.object,
+        vendor: m.vendor,
+        version: m.version,
+        preview: m.preview,
+        model_picker_category: m.model_picker_category || m.modelPickerCategory,
+        model_picker_enabled: m.model_picker_enabled ?? m.modelPickerEnabled,
+        supported_endpoints: m.supported_endpoints,
+        context_window: m.capabilities?.limits?.max_context_window_tokens ?? m.context_window ?? m.contextWindow ?? 128000,
         description: m.description || defaultDescription,
         capabilities: m.capabilities || { family: 'custom' },
         policy,
-        billing: m.billing,
-        supportedReasoningEfforts: m.supportedReasoningEfforts,
-        modelPickerCategory: m.modelPickerCategory,
-        modelPickerPriceCategory: m.modelPickerPriceCategory,
+        billing,
+        supported_reasoning_efforts: m.supported_reasoning_efforts || m.supportedReasoningEfforts || m.capabilities?.supports?.reasoning_effort,
+        model_picker_price_category: m.model_picker_price_category || m.modelPickerPriceCategory,
       };
 
       if (LOG_FULL_MODELS_LIST_INFO) {
-        logInfo(`[CopilotDelegate] Model mapped: ${model.id} - ${model.name} | Details: ${JSON.stringify(model)}`);
+        logInfo(`[CopilotDelegate] Model result mapped: ${model.id} - ${model.name} | Details: ${JSON.stringify(model)}`);
       }
       return model;
     });
@@ -421,8 +500,8 @@ export class CopilotDelegate implements ILlmProviderDelegate {
   /**
    * Lists available LLM models from REST API or SDK, merging optional custom models from JSON if available.
    */
-  async listModels(config?: LlmConfigVO): Promise<ILlmModelInfo[]> {
-    let fetchedModels: ILlmModelInfo[] = [];
+  async listModels(config?: LlmConfigVO): Promise<LlmModelInfo[]> {
+    let fetchedModels: LlmModelInfo[] = [];
     const token = this.getGithubCopilotToken();
 
     // Strategy 1: Attempt direct REST API with dynamic URL resolution from AccountInfo
@@ -436,7 +515,7 @@ export class CopilotDelegate implements ILlmProviderDelegate {
           logError(`[CopilotDelegate] Failed to resolve account endpoint URL, using default: ${accountErr?.message || accountErr}`);
         }
 
-        fetchedModels = await this.fetchModelsFromRestApi(token, baseUrl);
+        fetchedModels = []; //await this.fetchModelsFromRestApi(token, baseUrl);
       } catch (restErr: any) {
         logError(`[CopilotDelegate] Direct REST API fetch failed, falling back to SDK: ${restErr?.message || restErr}`);
       }

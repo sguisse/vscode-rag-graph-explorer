@@ -1,7 +1,7 @@
 import { ILlmProviderDelegate } from './llm-provider.delegate.interface';
 import {
   LlmProvider,
-  ILlmModelInfo,
+  LlmModelInfo,
   LlmConfigVO,
   ChatPromptVO,
   IChatResponseDto,
@@ -170,9 +170,9 @@ export class GeminiDelegate implements ILlmProviderDelegate {
     return result;
   }
 
-  public async listModels(): Promise<ILlmModelInfo[]> {
+  public async listModels(): Promise<LlmModelInfo[]> {
     log(ORIGIN, 'Listing Gemini models');
-    const models: ILlmModelInfo[] = [
+    const models: LlmModelInfo[] = [
       { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', provider: this.provider },
       { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', provider: this.provider },
     ];

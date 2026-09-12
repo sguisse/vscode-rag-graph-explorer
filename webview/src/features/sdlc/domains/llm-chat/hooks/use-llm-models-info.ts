@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ILlmModelInfo, LlmProvider } from '@/shared/services/llm-chat';
+import { LlmModelInfo, ILlmTokenPrices, ILlmTokenPriceConfig, LlmProvider } from '@/shared/services/llm-chat';
 import { llmChatApiService } from '@/services/api/llm-chat-api.service.gen';
 
 export type SortField =
+  | 'enabled'
   | 'provider'
   | 'name'
   | 'cost'
@@ -16,8 +17,7 @@ export type SortField =
   | 'vision'
   | 'tokenizer'
   | 'streaming'
-  | 'structuredOutputs'
-  | 'tokenPricing';
+  | 'structuredOutputs';
 
 export type SortOrder = 'asc' | 'desc';
 
@@ -26,7 +26,13 @@ export interface SortRule {
   order: SortOrder;
 }
 
-export interface ModelTableRow extends ILlmModelInfo {
+export const INITIAL_SORT_RULES: SortRule[] = [
+  { field: 'enabled', order: 'desc' },
+  { field: 'provider', order: 'asc' },
+  { field: 'name', order: 'asc' },
+];
+
+export interface ModelTableRow extends LlmModelInfo {
   rowType: 'model' | 'detail';
   detailsText: string;
   categoryText: string;
@@ -48,9 +54,45 @@ export interface ModelTableRow extends ILlmModelInfo {
   subRows?: ModelTableRow[];
 }
 
-export function computeCostRating(m: ILlmModelInfo): number {
-  if (m.billing?.tokenPrices) {
-    const inputPrice = m.billing.tokenPrices.inputPrice ?? 0;
+export function getTokenPrices(m: LlmModelInfo, longContext: boolean): ILlmTokenPrices | undefined {
+  if (longContext && m.billing?.token_prices?.long_context) {
+    return m.billing.token_prices.long_context;
+  }
+  if (!longContext && m.billing?.token_prices) {
+    return m.billing.token_prices;
+  }
+
+  return undefined;
+}
+
+export function formatBillingRates(rates?: ILlmTokenPriceConfig, includeBatchSize = false, batchSize?: number): string {
+  if (!rates) {
+    return 'inputPrice: - | outputPrice: - | cacheReadPrice: - | cacheWritePrice: -';
+  }
+
+  const parts = [
+    `inputPrice: ${rates.input_price ?? '-'}`,
+    `outputPrice: ${rates.output_price ?? '-'}`,
+  ];
+
+  parts.push(`cachePrice: ${rates.cache_price ?? '-'}`);
+  parts.push(`cacheReadPrice: ${rates.cache_read_price ?? '-'}`);
+  parts.push(`cacheWritePrice: ${rates.cache_write_price ?? '-'}`);
+  parts.push(`cacheWrite1hPrice: ${rates.cache_write_1h_price ?? '-'}`);
+  parts.push(`contextMax: ${rates.context_max ?? '-'}`);
+  parts.push(`maxPromptTokens: ${rates.max_prompt_tokens ?? '-'}`);
+
+  if (includeBatchSize && batchSize !== undefined && batchSize > 0) {
+    parts.push(`batchSize: ${batchSize}`);
+  }
+
+  return parts.join(' | ');
+}
+
+export function computeCostRating(m: LlmModelInfo): number {
+  const tp = getTokenPrices(m, false);
+  if (tp && tp.input_price !== undefined) {
+    const inputPrice = tp.input_price;
     if (inputPrice === 0) return 1;
     if (inputPrice <= 100) return 2;
     if (inputPrice <= 250) return 3;
@@ -58,55 +100,46 @@ export function computeCostRating(m: ILlmModelInfo): number {
     return 5;
   }
 
-  if (m.modelPickerPriceCategory === 'low') return 1;
-  if (m.modelPickerPriceCategory === 'medium') return 3;
-  if (m.modelPickerPriceCategory === 'high') return 5;
+  if (m.model_picker_price_category === 'low') return 1;
+  if (m.model_picker_price_category === 'medium') return 3;
+  if (m.model_picker_price_category === 'high') return 5;
 
   return 2;
 }
 
-export function formatTokenPricing(m: ILlmModelInfo): string {
-  const tp = m.billing?.tokenPrices;
-  if (!tp) return '-';
-
-  const parts = [
-    `Input: $${tp.inputPrice ?? 0}/1M`,
-    `Output: $${tp.outputPrice ?? 0}/1M`,
-    `Cache Read: $${tp.cacheReadPrice ?? 0}/1M`,
-    `Cache Write: $${tp.cacheWritePrice ?? 0}/1M`,
-  ];
-
-  return parts.join(' | ');
+export function formatTokenPricing(m: LlmModelInfo): string {
+  const tp = getTokenPrices(m, false);
+  return formatBillingRates(tp, true, tp?.batch_size);
 }
 
-export function formatPromoTooltip(m: ILlmModelInfo): string {
+export function formatPromoTooltip(m: LlmModelInfo): string {
   const p = m.billing?.promo;
-  const tp = m.billing?.tokenPrices;
+  const tp = getTokenPrices(m, false);
   const lines: string[] = [];
 
   if (p) {
     if (p.id) lines.push(`<b>Promo ID:</b> ${p.id}`);
-    if (p.discountPercent !== undefined) lines.push(`<b>Discount:</b> ${p.discountPercent}%`);
+    if (p.discount_percent !== undefined) lines.push(`<b>Discount:</b> ${p.discount_percent}%`);
     if (p.message) lines.push(`<b>Message:</b> ${p.message}`);
-    if (p.endsAt) lines.push(`<b>Ends At:</b> ${p.endsAt}`);
+    if (p.ends_at) lines.push(`<b>Ends At:</b> ${p.ends_at}`);
   }
 
-  if (tp?.longContext) {
-    const lc = tp.longContext;
-    lines.push(`<b>Long Context Max:</b> ${(lc.contextMax ? lc.contextMax / 1000 : 0)}k`);
-    lines.push(`<b>Long Context Input:</b> $${lc.inputPrice ?? 0}/1M`);
-    lines.push(`<b>Long Context Output:</b> $${lc.outputPrice ?? 0}/1M`);
+  if (tp?.long_context) {
+    const lc = tp.long_context;
+    lines.push(`<b>Long Context Max:</b> ${lc.context_max ?? '-'}`);
+    lines.push(`<b>Long Context Input:</b> ${lc.input_price ?? '-'}`);
+    lines.push(`<b>Long Context Output:</b> ${lc.output_price ?? '-'}`);
   }
 
   return lines.join('<br/>');
 }
 
-export function formatVisionTooltip(m: ILlmModelInfo): string {
+export function formatVisionTooltip(m: LlmModelInfo): string {
   const v = m.capabilities?.limits?.vision;
   if (!v) return '';
   const lines: string[] = [];
   if (v.max_prompt_image_size) {
-    lines.push(`<b>Max Prompt Image Size:</b> ${(v.max_prompt_image_size / (1024 * 1024)).toFixed(1)} MB`);
+    lines.push(`<b>Max Prompt Image Size:</b> ${v.max_prompt_image_size}`);
   }
   if (v.max_prompt_images !== undefined) {
     lines.push(`<b>Max Prompt Images:</b> ${v.max_prompt_images}`);
@@ -119,16 +152,12 @@ export function formatVisionTooltip(m: ILlmModelInfo): string {
 
 export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
   const [selectedProvider, setSelectedProvider] = useState<string>(initialProvider);
-  const [models, setModels] = useState<ILlmModelInfo[]>([]);
+  const [models, setModels] = useState<LlmModelInfo[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [sortRules, setSortRules] = useState<SortRule[]>([
-    { field: 'provider', order: 'asc' },
-    { field: 'name', order: 'asc' },
-  ]);
+  const [sortRules, setSortRules] = useState<SortRule[]>(INITIAL_SORT_RULES);
   const [expandedRowIds, setExpandedRowIds] = useState<Record<string, boolean>>({});
   const [globalFilter, setGlobalFilter] = useState<string>('');
 
-  // Keep state synchronized with initialProvider when modal opens
   useEffect(() => {
     if (initialProvider) {
       setSelectedProvider(initialProvider);
@@ -187,7 +216,7 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
   };
 
   const clearSort = () => {
-    setSortRules([{ field: 'name', order: 'asc' }]);
+    setSortRules(INITIAL_SORT_RULES);
   };
 
   const tableData = useMemo<ModelTableRow[]>(() => {
@@ -209,9 +238,16 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
       const visionTooltipText = formatVisionTooltip(m);
       const hasPromo = Boolean(m.billing?.promo);
 
-      const adaptiveThinking = sup?.adaptive_thinking || '';
-      const reasoningEfforts = m.supportedReasoningEfforts || sup?.reasoning_effort || [];
-      const categoryText = m.modelPickerCategory || '-';
+      const adaptiveThinkingRaw = sup?.adaptive_thinking;
+      const adaptiveThinking =
+        adaptiveThinkingRaw !== undefined
+          ? typeof adaptiveThinkingRaw === 'boolean'
+            ? adaptiveThinkingRaw ? 'supported' : 'unsupported'
+            : String(adaptiveThinkingRaw)
+          : '';
+
+      const reasoningEfforts = m.supported_reasoning_efforts || sup?.reasoning_effort || [];
+      const categoryText = m.model_picker_category || '-';
 
       const subRows: ModelTableRow[] = [];
 
@@ -234,10 +270,10 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
           tokenizer: '-',
           streaming: false,
           structuredOutputs: false,
-          tokenPricingText: `Family: ${m.capabilities.family} | Type: ${m.capabilities.type || 'chat'} | Tokenizer: ${m.capabilities.tokenizer || 'N/A'} | Object: ${m.capabilities.object || '-'}`,
+          tokenPricingText: `ID: ${m.id} | Family: ${m.capabilities.family} | Type: ${m.capabilities.type || 'chat'}`,
           promoTooltipText: '',
           hasPromo: false,
-          detailsText: `Family: ${m.capabilities.family}`,
+          detailsText: `ID: ${m.id} | Family: ${m.capabilities.family} | Type: ${m.capabilities.type || 'chat'}`,
         });
       }
 
@@ -267,13 +303,42 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
         });
       }
 
-      if (m.billing?.tokenPrices) {
-        const tp = m.billing.tokenPrices;
+      let tp = getTokenPrices(m, false);
+      const formattedTokenPricesText = formatBillingRates(tp, true, tp?.batch_size);
+
+      subRows.push({
+        ...m,
+        subRows: undefined,
+        id: `${m.id}-billing-token-prices`,
+        name: `Billing (token_prices)`,
+        provider: m.provider,
+        rowType: 'detail',
+        categoryText: '-',
+        costRating: 0,
+        adaptiveThinking: '',
+        reasoningEfforts: [],
+        parallelToolCalls: false,
+        tools: false,
+        vision: false,
+        visionTooltipText: '',
+        tokenizer: '-',
+        streaming: false,
+        structuredOutputs: false,
+        tokenPricingText: formattedTokenPricesText,
+        promoTooltipText: '',
+        hasPromo: false,
+        detailsText: formattedTokenPricesText,
+      });
+
+      let tpLongContext = getTokenPrices(m, true);
+      if (tpLongContext) {
+        const formattedLongContextText = formatBillingRates(tpLongContext, false);
+
         subRows.push({
           ...m,
           subRows: undefined,
-          id: `${m.id}-billing-std`,
-          name: `Standard Billing`,
+          id: `${m.id}-billing-long-context`,
+          name: `Billing (longContext)`,
           provider: m.provider,
           rowType: 'detail',
           categoryText: '-',
@@ -287,38 +352,11 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
           tokenizer: '-',
           streaming: false,
           structuredOutputs: false,
-          tokenPricingText: `Input: $${tp.inputPrice ?? 0}/1M | Output: $${tp.outputPrice ?? 0}/1M | Cache Read: $${tp.cacheReadPrice ?? 0}/1M | Cache Write: $${tp.cacheWritePrice ?? 0}/1M`,
+          tokenPricingText: formattedLongContextText,
           promoTooltipText: '',
           hasPromo: false,
-          detailsText: 'Standard token prices',
+          detailsText: formattedLongContextText,
         });
-
-        if (tp.longContext) {
-          const lc = tp.longContext;
-          subRows.push({
-            ...m,
-            subRows: undefined,
-            id: `${m.id}-billing-long`,
-            name: `Long Context`,
-            provider: m.provider,
-            rowType: 'detail',
-            categoryText: '-',
-            costRating: 0,
-            adaptiveThinking: '',
-            reasoningEfforts: [],
-            parallelToolCalls: false,
-            tools: false,
-            vision: false,
-            visionTooltipText: '',
-            tokenizer: '-',
-            streaming: false,
-            structuredOutputs: false,
-            tokenPricingText: `Context Max: ${(lc.contextMax ? lc.contextMax / 1000 : 0)}k | Input: $${lc.inputPrice ?? 0}/1M | Output: $${lc.outputPrice ?? 0}/1M | Cache Write: $${lc.cacheWritePrice ?? 0}/1M`,
-            promoTooltipText: '',
-            hasPromo: false,
-            detailsText: 'Long context token prices',
-          });
-        }
       }
 
       if (m.billing?.promo) {
@@ -341,7 +379,7 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
           tokenizer: '-',
           streaming: false,
           structuredOutputs: false,
-          tokenPricingText: `ID: ${p.id || 'Active'} | Discount: ${p.discountPercent}% | ${p.message || ''} | Ends At: ${p.endsAt || 'N/A'}`,
+          tokenPricingText: `ID: ${p.id || 'Active'} | Discount: ${p.discount_percent !== undefined ? p.discount_percent + '%' : '-'} | ${p.message || ''} | Ends At: ${p.ends_at || 'N/A'}`,
           promoTooltipText: '',
           hasPromo: false,
           detailsText: 'Promo details',
@@ -392,6 +430,10 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
         let valB: string | number = '';
 
         switch (rule.field) {
+          case 'enabled':
+            valA = a.policy?.state && a.policy.state.toLowerCase() === 'enabled' ? 1 : 0;
+            valB = b.policy?.state && b.policy.state.toLowerCase() === 'enabled' ? 1 : 0;
+            break;
           case 'provider':
             valA = (a.provider || '').toLowerCase();
             valB = (b.provider || '').toLowerCase();
@@ -409,8 +451,8 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
             valB = (b.categoryText || '').toLowerCase();
             break;
           case 'contextWindow':
-            valA = a.contextWindow ?? 0;
-            valB = b.contextWindow ?? 0;
+            valA = a.context_window ?? 0;
+            valB = b.context_window ?? 0;
             break;
           case 'maxPrompt':
             valA = a.maxPromptTokens ?? 0;
@@ -447,10 +489,6 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
           case 'structuredOutputs':
             valA = a.structuredOutputs ? 1 : 0;
             valB = b.structuredOutputs ? 1 : 0;
-            break;
-          case 'tokenPricing':
-            valA = (a.tokenPricingText || '').toLowerCase();
-            valB = (b.tokenPricingText || '').toLowerCase();
             break;
         }
 

@@ -1,21 +1,21 @@
 import { LlmProvider } from '../../types/llm-provider.enum';
 
-export interface ILlmModelVisionLimits {
+export interface LlmModelVisionLimits {
   max_prompt_image_size?: number;
   max_prompt_images?: number;
   supported_media_types?: string[];
 }
 
-export interface ILlmModelLimits {
+export interface LlmModelLimits {
   max_context_window_tokens?: number;
   max_non_streaming_output_tokens?: number;
   max_output_tokens?: number;
   max_prompt_tokens?: number;
-  vision?: ILlmModelVisionLimits;
+  vision?: LlmModelVisionLimits;
 }
 
-export interface ILlmModelSupports {
-  adaptive_thinking?: string;
+export interface LlmModelSupports {
+  adaptive_thinking?: boolean | string;
   max_thinking_budget?: number;
   min_thinking_budget?: number;
   parallel_tool_calls?: boolean;
@@ -27,66 +27,68 @@ export interface ILlmModelSupports {
   reasoningEffort?: boolean;
 }
 
-export interface ILlmModelCapabilities {
+export interface LlmModelCapabilities {
   family?: string;
-  limits?: ILlmModelLimits;
+  limits?: LlmModelLimits;
   object?: string;
-  supports?: ILlmModelSupports;
+  supports?: LlmModelSupports;
   tokenizer?: string;
   type?: string;
 }
 
-export interface ILlmModelPolicy {
+export interface LlmModelPolicy {
   state?: string;
   terms?: string;
 }
 
-export interface ILlmLongContextTokenPriceConfig {
-  inputPrice?: number;
-  outputPrice?: number;
-  cachePrice?: number;
-  cacheReadPrice?: number;
-  cacheWritePrice?: number;
-  contextMax?: number;
-  maxPromptTokens?: number;
+export interface ILlmTokenPriceConfig {
+  input_price?: number;
+  output_price?: number;
+  cache_price?: number;
+  cache_read_price?: number;
+  cache_write_price?: number;
+  cache_write_1h_price?: number;
+  context_max?: number;
+  max_prompt_tokens?: number;
 }
 
-export interface ILlmTokenPrices {
-  inputPrice?: number;
-  outputPrice?: number;
-  cachePrice?: number;
-  cacheReadPrice?: number;
-  cacheWritePrice?: number;
-  batchSize?: number;
-  contextMax?: number;
-  maxPromptTokens?: number;
-  longContext?: ILlmLongContextTokenPriceConfig;
+export interface ILlmLongContextTokenPriceConfig extends ILlmTokenPriceConfig {}
+
+export interface ILlmTokenPrices extends ILlmTokenPriceConfig {
+  batch_size?: number;
+  long_context?: ILlmLongContextTokenPriceConfig;
 }
 
-export interface ILlmModelPromo {
+export interface LlmModelPromo {
   id?: string;
-  discountPercent?: number;
-  endsAt?: string;
+  discount_percent?: number;
+  ends_at?: string;
   message?: string;
 }
 
-export interface ILlmModelBilling {
-  discountPercent?: number;
-  tokenPrices?: ILlmTokenPrices;
-  promo?: ILlmModelPromo;
+export interface LlmModelBilling {
+  discount_percent?: number;
+  token_prices?: ILlmTokenPrices;
+  promo?: LlmModelPromo;
 }
 
-export interface ILlmModelInfo {
+export interface LlmModelInfo {
   id: string;
   name: string;
   provider: LlmProvider;
-  contextWindow?: number;
+  object?: string;
+  vendor?: string;
+  version?: string;
+  preview?: boolean;
+  model_picker_category?: string;
+  model_picker_enabled?: boolean;
+  supported_endpoints?: string[];
+  context_window?: number;
   description?: string;
-  capabilities?: ILlmModelCapabilities;
-  policy?: ILlmModelPolicy;
-  billing?: ILlmModelBilling;
-  supportedReasoningEfforts?: string[];
-  modelPickerCategory?: string;
-  modelPickerPriceCategory?: string;
-  subRows?: ILlmModelInfo[];
+  capabilities?: LlmModelCapabilities;
+  policy?: LlmModelPolicy;
+  billing?: LlmModelBilling;
+  supported_reasoning_efforts?: string[];
+  model_picker_price_category?: string;
+  subRows?: LlmModelInfo[];
 }
