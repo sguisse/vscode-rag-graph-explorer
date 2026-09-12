@@ -42,7 +42,6 @@ export interface ModelTableRow extends LlmModelInfo {
   structuredOutputs: boolean;
   maxPromptTokens?: number;
   maxOutputTokens?: number;
-  tokenPricingText: string;
   promoTooltipText: string;
   hasPromo: boolean;
   subRows?: ModelTableRow[];
@@ -209,7 +208,13 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
       const visionTooltipText = formatVisionTooltip(m);
       const hasPromo = Boolean(m.billing?.promo);
 
-      const adaptiveThinking = sup?.adaptive_thinking || '';
+      const adaptiveThinkingRaw = sup?.adaptive_thinking;
+      const adaptiveThinking: string =
+            adaptiveThinkingRaw !== undefined && adaptiveThinkingRaw !== null
+            ? typeof adaptiveThinkingRaw === 'boolean'
+                ? (adaptiveThinkingRaw ? 'supported' : 'unsupported')
+                : String(adaptiveThinkingRaw)
+            : '';
       const reasoningEfforts = m.supported_reasoning_efforts || sup?.reasoning_effort || [];
       const categoryText = m.model_picker_category || '-';
 
@@ -234,7 +239,6 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
           tokenizer: '-',
           streaming: false,
           structuredOutputs: false,
-          tokenPricingText: `Family: ${m.capabilities.family} | Type: ${m.capabilities.type || 'chat'} | Tokenizer: ${m.capabilities.tokenizer || 'N/A'} | Object: ${m.capabilities.object || '-'}`,
           promoTooltipText: '',
           hasPromo: false,
           detailsText: `Family: ${m.capabilities.family}`,
@@ -260,7 +264,6 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
           tokenizer: '-',
           streaming: false,
           structuredOutputs: false,
-          tokenPricingText: `State: ${m.policy.state || 'enabled'} | Terms: ${m.policy.terms || 'Enabled for workspace'}`,
           promoTooltipText: '',
           hasPromo: false,
           detailsText: m.policy.terms || '',
@@ -287,7 +290,6 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
           tokenizer: '-',
           streaming: false,
           structuredOutputs: false,
-          tokenPricingText: `Input: $${tp.input_price ?? 0}/1M | Output: $${tp.output_price ?? 0}/1M | Cache Read: $${tp.cache_read_price ?? 0}/1M | Cache Write: $${tp.cache_write_price ?? 0}/1M`,
           promoTooltipText: '',
           hasPromo: false,
           detailsText: 'Standard token prices',
@@ -313,7 +315,6 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
             tokenizer: '-',
             streaming: false,
             structuredOutputs: false,
-            tokenPricingText: `Context Max: ${(lc.context_max ? lc.context_max / 1000 : 0)}k | Input: $${lc.input_price ?? 0}/1M | Output: $${lc.output_price ?? 0}/1M | Cache Write: $${lc.cache_write_price ?? 0}/1M`,
             promoTooltipText: '',
             hasPromo: false,
             detailsText: 'Long context token prices',
@@ -341,10 +342,9 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
           tokenizer: '-',
           streaming: false,
           structuredOutputs: false,
-          tokenPricingText: `ID: ${p.id || 'Active'} | Discount: ${p.discount_percent}% | ${p.message || ''} | Ends At: ${p.ends_at || 'N/A'}`,
           promoTooltipText: '',
           hasPromo: false,
-          detailsText: 'Promo details',
+          detailsText: `Promo details: Discount: ${p.discount_percent}% | ${p.message || ''} | Ends At: ${p.ends_at || 'N/A'}`,
         });
       }
 
@@ -379,8 +379,7 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
             r.name.toLowerCase().includes(filterTerm) ||
             r.provider.toLowerCase().includes(filterTerm) ||
             r.categoryText.toLowerCase().includes(filterTerm) ||
-            r.tokenizer.toLowerCase().includes(filterTerm) ||
-            r.tokenPricingText.toLowerCase().includes(filterTerm)
+            r.tokenizer.toLowerCase().includes(filterTerm)
         )
       : rawRows;
 
@@ -447,10 +446,6 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
           case 'structuredOutputs':
             valA = a.structuredOutputs ? 1 : 0;
             valB = b.structuredOutputs ? 1 : 0;
-            break;
-          case 'tokenPricing':
-            valA = (a.tokenPricingText || '').toLowerCase();
-            valB = (b.tokenPricingText || '').toLowerCase();
             break;
         }
 

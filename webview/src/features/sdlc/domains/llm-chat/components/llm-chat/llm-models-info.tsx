@@ -313,7 +313,7 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
 
             <td colSpan={MODEL_TABLE_COLUMNS.length - 3} className="p-2 font-mono text-[11px] text-foreground align-middle">
               <span className="block font-mono text-[11px] text-muted-foreground truncate">
-                {row.tokenPricingText || row.detailsText}
+                {row.detailsText}
               </span>
             </td>
           </tr>

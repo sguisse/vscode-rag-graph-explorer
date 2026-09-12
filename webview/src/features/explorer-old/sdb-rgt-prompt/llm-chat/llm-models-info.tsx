@@ -206,12 +206,6 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
                 </span>
               </div>
             </td>
-
-            <td colSpan={13} className="p-2 font-mono text-[11px] text-foreground align-middle">
-              <span className="block font-mono text-[11px] text-muted-foreground truncate">
-                {row.tokenPricingText || row.detailsText}
-              </span>
-            </td>
           </tr>
         </React.Fragment>
       );
@@ -389,13 +383,6 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
           {/* Structured Outputs */}
           <td style={{ width: `${colWidths.structuredOutputs}px` }} className="p-2 font-mono text-xs text-center align-middle">
             <Checkbox checked={row.structuredOutputs} disabled className="pointer-events-none" />
-          </td>
-
-          {/* Token Pricing */}
-          <td style={{ width: `${colWidths.tokenPricing}px` }} className="p-2 font-mono text-xs align-middle">
-            <span className={`font-mono text-[11px] truncate block ${rowTextStyle}`}>
-              {row.tokenPricingText}
-            </span>
           </td>
         </tr>
 

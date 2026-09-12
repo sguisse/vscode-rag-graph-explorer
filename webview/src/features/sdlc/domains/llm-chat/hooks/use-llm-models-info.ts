@@ -48,7 +48,6 @@ export interface ModelTableRow extends LlmModelInfo {
   structuredOutputs: boolean;
   maxPromptTokens?: number;
   maxOutputTokens?: number;
-  tokenPricingText: string;
   promoTooltipText: string;
   hasPromo: boolean;
   subRows?: ModelTableRow[];
@@ -105,11 +104,6 @@ export function computeCostRating(m: LlmModelInfo): number {
   if (m.model_picker_price_category === 'high') return 5;
 
   return 2;
-}
-
-export function formatTokenPricing(m: LlmModelInfo): string {
-  const tp = getTokenPrices(m, false);
-  return formatBillingRates(tp, true, tp?.batch_size);
 }
 
 export function formatPromoTooltip(m: LlmModelInfo): string {
@@ -233,14 +227,13 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
       const tokenizer = m.capabilities?.tokenizer || '-';
       const maxPromptTokens = limits?.max_prompt_tokens;
       const maxOutputTokens = limits?.max_output_tokens;
-      const tokenPricingText = formatTokenPricing(m);
       const promoTooltipText = formatPromoTooltip(m);
       const visionTooltipText = formatVisionTooltip(m);
       const hasPromo = Boolean(m.billing?.promo);
 
       const adaptiveThinkingRaw = sup?.adaptive_thinking;
-      const adaptiveThinking =
-        adaptiveThinkingRaw !== undefined
+      const adaptiveThinking: string =
+        adaptiveThinkingRaw !== undefined && adaptiveThinkingRaw !== null
           ? typeof adaptiveThinkingRaw === 'boolean'
             ? adaptiveThinkingRaw ? 'supported' : 'unsupported'
             : String(adaptiveThinkingRaw)
@@ -270,10 +263,9 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
           tokenizer: '-',
           streaming: false,
           structuredOutputs: false,
-          tokenPricingText: `ID: ${m.id} | Family: ${m.capabilities.family} | Type: ${m.capabilities.type || 'chat'}`,
           promoTooltipText: '',
           hasPromo: false,
-          detailsText: `ID: ${m.id} | Family: ${m.capabilities.family} | Type: ${m.capabilities.type || 'chat'}`,
+          detailsText: `ID: ${m.id} | Family: ${m.capabilities.family} | Type: ${m.capabilities.type || 'chat'} | Vendor: ${m.vendor || '-'}`,
         });
       }
 
@@ -296,10 +288,9 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
           tokenizer: '-',
           streaming: false,
           structuredOutputs: false,
-          tokenPricingText: `State: ${m.policy.state || 'enabled'} | Terms: ${m.policy.terms || 'Enabled for workspace'}`,
           promoTooltipText: '',
           hasPromo: false,
-          detailsText: m.policy.terms || '',
+          detailsText: `State: ${m.policy.state || 'enabled'} | Terms: ${m.policy.terms || 'Enabled for workspace'}`,
         });
       }
 
@@ -324,7 +315,6 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
         tokenizer: '-',
         streaming: false,
         structuredOutputs: false,
-        tokenPricingText: formattedTokenPricesText,
         promoTooltipText: '',
         hasPromo: false,
         detailsText: formattedTokenPricesText,
@@ -352,7 +342,6 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
           tokenizer: '-',
           streaming: false,
           structuredOutputs: false,
-          tokenPricingText: formattedLongContextText,
           promoTooltipText: '',
           hasPromo: false,
           detailsText: formattedLongContextText,
@@ -379,10 +368,9 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
           tokenizer: '-',
           streaming: false,
           structuredOutputs: false,
-          tokenPricingText: `ID: ${p.id || 'Active'} | Discount: ${p.discount_percent !== undefined ? p.discount_percent + '%' : '-'} | ${p.message || ''} | Ends At: ${p.ends_at || 'N/A'}`,
           promoTooltipText: '',
           hasPromo: false,
-          detailsText: 'Promo details',
+          detailsText: `ID: ${p.id || 'Active'} | Discount: ${p.discount_percent !== undefined ? p.discount_percent + '%' : '-'} | ${p.message || ''} | Ends At: ${p.ends_at || 'N/A'}`,
         });
       }
 
@@ -402,7 +390,6 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
         structuredOutputs,
         maxPromptTokens,
         maxOutputTokens,
-        tokenPricingText,
         promoTooltipText,
         hasPromo,
         detailsText: m.description || `Model ${m.name} (${m.provider})`,
@@ -417,8 +404,7 @@ export function useLlmModelsInfo(initialProvider: LlmProvider | 'all' = 'all') {
             r.name.toLowerCase().includes(filterTerm) ||
             r.provider.toLowerCase().includes(filterTerm) ||
             r.categoryText.toLowerCase().includes(filterTerm) ||
-            r.tokenizer.toLowerCase().includes(filterTerm) ||
-            r.tokenPricingText.toLowerCase().includes(filterTerm)
+            r.tokenizer.toLowerCase().includes(filterTerm)
         )
       : rawRows;
 
