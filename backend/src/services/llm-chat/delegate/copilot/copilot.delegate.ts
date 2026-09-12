@@ -2,7 +2,7 @@ import { CopilotClient, approveAll } from '@github/copilot-sdk';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as cp from 'child_process';
-import { ILlmProviderDelegate } from './llm-provider.delegate.interface';
+import { ILlmProviderDelegate } from '../llm-provider.delegate.interface';
 import {
   LlmProvider,
   ILlmModelInfo,
@@ -11,12 +11,12 @@ import {
   IChatResponseDto,
   IChatStreamChunkDto,
   ILlmHealthResultDto,
-} from '../../../../../shared/services/llm-chat';
-import { getCurrentExtensionContext, getWorkspaceRoot } from '../../../utils/utils-vscode';
-import { vsCodeSettingsManager } from '../../../managers/VsCodeSettings.manager';
-import { log, logError, logInfo } from '../../../utils/utils-log';
+} from '../../../../../../shared/services/llm-chat';
+import { getCurrentExtensionContext, getWorkspaceRoot } from '../../../../utils/utils-vscode';
+import { vsCodeSettingsManager } from '../../../../managers/VsCodeSettings.manager';
+import { log, logError, logInfo } from '../../../../utils/utils-log';
 
-import customModelsData from './copilot-models-custom.json';
+import { CopilotAccountInfo } from './copilot-account-info.model';
 
 type ForceResolveMode = 'COPILOT_CLI' | 'DEVELOPMENT_NODE_MODULE' | 'PLUGIN_INSTALL_LOCATION' | null;
 
@@ -31,21 +31,20 @@ export class CopilotDelegate implements ILlmProviderDelegate {
   private static cliBinaryPath: string | null = null;
 
   public constructor() {
-    //this.resolveNativeCliPath();
+    this.resolveNativeCliPath();
   }
 
   /**
    * Main orchestrator for CLI binary path resolution.
    */
   private resolveNativeCliPath(): string | undefined {
-    log('CopilotDelegate', `resolveNativeCliPath start ...`);
+    log('CopilotDelegate', `resolveNativeCliPath start (Force Mode: ${FORCE_RESOLVE_NATIVE_CLI ?? 'None'})...`);
 
-    if (CopilotDelegate.cliBinaryPath) {
+    // Return cached path if already resolved, only if no force mode is specified
+    if (CopilotDelegate.cliBinaryPath && FORCE_RESOLVE_NATIVE_CLI === null) {
       log('CopilotDelegate', `resolveNativeCliPath cached path found: ${CopilotDelegate.cliBinaryPath}`);
       return CopilotDelegate.cliBinaryPath;
     }
-
-    log('CopilotDelegate', `resolveNativeCliPath starting (Force Mode: ${FORCE_RESOLVE_NATIVE_CLI ?? 'None'})...`);
 
     const foundPath = FORCE_RESOLVE_NATIVE_CLI
       ? this.resolvePathByStrategy(FORCE_RESOLVE_NATIVE_CLI)
@@ -198,18 +197,63 @@ export class CopilotDelegate implements ILlmProviderDelegate {
   }
 
   /**
-   * Safely loads custom model overrides from copilot-models-custom.json if present.
-   * If the file does not exist or fails to parse, custom models are skipped.
+   * Safely loads custom model overrides from optional locations:
+   * 1. VS Code Extension absolute installation path
+   * 2. Active Workspace tools folder (.token-razor/copilot-models-custom.json)
    */
   private loadCustomModels(): Partial<ILlmModelInfo>[] {
+    const candidatePaths: string[] = [];
+
+    // 1. VS Code Extension absolute path (if running inside extension context)
+    const extensionContext = getCurrentExtensionContext();
+    if (extensionContext) {
+      candidatePaths.push(
+        extensionContext.asAbsolutePath(
+          path.join('backend', 'src', 'services', 'llm-chat', 'delegate', 'copilot-models-custom.json')
+        ),
+        extensionContext.asAbsolutePath('copilot-models-custom.json')
+      );
+    }
+
+    // 2. Local workspace config path (.token-razor/copilot-models-custom.json)
     try {
-        logInfo(`[CopilotDelegate] '${customModelsData.length}' Custom models JSON loaded.`);
-        return customModelsData as Partial<ILlmModelInfo>[];
-    } catch (error: any) {
-        logInfo(`[CopilotDelegate] Custom models JSON not loaded or unparseable: ${error?.message || error}`);
+      const workspaceRoot = getWorkspaceRoot();
+      if (workspaceRoot) {
+        candidatePaths.push(path.join(workspaceRoot, '.token-razor', 'config', 'llm', 'copilot', 'copilot-models-custom.json'));
+      }
+    } catch {
+      // Workspace root not available
     }
+
+    // 3. Runtime directory fallback (__dirname)
+    candidatePaths.push(path.join(__dirname, 'copilot-models-custom.json'));
+
+    for (const customJsonPath of candidatePaths) {
+      try {
+        if (fs.existsSync(customJsonPath)) {
+          const fileContent = fs.readFileSync(customJsonPath, 'utf-8');
+          const parsedModels: Partial<ILlmModelInfo>[] = JSON.parse(fileContent);
+          logInfo(`[CopilotDelegate] '${parsedModels.length}' Custom models JSON loaded from: ${customJsonPath}`);
+          return parsedModels;
+        }
+      } catch (error: any) {
+        logInfo(`[CopilotDelegate] Failed parsing custom models at ${customJsonPath}: ${error?.message || error}`);
+      }
+    }
+
+    logInfo(`[CopilotDelegate] No custom models found or loaded.`);
     return [];
-    }
+  }
+
+  private getGithubCopilotToken(): string | undefined {
+    // Include GITHUB_COPILOT_TOKEN_RAZOR in the resolution chain
+    const token =
+      process.env.GITHUB_COPILOT_TOKEN_RAZOR ||
+      process.env.COPILOT_GITHUB_TOKEN ||
+      process.env.GITHUB_TOKEN ||
+      process.env.GITHUB_COPILOT_TOKEN;
+    return token;
+  }
 
   private get client(): CopilotClient {
     if (!CopilotDelegate.clientInstance) {
@@ -219,7 +263,16 @@ export class CopilotDelegate implements ILlmProviderDelegate {
         process.env.COPILOT_CLI_PATH = cliPath;
       }
 
-      const token = process.env.COPILOT_GITHUB_TOKEN || process.env.GITHUB_TOKEN || process.env.GITHUB_COPILOT_TOKEN;
+      const token = this.getGithubCopilotToken();
+      if (token) {
+        this.getGitHubUserAccountInfo(token)
+          .then((accountInfo) => {
+            logInfo(`[CopilotDelegate] Authenticated GitHub account: ${accountInfo.login} (${accountInfo.copilot_plan || 'Copilot'})`);
+          })
+          .catch((err) => {
+            logError(`[CopilotDelegate] Could not retrieve account info: ${err?.message || err}`);
+          });
+      }
 
       const options: Record<string, any> = token
         ? { gitHubToken: token }
@@ -232,6 +285,97 @@ export class CopilotDelegate implements ILlmProviderDelegate {
       CopilotDelegate.clientInstance = new CopilotClient(options as any);
     }
     return CopilotDelegate.clientInstance;
+  }
+
+  /**
+   * Fetches profile details and Copilot quota metadata for the currently authenticated GitHub account.
+   */
+  public async getGitHubUserAccountInfo(token: string): Promise<CopilotAccountInfo> {
+    if (!token) {
+      throw new Error('No GitHub Copilot token found. Please ensure you are logged in and have a valid token.');
+    }
+
+    const response = await fetch('https://api.github.com/copilot_internal/user', {
+      headers: {
+        Authorization: `token ${token}`,
+        'User-Agent': 'GithubCopilot/1.155.0',
+        Accept: 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`GitHub Copilot API Error (${response.status}): ${errorText}`);
+    }
+
+    const data = (await response.json()) as CopilotAccountInfo;
+    logInfo(`[CopilotDelegate] Authenticated user: ${data.login} (${data.copilot_plan || 'Copilot'})`);
+
+    return data;
+  }
+
+  /**
+   * Dedicated Method 1: Fetches available models via the direct REST API endpoint.
+   * Adapts base URL dynamically using AccountInfo endpoints if available.
+   */
+  public async fetchModelsFromRestApi(token: string, baseUrl?: string): Promise<ILlmModelInfo[]> {
+    const targetHost = baseUrl || 'https://api.business.githubcopilot.com';
+    const url = `${targetHost}/models`;
+    logInfo(`[CopilotDelegate] Querying REST API for models: ${url}`);
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Copilot-Integration-Id': 'vscode-chat',
+        'User-Agent': 'GithubCopilot/1.155.0',
+      },
+    });
+
+    if (!response.ok) {
+      const errorMsg = await response.text();
+      throw new Error(`Copilot REST API error ${response.status}: ${errorMsg}`);
+    }
+
+    const body = (await response.json()) as { data?: any[] };
+    const rawModels = body.data || [];
+
+    logInfo(`[CopilotDelegate] Successfully retrieved ${rawModels.length} models via REST API.`);
+
+    return this.mapRawModelsToModelInfo(rawModels, 'Model administered via GitHub Copilot REST API');
+  }
+
+  /**
+   * Dedicated Method 2: Fetches available models via the Copilot SDK client instance.
+   */
+  public async fetchModelsFromSdk(): Promise<ILlmModelInfo[]> {
+    await this.ensureStarted();
+    const rawModels: any[] = await this.client.listModels();
+    logInfo(`[CopilotDelegate] Total models found from SDK: ${rawModels.length}`, rawModels);
+
+    return this.mapRawModelsToModelInfo(rawModels, 'Model administered via GitHub Copilot SDK');
+  }
+
+  /**
+   * Helper method to map raw model objects from REST API, SDK, or Custom JSON into standard ILlmModelInfo interfaces.
+   */
+  private mapRawModelsToModelInfo(
+    rawModels: any[],
+    defaultDescription: string = 'Model administered via GitHub Copilot'
+  ): ILlmModelInfo[] {
+    return rawModels.map((m: any) => ({
+      id: m.id || m.name,
+      name: m.name || m.id,
+      provider: this.provider,
+      contextWindow: m.capabilities?.limits?.max_context_window_tokens ?? m.contextWindow ?? 128000,
+      description: m.description || defaultDescription,
+      capabilities: m.capabilities || { family: 'custom' },
+      policy: m.policy,
+      billing: m.billing,
+      supportedReasoningEfforts: m.supportedReasoningEfforts,
+      modelPickerCategory: m.modelPickerCategory,
+      modelPickerPriceCategory: m.modelPickerPriceCategory,
+    }));
   }
 
   private async ensureStarted(): Promise<void> {
@@ -259,31 +403,36 @@ export class CopilotDelegate implements ILlmProviderDelegate {
   }
 
   /**
-   * Lists available LLM models from the SDK and merges optional custom models from JSON if available.
+   * Lists available LLM models from REST API or SDK, merging optional custom models from JSON if available.
    */
   async listModels(config?: LlmConfigVO): Promise<ILlmModelInfo[]> {
     let fetchedModels: ILlmModelInfo[] = [];
+    const token = this.getGithubCopilotToken();
 
-    try {
-      await this.ensureStarted();
-      const rawModels: any[] = await this.client.listModels();
-      logInfo(`CopilotDelegate.listModels totalFound from SDK: ${rawModels.length}`, rawModels);
+    // Strategy 1: Attempt direct REST API with dynamic URL resolution from AccountInfo
+    if (token) {
+      try {
+        let baseUrl: string | undefined;
+        try {
+          const accountInfo = await this.getGitHubUserAccountInfo(token);
+          baseUrl = accountInfo.endpoints?.api;
+        } catch (accountErr: any) {
+          logError(`[CopilotDelegate] Failed to resolve account endpoint URL, using default: ${accountErr?.message || accountErr}`);
+        }
 
-      fetchedModels = rawModels.map((m: any) => ({
-        id: m.id || m.name,
-        name: m.name || m.id,
-        provider: this.provider,
-        contextWindow: m.capabilities?.limits?.max_context_window_tokens ?? m.contextWindow ?? 128000,
-        description: m.description || 'Model administered via GitHub Copilot SDK',
-        capabilities: m.capabilities,
-        policy: m.policy,
-        billing: m.billing,
-        supportedReasoningEfforts: m.supportedReasoningEfforts,
-        modelPickerCategory: m.modelPickerCategory,
-        modelPickerPriceCategory: m.modelPickerPriceCategory,
-      }));
-    } catch (error: any) {
-      logError(`[CopilotDelegate] Error fetching models from Copilot SDK: ${error?.message || error}`);
+        fetchedModels = await this.fetchModelsFromRestApi(token, baseUrl);
+      } catch (restErr: any) {
+        logError(`[CopilotDelegate] Direct REST API fetch failed, falling back to SDK: ${restErr?.message || restErr}`);
+      }
+    }
+
+    // Strategy 2: Fallback to Copilot SDK client if direct REST API returned no models
+    if (fetchedModels.length === 0) {
+      try {
+        fetchedModels = await this.fetchModelsFromSdk();
+      } catch (sdkErr: any) {
+        logError(`[CopilotDelegate] Error fetching models from Copilot SDK: ${sdkErr?.message || sdkErr}`);
+      }
     }
 
     // Dynamic resolution of custom models (skipped gracefully if file does not exist)
@@ -292,31 +441,32 @@ export class CopilotDelegate implements ILlmProviderDelegate {
     if (customModels.length > 0) {
       const existingModelIds = new Set(fetchedModels.map((m) => m.id.toLowerCase()));
 
-      for (const fallback of customModels) {
-        if (fallback.id && !existingModelIds.has(fallback.id.toLowerCase())) {
-          fetchedModels.push({
-            id: fallback.id,
-            name: fallback.name || fallback.id,
-            provider: this.provider,
-            contextWindow: fallback.contextWindow ?? 128000,
-            description: fallback.description || 'Custom user-defined Copilot model',
-            capabilities: {
-              family: 'custom',
-              ...(fallback.capabilities || {}),
-            },
-            policy: fallback.policy,
-            billing: fallback.billing,
-            supportedReasoningEfforts: fallback.supportedReasoningEfforts,
-            modelPickerCategory: fallback.modelPickerCategory,
-            modelPickerPriceCategory: fallback.modelPickerPriceCategory,
-          });
-          existingModelIds.add(fallback.id.toLowerCase());
-          logInfo(`[CopilotDelegate] Custom model added: ${fallback.id}`);
+      // 1. Filter out invalid or duplicate models
+      const newCustomModels = customModels.filter((fallback) => {
+        if (!fallback.id || existingModelIds.has(fallback.id.toLowerCase())) {
+          return false;
         }
+        existingModelIds.add(fallback.id.toLowerCase());
+        logInfo(`[CopilotDelegate] Custom model added: ${fallback.id}`);
+        return true;
+      });
+
+      // 2. Reuse mapper helper for new custom models
+      if (newCustomModels.length > 0) {
+        const mappedCustomModels = this.mapRawModelsToModelInfo(
+          newCustomModels,
+          'Custom user-defined Copilot model'
+        );
+        fetchedModels.push(...mappedCustomModels);
       }
     } else {
       logInfo(`[CopilotDelegate] No custom models found or loaded.`);
     }
+
+    // Sort models by name ASC (case-insensitive)
+    fetchedModels.sort((a, b) =>
+      (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })
+    );
 
     return fetchedModels;
   }

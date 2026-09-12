@@ -113,7 +113,7 @@ export class LlmChatServiceAdapter implements ILlmChatServicePort {
       log(ORIGIN, 'Found models for single provider', {
         provider,
         totalFound: models.length,
-        models: models.map((m) => ({ id: m.id, name: m.name, provider: m.provider })),
+        models: models.map((m) => ({ id: m.id, name: m.name, provider: m.provider, state: m.policy?.state, family: m.capabilities?.family })),
       });
       return models;
     }

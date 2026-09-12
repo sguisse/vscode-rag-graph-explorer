@@ -2,7 +2,7 @@ import { LlmProvider } from '../../../../../shared/services/llm-chat';
 import { ILlmProviderDelegate } from '../delegate/llm-provider.delegate.interface';
 import { OllamaDelegate } from '../delegate/ollama.delegate';
 import { GeminiDelegate } from '../delegate/gemini.delegate';
-import { CopilotDelegate } from '../delegate/copilot.delegate';
+import { CopilotDelegate } from '../delegate/copilot/copilot.delegate';
 
 export class LlmDelegateFactory {
   private static delegates: Map<LlmProvider, ILlmProviderDelegate> = new Map();
