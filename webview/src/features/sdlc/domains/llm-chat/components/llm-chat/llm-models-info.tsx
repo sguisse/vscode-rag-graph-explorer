@@ -173,10 +173,11 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
   const formatTokens = (val?: number) => (val ? `${(val / 1000).toFixed(0)}k` : '-');
 
   const renderTableRow = (row: ModelTableRow, depth = 0) => {
-    const isCustomFamily = row.capabilities?.family === 'custom';
+    const isCustomFamily = row.capabilities?.family === 'custom' || row.modelPickerCategory === 'custom';
     const isExpanded = Boolean(expandedRowIds[row.id]);
     const hasSubRows = Boolean(row.subRows && row.subRows.length > 0);
     const isSelectedModel = row.rowType === 'model' && row.id === currentSelectedModel;
+    const isNotEnabled = Boolean(row.policy?.state && row.policy.state.toLowerCase() !== 'enabled');
 
     if (row.rowType === 'detail') {
       return (
@@ -216,11 +217,19 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
     }
 
     let rowTextStyle = 'text-foreground';
-    if (row.hasPromo) {
+    if (isNotEnabled) {
+      rowTextStyle = 'font-bold text-destructive';
+    } else if (row.hasPromo) {
       rowTextStyle = 'font-bold text-emerald-600 dark:text-emerald-400';
     } else if (isCustomFamily) {
       rowTextStyle = 'font-bold text-blue-600 dark:text-blue-400';
     }
+
+    const stickyCellBg = isNotEnabled
+      ? 'bg-destructive/30 backdrop-blur text-destructive'
+      : isSelectedModel
+      ? 'bg-primary/10 backdrop-blur'
+      : 'bg-background/95 backdrop-blur';
 
     const isAdaptiveYes = row.adaptiveThinking && row.adaptiveThinking !== 'unsupported';
 
@@ -229,17 +238,19 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
         <tr
           onClick={() => handleModelSelect(row)}
           className={`transition-colors cursor-pointer ${
-            isSelectedModel
+            isNotEnabled
+              ? 'bg-destructive/20 hover:bg-destructive/30 text-destructive font-semibold'
+              : isSelectedModel
               ? 'bg-primary/15 hover:bg-primary/20 ring-1 ring-inset ring-primary/40'
               : 'bg-card/50 hover:bg-muted/40'
           }`}
-          data-tooltip="Click to select this model for LLM Chat"
+          data-tooltip={isNotEnabled ? `Disabled by Policy (${row.policy?.state || 'disabled'})` : 'Click to select this model for LLM Chat'}
         >
           <td
             style={{ width: `${colWidths.provider}px`, minWidth: `${colWidths.provider}px` }}
-            className="left-0 z-10 sticky bg-background/95 backdrop-blur p-2 font-mono text-xs align-middle"
+            className={`left-0 z-10 sticky ${stickyCellBg} p-2 font-mono text-xs align-middle`}
           >
-            <span className={`bg-muted px-1.5 py-0.5 border border-border rounded font-mono text-[10px] uppercase ${rowTextStyle}`}>
+            <span className={`px-1.5 py-0.5 border rounded font-mono text-[10px] uppercase ${isNotEnabled ? 'border-destructive/50 bg-destructive/30 text-destructive font-bold' : 'bg-muted border-border ' + rowTextStyle}`}>
               {row.provider || 'N/A'}
             </span>
           </td>
@@ -250,7 +261,7 @@ export const LLMModelsInfo: React.FC<LLMModelsInfoProps> = ({
               minWidth: `${colWidths.name}px`,
               left: `${colWidths.provider}px`,
             }}
-            className="z-10 sticky bg-background/95 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] backdrop-blur p-2 font-mono text-xs align-middle"
+            className={`z-10 sticky ${stickyCellBg} shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] p-2 font-mono text-xs align-middle`}
           >
             <div className="flex items-center gap-1.5" style={{ paddingLeft: `${depth * 14}px` }}>
               {hasSubRows ? (

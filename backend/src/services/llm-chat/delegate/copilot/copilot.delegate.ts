@@ -23,6 +23,8 @@ type ForceResolveMode = 'COPILOT_CLI' | 'DEVELOPMENT_NODE_MODULE' | 'PLUGIN_INST
 // Configuration constant to force a specific path strategy or standard workflow (null)
 const FORCE_RESOLVE_NATIVE_CLI: ForceResolveMode = null;
 
+const LOG_FULL_MODELS_LIST_INFO = true; // Set to true to log the full list of models retrieved from Copilot SDK or REST API
+
 export class CopilotDelegate implements ILlmProviderDelegate {
   readonly provider = LlmProvider.COPILOT;
   private static clientInstance: CopilotClient | null = null;
@@ -363,19 +365,33 @@ export class CopilotDelegate implements ILlmProviderDelegate {
     rawModels: any[],
     defaultDescription: string = 'Model administered via GitHub Copilot'
   ): ILlmModelInfo[] {
-    return rawModels.map((m: any) => ({
-      id: m.id || m.name,
-      name: m.name || m.id,
-      provider: this.provider,
-      contextWindow: m.capabilities?.limits?.max_context_window_tokens ?? m.contextWindow ?? 128000,
-      description: m.description || defaultDescription,
-      capabilities: m.capabilities || { family: 'custom' },
-      policy: m.policy,
-      billing: m.billing,
-      supportedReasoningEfforts: m.supportedReasoningEfforts,
-      modelPickerCategory: m.modelPickerCategory,
-      modelPickerPriceCategory: m.modelPickerPriceCategory,
-    }));
+    return rawModels.map((m: any) => {
+      // If policy or policy.state does not exist, initialize policy with state set to 'disabled'
+      const isStateEnabled = m.policy?.state && String(m.policy.state).toLowerCase() === 'enabled';
+      const policy = {
+        ...(m.policy || {}),
+        state: isStateEnabled ? 'enabled' : 'disabled',
+      };
+
+      const model = {
+        id: m.id || m.name,
+        name: m.name || m.id,
+        provider: this.provider,
+        contextWindow: m.capabilities?.limits?.max_context_window_tokens ?? m.contextWindow ?? 128000,
+        description: m.description || defaultDescription,
+        capabilities: m.capabilities || { family: 'custom' },
+        policy,
+        billing: m.billing,
+        supportedReasoningEfforts: m.supportedReasoningEfforts,
+        modelPickerCategory: m.modelPickerCategory,
+        modelPickerPriceCategory: m.modelPickerPriceCategory,
+      };
+
+      if (LOG_FULL_MODELS_LIST_INFO) {
+        logInfo(`[CopilotDelegate] Model mapped: ${model.id} - ${model.name} | Details: ${JSON.stringify(model)}`);
+      }
+      return model;
+    });
   }
 
   private async ensureStarted(): Promise<void> {
