@@ -1,11 +1,3 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
-# Create directory structure for Agent Skills specification
-mkdir -p .github/skills/py-module-installer
-
-# Write SKILL.md definition compliant with https://agentskills.io/specification
-cat << 'EOF' > .github/skills/py-module-installer/SKILL.md
 ---
 name: py-module-installer
 description: Create and register a modular tool checker and installer within the GraphRAG Explorer installation pipeline adhering to BaseCheckModule and BaseInstallModule standards.
@@ -172,6 +164,3 @@ class ToolInstaller(BaseInstallModule):
 | **Metrics Tracking** | In `check.py`, increment `self.steps_count += 1` for every check step and `self.ko_count += 1` whenever status is `"❌"`. |
 | **Path Normalization** | Use `EnvironmentContext` or path normalization utilities for Windows/POSIX compatibility. |
 | **No Dynamic Modifications** | Do not hardcode references in `install/runner.py`. Allow discovery via structural directory scanning. |
-EOF
-
-echo "✅ feat: Added SKILLS-compliant specification for create-graphrag-tool-installer in skills/create-graphrag-tool-installer/SKILL.md"

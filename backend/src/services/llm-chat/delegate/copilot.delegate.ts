@@ -1,6 +1,7 @@
 import { CopilotClient, approveAll } from '@github/copilot-sdk';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as cp from 'child_process';
 import { ILlmProviderDelegate } from './llm-provider.delegate.interface';
 import {
   LlmProvider,
@@ -13,7 +14,7 @@ import {
 } from '../../../../../shared/services/llm-chat';
 import { getCurrentExtensionContext, getWorkspaceRoot } from '../../../utils/utils-vscode';
 import { vsCodeSettingsManager } from '../../../managers/VsCodeSettings.manager';
-import { logError, logInfo } from '../../../utils/utils-log';
+import { log, logError, logInfo } from '../../../utils/utils-log';
 
 export class CopilotDelegate implements ILlmProviderDelegate {
   readonly provider = LlmProvider.COPILOT;
@@ -27,24 +28,25 @@ export class CopilotDelegate implements ILlmProviderDelegate {
   }
 
   private resolveNativeCliPath(): string | undefined {
+    log("CopilotDelegate", `resolveNativeCliPath start ...`);
     if (!CopilotDelegate.cliBinaryPath) {
       const extentionContext = getCurrentExtensionContext();
       const isWin = process.platform === 'win32';
-      const binName = isWin ? 'copilot.exe' : 'copilot';
+      const binName = isWin ? 'copilot.exe' : 'copilot-runtime';
       const isArm64 = process.arch === 'arm64';
       const arch = isArm64 ? 'arm64' : 'x64';
       const platform = process.platform;
       const platformTarget = `${platform}-${arch}`;
 
+      // 1. First search in the local workspace tools directory (.token-razor)
       const workspaceRoot = getWorkspaceRoot();
       const backendWorkspacePath = vsCodeSettingsManager.getSettings().backendWorkspacePath || '.token-razor';
       const localToolPath = path.join(
         workspaceRoot,
         backendWorkspacePath,
         'tools',
-        'copilot',
-        platformTarget,
-        binName
+        'node',
+        'node_modules', '@github', `copilot-sdk-${platformTarget}`, 'prebuilds', platformTarget, binName
       );
 
       let foundPath: string | undefined;
@@ -52,32 +54,67 @@ export class CopilotDelegate implements ILlmProviderDelegate {
       if (fs.existsSync(localToolPath)) {
         foundPath = localToolPath;
       } else {
+        // 2. Second try : search in the extension's node_modules directory (works only in dev mode !!!)
         const nodeModulesPath = extentionContext ? extentionContext.asAbsolutePath(
-          path.join('node_modules', '@github', `copilot-sdk-${platformTarget}`, binName)
+          path.join('node_modules', '@github', `copilot-sdk-${platformTarget}`, 'prebuilds', platformTarget, binName)
         ) : undefined;
 
         if (nodeModulesPath && fs.existsSync(nodeModulesPath)) {
           foundPath = nodeModulesPath;
-        }
+      }
       }
 
       if (foundPath) {
         CopilotDelegate.cliBinaryPath = foundPath;
         process.env.COPILOT_CLI_PATH = foundPath;
         logInfo(`[CopilotDelegate] Resolved Copilot SDK binary path: ${foundPath}`);
+
+
+
       } else {
-        logError(`[CopilotDelegate] Copilot SDK binary not found in local workspace tools (.token-razor) or extension node_modules.`);
+        logError(`[CopilotDelegate] Copilot SDK binary not found in local workspace tools (.token-razor) or extension (local dev) node_modules.`);
       }
     }
 
-    return CopilotDelegate.cliBinaryPath || undefined;
-  }
+      const sdkPath = CopilotDelegate.cliBinaryPath;
+      if (sdkPath) {
+        try {
+          const versionOutput = cp.execFileSync(sdkPath, ['-version'], { encoding: 'utf-8' }).trim();
+          logInfo(`[CopilotDelegate] Copilot SDK version output: ${versionOutput}`);
+        } catch (err: any) {
+          logError(`[CopilotDelegate] Failed to execute Copilot SDK version check: ${err?.message || err}`);
+        }
+      } else {
+        logError(`[CopilotDelegate] Copilot SDK binary not found at target path: ${sdkPath}`);
+      }
 
-  private get client(): CopilotClient {
-    if (!CopilotDelegate.clientInstance) {
-      const cliPath = this.resolveNativeCliPath();
-      CopilotDelegate.clientInstance = new CopilotClient(cliPath ? ({ cliPath } as any) : undefined);
+      logInfo(`[CopilotDelegate] Copilot SDK binary path: ${CopilotDelegate.cliBinaryPath || 'not found'}`);
+      return CopilotDelegate.cliBinaryPath || undefined;
     }
+
+private get client(): CopilotClient {
+    //if (!CopilotDelegate.clientInstance) {
+      const cliPath = this.resolveNativeCliPath();
+
+      if (cliPath) {
+        process.env.COPILOT_CLI_PATH = cliPath;
+      }
+
+      // 1. Récupération d'un token explicite si défini dans l'environnement
+      const token = process.env.COPILOT_GITHUB_TOKEN || process.env.GITHUB_TOKEN || process.env.GITHUB_COPILOT_TOKEN;
+
+      // 2. Configuration des options d'authentification
+      const options: Record<string, any> = token
+        ? { gitHubToken: token }
+        : { useLoggedInUser: true }; // Force le SDK à utiliser ta session CLI (copilot auth)
+
+      if (cliPath) {
+        options.cliPath = cliPath;
+      }
+
+      // Initialisation avec les bonnes options
+      CopilotDelegate.clientInstance = new CopilotClient(options as any);
+    //}
     return CopilotDelegate.clientInstance;
   }
 
@@ -133,7 +170,7 @@ export class CopilotDelegate implements ILlmProviderDelegate {
     config: LlmConfigVO
   ): Promise<IChatResponseDto> {
     const startTime = Date.now();
-    const model = config?.model || 'mai-code-1-flash-picker';
+    const model = config?.model || 'mai-code-1.1-flash';
     const lastUserMsg = prompt.getLastUserMessage()?.content || '';
 
     try {
