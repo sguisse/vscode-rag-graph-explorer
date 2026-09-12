@@ -7,7 +7,7 @@ import {
 } from '@/shared/services/graph-rag-explorer';
 import {
   LlmProvider,
-  IChatMessageDto,
+  ChatMessageDto,
   IFileContextDto,
 } from '@/shared/services/llm-chat';
 import { ExportFormat } from '@/shared/services/codebase-exporter/types';
@@ -246,7 +246,7 @@ export interface SdbRgtPromptBuilderState {
 export interface SdbRgtLlmChatState {
   llmProvider: LlmProvider;
   llmSelectedModel: string;
-  llmMessages: IChatMessageDto[];
+  llmMessages: ChatMessageDto[];
   llmInputPrompt: string;
   llmTemperature: number;
   llmAttachedFiles: IFileContextDto[];
@@ -256,7 +256,7 @@ export interface SdbRgtLlmChatState {
   setLlmProvider: (provider: LlmProvider) => void;
   setLlmSelectedModel: (model: string) => void;
   setLmMessages: (
-    messages: IChatMessageDto[] | ((prev: IChatMessageDto[]) => IChatMessageDto[])
+    messages: ChatMessageDto[] | ((prev: ChatMessageDto[]) => ChatMessageDto[])
   ) => void;
   setLlmInputPrompt: (prompt: string) => void;
   setLlmTemperature: (temp: number) => void;

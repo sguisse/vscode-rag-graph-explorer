@@ -3,8 +3,8 @@
 
 import { RpcMethodEnum } from '@/shared/config/rpc-methods.enum.gen';
 import { AbstractApiService } from '@/services/abstract-api.service';
-import { IChatRequestDto } from '@/shared/services/llm-chat/model/dto/chat-request.dto';
-import { IChatResponseDto, IChatStreamChunkDto, ILlmHealthResultDto } from '@/shared/services/llm-chat/model/dto/chat-response.dto';
+import { ChatRequestDto } from '@/shared/services/llm-chat/model/dto/chat-request.dto';
+import { ChatResponseDto, ChatStreamChunkDto, LlmHealthResultDto } from '@/shared/services/llm-chat/model/dto/chat-response.dto';
 import { LlmProvider } from '@/shared/services/llm-chat/types/llm-provider.enum';
 import { LlmModelInfo } from '@/shared/services/llm-chat/model/value-objects/llm-model.vo';
 import { ILlmChatServicePort } from '@/shared/services/llm-chat/port-out/llm-chat-service.port';
@@ -14,11 +14,11 @@ class LlmChatApiService extends AbstractApiService implements ILlmChatServicePor
         super();
     }
 
-    public async executeChat(request: IChatRequestDto): Promise<IChatResponseDto> {
+    public async executeChat(request: ChatRequestDto): Promise<ChatResponseDto> {
         return await this.rpc.call(RpcMethodEnum.LLMCHAT_EXECUTE_CHAT, request);
     }
 
-    public async streamChat(request: IChatRequestDto, onChunk: (chunk: IChatStreamChunkDto) => void): Promise<IChatResponseDto> {
+    public async streamChat(request: ChatRequestDto, onChunk: (chunk: ChatStreamChunkDto) => void): Promise<ChatResponseDto> {
         return await this.rpc.call(RpcMethodEnum.LLMCHAT_STREAM_CHAT, request, onChunk);
     }
 
@@ -26,7 +26,7 @@ class LlmChatApiService extends AbstractApiService implements ILlmChatServicePor
         return await this.rpc.call(RpcMethodEnum.LLMCHAT_LIST_AVAILABLE_MODELS, provider);
     }
 
-    public async healthCheck(provider: LlmProvider, baseUrl?: string): Promise<ILlmHealthResultDto> {
+    public async healthCheck(provider: LlmProvider, baseUrl?: string): Promise<LlmHealthResultDto> {
         return await this.rpc.call(RpcMethodEnum.LLMCHAT_HEALTH_CHECK, provider, baseUrl);
     }
 

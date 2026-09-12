@@ -3,28 +3,28 @@ import {
   LlmModelInfo,
   LlmConfigVO,
   ChatPromptVO,
-  IChatResponseDto,
-  IChatStreamChunkDto,
-  ILlmHealthResultDto,
+  ChatResponseDto,
+  ChatStreamChunkDto,
+  LlmHealthResultDto,
 } from '../../../../../shared/services/llm-chat';
 
-export interface ILlmProviderDelegate {
+export interface LlmProviderDelegate {
   readonly provider: LlmProvider;
 
   executeChat(
     sessionId: string,
     prompt: ChatPromptVO,
     config: LlmConfigVO
-  ): Promise<IChatResponseDto>;
+  ): Promise<ChatResponseDto>;
 
   streamChat(
     sessionId: string,
     prompt: ChatPromptVO,
     config: LlmConfigVO,
-    onChunk: (chunk: IChatStreamChunkDto) => void
-  ): Promise<IChatResponseDto>;
+    onChunk: (chunk: ChatStreamChunkDto) => void
+  ): Promise<ChatResponseDto>;
 
   listModels(config?: LlmConfigVO): Promise<LlmModelInfo[]>;
 
-  healthCheck(baseUrl?: string): Promise<ILlmHealthResultDto>;
+  healthCheck(baseUrl?: string): Promise<LlmHealthResultDto>;
 }

@@ -1,12 +1,12 @@
-import { ILlmProviderDelegate } from './llm-provider.delegate.interface';
+import { LlmProviderDelegate } from './llm-provider.delegate.interface';
 import {
   LlmProvider,
   LlmModelInfo,
   LlmConfigVO,
   ChatPromptVO,
-  IChatResponseDto,
-  IChatStreamChunkDto,
-  ILlmHealthResultDto,
+  ChatResponseDto,
+  ChatStreamChunkDto,
+  LlmHealthResultDto,
 } from '../../../../../shared/services/llm-chat';
 import { log } from '../../../utils/utils-log';
 import { TokenComputationAdapter } from '../token-computation.adapter';
@@ -16,14 +16,14 @@ import { promisify } from 'util';
 const execAsync = promisify(exec);
 const ORIGIN = 'GeminiDelegate';
 
-export class GeminiDelegate implements ILlmProviderDelegate {
+export class GeminiDelegate implements LlmProviderDelegate {
   readonly provider = LlmProvider.GEMINI;
 
   public async executeChat(
     sessionId: string,
     prompt: ChatPromptVO,
     config: LlmConfigVO
-  ): Promise<IChatResponseDto> {
+  ): Promise<ChatResponseDto> {
     const startTime = Date.now();
     const apiKey = config.apiKey || process.env.GEMINI_API_KEY;
 
@@ -42,7 +42,7 @@ export class GeminiDelegate implements ILlmProviderDelegate {
     config: LlmConfigVO,
     apiKey: string,
     startTime: number
-  ): Promise<IChatResponseDto> {
+  ): Promise<ChatResponseDto> {
     const baseUrl = config.baseUrl || 'https://generativelanguage.googleapis.com';
     const model = config.model || 'gemini-1.5-pro';
     const url = `${baseUrl}/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -105,7 +105,7 @@ export class GeminiDelegate implements ILlmProviderDelegate {
     prompt: ChatPromptVO,
     config: LlmConfigVO,
     startTime: number
-  ): Promise<IChatResponseDto> {
+  ): Promise<ChatResponseDto> {
     const formattedHistory = prompt.getFormattedHistory();
     const lastUserMsg = prompt.getLastUserMessage()?.content || '';
     const cliCmd = process.env.JQA_LLM_CLI_CMD || 'gemini';
@@ -157,8 +157,8 @@ export class GeminiDelegate implements ILlmProviderDelegate {
     sessionId: string,
     prompt: ChatPromptVO,
     config: LlmConfigVO,
-    onChunk: (chunk: IChatStreamChunkDto) => void
-  ): Promise<IChatResponseDto> {
+    onChunk: (chunk: ChatStreamChunkDto) => void
+  ): Promise<ChatResponseDto> {
     log(ORIGIN, 'Streaming Gemini chat response', { sessionId });
     const result = await this.executeChat(sessionId, prompt, config);
     onChunk({
@@ -183,7 +183,7 @@ export class GeminiDelegate implements ILlmProviderDelegate {
     return models;
   }
 
-  public async healthCheck(): Promise<ILlmHealthResultDto> {
+  public async healthCheck(): Promise<LlmHealthResultDto> {
     log(ORIGIN, 'Checking Gemini provider health');
     const apiKey = process.env.GEMINI_API_KEY;
     if (apiKey) return { status: 'ok', details: 'API Key configured' };

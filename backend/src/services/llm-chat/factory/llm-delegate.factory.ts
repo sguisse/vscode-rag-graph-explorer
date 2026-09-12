@@ -1,13 +1,13 @@
 import { LlmProvider } from '../../../../../shared/services/llm-chat';
-import { ILlmProviderDelegate } from '../delegate/llm-provider.delegate.interface';
+import { LlmProviderDelegate } from '../delegate/llm-provider.delegate.interface';
 import { OllamaDelegate } from '../delegate/ollama.delegate';
 import { GeminiDelegate } from '../delegate/gemini.delegate';
 import { CopilotDelegate } from '../delegate/copilot/copilot.delegate';
 
 export class LlmDelegateFactory {
-  private static delegates: Map<LlmProvider, ILlmProviderDelegate> = new Map();
+  private static delegates: Map<LlmProvider, LlmProviderDelegate> = new Map();
 
-  public static getDelegate(provider: LlmProvider): ILlmProviderDelegate {
+  public static getDelegate(provider: LlmProvider): LlmProviderDelegate {
     if (!this.delegates.has(provider)) {
       switch (provider) {
         case LlmProvider.OLLAMA:

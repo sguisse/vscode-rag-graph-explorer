@@ -1,14 +1,14 @@
-import { IChatMessage } from '../../types/chat-message.type';
+import { ChatMessage } from '../../types/chat-message.type';
 import { LlmConfigVO } from '../value-objects/llm-config.vo';
 
 export class ChatSessionEntity {
   readonly id: string;
-  private _messages: IChatMessage[];
+  private _messages: ChatMessage[];
   private _config: LlmConfigVO;
   private _createdAt: number;
   private _updatedAt: number;
 
-  constructor(id: string, config: LlmConfigVO, initialMessages: IChatMessage[] = []) {
+  constructor(id: string, config: LlmConfigVO, initialMessages: ChatMessage[] = []) {
     this.id = id;
     this._config = config;
     this._messages = [...initialMessages];
@@ -16,7 +16,7 @@ export class ChatSessionEntity {
     this._updatedAt = Date.now();
   }
 
-  public get messages(): readonly IChatMessage[] {
+  public get messages(): readonly ChatMessage[] {
     return Object.freeze([...this._messages]);
   }
 
@@ -32,7 +32,7 @@ export class ChatSessionEntity {
     return this._updatedAt;
   }
 
-  public addMessage(message: IChatMessage): void {
+  public addMessage(message: ChatMessage): void {
     this._messages.push(message);
     this._updatedAt = Date.now();
   }

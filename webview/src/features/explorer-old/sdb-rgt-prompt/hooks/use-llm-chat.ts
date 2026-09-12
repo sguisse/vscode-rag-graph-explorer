@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   LlmProvider,
-  IChatMessageDto,
+  ChatMessageDto,
   LlmModelInfo,
   IFileContextDto,
 } from '@/shared/services/llm-chat';
@@ -195,7 +195,7 @@ export function useLlmChat() {
       timestamp: requestTimestamp,
     });
 
-    const userMessage: IChatMessageDto = {
+    const userMessage: ChatMessageDto = {
       id: `user-${requestTimestamp}`,
       role: 'user',
       content: formattedPrompt,

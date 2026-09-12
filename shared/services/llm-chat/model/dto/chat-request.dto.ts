@@ -5,7 +5,7 @@ export interface IFileContextDto {
   content?: string;
 }
 
-export interface IChatMessageDto {
+export interface ChatMessageDto {
   id?: string;
   role: LlmRole;
   content: string;
@@ -19,11 +19,11 @@ export interface IChatMessageDto {
   executionTimeMs?: number;
 }
 
-export interface IChatRequestDto {
+export interface ChatRequestDto {
   sessionId?: string;
   provider: LlmProvider;
   model?: string;
-  messages: IChatMessageDto[];
+  messages: ChatMessageDto[];
   systemPrompt?: string;
   fileContexts?: IFileContextDto[];
   temperature?: number;

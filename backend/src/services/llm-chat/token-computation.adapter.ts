@@ -1,4 +1,4 @@
-import { IChatMessageDto } from '../../../../shared/services/llm-chat';
+import { ChatMessageDto } from '../../../../shared/services/llm-chat';
 import { log } from '../../utils/utils-log';
 
 const ORIGIN = 'TokenComputationAdapter';
@@ -21,7 +21,7 @@ export class TokenComputationAdapter {
   /**
    * Estimates total prompt tokens across message history and system prompt.
    */
-  public static countPromptTokens(messages: IChatMessageDto[], systemPrompt?: string): number {
+  public static countPromptTokens(messages: ChatMessageDto[], systemPrompt?: string): number {
     let total = 0;
     if (systemPrompt) {
       total += this.countTokens(systemPrompt) + 4;

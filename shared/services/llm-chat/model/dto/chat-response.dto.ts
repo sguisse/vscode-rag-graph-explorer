@@ -1,6 +1,6 @@
 import { LlmProvider } from '../../types/llm-provider.enum';
 
-export interface IChatResponseDto {
+export interface ChatResponseDto {
   sessionId: string;
   messageId: string;
   provider: LlmProvider;
@@ -14,14 +14,14 @@ export interface IChatResponseDto {
   error?: string;
 }
 
-export interface IChatStreamChunkDto {
+export interface ChatStreamChunkDto {
   sessionId: string;
   delta: string;
   done: boolean;
   error?: string;
 }
 
-export interface ILlmHealthResultDto {
+export interface LlmHealthResultDto {
   status: 'ok' | 'error';
   details?: string;
 }

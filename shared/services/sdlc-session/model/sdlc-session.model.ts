@@ -1,4 +1,4 @@
-import { IChatMessageDto, LlmProvider } from '../../llm-chat';
+import { ChatMessageDto, LlmProvider } from '../../llm-chat';
 import { ReferenceItem } from '../../reference/model/reference-model';
 
 export type SdlcSessionStatus = 'draft' | 'running' | 'error' | 'success';
@@ -24,7 +24,7 @@ export interface LlmChatPayload {
     provider: LlmProvider;
     selectedModel: string;
     temperature: number;
-    messages: IChatMessageDto[];
+    messages: ChatMessageDto[];
     /** Refined prompt text edited inside the LLM chat panel */
     customPrompt?: string;
     /** Adjusted reference items selected for the LLM request (undefined inherits from Instructions) */

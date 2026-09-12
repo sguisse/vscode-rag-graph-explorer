@@ -1,10 +1,10 @@
-import { IChatMessage } from '../../types/chat-message.type';
+import { ChatMessage } from '../../types/chat-message.type';
 
 export class ChatPromptVO {
-  readonly messages: readonly IChatMessage[];
+  readonly messages: readonly ChatMessage[];
   readonly systemPrompt?: string;
 
-  constructor(messages: IChatMessage[], systemPrompt?: string) {
+  constructor(messages: ChatMessage[], systemPrompt?: string) {
     if (!messages || messages.length === 0) {
       throw new Error('ChatPromptVO requires at least one message');
     }
@@ -12,7 +12,7 @@ export class ChatPromptVO {
     this.systemPrompt = systemPrompt;
   }
 
-  public getFormattedHistory(): IChatMessage[] {
+  public getFormattedHistory(): ChatMessage[] {
     if (!this.systemPrompt) {
       return [...this.messages];
     }
@@ -20,7 +20,7 @@ export class ChatPromptVO {
     if (hasSystem) {
       return [...this.messages];
     }
-    const systemMsg: IChatMessage = {
+    const systemMsg: ChatMessage = {
       id: 'system-prompt',
       role: 'system',
       content: this.systemPrompt,
@@ -29,7 +29,7 @@ export class ChatPromptVO {
     return [systemMsg, ...this.messages];
   }
 
-  public getLastUserMessage(): IChatMessage | undefined {
+  public getLastUserMessage(): ChatMessage | undefined {
     return [...this.messages].reverse().find((m) => m.role === 'user');
   }
 }

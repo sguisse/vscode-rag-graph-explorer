@@ -1,12 +1,12 @@
 import React from 'react';
-import { IChatMessageDto } from '@/shared/services/llm-chat';
+import { ChatMessageDto } from '@/shared/services/llm-chat';
 import { CollapsibleCard } from '@/components/app/collapsible-card';
 import { parseUserMessageContent, formatDateTime } from '../../hooks/use-llm-chat';
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { useExplorerStore } from '../../../store/useExplorerStore';
 
 export const UserMessageBlock: React.FC<{
-  msg: IChatMessageDto;
+  msg: ChatMessageDto;
   globalExpanded?: { value: boolean; id: number };
 }> = ({ msg, globalExpanded }) => {
   const isDarkMode = useAppContextStore((s) => s.isDarkMode);

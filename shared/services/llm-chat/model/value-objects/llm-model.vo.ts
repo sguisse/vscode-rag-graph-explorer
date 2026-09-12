@@ -41,7 +41,7 @@ export interface LlmModelPolicy {
   terms?: string;
 }
 
-export interface ILlmTokenPriceConfig {
+export interface LlmTokenPriceConfig {
   input_price?: number;
   output_price?: number;
   cache_price?: number;
@@ -52,11 +52,11 @@ export interface ILlmTokenPriceConfig {
   max_prompt_tokens?: number;
 }
 
-export interface ILlmLongContextTokenPriceConfig extends ILlmTokenPriceConfig {}
+export interface LlmLongContextTokenPriceConfig extends LlmTokenPriceConfig {}
 
-export interface ILlmTokenPrices extends ILlmTokenPriceConfig {
+export interface LlmTokenPrices extends LlmTokenPriceConfig {
   batch_size?: number;
-  long_context?: ILlmLongContextTokenPriceConfig;
+  long_context?: LlmLongContextTokenPriceConfig;
 }
 
 export interface LlmModelPromo {
@@ -68,7 +68,7 @@ export interface LlmModelPromo {
 
 export interface LlmModelBilling {
   discount_percent?: number;
-  token_prices?: ILlmTokenPrices;
+  token_prices?: LlmTokenPrices;
   promo?: LlmModelPromo;
 }
 

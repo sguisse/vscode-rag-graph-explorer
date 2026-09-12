@@ -1,6 +1,6 @@
 import { LlmProvider } from '../../types/llm-provider.enum';
 
-export interface ILlmConfigProps {
+export interface LlmConfigProps {
   provider: LlmProvider;
   model: string;
   temperature?: number;
@@ -21,7 +21,7 @@ export class LlmConfigVO {
   readonly timeoutMs: number;
   readonly extraParams: Record<string, unknown>;
 
-  constructor(props: ILlmConfigProps) {
+  constructor(props: LlmConfigProps) {
     this.provider = props.provider;
     this.model = props.model || this.getDefaultModel(props.provider);
     this.temperature = props.temperature ?? 0.7;

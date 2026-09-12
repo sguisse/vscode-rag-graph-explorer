@@ -1,26 +1,26 @@
-import { ILlmProviderDelegate } from './llm-provider.delegate.interface';
+import { LlmProviderDelegate } from './llm-provider.delegate.interface';
 import {
   LlmProvider,
   LlmModelInfo,
   LlmConfigVO,
   ChatPromptVO,
-  IChatResponseDto,
-  IChatStreamChunkDto,
-  ILlmHealthResultDto,
+  ChatResponseDto,
+  ChatStreamChunkDto,
+  LlmHealthResultDto,
 } from '../../../../../shared/services/llm-chat';
 import { log } from '../../../utils/utils-log';
 import { TokenComputationAdapter } from '../token-computation.adapter';
 
 const ORIGIN = 'OllamaDelegate';
 
-export class OllamaDelegate implements ILlmProviderDelegate {
+export class OllamaDelegate implements LlmProviderDelegate {
   readonly provider = LlmProvider.OLLAMA;
 
   public async executeChat(
     sessionId: string,
     prompt: ChatPromptVO,
     config: LlmConfigVO
-  ): Promise<IChatResponseDto> {
+  ): Promise<ChatResponseDto> {
     const startTime = Date.now();
     const baseUrl = config.baseUrl || 'http://localhost:11434';
     log(ORIGIN, 'Executing synchronous chat request to Ollama HTTP daemon', { baseUrl, model: config.model });
@@ -103,8 +103,8 @@ export class OllamaDelegate implements ILlmProviderDelegate {
     sessionId: string,
     prompt: ChatPromptVO,
     config: LlmConfigVO,
-    onChunk: (chunk: IChatStreamChunkDto) => void
-  ): Promise<IChatResponseDto> {
+    onChunk: (chunk: ChatStreamChunkDto) => void
+  ): Promise<ChatResponseDto> {
     const startTime = Date.now();
     const baseUrl = config.baseUrl || 'http://localhost:11434';
     log(ORIGIN, 'Initiating chat stream to Ollama HTTP daemon', { baseUrl, model: config.model });
@@ -240,7 +240,7 @@ export class OllamaDelegate implements ILlmProviderDelegate {
     }
   }
 
-  public async healthCheck(baseUrl?: string): Promise<ILlmHealthResultDto> {
+  public async healthCheck(baseUrl?: string): Promise<LlmHealthResultDto> {
     const url = baseUrl || 'http://localhost:11434';
     log(ORIGIN, 'Checking health of Ollama daemon', { url });
     try {

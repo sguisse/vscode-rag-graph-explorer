@@ -1,8 +1,8 @@
-import { IChatMessage } from '../types/chat-message.type';
-import { IChatMessageDto } from '../model/dto/chat-request.dto';
+import { ChatMessage } from '../types/chat-message.type';
+import { ChatMessageDto } from '../model/dto/chat-request.dto';
 
 export class ChatMessageMapper {
-  public static toDomain(dto: IChatMessageDto): IChatMessage {
+  public static toDomain(dto: ChatMessageDto): ChatMessage {
     return {
       id: dto.id || `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       role: dto.role,
@@ -18,7 +18,7 @@ export class ChatMessageMapper {
     };
   }
 
-  public static toDto(entity: IChatMessage): IChatMessageDto {
+  public static toDto(entity: ChatMessage): ChatMessageDto {
     return {
       id: entity.id,
       role: entity.role,
@@ -34,11 +34,11 @@ export class ChatMessageMapper {
     };
   }
 
-  public static toDomainList(dtos: IChatMessageDto[]): IChatMessage[] {
+  public static toDomainList(dtos: ChatMessageDto[]): ChatMessage[] {
     return dtos.map((d) => this.toDomain(d));
   }
 
-  public static toDtoList(entities: IChatMessage[]): IChatMessageDto[] {
+  public static toDtoList(entities: ChatMessage[]): ChatMessageDto[] {
     return entities.map((e) => this.toDto(e));
   }
 }

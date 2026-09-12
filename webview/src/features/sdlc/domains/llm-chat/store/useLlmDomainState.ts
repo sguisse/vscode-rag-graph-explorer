@@ -1,14 +1,14 @@
 import { create } from 'zustand';
 import { useSdlcSessionStore } from '../../../core/store/useSdlcSessionStore';
-import { LlmProvider, IChatMessageDto, IFileContextDto } from '@/shared/services/llm-chat';
+import { LlmProvider, ChatMessageDto, IFileContextDto } from '@/shared/services/llm-chat';
 
 export interface LlmDomainState {
   llmProvider: LlmProvider;
   setLlmProvider: (provider: LlmProvider) => void;
   llmSelectedModel: string;
   setLlmSelectedModel: (model: string) => void;
-  llmMessages: IChatMessageDto[];
-  setLmMessages: (messages: IChatMessageDto[] | ((prev: IChatMessageDto[]) => IChatMessageDto[])) => void;
+  llmMessages: ChatMessageDto[];
+  setLmMessages: (messages: ChatMessageDto[] | ((prev: ChatMessageDto[]) => ChatMessageDto[])) => void;
   llmTemperature: number;
   setLlmTemperature: (temp: number) => void;
 

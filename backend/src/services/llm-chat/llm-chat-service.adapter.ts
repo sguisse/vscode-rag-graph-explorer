@@ -2,11 +2,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {
   ILlmChatServicePort,
-  IChatRequestDto,
-  IChatResponseDto,
-  IChatStreamChunkDto,
+  ChatRequestDto,
+  ChatResponseDto,
+  ChatStreamChunkDto,
   LlmModelInfo,
-  ILlmHealthResultDto,
+  LlmHealthResultDto,
   LlmProvider,
   LlmConfigVO,
   ChatPromptVO,
@@ -16,12 +16,12 @@ import {
 import { LlmDelegateFactory } from './factory/llm-delegate.factory';
 import { log } from '../../utils/utils-log';
 
-const ORIGIN = 'LlmChatServiceAdapter';
+const ORIGIN = 'LlmChatAdapter';
 
-export class LlmChatServiceAdapter implements ILlmChatServicePort {
+export class LlmChatAdapter implements ILlmChatServicePort {
   private sessions: Map<string, ChatSessionEntity> = new Map();
 
-  public async executeChat(request: IChatRequestDto): Promise<IChatResponseDto> {
+  public async executeChat(request: ChatRequestDto): Promise<ChatResponseDto> {
     const sessionId = request.sessionId || `session-${Date.now()}`;
     log(ORIGIN, 'Incoming Chat Execution Request', { sessionId, provider: request.provider, model: request.model, contextFilesCount: request.fileContexts?.length || 0 });
 
@@ -80,9 +80,9 @@ export class LlmChatServiceAdapter implements ILlmChatServicePort {
   }
 
   public async streamChat(
-    request: IChatRequestDto,
-    onChunk: (chunk: IChatStreamChunkDto) => void
-  ): Promise<IChatResponseDto> {
+    request: ChatRequestDto,
+    onChunk: (chunk: ChatStreamChunkDto) => void
+  ): Promise<ChatResponseDto> {
     const sessionId = request.sessionId || `session-${Date.now()}`;
     log(ORIGIN, 'Incoming Chat Streaming Request', { sessionId, provider: request.provider, model: request.model });
 
@@ -144,7 +144,7 @@ export class LlmChatServiceAdapter implements ILlmChatServicePort {
   public async healthCheck(
     provider: LlmProvider,
     baseUrl?: string
-  ): Promise<ILlmHealthResultDto> {
+  ): Promise<LlmHealthResultDto> {
     log(ORIGIN, 'Performing provider health check', { provider, baseUrl });
     const delegate = LlmDelegateFactory.getDelegate(provider);
     return delegate.healthCheck(baseUrl);

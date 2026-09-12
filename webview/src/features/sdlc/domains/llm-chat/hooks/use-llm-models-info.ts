@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { LlmModelInfo, ILlmTokenPrices, ILlmTokenPriceConfig, LlmProvider } from '@/shared/services/llm-chat';
+import { LlmModelInfo, LlmTokenPrices, LlmTokenPriceConfig, LlmProvider } from '@/shared/services/llm-chat';
 import { llmChatApiService } from '@/services/api/llm-chat-api.service.gen';
 
 export type SortField =
@@ -53,7 +53,7 @@ export interface ModelTableRow extends LlmModelInfo {
   subRows?: ModelTableRow[];
 }
 
-export function getTokenPrices(m: LlmModelInfo, longContext: boolean): ILlmTokenPrices | undefined {
+export function getTokenPrices(m: LlmModelInfo, longContext: boolean): LlmTokenPrices | undefined {
   if (longContext && m.billing?.token_prices?.long_context) {
     return m.billing.token_prices.long_context;
   }
@@ -64,7 +64,7 @@ export function getTokenPrices(m: LlmModelInfo, longContext: boolean): ILlmToken
   return undefined;
 }
 
-export function formatBillingRates(rates?: ILlmTokenPriceConfig, includeBatchSize = false, batchSize?: number): string {
+export function formatBillingRates(rates?: LlmTokenPriceConfig, includeBatchSize = false, batchSize?: number): string {
   if (!rates) {
     return 'inputPrice: - | outputPrice: - | cacheReadPrice: - | cacheWritePrice: -';
   }

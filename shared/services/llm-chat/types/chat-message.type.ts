@@ -1,6 +1,6 @@
 import { LlmProvider, LlmRole } from './llm-provider.enum';
 
-export interface IChatMessage {
+export interface ChatMessage {
   id: string;
   role: LlmRole;
   content: string;

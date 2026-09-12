@@ -2,18 +2,18 @@ import { CopilotClient, approveAll } from '@github/copilot-sdk';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as cp from 'child_process';
-import { ILlmProviderDelegate } from '../llm-provider.delegate.interface';
+import { LlmProviderDelegate } from '../llm-provider.delegate.interface';
 import {
   LlmProvider,
   LlmModelInfo,
   LlmModelBilling,
-  ILlmTokenPrices,
+  LlmTokenPrices,
   LlmModelPromo,
   LlmConfigVO,
   ChatPromptVO,
-  IChatResponseDto,
-  IChatStreamChunkDto,
-  ILlmHealthResultDto,
+  ChatResponseDto,
+  ChatStreamChunkDto,
+  LlmHealthResultDto,
 } from '../../../../../../shared/services/llm-chat';
 import { getCurrentExtensionContext, getWorkspaceRoot } from '../../../../utils/utils-vscode';
 import { vsCodeSettingsManager } from '../../../../managers/VsCodeSettings.manager';
@@ -27,7 +27,7 @@ const FORCE_RESOLVE_NATIVE_CLI: ForceResolveMode = null; // Set to 'COPILOT_CLI'
 
 const LOG_FULL_MODELS_LIST_INFO = true;
 
-export class CopilotDelegate implements ILlmProviderDelegate {
+export class CopilotDelegate implements LlmProviderDelegate {
   readonly provider = LlmProvider.COPILOT;
   private static clientInstance: CopilotClient | null = null;
   private static isStarted = false;
@@ -402,7 +402,7 @@ export class CopilotDelegate implements ILlmProviderDelegate {
 
       if (rawBilling) {
         const rawTp = rawBilling.token_prices || rawBilling.tokenPrices;
-        let tokenPrices: ILlmTokenPrices | undefined = undefined;
+        let tokenPrices: LlmTokenPrices | undefined = undefined;
 
         if (rawTp) {
           const rawDefault = rawTp.default || rawTp;
@@ -445,6 +445,7 @@ export class CopilotDelegate implements ILlmProviderDelegate {
           promo,
         };
       }
+
 
       const model: LlmModelInfo = {
         id: m.id || m.name,
@@ -570,7 +571,7 @@ export class CopilotDelegate implements ILlmProviderDelegate {
     sessionId: string,
     prompt: ChatPromptVO,
     config: LlmConfigVO
-  ): Promise<IChatResponseDto> {
+  ): Promise<ChatResponseDto> {
     const startTime = Date.now();
     const model = config?.model || 'mai-code-1.1-flash';
     const lastUserMsg = prompt.getLastUserMessage()?.content || '';
@@ -631,8 +632,8 @@ export class CopilotDelegate implements ILlmProviderDelegate {
     sessionId: string,
     prompt: ChatPromptVO,
     config: LlmConfigVO,
-    onChunk: (chunk: IChatStreamChunkDto) => void
-  ): Promise<IChatResponseDto> {
+    onChunk: (chunk: ChatStreamChunkDto) => void
+  ): Promise<ChatResponseDto> {
     const startTime = Date.now();
     const model = config?.model || 'mai-code-1-flash-picker';
     const lastUserMsg = prompt.getLastUserMessage()?.content || '';
@@ -694,7 +695,7 @@ export class CopilotDelegate implements ILlmProviderDelegate {
     }
   }
 
-  async healthCheck(baseUrl?: string): Promise<ILlmHealthResultDto> {
+  async healthCheck(baseUrl?: string): Promise<LlmHealthResultDto> {
     try {
       await this.ensureStarted();
       const models = await this.listModels();

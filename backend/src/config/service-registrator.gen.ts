@@ -14,7 +14,7 @@ import { GitServiceAdapter } from '../services/git/git-service.adapter';
 import { GraphRagExplorerAdapter } from '../services/graph-rag-explorer/grag-explorer-service.adapter';
 import { GraphRagInstallerAdapter } from '../services/graph-rag-explorer/grag-installer-service.adapter';
 import { ImageAdapter } from '../services/image/image-service.adapter';
-import { LlmChatServiceAdapter } from '../services/llm-chat/llm-chat-service.adapter';
+import { LlmChatAdapter } from '../services/llm-chat/llm-chat-service.adapter';
 import { Neo4jAdapter } from '../services/neo4j/neo4j-service.adapter';
 import { ReferenceServiceAdapter } from '../services/reference/reference-service.adapter';
 import { SdlcSessionAdapter } from '../services/sdlc-session/sdlc-session-service.adapter';
@@ -97,7 +97,7 @@ export function registerServices(context: vscode.ExtensionContext): void {
     serviceRegistry.register(ServiceEnum.IMAGE, imageService);
     context.subscriptions.push(imageService);
 
-    const llmChatService = new LlmChatServiceAdapter();
+    const llmChatService = new LlmChatAdapter();
     serviceRegistry.register(ServiceEnum.LLM_CHAT, llmChatService);
 
     const neo4jService = new Neo4jAdapter();

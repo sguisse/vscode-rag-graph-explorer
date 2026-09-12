@@ -1,12 +1,12 @@
 import React from 'react';
-import { IChatMessageDto, LlmProvider } from '@/shared/services/llm-chat';
+import { ChatMessageDto, LlmProvider } from '@/shared/services/llm-chat';
 import { CollapsibleCard } from '@/components/app/collapsible-card';
 import { formatTokenCount, formatExecutionTime } from '../../hooks/use-llm-chat';
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { useExplorerStore } from '../../../store/useExplorerStore';
 
 export const AssistantMessageBlock: React.FC<{
-  msg: IChatMessageDto;
+  msg: ChatMessageDto;
   fallbackProvider: LlmProvider;
   fallbackModel: string;
   globalExpanded?: { value: boolean; id: number };
