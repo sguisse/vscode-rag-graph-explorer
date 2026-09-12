@@ -16,6 +16,13 @@ import { getCurrentExtensionContext, getWorkspaceRoot } from '../../../utils/uti
 import { vsCodeSettingsManager } from '../../../managers/VsCodeSettings.manager';
 import { log, logError, logInfo } from '../../../utils/utils-log';
 
+import customModelsData from './copilot-models-custom.json';
+
+type ForceResolveMode = 'COPILOT_CLI' | 'DEVELOPMENT_NODE_MODULE' | 'PLUGIN_INSTALL_LOCATION' | null;
+
+// Configuration constant to force a specific path strategy or standard workflow (null)
+const FORCE_RESOLVE_NATIVE_CLI: ForceResolveMode = null;
+
 export class CopilotDelegate implements ILlmProviderDelegate {
   readonly provider = LlmProvider.COPILOT;
   private static clientInstance: CopilotClient | null = null;
@@ -24,97 +31,206 @@ export class CopilotDelegate implements ILlmProviderDelegate {
   private static cliBinaryPath: string | null = null;
 
   public constructor() {
-    this.resolveNativeCliPath();
+    //this.resolveNativeCliPath();
   }
 
+  /**
+   * Main orchestrator for CLI binary path resolution.
+   */
   private resolveNativeCliPath(): string | undefined {
-    log("CopilotDelegate", `resolveNativeCliPath start ...`);
-    if (!CopilotDelegate.cliBinaryPath) {
-      const extentionContext = getCurrentExtensionContext();
-      const isWin = process.platform === 'win32';
-      const binName = isWin ? 'copilot.exe' : 'copilot-runtime';
-      const isArm64 = process.arch === 'arm64';
-      const arch = isArm64 ? 'arm64' : 'x64';
-      const platform = process.platform;
-      const platformTarget = `${platform}-${arch}`;
+    log('CopilotDelegate', `resolveNativeCliPath start ...`);
 
-      // 1. First search in the local workspace tools directory (.token-razor)
-      const workspaceRoot = getWorkspaceRoot();
-      const backendWorkspacePath = vsCodeSettingsManager.getSettings().backendWorkspacePath || '.token-razor';
-      const localToolPath = path.join(
+    if (CopilotDelegate.cliBinaryPath) {
+      log('CopilotDelegate', `resolveNativeCliPath cached path found: ${CopilotDelegate.cliBinaryPath}`);
+      return CopilotDelegate.cliBinaryPath;
+    }
+
+    log('CopilotDelegate', `resolveNativeCliPath starting (Force Mode: ${FORCE_RESOLVE_NATIVE_CLI ?? 'None'})...`);
+
+    const foundPath = FORCE_RESOLVE_NATIVE_CLI
+      ? this.resolvePathByStrategy(FORCE_RESOLVE_NATIVE_CLI)
+      : this.resolveWithStandardWorkflow();
+
+    if (foundPath) {
+      CopilotDelegate.cliBinaryPath = foundPath;
+      process.env.COPILOT_CLI_PATH = foundPath;
+      logInfo(`[CopilotDelegate] Resolved Copilot SDK binary path: ${foundPath}`);
+      this.verifyCliBinary(foundPath);
+    } else {
+      logError(`[CopilotDelegate] Copilot SDK binary not found under current resolution settings.`);
+    }
+
+    return CopilotDelegate.cliBinaryPath || undefined;
+  }
+
+  /**
+   * Standard resolution workflow priority:
+   * 1. System CLI (installed globally on host machine)
+   * 2. Local dev node_modules (/node_modules/@github)
+   * 3. Local workspace tools (.token-razor/...)
+   */
+  private resolveWithStandardWorkflow(): string | undefined {
+    log('CopilotDelegate', `resolveWithStandardWorkflow ...`);
+    return (
+      this.resolveSystemCliPath() ||
+      this.resolveDevNodeModulesPath() ||
+      this.resolvePluginInstallPath()
+    );
+  }
+
+  /**
+   * Direct strategy dispatcher for explicit FORCE_RESOLVE_NATIVE_CLI override execution.
+   */
+  private resolvePathByStrategy(mode: ForceResolveMode): string | undefined {
+    log('CopilotDelegate', `resolvePathByStrategy with mode: ${mode} ...`);
+
+    switch (mode) {
+      case 'COPILOT_CLI':
+        return this.resolveSystemCliPath();
+      case 'DEVELOPMENT_NODE_MODULE':
+        return this.resolveDevNodeModulesPath();
+      case 'PLUGIN_INSTALL_LOCATION':
+        return this.resolvePluginInstallPath();
+      default:
+        return undefined;
+    }
+  }
+
+  /**
+   * Strategy 1: Search for Copilot CLI installed on local machine (PATH environment variable)
+   */
+  private resolveSystemCliPath(): string | undefined {
+    const isWin = process.platform === 'win32';
+    const checkCommand = isWin ? 'where copilot' : 'which copilot';
+
+    try {
+      const systemPath = cp.execSync(checkCommand, { encoding: 'utf-8' }).trim().split('\n')[0];
+      if (systemPath && fs.existsSync(systemPath)) {
+        logInfo(`[CopilotDelegate] System CLI found at: ${systemPath}`);
+        return systemPath;
+      }
+    } catch {
+      // CLI not found in system PATH
+    }
+    return undefined;
+  }
+
+  /**
+   * Strategy 2: Search in extension node_modules directory (/node_modules/@github)
+   */
+  private resolveDevNodeModulesPath(): string | undefined {
+    const extensionContext = getCurrentExtensionContext();
+    if (!extensionContext) return undefined;
+
+    const platformTarget = this.getPlatformTarget();
+    const binNames = this.getPossibleBinNames();
+
+    for (const binName of binNames) {
+      const devPath = extensionContext.asAbsolutePath(
+        path.join('node_modules', '@github', `copilot-sdk-${platformTarget}`, 'prebuilds', platformTarget, binName)
+      );
+      if (fs.existsSync(devPath)) {
+        return devPath;
+      }
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Strategy 3: Search in local workspace tools directory (.token-razor/...)
+   */
+  private resolvePluginInstallPath(): string | undefined {
+    const workspaceRoot = getWorkspaceRoot();
+    const backendWorkspacePath = vsCodeSettingsManager.getSettings().backendWorkspacePath || '.token-razor';
+    const platformTarget = this.getPlatformTarget();
+    const binNames = this.getPossibleBinNames();
+
+    for (const binName of binNames) {
+      const pluginPath = path.join(
         workspaceRoot,
         backendWorkspacePath,
         'tools',
         'node',
-        'node_modules', '@github', `copilot-sdk-${platformTarget}`, 'prebuilds', platformTarget, binName
+        'node_modules',
+        '@github',
+        `copilot-sdk-${platformTarget}`,
+        'prebuilds',
+        platformTarget,
+        binName
       );
 
-      let foundPath: string | undefined;
-
-      if (fs.existsSync(localToolPath)) {
-        foundPath = localToolPath;
-      } else {
-        // 2. Second try : search in the extension's node_modules directory (works only in dev mode !!!)
-        const nodeModulesPath = extentionContext ? extentionContext.asAbsolutePath(
-          path.join('node_modules', '@github', `copilot-sdk-${platformTarget}`, 'prebuilds', platformTarget, binName)
-        ) : undefined;
-
-        if (nodeModulesPath && fs.existsSync(nodeModulesPath)) {
-          foundPath = nodeModulesPath;
-      }
-      }
-
-      if (foundPath) {
-        CopilotDelegate.cliBinaryPath = foundPath;
-        process.env.COPILOT_CLI_PATH = foundPath;
-        logInfo(`[CopilotDelegate] Resolved Copilot SDK binary path: ${foundPath}`);
-
-
-
-      } else {
-        logError(`[CopilotDelegate] Copilot SDK binary not found in local workspace tools (.token-razor) or extension (local dev) node_modules.`);
+      if (fs.existsSync(pluginPath)) {
+        return pluginPath;
       }
     }
 
-      const sdkPath = CopilotDelegate.cliBinaryPath;
-      if (sdkPath) {
-        try {
-          const versionOutput = cp.execFileSync(sdkPath, ['-version'], { encoding: 'utf-8' }).trim();
-          logInfo(`[CopilotDelegate] Copilot SDK version output: ${versionOutput}`);
-        } catch (err: any) {
-          logError(`[CopilotDelegate] Failed to execute Copilot SDK version check: ${err?.message || err}`);
-        }
-      } else {
-        logError(`[CopilotDelegate] Copilot SDK binary not found at target path: ${sdkPath}`);
-      }
+    return undefined;
+  }
 
-      logInfo(`[CopilotDelegate] Copilot SDK binary path: ${CopilotDelegate.cliBinaryPath || 'not found'}`);
-      return CopilotDelegate.cliBinaryPath || undefined;
+  /**
+   * Returns candidates for binary executable name depending on target OS.
+   */
+  private getPossibleBinNames(): string[] {
+    return process.platform === 'win32'
+      ? ['copilot.exe', 'copilot']
+      : ['copilot-runtime', 'copilot'];
+  }
+
+  /**
+   * Platform target specifier (e.g., darwin-arm64, linux-x64, win32-x64).
+   */
+  private getPlatformTarget(): string {
+    const arch = process.arch === 'arm64' ? 'arm64' : 'x64';
+    return `${process.platform}-${arch}`;
+  }
+
+  /**
+   * Helper to verify binary functionality.
+   */
+  private verifyCliBinary(binPath: string): void {
+    try {
+      const versionOutput = cp.execFileSync(binPath, ['-version'], { encoding: 'utf-8' }).trim();
+      logInfo(`[CopilotDelegate] Copilot SDK version output: ${versionOutput}`);
+    } catch (err: any) {
+      logError(`[CopilotDelegate] Failed to execute Copilot SDK version check: ${err?.message || err}`);
+    }
+  }
+
+  /**
+   * Safely loads custom model overrides from copilot-models-custom.json if present.
+   * If the file does not exist or fails to parse, custom models are skipped.
+   */
+  private loadCustomModels(): Partial<ILlmModelInfo>[] {
+    try {
+        logInfo(`[CopilotDelegate] '${customModelsData.length}' Custom models JSON loaded.`);
+        return customModelsData as Partial<ILlmModelInfo>[];
+    } catch (error: any) {
+        logInfo(`[CopilotDelegate] Custom models JSON not loaded or unparseable: ${error?.message || error}`);
+    }
+    return [];
     }
 
-private get client(): CopilotClient {
-    //if (!CopilotDelegate.clientInstance) {
+  private get client(): CopilotClient {
+    if (!CopilotDelegate.clientInstance) {
       const cliPath = this.resolveNativeCliPath();
 
       if (cliPath) {
         process.env.COPILOT_CLI_PATH = cliPath;
       }
 
-      // 1. Récupération d'un token explicite si défini dans l'environnement
       const token = process.env.COPILOT_GITHUB_TOKEN || process.env.GITHUB_TOKEN || process.env.GITHUB_COPILOT_TOKEN;
 
-      // 2. Configuration des options d'authentification
       const options: Record<string, any> = token
         ? { gitHubToken: token }
-        : { useLoggedInUser: true }; // Force le SDK à utiliser ta session CLI (copilot auth)
+        : { useLoggedInUser: true };
 
       if (cliPath) {
         options.cliPath = cliPath;
       }
 
-      // Initialisation avec les bonnes options
       CopilotDelegate.clientInstance = new CopilotClient(options as any);
-    //}
+    }
     return CopilotDelegate.clientInstance;
   }
 
@@ -127,10 +243,7 @@ private get client(): CopilotClient {
       CopilotDelegate.startPromise = (async () => {
         try {
           const timeout = new Promise<never>((_, reject) =>
-            setTimeout(
-              () => reject(new Error('Timeout starting Copilot SDK (10s)')),
-              10000
-            )
+            setTimeout(() => reject(new Error('Timeout starting Copilot SDK (10s)')), 10000)
           );
 
           await Promise.race([this.client.start(), timeout]);
@@ -145,23 +258,67 @@ private get client(): CopilotClient {
     return CopilotDelegate.startPromise;
   }
 
+  /**
+   * Lists available LLM models from the SDK and merges optional custom models from JSON if available.
+   */
   async listModels(config?: LlmConfigVO): Promise<ILlmModelInfo[]> {
-    await this.ensureStarted();
-    const models = await this.client.listModels();
-    logInfo(`CopilotDelegate.listModels totalFound: ${models.length}`, models);
-    return models.map((m: any) => ({
-      id: m.id || m.name,
-      name: m.name || m.id,
-      provider: this.provider,
-      contextWindow: m.capabilities?.limits?.max_context_window_tokens ?? m.contextWindow ?? 128000,
-      description: m.description || 'Model administered via GitHub Copilot SDK',
-      capabilities: m.capabilities,
-      policy: m.policy,
-      billing: m.billing,
-      supportedReasoningEfforts: m.supportedReasoningEfforts,
-      modelPickerCategory: m.modelPickerCategory,
-      modelPickerPriceCategory: m.modelPickerPriceCategory,
-    }));
+    let fetchedModels: ILlmModelInfo[] = [];
+
+    try {
+      await this.ensureStarted();
+      const rawModels: any[] = await this.client.listModels();
+      logInfo(`CopilotDelegate.listModels totalFound from SDK: ${rawModels.length}`, rawModels);
+
+      fetchedModels = rawModels.map((m: any) => ({
+        id: m.id || m.name,
+        name: m.name || m.id,
+        provider: this.provider,
+        contextWindow: m.capabilities?.limits?.max_context_window_tokens ?? m.contextWindow ?? 128000,
+        description: m.description || 'Model administered via GitHub Copilot SDK',
+        capabilities: m.capabilities,
+        policy: m.policy,
+        billing: m.billing,
+        supportedReasoningEfforts: m.supportedReasoningEfforts,
+        modelPickerCategory: m.modelPickerCategory,
+        modelPickerPriceCategory: m.modelPickerPriceCategory,
+      }));
+    } catch (error: any) {
+      logError(`[CopilotDelegate] Error fetching models from Copilot SDK: ${error?.message || error}`);
+    }
+
+    // Dynamic resolution of custom models (skipped gracefully if file does not exist)
+    const customModels = this.loadCustomModels();
+
+    if (customModels.length > 0) {
+      const existingModelIds = new Set(fetchedModels.map((m) => m.id.toLowerCase()));
+
+      for (const fallback of customModels) {
+        if (fallback.id && !existingModelIds.has(fallback.id.toLowerCase())) {
+          fetchedModels.push({
+            id: fallback.id,
+            name: fallback.name || fallback.id,
+            provider: this.provider,
+            contextWindow: fallback.contextWindow ?? 128000,
+            description: fallback.description || 'Custom user-defined Copilot model',
+            capabilities: {
+              family: 'custom',
+              ...(fallback.capabilities || {}),
+            },
+            policy: fallback.policy,
+            billing: fallback.billing,
+            supportedReasoningEfforts: fallback.supportedReasoningEfforts,
+            modelPickerCategory: fallback.modelPickerCategory,
+            modelPickerPriceCategory: fallback.modelPickerPriceCategory,
+          });
+          existingModelIds.add(fallback.id.toLowerCase());
+          logInfo(`[CopilotDelegate] Custom model added: ${fallback.id}`);
+        }
+      }
+    } else {
+      logInfo(`[CopilotDelegate] No custom models found or loaded.`);
+    }
+
+    return fetchedModels;
   }
 
   async executeChat(

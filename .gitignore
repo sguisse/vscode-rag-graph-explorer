@@ -11,3 +11,4 @@ sandbox
 __pycache__
 zz-tmp/rvng-jqassistant-analysis
 webview/src/features/explorer/wksp-cnt-graph/data/sample-ast-data-for-dev.json
+backend/src/services/llm-chat/delegate/copilot-models-custom.json
