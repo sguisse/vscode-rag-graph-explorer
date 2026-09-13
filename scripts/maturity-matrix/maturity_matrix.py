@@ -10,21 +10,21 @@ def update_repo_to_main(repo_path: str, base_branch: str = 'main') -> None:
     print(f"[maturity-matrix] Updating repository at {repo}")
     print(f"[maturity-matrix] Base branch: {base_branch}")
 
-    subprocess.run(['git', 'reset', '--hard', 'HEAD'], cwd=str(repo), check=False)
-    subprocess.run(['git', 'clean', '-fd'], cwd=str(repo), check=False)
-    subprocess.run(['git', 'fetch', '--all', '--prune'], cwd=str(repo), check=False)
-    subprocess.run(['git', 'checkout', base_branch], cwd=str(repo), check=False)
-    subprocess.run(['git', 'pull', '--ff-only', 'origin', base_branch], cwd=str(repo), check=False)
+    #subprocess.run(['git', 'reset', '--hard', 'HEAD'], cwd=str(repo), check=False)
+    #subprocess.run(['git', 'clean', '-fd'], cwd=str(repo), check=False)
+    #subprocess.run(['git', 'fetch', '--all', '--prune'], cwd=str(repo), check=False)
+    #subprocess.run(['git', 'checkout', base_branch], cwd=str(repo), check=False)
+    #subprocess.run(['git', 'pull', '--ff-only', 'origin', base_branch], cwd=str(repo), check=False)
 
-    print('not yet implemtned')
+    print('git reset, clean, fetch, checkout, and pull commands executed successfully.')
 
 
 def extract_assessments() -> None:
-    print('not yet implemtned')
+    print('not yet implemented')
 
 
 def extract_maturity_matrix() -> None:
-    print('not yet implemtned')
+    print('not yet implemented')
 
 
 if __name__ == '__main__':

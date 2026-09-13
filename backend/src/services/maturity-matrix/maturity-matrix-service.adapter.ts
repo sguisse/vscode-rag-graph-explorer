@@ -27,10 +27,10 @@ export class MaturityMatrixAdapter extends AbstractServiceAdapter implements IMa
         return {
             label,
             generatedAt: createdAt,
-            message: 'not yet implemtned',
+            message: 'not yet implemented',
             rows: [
                 ['status', 'message'],
-                ['not yet implemtned', 'not yet implemtned'],
+                ['not yet implemented', 'not yet implemented'],
             ],
         };
     }
