@@ -93,7 +93,7 @@ export const MODEL_TABLE_COLUMNS: ModelTableColumnDef[] = [
   { key: 'tools', field: 'tools', label: 'Tools', defaultWidth: 65 },
   { key: 'vision', field: 'vision', label: 'Vision', defaultWidth: 65 },
   { key: 'tokenizer', field: 'tokenizer', label: 'Tokenizer', defaultWidth: 105 },
-  { key: 'streaming', field: 'streaming', label: 'Streaming', defaultWidth: 75 },
+  { key: 'streaming', field: 'streaming', label: 'Streaming', defaultWidth: 85 },
   {
     key: 'structuredOutputs',
     field: 'structuredOutputs',
@@ -103,7 +103,7 @@ export const MODEL_TABLE_COLUMNS: ModelTableColumnDef[] = [
         <span>Outputs</span>
       </>
     ),
-    defaultWidth: 85,
+    defaultWidth: 300,
   },
 ];
 

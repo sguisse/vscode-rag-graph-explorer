@@ -80,7 +80,6 @@ export const SIDEBAR_MENU_ITEMS: NavItem[] = [
 
   { id: 'feature-help', icon: HelpCircle, label: 'Help & Shortcuts', bottom: true },
   { id: 'feature-layout-demo', icon: Layout, label: 'Layout Demo', bottom: true },
-  { id: 'feature-old-explorer', icon: FolderDown, label: 'Graph RAG Explorer', badge: 'Old', bottom: true },
 ];
 
 export function renderSidebarMenuItem(

@@ -23,7 +23,7 @@ import { CopilotAccountInfo } from './copilot-account-info.model';
 
 type ForceResolveMode = 'COPILOT_CLI' | 'DEVELOPMENT_NODE_MODULE' | 'PLUGIN_INSTALL_LOCATION' | null;
 
-const FORCE_RESOLVE_NATIVE_CLI: ForceResolveMode = 'COPILOT_CLI'; // Set to 'COPILOT_CLI', 'DEVELOPMENT_NODE_MODULE', or 'PLUGIN_INSTALL_LOCATION' to force a specific resolution strategy, or null for default behavior.
+const FORCE_RESOLVE_NATIVE_CLI: ForceResolveMode = 'DEVELOPMENT_NODE_MODULE'; // Set to 'COPILOT_CLI', 'DEVELOPMENT_NODE_MODULE', or 'PLUGIN_INSTALL_LOCATION' to force a specific resolution strategy, or null for default behavior.
 
 const LOG_FULL_MODELS_LIST_INFO = true;
 
