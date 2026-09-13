@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export interface AppContextState {
+export interface AppContextState  {
   activeFeature: string;
   themeMode: 'dark' | 'light';
   isDarkMode: boolean;

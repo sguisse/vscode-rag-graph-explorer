@@ -236,17 +236,6 @@
   },
   {
     "name": "CodebaseGrouping",
-    "path": "webview/src/features/explorer-old/wkp-lft-codebase-tree/type-codebase-grouping.gen.ts",
-    "values": [
-      { "value": "scope", "label": "By Scope", "icon": "📄" },
-      { "value": "folder", "label": "By Folder", "icon": "📁" },
-      { "value": "layer", "label": "By Layer", "icon": "🏗️" },
-      { "value": "typology", "label": "By Typology", "icon": "🧩" },
-      { "value": "tags", "label": "By Tags", "icon": "🏷️" }
-    ]
-  },
-  {
-    "name": "CodebaseGrouping",
     "path": "webview/src/features/sdlc/domains/codebase-context/components/codebase-tree/type-codebase-grouping.gen.ts",
     "values": [
       { "value": "scope", "label": "By Scope", "icon": "📄" },

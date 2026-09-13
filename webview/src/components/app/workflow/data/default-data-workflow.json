@@ -1,0 +1,306 @@
+{
+    "workflow": {
+      "title": "SDLC Pipeline",
+      "description": "Interactive multi-branch document validation flow with automated decision checks.",
+      "initialStepId": "spec-kit",
+      "nodes": [
+        {
+          "id": "start",
+          "label": "SDLC Pipeline",
+          "desc": "Start Event: Trigger point of the pipeline. Reset the pipeline to start over.",
+          "type": "start",
+          "x": 6,
+          "y": 101,
+          "status": "current",
+          "clickEnabled": true
+        },
+        {
+          "id": "files_selection",
+          "label": "Files Selection",
+          "desc": "Select target source files in VS-Code Explorer.",
+          "type": "step",
+          "x": 139,
+          "y": 99,
+          "status": "pending",
+          "clickEnabled": true,
+          "tooltip": "Select files in VS-Code Explorer and right-click to trigger the pipeline."
+        },
+        {
+          "id": "anonymizer",
+          "label": "Anonymize",
+          "desc": "Replaces sensitive information in the files.",
+          "type": "step",
+          "x": 237,
+          "y": 18,
+          "status": "pending",
+          "clickEnabled": true
+        },
+        {
+          "id": "prompt",
+          "label": "Prompt",
+          "desc": "Define what is expected.",
+          "type": "step",
+          "x": 339,
+          "y": 99,
+          "status": "pending",
+          "clickEnabled": true
+        },
+        {
+          "id": "llm_copilot",
+          "label": "",
+          "desc": "Display LLM view prefilled with files context and prompt.",
+          "type": "step",
+          "x": 704,
+          "y": 34,
+          "status": "pending",
+          "clickEnabled": true,
+          "icon": "assets/brands/copilot.png",
+          "tooltip": "Open LLM with Copilot selected.",
+          "width": 50,
+          "height": 50
+        },
+        {
+          "id": "llm_ollama",
+          "label": "",
+          "desc": "Display LLM view prefilled with files context and prompt.",
+          "type": "step",
+          "x": 829,
+          "y": 35,
+          "status": "pending",
+          "clickEnabled": true,
+          "icon": "assets/brands/ollama-black.png",
+          "width": 50,
+          "height": 50
+        },
+        {
+          "id": "request_flow",
+          "label": "🚀 execution ?",
+          "desc": "Select the request flow to use files context and prompt.",
+          "type": "decision",
+          "x": 488,
+          "y": 97,
+          "status": "pending",
+          "clickEnabled": false
+        },
+        {
+          "id": "gemini",
+          "label": "",
+          "desc": "Display Gemini site in browser, with files context in clipboard ready to paste in the prompt.",
+          "type": "step",
+          "x": 645,
+          "y": 103,
+          "status": "pending",
+          "clickEnabled": true,
+          "icon": "assets/brands/gemini.svg",
+          "width": 50,
+          "height": 50
+        },
+        {
+          "id": "gems_01",
+          "label": "",
+          "desc": "Display Gemini Gems dedicated to Extension site in browser, with files context in clipboard ready to paste in the prompt.",
+          "type": "step",
+          "x": 768,
+          "y": 104,
+          "icon": "assets/brands/gemini-gems.png",
+          "width": 50,
+          "height": 50,
+          "status": "pending",
+          "clickEnabled": true
+        },
+        {
+          "id": "notebookLM",
+          "label": "",
+          "desc": "Display NotebookLM site in browser, with files context in clipboard ready to paste in the prompt.",
+          "type": "step",
+          "x": 883,
+          "y": 104,
+          "width": 50,
+          "height": 50,
+          "icon": "assets/brands/notebooklm.svg",
+          "status": "pending",
+          "clickEnabled": true
+        },
+        {
+          "id": "bmad",
+          "label": "",
+          "desc": "To use Specification Driven Development ...",
+          "type": "step",
+          "x": 705,
+          "y": 178,
+          "status": "pending",
+          "clickEnabled": false,
+          "icon": "assets/brands/bmad.png",
+          "tooltip": "Not yet implemented. Coming soon.",
+          "width": 50,
+          "height": 50
+        },
+        {
+          "id": "spec-kit",
+          "label": "",
+          "desc": "To use Specification Driven Development ...",
+          "type": "step",
+          "x": 825,
+          "y": 178,
+          "status": "pending",
+          "clickEnabled": false,
+          "icon": "assets/brands/spec-kit.png",
+          "tooltip": "Not yet implemented. Coming soon.",
+          "width": 50,
+          "height": 50
+        },
+        {
+          "id": "end",
+          "label": "Pipeline<br/>Completed",
+          "desc": "End Event: Context generated and ready.",
+          "type": "end",
+          "x": 1070,
+          "y": 95,
+          "status": "pending",
+          "clickEnabled": false
+        }
+      ],
+      "edges": [
+        {
+          "id": "e0",
+          "source": "start",
+          "target": "files_selection",
+          "label": "Start",
+          "lineStyle": "solid",
+          "curveStyle": "bezier",
+          "arrowShape": "triangle"
+        },
+        {
+          "id": "e1",
+          "source": "files_selection",
+          "target": "anonymizer",
+          "label": "Recommended",
+          "lineStyle": "dashed",
+          "curveStyle": "bezier",
+          "arrowShape": "triangle",
+          "color": "#10b981"
+        },
+        {
+          "id": "e1.1",
+          "source": "files_selection",
+          "target": "prompt",
+          "label": "",
+          "lineStyle": "solid",
+          "curveStyle": "bezier",
+          "arrowShape": "triangle"
+        },
+        {
+          "id": "e2",
+          "source": "anonymizer",
+          "target": "prompt",
+          "label": "",
+          "lineStyle": "solid",
+          "curveStyle": "bezier",
+          "arrowShape": "triangle"
+        },
+        {
+          "id": "e3",
+          "source": "prompt",
+          "target": "request_flow",
+          "label": "files\n+\nprompt",
+          "lineStyle": "solid",
+          "curveStyle": "bezier",
+          "arrowShape": "triangle"
+        },
+        {
+          "id": "e4",
+          "source": "request_flow",
+          "target": "llm_copilot",
+          "label": "Local LLM",
+          "lineStyle": "solid",
+          "curveStyle": "bezier",
+          "arrowShape": "triangle"
+        },
+        {
+          "id": "e4.1",
+          "source": "llm_copilot",
+          "target": "llm_ollama",
+          "label": "Or",
+          "lineStyle": "solid",
+          "curveStyle": "bezier",
+          "arrowShape": "triangle"
+        },
+        {
+          "id": "e5",
+          "source": "request_flow",
+          "target": "gemini",
+          "label": "external",
+          "lineStyle": "solid",
+          "curveStyle": "bezier",
+          "arrowShape": "triangle"
+        },
+        {
+          "id": "e5.1",
+          "source": "gemini",
+          "target": "gems_01",
+          "label": "Or",
+          "lineStyle": "solid",
+          "curveStyle": "bezier",
+          "arrowShape": "triangle"
+        },
+        {
+          "id": "e5.2",
+          "source": "gems_01",
+          "target": "notebookLM",
+          "label": "Or",
+          "lineStyle": "solid",
+          "curveStyle": "bezier",
+          "arrowShape": "triangle"
+        },
+        {
+          "id": "e6",
+          "source": "request_flow",
+          "target": "bmad",
+          "label": "SDD",
+          "lineStyle": "dashed",
+          "curveStyle": "bezier",
+          "arrowShape": "triangle",
+          "color": "#f59e0b",
+          "textColor": "#d97706"
+        },
+        {
+          "id": "e6.1",
+          "source": "bmad",
+          "target": "spec-kit",
+          "label": "Or",
+          "lineStyle": "dashed",
+          "curveStyle": "bezier",
+          "arrowShape": "triangle",
+          "color": "#f59e0b",
+          "textColor": "#d97706"
+        },
+        {
+          "id": "e10",
+          "source": "llm_ollama",
+          "target": "end",
+          "label": "Finish",
+          "lineStyle": "solid",
+          "curveStyle": "bezier",
+          "arrowShape": "triangle"
+        },
+        {
+          "id": "e11",
+          "source": "notebookLM",
+          "target": "end",
+          "label": "Finish",
+          "lineStyle": "solid",
+          "curveStyle": "bezier",
+          "arrowShape": "triangle"
+        },
+        {
+          "id": "e12",
+          "source": "spec-kit",
+          "target": "end",
+          "label": "Finish",
+          "lineStyle": "solid",
+          "curveStyle": "bezier",
+          "arrowShape": "triangle"
+        }
+      ]
+    }
+  }

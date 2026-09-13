@@ -1,11 +1,11 @@
-import { useExplorerStore } from '@/features/explorer-old/store/useExplorerStore';
+import { useWorkflowHeaderStore } from '../store/use-workflow-header.store';
 import { useCallback } from 'react';
 import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { useLayoutStore } from '@/store/useLayoutStore';
 
 export function useExplorerWorkflow() {
-  const dataWorkflow = useExplorerStore((s) => s.dataWorkflow);
-  const setSelectedWorkflowStep = useExplorerStore((s) => s.setSelectedWorkflowStep);
+  const dataWorkflow = useWorkflowHeaderStore((s) => s.dataWorkflow);
+  const setSelectedWorkflowStep = useWorkflowHeaderStore((s) => s.setSelectedWorkflowStep);
 
   const handleSelectStep = useCallback(
     (stepId: string) => {

@@ -19,7 +19,6 @@ import { RulesFeature } from '@/features/rules/RulesFeature';
 import { WorkflowBuilderFeature } from '@/features/ai-workflow-builder/WorkflowBuilderFeature';
 import { ExporterFeature } from '@/features/exporter/ExporterFeature';
 import { HelpFeature } from '@/features/help/HelpFeature';
-import ExplorerOldFeature from '@/features/explorer-old/ExplorerOldFeature';
 import { InstructionsFeature } from '@/features/sdlc/domains/instructions';
 import { ConfigurationFeature } from '@/features/sdlc/domains/configuration';
 import { SessionsFeature } from '@/features/sdlc/domains/sessions';
@@ -69,7 +68,6 @@ const FEATURE_TO_ROUTE_MAP: Record<string, string> = {
   'feature-llm-chat': '/llm-chat',
   'feature-sessions': '/sessions',
   'feat-history': '/sessions',
-  'feature-old-explorer': '/old-explorer',
   'feature-layout-demo': '/layout-demo',
 };
 
@@ -87,7 +85,6 @@ const ROUTE_TO_FEATURE_MAP: Record<string, string> = {
   '/instructions': 'feature-instructions',
   '/llm-chat': 'feature-llm-chat',
   '/sessions': 'feature-sessions',
-  '/old-explorer': 'feature-old-explorer',
   '/layout-demo': 'feature-layout-demo',
 };
 
@@ -105,7 +102,6 @@ export const ROUTE_BREADCRUMB_LABELS: Record<string, string> = {
   '/instructions': 'SDLC Instructions',
   '/llm-chat': 'LLM Chat',
   '/sessions': 'Sessions Manager',
-  '/old-explorer': 'Legacy Explorer',
   '/layout-demo': 'Layout Demo',
 };
 
@@ -319,13 +315,6 @@ export const sessionsManagerRoute = createRoute({
   component: SessionsFeature,
 });
 
-export const oldExplorerRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/old-explorer',
-  staticData: { breadcrumb: 'Legacy Explorer' },
-  component: ExplorerOldFeature,
-});
-
 export const layoutDemoRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/layout-demo',
@@ -347,7 +336,6 @@ const routeTree = rootRoute.addChildren([
   instructionsRoute,
   llmChatRoute,
   sessionsManagerRoute,
-  oldExplorerRoute,
   layoutDemoRoute,
 ]);
 

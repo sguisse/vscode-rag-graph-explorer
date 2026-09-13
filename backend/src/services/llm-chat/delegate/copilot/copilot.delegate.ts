@@ -23,7 +23,7 @@ import { CopilotAccountInfo } from './copilot-account-info.model';
 
 type ForceResolveMode = 'COPILOT_CLI' | 'DEVELOPMENT_NODE_MODULE' | 'PLUGIN_INSTALL_LOCATION' | null;
 
-const FORCE_RESOLVE_NATIVE_CLI: ForceResolveMode = null; // Set to 'COPILOT_CLI', 'DEVELOPMENT_NODE_MODULE', or 'PLUGIN_INSTALL_LOCATION' to force a specific resolution strategy, or null for default behavior.
+const FORCE_RESOLVE_NATIVE_CLI: ForceResolveMode = 'COPILOT_CLI'; // Set to 'COPILOT_CLI', 'DEVELOPMENT_NODE_MODULE', or 'PLUGIN_INSTALL_LOCATION' to force a specific resolution strategy, or null for default behavior.
 
 const LOG_FULL_MODELS_LIST_INFO = true;
 
@@ -499,13 +499,74 @@ export class CopilotDelegate implements LlmProviderDelegate {
   }
 
   /**
+ * Helper to recursively merge `secondary` into `primary`.
+ * If a key already has a defined value in `primary`, it will NOT be overwritten.
+ */
+  private mergeWithoutOverride<T extends Record<string, any>>(primary: T, secondary: Partial<T>): T {
+    const result: Record<string, any> = { ...primary };
+
+    for (const key of Object.keys(secondary)) {
+        const pVal = result[key];
+        const sVal = (secondary as Record<string, any>)[key];
+
+        if (pVal === undefined || pVal === null) {
+        // Primary is missing this field -> fill it from secondary
+        result[key] = sVal;
+        } else if (
+        typeof pVal === 'object' &&
+        pVal !== null &&
+        !Array.isArray(pVal) &&
+        typeof sVal === 'object' &&
+        sVal !== null &&
+        !Array.isArray(sVal)
+        ) {
+        // Both are non-array objects -> deep merge nested properties (e.g. capabilities, policy)
+        result[key] = this.mergeWithoutOverride(pVal, sVal);
+        }
+    }
+
+    return result as T;
+  }
+
+  private mergeApiAndSdkModels(apiModels: LlmModelInfo[], sdkModels: LlmModelInfo[]): LlmModelInfo[] {
+    // Step 1: Index API models by lowercase ID (API takes precedence)
+    const modelsMap = new Map<string, LlmModelInfo>();
+
+    for (const apiModel of apiModels) {
+    if (apiModel.id) {
+        modelsMap.set(apiModel.id.toLowerCase(), { ...apiModel });
+    }
+    }
+
+    // Step 2: Merge SDK models into the map
+    for (const sdkModel of sdkModels) {
+    if (!sdkModel.id) continue;
+    const key = sdkModel.id.toLowerCase();
+    const existingApiModel = modelsMap.get(key);
+
+    if (existingApiModel) {
+        // ID exists in both: merge missing SDK fields into API model
+        modelsMap.set(key, this.mergeWithoutOverride(existingApiModel, sdkModel));
+    } else {
+        // ID only exists in SDK: add as a new entry
+        modelsMap.set(key, sdkModel);
+    }
+    }
+
+    // Step 3: Final merged list
+    const fetchedModels: LlmModelInfo[] = Array.from(modelsMap.values());
+    return fetchedModels.sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
+  }
+
+
+  /**
    * Lists available LLM models from REST API or SDK, merging optional custom models from JSON if available.
    */
   async listModels(config?: LlmConfigVO): Promise<LlmModelInfo[]> {
-    let fetchedModels: LlmModelInfo[] = [];
     const token = this.getGithubCopilotToken();
 
-    // Strategy 1: Attempt direct REST API with dynamic URL resolution from AccountInfo
+    // Step 1: Attempt direct REST API with dynamic URL resolution from AccountInfo
+    let fetchedModelsAPI: LlmModelInfo[] = [];
     if (token) {
       try {
         let baseUrl: string | undefined;
@@ -516,22 +577,25 @@ export class CopilotDelegate implements LlmProviderDelegate {
           logError(`[CopilotDelegate] Failed to resolve account endpoint URL, using default: ${accountErr?.message || accountErr}`);
         }
 
-        fetchedModels = []; //await this.fetchModelsFromRestApi(token, baseUrl);
+        fetchedModelsAPI = await this.fetchModelsFromRestApi(token, baseUrl);
       } catch (restErr: any) {
         logError(`[CopilotDelegate] Direct REST API fetch failed, falling back to SDK: ${restErr?.message || restErr}`);
       }
     }
 
-    // Strategy 2: Fallback to Copilot SDK client if direct REST API returned no models
-    if (fetchedModels.length === 0) {
-      try {
-        fetchedModels = await this.fetchModelsFromSdk();
+    // Step 2: Fallback to Copilot SDK client if direct REST API returned no models
+    let fetchedModelsSDK: LlmModelInfo[] = [];
+    try {
+        fetchedModelsSDK = await this.fetchModelsFromSdk();
       } catch (sdkErr: any) {
         logError(`[CopilotDelegate] Error fetching models from Copilot SDK: ${sdkErr?.message || sdkErr}`);
       }
-    }
 
-    // Dynamic resolution of custom models (skipped gracefully if file does not exist)
+    // Step 3: Efficient, case-insensitive merge prioritizing API models
+    const fetchedModels: LlmModelInfo[] = this.mergeApiAndSdkModels(fetchedModelsAPI, fetchedModelsSDK);
+
+
+    // Step 4: Dynamic resolution of custom models (skipped gracefully if file does not exist)
     const customModels = this.loadCustomModels();
 
     if (customModels.length > 0) {

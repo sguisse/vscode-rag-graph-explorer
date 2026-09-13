@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import cytoscape from 'cytoscape';
-import defaultWorkflowData from '@/features/explorer-old/workflow/data-workflow.json';
+import defaultWorkflowData from '../data/default-data-workflow.json';
 import { useAppContextStore } from '@/store/useAppContextStore';
 import { getWorkflowCytoscapeStyles } from '../components/shapes-workflow';
 import { logWorkflowPositionsIfChanged } from '../utils-workflow';
-import { logInfo, logError } from '@/services/view/log-view.service.wrapper';
+import { logInfo } from '@/services/view/log-view.service.wrapper';
 import { WorkflowData, WorkflowNode } from '../model/workflow-model';
 import { isCurrentStatus } from '../types';
-import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import { resolveIconUrlAsync } from '@/lib/utils-image';
 
 function sanitizeLabel(label: string): string {
@@ -16,8 +15,6 @@ function sanitizeLabel(label: string): string {
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<[^>]+>/g, '');
 }
-
-
 
 export interface HoverTooltipState {
   text: string;
@@ -34,6 +31,11 @@ export function useWorkflowPanel(
   const isDarkMode = useAppContextStore((s) => s.isDarkMode);
   const [selectedNode, setSelectedNode] = useState<WorkflowNode | null>(null);
   const [hoverTooltip, setHoverTooltip] = useState<HoverTooltipState | null>(null);
+
+  const onSelectNodeRef = useRef(onSelectNode);
+  useEffect(() => {
+    onSelectNodeRef.current = onSelectNode;
+  }, [onSelectNode]);
 
   const workflow = workflowData.workflow;
 
@@ -96,7 +98,7 @@ export function useWorkflowPanel(
       elements,
       style: getWorkflowCytoscapeStyles(isDarkMode),
       layout: {
-        name: 'cose',
+        name: 'preset',
         fit: true,
         padding: 25,
       },
@@ -110,11 +112,21 @@ export function useWorkflowPanel(
 
     const currentStep = workflow.nodes.find((n) => isCurrentStatus(n.status) || n.id === workflow.initialStepId);
     if (currentStep) {
-      setSelectedNode({
-        ...currentStep,
-        label: sanitizeLabel(currentStep.label),
-        isCurrent: true,
-        clickEnabled: currentStep.clickEnabled !== undefined ? currentStep.clickEnabled : currentStep.type === 'step',
+      setSelectedNode((prev) => {
+        if (
+          prev &&
+          prev.id === currentStep.id &&
+          prev.status === currentStep.status &&
+          prev.isCurrent === true
+        ) {
+          return prev;
+        }
+        return {
+          ...currentStep,
+          label: sanitizeLabel(currentStep.label),
+          isCurrent: true,
+          clickEnabled: currentStep.clickEnabled !== undefined ? currentStep.clickEnabled : currentStep.type === 'step',
+        };
       });
     }
 
@@ -186,8 +198,8 @@ export function useWorkflowPanel(
 
       if (data.clickEnabled) {
         logInfo(`[WorkflowPanel] Workflow step selected: '${data.label.replace(/\n/g, ' ')}' (ID: ${data.id})`);
-        if (onSelectNode) {
-          onSelectNode(data.id);
+        if (onSelectNodeRef.current) {
+          onSelectNodeRef.current(data.id);
         }
       }
     });
@@ -198,7 +210,7 @@ export function useWorkflowPanel(
         cyRef.current.center();
       }
     }, 100);
-  }, [isDarkMode, workflow, onSelectNode]);
+  }, [isDarkMode, workflow]);
 
   useEffect(() => {
     initCytoscape();

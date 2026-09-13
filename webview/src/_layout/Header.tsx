@@ -1,4 +1,5 @@
 import React from 'react';
+import { useWorkflowHeaderStore } from '@/features/workflow-header/store/use-workflow-header.store';
 import { useNavigate } from '@tanstack/react-router';
 import { ToolbarSeparator } from '@/components/app/toolbar-separator';
 import { headerLeftWidth, DefaultContainersSize } from '@/_layout';
@@ -26,7 +27,6 @@ import logoLight from '@assets/logo-light.png';
 import logoDark from '@assets/logo-dark.png';
 import { ApplicationTitle } from '@/components/app/ApplicationTitle';
 import { WorkflowPopup } from '@/components/app/workflow/workflow-popup';
-import { useExplorerWorkflow } from '@/features/explorer-old/workflow/hooks/use-explorer-workflow';
 import { Button } from '@/components/ui/button';
 import { useBreadcrumbInterceptorStore } from '@/store/useBreadcrumbInterceptorStore';
 import { useBreadcrumbHistoryStore } from '@/store/useBreadcrumbHistoryStore';
@@ -49,7 +49,10 @@ export function Header({
   const toggleContainerVisible = useLayoutStore((s) => s.toggleContainerVisible);
   const containers = useLayoutStore((s) => s.containers);
   const headerHeight = containers.header?.headerHeight ?? DefaultContainersSize.headerHeight;
-  const { dataWorkflow, handleSelectStep } = useExplorerWorkflow();
+
+  // Selected individually to maintain reference stability and avoid infinite render loops
+  const dataWorkflow = useWorkflowHeaderStore((s) => s.dataWorkflow);
+  const handleSelectStep = useWorkflowHeaderStore((s) => s.setSelectedWorkflowStep);
 
   const interceptor = useBreadcrumbInterceptorStore((s) => s.interceptor);
   const registeredOrigin = useBreadcrumbInterceptorStore((s) => s.originFeature);
