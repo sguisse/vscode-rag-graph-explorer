@@ -18,6 +18,7 @@ import { InstallFeature } from '@/features/install/InstallFeature';
 import { RulesFeature } from '@/features/rules/RulesFeature';
 import { WorkflowBuilderFeature } from '@/features/ai-workflow-builder/WorkflowBuilderFeature';
 import { ExporterFeature } from '@/features/exporter/ExporterFeature';
+import { MaturityMatrixFeature } from '@/features/maturity-matrix/MaturityMatrixFeature';
 import { HelpFeature } from '@/features/help/HelpFeature';
 import { InstructionsFeature } from '@/features/sdlc/domains/instructions';
 import { ConfigurationFeature } from '@/features/sdlc/domains/configuration';
@@ -57,6 +58,7 @@ const FEATURE_TO_ROUTE_MAP: Record<string, string> = {
   'feature-ai-workflow-builder': '/workflow-builder',
   'feature-exporter': '/exporter',
   'feature-codebase-exporter': '/exporter',
+  'feature-maturity-matrix': '/maturity-matrix',
   'feat-prompt': '/exporter',
   'feature-help': '/help',
   'feature-configuration': '/configuration',
@@ -79,6 +81,7 @@ const ROUTE_TO_FEATURE_MAP: Record<string, string> = {
   '/rules': 'feature-rules',
   '/workflow-builder': 'feature-ai-workflow-builder',
   '/exporter': 'feature-exporter',
+  '/maturity-matrix': 'feature-maturity-matrix',
   '/help': 'feature-help',
   '/configuration': 'feature-configuration',
   '/codebase-context': 'feature-codebase-context',
@@ -96,6 +99,7 @@ export const ROUTE_BREADCRUMB_LABELS: Record<string, string> = {
   '/rules': 'Impact Rules',
   '/workflow-builder': 'Workflow Builder',
   '/exporter': 'Codebase Exporter',
+  '/maturity-matrix': 'Maturity Matrix',
   '/help': 'Documentation',
   '/configuration': 'Configuration',
   '/codebase-context': 'Codebase Context',
@@ -273,6 +277,13 @@ export const exporterRoute = createRoute({
   component: ExporterFeature,
 });
 
+export const maturityMatrixRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/maturity-matrix',
+  staticData: { breadcrumb: 'Maturity Matrix' },
+  component: MaturityMatrixFeature,
+});
+
 export const helpRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/help',
@@ -330,6 +341,7 @@ const routeTree = rootRoute.addChildren([
   rulesRoute,
   workflowRoute,
   exporterRoute,
+  maturityMatrixRoute,
   helpRoute,
   configurationRoute,
   codebaseContextRoute,

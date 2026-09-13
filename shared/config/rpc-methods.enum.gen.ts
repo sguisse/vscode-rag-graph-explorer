@@ -62,6 +62,8 @@ export enum RpcMethodEnum {
     LLMCHAT_LIST_AVAILABLE_MODELS = 'listAvailableModels',
     LLMCHAT_HEALTH_CHECK = 'healthCheck',
     LLMCHAT_READ_FILE_CONTENT = 'readFileContent',
+    MATURITYMATRIX_EXTRACT_ASSESSMENTS = 'extractAssessments',
+    MATURITYMATRIX_EXTRACT_MATURITY_MATRIX = 'extractMaturityMatrix',
     NEO4J_EXECUTE_CYPHER = 'executeCypher',
     NEO4J_START_NEO4J_DATABASE = 'startNeo4jDatabase',
     NEO4J_STOP_NEO4J_DATABASE = 'stopNeo4jDatabase',

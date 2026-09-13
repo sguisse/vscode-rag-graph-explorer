@@ -90,6 +90,10 @@ export function registerRpcMethods(rpc: RpcProtocol): void {
     rpc.register(RpcMethodEnum.LLMCHAT_HEALTH_CHECK, llmChatService.healthCheck.bind(llmChatService));
     rpc.register(RpcMethodEnum.LLMCHAT_READ_FILE_CONTENT, llmChatService.readFileContent.bind(llmChatService));
 
+    const maturityMatrixService = serviceRegistry.get(ServiceEnum.MATURITY_MATRIX);
+    rpc.register(RpcMethodEnum.MATURITYMATRIX_EXTRACT_ASSESSMENTS, maturityMatrixService.extractAssessments.bind(maturityMatrixService));
+    rpc.register(RpcMethodEnum.MATURITYMATRIX_EXTRACT_MATURITY_MATRIX, maturityMatrixService.extractMaturityMatrix.bind(maturityMatrixService));
+
     const neo4jService = serviceRegistry.get(ServiceEnum.NEO4J);
     rpc.register(RpcMethodEnum.NEO4J_EXECUTE_CYPHER, neo4jService.executeCypher.bind(neo4jService));
     rpc.register(RpcMethodEnum.NEO4J_START_NEO4J_DATABASE, neo4jService.startNeo4jDatabase.bind(neo4jService));

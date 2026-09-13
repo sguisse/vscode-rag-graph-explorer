@@ -12,6 +12,7 @@ export enum ServiceEnum {
     GRAPH_RAG_INSTALLER = 'GraphRagInstallerService',
     IMAGE = 'ImageService',
     LLM_CHAT = 'LlmChatService',
+    MATURITY_MATRIX = 'MaturityMatrixService',
     NEO4J = 'Neo4jService',
     REFERENCE = 'ReferenceService',
     SDLC_SESSION = 'SdlcSessionService',

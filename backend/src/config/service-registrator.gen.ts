@@ -15,6 +15,7 @@ import { GraphRagExplorerAdapter } from '../services/graph-rag-explorer/grag-exp
 import { GraphRagInstallerAdapter } from '../services/graph-rag-explorer/grag-installer-service.adapter';
 import { ImageAdapter } from '../services/image/image-service.adapter';
 import { LlmChatAdapter } from '../services/llm-chat/llm-chat-service.adapter';
+import { MaturityMatrixAdapter } from '../services/maturity-matrix/maturity-matrix-service.adapter';
 import { Neo4jAdapter } from '../services/neo4j/neo4j-service.adapter';
 import { ReferenceServiceAdapter } from '../services/reference/reference-service.adapter';
 import { SdlcSessionAdapter } from '../services/sdlc-session/sdlc-session-service.adapter';
@@ -31,6 +32,7 @@ import { IGraphRagExplorerServicePort } from '../../../shared/services/graph-rag
 import { IGraphRagInstallerServicePort } from '../../../shared/services/graph-rag-explorer/port-out/grag-installer-service.port';
 import { IImageServicePort } from '../../../shared/services/image/port-out/image-service.port';
 import { ILlmChatServicePort } from '../../../shared/services/llm-chat/port-out/llm-chat-service.port';
+import { IMaturityMatrixServicePort } from '../../../shared/services/maturity-matrix/port-out/maturity-matrix-service.port';
 import { INeo4jServicePort } from '../../../shared/services/neo4j/port-out/neo4j-service.port';
 import { IReferenceServicePort } from '../../../shared/services/reference/port-out/reference-service.port';
 import { ISdlcSessionServicePort } from '../../../shared/services/sdlc-session/port-out/sdlc-session-service.port';
@@ -49,6 +51,7 @@ export interface BackendServicesMap {
     [ServiceEnum.GRAPH_RAG_INSTALLER]: IGraphRagInstallerServicePort;
     [ServiceEnum.IMAGE]: IImageServicePort;
     [ServiceEnum.LLM_CHAT]: ILlmChatServicePort;
+    [ServiceEnum.MATURITY_MATRIX]: IMaturityMatrixServicePort;
     [ServiceEnum.NEO4J]: INeo4jServicePort;
     [ServiceEnum.REFERENCE]: IReferenceServicePort;
     [ServiceEnum.SDLC_SESSION]: ISdlcSessionServicePort;
@@ -99,6 +102,10 @@ export function registerServices(context: vscode.ExtensionContext): void {
 
     const llmChatService = new LlmChatAdapter();
     serviceRegistry.register(ServiceEnum.LLM_CHAT, llmChatService);
+
+    const maturityMatrixService = new MaturityMatrixAdapter();
+    serviceRegistry.register(ServiceEnum.MATURITY_MATRIX, maturityMatrixService);
+    context.subscriptions.push(maturityMatrixService);
 
     const neo4jService = new Neo4jAdapter();
     serviceRegistry.register(ServiceEnum.NEO4J, neo4jService);

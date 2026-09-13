@@ -53,6 +53,7 @@ export interface SidebarLeftProps {
 export const SIDEBAR_MENU_ITEMS: NavItem[] = [
   { id: 'feature-home', icon: Home, label: 'Home' },
   { id: 'feature-codebase-exporter', icon: FolderDown, label: 'Codebase Exporter', badge: '' },
+  { id: 'feature-maturity-matrix', icon: Sparkles, label: 'Maturity Matrix', badge: 'New' },
   { id: 'feature-references', icon: FolderGit2, label: 'Project References', badge: 'New' },
   { id: 'feature-transformer', icon: Sliders, label: 'ETL Transformer', badge: 'New' },
   {
