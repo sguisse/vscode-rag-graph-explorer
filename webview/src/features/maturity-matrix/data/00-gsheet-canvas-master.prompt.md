@@ -1,4 +1,4 @@
-# UNIVERSAL MASTER PROMPT: SPREADSHEET-TO-CANVAS REACT APPLICATIONS (300% COMPLIANCE - ADAPTIVE 3D ENGINE)
+# UNIVERSAL MASTER PROMPT: SPREADSHEET-TO-CANVAS REACT APPLICATIONS (350% COMPLIANCE - DUAL-DEPLOYMENT & WEB EMBED READY)
 
 ## ROLE & OBJECTIVE
 You are an expert Full-Stack Engineer, UI/UX Architect, and Data Lineage Specialist.
@@ -9,8 +9,8 @@ The generated Canvas must provide:
 2. **Adaptive 3D Spatial Engine (Optional / Domain-Dependent):** Evaluate the analyzed dataset domain at runtime. IF the spreadsheet contains physical, structural, spatial, geographic, facility, or warehouse/inventory coordinates, automatically render an interactive 3D WebGL layout (powered by Three.js or SVG spatial projections) featuring 360° orbit controls, 45° step rotation, zoom controls (+/-), Raycaster item selection, single-click spatial action write-backs, and an automated Auto-Tour camera inspection loop. IF the dataset is purely relational/financial, omit 3D and dedicate screen space to enhanced 2D analytical charts.
 3. **Cell Lineage Engine:** Precise A1-notation visual traceability (`[Sheet1!A1]`) linking rendered UI components and optional 3D WebGL mesh targets back to raw spreadsheet cell coordinates.
 4. **Reactive State & Feedback:** Bi-directional sync with source sheet mutations, `ResizeObserver`-driven dynamic viewports, theme switching, and feedback notifications ("Toasts").
-5. **Comprehensive 6-Tab Documentation Suite:** In-app accessible modal documentation capturing exact layout, technical specs, schema, lineage map, user guide (with 3D navigation manual if 3D view is active), and dynamically populated external reproduction prompt.
-6. **Markdown Export Engine:** A dedicated header action to copy the entire documentation suite to the system clipboard formatted with level-1 headers (`#`), ready for instant LLM app regeneration.
+5. **Comprehensive 7-Tab Documentation Suite:** In-app accessible modal documentation capturing exact layout, technical specs, schema, lineage map, user guide (with 3D navigation manual if 3D view is active), and a dynamically populated external reproduction/embedding prompt, and a dedicated CSV-to-JSON conversion guide for external data management.
+6. **Markdown Export Engine:** A dedicated header action to copy the entire documentation suite to the system clipboard formatted with level-1 headers (`#`), ready for instant LLM app regeneration or external web/Google Sites embedding.
 
 ---
 
@@ -45,12 +45,12 @@ const getA1Notation = (sheetName, colIdx, rowIdx) => {
 ```
 
 ### 1.3 External Library Matrix & Execution Sandbox
-Return strictly functional JavaScript/JSX code inside a single code block. No external network requests (`fetch`, `axios`) are allowed. Include `three` imports conditionally based on whether 3D spatial view is generated for the domain.
+Return strictly functional JavaScript/JSX code inside a single code block. No unauthorized external network requests (`fetch`, `axios`) are allowed. Include `three` imports conditionally based on whether 3D spatial view is generated for the domain.
 
 | Library | Intended Purpose | Import Signature & Status |
 | :--- | :--- | :--- |
 | **React** | Core state, hooks & context | `import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';` (Mandatory) |
-| **Lucide React** | Interface iconography | `import { Target, CheckCircle2, AlertTriangle, Clock, Search, Filter, Layers, RefreshCw, FileText, ExternalLink, ChevronDown, ChevronRight, X, Plus, Trash2, Copy, Check, ArrowUpDown, MoreVertical, Edit3, Eye, EyeOff, Bell, Sun, Moon, Compass, Play, Pause, ZoomIn, ZoomOut, RotateCw, Box } from 'lucide-react';` (Mandatory) |
+| **Lucide React** | Interface iconography | `import { Target, CheckCircle2, AlertTriangle, Clock, Search, Filter, Layers, RefreshCw, FileText, ExternalLink, ChevronDown, ChevronRight, X, Plus, Trash2, Copy, Check, ArrowUpDown, MoreVertical, Edit3, Eye, EyeOff, Bell, Sun, Moon, Compass, Play, Pause, ZoomIn, ZoomOut, RotateCw, Box, Globe, Share2 } from 'lucide-react';` (Mandatory) |
 | **Three.js** | WebGL 3D scene, meshes, raycasting | `import * as THREE from 'three';` (Optional / Generated if spatial domain detected) |
 | **D3.js** | KPI metrics, SVG charts | `import * as d3 from 'd3';` (Mandatory) |
 | **d3-sankey** | Process flow links | `import { sankey, sankeyLinkHorizontal } from 'd3-sankey';` (Mandatory) |
@@ -85,7 +85,7 @@ Structure the application UI using responsive Tailwind CSS strictly into these s
 |  - Side Drawer: Master-Detail Full Field Editor                                   |
 |  - Toast System: Floating notification overlay for user actions                   |
 +-----------------------------------------------------------------------------------+
-| SECTION 6: IN-APP DOCUMENTATION MODAL (6 distinct tabs) WITH MARKDOWN EXPORT    |
+| SECTION 6: IN-APP DOCUMENTATION MODAL (7 distinct tabs) WITH MARKDOWN EXPORT    |
 +-----------------------------------------------------------------------------------+
 ```
 
@@ -97,7 +97,7 @@ Structure the application UI using responsive Tailwind CSS strictly into these s
   - **Numeric / Currency / Percentage:** Clean strings (strip `$`, `,`, `%`) before parsing numbers.
   - **Date:** Parse safely using local date component constructors.
   - **Categorical / Boolean / Spatial:** Identify discrete string sets, boolean flags, and spatial context (e.g., aisle, rack, shelf, lat/long, room, X/Y/Z coordinates, zone).
-- **Zero-Hallucination Policy:** Missing/null cells must remain `null` or `undefined` and be represented visually as **Unreviewed / Missing Data** (Yellow indicator).
+- **Zero-Hallucination Policy:** Missing/null cells must remain `null` or `undefined` and be represented visually as **Unreviewed / Missing Data** (Yellow indicator). Never generate fake static mock data.
 - **Timezone-Safe Date Ingestion:**
   ```javascript
   const parseLocalDate = (dateStr) => {
@@ -131,34 +131,51 @@ The documentation modal MUST contain an interactive tab bar navigating across ex
 2. **Tab 2 - Technical Architecture & Libraries:** Component hierarchy, React hooks (`useState`, `useMemo`, `useRef`), and external library contracts (including optional `three`).
 3. **Tab 3 - Dynamic Ingestion & Data Schema:** Discovered schema, column data types, string sanitization rules, and date logic.
 4. **Tab 4 - Cell Lineage & Persistence Matrix:** Table mapping UI elements (and optional 3D meshes) to data attributes, A1 cell origins, and mutation callbacks (`updateItem`, `moveItem`).
-5. **Tab 5 - User Guide & Spatial Navigation:** End-user guide covering filters, sorting, drag-and-drop reordering, keyboard shortcuts (`Esc`, `Enter`), drawer editing, status colors, and optional 3D spatial controls (360° orbit, 45° rotation stepper, camera zoom, Auto-Tour mode) *if 3D engine is active*.
-6. **Tab 6 - External App Reproduction Prompt:** Dynamically populated AI prompt containing live schema, active column signatures, state handlers, optional 3D dependencies, and CSV configuration for external application generation.
+5. **Tab 5 - User Guide & Operational Specs & Spatial Navigation:** End-user guide covering filters, sorting, drag-and-drop reordering, keyboard shortcuts (`Esc`, `Enter`), drawer editing, status colors, and optional 3D spatial navigation controls (360° orbit, 45° rotation stepper, camera zoom, Auto-Tour mode) *if 3D engine is active*.
+6. **Tab 6 - External React App Reproduction & Web/Google Sites Embed Prompt:** Dynamically populated AI prompt containing live schema, active column signatures, state handlers, optional 3D dependencies, and CSV configuration, and specific instructions for external Vite builds OR live dynamic Google Sites iframe embedding.
+7. **Tab 7 - CSV to JSON Data Conversion & Management Guide:** Dedicated guide explaining how to transform flat CSV/spreadsheet data into structured JSON objects to streamline integration with external applications, state managers, and databases. Must include:
+   - **Transformation Architecture:** Explanations of header mapping, row-to-object keying, type coercion rules (auto-casting strings to numbers, booleans, dates, or nulls), and quotes/comma sanitization.
+   - **Structural Optimization:** Guidance on converting flat relational keys (e.g., location_zone, location_x) into nested JSON structures (e.g., location: { zone: "A", x: 12 }) for cleaner external app state management.
+   - **Reusable Conversion Code Snippets:** Ready-to-copy client-side JavaScript (csvToJson parser utility) and Node.js/Python conversion scripts tailored to the active Canvas schema.
+   - **External App Integration Benefits:** Details on how JSON formatting simplifies API payloads, local storage caching (localStorage/IndexedDB), React state management, and schema validation (e.g., Zod, TypeScript types).
 
 ---
 
-## SECTION 6: MARKDOWN EXPORT ENGINE & REPRODUCTION PROMPT
+## SECTION 6: MARKDOWN EXPORT ENGINE & EXTERNAL REPRODUCTION PROMPT
 
 ### 6.1 Header Copy Action
 - **Button:** Positioned inside the modal header: `<Copy size="{16}"/> Copy Full Docs (Markdown)`.
-  - **Behavior:** Concatenates all 6 documentation modules into a clean Markdown string and copies to `navigator.clipboard.writeText()`. Delineates sections using `#` (H1) headers. Shows a temporary `"Copied!"` checkmark state for 2 seconds.
+  - **Behavior:** Concatenates all 7 documentation modules into a clean Markdown string and copies to `navigator.clipboard.writeText()`. Delineates sections using `#` (H1) headers. Shows a temporary `"Copied!"` checkmark state for 2 seconds.
 - **Button:** Positioned inside the modal header: `<Eye size="{16}"/> Display Full Docs in raw Markdown`.
-  - **Behavior:** Concatenates all 6 documentation modules into a clean Markdown string and display it in popup allowing raw data manual copy
+  - **Behavior:** Concatenates all 7 documentation modules into a clean Markdown string and display it in popup allowing raw data manual copy
 
-### 6.2 Standalone External Prompt Template (Tab 6 Content)
+### 6.2 Standalone External Prompt Template (Tab 7 Content)
 Tab 6 and Section 6 of the exported Markdown MUST dynamically fill and present this prompt block:
 
 ```markdown
-# 6. EXTERNAL REACT APP REPRODUCTION PROMPT
+# 6. EXTERNAL REACT APP REPRODUCTION & WEB / GOOGLE SITES EMBED PROMPT
 
-**Copy and paste the prompt below into any LLM to reproduce this Canvas application outside Google Sheets:**
+**Copy and paste the prompt below into any LLM (Gemini, Claude, ChatGPT) to reproduce this Canvas application externally or embed it into Google Sites / Web Intranets:**
 
-> "You are an expert React developer. Build a standalone React mini-application using Vite or Next.js that replicates the Canvas application described below.
+> "You are an expert Full-Stack React & UI Architect. Build a standalone React mini-application using Vite or embeddable Web dashboard widget that replicates the Canvas application specified in the documentation below.
 >
-> **Requirements:**
-> 1. **Data Ingestion:** Parse data from an external `data.csv` file using `PapaParse` instead of live Google Sheets data bindings.
-> 2. **State Persistence:** Replace `updateItem`, `insertItem`, `deleteItem`, and `moveItem` callback props with a local React `useReducer` state model.
-> 3. **UI & Styling:** Build with Tailwind CSS, `lucide-react`, `d3`, and `@dnd-kit`. Include 3D WebGL spatial rendering with Three.js ONLY IF spatial/layout features were present in the source spec.
-> 4. **Dynamic Schema Context:**
+> **Deployment & Data Ingestion Modes (Select One):**
+>
+> - **MODE A (Standalone Local React App - CSV File):**
+>   - Build a React application using Vite or Next.js.
+>   - Parse data from a local `data.csv` file using `PapaParse`.
+>   - Replace Google Sheet callback props (`updateItem`, `insertItem`, `deleteItem`, `moveItem`) with a local React `useReducer` state model.
+>
+> - **MODE B (Google Sites / Intranet Live Web Embed 🌐):**
+>   - Build an embeddable React HTML/JS bundle formatted specifically for iframe embedding in Google Sites or corporate web portals.
+>   - Implement a dynamic client-side `fetch()` function linked in real-time to the published Google Sheet CSV/JSON URL endpoint (e.g. `https://docs.google.com/spreadsheets/d/e/.../pub?output=csv`).
+>   - DO NOT generate hardcoded static mock data. Ensure data refreshes dynamically from the live sheet feed.
+>   - Format the CSS container for dynamic full-height responsiveness (`h-screen` / `w-full`) and iframe container sandboxing without horizontal layout overflow.
+>
+> **UI  & Styling & Tech Stack Requirements:**
+> 1. **Styling & Icons:** Build with Tailwind CSS and `lucide-react`.
+> 2. **Analytics & DND:** Integrate `d3`, `@dnd-kit` sortables, and optional `three` (Three.js WebGL) IF 3D spatial layout features were active in the source Canvas spec.
+> 3. **Dynamic Schema Context:**
 >    - Discovered Columns: [AUTO_FILLED_COLUMN_LIST]
 >    - Sample Record Payload: [AUTO_FILLED_SAMPLE_PAYLOAD]
 >
@@ -181,7 +198,9 @@ Before outputting code, verify that all execution contracts are strictly satisfi
 - [ ] Do D3 charts and WebGL viewports implement dynamic sizing via `ResizeObserver`?
 - [ ] Is keyboard accessibility (`Esc` to dismiss drawer/modal, `Enter` to commit edit) fully implemented?
 - [ ] Is a confirmation dialog required before `deleteItem` execution?
-- [ ] Does the documentation modal contain all 6 distinct tabs with dynamic data populated in Tab 6?
-- [ ] Does the Markdown copy button format all 6 tabs with level-1 (`#`) headers?
-- [ ] Does the Markdown copy button effectively copy it in clipboard ?
+- [ ] Does the documentation modal contain exactly 7 distinct tabs, including Tab 7 for CSV to JSON Data Conversion & Management Guide?
+- [ ] Does Tab 7 contain actionable transformation logic, type coercion rules, nested JSON mapping guidelines, and copyable JS/Python utility code for external app data management?
+- [ ] Does Tab 6 / Section 6 include dual deployment specifications for both Standalone Vite/CSV apps and Live Google Sites dynamic `fetch()` embeds?
+- [ ] Does the Markdown copy button format all 7 tabs with level-1 (`#`) headers?
+- [ ] Does the Markdown copy button effectively copy all 7 documentation tabs to the clipboard?
 - [ ] Is the output raw executable JavaScript/JSX code without conversational text outside the code block?

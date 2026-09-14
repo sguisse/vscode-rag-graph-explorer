@@ -1,794 +1,206 @@
-echo "✏️ Modifying existing file: 'webview/src/features/maturity-matrix/components/tabs/MaturityMatrixTab.tsx'"
-cat << 'EOF' > webview/src/features/maturity-matrix/components/tabs/MaturityMatrixTab.tsx
-import React, { useState, useMemo } from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useMaturityMatrixStore } from '../../store/useMaturityMatrixStore';
-import type { MaturityApplication, MaturityPillarDefinition } from '../../types/maturity-matrix.types';
+#!/bin/bash
+set -e
 
-interface MaturityMatrixTabProps {
-  applications: MaturityApplication[];
-  onOriginClick?: (sheet: string, col: string, row: number | string) => void;
-}
+echo "➕ Creating directory 'docs' if it does not exist..."
+mkdir -p docs
 
-const DEFAULT_PILLARS: MaturityPillarDefinition[] = [
-  { key: 'DATA', label: 'DATA', icon: '💾', rowOffset: 0 },
-  { key: 'DELIVERY', label: 'DELIVERY', icon: '🚚', rowOffset: 7 },
-  { key: 'DESIGN', label: 'DESIGN', icon: '🎨', rowOffset: 14 },
-  { key: 'DEV', label: 'DEV', icon: '💻', rowOffset: 21 },
-  { key: 'INFRA', label: 'INFRA', icon: '🏗️', rowOffset: 28 },
-  { key: 'PROCESS_PRACTICES', label: 'PROCESS PRACTICES', icon: '⚙️', rowOffset: 42 },
-  { key: 'QUALITY', label: 'QUALITY', icon: '🧪', rowOffset: 49 },
-  { key: 'OPERATION', label: 'OPERATION', icon: '📊', rowOffset: 35 },
-  { key: 'SECURITY', label: 'SECURITY', icon: '🛡️', rowOffset: 56 },
-  { key: 'STREAMING', label: 'STREAMING', icon: '📡', rowOffset: 63 },
-  { key: 'ACCESSIBILITY', label: 'ACCESSIBILITY', icon: '♿', rowOffset: 70 },
-];
+echo "✏️ Writing updated Master Prompt with Live Google Sites & Web Embed capabilities to 'docs/spreadsheet-to-canvas-prompt.md'..."
+cat << 'EOF' > docs/spreadsheet-to-canvas-prompt.md
+# UNIVERSAL MASTER PROMPT: SPREADSHEET-TO-CANVAS REACT APPLICATIONS (350% COMPLIANCE - DUAL-DEPLOYMENT & WEB EMBED READY)
 
-const KNOWN_START_ROWS: Record<string, number> = {
-  AVAILABLE_SHIPMENT: 78,
-  APO: 2,
-  BOM_MANAGER: 156,
-  DPCP_FORCAST: 233,
-  MOLD: 310,
-  MPS_APO: 387,
-  MRP_EXCHANGE: 464,
-  ORDER_AMENDMENT_BACK: 541,
-  ORDER_AMENDMENT_FRONT: 618,
-  ORDER_DELIVERY_PARTNER: 695,
-  ORDER_MANAGEMENT_PURCHASE_ORDER_API: 772,
-  ORDERMAX: 849,
-  PRODCOM: 926,
-  PRODCOM_API: 1003,
-  PSV: 1080,
-  RFQ_AND_SHARING: 1157,
-  SAVE_THE_STOCKS: 1234,
-  SCAN_DELAY: 1311,
-  SHU_SSCC: 1388,
-  SMART_SUPPLY_BACK: 1465,
-  SMART_SUPPLY_FRONT: 1542,
-  SMDI: 1619,
+## ROLE & OBJECTIVE
+You are an expert Full-Stack Engineer, UI/UX Architect, and Data Lineage Specialist.
+Your task is to transform raw tabular spreadsheet data (passed as an array of row envelopes `[{"index_": number, "row": [...]}, ...]` or flattened CSV/JSON arrays) into a fully interactive, responsive, and bi-directionally synchronized React Mini-Application ("Canvas").
+
+The generated Canvas must provide:
+1. **Interactive Operational UI:** Multi-view data browsing, multi-column dynamic filtering, inline table/drawer editing, multi-select bulk actions, column customizers, and responsive KPI micro-visualizations.
+2. **Adaptive 3D Spatial Engine (Optional / Domain-Dependent):** Evaluate the analyzed dataset domain at runtime. IF the spreadsheet contains physical, structural, spatial, geographic, facility, or warehouse/inventory coordinates, automatically render an interactive 3D WebGL layout (powered by Three.js or SVG spatial projections) featuring 360° orbit controls, 45° step rotation, zoom controls (+/-), Raycaster item selection, single-click spatial action write-backs, and an automated Auto-Tour camera inspection loop. IF the dataset is purely relational/financial, omit 3D and dedicate screen space to enhanced 2D analytical charts.
+3. **Cell Lineage Engine:** Precise A1-notation visual traceability (`[Sheet1!A1]`) linking rendered UI components and optional 3D WebGL mesh targets back to raw spreadsheet cell coordinates.
+4. **Reactive State & Feedback:** Bi-directional sync with source sheet mutations, `ResizeObserver`-driven dynamic viewports, theme switching, and feedback notifications ("Toasts").
+5. **Comprehensive 6-Tab Documentation Suite:** In-app accessible modal documentation capturing exact layout, technical specs, schema, lineage map, user guide (with 3D navigation manual if active), and a dynamically populated external reproduction/embedding prompt.
+6. **Markdown Export Engine:** A dedicated header action to copy the entire documentation suite to the system clipboard formatted with level-1 headers (`#`), ready for instant LLM app regeneration or external web/Google Sites embedding.
+
+---
+
+## SECTION 1: TECHNICAL ARCHITECTURE & DEPENDENCIES
+
+### 1.1 Main Component Signature & Event Contracts
+The Canvas MUST be generated as a single, self-contained, default-exported React function component:
+```javascript
+export default function App({ data, updateItem, deleteItem, insertItem, moveItem, followLink }) { ... }
+```
+
+- **`data` Envelope:** Input is an array of objects `[{ index_: number, row: Array<any> | Object }]`. Preserve `index_` as the immutable record key for sorting, keys, and persistence updates.
+- **Reactive Data Binding:** Use `useEffect` to synchronize internal filter/sort states whenever incoming `data` updates from external spreadsheet edits.
+- **`updateItem(rowIndex, updatedRowArrayOrObject)`:** Triggered immediately upon cell, inline drawer, or spatial node action edits.
+- **`insertItem(newRowArrayOrObject, targetIndex?)`:** Triggered when adding new records.
+- **`deleteItem(rowIndex)`:** Triggered when removing records. MUST require confirmation modal UI before firing.
+- **`moveItem(oldIndex, newIndex)`:** Triggered upon drag-and-drop reordering to persist row order back to source sheet.
+- **`followLink(urlOrCellRange)`:** Triggered when clicking cell origin badges or 3D object lineage tags (e.g., `followLink('Sheet1!B4')`). Show visual toast feedback upon trigger. Never use `window.open` for internal sheet references.
+
+### 1.2 Coordinate Calculation Utility
+Implement standard zero-based column index to A1 notation conversion:
+```javascript
+const getA1Notation = (sheetName, colIdx, rowIdx) => {
+  let letter = '';
+  let temp = colIdx;
+  while (temp >= 0) {
+    letter = String.fromCharCode((temp % 26) + 65) + letter;
+    temp = Math.floor(temp / 26) - 1;
+  }
+  return `${sheetName}!${letter}${rowIdx + 1}`;
 };
+```
 
-function getAppStartRow(app: MaturityApplication, index: number): number {
-  if (app.startRow !== undefined) return app.startRow;
-  if (KNOWN_START_ROWS[app.code]) return KNOWN_START_ROWS[app.code];
-  return index * 75 + 2;
-}
+### 1.3 External Library Matrix & Execution Sandbox
+Return strictly functional JavaScript/JSX code inside a single code block. No unauthorized external network requests are allowed inside Google Sheets sandboxes.
 
-function getAppRowIdx(app: MaturityApplication, index: number): number {
-  if (app.rowIdx !== undefined) return app.rowIdx;
-  return index + 2;
-}
+| Library | Intended Purpose | Import Signature & Status |
+| :--- | :--- | :--- |
+| **React** | Core state, hooks & context | `import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';` (Mandatory) |
+| **Lucide React** | Interface iconography | `import { Target, CheckCircle2, AlertTriangle, Clock, Search, Filter, Layers, RefreshCw, FileText, ExternalLink, ChevronDown, ChevronRight, X, Plus, Trash2, Copy, Check, ArrowUpDown, MoreVertical, Edit3, Eye, EyeOff, Bell, Sun, Moon, Compass, Play, Pause, ZoomIn, ZoomOut, RotateCw, Box, Globe, Share2 } from 'lucide-react';` (Mandatory) |
+| **Three.js** | WebGL 3D scene, meshes, raycasting | `import * as THREE from 'three';` (Optional / Generated if spatial domain detected) |
+| **D3.js** | KPI metrics, SVG charts | `import * as d3 from 'd3';` (Mandatory) |
+| **d3-sankey** | Process flow links | `import { sankey, sankeyLinkHorizontal } from 'd3-sankey';` (Mandatory) |
+| **@dnd-kit/core** | Drag-and-drop context | `import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';` (Mandatory) |
+| **@dnd-kit/sortable** | Row reordering | `import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';` (Mandatory) |
+| **@dnd-kit/utilities**| CSS transforms | `import { CSS } from '@dnd-kit/utilities';` (Mandatory) |
+| **react-simple-maps** | Geospatial visuals | `import { ComposableMap, Geographies, Geography, Marker } from 'react-simple-maps';` (Mandatory) |
+| **TopoJSON Assets** | Map geometries | `import worldAtlas from 'world-atlas/countries-110m.json';` (Mandatory) |
 
-function getDateHealth(dateStr: string | null | undefined) {
-  if (!dateStr || dateStr === 'null') {
-    return {
-      status: 'yellow',
-      label: 'Yellow: No assessment',
-      badgeBg: 'bg-yellow-100 text-yellow-900 border-yellow-300',
-      dotColor: 'bg-yellow-500',
-      desc: 'No assessment',
-    };
-  }
+---
 
-  const parts = dateStr.split('-');
-  const year = parseInt(parts[0], 10);
-  const month = parseInt(parts[1], 10);
-  const day = parseInt(parts[2], 10);
-  const assessDate = new Date(year, month - 1, day);
-  const TODAY_ANCHOR = new Date('2026-09-14T00:00:00Z');
-  const diffMs = TODAY_ANCHOR.getTime() - assessDate.getTime();
-  const diffDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
-  const diffMonths = Math.floor(diffDays / 30.4);
+## SECTION 2: CANVAS LAYOUT & SCREEN BLUEPRINT
 
-  if (diffDays <= 15) {
-    return {
-      status: 'green',
-      label: 'Green: ≤ 15 Days',
-      badgeBg: 'bg-emerald-100 text-emerald-900 border-emerald-300',
-      dotColor: 'bg-emerald-500',
-      desc: `${diffDays}d ago (≤15d)`,
-    };
-  } else if (diffDays <= 182) {
-    return {
-      status: 'blue',
-      label: 'Blue: Valid',
-      badgeBg: 'bg-blue-100 text-blue-900 border-blue-300',
-      dotColor: 'bg-blue-500',
-      desc: `Valid (${diffMonths}m ago)`,
-    };
-  } else {
-    return {
-      status: 'red',
-      label: 'Red: Outdated >6M',
-      badgeBg: 'bg-rose-100 text-rose-900 border-rose-300',
-      dotColor: 'bg-rose-500',
-      desc: `Outdated (${diffMonths}m ago)`,
-    };
-  }
-}
+Structure the application UI using responsive Tailwind CSS strictly into these sections:
 
-function CellOriginTag({
-  sheet,
-  col,
-  row,
-  showCellOrigins,
-  onOriginClick,
-  className = '',
-}: {
-  sheet: string;
-  col: string;
-  row: number | string;
-  showCellOrigins: boolean;
-  onOriginClick?: (sheet: string, col: string, row: number | string) => void;
-  className?: string;
-}) {
-  if (!showCellOrigins) return null;
-  return (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.stopPropagation();
-        if (onOriginClick) {
-          onOriginClick(sheet, col, row);
-        } else {
-          console.log(`Opening sheet '${sheet}'!${col}${row}`);
-        }
-      }}
-      className={`inline-flex items-center gap-0.5 text-[8px] font-mono font-bold text-indigo-600 hover:text-white bg-indigo-50 hover:bg-indigo-600 border border-indigo-200 hover:border-indigo-600 rounded px-1 py-0.5 transition-all cursor-pointer shadow-xs ${className}`}
-      title={`Click to open Google Sheet and select cell '${sheet}'!${col}${row}`}
-    >
-      <span>[{col}:{row}]</span>
-      <svg className="w-2 h-2 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-        <polyline points="15 3 21 3 21 9" />
-        <line x1="10" y1="14" x2="21" y2="3" />
-      </svg>
-    </button>
-  );
-}
+```text
++-----------------------------------------------------------------------------------+
+| SECTION 1: HEADER BAR (Title, Sync Badge, Origins Toggle, Theme Switcher, Docs)   |
++-----------------------------------------------------------------------------------+
+| SECTION 2: EXECUTIVE KPI RACK (Dynamic Metric Cards with SVG Micro-Charts)        |
++-----------------------------------------------------------------------------------+
+| SECTION 3: MULTI-VIEW TOOLBAR (Tab View Switcher + Search + Dynamic Filters)      |
++-----------------------------------------------------------------------------------+
+| SECTION 4: HEALTH & STATUS STRIP (Interactive Status Badges + Bulk Action Bar)    |
++-----------------------------------------------------------------------------------+
+| SECTION 5: ACTIVE VIEW DISPLAY & DETAIL DRAWER                                    |
+|  - View 1: Accordion Grid / Sortable Table (with column customizer & editing)    |
+|  - View 2: Analytical & Delta View (D3 scales, Sankey & distribution views)       |
+|  - View 3: Workload & Grouping Breakdown (Grouped cards by Owner or Category)     |
+|  - View 4 (OPTIONAL / ADAPTIVE): 3D Spatial Model View (Three.js / Spatial Canvas  |
+|            generated IF dataset contains spatial, facility, or physical layout)   |
+|  - Side Drawer: Master-Detail Full Field Editor                                   |
+|  - Toast System: Floating notification overlay for user actions                   |
++-----------------------------------------------------------------------------------+
+| SECTION 6: IN-APP DOCUMENTATION MODAL (6 distinct tabs) WITH MARKDOWN EXPORT    |
++-----------------------------------------------------------------------------------+
+```
 
-function CommentaryEditor({
-  appCode,
-  commentary,
-  isEditing,
-  draftVal,
-  onStartEdit,
-  onSave,
-  onCancel,
-  onDraftChange,
-}: {
-  appCode: string;
-  commentary: string;
-  isEditing: boolean;
-  draftVal: string;
-  onStartEdit: (code: string, commentary: string) => void;
-  onSave: (code: string) => void;
-  onCancel: (code: string) => void;
-  onDraftChange: (code: string, val: string) => void;
-}) {
-  return (
-    <div className="p-4 bg-slate-50/50 border-t border-slate-200 flex flex-col md:flex-row justify-between gap-3 text-xs">
-      <div className="flex-1">
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="font-bold text-slate-700 flex items-center gap-1.5">
-            <svg className="w-3.5 h-3.5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-            </svg>
-            <span>Application Goals &amp; Progress Commentary:</span>
-          </span>
-          {isEditing ? (
-            <div className="flex items-center gap-2">
-              <Button onClick="{()" size="sm" type="button" variant="ghost"> onSave(appCode)}
-                className="h-6 px-2 text-xs text-emerald-600 font-bold hover:bg-emerald-50 hover:text-emerald-700"
-              >
-                Save Note
-              </Button>
-              <Button onClick="{()" size="sm" type="button" variant="ghost"> onCancel(appCode)}
-                className="h-6 px-2 text-xs text-slate-500 hover:bg-slate-100"
-              >
-                Cancel
-              </Button>
-            </div>
-          ) : (
-            <Button onClick="{()" size="sm" type="button" variant="ghost"> onStartEdit(appCode, commentary)}
-              className="h-6 px-2 text-xs text-indigo-600 font-semibold hover:bg-indigo-50"
-            >
-              Edit Note
-            </Button>
-          )}
-        </div>
-        {isEditing ? (
-          <Textarea onChange="{(e)" value="{draftVal}"> onDraftChange(appCode, e.target.value)}
-            rows={3}
-            className="border-indigo-300 focus-visible:ring-indigo-500 text-xs font-mono"
-          />
-        ) : (
-          <div className="p-2.5 bg-white border border-slate-200 rounded-lg text-slate-600 whitespace-pre-line font-mono text-[11px] leading-relaxed">
-            {commentary || 'No commentary recorded for this application.'}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+---
 
-function MatrixTable({
-  app,
-  pillars,
-  selectedPillar,
-  showCellOrigins,
-  onToggleTarget,
-  onOriginClick,
-  appIndex,
-}: {
-  app: MaturityApplication;
-  pillars: MaturityPillarDefinition[];
-  selectedPillar: string;
-  showCellOrigins: boolean;
-  onToggleTarget: (appCode: string, pillarKey: string) => void;
-  onOriginClick?: (sheet: string, col: string, row: number | string) => void;
-  appIndex: number;
-}) {
-  const visiblePillars = useMemo(
-    () => (selectedPillar === 'ALL' ? pillars : pillars.filter((p) => p.key === selectedPillar)),
-    [pillars, selectedPillar],
-  );
+## SECTION 3: DYNAMIC DATA INGESTION & ADAPTIVE ENGINES
 
-  const startRow = getAppStartRow(app, appIndex);
-
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-left border-collapse text-xs">
-        <thead>
-          <tr className="bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 text-white font-semibold shadow-sm border-b-2 border-indigo-400">
-            <th className="py-3 px-3.5 border-r border-blue-500/80 w-36 sticky left-0 bg-blue-600 text-white z-10 shadow-sm">
-              <span className="tracking-wide uppercase text-[11px]">Assessment Type</span>
-            </th>
-            <th className="py-3 px-2.5 border-r border-indigo-500/60 w-24 text-blue-100">
-              <span className="tracking-wide uppercase text-[11px]">Metric</span>
-            </th>
-            {visiblePillars.map((p) => (
-              <th key={p.key} className="py-3 px-3 border-r border-indigo-500/40 text-center min-w-[125px] bg-indigo-600/20">
-                <div className="flex items-center justify-center gap-1.5 text-white">
-                  <span className="text-base">{p.icon}</span>
-                  <span className="font-bold tracking-wide uppercase text-[11px]">{p.label}</span>
-                </div>
-              </th>
-            ))}
-          </tr>
-        </thead>
-
-        <tbody className="divide-y divide-slate-200">
-          {/* ROW 1: EXPECTED TARGET */}
-          <tr className="bg-amber-50/50 hover:bg-amber-50/80 transition-colors">
-            <td className="py-2.5 px-3 font-semibold text-slate-700 border-r border-slate-200 sticky left-0 bg-amber-50/90 z-10">
-              Expected Target
-            </td>
-            <td className="py-2.5 px-2 text-slate-500 font-mono text-[11px] border-r border-slate-200">
-              Target ⬆️
-            </td>
-            {visiblePillars.map((p) => {
-              const pillarVal = app.pillars[p.key];
-              const isTargetActive = Boolean(pillarVal?.target);
-              return (
-                <td key={p.key} className="py-2.5 px-3 text-center border-r border-slate-200">
-                  <Button onClick="{()" size="xs" type="button"> onToggleTarget(app.code, p.key)}
-                    className={
-                      isTargetActive
-                        ? 'bg-amber-400 text-amber-950 font-bold hover:bg-amber-500 scale-105 shadow-sm h-6 px-2.5 text-xs'
-                        : 'border border-slate-300 bg-white text-slate-600 hover:text-slate-800 hover:bg-slate-100 font-semibold h-6 px-2.5 text-xs'
-                    }
-                    title={isTargetActive ? 'Target Improvement Indicator is Active (Click to remove)' : 'Click to mark pillar target ⬆️'}
-                  >
-                    {isTargetActive ? '⬆️ TARGET' : '+ Target'}
-                  </Button>
-                </td>
-              );
-            })}
-          </tr>
-
-          {/* ROW 2: LAST ASSESSMENT DATE */}
-          <tr className="hover:bg-slate-50">
-            <td rowSpan={3} className="py-2 px-3 font-semibold text-slate-700 border-r border-slate-200 sticky left-0 bg-white z-10">
-              Last Assessment
-              <div className="text-[10px] text-slate-400 font-normal mt-0.5">Compared to TODAY</div>
-              <div className="text-[9px] text-indigo-500 font-mono font-medium mt-0.5">💡 hover for origin</div>
-            </td>
-            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200">Date</td>
-            {visiblePillars.map((p) => {
-              const pillarVal = app.pillars[p.key];
-              const cellRow = startRow + p.rowOffset + 1;
-              const health = getDateHealth(pillarVal?.date);
-
-              return (
-                <td
-                  key={p.key}
-                  className="py-2 px-3 text-center border-r border-slate-200 cursor-help transition-colors hover:bg-indigo-50/30"
-                  title={`'Assessments-Extracts'!E${cellRow} [Column E : Row ${cellRow}] • Last Assessment Date | Current Value: ${pillarVal?.date || 'null'}\nStatus: ${health.label}`}
-                >
-                  <div className="flex flex-col items-center gap-0.5">
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-mono rounded border ${health.badgeBg}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${health.dotColor}`} />
-                      <span>{pillarVal?.date || 'null'}</span>
-                    </span>
-                    <span className="text-[9px] text-slate-500 font-medium">{health.desc}</span>
-                    <CellOriginTag className="mt-0.5" col="E" onOriginClick="{onOriginClick}" row="{cellRow}" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
-                  </div>
-                </td>
-              );
-            })}
-          </tr>
-
-          {/* ROW 3: LAST ASSESSMENT SCORE */}
-          <tr className="hover:bg-slate-50">
-            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200">Score</td>
-            {visiblePillars.map((p) => {
-              const pillarVal = app.pillars[p.key];
-              const cellRow = startRow + p.rowOffset + 1;
-
-              return (
-                <td
-                  key={p.key}
-                  className="py-2 px-3 text-center border-r border-slate-200 cursor-help transition-colors hover:bg-indigo-50/30"
-                  title={`'Assessments-Extracts'!G${cellRow} [Column G : Row ${cellRow}] • Last Assessment Score | Current Value: ${Number(pillarVal?.score ?? 0).toFixed(2)}`}
-                >
-                  <div className="flex flex-col items-center justify-center">
-                    <span className="text-sm font-bold text-slate-900">{Number(pillarVal?.score ?? 0).toFixed(2)}</span>
-                    <CellOriginTag className="mt-0.5" col="G" onOriginClick="{onOriginClick}" row="{cellRow}" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
-                  </div>
-                </td>
-              );
-            })}
-          </tr>
-
-          {/* ROW 4: LAST ASSESSMENT LEVEL */}
-          <tr className="hover:bg-slate-50 border-b border-slate-300">
-            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200">Level</td>
-            {visiblePillars.map((p) => {
-              const pillarVal = app.pillars[p.key];
-              const levelRow = startRow + p.rowOffset + 2;
-
-              return (
-                <td
-                  key={p.key}
-                  className="py-2 px-3 text-center border-r border-slate-200 cursor-help transition-colors hover:bg-indigo-50/30"
-                  title={`'Assessments-Extracts'!G${levelRow} [Column G : Row ${levelRow}] • Last Assessment Level | Current Value: ${pillarVal?.level || 'Lvl 0'}`}
-                >
-                  <div className="flex flex-col items-center justify-center gap-0.5">
-                    <Badge className="text-[11px] py-0.5 px-2.5" variant="default">
-                      {pillarVal?.level || 'Lvl 0'}
-                    </Badge>
-                    <CellOriginTag className="mt-0.5" col="G" onOriginClick="{onOriginClick}" row="{levelRow}" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
-                  </div>
-                </td>
-              );
-            })}
-          </tr>
-
-          {/* ROW 5: PREVIOUS ASSESSMENT DATE */}
-          <tr className="bg-slate-50/70 hover:bg-slate-100/70">
-            <td rowSpan={3} className="py-2 px-3 font-semibold text-slate-600 border-r border-slate-200 sticky left-0 bg-slate-50/90 z-10">
-              Last Assessment - 1
-              <div className="text-[10px] text-slate-400 font-normal mt-0.5">Previous Session</div>
-            </td>
-            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200">Date</td>
-            {visiblePillars.map((p) => {
-              const pillarVal = app.pillars[p.key];
-              const prevRow = startRow + p.rowOffset + 3;
-
-              return (
-                <td
-                  key={p.key}
-                  className="py-2 px-3 text-center text-slate-500 font-mono text-[11px] border-r border-slate-200 cursor-help hover:bg-slate-200/50"
-                  title={`'Assessments-Extracts'!E${prevRow} [Column E : Row ${prevRow}] • Last Assessment - 1 Date | Current Value: ${pillarVal?.prevDate || 'null'}`}
-                >
-                  <div className="flex flex-col items-center justify-center">
-                    <span>{pillarVal?.prevDate || '—'}</span>
-                    <CellOriginTag className="mt-0.5" col="E" onOriginClick="{onOriginClick}" row="{prevRow}" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
-                  </div>
-                </td>
-              );
-            })}
-          </tr>
-
-          {/* ROW 6: PREVIOUS ASSESSMENT SCORE */}
-          <tr className="bg-slate-50/70 hover:bg-slate-100/70">
-            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200">Score</td>
-            {visiblePillars.map((p) => {
-              const pillarVal = app.pillars[p.key];
-              const prevRow = startRow + p.rowOffset + 3;
-
-              return (
-                <td
-                  key={p.key}
-                  className="py-2 px-3 text-center text-slate-600 font-semibold border-r border-slate-200 cursor-help hover:bg-slate-200/50"
-                  title={`'Assessments-Extracts'!G${prevRow} [Column G : Row ${prevRow}] • Last Assessment - 1 Score | Current Value: ${Number(pillarVal?.prevScore ?? 0).toFixed(2)}`}
-                >
-                  <div className="flex flex-col items-center justify-center">
-                    <span>{Number(pillarVal?.prevScore ?? 0).toFixed(2)}</span>
-                    <CellOriginTag className="mt-0.5" col="G" onOriginClick="{onOriginClick}" row="{prevRow}" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
-                  </div>
-                </td>
-              );
-            })}
-          </tr>
-
-          {/* ROW 7: PREVIOUS ASSESSMENT LEVEL */}
-          <tr className="bg-slate-50/70 hover:bg-slate-100/70 border-b-2 border-indigo-100">
-            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200">Level</td>
-            {visiblePillars.map((p) => {
-              const pillarVal = app.pillars[p.key];
-              const prevLevelRow = startRow + p.rowOffset + 4;
-
-              return (
-                <td
-                  key={p.key}
-                  className="py-2 px-3 text-center text-slate-500 font-semibold border-r border-slate-200 cursor-help hover:bg-slate-200/50"
-                  title={`'Assessments-Extracts'!G${prevLevelRow} [Column G : Row ${prevLevelRow}] • Last Assessment - 1 Level | Current Value: ${pillarVal?.prevLevel || 'Lvl 0'}`}
-                >
-                  <div className="flex flex-col items-center justify-center">
-                    <span>{pillarVal?.prevLevel || 'Lvl 0'}</span>
-                    <CellOriginTag className="mt-0.5" col="G" onOriginClick="{onOriginClick}" row="{prevLevelRow}" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
-                  </div>
-                </td>
-              );
-            })}
-          </tr>
-
-          {/* SECTION HEADER: PENDING EXTRACT FOLLOW-UP */}
-          <tr className="bg-slate-100 text-slate-700 font-semibold">
-            <td colSpan={visiblePillars.length + 2} className="py-1.5 px-3 text-[11px] uppercase tracking-wider text-slate-600">
-              New Pending Assessment Follow-up (Extract Progression)
-            </td>
-          </tr>
-
-          {/* ROW 8: ASSESSOR */}
-          <tr className="hover:bg-slate-50">
-            <td className="py-2 px-3 font-semibold text-slate-700 border-r border-slate-200 sticky left-0 bg-white z-10">
-              Assessor
-              <div className="text-[10px] text-slate-400 font-normal mt-0.5">Extracts Col C</div>
-            </td>
-            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200 text-[11px]">
-              Assessor
-            </td>
-            {visiblePillars.map((p) => {
-              const pillarVal = app.pillars[p.key];
-              const assessorRow = startRow + p.rowOffset;
-              const assessorName = pillarVal?.assessor || '-';
-              const hasOwner = Boolean(assessorName && assessorName !== '-');
-
-              return (
-                <td
-                  key={p.key}
-                  className="py-2 px-2 text-center text-[11px] text-slate-700 font-medium border-r border-slate-200 cursor-help hover:bg-indigo-50/30"
-                  title={`'Assessments-Extracts'!C${assessorRow} [Column C : Row ${assessorRow}] • Assessor / Owner | Current Value: ${assessorName}`}
-                >
-                  <div className="flex flex-col items-center justify-center">
-                    <span
-                      className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium truncate max-w-[130px] ${
-                        hasOwner
-                          ? 'bg-slate-100 text-slate-800 border border-slate-200'
-                          : 'bg-slate-50 text-slate-400 border border-dashed border-slate-200'
-                      }`}
-                    >
-                      {assessorName}
-                    </span>
-                    <CellOriginTag className="mt-0.5" col="C" onOriginClick="{onOriginClick}" row="{assessorRow}" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
-                  </div>
-                </td>
-              );
-            })}
-          </tr>
-
-          {/* ROW 9: LAST EXTRACT PROGRESS */}
-          <tr className="hover:bg-slate-50">
-            <td className="py-2 px-3 font-semibold text-slate-700 border-r border-slate-200 sticky left-0 bg-white z-10">
-              Last extract
-              <div className="text-[10px] text-slate-400 font-normal">2025-05-11</div>
-            </td>
-            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200">
-              Progress
-            </td>
-            {visiblePillars.map((p) => {
-              const pillarVal = app.pillars[p.key];
-              const lastExtractRow = startRow + p.rowOffset + 5;
-              const prog = Math.round(Number(pillarVal?.lastExtract ?? 0));
-
-              return (
-                <td
-                  key={p.key}
-                  className="py-2 px-3 border-r border-slate-200 cursor-help hover:bg-indigo-50/30"
-                  title={`'Assessments-Extracts'!G${lastExtractRow} [Column G : Row ${lastExtractRow}] • Last Pending Assessment Snapshot Progress | Current Value: ${prog}%`}
-                >
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="font-bold text-slate-900 text-xs">{prog}%</span>
-                    <div className="w-16 bg-slate-200 rounded-full h-1.5 overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${
-                          prog === 100 ? 'bg-emerald-500' : prog > 0 ? 'bg-indigo-600' : 'bg-slate-300'
-                        }`}
-                        style={{ width: `${prog}%` }}
-                      />
-                    </div>
-                    <CellOriginTag className="mt-0.5" col="G" onOriginClick="{onOriginClick}" row="{lastExtractRow}" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
-                  </div>
-                </td>
-              );
-            })}
-          </tr>
-
-          {/* ROW 10: PREVIOUS EXTRACT PROGRESS */}
-          <tr className="hover:bg-slate-50">
-            <td className="py-2 px-3 font-semibold text-slate-600 border-r border-slate-200 sticky left-0 bg-white z-10">
-              Previous extract
-              <div className="text-[10px] text-slate-400 font-normal">2025-04-11</div>
-            </td>
-            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200">
-              Progress
-            </td>
-            {visiblePillars.map((p) => {
-              const pillarVal = app.pillars[p.key];
-              const prevExtractRow = startRow + p.rowOffset + 6;
-              const prevProg = Math.round(Number(pillarVal?.prevExtract ?? 0));
-
-              return (
-                <td
-                  key={p.key}
-                  className="py-2 px-3 text-center text-slate-500 border-r border-slate-200 cursor-help hover:bg-slate-200/50"
-                  title={`'Assessments-Extracts'!G${prevExtractRow} [Column G : Row ${prevExtractRow}] • Previous Pending Assessment Snapshot Progress | Current Value: ${prevProg}%`}
-                >
-                  <div className="flex flex-col items-center justify-center">
-                    <span>{prevProg}%</span>
-                    <CellOriginTag className="mt-0.5" col="G" onOriginClick="{onOriginClick}" row="{prevExtractRow}" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
-                  </div>
-                </td>
-              );
-            })}
-          </tr>
-
-          {/* ROW 11: FILLED PROGRESS INDICATOR */}
-          <tr className="bg-slate-50 font-bold">
-            <td className="py-2 px-3 text-slate-800 border-r border-slate-200 sticky left-0 bg-slate-50 z-10">
-              Filled Progress Indicator
-            </td>
-            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200 text-[10px]">
-              Trend
-            </td>
-            {visiblePillars.map((p) => {
-              const pillarVal = app.pillars[p.key];
-              const curr = Math.round(Number(pillarVal?.lastExtract ?? 0));
-              const prev = Math.round(Number(pillarVal?.prevExtract ?? 0));
-
-              let trendIcon = '➡️';
-              let trendColor = 'text-slate-600 bg-slate-100';
-              let trendLabel = 'No Change';
-
-              if (curr === 100) {
-                trendIcon = '✅';
-                trendColor = 'text-emerald-700 bg-emerald-50';
-                trendLabel = 'Finished';
-              } else if (curr > prev) {
-                trendIcon = '↗️';
-                trendColor = 'text-emerald-700 bg-emerald-50';
-                trendLabel = 'Improved';
-              } else if (curr < prev) {
-                trendIcon = '↘️';
-                trendColor = 'text-rose-700 bg-rose-50';
-                trendLabel = 'Degraded';
-              }
-
-              const cellG1 = startRow + p.rowOffset + 5;
-              const cellG2 = startRow + p.rowOffset + 6;
-
-              return (
-                <td
-                  key={p.key}
-                  className="py-2 px-3 text-center border-r border-slate-200 cursor-help"
-                  title={`Trend: ${trendLabel}\nCompared from 'Assessments-Extracts'!G${cellG1} vs G${cellG2}`}
-                >
-                  <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs ${trendColor}`}>
-                    {trendIcon}
-                  </span>
-                </td>
-              );
-            })}
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-export function MaturityMatrixTab({ applications, onOriginClick }: MaturityMatrixTabProps) {
-  const showCellOrigins = useMaturityMatrixStore((s) => s.showCellOrigins);
-  const selectedPillar = useMaturityMatrixStore((s) => s.selectedPillar);
-  const storePillars = useMaturityMatrixStore((s) => s.data.pillars);
-  const storeApplications = useMaturityMatrixStore((s) => s.data.applications);
-
-  const updateLeader = useMaturityMatrixStore((s) => s.updateLeader);
-  const toggleToGenerate = useMaturityMatrixStore((s) => s.toggleToGenerate);
-  const toggleTarget = useMaturityMatrixStore((s) => s.toggleTarget);
-  const updateCommentary = useMaturityMatrixStore((s) => s.updateCommentary);
-
-  const pillars = storePillars && storePillars.length > 0 ? storePillars : DEFAULT_PILLARS;
-
-  const leaderOptions = useMemo(
-    () => Array.from(new Set(storeApplications.map((app) => app.leader))).sort(),
-    [storeApplications],
-  );
-
-  const [expandedAppCodes, setExpandedAppCodes] = useState<Record<string, boolean>>({
-    AVAILABLE_SHIPMENT: true,
-  });
-
-  const [editingNotes, setEditingNotes] = useState<Record<string, boolean>>({});
-  const [notesDraft, setNotesDraft] = useState<Record<string, string>>({});
-
-  const toggleExpandApp = (code: string) => {
-    setExpandedAppCodes((prev) => ({
-      ...prev,
-      [code]: !prev[code],
-    }));
+- **Dynamic Schema Discovery:** Programmatically parse `data` at runtime. Auto-detect headers and data types:
+  - **Numeric / Currency / Percentage:** Clean strings (strip `$`, `,`, `%`) before parsing numbers.
+  - **Date:** Parse safely using local date component constructors.
+  - **Categorical / Boolean / Spatial:** Identify discrete string sets, boolean flags, and spatial context (e.g., aisle, rack, shelf, room, X/Y/Z coordinates).
+- **Zero-Hallucination Policy:** Missing/null cells must remain `null` or `undefined` and be represented visually as **Unreviewed / Missing Data** (Yellow indicator). Never generate fake static mock data.
+- **Timezone-Safe Date Ingestion:**
+  ```javascript
+  const parseLocalDate = (dateStr) => {
+    if (!dateStr) return null;
+    const cleanStr = String(dateStr).split('T')[0];
+    const [y, m, d] = cleanStr.split(/[-/]/).map(Number);
+    return (y && m && d) ? new Date(y, m - 1, d) : null;
   };
+  ```
 
-  const handleStartEditNote = (code: string, commentary: string) => {
-    setEditingNotes((prev) => ({ ...prev, [code]: true }));
-    setNotesDraft((prev) => ({ ...prev, [code]: commentary || '' }));
-  };
+---
 
-  const handleSaveNote = (code: string) => {
-    const val = notesDraft[code] ?? '';
-    updateCommentary(code, val);
-    setEditingNotes((prev) => ({ ...prev, [code]: false }));
-  };
+## SECTION 4: CELL LINEAGE & DEEP-LINKING PROTOCOL
 
-  const handleCancelEditNote = (code: string) => {
-    setEditingNotes((prev) => ({ ...prev, [code]: false }));
-  };
+- **Global Origins Toggle:** Header toolbar toggle button labeled **"Show Cell Origins"**.
+- **Visual Pill Badges:** When active, render mini inline origin badges (e.g. `[Sheet1!B4]`) beside data elements in grid tables, cards, and inside optional 3D overlay tooltips.
+- **Click Action & Toast:** Clicking an origin badge or 3D lineage target fires `followLink('Sheet1!B4')` and displays a feedback toast notification ("Navigating to Sheet1!B4").
+- **DOM Metadata Standard:** Set HTML attributes on data cells: `data-origin-tag="Sheet1!B4"` and standard hover tooltips (`title="Source: Sheet1!B4"`).
 
-  const handleDraftChange = (code: string, val: string) => {
-    setNotesDraft((prev) => ({ ...prev, [code]: val }));
-  };
+---
 
-  if (applications.length === 0) {
-    return (
-      <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
-        No applications match the current filters.
-      </div>
-    );
-  }
+## SECTION 5: IN-APP DOCUMENTATION MODAL (6 TABS)
 
-  return (
-    <section className="flex flex-col gap-6">
-      {applications.map((app, index) => {
-        const isExpanded = Boolean(expandedAppCodes[app.code] ?? expandedAppCodes[app.id] ?? false);
-        const health = getDateHealth(app.lastAssessmentDate);
-        const rowIdx = getAppRowIdx(app, index);
-        const startRow = getAppStartRow(app, index);
-        const isEditingNote = Boolean(editingNotes[app.code] || editingNotes[app.id]);
-        const noteDraftVal = notesDraft[app.code] ?? notesDraft[app.id] ?? app.commentary ?? '';
+The documentation modal MUST contain an interactive tab bar navigating across exactly 6 sections:
 
-        return (
-          <Card app.code} className="overflow-hidden border-slate-200 bg-white shadow-sm" key="{app.id" ||>
-            {/* CARD HEADER */}
-            <div className="bg-slate-50 border-b border-slate-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <Button onClick="{()" size="sm" type="button" variant="ghost"> toggleExpandApp(app.code || app.id)}
-                  className="h-7 w-7 p-1 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded-md transition-colors"
-                  title={isExpanded ? 'Collapse Application' : 'Expand Application'}
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points={isExpanded ? '18 15 12 9 6 15' : '6 9 12 15 18 9'} />
-                  </svg>
-                </Button>
+1. **Tab 1 - Canvas Layout Blueprint:** Visual breakdown mapping UI components to layout sections.
+2. **Tab 2 - Technical Architecture & Libraries:** Component hierarchy, React hooks (`useState`, `useMemo`, `useRef`), and external library contracts.
+3. **Tab 3 - Dynamic Ingestion & Data Schema:** Discovered schema, column data types, string sanitization rules, and date logic.
+4. **Tab 4 - Cell Lineage & Persistence Matrix:** Table mapping UI elements (and optional 3D meshes) to data attributes, A1 cell origins, and mutation callbacks (`updateItem`, `moveItem`).
+5. **Tab 5 - User Guide & Operational Specs:** End-user guide covering filters, sorting, drag-and-drop reordering, keyboard shortcuts (`Esc`, `Enter`), drawer editing, status colors, and 3D spatial navigation (if active).
+6. **Tab 6 - External React App & Web/Google Sites Embed Prompt:** Dynamically populated AI prompt containing live schema, active column signatures, state handlers, and specific instructions for external Vite builds OR live dynamic Google Sites iframe embedding.
 
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="text-base font-bold text-slate-900 tracking-tight">{app.name}</h2>
+---
 
-                    <span className="px-2 py-0.5 bg-slate-200 text-slate-700 text-[11px] font-mono rounded flex items-center gap-1">
-                      <span>{app.code}</span>
-                      <CellOriginTag col="D" onOriginClick="{onOriginClick}" row="{rowIdx}" sheet="Maturity-Matrix-Projects" showCellOrigins="{showCellOrigins}"/>
-                    </span>
+## SECTION 6: MARKDOWN EXPORT ENGINE & EXTERNAL EMBED PROMPT
 
-                    <span
-                      className={`px-2 py-0.5 text-[10px] font-bold rounded-full flex items-center gap-1 border ${
-                        app.toGenerate
-                          ? 'bg-indigo-100 text-indigo-800 border-indigo-200'
-                          : 'bg-slate-200 text-slate-700 border-slate-300'
-                      }`}
-                    >
-                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                      <span>TO GENERATE = {app.toGenerate ? 'TRUE' : 'FALSE'}</span>
-                      <CellOriginTag col="F" onOriginClick="{onOriginClick}" row="{rowIdx}" sheet="Maturity-Matrix-Projects" showCellOrigins="{showCellOrigins}"/>
-                    </span>
-                  </div>
+### 6.1 Header Copy Action
+- **Button:** Positioned inside the modal header: `<Copy size="{16}"/> Copy Full Docs (Markdown)`.
+- **Behavior:** Concatenates all 6 documentation modules into a clean Markdown string and copies to `navigator.clipboard.writeText()`. Delineates sections using `#` (H1) headers. Shows a temporary `"Copied!"` checkmark state for 2 seconds.
 
-                  <div className="text-xs text-slate-500 flex flex-wrap items-center gap-3 mt-1.5">
-                    <div className="flex items-center gap-1.5 bg-purple-50 text-purple-900 border border-purple-200 px-2 py-0.5 rounded font-semibold text-[11px]">
-                      <svg className="w-3 h-3 text-purple-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                        <circle cx="12" cy="7" r="4" />
-                      </svg>
-                      <span>Leader (Col E):</span>
-                      <Select onValueChange="{(newLeader)" value="{app.leader}"> updateLeader(app.code, newLeader)}>
-                        <SelectTrigger className="h-6 border-purple-200 bg-white/70 text-purple-950 px-2 py-0 text-[11px] font-bold shadow-none hover:bg-white">
-                          <SelectValue placeholder="{app.leader}"/>
-                        </SelectTrigger>
-                        <SelectContent className="min-w-[160px]">
-                          {leaderOptions.map((l) => (
-                            <SelectItem key="{l}" value="{l}">
-                              {l}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <CellOriginTag col="E" onOriginClick="{onOriginClick}" row="{rowIdx}" sheet="Maturity-Matrix-Projects" showCellOrigins="{showCellOrigins}"/>
-                    </div>
+### 6.2 Standalone External Prompt Template (Tab 6 Content)
+Tab 6 and Section 6 of the exported Markdown MUST dynamically fill and present this prompt block:
 
-                    <span>•</span>
+```markdown
+# 6. EXTERNAL REACT APP & WEB / GOOGLE SITES EMBED PROMPT
 
-                    <span className="flex items-center gap-1.5">
-                      <span>Last Assessment:</span>
-                      <span
-                        className={`px-2 py-0.5 rounded text-[11px] font-mono border flex items-center gap-1 cursor-help ${health.badgeBg}`}
-                        title={`'Assessments-Extracts'!E${startRow + 1} [Column E : Row ${startRow + 1}] • Application Last Assessment Date | Current Value: ${app.lastAssessmentDate || 'null'}\nStatus: ${health.label}`}
-                      >
-                        <span className={`w-1.5 h-1.5 rounded-full ${health.dotColor}`} />
-                        <span>{app.lastAssessmentDate || 'null'}</span>
-                        <span className="text-[10px] opacity-75 font-sans font-normal">({health.desc})</span>
-                        <CellOriginTag + 1} className="ml-1" col="E" onOriginClick="{onOriginClick}" row="{startRow" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
-                      </span>
-                    </span>
+**Copy and paste the prompt below into any LLM (Gemini, Claude, ChatGPT) to reproduce this Canvas application externally or embed it into Google Sites / Web Intranets:**
 
-                    <span>•</span>
+> "You are an expert Full-Stack React & UI Architect. Build a standalone React mini-application or embeddable Web dashboard widget that replicates the Canvas application specified in the documentation below.
+>
+> **Deployment & Data Ingestion Modes (Select One):**
+>
+> - **MODE A (Standalone Local React App - CSV File):**
+>   - Build a React application using Vite or Next.js.
+>   - Parse data from a local `data.csv` file using `PapaParse`.
+>   - Replace Google Sheet callback props (`updateItem`, `insertItem`, `deleteItem`, `moveItem`) with a local React `useReducer` state model.
+>
+> - **MODE B (Google Sites / Intranet Live Web Embed 🌐):**
+>   - Build an embeddable React HTML/JS bundle formatted specifically for iframe embedding in Google Sites or corporate web portals.
+>   - Implement a dynamic client-side `fetch()` function linked in real-time to the published Google Sheet CSV/JSON URL endpoint (e.g. `https://docs.google.com/spreadsheets/d/e/.../pub?output=csv`).
+>   - DO NOT generate hardcoded static mock data. Ensure data refreshes dynamically from the live sheet feed.
+>   - Format the CSS container for dynamic full-height responsiveness (`h-screen` / `w-full`) and iframe container sandboxing without horizontal layout overflow.
+>
+> **UI & Tech Stack Requirements:**
+> 1. **Styling & Icons:** Build with Tailwind CSS and `lucide-react`.
+> 2. **Analytics & DND:** Integrate `d3`, `@dnd-kit` sortables, and optional `three` (Three.js WebGL) IF 3D spatial layout features were active in the source Canvas spec.
+> 3. **Dynamic Schema Context:**
+>    - Discovered Columns: [AUTO_FILLED_COLUMN_LIST]
+>    - Sample Record Payload: [AUTO_FILLED_SAMPLE_PAYLOAD]
+>
+> **Complete Canvas Blueprint & Specification:**
+> [PASTE EXPORTED MARKDOWN DOCUMENTATION HERE]"
+```
 
-                    <span>
-                      Previous: <strong className="text-slate-600">{app.prevAssessmentDate || '—'}</strong>
-                    </span>
-                  </div>
-                </div>
+---
 
-                <div className="flex items-center gap-2 self-end sm:self-auto">
-                  <Button 'default'} 'destructive' : ? onClick="{()" size="xs" type="button" variant="{app.toGenerate"> toggleToGenerate(app.code)}
-                    className="text-xs font-semibold px-2.5 py-1 rounded transition-colors"
-                    title="Toggle sheet F column 'To Generate'"
-                  >
-                    Set TO Generate = {app.toGenerate ? 'FALSE' : 'TRUE'}
-                  </Button>
-                </div>
-              </div>
+## SECTION 7: CODE GENERATION & COMPLIANCE CHECKLIST
 
-              {/* EXPANDED CONTENT */}
-              {isExpanded && (
-                <div>
-                  <MatrixTable app="{app}" appIndex="{index}" onOriginClick="{onOriginClick}" onToggleTarget="{toggleTarget}" pillars="{pillars}" selectedPillar="{selectedPillar}" showCellOrigins="{showCellOrigins}"/>
-
-                  <CommentaryEditor appCode="{app.code}" commentary="{app.commentary}" draftVal="{noteDraftVal}" isEditing="{isEditingNote}" onCancel="{handleCancelEditNote}" onDraftChange="{handleDraftChange}" onSave="{handleSaveNote}" onStartEdit="{handleStartEditNote}"/>
-                </div>
-              )}
-          </Card>
-        );
-      })}
-    </section>
-  );
-}
-
-export default MaturityMatrixTab;
+Before outputting code, verify that all execution contracts are strictly satisfied:
+- [ ] Is the app contained entirely within a single `export default function App(...)` component?
+- [ ] Are row indices (`index_`) used consistently for sorting keys and persistence updates?
+- [ ] Are cell coordinates dynamically computed into valid A1 notation (`Sheet1!A1`)?
+- [ ] Is data parsing timezone-safe and clean of string formatting noise (`$`, `,`, `%`)?
+- [ ] Is 3D spatial rendering evaluated adaptively based on the dataset domain?
+- [ ] Does Tab 6 / Section 6 include dual deployment specifications for both Standalone Vite/CSV apps and Live Google Sites dynamic `fetch()` embeds?
+- [ ] Does the Markdown copy button format all 6 tabs with level-1 (`#`) headers?
+- [ ] Is the output raw executable JavaScript/JSX code without conversational text outside the code block?
 EOF
 
-if [ -f "webview/package.json" ]; then
-  (cd webview && npm run build)
-elif [ -f "package.json" ]; then
-  npm run build
+echo "Running build verification check..."
+if [ -f "docs/spreadsheet-to-canvas-prompt.md" ]; then
+    echo "✅ Master prompt file validated successfully."
+else
+    echo "❌ Prompt file generation failed."
+    exit 1
 fi
 
-echo "✅ fix(maturity-matrix): resolved JSX syntax escaping issues in MaturityMatrixTab"
+echo "✅ feat(prompt): Smartly integrated Google Sites embed & dynamic live fetch mode into Master Prompt"
