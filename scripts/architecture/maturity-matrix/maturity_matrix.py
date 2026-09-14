@@ -19,8 +19,14 @@ def update_repo_to_main(repo_path: str, base_branch: str = 'main') -> None:
     print('git reset, clean, fetch, checkout, and pull commands executed successfully.')
 
 
-def extract_assessments() -> None:
-    print('not yet implemented')
+def extract_assessments() -> str:
+    try:
+        from scripts.architecture.maturity_matrix.assessments_extractor import extract_assessments as run_extract_assessments
+    except (ImportError, ModuleNotFoundError):
+        from assessments_extractor import extract_assessments as run_extract_assessments
+    report_location = run_extract_assessments()
+    print(f"[maturity-matrix] Report location: {report_location}")
+    return report_location
 
 
 def extract_maturity_matrix() -> None:

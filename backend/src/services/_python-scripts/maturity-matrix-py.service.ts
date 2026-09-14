@@ -13,10 +13,8 @@ export async function callMaturityMatrixScript(repoPath: string, action: Maturit
     const workspaceExtPath = getWorkspaceExtentionPath();
 
     const candidatePaths = [
-        path.join(workspaceExtPath, 'scripts', 'maturity-matrix', 'maturity_matrix.py'),
-        path.join(rootPath, 'scripts', 'maturity-matrix', 'maturity_matrix.py'),
-        path.join(workspaceExtPath, 'scripts', 'maturity_matrix.py'),
-        path.join(rootPath, 'scripts', 'maturity_matrix.py'),
+        path.join(workspaceExtPath, 'scripts', 'architecture', 'maturity-matrix', 'maturity_matrix.py'),
+        path.join(rootPath, 'scripts', 'architecture', 'maturity-matrix', 'maturity_matrix.py'),
     ];
 
     let pythonScriptPath = '';

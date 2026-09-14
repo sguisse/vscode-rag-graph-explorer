@@ -19,6 +19,7 @@ fi
 echo "🚀 Installing Shadcn components..."
 
 # Install basic form components
-npx shadcn@latest add @reui/rating -y
+#npx shadcn@latest add @reui/rating -y
+npx shadcn@latest add badge -y
 
 echo "✅ Installation completed successfully!"

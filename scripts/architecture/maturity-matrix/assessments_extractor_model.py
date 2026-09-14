@@ -1,11 +1,3 @@
-#!/usr/bin/env bash
-set -e
-
-# Ensure target directory exists
-mkdir -p scripts/architecture/maturity-matrix
-
-echo "✏️ Modifying existing file: 'scripts/architecture/maturity-matrix/assessments_extractor_model.py'"
-cat << 'EOF' > scripts/architecture/maturity-matrix/assessments_extractor_model.py
 #!/usr/bin/env python3
 """Data models, enumerations, and config structures for maturity matrix assessment extraction."""
 
@@ -433,11 +425,3 @@ class ProductCSV:
                 lines.append(",".join(row_parts))
 
         return "\n".join(lines) + ("\n" if lines else "")
-EOF
-
-# Syntax compilation checks
-python3 -m py_compile scripts/architecture/maturity-matrix/assessments_extractor_model.py
-python3 -m py_compile scripts/architecture/maturity-matrix/assessments_extractor.py
-python3 -m py_compile scripts/architecture/maturity-matrix/maturity_matrix.py
-
-echo "🐛 fix(archi): Trimmed leading and trailing whitespace from skill question strings in CSV export"

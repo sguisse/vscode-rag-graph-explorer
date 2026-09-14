@@ -134,16 +134,16 @@ The codebase is organized into strict vertical slices across Webview UI domain m
 
 ## 📐 Ratified Consistency Conventions
 
-| Concern | Convention & Standard | Example / Enforcement |
-| :--- | :--- | :--- |
-| **Webview UI Layering** | Strict 4-layer separation: View (`[Feature].component.tsx`), Handlers (`use[Feature]Handlers.ts`), State (`use[Feature]State.ts`), Store (`[feature].store.ts`). | No inline regex parsing or multi-step async dispatch inside JSX render bodies. |
-| **UI Form Primitives** | Mandatory shadcn/ui components (`@/components/ui/*`). Raw HTML form tags (`<input>`, `<select>`, `<button>`) are forbidden. | `<Input />`, `<Select />`, `<Checkbox />`, `<Switch />`, `<Button />`. |
-| **Tooltip Standard** | Use `data-tooltip` attribute with HTML markup support instead of native `title` attributes. | `data-tooltip="<strong>Format:</strong> <em>JSON Payload</em>"` |
-| **Logging Isolation** | No raw `console.log`. Frontend uses `@/services/view/log-view.service.wrapper`; Backend uses `../../utils/utils-log`. | `logInfo('[Feature] Event triggered', { payload })` |
-| **Temp File Hygiene** | Temporary files in `os.tmpdir()` must be created and unlinked inside `try ... finally` blocks. | `try { fs.writeFileSync(tmp); ... } finally { fs.unlinkSync(tmp); }` |
-| **IPC Payload Streaming** | AST graph payloads exceeding 1 MB must be chunked or paginated across `postMessage`. | `streamGraphDataToWebview(webview, codebaseData)` |
-| **CSS Design Tokens** | Use semantic CSS theme variables (`var(--primary)`) instead of hardcoded hex colors for Cytoscape node styles. | `background-color: var(--primary)` |
-| **Legacy Code Depreciation**| `src/features/explorer-old/` is deprecated. All active codebase context logic belongs under `src/features/sdlc/domains/codebase-context/`. | Delete legacy folder; migrate references. |
+| Concern                      | Convention & Standard                                                                                                                                            | Example / Enforcement                                                          |
+| :--------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------- |
+| **Webview UI Layering**      | Strict 4-layer separation: View (`[Feature].component.tsx`), Handlers (`use[Feature]Handlers.ts`), State (`use[Feature]State.ts`), Store (`[feature].store.ts`). | No inline regex parsing or multi-step async dispatch inside JSX render bodies. |
+| **UI Form Primitives**       | Mandatory shadcn/ui components (`@/components/ui/*`). Raw HTML form tags (`<input>`, `<select>`, `<button>`) are forbidden.                                      | `<Input />`, `<Select />`, `<Checkbox />`, `<Switch />`, `<Button />`.         |
+| **Tooltip Standard**         | Use `data-tooltip` attribute with HTML markup support instead of native `title` attributes.                                                                      | `data-tooltip="<strong>Format:</strong> <em>JSON Payload</em>"`                |
+| **Logging Isolation**        | No raw `console.log`. Frontend uses `@/services/view/log-view.service.wrapper`; Backend uses `../../utils/utils-log`.                                            | `logInfo('[Feature] Event triggered', { payload })`                            |
+| **Temp File Hygiene**        | Temporary files in `os.tmpdir()` must be created and unlinked inside `try ... finally` blocks.                                                                   | `try { fs.writeFileSync(tmp); ... } finally { fs.unlinkSync(tmp); }`           |
+| **IPC Payload Streaming**    | AST graph payloads exceeding 1 MB must be chunked or paginated across `postMessage`.                                                                             | `streamGraphDataToWebview(webview, codebaseData)`                              |
+| **CSS Design Tokens**        | Use semantic CSS theme variables (`var(--primary)`) instead of hardcoded hex colors for Cytoscape node styles.                                                   | `background-color: var(--primary)`                                             |
+| **Legacy Code Depreciation** | `src/features/explorer-old/` is deprecated. All active codebase context logic belongs under `src/features/sdlc/domains/codebase-context/`.                       | Delete legacy folder; migrate references.                                      |
 
 ---
 
@@ -151,41 +151,41 @@ The codebase is organized into strict vertical slices across Webview UI domain m
 
 ### Backend Extension Host & Build Engine
 
-| Technology | Version | Purpose |
-| :--- | :--- | :--- |
-| **VS Code Extension Engine** | `^1.125.0` | Extension Host API runtime requirement |
-| **Node.js Target** | `ES2022` | Backend JavaScript runtime |
-| **TypeScript** | `^5.3.3` (Backend) / `^5.1.3` (Webview) | Static type safety |
-| **esbuild** | `^0.28.2` | Fast Extension Host backend bundling |
-| **js-yaml** | `^5.4.1` | YAML configuration parsing |
-| **neo4j-driver** | `^6.2.0` | Direct Bolt connection to Neo4j graph database |
-| **@github/copilot-sdk** | `1.0.13` | GitHub Copilot LLM integration |
+| Technology                   | Version                                 | Purpose                                        |
+| :--------------------------- | :-------------------------------------- | :--------------------------------------------- |
+| **VS Code Extension Engine** | `^1.125.0`                              | Extension Host API runtime requirement         |
+| **Node.js Target**           | `ES2022`                                | Backend JavaScript runtime                     |
+| **TypeScript**               | `^5.3.3` (Backend) / `^5.1.3` (Webview) | Static type safety                             |
+| **esbuild**                  | `^0.28.2`                               | Fast Extension Host backend bundling           |
+| **js-yaml**                  | `^5.4.1`                                | YAML configuration parsing                     |
+| **neo4j-driver**             | `^6.2.0`                                | Direct Bolt connection to Neo4j graph database |
+| **@github/copilot-sdk**      | `1.0.13`                                | GitHub Copilot LLM integration                 |
 
 ### Webview UI Frontend
 
-| Technology | Version | Purpose |
-| :--- | :--- | :--- |
-| **React** | `^19.2.8` | Declarative UI framework |
-| **Vite** | `^8.1.5` | Webview frontend development & bundling |
-| **Tailwind CSS** | `^4.3.3` | Utility-first CSS styling engine |
-| **shadcn** | `^4.17.0` | Component library design system |
-| **Zustand** | `^5.0.15` | Micro state management store |
-| **@tanstack/react-router** | `^1.170.32` | Webview routing & breadcrumb navigation |
-| **@tanstack/react-table** | `^9.2.4` | Virtualized data table rendering |
-| **Cytoscape.js** | `^3.34.2` | AST graph topology visualization |
-| **cytoscape-fcose** | `^2.2.0` | Fast Compound Spring Embedder graph layout |
-| **cytoscape-dagre** | `^4.0.1` | Directed acyclic graph layout |
-| **Lucide React** | `^1.38.0` | UI icon set |
-| **Vitest** | `^3.0.0` | Frontend & backend unit test runner |
+| Technology                 | Version     | Purpose                                    |
+| :------------------------- | :---------- | :----------------------------------------- |
+| **React**                  | `^19.2.8`   | Declarative UI framework                   |
+| **Vite**                   | `^8.1.5`    | Webview frontend development & bundling    |
+| **Tailwind CSS**           | `^4.3.3`    | Utility-first CSS styling engine           |
+| **shadcn**                 | `^4.17.0`   | Component library design system            |
+| **Zustand**                | `^5.0.15`   | Micro state management store               |
+| **@tanstack/react-router** | `^1.170.32` | Webview routing & breadcrumb navigation    |
+| **@tanstack/react-table**  | `^9.2.4`    | Virtualized data table rendering           |
+| **Cytoscape.js**           | `^3.34.2`   | AST graph topology visualization           |
+| **cytoscape-fcose**        | `^2.2.0`    | Fast Compound Spring Embedder graph layout |
+| **cytoscape-dagre**        | `^4.0.1`    | Directed acyclic graph layout              |
+| **Lucide React**           | `^1.38.0`   | UI icon set                                |
+| **Vitest**                 | `^3.0.0`    | Frontend & backend unit test runner        |
 
 ### Background Analysis & Database Stack
 
-| Technology | Version | Purpose |
-| :--- | :--- | :--- |
-| **Python** | `3.11+` | Background GraphRAG & script execution runtime |
-| **Neo4j Community Server** | `5.26.0` | Local embedded/sandboxed graph database server |
-| **jQAssistant CLI** | `2.9.1` | Bytecode & class structure scanner |
-| **sentence-transformers** | `all-MiniLM-L6-v2` | GraphRAG semantic embedding model |
+| Technology                 | Version            | Purpose                                        |
+| :------------------------- | :----------------- | :--------------------------------------------- |
+| **Python**                 | `3.11+`            | Background GraphRAG & script execution runtime |
+| **Neo4j Community Server** | `5.26.0`           | Local embedded/sandboxed graph database server |
+| **jQAssistant CLI**        | `2.9.1`            | Bytecode & class structure scanner             |
+| **sentence-transformers**  | `all-MiniLM-L6-v2` | GraphRAG semantic embedding model              |
 
 ### Structural Seed Layout
 
@@ -224,13 +224,13 @@ The codebase is organized into strict vertical slices across Webview UI domain m
 
 ## 🗺️ Capability → Architecture Map
 
-| Capability / Feature | Implemented In | Governed By |
-| :--- | :--- | :--- |
-| **AST Topology Graph Canvas** | `webview/src/features/sdlc/domains/codebase-context/` | AD-4, `useCytoscapeInstance`, Cytoscape.js |
-| **Transitive Impact Analysis** | `backend/src/services/graph-rag-explorer/` | `GraphRagExplorerAdapter`, Cypher BFS queries |
-| **Background Script Lifecycles** | `backend/src/managers/PythonScriptExecution.manager.ts` | AD-2 (`tree-kill`, `SIGKILL`) |
-| **Shell Commands Execution** | `backend/src/services/file-exporter/delegate/` | AD-1 (Parameterized `execFile`) |
-| **Secret API Keys Persistence** | `backend/src/managers/SecretCredentialManager.ts` | AD-3 (VS Code `context.secrets`) |
-| **IPC Message Dispatching** | `shared/rpc/rpc-protocol.ts` | RPC Exception Boundaries & DTO Validation |
-| **Code Generation Integrity** | `dev-tools/generate-all.js` | AD-4 (`npm run verify:generated`) |
-| **Workspace File Access** | `backend/src/services/file-system/` | AD-5 (`isPathInsideWorkspace`) |
+| Capability / Feature             | Implemented In                                          | Governed By                                   |
+| :------------------------------- | :------------------------------------------------------ | :-------------------------------------------- |
+| **AST Topology Graph Canvas**    | `webview/src/features/sdlc/domains/codebase-context/`   | AD-4, `useCytoscapeInstance`, Cytoscape.js    |
+| **Transitive Impact Analysis**   | `backend/src/services/graph-rag-explorer/`              | `GraphRagExplorerAdapter`, Cypher BFS queries |
+| **Background Script Lifecycles** | `backend/src/managers/PythonScriptExecution.manager.ts` | AD-2 (`tree-kill`, `SIGKILL`)                 |
+| **Shell Commands Execution**     | `backend/src/services/file-exporter/delegate/`          | AD-1 (Parameterized `execFile`)               |
+| **Secret API Keys Persistence**  | `backend/src/managers/SecretCredentialManager.ts`       | AD-3 (VS Code `context.secrets`)              |
+| **IPC Message Dispatching**      | `shared/rpc/rpc-protocol.ts`                            | RPC Exception Boundaries & DTO Validation     |
+| **Code Generation Integrity**    | `dev-tools/generate-all.js`                             | AD-4 (`npm run verify:generated`)             |
+| **Workspace File Access**        | `backend/src/services/file-system/`                     | AD-5 (`isPathInsideWorkspace`)                |

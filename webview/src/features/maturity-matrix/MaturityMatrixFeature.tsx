@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useLayoutStore } from '@/store/useLayoutStore';
 import { useBreadcrumbNavigation } from '@/hooks/useBreadcrumbNavigation';
-import { MaturityMatrixPanel } from './MaturityMatrixPanel';
+import CenterPanelContainer from './layout-ctns/CenterPanelContainer';
 
 export function MaturityMatrixFeature() {
   const setLayoutContainers = useLayoutStore((s) => s.setLayoutContainers);
@@ -16,7 +16,7 @@ export function MaturityMatrixFeature() {
         left: { visible: false },
         center: {
           visible: true,
-          container: <MaturityMatrixPanel />,
+          container: <CenterPanelContainer/>,
           isHiddable: false,
           maximizeContainer: { isMaximizable: true, isMaximized: false, maximizeScope: 'Main' },
         },
