@@ -1,5 +1,5 @@
 export interface MMAssessmentsReport {
-  assessmentDatetime: string;
+  datetimeExtract: string;
   targetDirectory: string;
   files: {
     jsonExtract: string;

@@ -19,8 +19,8 @@ class MaturityMatrixApiService extends AbstractApiService implements IMaturityMa
         return await this.rpc.call(RpcMethodEnum.MATURITYMATRIX_GET_LAST_ASSESSMENTS);
     }
 
-    public async getAssessmentsAt(assessmentDatetime: string): Promise<MMAssessmentsResult> {
-        return await this.rpc.call(RpcMethodEnum.MATURITYMATRIX_GET_ASSESSMENTS_AT, assessmentDatetime);
+    public async getAssessmentsAt(datetimeExtract: string): Promise<MMAssessmentsResult> {
+        return await this.rpc.call(RpcMethodEnum.MATURITYMATRIX_GET_ASSESSMENTS_AT, datetimeExtract);
     }
 
     public async getAssessmentsAvailable(): Promise<string[]> {

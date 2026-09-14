@@ -1,5 +1,5 @@
 export interface MMAssessmentsResult {
-  assessmentDatetime: string;
+  datetimeExtract: string;
   targetDirectory: string;
   reportPath: string;
   csvExtractPath: string;

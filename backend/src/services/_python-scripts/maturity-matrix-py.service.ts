@@ -46,8 +46,8 @@ export class MaturityMatrixPyService implements IMaturityMatrixServicePort {
     return JSON.parse(rawOutput) as MMAssessmentsResult;
   }
 
-  async getAssessmentsAt(assessmentDatetime: string): Promise<MMAssessmentsResult> {
-    const rawOutput = await this.runPythonAction('get-assessments-at', `--assessment-datetime "${assessmentDatetime}"`);
+  async getAssessmentsAt(datetimeExtract: string): Promise<MMAssessmentsResult> {
+    const rawOutput = await this.runPythonAction('get-assessments-at', `--assessment-datetime "${datetimeExtract}"`);
     return JSON.parse(rawOutput) as MMAssessmentsResult;
   }
 

@@ -69,11 +69,11 @@ def get_assessments_available() -> List[str]:
 
 
 def get_assessments_at(assessment_datetime: str) -> Dict[str, Any]:
-    """Retrieves paths and parsed CSV rows for assessment outputs at a specific assessmentDatetime snapshot."""
+    """Retrieves paths and parsed CSV rows for assessment outputs at a specific datetimeExtract snapshot."""
     base_dir = get_target_base_dir()
     target_dir = base_dir / assessment_datetime
     if not target_dir.exists() or not target_dir.is_dir():
-        raise FileNotFoundError(f"Assessments snapshot for assessmentDatetime '{assessment_datetime}' not found at '{target_dir}'.")
+        raise FileNotFoundError(f"Assessments snapshot for datetimeExtract '{assessment_datetime}' not found at '{target_dir}'.")
 
     report_path = target_dir / "report-extract.yaml"
     csv_path = target_dir / "last-assessments-extract.csv"
@@ -85,7 +85,7 @@ def get_assessments_at(assessment_datetime: str) -> Dict[str, Any]:
             rows = [row for row in reader]
 
     return {
-        "assessmentDatetime": assessment_datetime,
+        "datetimeExtract": assessment_datetime,
         "targetDirectory": str(target_dir.resolve()),
         "reportPath": str(report_path.resolve()) if report_path.exists() else "",
         "csvExtractPath": str(csv_path.resolve()) if csv_path.exists() else "",
@@ -101,8 +101,12 @@ def get_last_assessments() -> Dict[str, Any]:
     return get_assessments_at(available[0])
 
 
-def extract_maturity_matrix() -> None:
-    print('not yet implemented')
+def get_target_base_dir() -> Path:
+    """Resolves the target base extraction directory from the extractor configuration."""
+    service = AssessmentsExtractorService()
+    config, _ = service._load_extractor_config()
+    base_dir_str = service.get_config_value(config, "target-extracted-file-location", required=True)
+    return Path(base_dir_str)
 
 
 if __name__ == '__main__':

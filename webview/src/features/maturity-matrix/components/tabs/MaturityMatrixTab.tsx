@@ -1,5 +1,3 @@
-echo "✏️ Modifying existing file: 'webview/src/features/maturity-matrix/components/tabs/MaturityMatrixTab.tsx'"
-cat << 'EOF' > webview/src/features/maturity-matrix/components/tabs/MaturityMatrixTab.tsx
 import React, { useState, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -142,7 +140,9 @@ function CellOriginTag({
       className={`inline-flex items-center gap-0.5 text-[8px] font-mono font-bold text-indigo-600 hover:text-white bg-indigo-50 hover:bg-indigo-600 border border-indigo-200 hover:border-indigo-600 rounded px-1 py-0.5 transition-all cursor-pointer shadow-xs ${className}`}
       title={`Click to open Google Sheet and select cell '${sheet}'!${col}${row}`}
     >
-      <span>[{col}:{row}]</span>
+      <span>
+        [{col}:{row}]
+      </span>
       <svg className="w-2 h-2 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
         <polyline points="15 3 21 3 21 9" />
@@ -184,19 +184,19 @@ function CommentaryEditor({
           </span>
           {isEditing ? (
             <div className="flex items-center gap-2">
-              <Button onClick="{()" size="sm" type="button" variant="ghost"> onSave(appCode)}
+              <Button onClick={() => onSave(appCode)} size="sm" type="button" variant="ghost"
                 className="h-6 px-2 text-xs text-emerald-600 font-bold hover:bg-emerald-50 hover:text-emerald-700"
               >
                 Save Note
               </Button>
-              <Button onClick="{()" size="sm" type="button" variant="ghost"> onCancel(appCode)}
+              <Button onClick={() => onCancel(appCode)} size="sm" type="button" variant="ghost"
                 className="h-6 px-2 text-xs text-slate-500 hover:bg-slate-100"
               >
                 Cancel
               </Button>
             </div>
           ) : (
-            <Button onClick="{()" size="sm" type="button" variant="ghost"> onStartEdit(appCode, commentary)}
+            <Button onClick={() => onStartEdit(appCode, commentary)} size="sm" type="button" variant="ghost"
               className="h-6 px-2 text-xs text-indigo-600 font-semibold hover:bg-indigo-50"
             >
               Edit Note
@@ -204,7 +204,8 @@ function CommentaryEditor({
           )}
         </div>
         {isEditing ? (
-          <Textarea onChange="{(e)" value="{draftVal}"> onDraftChange(appCode, e.target.value)}
+          <Textarea onChange={(e) => onDraftChange(appCode, e.target.value)}
+            value={draftVal}
             rows={3}
             className="border-indigo-300 focus-visible:ring-indigo-500 text-xs font-mono"
           />
@@ -265,20 +266,21 @@ function MatrixTable({
         </thead>
 
         <tbody className="divide-y divide-slate-200">
-          {/* ROW 1: EXPECTED TARGET */}
           <tr className="bg-amber-50/50 hover:bg-amber-50/80 transition-colors">
             <td className="py-2.5 px-3 font-semibold text-slate-700 border-r border-slate-200 sticky left-0 bg-amber-50/90 z-10">
               Expected Target
             </td>
-            <td className="py-2.5 px-2 text-slate-500 font-mono text-[11px] border-r border-slate-200">
-              Target ⬆️
-            </td>
+            <td className="py-2.5 px-2 text-slate-500 font-mono text-[11px] border-r border-slate-200">Target ⬆️</td>
             {visiblePillars.map((p) => {
               const pillarVal = app.pillars[p.key];
               const isTargetActive = Boolean(pillarVal?.target);
               return (
                 <td key={p.key} className="py-2.5 px-3 text-center border-r border-slate-200">
-                  <Button onClick="{()" size="xs" type="button"> onToggleTarget(app.code, p.key)}
+                  <Button
+                    onClick={() => onToggleTarget(app.code, p.key)}
+                    size="xs"
+                    type="button"
+                    variant="outline"
                     className={
                       isTargetActive
                         ? 'bg-amber-400 text-amber-950 font-bold hover:bg-amber-500 scale-105 shadow-sm h-6 px-2.5 text-xs'
@@ -293,7 +295,6 @@ function MatrixTable({
             })}
           </tr>
 
-          {/* ROW 2: LAST ASSESSMENT DATE */}
           <tr className="hover:bg-slate-50">
             <td rowSpan={3} className="py-2 px-3 font-semibold text-slate-700 border-r border-slate-200 sticky left-0 bg-white z-10">
               Last Assessment
@@ -318,14 +319,13 @@ function MatrixTable({
                       <span>{pillarVal?.date || 'null'}</span>
                     </span>
                     <span className="text-[9px] text-slate-500 font-medium">{health.desc}</span>
-                    <CellOriginTag className="mt-0.5" col="E" onOriginClick="{onOriginClick}" row="{cellRow}" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
+                    <CellOriginTag className="mt-0.5" col="E" onOriginClick={onOriginClick} row={cellRow} sheet="Assessments-Extracts" showCellOrigins={showCellOrigins} />
                   </div>
                 </td>
               );
             })}
           </tr>
 
-          {/* ROW 3: LAST ASSESSMENT SCORE */}
           <tr className="hover:bg-slate-50">
             <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200">Score</td>
             {visiblePillars.map((p) => {
@@ -340,14 +340,13 @@ function MatrixTable({
                 >
                   <div className="flex flex-col items-center justify-center">
                     <span className="text-sm font-bold text-slate-900">{Number(pillarVal?.score ?? 0).toFixed(2)}</span>
-                    <CellOriginTag className="mt-0.5" col="G" onOriginClick="{onOriginClick}" row="{cellRow}" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
+                    <CellOriginTag className="mt-0.5" col="G" onOriginClick={onOriginClick} row={cellRow} sheet="Assessments-Extracts" showCellOrigins={showCellOrigins} />
                   </div>
                 </td>
               );
             })}
           </tr>
 
-          {/* ROW 4: LAST ASSESSMENT LEVEL */}
           <tr className="hover:bg-slate-50 border-b border-slate-300">
             <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200">Level</td>
             {visiblePillars.map((p) => {
@@ -364,14 +363,13 @@ function MatrixTable({
                     <Badge className="text-[11px] py-0.5 px-2.5" variant="default">
                       {pillarVal?.level || 'Lvl 0'}
                     </Badge>
-                    <CellOriginTag className="mt-0.5" col="G" onOriginClick="{onOriginClick}" row="{levelRow}" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
+                    <CellOriginTag className="mt-0.5" col="G" onOriginClick={onOriginClick} row={levelRow} sheet="Assessments-Extracts" showCellOrigins={showCellOrigins} />
                   </div>
                 </td>
               );
             })}
           </tr>
 
-          {/* ROW 5: PREVIOUS ASSESSMENT DATE */}
           <tr className="bg-slate-50/70 hover:bg-slate-100/70">
             <td rowSpan={3} className="py-2 px-3 font-semibold text-slate-600 border-r border-slate-200 sticky left-0 bg-slate-50/90 z-10">
               Last Assessment - 1
@@ -390,14 +388,13 @@ function MatrixTable({
                 >
                   <div className="flex flex-col items-center justify-center">
                     <span>{pillarVal?.prevDate || '—'}</span>
-                    <CellOriginTag className="mt-0.5" col="E" onOriginClick="{onOriginClick}" row="{prevRow}" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
+                    <CellOriginTag className="mt-0.5" col="E" onOriginClick={onOriginClick} row={prevRow} sheet="Assessments-Extracts" showCellOrigins={showCellOrigins} />
                   </div>
                 </td>
               );
             })}
           </tr>
 
-          {/* ROW 6: PREVIOUS ASSESSMENT SCORE */}
           <tr className="bg-slate-50/70 hover:bg-slate-100/70">
             <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200">Score</td>
             {visiblePillars.map((p) => {
@@ -412,14 +409,13 @@ function MatrixTable({
                 >
                   <div className="flex flex-col items-center justify-center">
                     <span>{Number(pillarVal?.prevScore ?? 0).toFixed(2)}</span>
-                    <CellOriginTag className="mt-0.5" col="G" onOriginClick="{onOriginClick}" row="{prevRow}" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
+                    <CellOriginTag className="mt-0.5" col="G" onOriginClick={onOriginClick} row={prevRow} sheet="Assessments-Extracts" showCellOrigins={showCellOrigins} />
                   </div>
                 </td>
               );
             })}
           </tr>
 
-          {/* ROW 7: PREVIOUS ASSESSMENT LEVEL */}
           <tr className="bg-slate-50/70 hover:bg-slate-100/70 border-b-2 border-indigo-100">
             <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200">Level</td>
             {visiblePillars.map((p) => {
@@ -434,29 +430,25 @@ function MatrixTable({
                 >
                   <div className="flex flex-col items-center justify-center">
                     <span>{pillarVal?.prevLevel || 'Lvl 0'}</span>
-                    <CellOriginTag className="mt-0.5" col="G" onOriginClick="{onOriginClick}" row="{prevLevelRow}" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
+                    <CellOriginTag className="mt-0.5" col="G" onOriginClick={onOriginClick} row={prevLevelRow} sheet="Assessments-Extracts" showCellOrigins={showCellOrigins} />
                   </div>
                 </td>
               );
             })}
           </tr>
 
-          {/* SECTION HEADER: PENDING EXTRACT FOLLOW-UP */}
           <tr className="bg-slate-100 text-slate-700 font-semibold">
             <td colSpan={visiblePillars.length + 2} className="py-1.5 px-3 text-[11px] uppercase tracking-wider text-slate-600">
               New Pending Assessment Follow-up (Extract Progression)
             </td>
           </tr>
 
-          {/* ROW 8: ASSESSOR */}
           <tr className="hover:bg-slate-50">
             <td className="py-2 px-3 font-semibold text-slate-700 border-r border-slate-200 sticky left-0 bg-white z-10">
               Assessor
               <div className="text-[10px] text-slate-400 font-normal mt-0.5">Extracts Col C</div>
             </td>
-            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200 text-[11px]">
-              Assessor
-            </td>
+            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200 text-[11px]">Assessor</td>
             {visiblePillars.map((p) => {
               const pillarVal = app.pillars[p.key];
               const assessorRow = startRow + p.rowOffset;
@@ -479,22 +471,19 @@ function MatrixTable({
                     >
                       {assessorName}
                     </span>
-                    <CellOriginTag className="mt-0.5" col="C" onOriginClick="{onOriginClick}" row="{assessorRow}" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
+                    <CellOriginTag className="mt-0.5" col="C" onOriginClick={onOriginClick} row={assessorRow} sheet="Assessments-Extracts" showCellOrigins={showCellOrigins} />
                   </div>
                 </td>
               );
             })}
           </tr>
 
-          {/* ROW 9: LAST EXTRACT PROGRESS */}
           <tr className="hover:bg-slate-50">
             <td className="py-2 px-3 font-semibold text-slate-700 border-r border-slate-200 sticky left-0 bg-white z-10">
               Last extract
               <div className="text-[10px] text-slate-400 font-normal">2025-05-11</div>
             </td>
-            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200">
-              Progress
-            </td>
+            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200">Progress</td>
             {visiblePillars.map((p) => {
               const pillarVal = app.pillars[p.key];
               const lastExtractRow = startRow + p.rowOffset + 5;
@@ -516,22 +505,19 @@ function MatrixTable({
                         style={{ width: `${prog}%` }}
                       />
                     </div>
-                    <CellOriginTag className="mt-0.5" col="G" onOriginClick="{onOriginClick}" row="{lastExtractRow}" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
+                    <CellOriginTag className="mt-0.5" col="G" onOriginClick={onOriginClick} row={lastExtractRow} sheet="Assessments-Extracts" showCellOrigins={showCellOrigins} />
                   </div>
                 </td>
               );
             })}
           </tr>
 
-          {/* ROW 10: PREVIOUS EXTRACT PROGRESS */}
           <tr className="hover:bg-slate-50">
             <td className="py-2 px-3 font-semibold text-slate-600 border-r border-slate-200 sticky left-0 bg-white z-10">
               Previous extract
               <div className="text-[10px] text-slate-400 font-normal">2025-04-11</div>
             </td>
-            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200">
-              Progress
-            </td>
+            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200">Progress</td>
             {visiblePillars.map((p) => {
               const pillarVal = app.pillars[p.key];
               const prevExtractRow = startRow + p.rowOffset + 6;
@@ -545,21 +531,16 @@ function MatrixTable({
                 >
                   <div className="flex flex-col items-center justify-center">
                     <span>{prevProg}%</span>
-                    <CellOriginTag className="mt-0.5" col="G" onOriginClick="{onOriginClick}" row="{prevExtractRow}" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
+                    <CellOriginTag className="mt-0.5" col="G" onOriginClick={onOriginClick} row={prevExtractRow} sheet="Assessments-Extracts" showCellOrigins={showCellOrigins} />
                   </div>
                 </td>
               );
             })}
           </tr>
 
-          {/* ROW 11: FILLED PROGRESS INDICATOR */}
           <tr className="bg-slate-50 font-bold">
-            <td className="py-2 px-3 text-slate-800 border-r border-slate-200 sticky left-0 bg-slate-50 z-10">
-              Filled Progress Indicator
-            </td>
-            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200 text-[10px]">
-              Trend
-            </td>
+            <td className="py-2 px-3 text-slate-800 border-r border-slate-200 sticky left-0 bg-slate-50 z-10">Filled Progress Indicator</td>
+            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200 text-[10px]">Trend</td>
             {visiblePillars.map((p) => {
               const pillarVal = app.pillars[p.key];
               const curr = Math.round(Number(pillarVal?.lastExtract ?? 0));
@@ -592,9 +573,7 @@ function MatrixTable({
                   className="py-2 px-3 text-center border-r border-slate-200 cursor-help"
                   title={`Trend: ${trendLabel}\nCompared from 'Assessments-Extracts'!G${cellG1} vs G${cellG2}`}
                 >
-                  <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs ${trendColor}`}>
-                    {trendIcon}
-                  </span>
+                  <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs ${trendColor}`}>{trendIcon}</span>
                 </td>
               );
             })}
@@ -667,19 +646,23 @@ export function MaturityMatrixTab({ applications, onOriginClick }: MaturityMatri
   return (
     <section className="flex flex-col gap-6">
       {applications.map((app, index) => {
-        const isExpanded = Boolean(expandedAppCodes[app.code] ?? expandedAppCodes[app.id] ?? false);
+        const appKey = app.id || app.code;
+        const isExpanded = Boolean(expandedAppCodes[app.code] ?? expandedAppCodes[appKey] ?? false);
         const health = getDateHealth(app.lastAssessmentDate);
         const rowIdx = getAppRowIdx(app, index);
         const startRow = getAppStartRow(app, index);
-        const isEditingNote = Boolean(editingNotes[app.code] || editingNotes[app.id]);
-        const noteDraftVal = notesDraft[app.code] ?? notesDraft[app.id] ?? app.commentary ?? '';
+        const isEditingNote = Boolean(editingNotes[app.code] || editingNotes[appKey]);
+        const noteDraftVal = notesDraft[app.code] ?? notesDraft[appKey] ?? app.commentary ?? '';
 
         return (
-          <Card app.code} className="overflow-hidden border-slate-200 bg-white shadow-sm" key="{app.id" ||>
-            {/* CARD HEADER */}
+          <Card key={appKey} className="overflow-hidden border-slate-200 bg-white shadow-sm">
             <div className="bg-slate-50 border-b border-slate-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <Button onClick="{()" size="sm" type="button" variant="ghost"> toggleExpandApp(app.code || app.id)}
+                <Button
+                  onClick={() => toggleExpandApp(app.code || appKey)}
+                  size="sm"
+                  type="button"
+                  variant="ghost"
                   className="h-7 w-7 p-1 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded-md transition-colors"
                   title={isExpanded ? 'Collapse Application' : 'Expand Application'}
                 >
@@ -694,7 +677,7 @@ export function MaturityMatrixTab({ applications, onOriginClick }: MaturityMatri
 
                     <span className="px-2 py-0.5 bg-slate-200 text-slate-700 text-[11px] font-mono rounded flex items-center gap-1">
                       <span>{app.code}</span>
-                      <CellOriginTag col="D" onOriginClick="{onOriginClick}" row="{rowIdx}" sheet="Maturity-Matrix-Projects" showCellOrigins="{showCellOrigins}"/>
+                      <CellOriginTag col="D" row={rowIdx} sheet="Maturity-Matrix-Projects" showCellOrigins={showCellOrigins} onOriginClick={onOriginClick} />
                     </span>
 
                     <span
@@ -708,7 +691,7 @@ export function MaturityMatrixTab({ applications, onOriginClick }: MaturityMatri
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                       <span>TO GENERATE = {app.toGenerate ? 'TRUE' : 'FALSE'}</span>
-                      <CellOriginTag col="F" onOriginClick="{onOriginClick}" row="{rowIdx}" sheet="Maturity-Matrix-Projects" showCellOrigins="{showCellOrigins}"/>
+                      <CellOriginTag col="F" row={rowIdx} sheet="Maturity-Matrix-Projects" showCellOrigins={showCellOrigins} onOriginClick={onOriginClick} />
                     </span>
                   </div>
 
@@ -719,19 +702,24 @@ export function MaturityMatrixTab({ applications, onOriginClick }: MaturityMatri
                         <circle cx="12" cy="7" r="4" />
                       </svg>
                       <span>Leader (Col E):</span>
-                      <Select onValueChange="{(newLeader)" value="{app.leader}"> updateLeader(app.code, newLeader)}>
+                      <Select
+                        value={app.leader}
+                        onValueChange={(newLeader) => {
+                          if (typeof newLeader === 'string') updateLeader(app.code, newLeader);
+                        }}
+                      >
                         <SelectTrigger className="h-6 border-purple-200 bg-white/70 text-purple-950 px-2 py-0 text-[11px] font-bold shadow-none hover:bg-white">
-                          <SelectValue placeholder="{app.leader}"/>
+                          <SelectValue placeholder={app.leader} />
                         </SelectTrigger>
                         <SelectContent className="min-w-[160px]">
-                          {leaderOptions.map((l) => (
-                            <SelectItem key="{l}" value="{l}">
-                              {l}
+                          {leaderOptions.map((leader) => (
+                            <SelectItem key={leader} value={leader}>
+                              {leader}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                      <CellOriginTag col="E" onOriginClick="{onOriginClick}" row="{rowIdx}" sheet="Maturity-Matrix-Projects" showCellOrigins="{showCellOrigins}"/>
+                      <CellOriginTag col="E" row={rowIdx} sheet="Maturity-Matrix-Projects" showCellOrigins={showCellOrigins} onOriginClick={onOriginClick} />
                     </div>
 
                     <span>•</span>
@@ -745,7 +733,7 @@ export function MaturityMatrixTab({ applications, onOriginClick }: MaturityMatri
                         <span className={`w-1.5 h-1.5 rounded-full ${health.dotColor}`} />
                         <span>{app.lastAssessmentDate || 'null'}</span>
                         <span className="text-[10px] opacity-75 font-sans font-normal">({health.desc})</span>
-                        <CellOriginTag + 1} className="ml-1" col="E" onOriginClick="{onOriginClick}" row="{startRow" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
+                        <CellOriginTag className="ml-1" col="E" row={startRow + 1} sheet="Assessments-Extracts" showCellOrigins={showCellOrigins} onOriginClick={onOriginClick} />
                       </span>
                     </span>
 
@@ -756,25 +744,46 @@ export function MaturityMatrixTab({ applications, onOriginClick }: MaturityMatri
                     </span>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-2 self-end sm:self-auto">
-                  <Button 'default'} 'destructive' : ? onClick="{()" size="xs" type="button" variant="{app.toGenerate"> toggleToGenerate(app.code)}
-                    className="text-xs font-semibold px-2.5 py-1 rounded transition-colors"
-                    title="Toggle sheet F column 'To Generate'"
-                  >
-                    Set TO Generate = {app.toGenerate ? 'FALSE' : 'TRUE'}
-                  </Button>
-                </div>
               </div>
 
-              {/* EXPANDED CONTENT */}
-              {isExpanded && (
-                <div>
-                  <MatrixTable app="{app}" appIndex="{index}" onOriginClick="{onOriginClick}" onToggleTarget="{toggleTarget}" pillars="{pillars}" selectedPillar="{selectedPillar}" showCellOrigins="{showCellOrigins}"/>
+              <div className="flex items-center gap-2 self-end sm:self-auto">
+                <Button
+                  onClick={() => toggleToGenerate(app.code)}
+                  size="xs"
+                  type="button"
+                  variant={app.toGenerate ? 'destructive' : 'default'}
+                  className="text-xs font-semibold px-2.5 py-1 rounded transition-colors"
+                  title="Toggle sheet F column 'To Generate'"
+                >
+                  Set TO Generate = {app.toGenerate ? 'FALSE' : 'TRUE'}
+                </Button>
+              </div>
+            </div>
 
-                  <CommentaryEditor appCode="{app.code}" commentary="{app.commentary}" draftVal="{noteDraftVal}" isEditing="{isEditingNote}" onCancel="{handleCancelEditNote}" onDraftChange="{handleDraftChange}" onSave="{handleSaveNote}" onStartEdit="{handleStartEditNote}"/>
-                </div>
-              )}
+            {isExpanded && (
+              <div>
+                <MatrixTable
+                  app={app}
+                  appIndex={index}
+                  pillars={pillars}
+                  selectedPillar={selectedPillar}
+                  showCellOrigins={showCellOrigins}
+                  onToggleTarget={toggleTarget}
+                  onOriginClick={onOriginClick}
+                />
+
+                <CommentaryEditor
+                  appCode={app.code}
+                  commentary={app.commentary}
+                  draftVal={noteDraftVal}
+                  isEditing={isEditingNote}
+                  onCancel={handleCancelEditNote}
+                  onDraftChange={handleDraftChange}
+                  onSave={handleSaveNote}
+                  onStartEdit={handleStartEditNote}
+                />
+              </div>
+            )}
           </Card>
         );
       })}
@@ -783,12 +792,3 @@ export function MaturityMatrixTab({ applications, onOriginClick }: MaturityMatri
 }
 
 export default MaturityMatrixTab;
-EOF
-
-if [ -f "webview/package.json" ]; then
-  (cd webview && npm run build)
-elif [ -f "package.json" ]; then
-  npm run build
-fi
-
-echo "✅ fix(maturity-matrix): resolved JSX syntax escaping issues in MaturityMatrixTab"

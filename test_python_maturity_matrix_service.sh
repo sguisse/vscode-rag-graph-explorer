@@ -21,7 +21,7 @@ echo "${AVAILABLE_OUTPUT}"
 LATEST_TS=$(echo "${AVAILABLE_OUTPUT}" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data[0] if data else '')")
 
 if [ -z "${LATEST_TS}" ]; then
-  echo "❌ Error: No assessmentDatetime folder found in getAssessmentsAvailable output."
+  echo "❌ Error: No datetimeExtract folder found in getAssessmentsAvailable output."
   exit 1
 fi
 

@@ -1,18 +1,151 @@
+import { useMemo } from 'react';
 import { useMaturityMatrixStore } from '../store/useMaturityMatrixStore';
+import type { DateStatus, MaturityApplication, MaturityPillarDefinition } from '../types/maturity-matrix.types';
+
+export function getDateStatus(date: string | null | undefined): DateStatus {
+  if (!date) {
+    return 'yellow';
+  }
+
+  const today = new Date('2026-09-14T00:00:00Z');
+  const assessmentDate = new Date(date);
+  const diffDays = Math.max(0, Math.floor((today.getTime() - assessmentDate.getTime()) / 86400000));
+
+  if (diffDays <= 15) return 'green';
+  if (diffDays <= 180) return 'blue';
+  return 'red';
+}
 
 export function useMaturityMatrixState() {
-  const activeTab = useMaturityMatrixStore((s) => s.activeTab);
-  const setActiveTab = useMaturityMatrixStore((s) => s.setActiveTab);
-  const categories = useMaturityMatrixStore((s) => s.categories);
-  const selectedCategoryId = useMaturityMatrixStore((s) => s.selectedCategoryId);
+  const data = useMaturityMatrixStore((state) => state.data);
+  const activeTab = useMaturityMatrixStore((state) => state.activeTab);
+  const filterToGenerate = useMaturityMatrixStore((state) => state.filterToGenerate);
+  const selectedLeader = useMaturityMatrixStore((state) => state.selectedLeader);
+  const selectedAssessor = useMaturityMatrixStore((state) => state.selectedAssessor);
+  const selectedPillar = useMaturityMatrixStore((state) => state.selectedPillar);
+  const selectedDateStatus = useMaturityMatrixStore((state) => state.selectedDateStatus);
+  const searchQuery = useMaturityMatrixStore((state) => state.searchQuery);
 
-  const selectedCategory = categories.find((c) => c.id === selectedCategoryId) || categories[0];
+  const leaderOptions = useMemo(
+    () => Array.from(new Set(data.applications.map((app) => app.leader))).sort(),
+    [data.applications],
+  );
+
+  const assessorOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          data.applications.flatMap((app) =>
+            Object.values(app.pillars)
+              .map((pillar) => pillar.assessor)
+              .filter((assessor): assessor is string => Boolean(assessor && assessor !== '-')),
+          ),
+        ),
+      ).sort(),
+    [data.applications],
+  );
+
+  const pillarOptions: MaturityPillarDefinition[] = data.pillars;
+
+  const filteredApplications = useMemo(() => {
+    const term = searchQuery.trim().toLowerCase();
+
+    return data.applications.filter((app) => {
+      const matchesToGenerate = filterToGenerate ? app.toGenerate : true;
+      const matchesLeader = selectedLeader === 'ALL' || app.leader === selectedLeader;
+      const matchesAssessor =
+        selectedAssessor === 'ALL' ||
+        Object.values(app.pillars).some(
+          (pillar) => pillar.assessor && pillar.assessor === selectedAssessor,
+        );
+      const matchesPillar =
+        selectedPillar === 'ALL' ||
+        Boolean(app.pillars[selectedPillar]?.score !== undefined && app.pillars[selectedPillar]?.score !== null);
+      const matchesStatus =
+        selectedDateStatus === 'ALL' ||
+        getDateStatus(
+          Object.values(app.pillars).find((pillar) => pillar.date && pillar.assessor && pillar.assessor !== '-')?.date ?? app.lastAssessmentDate,
+        ) === selectedDateStatus;
+      const matchesQuery =
+        term.length === 0 ||
+        app.name.toLowerCase().includes(term) ||
+        app.leader.toLowerCase().includes(term) ||
+        app.code.toLowerCase().includes(term);
+
+      return matchesToGenerate && matchesLeader && matchesAssessor && matchesPillar && matchesStatus && matchesQuery;
+    });
+  }, [data.applications, filterToGenerate, searchQuery, selectedAssessor, selectedDateStatus, selectedLeader, selectedPillar]);
+
+  const statusCounts: Record<DateStatus | 'ALL', number> = useMemo(() => {
+    const counts: Record<DateStatus | 'ALL', number> = {
+      ALL: data.applications.length,
+      yellow: 0,
+      green: 0,
+      blue: 0,
+      red: 0,
+    };
+
+    data.applications.forEach((app) => {
+      const status = getDateStatus(app.lastAssessmentDate ?? null);
+      counts[status] += 1;
+    });
+
+    return counts;
+  }, [data.applications]);
+
+  const kpis = useMemo(() => {
+    const totalApps = filteredApplications.length;
+    const totalScores = filteredApplications.reduce((sum, app) => {
+      const scores = Object.values(app.pillars).map((pillar) => Number(pillar.score ?? 0));
+      return sum + (scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 0);
+    }, 0);
+
+    const averageScore = totalApps > 0 ? totalScores / totalApps : 0;
+    const averagePrevScore = filteredApplications.length
+      ? filteredApplications.reduce((sum, app) => {
+          const previousScores = Object.values(app.pillars).map((pillar) => Number(pillar.prevScore ?? 0));
+          return sum + (previousScores.length ? previousScores.reduce((a, b) => a + b, 0) / previousScores.length : 0);
+        }, 0) / filteredApplications.length
+      : 0;
+
+    const totalTargets = filteredApplications.reduce(
+      (count, app) => count + Object.values(app.pillars).filter((pillar) => pillar.target).length,
+      0,
+    );
+
+    const totalPillarsCount = data.pillars.length * filteredApplications.length;
+    const finishedExtracts = filteredApplications.reduce(
+      (count, app) => count + Object.values(app.pillars).filter((pillar) => Number(pillar.lastExtract ?? 0) >= 100).length,
+      0,
+    );
+
+    return {
+      totalApps,
+      avgScore: averageScore.toFixed(2),
+      avgPrevScore: averagePrevScore.toFixed(2),
+      scoreDelta: `+${(averageScore - averagePrevScore).toFixed(2)}`,
+      totalTargets,
+      extractPercent: totalPillarsCount > 0 ? Math.round((finishedExtracts / totalPillarsCount) * 100) : 0,
+      finishedExtracts,
+      totalPillarsCount,
+      leaderCount: new Set(filteredApplications.map((app) => app.leader)).size,
+    };
+  }, [data.pillars.length, filteredApplications]);
 
   return {
     activeTab,
-    setActiveTab,
-    categories,
-    selectedCategoryId,
-    selectedCategory,
+    data,
+    filterToGenerate,
+    selectedLeader,
+    selectedAssessor,
+    selectedPillar,
+    selectedDateStatus,
+    searchQuery,
+    leaderOptions,
+    assessorOptions,
+    pillarOptions,
+    filteredApplications,
+    statusCounts,
+    kpis,
   };
 }

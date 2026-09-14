@@ -26,14 +26,14 @@ export class MaturityMatrixAdapter extends AbstractServiceAdapter implements IMa
   public async getLastAssessments(): Promise<MMAssessmentsResult> {
     logInfo('[maturity-matrix] Fetching last assessments...');
     const result = await this.pyService.getLastAssessments();
-    logInfo(`[maturity-matrix] Fetched last assessments at: ${result.assessmentDatetime}`);
+    logInfo(`[maturity-matrix] Fetched last assessments at: ${result.datetimeExtract}`);
     return result;
   }
 
-  public async getAssessmentsAt(assessmentDatetime: string): Promise<MMAssessmentsResult> {
-    logInfo(`[maturity-matrix] Fetching assessments at assessmentDatetime: ${assessmentDatetime}...`);
-    const result = await this.pyService.getAssessmentsAt(assessmentDatetime);
-    logInfo(`[maturity-matrix] Fetched assessments snapshot at: ${result.assessmentDatetime}`);
+  public async getAssessmentsAt(datetimeExtract: string): Promise<MMAssessmentsResult> {
+    logInfo(`[maturity-matrix] Fetching assessments at datetimeExtract: ${datetimeExtract}...`);
+    const result = await this.pyService.getAssessmentsAt(datetimeExtract);
+    logInfo(`[maturity-matrix] Fetched assessments snapshot at: ${result.datetimeExtract}`);
     return result;
   }
 

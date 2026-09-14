@@ -42,40 +42,57 @@ class AssessmentsExtractorService:
         self.script_dir = Path(__file__).parent.resolve()
         self.data_dir = data_directory if data_directory else self.script_dir / "data"
 
+    @staticmethod
+    def get_config_value(
+        config: Dict[str, Any], key: str, default: Any = None, required: bool = False
+    ) -> Any:
+        """Generic method to retrieve a configuration value.
+
+        Raises KeyError if the key is required and missing/empty.
+        """
+        value = config.get(key)
+        if value is None or (isinstance(value, str) and not value.strip()):
+            if required:
+                raise KeyError(f"Required configuration key '{key}' is missing or empty in extractor-config.json")
+            return default
+        return value
+
     def execute_extraction(self) -> Dict[str, Any]:
         """Executes the full extraction process based on configuration and returns the report dictionary."""
         extractor_config, config_dir = self._load_extractor_config()
 
-        repo_location_str = extractor_config.get(
-            "maturity-matrix-repo-location",
-            "/Users/mac-SGUISS21/01-work/01-projects/10-tools/03-decath/maturity-matrix-front/public/data/assessments/",
-        )
+        repo_location_str = self.get_config_value(extractor_config, "maturity-matrix-repo-location", required=True)
         repo_location = Path(repo_location_str)
         self._verify_repo_location_exists(repo_location)
 
-        matrix_config_filename = extractor_config.get("maturity-matrix-config-file-name", "Y2026_Q1.csv")
+        matrix_config_filename = self.get_config_value(
+            extractor_config, "maturity-matrix-config-file-name", required=True
+        )
         matrix_config_path = config_dir / matrix_config_filename
         MaturityMatrixEngine.initialize_maturity_matrix_config(matrix_config_path)
 
         products_by_code: Dict[str, ProductCSV] = {}
-        products_code: List[str] = extractor_config.get("products-code", [])
-        pillars_config: List[Dict[str, Any]] = extractor_config.get("pillars", [])
+        products_code: List[str] = self.get_config_value(extractor_config, "products-code", required=True)
+        pillars_config: List[Dict[str, Any]] = self.get_config_value(extractor_config, "pillars", required=True)
 
         for product_code in products_code:
             product_csv = self._process_product(product_code, repo_location, pillars_config)
             if product_csv is not None:
                 products_by_code[product_code] = product_csv
 
-        base_target_dir_str = extractor_config.get(
-            "target-extracted-file-location",
-            "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer/sandbox/gen/archi/mm",
-        )
+        base_target_dir_str = self.get_config_value(extractor_config, "target-extracted-file-location", required=True)
         timestamp_folder = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         target_dir = Path(base_target_dir_str) / timestamp_folder
 
-        json_filename = extractor_config.get("target-extracted-last-assessment-json-file-name", "last-assessments-extract.json")
-        csv_filename = extractor_config.get("target-extracted-last-assessment-csv-file-name", "last-assessments-extract.csv")
-        skills_csv_filename = extractor_config.get("target-extracted-last-skills-csv-file-name", "last-assessments-skills-extract.csv")
+        json_filename = self.get_config_value(
+            extractor_config, "target-extracted-last-assessment-json-file-name", required=True
+        )
+        csv_filename = self.get_config_value(
+            extractor_config, "target-extracted-last-assessment-csv-file-name", required=True
+        )
+        skills_csv_filename = self.get_config_value(
+            extractor_config, "target-extracted-last-skills-csv-file-name", required=True
+        )
 
         report_data = self._save_extraction_outputs_and_report(
             products_by_code, target_dir, json_filename, csv_filename, skills_csv_filename
@@ -105,10 +122,9 @@ class AssessmentsExtractorService:
 
     def _verify_repo_location_exists(self, repo_location: Path) -> None:
         if not repo_location.exists() or not repo_location.is_dir():
-            logger.error(
-                "Maturity matrix repo location does not exist, check repo location: '%s'",
-                repo_location,
-            )
+            error_msg = f"Maturity matrix repo location does not exist at: '{repo_location}'"
+            logger.error(error_msg)
+            raise FileNotFoundError(error_msg)
 
     def _process_product(
         self, product_code: str, repo_location: Path, pillars_config: List[Dict[str, Any]]
@@ -354,7 +370,7 @@ class AssessmentsExtractorService:
         with open(target_skills_csv_path, "w", encoding="utf-8") as skills_file:
             skills_file.write("".join(csv_skills_content))
 
-        assessment_datetime = datetime.now().isoformat()
+        assessment_datetime = target_dir.name
         report_yaml_path = target_dir / "report-extract.yaml"
         yaml_content = f"""MMAssessmentsReport:
   assessment_datetime: "{assessment_datetime}"
@@ -373,7 +389,7 @@ message: "Assessments extraction completed successfully."
         logger.info("Saved extraction report YAML to file: %s", report_yaml_path)
 
         return {
-            "assessmentDatetime": assessment_datetime,
+            "datetimeExtract": assessment_datetime,
             "targetDirectory": str(target_dir.resolve()),
             "files": {
                 "jsonExtract": str(target_json_path.resolve()),
