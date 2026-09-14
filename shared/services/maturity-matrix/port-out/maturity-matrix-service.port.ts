@@ -1,6 +1,8 @@
-import type { MaturityMatrixResult } from '../model';
+import type { MMAssessmentsReport, MMAssessmentsResult } from '../model/index';
 
 export interface IMaturityMatrixServicePort {
-  extractAssessments(): Promise<MaturityMatrixResult>;
-  extractMaturityMatrix(): Promise<MaturityMatrixResult>;
+  refreshAssessments(): Promise<MMAssessmentsReport>;
+  getLastAssessments(): Promise<MMAssessmentsResult>;
+  getAssessmentsAt(assessmentDatetime: string): Promise<MMAssessmentsResult>;
+  getAssessmentsAvailable(): Promise<string[]>; // return timestamp folder names
 }

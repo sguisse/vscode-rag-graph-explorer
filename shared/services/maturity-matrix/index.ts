@@ -1,2 +1,2 @@
 export * from './port-out/maturity-matrix-service.port';
-export * from './model';
+export * from './model/index';

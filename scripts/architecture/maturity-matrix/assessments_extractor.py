@@ -42,8 +42,8 @@ class AssessmentsExtractorService:
         self.script_dir = Path(__file__).parent.resolve()
         self.data_dir = data_directory if data_directory else self.script_dir / "data"
 
-    def execute_extraction(self) -> str:
-        """Executes the full extraction process based on configuration and returns the YAML report path."""
+    def execute_extraction(self) -> Dict[str, Any]:
+        """Executes the full extraction process based on configuration and returns the report dictionary."""
         extractor_config, config_dir = self._load_extractor_config()
 
         repo_location_str = extractor_config.get(
@@ -77,10 +77,10 @@ class AssessmentsExtractorService:
         csv_filename = extractor_config.get("target-extracted-last-assessment-csv-file-name", "last-assessments-extract.csv")
         skills_csv_filename = extractor_config.get("target-extracted-last-skills-csv-file-name", "last-assessments-skills-extract.csv")
 
-        report_yaml_path = self._save_extraction_outputs_and_report(
+        report_data = self._save_extraction_outputs_and_report(
             products_by_code, target_dir, json_filename, csv_filename, skills_csv_filename
         )
-        return str(report_yaml_path)
+        return report_data
 
     def _load_extractor_config(self) -> Tuple[Dict[str, Any], Path]:
         candidate_paths = [
@@ -326,7 +326,7 @@ class AssessmentsExtractorService:
         json_filename: str,
         csv_filename: str,
         skills_csv_filename: str,
-    ) -> Path:
+    ) -> Dict[str, Any]:
         target_dir.mkdir(parents=True, exist_ok=True)
 
         target_json_path = target_dir / json_filename
@@ -354,24 +354,40 @@ class AssessmentsExtractorService:
         with open(target_skills_csv_path, "w", encoding="utf-8") as skills_file:
             skills_file.write("".join(csv_skills_content))
 
+        assessment_datetime = datetime.now().isoformat()
         report_yaml_path = target_dir / "report-extract.yaml"
-        yaml_content = f"""extraction_report:
-  created_at: "{datetime.now().isoformat()}"
+        yaml_content = f"""MMAssessmentsReport:
+  assessment_datetime: "{assessment_datetime}"
   target_directory: "{target_dir.resolve()}"
   files:
     json_extract: "{target_json_path.resolve()}"
     csv_extract: "{target_csv_path.resolve()}"
     skills_csv_extract: "{target_skills_csv_path.resolve()}"
+
+status: "SUCCESS"
+message: "Assessments extraction completed successfully."
 """
         with open(report_yaml_path, "w", encoding="utf-8") as report_file:
             report_file.write(yaml_content)
 
         logger.info("Saved extraction report YAML to file: %s", report_yaml_path)
-        return report_yaml_path
+
+        return {
+            "assessmentDatetime": assessment_datetime,
+            "targetDirectory": str(target_dir.resolve()),
+            "files": {
+                "jsonExtract": str(target_json_path.resolve()),
+                "csvExtract": str(target_csv_path.resolve()),
+                "skillsCsvExtract": str(target_skills_csv_path.resolve()),
+            },
+            "reportPath": str(report_yaml_path.resolve()),
+            "status": "SUCCESS",
+            "message": "Assessments extraction completed successfully.",
+        }
 
 
-def extract_assessments() -> str:
-    """Triggers the assessment extraction service execution and returns the YAML report file path."""
+def extract_assessments() -> Dict[str, Any]:
+    """Triggers the assessment extraction service execution and returns the MMAssessmentsReport dictionary."""
     service = AssessmentsExtractorService()
-    report_location = service.execute_extraction()
-    return report_location
+    report_data = service.execute_extraction()
+    return report_data

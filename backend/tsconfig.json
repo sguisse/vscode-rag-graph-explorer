@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "module": "nodenext",
+    "module": "ESNext",
     "target": "ES2022",
-    "moduleResolution": "nodenext",
+    "moduleResolution": "bundler",
     "outDir": "../dist-backend",
     "lib": ["ES2022"],
     "sourceMap": true,
@@ -11,12 +11,13 @@
     "rootDir": "..",
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": ["node", "vscode"]
   },
   "include": [
     "./src/**/*",
-    "../shared/**/*"
-, "../webview/src/services/view/constants/graph.constants.ts"  ],
+    "../shared/**/*",
+    "../webview/src/services/view/constants/graph.constants.ts"
+  ],
   "exclude": [
     "node_modules"
   ]

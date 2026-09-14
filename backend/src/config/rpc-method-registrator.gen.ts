@@ -91,8 +91,10 @@ export function registerRpcMethods(rpc: RpcProtocol): void {
     rpc.register(RpcMethodEnum.LLMCHAT_READ_FILE_CONTENT, llmChatService.readFileContent.bind(llmChatService));
 
     const maturityMatrixService = serviceRegistry.get(ServiceEnum.MATURITY_MATRIX);
-    rpc.register(RpcMethodEnum.MATURITYMATRIX_EXTRACT_ASSESSMENTS, maturityMatrixService.extractAssessments.bind(maturityMatrixService));
-    rpc.register(RpcMethodEnum.MATURITYMATRIX_EXTRACT_MATURITY_MATRIX, maturityMatrixService.extractMaturityMatrix.bind(maturityMatrixService));
+    rpc.register(RpcMethodEnum.MATURITYMATRIX_REFRESH_ASSESSMENTS, maturityMatrixService.refreshAssessments.bind(maturityMatrixService));
+    rpc.register(RpcMethodEnum.MATURITYMATRIX_GET_LAST_ASSESSMENTS, maturityMatrixService.getLastAssessments.bind(maturityMatrixService));
+    rpc.register(RpcMethodEnum.MATURITYMATRIX_GET_ASSESSMENTS_AT, maturityMatrixService.getAssessmentsAt.bind(maturityMatrixService));
+    rpc.register(RpcMethodEnum.MATURITYMATRIX_GET_ASSESSMENTS_AVAILABLE, maturityMatrixService.getAssessmentsAvailable.bind(maturityMatrixService));
 
     const neo4jService = serviceRegistry.get(ServiceEnum.NEO4J);
     rpc.register(RpcMethodEnum.NEO4J_EXECUTE_CYPHER, neo4jService.executeCypher.bind(neo4jService));

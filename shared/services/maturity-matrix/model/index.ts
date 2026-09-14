@@ -1,1 +1,2 @@
-export * from './maturity-matrix-result';
+export * from './mm-assessments-report';
+export * from './mm-assessments-result';

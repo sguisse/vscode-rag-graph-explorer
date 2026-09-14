@@ -1,55 +1,50 @@
 import * as vscode from 'vscode';
-import { AbstractServiceAdapter } from '../../core/AbstractServiceAdapter';
-import { logInfo } from '../../utils/utils-log';
-import { getWorkspaceRoot } from '../../utils/utils-vscode';
-import { PythonScriptStatus } from '../../../../shared/services/_python-scripts';
-import { IMaturityMatrixServicePort, MaturityMatrixResult } from '../../../../shared/services/maturity-matrix';
-import { callMaturityMatrixScript } from '../_python-scripts/maturity-matrix-py.service';
+import { AbstractServiceAdapter } from '../../core/AbstractServiceAdapter.js';
+import { logInfo } from '../../utils/utils-log.js';
+import {
+  IMaturityMatrixServicePort,
+  MMAssessmentsReport,
+  MMAssessmentsResult,
+} from '../../../../shared/services/maturity-matrix/index.js';
+import { MaturityMatrixPyService } from '../_python-scripts/maturity-matrix-py.service.js';
 
 export class MaturityMatrixAdapter extends AbstractServiceAdapter implements IMaturityMatrixServicePort, vscode.Disposable {
-    constructor() {
-        super();
-    }
+  private readonly pyService: MaturityMatrixPyService;
 
-    private async runRepoUpdate(): Promise<PythonScriptStatus> {
-        const repoPath = getWorkspaceRoot();
-        return await callMaturityMatrixScript(repoPath, 'update-repo');
-    }
+  constructor() {
+    super();
+    this.pyService = new MaturityMatrixPyService();
+  }
 
-    private async runScriptAction(action: 'extract-assessments' | 'extract-maturity-matrix'): Promise<PythonScriptStatus> {
-        const repoPath = getWorkspaceRoot();
-        await this.runRepoUpdate();
-        return await callMaturityMatrixScript(repoPath, action);
-    }
+  public async refreshAssessments(): Promise<MMAssessmentsReport> {
+    logInfo('[maturity-matrix] Refreshing assessments...');
+    const result = await this.pyService.refreshAssessments();
+    logInfo(`[maturity-matrix] Refresh completed. Report path: ${result.reportPath}`);
+    return result;
+  }
 
-    private buildPlaceholderResult(label: string): MaturityMatrixResult {
-        const createdAt = new Date().toISOString();
-        return {
-            label,
-            generatedAt: createdAt,
-            message: 'not yet implemented',
-            rows: [
-                ['status', 'message'],
-                ['not yet implemented', 'not yet implemented'],
-            ],
-        };
-    }
+  public async getLastAssessments(): Promise<MMAssessmentsResult> {
+    logInfo('[maturity-matrix] Fetching last assessments...');
+    const result = await this.pyService.getLastAssessments();
+    logInfo(`[maturity-matrix] Fetched last assessments at: ${result.assessmentDatetime}`);
+    return result;
+  }
 
-    public async extractAssessments(): Promise<MaturityMatrixResult> {
-        await this.runScriptAction('extract-assessments');
-        const result = this.buildPlaceholderResult('Assessments');
-        logInfo(`[maturity-matrix] ${result.label} extraction completed: ${result.message}`);
-        return result;
-    }
+  public async getAssessmentsAt(assessmentDatetime: string): Promise<MMAssessmentsResult> {
+    logInfo(`[maturity-matrix] Fetching assessments at assessmentDatetime: ${assessmentDatetime}...`);
+    const result = await this.pyService.getAssessmentsAt(assessmentDatetime);
+    logInfo(`[maturity-matrix] Fetched assessments snapshot at: ${result.assessmentDatetime}`);
+    return result;
+  }
 
-    public async extractMaturityMatrix(): Promise<MaturityMatrixResult> {
-        await this.runScriptAction('extract-maturity-matrix');
-        const result = this.buildPlaceholderResult('Maturity Matrix');
-        logInfo(`[maturity-matrix] ${result.label} extraction completed: ${result.message}`);
-        return result;
-    }
+  public async getAssessmentsAvailable(): Promise<string[]> {
+    logInfo('[maturity-matrix] Fetching available assessment timestamps...');
+    const timestamps = await this.pyService.getAssessmentsAvailable();
+    logInfo(`[maturity-matrix] Found ${timestamps.length} available assessment snapshot(s).`);
+    return timestamps;
+  }
 
-    public dispose() {
-        // Reserved for future cleanup.
-    }
+  public dispose() {
+    // Reserved for future cleanup.
+  }
 }

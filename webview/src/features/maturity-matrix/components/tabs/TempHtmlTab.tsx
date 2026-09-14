@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import tempHtmlRaw from '../../data/temp-02.html?raw';
+import tempHtmlRaw from '../../data/temp.html?raw';
 import { sanitizeHtmlForRendering } from '../../utils/htmlSanitizer';
 
 export const TempHtmlTab: React.FC = () => {

@@ -1,55 +1,58 @@
-import * as fs from 'fs';
+import { exec } from 'child_process';
 import * as path from 'path';
-import { ChildProcess } from 'child_process';
-import { PythonScriptStatus } from '../../../../shared/services/_python-scripts';
-import { pythonScriptExecutionManager } from '../../managers/PythonScriptExecution.manager';
-import { logError, logInfo } from '../../utils/utils-log';
-import { getWorkspaceExtentionPath, getWorkspaceRoot } from '../../utils/utils-vscode';
+import { promisify } from 'util';
+import {
+  IMaturityMatrixServicePort,
+  MMAssessmentsReport,
+  MMAssessmentsResult,
+} from '../../../../shared/services/maturity-matrix/index.js';
 
-export type MaturityMatrixAction = 'update-repo' | 'extract-assessments' | 'extract-maturity-matrix' | 'all';
+const execAsync = promisify(exec);
 
-export async function callMaturityMatrixScript(repoPath: string, action: MaturityMatrixAction = 'all'): Promise<PythonScriptStatus> {
-    const rootPath = getWorkspaceRoot();
-    const workspaceExtPath = getWorkspaceExtentionPath();
+export class MaturityMatrixPyService implements IMaturityMatrixServicePort {
+  private readonly scriptPath: string;
 
-    const candidatePaths = [
-        path.join(workspaceExtPath, 'scripts', 'architecture', 'maturity-matrix', 'maturity_matrix.py'),
-        path.join(rootPath, 'scripts', 'architecture', 'maturity-matrix', 'maturity_matrix.py'),
-    ];
+  constructor(customScriptPath?: string) {
+    this.scriptPath = customScriptPath || path.resolve(
+      process.cwd(),
+      'scripts/architecture/maturity-matrix/maturity_matrix.py'
+    );
+  }
 
-    let pythonScriptPath = '';
-    for (const candidate of candidatePaths) {
-        if (fs.existsSync(candidate)) {
-            pythonScriptPath = candidate;
-            break;
-        }
+  private async runPythonAction(action: string, extraArgs: string = ''): Promise<string> {
+    const command = `python3 "${this.scriptPath}" --action ${action} ${extraArgs}`.trim();
+    const { stdout, stderr } = await execAsync(command, {
+      env: {
+        ...process.env,
+        PYTHONPATH: `${process.cwd()}:${process.env.PYTHONPATH || ''}`,
+      },
+      maxBuffer: 50 * 1024 * 1024, // 50MB buffer to handle large CSV outputs
+    });
+
+    if (stderr && stderr.trim().length > 0) {
+      console.warn(`[MaturityMatrixPyService] Python stderr: ${stderr}`);
     }
 
-    if (!pythonScriptPath) {
-        const errorMsg = `[maturity-matrix-py] Python script NOT FOUND. Checked candidate locations:\n` + candidatePaths.map((p) => ` - ${p}`).join('\n');
-        logError(errorMsg);
-        throw new Error(errorMsg);
-    }
+    return stdout.trim();
+  }
 
-    const normalizedRepoPath = repoPath && repoPath.trim() ? repoPath.trim() : rootPath;
-    const args: string[] = ['--repo-path', normalizedRepoPath, '--action', action];
+  async refreshAssessments(): Promise<MMAssessmentsReport> {
+    const rawOutput = await this.runPythonAction('refresh-assessments');
+    return JSON.parse(rawOutput) as MMAssessmentsReport;
+  }
 
-    logInfo(`[maturity-matrix-py] Executing Python script with args: ${args.join(' ')}`);
+  async getLastAssessments(): Promise<MMAssessmentsResult> {
+    const rawOutput = await this.runPythonAction('get-last-assessments');
+    return JSON.parse(rawOutput) as MMAssessmentsResult;
+  }
 
-    const childProcess: ChildProcess = await pythonScriptExecutionManager.executeScript(pythonScriptPath, args);
+  async getAssessmentsAt(assessmentDatetime: string): Promise<MMAssessmentsResult> {
+    const rawOutput = await this.runPythonAction('get-assessments-at', `--assessment-datetime "${assessmentDatetime}"`);
+    return JSON.parse(rawOutput) as MMAssessmentsResult;
+  }
 
-    if (!childProcess || !childProcess.pid) {
-        const errorMsg = `[maturity-matrix-py] Failed to spawn child process for script: ${pythonScriptPath}`;
-        logError(errorMsg);
-        throw new Error(errorMsg);
-    }
-
-    const pythonScriptStatus = pythonScriptExecutionManager.getProcessStatus(childProcess.pid || 0);
-    if (!pythonScriptStatus) {
-        const errorMsg = `[maturity-matrix-py] Failed to retrieve status for process PID: ${childProcess.pid}`;
-        logError(errorMsg);
-        throw new Error(errorMsg);
-    }
-
-    return pythonScriptStatus;
+  async getAssessmentsAvailable(): Promise<string[]> {
+    const rawOutput = await this.runPythonAction('get-assessments-available');
+    return JSON.parse(rawOutput) as string[];
+  }
 }

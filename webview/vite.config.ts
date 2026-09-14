@@ -5,11 +5,8 @@ import ViteYaml from '@modyfi/vite-plugin-yaml';
 import path from 'path';
 
 export default defineConfig({
+  root: path.resolve(import.meta.dirname, '.'),
   plugins: [react(), tailwindcss(), ViteYaml()],
-  test: {
-    globals: true,
-    environment: 'jsdom',
-  },
   resolve: {
     alias: {
       '@assets': path.resolve(import.meta.dirname, '../assets'),
@@ -44,6 +41,7 @@ export default defineConfig({
     emptyOutDir: true,
     chunkSizeWarningLimit: 1200,
     rollupOptions: {
+      input: path.resolve(import.meta.dirname, 'index.html'),
       output: {
         entryFileNames: "assets/[name].js",
         chunkFileNames: "assets/[name].js",

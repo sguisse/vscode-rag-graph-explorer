@@ -1,28 +1,970 @@
 {
-  "name": "sheet-to-canvas-application",
-  "private": true,
-  "version": "1.0.0",
-  "type": "module",
+  "name": "token-razor",
+  "license": "MIT",
+  "displayName": "Token Razor",
+  "description": "Surgically select codebase files from dependency graphs to build token-optimized LLM context.",
+  "version": "3.0.6",
+  "publisher": "sguisse",
+  "engines": {
+    "vscode": "^1.125.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sguisse/vscode-rag-graph-explorer.git"
+  },
+  "keywords": [
+    "file",
+    "export",
+    "AI",
+    "LLM",
+    "token",
+    "optimized"
+  ],
+  "categories": [
+    "Other"
+  ],
+  "icon": "assets/logo-max-light.png",
+  "main": "./dist-backend/extension.js",
+  "files": [
+    "dist-backend",
+    "dist-webview",
+    "assets",
+    "scripts",
+    "README.md",
+    "LICENSE"
+  ],
+  "activationEvents": [],
+  "contributes": {
+    "commands": [
+      {
+        "command": "tokenRazor.openTool",
+        "title": "Token Razor - 01 --> 🪒 Open UI",
+        "icon": {
+          "light": "./assets/favicon.png",
+          "dark": "./assets/favicon.png"
+        }
+      },
+      {
+        "command": "tokenRazor.exporter.codebase.addPaths",
+        "title": "Token Razor - 02 Exporter --> ➕ Codebase Sources Paths"
+      },
+      {
+        "command": "tokenRazor.exporter.codebase.excludePaths",
+        "title": "Token Razor - 03 Exporter --> 🚫 Codebase Exclude paths"
+      },
+      {
+        "command": "tokenRazor.exporter.reference.addPaths",
+        "title": "Token Razor - 04 Exporter --> ➕ Reference Sources Paths"
+      },
+      {
+        "command": "tokenRazor.exporter.reference.excludePaths",
+        "title": "Token Razor - 05 Exporter --> 🚫 Reference Exclude paths"
+      },
+      {
+        "command": "tokenRazor.explorer.addPaths",
+        "title": "Token Razor - 06 Explorer --> 🔬 Add selected files Paths to Explore"
+      },
+      {
+        "command": "tokenRazor.exporter.exportSelectedPathsToClipboard",
+        "title": "Token Razor - 07 --> 📥 Export selected paths content (as aggregate)",
+        "icon": "$(export)"
+      },
+      {
+        "command": "tokenRazor.exporter.copySelectedFilesToClipboard",
+        "title": "Token Razor - 08 --> 📑 Copy selected files (To paste outside of vscode) ",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "tokenRazor.exporter.copySelectedPathsToClipboard",
+        "title": "Token Razor - 09 --> 🔗 Copy selected paths (absolute)",
+        "icon": "$(copy)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "tokenRazor.openTool",
+          "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "tokenRazor.openTool",
+          "group": "navigation@0"
+        },
+        {
+          "command": "tokenRazor.exporter.codebase.addPaths",
+          "group": "navigation@1",
+          "when": "tokenRazor.isToolOpened"
+        },
+        {
+          "command": "tokenRazor.exporter.codebase.excludePaths",
+          "group": "navigation@1",
+          "when": "tokenRazor.isToolOpened"
+        },
+        {
+          "command": "tokenRazor.exporter.reference.addPaths",
+          "group": "navigation@1",
+          "when": "tokenRazor.isToolOpened"
+        },
+        {
+          "command": "tokenRazor.exporter.reference.excludePaths",
+          "group": "navigation@1",
+          "when": "tokenRazor.isToolOpened"
+        },
+        {
+          "command": "tokenRazor.explorer.addPaths",
+          "group": "navigation@2",
+          "when": "tokenRazor.isToolOpened"
+        },
+        {
+          "command": "tokenRazor.exporter.exportSelectedPathsToClipboard",
+          "group": "navigation@3"
+        },
+        {
+          "command": "tokenRazor.exporter.copySelectedFilesToClipboard",
+          "group": "navigation@3"
+        },
+        {
+          "command": "tokenRazor.exporter.copySelectedPathsToClipboard",
+          "group": "navigation@3"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Token Razor",
+      "properties": {
+        "tokenRazor.pinApplication": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically pin the Application UI tab when opened."
+        },
+        "tokenRazor.codebaseScanEachTimeAppIsDisplayed": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically start code scan each time the application UI is displayed."
+        },
+        "tokenRazor.tooltipDelay": {
+          "type": "number",
+          "default": 2000,
+          "description": "Delay in milliseconds before showing the custom tooltips on hover."
+        },
+        "tokenRazor.geminiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API Key for Gemini Assistant analysis."
+        },
+        "tokenRazor.backendWorkspacePath": {
+          "type": "string",
+          "default": ".token-razor",
+          "description": "Local User Path where the back-end scripts and treatment results will be stored (relative to the workspace root)."
+        },
+        "tokenRazor.forceScriptSync": {
+          "type": "boolean",
+          "default": false,
+          "description": "Force synchronized recreation of local workspace core scripts."
+        },
+        "tokenRazor.logFileEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable background file logging redirection (${tokenRazor.backendWorkspacePath}/logs/)"
+        },
+        "tokenRazor.logFileMaxSize": {
+          "type": "number",
+          "default": 5,
+          "description": "Maximum size per log file before rotation triggers (in Megabytes)."
+        },
+        "tokenRazor.logFileMaxCountRetention": {
+          "type": "number",
+          "default": 5,
+          "description": "Maximum number of historical log file nodes to keep before cycling."
+        },
+        "tokenRazor.processTimeout": {
+          "type": "number",
+          "default": 10000,
+          "description": "Default external process timeout in milliseconds (python scripts, sh scripts, ...)."
+        },
+        "tokenRazor.processSoundPath": {
+          "type": "string",
+          "default": "/System/Library/Sounds/Glass.aiff",
+          "description": "Path to the sound file to play upon process completion (if empty, no sound will be played). It could be on MacOS: /System/Library/Sounds/Glass.aiff or on Windows: C:\\Windows\\Media\\notify.wav or on Linux: /usr/share/sounds/freedesktop/stereo/complete.oga"
+        },
+        "tokenRazor.processSoundDelay": {
+          "type": "number",
+          "default": 10000,
+          "description": "If process takes longer than this value in milliseconds, the process completion sound will be played. If set to <=0, the sound will be disabled."
+        },
+        "tokenRazor.graphRagExplorer.entitiesTypesList": {
+          "type": "array",
+          "description": "List of predefined entity types for the graph exploration.",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "file",
+            "class",
+            "method",
+            "document"
+          ]
+        },
+        "tokenRazor.graphRagExplorer.regexFilterEnabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable Regex matching in the filter bar by default."
+        },
+        "tokenRazor.graphRagExplorer.treeFilterEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Apply search filters on the Tree View by default."
+        },
+        "tokenRazor.graphRagExplorer.graphLegendEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Display the visual topological legend by default upon launch."
+        },
+        "tokenRazor.graphRagExplorer.callersDepth": {
+          "type": "number",
+          "default": 1,
+          "description": "Default callers upstream lookup relationship parsing depth."
+        },
+        "tokenRazor.graphRagExplorer.calleesDepth": {
+          "type": "number",
+          "default": 1,
+          "description": "Default callees downstream lookup relationship parsing depth."
+        },
+        "tokenRazor.graphRagExplorer.backendWorkspacePath": {
+          "type": "string",
+          "default": "${tokenRazor.backendWorkspacePath}/graph-rag-explorer-v2",
+          "description": "Local User Path where the back-end scripts and treatment results will be stored (relative to the workspace root)."
+        },
+        "tokenRazor.graphRagExplorer.includePathsRegex": {
+          "type": "string",
+          "default": "",
+          "description": "Regex to include only paths containing specific directories."
+        },
+        "tokenRazor.graphRagExplorer.includeExtensionsRegex": {
+          "type": "string",
+          "default": ".*\\.(java|ts|tsx|js|html|css|json|xml|yaml|yml|py|md|properties)$",
+          "description": "Regex to include paths containing specific file extensions."
+        },
+        "tokenRazor.graphRagExplorer.excludePathsRegex": {
+          "type": "string",
+          "default": "(^|.*/)(node_modules|\\.git|\\.github|dist|.*-tmp|.*-out|\\.idea|\\.vscode|\\.history|exported-files|\\.[^/]+)(/.*|$)",
+          "description": "Regex to exclude paths containing specific directories (! /target is not included because we need classes)."
+        },
+        "tokenRazor.graphRagExplorer.excludeExtensionsRegex": {
+          "type": "string",
+          "default": "",
+          "description": "Regex to exclude paths containing specific file extensions."
+        },
+        "tokenRazor.graphRagExplorer.neo4j.version": {
+          "type": "string",
+          "default": "5.26.0",
+          "description": "The specific community release version of the local sandboxed database engine server."
+        },
+        "tokenRazor.graphRagExplorer.neo4j.host": {
+          "type": "string",
+          "default": "localhost",
+          "description": "Neo4j host."
+        },
+        "tokenRazor.graphRagExplorer.neo4j.port.bolt": {
+          "type": "number",
+          "default": 7687,
+          "description": "Neo4j connection endpoint port used to access db API."
+        },
+        "tokenRazor.graphRagExplorer.neo4j.port.http": {
+          "type": "number",
+          "default": 7474,
+          "description": "Neo4j website client http port"
+        },
+        "tokenRazor.graphRagExplorer.neo4j.uri": {
+          "type": "string",
+          "default": "bolt://${tokenRazor.graphRagExplorer.neo4j.host}:${tokenRazor.graphRagExplorer.neo4j.port.bolt}",
+          "description": "Neo4j connection endpoint mapping into the embedded jQAssistant server database."
+        },
+        "tokenRazor.graphRagExplorer.neo4j.url": {
+          "type": "string",
+          "default": "http://${tokenRazor.graphRagExplorer.neo4j.host}:${tokenRazor.graphRagExplorer.neo4j.port.http}/browser/preview/",
+          "description": "Neo4j website client URL."
+        },
+        "tokenRazor.graphRagExplorer.neo4j.username": {
+          "type": "string",
+          "default": "neo4j",
+          "description": "Database account access identifier username. Should not change with the default Neo4j community installation."
+        },
+        "tokenRazor.graphRagExplorer.neo4j.password": {
+          "type": "string",
+          "default": "password",
+          "description": "Database secure transaction authorization secret credentials. Should not change with the default Neo4j community installation."
+        },
+        "tokenRazor.graphRagExplorer.jqassistant.version": {
+          "type": "string",
+          "default": "2.9.1",
+          "description": "The target production-ready release version of the portable jQAssistant CLI tool."
+        },
+        "tokenRazor.graphRagExplorer.jqassistant.downloadUrl": {
+          "type": "string",
+          "default": "https://github.com/jQAssistant/jqassistant/releases/download/${tokenRazor.graphRagExplorer.jqassistant.version}/jqassistant-commandline-neo4jv5-${tokenRazor.graphRagExplorer.jqassistant.version}-distribution.zip",
+          "description": "The absolute parameterized GitHub Releases download link for fetching portable jQAssistant distribution packages."
+        },
+        "tokenRazor.graphRagExplorer.jqassistant.graphRagLLM.downloadUrl": {
+          "type": "string",
+          "default": "https://huggingface.co/sentence-transformers",
+          "description": "The base URL of the GraphRag LLM model used to generate graph-based semantic embeddings on codebase."
+        },
+        "tokenRazor.graphRagExplorer.jqassistant.graphRagLLM.model": {
+          "type": "string",
+          "default": "all-MiniLM-L6-v2",
+          "description": "The LLM model used to generate graph-based semantic embeddings on codebase."
+        },
+        "tokenRazor.graphRagExplorer.jqassistant.graphRagLLM.method.minCyclomatic": {
+          "type": "number",
+          "default": 30,
+          "description": "The minimum cyclomatic complexity required for the GraphRag LLM model to analyze a method."
+        },
+        "tokenRazor.graphRagExplorer.jqassistant.graphRagLLM.maxAnalyzerCall": {
+          "type": "number",
+          "default": 5,
+          "description": "The maximum number of analyzer calls allowed by element type (method, type, sourceFile, directory, package, project) for the GraphRag LLM model. 0 = unlimited. (used mainly at dev step to avoid too many calls to the LLM model)"
+        },
+        "tokenRazor.graphRagExplorer.jqassistant.graphRagLLM.maxSummarizerCall": {
+          "type": "number",
+          "default": 5,
+          "description": "The maximum number of summarizer calls allowed by element type (method, type, sourceFile, directory, package, project) for the GraphRag LLM model. 0 = unlimited. (used mainly at dev step to avoid too many calls to the LLM model)"
+        },
+        "tokenRazor.graphRagExplorer.jqassistant.graphRagLLM.mcp.host": {
+          "type": "string",
+          "default": "127.0.0.1",
+          "description": "The host address for the jqassistant MCP server."
+        },
+        "tokenRazor.graphRagExplorer.jqassistant.graphRagLLM.mcp.port": {
+          "type": "number",
+          "default": 8800,
+          "description": "The port for the jqassistant MCP server."
+        },
+        "tokenRazor.graphRagExplorer.jqassistant.xmlReportPath": {
+          "type": "string",
+          "default": "./target/site/jacoco/jacoco.xml",
+          "description": "Workspace matching path targeting local JaCoCo XML metric reports."
+        },
+        "tokenRazor.graphRagExplorer.dependencyCruiser.configFile": {
+          "type": "string",
+          "default": ".dependency-cruiser.json",
+          "description": "Configuration rules path definition for Dependency Cruiser checks."
+        },
+        "tokenRazor.graphRagExplorer.graphify.arguments": {
+          "type": "string",
+          "default": "--deep-scan",
+          "description": "Optional runtime execution flags passed onto the background python graphify engine."
+        },
+        "tokenRazor.graphRagExplorer.userPreferences": {
+          "type": "array",
+          "default": [
+            "{",
+            "}"
+          ],
+          "description": "User preferences for the GraphRag Explorer extension in JSON format as an array of strings (one by line, for better readability)."
+        },
+        "tokenRazor.exporter.scriptPythonPath": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to files-exporter.py"
+        },
+        "tokenRazor.exporter.historyYamlPath": {
+          "type": "string",
+          "default": "~/files-exporter/.files-exporter-history.yaml",
+          "description": "Absolute path to the history log file."
+        },
+        "tokenRazor.exporter.maxFileSizeKb": {
+          "type": "number",
+          "default": 50,
+          "description": "Skip individual files larger than this (in KB)."
+        },
+        "tokenRazor.exporter.includePathsRegex": {
+          "type": "string",
+          "default": ".*",
+          "description": "Regex to include paths (default is all paths '.*')."
+        },
+        "tokenRazor.exporter.includeExtensionsRegex": {
+          "type": "string",
+          "default": ".*\\.(java|ts|tsx|js|html|css|json|xml|yaml|yml|py|md|properties)$",
+          "description": "Regex to include files with specific extensions (default is '.*\\.(java|ts|tsx|js|html|css|json|xml|yaml|yml|py|md|properties)$')."
+        },
+        "tokenRazor.exporter.excludePathsRegex": {
+          "type": "string",
+          "default": ".*/node_modules/.*|.*/target/.*|.*/\\.git/.*|.*/dist/.*|.*/.idea/.*|.*/.vscode/.*|.*/.history/.*|.*/exported-files/.*,/\\.[^/]+",
+          "description": "Regex to exclude paths containing specific directories (e.g., node_modules, target, .git, dist, /\\.[^/]+)."
+        },
+        "tokenRazor.exporter.excludeExtensionsRegex": {
+          "type": "string",
+          "default": "^[^.]+$|.*\\.(?:log|tmp|lock|zip|tar|png|jpg|gif|pyc|vsix)$",
+          "description": "Regex to exclude files without extensions or with specific extensions (e.g., log, tmp, lock, zip, tar, png, jpg, gif, pyc, vsix)."
+        },
+        "tokenRazor.exporter.defaultFormat": {
+          "type": "string",
+          "enum": [
+            "yaml",
+            "json",
+            "xml",
+            "txt",
+            "toml"
+          ],
+          "default": "yaml",
+          "description": "Default output format."
+        },
+        "tokenRazor.exporter.maxChunkSizeKb": {
+          "type": "number",
+          "default": 500,
+          "description": "Split output files into individual chunks <= than this (in KB)."
+        },
+        "tokenRazor.exporter.splitChunkByFileExtension": {
+          "type": "boolean",
+          "default": false,
+          "description": "Default value for grouping generated chunks by file extension."
+        },
+        "tokenRazor.exporter.copyGeneratedFilesToClipboard": {
+          "type": "boolean",
+          "default": true,
+          "description": "Default value for copying generated export files to the OS clipboard after export."
+        },
+        "tokenRazor.exporter.generateTreeView": {
+          "type": "boolean",
+          "default": true,
+          "description": "Default value for generating the tree view manifest."
+        },
+        "tokenRazor.exporter.generateLogConsole": {
+          "type": "boolean",
+          "default": true,
+          "description": "Default value for streaming exporter logs to the webview terminal."
+        },
+        "tokenRazor.exporter.generateLogFile": {
+          "type": "boolean",
+          "default": false,
+          "description": "Default value for writing exporter logs to a log file."
+        },
+        "tokenRazor.exporter.tooltipDelay": {
+          "type": "number",
+          "default": 2000,
+          "description": "Delay in milliseconds before showing the custom tooltips on hover."
+        },
+        "tokenRazor.exporter.copyFilesToClipboardTimeout": {
+          "type": "number",
+          "default": 10000,
+          "description": "Maximum non-blocking timeout limit in milliseconds to poll-verify that all exported files are fully cached into the OS clipboard."
+        },
+        "tokenRazor.exporter.pinFilesExporter": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically pin the Files Exporter UI tab when opened to prevent it from being overwritten or closed as a preview tab."
+        },
+        "tokenRazor.exporter.pinBrowserTab": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically pin the browser tab when opened to prevent it from being overwritten or closed as a preview tab."
+        },
+        "tokenRazor.exporter.exchange": {
+          "type": "array",
+          "description": "A list of custom exchange tools and links.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "icon": {
+                "type": "string",
+                "description": "Path to the icon SVG or PNG."
+              },
+              "url": {
+                "type": "string",
+                "format": "uri",
+                "description": "The URL to open."
+              },
+              "tooltip": {
+                "type": "string",
+                "description": "The hover tooltip text."
+              },
+              "height": {
+                "type": "string",
+                "description": "Height of the icon (e.g., '45px')."
+              },
+              "width": {
+                "type": "string",
+                "description": "Width of the icon (e.g., '45px')."
+              },
+              "openInVSCode": {
+                "type": "boolean",
+                "description": "Whether to open the link inside VS Code or an external browser."
+              }
+            },
+            "required": [
+              "icon",
+              "url",
+              "tooltip"
+            ]
+          },
+          "default": [
+            {
+              "icon": "assets/brands/gemini.svg",
+              "url": "https://gemini.google.com/",
+              "tooltip": "Open Gemini",
+              "height": "45px",
+              "width": "45px",
+              "openInVSCode": true
+            },
+            {
+              "icon": "assets/brands/notebookLM.svg",
+              "url": "https://notebooklm.google.com/",
+              "tooltip": "Open NotebookLM",
+              "height": "45px",
+              "width": "45px",
+              "openInVSCode": false
+            }
+          ]
+        },
+        "tokenRazor.exporter.fileExtsCategoryGroups": {
+          "type": "array",
+          "description": "Group file extensions by categories map layout containing label groupings and explicit matching extension scopes and a flag named includeExtsMenuEnabled and a flag excludeExtsMenuEnabled to manage predefines extentions present in Predefines menus",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "includeExtsMenuEnabled": {
+                "type": "boolean"
+              },
+              "excludeExtsMenuEnabled": {
+                "type": "boolean"
+              },
+              "extensions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "label",
+              "extensions"
+            ]
+          },
+          "default": [
+            {
+              "label": "No Extension",
+              "excludeExtsMenuEnabled": true,
+              "extensions": [
+                "^[^.]+$|.*\\."
+              ]
+            },
+            {
+              "label": "CONFIG -  YAML",
+              "includeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.yaml$",
+                ".*\\.yml$"
+              ]
+            },
+            {
+              "label": "CONFIG -  XML",
+              "includeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.xml$",
+                ".*\\.xsd$"
+              ]
+            },
+            {
+              "label": "CONFIG -  JSON",
+              "includeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.json$",
+                ".*\\.jsonc$",
+                ".*\\.json5$"
+              ]
+            },
+            {
+              "label": "CONFIG -  TOML",
+              "includeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.toml$"
+              ]
+            },
+            {
+              "label": "CONFIG -  Props & Env",
+              "includeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.properties$",
+                ".*\\.prop$",
+                ".*\\.env$"
+              ]
+            },
+            {
+              "label": "CONFIG -  Generic & INI",
+              "includeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.conf$",
+                ".*\\.cfg$",
+                ".*\\.config$",
+                ".*\\.ini$",
+                ".*\\.prefs$"
+              ]
+            },
+            {
+              "label": "DOC -    Markdown & Tech",
+              "includeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.md$",
+                ".*\\.txt$",
+                ".*\\.rst$",
+                ".*\\.adoc$"
+              ]
+            },
+            {
+              "label": "DOC -    Office & PDF",
+              "excludeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.pdf$",
+                ".*\\.docx$",
+                ".*\\.doc$",
+                ".*\\.odt$"
+              ]
+            },
+            {
+              "label": "DOC -    Spreadsheets & Data Sheets",
+              "excludeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.xlsx$",
+                ".*\\.xls$",
+                ".*\\.csv$"
+              ]
+            },
+            {
+              "label": "FE - Web Markup",
+              "includeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.html$",
+                ".*\\.htm$"
+              ]
+            },
+            {
+              "label": "FE - CSS & Preprocessors",
+              "includeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.css$",
+                ".*\\.scss$",
+                ".*\\.sass$",
+                ".*\\.less$"
+              ]
+            },
+            {
+              "label": "FE - JavaScript & TypeScript",
+              "includeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.js$",
+                ".*\\.ts$"
+              ]
+            },
+            {
+              "label": "FE - React Components",
+              "includeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.jsx$",
+                ".*\\.tsx$"
+              ]
+            },
+            {
+              "label": "FE - Modern UI Fwks",
+              "includeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.vue$",
+                ".*\\.svelte$",
+                ".*\\.astro$"
+              ]
+            },
+            {
+              "label": "BE - Python",
+              "includeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.py$",
+                ".*\\.pyw$",
+                ".*\\.pyx$"
+              ]
+            },
+            {
+              "label": "BE - Java & JVM",
+              "includeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.java$",
+                ".*\\.kt$",
+                ".*\\.kts$",
+                ".*\\.scala$",
+                ".*\\.groovy$"
+              ]
+            },
+            {
+              "label": "BE - Node.js (TS/JS)",
+              "includeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.ts$",
+                ".*\\.js$",
+                ".*\\.mjs$",
+                ".*\\.cjs$"
+              ]
+            },
+            {
+              "label": "BE - .NET (C# / F#)",
+              "includeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.cs$",
+                ".*\\.fs$"
+              ]
+            },
+            {
+              "label": "BE - Go & Rust",
+              "includeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.go$",
+                ".*\\.rs$"
+              ]
+            },
+            {
+              "label": "BE - C & C++",
+              "includeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.c$",
+                ".*\\.cpp$",
+                ".*\\.h$",
+                ".*\\.hpp$"
+              ]
+            },
+            {
+              "label": "BE - PHP & Ruby",
+              "includeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.php$",
+                ".*\\.rb$"
+              ]
+            },
+            {
+              "label": "ARCH -  Standard",
+              "excludeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.zip$",
+                ".*\\.rar$",
+                ".*\\.7z$",
+                ".*\\.tar$",
+                ".*\\.gz$",
+                ".*\\.bz2$",
+                ".*\\.xz$",
+                ".*\\.tgz$",
+                ".*\\.zipx$"
+              ]
+            },
+            {
+              "label": "ARCH -  Img & Virtual",
+              "excludeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.iso$",
+                ".*\\.dmg$",
+                ".*\\.cab$",
+                ".*\\.vhd$",
+                ".*\\.vmdk$"
+              ]
+            },
+            {
+              "label": "ARCH -  Java & Deployment",
+              "excludeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.jar$",
+                ".*\\.war$",
+                ".*\\.ear$"
+              ]
+            },
+            {
+              "label": "IMG -Web & Standard",
+              "excludeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.jpg$",
+                ".*\\.jpeg$",
+                ".*\\.png$",
+                ".*\\.webp$",
+                ".*\\.gif$",
+                ".*\\.bmp$"
+              ]
+            },
+            {
+              "label": "IMG -Vector Graphics",
+              "excludeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.svg$",
+                ".*\\.ai$",
+                ".*\\.eps$"
+              ]
+            },
+            {
+              "label": "IMG -Design & Editing",
+              "excludeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.psd$",
+                ".*\\.xcf$",
+                ".*\\.tiff$",
+                ".*\\.tif$"
+              ]
+            },
+            {
+              "label": "IMG -Camera RAW & HE",
+              "excludeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.heic$",
+                ".*\\.heif$",
+                ".*\\.raw$",
+                ".*\\.cr2$",
+                ".*\\.nef$",
+                ".*\\.arw$"
+              ]
+            },
+            {
+              "label": "LOG -  Standard",
+              "excludeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.log$",
+                ".*\\.out$",
+                ".*\\.err$",
+                ".*\\.syslog$"
+              ]
+            },
+            {
+              "label": "LOG -  Structured & Event",
+              "excludeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.jsonl$",
+                ".*\\.ndjson$",
+                ".*\\.event$",
+                ".*\\.evtx$"
+              ]
+            },
+            {
+              "label": "LOG -  Diagnostic & Trace",
+              "excludeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.trace$",
+                ".*\\.audit$",
+                ".*\\.dump$",
+                ".*\\.crash$"
+              ]
+            },
+            {
+              "label": "LOG -  Level Specifics",
+              "excludeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.info$",
+                ".*\\.warn$",
+                ".*\\.error$"
+              ]
+            },
+            {
+              "label": "TMP - Standard",
+              "excludeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.tmp$",
+                ".*\\.temp$"
+              ]
+            },
+            {
+              "label": "TMP - Backup & Cache",
+              "excludeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.bak$",
+                ".*\\.old$",
+                ".*\\.cache$",
+                ".*\\.swp$",
+                ".*\\.~$"
+              ]
+            },
+            {
+              "label": "TMP - Lock & Process",
+              "excludeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.lock$",
+                ".*\\.pid$"
+              ]
+            },
+            {
+              "label": "TMP - Placeholder & Keep",
+              "excludeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.keep$",
+                ".*\\.gitkeep$"
+              ]
+            },
+            {
+              "label": "TEMPLATE - Logicless & Handlebars",
+              "includeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.mustache$",
+                ".*\\.hbs$",
+                ".*\\.handlebars$"
+              ]
+            },
+            {
+              "label": "TEMPLATE - Generic Engine",
+              "includeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.template$",
+                ".*\\.tpl$",
+                ".*\\.tmpl$"
+              ]
+            },
+            {
+              "label": "TEMPLATE - JavaScript & Web",
+              "includeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.ejs$",
+                ".*\\.pug$",
+                ".*\\.jade$",
+                ".*\\.twig$",
+                ".*\\.liquid$"
+              ]
+            },
+            {
+              "label": "TEMPLATE - Python & Polyglot ",
+              "includeExtsMenuEnabled": true,
+              "extensions": [
+                ".*\\.jinja$",
+                ".*\\.jinja2$",
+                ".*\\.j2$",
+                ".*\\.ftl$",
+                ".*\\.erb$"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "postinstall": "npm install --prefix webview",
+    "install:all": "npm install && npm install --prefix webview",
+    "vscode:prepublish": "npm run build",
+    "generate:code": "node dev-tools/generate-all.js",
+    "build:backend": "npm run generate:code && node backend/esbuild.js",
+    "build:webview": "cd webview && npm run build",
+    "build": "npm run build:backend && npm run build:webview",
+    "watch:backend": "node backend/esbuild.js --watch",
+    "watch:webview": "cd webview && npm run dev",
+    "compile": "npm run build"
   },
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "lucide-react": "^0.263.1",
-    "d3": "^7.8.5",
-    "d3-sankey": "^0.12.3",
-    "@dnd-kit/core": "^6.0.8",
-    "@dnd-kit/sortable": "^7.0.2",
-    "@dnd-kit/utilities": "^3.2.1",
-    "react-simple-maps": "^3.0.0"
+    "js-yaml": "^5.4.1",
+    "neo4j-driver": "^6.2.0"
   },
   "devDependencies": {
-    "@types/react": "^18.2.15",
-    "@types/react-dom": "^18.2.7",
-    "@vitejs/plugin-react": "^4.0.3",
-    "vite": "^4.4.5"
+    "@github/copilot-sdk": "1.0.13",
+    "@modyfi/vite-plugin-yaml": "^1.1.1",
+    "@types/node": "^26.1.2",
+    "@types/vscode": "^1.125.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.3.3"
+  },
+  "allowScripts": {
+    "fsevents@2.3.3": true,
+    "koffi@3.1.5": true
   }
 }
