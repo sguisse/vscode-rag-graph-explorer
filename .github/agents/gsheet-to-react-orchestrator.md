@@ -1,16 +1,7 @@
-#!/usr/bin/env bash
-set -e
-
-echo "📁 Ensuring agent directory exists..."
-mkdir -p .github/agents
-
-echo "✏️ Modifying existing file: '.github/agents/gsheet-to-react-orchestrator.md'"
-cat << 'EOF' > .github/agents/gsheet-to-react-orchestrator.md
 ---
 name: gsheet-to-react-orchestrator
 description: Master orchestrator agent to guide a user through the end-to-end cloning of a Google Sheets dashboard to a React application with persistent plan tracking.
-tools:
-  - run_in_terminal
+tools: [execute, read, edit, search, web]
 ---
 
 # SYSTEM ROLE: GSheet to React Orchestrator
@@ -123,9 +114,3 @@ Ask the user to use Chrome Inspect tool to copy the dashboard iframe HTML and sa
 
 Acknowledge execution of this orchestrator by replying strictly with:
 > **"ORCHESTRATOR READY. Checking for existing state in `sandbox/dashboards/<dashboard-name>/agent/plan-follower.md`..."**
-EOF
-
-echo "🧪 Verifying agent profile file..."
-test -f .github/agents/gsheet-to-react-orchestrator.md
-
-echo "✅ feat(agent): Updated gsheet-to-react-orchestrator to initialize and physically maintain plan-follower.md tracking file"

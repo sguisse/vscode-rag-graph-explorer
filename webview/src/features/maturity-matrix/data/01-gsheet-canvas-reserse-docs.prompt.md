@@ -84,7 +84,7 @@ Step-by-step instructions for:
 - Status color codes and bulk selection actions.
 - **3D Spatial Navigation Manual** (360° orbit, 45° rotation steppers, zoom, Auto-Tour mode, raycaster selection) if 3D engine is active.
 
-### 6. Tab 6 – External React App Reproduction & Web/Google Sites Embed Prompt
+### 6. Tab 6 - External React App Reproduction & Web/Google Sites Embed Prompt
 
 Generate a comprehensive, production-ready React application reproduction prompt incorporating live schema fields, sample record payloads, and dual deployment modes:
 
