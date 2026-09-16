@@ -126,5 +126,45 @@
         "workspaceRoot": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer",
         "workspacePath": ".github/skills",
         "id": "uDFby1dv4AV0T93j"
+    },
+    {
+        "type": "Directory",
+        "name": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer/backend/src/services/maturity-matrix",
+        "parent_id": "EpCPBhwzg03aRLAc",
+        "workspaceRoot": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer",
+        "workspacePath": "backend/src/services/maturity-matrix",
+        "id": "HyZg60UWkCGJKLPz"
+    },
+    {
+        "type": "Directory",
+        "name": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer/shared/services/maturity-matrix",
+        "parent_id": "EpCPBhwzg03aRLAc",
+        "workspaceRoot": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer",
+        "workspacePath": "shared/services/maturity-matrix",
+        "id": "tn8XPsdWpMkRG1KA"
+    },
+    {
+        "type": "Directory",
+        "name": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer/webview/src/features/maturity-matrix",
+        "parent_id": "EpCPBhwzg03aRLAc",
+        "workspaceRoot": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer",
+        "workspacePath": "webview/src/features/maturity-matrix",
+        "id": "XgRBpwkFhHtbGA9e"
+    },
+    {
+        "type": "File",
+        "name": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer/webview/src/services/api/maturity-matrix-api.service.gen.ts",
+        "parent_id": "EpCPBhwzg03aRLAc",
+        "workspaceRoot": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer",
+        "workspacePath": "webview/src/services/api/maturity-matrix-api.service.gen.ts",
+        "id": "jvWU7hDXkBeFYGtb"
+    },
+    {
+        "type": "Directory",
+        "name": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer/scripts/architecture/maturity-matrix",
+        "parent_id": "EpCPBhwzg03aRLAc",
+        "workspaceRoot": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer",
+        "workspacePath": "scripts/architecture/maturity-matrix",
+        "id": "XnO3xEAacw1R264p"
     }
 ]

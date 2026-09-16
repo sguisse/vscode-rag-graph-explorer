@@ -2,18 +2,12 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { MaturityMatrixTabId } from '../types/maturity-matrix.types';
 
-const tabs: Array<{ key: MaturityMatrixTabId; label: string; accent: string }> = [
-  { key: 'matrix', label: 'Matrix View', accent: 'text-indigo-600' },
-  { key: 'compare', label: 'Pillar Delta Analytics', accent: 'text-violet-600' },
-  { key: 'extracts', label: 'Extracts & Assessors', accent: 'text-emerald-600' },
-];
-
 interface MaturityMatrixHeaderProps {
-  activeTab: MaturityMatrixTabId;
+  activeTab?: MaturityMatrixTabId;
   lastUpdated: string;
   filterToGenerate: boolean;
   showCellOrigins: boolean;
-  onTabChange: (nextTab: MaturityMatrixTabId) => void;
+  onTabChange?: (nextTab: MaturityMatrixTabId) => void;
   onRefresh: () => void;
   onExtractAll: () => void;
   onToggleFilter: () => void;
@@ -21,29 +15,47 @@ interface MaturityMatrixHeaderProps {
 }
 
 export function MaturityMatrixHeader({
-  activeTab,
   lastUpdated,
   filterToGenerate,
   showCellOrigins,
-  onTabChange,
   onRefresh,
   onExtractAll,
   onToggleFilter,
   onToggleCellOrigins,
 }: MaturityMatrixHeaderProps) {
   return (
-    <header className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <header className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-100 text-xl text-indigo-700 shadow-sm">
-            🧭
+        {/* Header Title Section */}
+        <div className="flex items-center gap-3.5">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50/80 text-indigo-600 border border-indigo-100/60 shadow-2xs">
+            <svg
+              className="h-5 w-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polygon points="12 2 2 7 12 12 22 7 12 2" />
+              <polyline points="2 17 12 22 22 17" />
+              <polyline points="2 12 12 17 22 12" />
+            </svg>
           </div>
+
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-indigo-600">Maturity Matrix</p>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">Evolution Dashboard</h1>
+            <h1 className="text-xl font-extrabold tracking-tight text-slate-950 sm:text-2xl">
+              Maturity Matrix Evolution Dashboard
+            </h1>
+            <p className="mt-0.5 text-xs text-slate-500 font-normal">
+              Tracking Pillar Progress between Assessments &amp; Extracts • Specification from{' '}
+              <strong className="font-bold text-slate-700">"Readme"</strong> Sheet
+            </p>
           </div>
         </div>
 
+        {/* Global Action Controls */}
         <div className="flex flex-wrap items-center gap-2">
           <Button type="button" variant="default" size="sm" onClick={onRefresh}>
             Refresh Data
@@ -69,25 +81,8 @@ export function MaturityMatrixHeader({
           </div>
         </div>
       </div>
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        {tabs.map((tab) => {
-          const isActive = tab.key === activeTab;
-
-          return (
-            <Button
-              key={tab.key}
-              type="button"
-              variant={isActive ? 'secondary' : 'outline'}
-              size="sm"
-              onClick={() => onTabChange(tab.key)}
-              className={isActive ? 'shadow-sm' : ''}
-            >
-              <span className={tab.accent}>{tab.label}</span>
-            </Button>
-          );
-        })}
-      </div>
     </header>
   );
 }
+
+export default MaturityMatrixHeader;

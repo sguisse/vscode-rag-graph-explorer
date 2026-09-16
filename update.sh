@@ -1,131 +1,1081 @@
 #!/usr/bin/env bash
 set -e
 
-echo "📁 Ensuring agent directory exists..."
-mkdir -p .github/agents
+# 1. Update shared interface definition
+echo "✏️ Modifying existing file: 'shared/services/maturity-matrix/model/assessments-json.ts'"
+cat << 'EOF' > shared/services/maturity-matrix/model/assessments-json.ts
+export interface MaturityPillarDefinition {
+  key: string;
+  label: string;
+  icon: string;
+  rowOffset: number;
+}
 
-echo "✏️ Modifying existing file: '.github/agents/gsheet-to-react-orchestrator.md'"
-cat << 'EOF' > .github/agents/gsheet-to-react-orchestrator.md
----
-name: gsheet-to-react-orchestrator
-description: Master orchestrator agent to guide a user through the end-to-end cloning of a Google Sheets dashboard to a React application with persistent plan tracking.
-tools:
-  - run_in_terminal
----
+export interface MaturityPillarValue {
+  key: string;
+  label: string;
+  icon: string;
+  assessor: string;
+  date: string | null;
+  score: number;
+  level: string;
+  prevDate: string | null;
+  prevScore: number;
+  prevLevel: string;
+  target: boolean;
+  lastExtract: number;
+  prevExtract: number;
+  diffLevel: number | null;
+  diffScore: number | null;
+}
 
-# SYSTEM ROLE: GSheet to React Orchestrator
+export interface MaturityApplication {
+  id: string;
+  name: string;
+  code: string;
+  leader: string;
+  toGenerate: boolean;
+  lastAssessmentDate: string | null;
+  prevAssessmentDate: string | null;
+  commentary: string;
+  startRow?: number;
+  rowIdx?: number;
+  pillars: Record<string, MaturityPillarValue>;
+}
 
-You are an **Expert AI Orchestrator Agent**. Your objective is to seamlessly guide a developer through the end-to-end migration of a Google Sheets Canvas Dashboard into a standalone, production-ready React application while strictly maintaining a persistent state file (`plan-follower.md`).
+export interface MaturityMatrixData {
+  updatedAt: string;
+  generatedAt: string;
+  pillars: MaturityPillarDefinition[];
+  applications: MaturityApplication[];
+}
 
----
-
-## 🛑 MANDATORY AGENT DIRECTIVES
-
-- **STRICT STATE MACHINE & PERSISTENCE**: You MUST track progress by physically creating and updating the tracking file `sandbox/dashboards/<dashboard-name>/agent/plan-follower.md` after EVERY step transition.
-- **WORKFLOW RESUMPTION**: Upon starting, check if `sandbox/dashboards/<dashboard-name>/agent/plan-follower.md` already exists. If it exists, read its table, report current progress to the user, and resume execution from the first step marked as `IN_PROGRESS` or `NOT_STARTED`.
-- **PAUSE & AWAIT**: If a step requires manual user action (Steps 2, 4, 5, 6, 8), you MUST stop your output, provide exact instructions to the user, and explicitly wait for their confirmation before updating `plan-follower.md` to `COMPLETED` and advancing.
-- **TERMINAL EXECUTION**: Execute shell commands and referenced scripts directly using the `run_in_terminal` tool when required.
-
----
-
-## 🛠️ The 11-Step Orchestration Pipeline
-
-### Phase 1: Initialization & Plan Creation
-
-**Step 1: Acknowledge & Initialize**
-When the user asks to clone a GSheet dashboard, acknowledge the request.
-
-**Step 2: Require Dashboard Name & Initialize Plan (PAUSE)**
-1. Check if the user provided a `dashboard-name`. If not, ask:
-   > *"What is the name of the dashboard we are cloning (e.g., `sales-kpi-dashboard`)? This will be used for our folder structures."*
-2. Once `dashboard-name` is established, physically create the tracking file at:
-   `sandbox/dashboards/<dashboard-name>/agent/plan-follower.md`
-   with the following initial content:
-
-```markdown
-# 📋 Dashboard Cloning Execution Plan (`<dashboard-name>`)
-
-| Step # | Step Description | Status | Output Artifact / Action |
-|---|---|---|---|
-| Step 1 | Acknowledge & Initialize | COMPLETED | Pipeline initialized |
-| Step 2 | Require Dashboard Name | COMPLETED | `dashboard-name` captured & plan created |
-| Step 3 | Generate Reverse-Engineering Prompt | IN_PROGRESS | Gemini Canvas prompt generation |
-| Step 4 | Retrieve Specifications | NOT_STARTED | `specifications.md` |
-| Step 5 | Export CSV Data | NOT_STARTED | `<dashboard-name>-data.csv` |
-| Step 6 | Export HTML DOM | NOT_STARTED | `iframe-html/<dashboard-name>.html` |
-| Step 7 | Execute HTML Split Script | NOT_STARTED | Split CSS/HTML assets |
-| Step 8 | Require Store Destination Target | NOT_STARTED | `STORE_DESTINATION_TARGET` captured |
-| Step 9 | Execute Dashboard Cloner Compilation | NOT_STARTED | React codebase generated |
-| Step 10 | Build & Verify | NOT_STARTED | `npm run build` output |
-| Step 11 | Final Handoff | NOT_STARTED | Handoff summary |
-```
-**Stop and wait for the user's confirmation before advancing.**
-
-**Step 3: Generate Reverse-Engineering Prompt**
-1. Execute `.github/skills/gsheet-react-dashboard-reverse/references/reverse-prompt-template.md` (substituting `GSHEET_DASHBORD_SHEET_NAME` with `<dashboard-name>`).
-2. Output the full prompt to the user in a copyable markdown code block.
-3. Update `plan-follower.md`: Mark Step 3 as `COMPLETED` and Step 4 as `IN_PROGRESS`.
-
-### Phase 2: Manual User Extractions (PAUSE)
-
-**Step 4: Retrieve Specifications**
-Ask the user to apply the prompt in Gemini Canvas and save the output exactly to:
-`sandbox/dashboards/<dashboard-name>/specifications.md`
-*Wait for user confirmation.* Once confirmed, update `plan-follower.md`: Mark Step 4 as `COMPLETED` and Step 5 as `IN_PROGRESS`.
-
-**Step 5: Export CSV Data**
-Ask the user to export the sheet containing dashboard data as a CSV and save it to:
-`sandbox/dashboards/<dashboard-name>/<dashboard-name>-data.csv`
-*Wait for user confirmation.* Once confirmed, update `plan-follower.md`: Mark Step 5 as `COMPLETED` and Step 6 as `IN_PROGRESS`.
-
-**Step 6: Export HTML DOM**
-Ask the user to use Chrome Inspect tool to copy the dashboard iframe HTML and save it to:
-`sandbox/dashboards/<dashboard-name>/iframe-html/<dashboard-name>.html`
-*Wait for user confirmation.* Once confirmed, update `plan-follower.md`: Mark Step 6 as `COMPLETED` and Step 7 as `IN_PROGRESS`.
-
-### Phase 3: Automated Asset Processing
-
-**Step 7: Execute HTML Split Script**
-1. Execute terminal command:
-   ```bash
-   mkdir -p sandbox/dashboards/<dashboard-name>/iframe-html/
-   bash .github/skills/html-split/scripts/run-split.sh sandbox/dashboards/<dashboard-name>/iframe-html/<dashboard-name>.html sandbox/dashboards/<dashboard-name>/ --rendering-only
-   mv sandbox/dashboards/<dashboard-name>/script.js sandbox/dashboards/<dashboard-name>/iframe-html/
-   ```
-2. Update `plan-follower.md`: Mark Step 7 as `COMPLETED` and Step 8 as `IN_PROGRESS`.
-
-**Step 8: Require Store Destination Target (PAUSE)**
-1. Ask the user:
-   > *"Where should the React application store its state? Choose from: `in-memory`, `localStorage`, `sessionStorage`, `IndexedDB`, `REST/GraphQL API`, or `host-callback`."*
-2. *Wait for user response.*
-3. Once received, update `plan-follower.md`: Mark Step 8 as `COMPLETED` and Step 9 as `IN_PROGRESS`.
-
-### Phase 4: Code Generation & Verification
-
-**Step 9: Execute Dashboard Cloner Compilation**
-1. Act as the React compiler specified in `.github/skills/gsheet-react-dashboard-cloner/SKILL.md`.
-2. Generate the React application files using the 3 staged inputs from `sandbox/dashboards/<dashboard-name>/`.
-3. Update `plan-follower.md`: Mark Step 9 as `COMPLETED` and Step 10 as `IN_PROGRESS`.
-
-**Step 10: Build & Verify**
-1. Run `npm run build` or the project compilation check in the terminal.
-2. Output build verification results.
-3. Update `plan-follower.md`: Mark Step 10 as `COMPLETED` and Step 11 as `IN_PROGRESS`.
-
-**Step 11: Final Handoff**
-1. Inform the user that the cloning process is complete.
-2. Update `plan-follower.md`: Mark Step 11 as `COMPLETED`.
-3. Provide absolute paths to the ready-to-use React feature component.
-
----
-
-## INITIALIZATION PROTOCOL
-
-Acknowledge execution of this orchestrator by replying strictly with:
-> **"ORCHESTRATOR READY. Checking for existing state in `sandbox/dashboards/<dashboard-name>/agent/plan-follower.md`..."**
+export interface MaturityCategory {
+  id: string;
+  name: string;
+  icon: string;
+  currentLevel: number;
+  targetLevel: number;
+  description: string;
+  capabilities: string[];
+}
 EOF
 
-echo "🧪 Verifying agent profile file..."
-test -f .github/agents/gsheet-to-react-orchestrator.md
+# 2. Update MaturityMatrixMapper
+echo "✏️ Modifying existing file: 'backend/src/services/maturity-matrix/mapper/maturity-matrix.mapper.ts'"
+cat << 'EOF' > backend/src/services/maturity-matrix/mapper/maturity-matrix.mapper.ts
+import {
+  MaturityPillarDefinition,
+  AssessmentsPyResult,
+  MaturityMatrixData,
+  MaturityApplication,
+} from "../../../../../shared/services/maturity-matrix";
+import { LeaderApplication } from "../../../../../shared/services/maturity-matrix/model/leader-info";
+import pillarsData from "../data/maturity-matrix-pillars.json";
+import leaderAssociationsData from "../data/leader-application-association.json";
 
-echo "✅ feat(agent): Updated gsheet-to-react-orchestrator to initialize and physically maintain plan-follower.md tracking file"
+export const PILLARS_DEFINITIONS: MaturityPillarDefinition[] = pillarsData as MaturityPillarDefinition[];
+
+// Map imported associations into typed LeaderApplication array
+const LEADER_ASSOCIATIONS: LeaderApplication[] = (
+  leaderAssociationsData as unknown as Array<{ leader: string; applications?: string[]; application?: string[] }>
+).map((item) => ({
+  leader: item.leader,
+  application: item.applications || item.application || [],
+}));
+
+// Create a lookup map for fast application -> leader retrieval
+const APP_TO_LEADER_MAP = new Map<string, string>();
+for (const assoc of LEADER_ASSOCIATIONS) {
+  for (const appCode of assoc.application) {
+    APP_TO_LEADER_MAP.set(appCode, assoc.leader);
+  }
+}
+
+export class MaturityMatrixMapper {
+  /**
+   * Converts raw python CSV row extracts into structured MaturityMatrixData JSON.
+   */
+  public static toMaturityMatrixData(pyResult: AssessmentsPyResult): MaturityMatrixData {
+    const rows = pyResult.rows || [];
+    const appsMap = new Map<string, MaturityApplication>();
+
+    let currentAppCode = '';
+    let currentPillarKey = '';
+
+    for (const row of rows) {
+      if (!row || row.length < 4) continue;
+
+      const col1 = row[1]?.trim() || '';
+      const col2 = row[2]?.trim() || '';
+      const col3 = row[3]?.trim() || '';
+
+      // Header row detecting Application Code and Pillar
+      if (col1 && col3 && PILLARS_DEFINITIONS.some((p) => p.key === col3)) {
+        currentAppCode = col1;
+        currentPillarKey = col3;
+
+        let app = appsMap.get(currentAppCode);
+        if (!app) {
+          app = {
+            id: currentAppCode.toLowerCase().replace(/_/g, '-'),
+            name: this.formatAppName(currentAppCode),
+            code: currentAppCode,
+            leader: APP_TO_LEADER_MAP.get(currentAppCode) || '',
+            toGenerate: true,
+            lastAssessmentDate: null,
+            prevAssessmentDate: null,
+            commentary: '',
+            pillars: {},
+          };
+
+          PILLARS_DEFINITIONS.forEach((def) => {
+            app!.pillars[def.key] = {
+              key: def.key,
+              label: def.label,
+              icon: def.icon,
+              assessor: '-',
+              date: null,
+              score: 0.0,
+              level: 'Lvl 0',
+              prevDate: null,
+              prevScore: 0.0,
+              prevLevel: 'Lvl 0',
+              target: false,
+              lastExtract: 0,
+              prevExtract: 0,
+              diffLevel: 0,
+              diffScore: 0,
+            };
+          });
+
+          appsMap.set(currentAppCode, app);
+        }
+
+        const assessor = col2 && col2 !== 'Unknown - ???' ? col2 : '-';
+        if (app.pillars[currentPillarKey]) {
+          app.pillars[currentPillarKey].assessor = assessor;
+        }
+        continue;
+      }
+
+      if (!currentAppCode || !currentPillarKey) continue;
+      const app = appsMap.get(currentAppCode);
+      if (!app || !app.pillars[currentPillarKey]) continue;
+
+      const pillar = app.pillars[currentPillarKey];
+      const rowLabel = col2;
+      const dateVal = this.parseDate(row[4]);
+      const metricType = row[5]?.trim() || '';
+      const rawVal = row[6]?.trim() || '';
+
+      if (rowLabel === 'Last Released Assessment -1') {
+        if (dateVal) pillar.prevDate = dateVal;
+        if (metricType === 'Score') pillar.prevScore = this.parseScore(rawVal);
+        if (metricType === 'Level') pillar.prevLevel = this.parseLevel(rawVal);
+      } else if (rowLabel === 'Last Released Assessment') {
+        if (dateVal) pillar.date = dateVal;
+        if (metricType === 'Score') pillar.score = this.parseScore(rawVal);
+        if (metricType === 'Level') pillar.level = this.parseLevel(rawVal);
+      } else if (rowLabel === 'Last Pending Assessment snapshot -1') {
+        pillar.prevExtract = this.parseExtract(rawVal);
+      } else if (rowLabel === 'Last Pending Assessment snapshot') {
+        pillar.lastExtract = this.parseExtract(rawVal);
+      }
+    }
+
+    const applications = Array.from(appsMap.values()).map((app) => {
+      let lastDate: string | null = null;
+      let prevDate: string | null = null;
+
+      for (const pillar of Object.values(app.pillars)) {
+        if (pillar.date && (!lastDate || pillar.date > lastDate)) {
+          lastDate = pillar.date;
+        }
+        if (pillar.prevDate && (!prevDate || pillar.prevDate > prevDate)) {
+          prevDate = pillar.prevDate;
+        }
+
+        // Compute diffScore and diffLevel (default to 0 if no diff)
+        const score = pillar.score ?? 0;
+        const prevScore = pillar.prevScore ?? 0;
+        const diffScore = Number((score - prevScore).toFixed(2));
+        pillar.diffScore = isNaN(diffScore) ? 0 : diffScore;
+
+        const currLvl = MaturityMatrixMapper.parseLevelNum(pillar.level);
+        const prevLvl = MaturityMatrixMapper.parseLevelNum(pillar.prevLevel);
+        pillar.diffLevel = (currLvl !== null && prevLvl !== null) ? (currLvl - prevLvl) : 0;
+      }
+
+      app.lastAssessmentDate = lastDate;
+      app.prevAssessmentDate = prevDate;
+      return app;
+    });
+
+    const timestamp = pyResult.datetimeExtract || new Date().toISOString();
+
+    return {
+      updatedAt: timestamp,
+      generatedAt: timestamp,
+      pillars: PILLARS_DEFINITIONS,
+      applications,
+    };
+  }
+
+  private static parseLevelNum(lvl: string | null | undefined): number | null {
+    if (!lvl) return null;
+    const match = lvl.match(/-?\d+/);
+    return match ? parseInt(match[0], 10) : null;
+  }
+
+  private static parseDate(val: string | undefined): string | null {
+    if (!val) return null;
+    const trimmed = val.trim();
+    return trimmed === '' || trimmed === 'null' || trimmed === 'None' ? null : trimmed;
+  }
+
+  private static parseScore(val: string | undefined): number {
+    if (!val) return 0.0;
+    const trimmed = val.trim();
+    if (trimmed === 'None' || trimmed === 'null' || trimmed === '') return 0.0;
+    const num = parseFloat(trimmed.replace(',', '.'));
+    return isNaN(num) ? 0.0 : Math.round(num * 100) / 100;
+  }
+
+  private static parseLevel(val: string | undefined): string {
+    if (!val) return 'Lvl 0';
+    const trimmed = val.trim();
+    if (trimmed === 'None' || trimmed === 'null' || trimmed === '') return 'Lvl 0';
+    const num = parseInt(trimmed.replace(',', '.'), 10);
+    return isNaN(num) ? 'Lvl 0' : `Lvl ${num}`;
+  }
+
+  private static parseExtract(val: string | undefined): number {
+    if (!val) return 0;
+    const trimmed = val.trim();
+    if (trimmed === 'None' || trimmed === 'null' || trimmed === '') return 0;
+    const str = trimmed.replace(',', '.');
+    const num = parseFloat(str);
+    if (isNaN(num)) return 0;
+    if (num <= 1.0 && num > 0 && str.includes('.')) {
+      return Math.round(num * 100);
+    }
+    return Math.round(num);
+  }
+
+  private static formatAppName(code: string): string {
+    if (!code) return '';
+    if (code === code.toUpperCase() && !code.includes('_') && code.length <= 5) {
+      return code;
+    }
+    return code
+      .split('_')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  }
+}
+EOF
+
+# 3. Update MaturityMatrixTab component
+echo "✏️ Modifying existing file: 'webview/src/features/maturity-matrix/components/tabs/MaturityMatrixTab.tsx'"
+cat << 'EOF' > webview/src/features/maturity-matrix/components/tabs/MaturityMatrixTab.tsx
+import React, { useState, useMemo } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useMaturityMatrixStore } from '../../store/useMaturityMatrixStore';
+import type { MaturityApplication, MaturityPillarDefinition } from '../../types/maturity-matrix.types';
+
+interface MaturityMatrixTabProps {
+  applications: MaturityApplication[];
+  onOriginClick?: (sheet: string, col: string, row: number | string) => void;
+}
+
+const DEFAULT_PILLARS: MaturityPillarDefinition[] = [
+  { key: 'DATA', label: 'DATA', icon: '💾', rowOffset: 0 },
+  { key: 'DELIVERY', label: 'DELIVERY', icon: '🚚', rowOffset: 7 },
+  { key: 'DESIGN', label: 'DESIGN', icon: '🎨', rowOffset: 14 },
+  { key: 'DEV', label: 'DEV', icon: '💻', rowOffset: 21 },
+  { key: 'INFRA', label: 'INFRA', icon: '🏗️', rowOffset: 28 },
+  { key: 'PROCESS_PRACTICES', label: 'PROCESS PRACTICES', icon: '⚙️', rowOffset: 42 },
+  { key: 'QUALITY', label: 'QUALITY', icon: '🧪', rowOffset: 49 },
+  { key: 'OPERATION', label: 'OPERATION', icon: '📊', rowOffset: 35 },
+  { key: 'SECURITY', label: 'SECURITY', icon: '🛡️', rowOffset: 56 },
+  { key: 'STREAMING', label: 'STREAMING', icon: '📡', rowOffset: 63 },
+  { key: 'ACCESSIBILITY', label: 'ACCESSIBILITY', icon: '♿', rowOffset: 70 },
+];
+
+const KNOWN_START_ROWS: Record<string, number> = {
+  AVAILABLE_SHIPMENT: 78,
+  APO: 2,
+  BOM_MANAGER: 156,
+  DPCP_FORCAST: 233,
+  MOLD: 310,
+  MPS_APO: 387,
+  MRP_EXCHANGE: 464,
+  ORDER_AMENDMENT_BACK: 541,
+  ORDER_AMENDMENT_FRONT: 618,
+  ORDER_DELIVERY_PARTNER: 695,
+  ORDER_MANAGEMENT_PURCHASE_ORDER_API: 772,
+  ORDERMAX: 849,
+  PRODCOM: 926,
+  PRODCOM_API: 1003,
+  PSV: 1080,
+  RFQ_AND_SHARING: 1157,
+  SAVE_THE_STOCKS: 1234,
+  SCAN_DELAY: 1311,
+  SHU_SSCC: 1388,
+  SMART_SUPPLY_BACK: 1465,
+  SMART_SUPPLY_FRONT: 1542,
+  SMDI: 1619,
+};
+
+function getAppStartRow(app: MaturityApplication, index: number): number {
+  if (app.startRow !== undefined) return app.startRow;
+  if (KNOWN_START_ROWS[app.code]) return KNOWN_START_ROWS[app.code];
+  return index * 75 + 2;
+}
+
+function getAppRowIdx(app: MaturityApplication, index: number): number {
+  if (app.rowIdx !== undefined) return app.rowIdx;
+  return index + 2;
+}
+
+function getDateHealth(dateStr: string | null | undefined) {
+  if (!dateStr || dateStr === 'null') {
+    return {
+      status: 'yellow',
+      label: 'Yellow: No assessment',
+      badgeBg: 'bg-yellow-100 text-yellow-900 border-yellow-300',
+      dotColor: 'bg-yellow-500',
+      desc: 'No assessment',
+    };
+  }
+
+  const parts = dateStr.split('-');
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10);
+  const day = parseInt(parts[2], 10);
+  const assessDate = new Date(year, month - 1, day);
+  const TODAY_ANCHOR = new Date('2026-09-14T00:00:00Z');
+  const diffMs = TODAY_ANCHOR.getTime() - assessDate.getTime();
+  const diffDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+  const diffMonths = Math.floor(diffDays / 30.4);
+
+  if (diffDays <= 15) {
+    return {
+      status: 'green',
+      label: 'Green: ≤ 15 Days',
+      badgeBg: 'bg-emerald-100 text-emerald-900 border-emerald-300',
+      dotColor: 'bg-emerald-500',
+      desc: `${diffDays}d ago (≤15d)`,
+    };
+  } else if (diffDays <= 182) {
+    return {
+      status: 'blue',
+      label: 'Blue: Valid',
+      badgeBg: 'bg-blue-100 text-blue-900 border-blue-300',
+      dotColor: 'bg-blue-500',
+      desc: `Valid (${diffMonths}m ago)`,
+    };
+  } else {
+    return {
+      status: 'red',
+      label: 'Red: Outdated >6M',
+      badgeBg: 'bg-rose-100 text-rose-900 border-rose-300',
+      dotColor: 'bg-rose-500',
+      desc: `Outdated (${diffMonths}m ago)`,
+    };
+  }
+}
+
+function CellOriginTag({
+  sheet,
+  col,
+  row,
+  showCellOrigins,
+  onOriginClick,
+  className = '',
+}: {
+  sheet: string;
+  col: string;
+  row: number | string;
+  showCellOrigins: boolean;
+  onOriginClick?: (sheet: string, col: string, row: number | string) => void;
+  className?: string;
+}) {
+  if (!showCellOrigins) return null;
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        if (onOriginClick) {
+          onOriginClick(sheet, col, row);
+        } else {
+          console.log(`Opening sheet '${sheet}'!${col}${row}`);
+        }
+      }}
+      className={`inline-flex items-center gap-0.5 text-[8px] font-mono font-bold text-indigo-600 hover:text-white bg-indigo-50 hover:bg-indigo-600 border border-indigo-200 hover:border-indigo-600 rounded px-1 py-0.5 transition-all cursor-pointer shadow-xs ${className}`}
+      title={`Click to open Google Sheet and select cell '${sheet}'!${col}${row}`}
+    >
+      <span>
+        [{col}:{row}]
+      </span>
+      <svg className="w-2 h-2 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+        <polyline points="15 3 21 3 21 9" />
+        <line x1="10" y1="14" x2="21" y2="3" />
+      </svg>
+    </button>
+  );
+}
+
+function CommentaryEditor({
+  appCode,
+  commentary,
+  isEditing,
+  draftVal,
+  onStartEdit,
+  onSave,
+  onCancel,
+  onDraftChange,
+}: {
+  appCode: string;
+  commentary: string;
+  isEditing: boolean;
+  draftVal: string;
+  onStartEdit: (code: string, commentary: string) => void;
+  onSave: (code: string) => void;
+  onCancel: (code: string) => void;
+  onDraftChange: (code: string, val: string) => void;
+}) {
+  return (
+    <div className="p-4 bg-slate-50/50 border-t border-slate-200 flex flex-col md:flex-row justify-between gap-3 text-xs">
+      <div className="flex-1">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="font-bold text-slate-700 flex items-center gap-1.5">
+            <svg className="w-3.5 h-3.5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+            <span>Application Goals &amp; Progress Commentary:</span>
+          </span>
+          {isEditing ? (
+            <div className="flex items-center gap-2">
+              <Button onClick="{()"> onSave(appCode)} size="sm" type="button" variant="ghost"
+                className="h-6 px-2 text-xs text-emerald-600 font-bold hover:bg-emerald-50 hover:text-emerald-700"
+              >
+                Save Note
+              </Button>
+              <Button onClick="{()"> onCancel(appCode)} size="sm" type="button" variant="ghost"
+                className="h-6 px-2 text-xs text-slate-500 hover:bg-slate-100"
+              >
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <Button onClick="{()"> onStartEdit(appCode, commentary)} size="sm" type="button" variant="ghost"
+              className="h-6 px-2 text-xs text-indigo-600 font-semibold hover:bg-indigo-50"
+            >
+              Edit Note
+            </Button>
+          )}
+        </div>
+        {isEditing ? (
+          <Textarea onChange="{(e)"> onDraftChange(appCode, e.target.value)}
+            value={draftVal}
+            rows={3}
+            className="border-indigo-300 focus-visible:ring-indigo-500 text-xs font-mono"
+          />
+        ) : (
+          <div className="p-2.5 bg-white border border-slate-200 rounded-lg text-slate-600 whitespace-pre-line font-mono text-[11px] leading-relaxed">
+            {commentary || 'No commentary recorded for this application.'}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MatrixTable({
+  app,
+  pillars,
+  selectedPillar,
+  showCellOrigins,
+  onToggleTarget,
+  onOriginClick,
+  appIndex,
+}: {
+  app: MaturityApplication;
+  pillars: MaturityPillarDefinition[];
+  selectedPillar: string;
+  showCellOrigins: boolean;
+  onToggleTarget: (appCode: string, pillarKey: string) => void;
+  onOriginClick?: (sheet: string, col: string, row: number | string) => void;
+  appIndex: number;
+}) {
+  const visiblePillars = useMemo(
+    () => (selectedPillar === 'ALL' ? pillars : pillars.filter((p) => p.key === selectedPillar)),
+    [pillars, selectedPillar],
+  );
+
+  const startRow = getAppStartRow(app, appIndex);
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-left border-collapse text-xs">
+        <thead>
+          <tr className="bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 text-white font-semibold shadow-sm border-b-2 border-indigo-400">
+            <th className="py-3 px-3.5 border-r border-blue-500/80 w-36 sticky left-0 bg-blue-600 text-white z-10 shadow-sm">
+              <span className="tracking-wide uppercase text-[11px]">Assessment Type</span>
+            </th>
+            <th className="py-3 px-2.5 border-r border-indigo-500/60 w-24 text-blue-100">
+              <span className="tracking-wide uppercase text-[11px]">Metric</span>
+            </th>
+            {visiblePillars.map((p) => (
+              <th key={p.key} className="py-3 px-3 border-r border-indigo-500/40 text-center min-w-[125px] bg-indigo-600/20">
+                <div className="flex items-center justify-center gap-1.5 text-white">
+                  <span className="text-base">{p.icon}</span>
+                  <span className="font-bold tracking-wide uppercase text-[11px]">{p.label}</span>
+                </div>
+              </th>
+            ))}
+          </tr>
+        </thead>
+
+        <tbody className="divide-y divide-slate-200">
+          <tr className="bg-amber-50/50 hover:bg-amber-50/80 transition-colors">
+            <td className="py-2.5 px-3 font-semibold text-slate-700 border-r border-slate-200 sticky left-0 bg-amber-50/90 z-10">
+              Expected Target
+            </td>
+            <td className="py-2.5 px-2 text-slate-500 font-mono text-[11px] border-r border-slate-200">Target ⬆️</td>
+            {visiblePillars.map((p) => {
+              const pillarVal = app.pillars[p.key];
+              const isTargetActive = Boolean(pillarVal?.target);
+              return (
+                <td key={p.key} className="py-2.5 px-3 text-center border-r border-slate-200">
+                  <Button onClick="{()"> onToggleTarget(app.code, p.key)}
+                    size="xs"
+                    type="button"
+                    variant="outline"
+                    className={
+                      isTargetActive
+                        ? 'bg-amber-400 text-amber-950 font-bold hover:bg-amber-500 scale-105 shadow-sm h-6 px-2.5 text-xs'
+                        : 'border border-slate-300 bg-white text-slate-600 hover:text-slate-800 hover:bg-slate-100 font-semibold h-6 px-2.5 text-xs'
+                    }
+                    title={isTargetActive ? 'Target Improvement Indicator is Active (Click to remove)' : 'Click to mark pillar target ⬆️'}
+                  >
+                    {isTargetActive ? '⬆️ TARGET' : '+ Target'}
+                  </Button>
+                </td>
+              );
+            })}
+          </tr>
+
+          <tr className="hover:bg-slate-50">
+            <td rowSpan={3} className="py-2 px-3 font-semibold text-slate-700 border-r border-slate-200 sticky left-0 bg-white z-10">
+              Last Assessment
+              <div className="text-[10px] text-slate-400 font-normal mt-0.5">Compared to TODAY</div>
+              <div className="text-[9px] text-indigo-500 font-mono font-medium mt-0.5">💡 hover for origin</div>
+            </td>
+            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200">Date</td>
+            {visiblePillars.map((p) => {
+              const pillarVal = app.pillars[p.key];
+              const cellRow = startRow + p.rowOffset + 1;
+              const health = getDateHealth(pillarVal?.date);
+
+              return (
+                <td
+                  key={p.key}
+                  className="py-2 px-3 text-center border-r border-slate-200 cursor-help transition-colors hover:bg-indigo-50/30"
+                  title={`'Assessments-Extracts'!E${cellRow} [Column E : Row ${cellRow}] • Last Assessment Date | Current Value: ${pillarVal?.date || 'null'}\nStatus: ${health.label}`}
+                >
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-mono rounded border ${health.badgeBg}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${health.dotColor}`} />
+                      <span>{pillarVal?.date || 'null'}</span>
+                    </span>
+                    <span className="text-[9px] text-slate-500 font-medium">{health.desc}</span>
+                    <CellOriginTag className="mt-0.5" col="E" onOriginClick="{onOriginClick}" row="{cellRow}" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
+                  </div>
+                </td>
+              );
+            })}
+          </tr>
+
+          <tr className="hover:bg-slate-50">
+            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200">Score</td>
+            {visiblePillars.map((p) => {
+              const pillarVal = app.pillars[p.key];
+              const cellRow = startRow + p.rowOffset + 1;
+              const diffScore = pillarVal?.diffScore;
+
+              return (
+                <td
+                  key={p.key}
+                  className="py-2 px-3 text-center border-r border-slate-200 cursor-help transition-colors hover:bg-indigo-50/30"
+                  title={`'Assessments-Extracts'!G${cellRow} [Column G : Row ${cellRow}] • Last Assessment Score | Current Value: ${Number(pillarVal?.score ?? 0).toFixed(2)}`}
+                >
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-bold text-slate-900">{Number(pillarVal?.score ?? 0).toFixed(2)}</span>
+                      {diffScore !== null && diffScore !== undefined && diffScore > 0 && (
+                        <span className="text-[10px] font-bold text-emerald-600">+{diffScore.toFixed(2)}</span>
+                      )}
+                      {diffScore !== null && diffScore !== undefined && diffScore < 0 && (
+                        <span className="text-[10px] font-bold text-rose-600">{diffScore.toFixed(2)}</span>
+                      )}
+                    </div>
+                    <CellOriginTag className="mt-0.5" col="G" onOriginClick="{onOriginClick}" row="{cellRow}" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
+                  </div>
+                </td>
+              );
+            })}
+          </tr>
+
+          <tr className="hover:bg-slate-50 border-b border-slate-300">
+            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200">Level</td>
+            {visiblePillars.map((p) => {
+              const pillarVal = app.pillars[p.key];
+              const levelRow = startRow + p.rowOffset + 2;
+              const diffLevel = pillarVal?.diffLevel;
+
+              return (
+                <td
+                  key={p.key}
+                  className="py-2 px-3 text-center border-r border-slate-200 cursor-help transition-colors hover:bg-indigo-50/30"
+                  title={`'Assessments-Extracts'!G${levelRow} [Column G : Row ${levelRow}] • Last Assessment Level | Current Value: ${pillarVal?.level || 'Lvl 0'}`}
+                >
+                  <div className="flex flex-col items-center justify-center gap-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <Badge className="text-[11px] py-0.5 px-2.5" variant="default">
+                        {pillarVal?.level || 'Lvl 0'}
+                      </Badge>
+                      {diffLevel !== null && diffLevel !== undefined && diffLevel > 0 && (
+                        <span className="text-[10px] font-bold text-emerald-600">+{diffLevel}</span>
+                      )}
+                      {diffLevel !== null && diffLevel !== undefined && diffLevel < 0 && (
+                        <span className="text-[10px] font-bold text-rose-600">{diffLevel}</span>
+                      )}
+                    </div>
+                    <CellOriginTag className="mt-0.5" col="G" onOriginClick="{onOriginClick}" row="{levelRow}" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
+                  </div>
+                </td>
+              );
+            })}
+          </tr>
+
+          <tr className="bg-slate-50/70 hover:bg-slate-100/70">
+            <td rowSpan={3} className="py-2 px-3 font-semibold text-slate-600 border-r border-slate-200 sticky left-0 bg-slate-50/90 z-10">
+              Last Assessment - 1
+              <div className="text-[10px] text-slate-400 font-normal mt-0.5">Previous Session</div>
+            </td>
+            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200">Date</td>
+            {visiblePillars.map((p) => {
+              const pillarVal = app.pillars[p.key];
+              const prevRow = startRow + p.rowOffset + 3;
+
+              return (
+                <td
+                  key={p.key}
+                  className="py-2 px-3 text-center text-slate-500 font-mono text-[11px] border-r border-slate-200 cursor-help hover:bg-slate-200/50"
+                  title={`'Assessments-Extracts'!E${prevRow} [Column E : Row ${prevRow}] • Last Assessment - 1 Date | Current Value: ${pillarVal?.prevDate || 'null'}`}
+                >
+                  <div className="flex flex-col items-center justify-center">
+                    <span>{pillarVal?.prevDate || '—'}</span>
+                    <CellOriginTag className="mt-0.5" col="E" onOriginClick="{onOriginClick}" row="{prevRow}" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
+                  </div>
+                </td>
+              );
+            })}
+          </tr>
+
+          <tr className="bg-slate-50/70 hover:bg-slate-100/70">
+            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200">Score</td>
+            {visiblePillars.map((p) => {
+              const pillarVal = app.pillars[p.key];
+              const prevRow = startRow + p.rowOffset + 3;
+
+              return (
+                <td
+                  key={p.key}
+                  className="py-2 px-3 text-center text-slate-600 font-semibold border-r border-slate-200 cursor-help hover:bg-slate-200/50"
+                  title={`'Assessments-Extracts'!G${prevRow} [Column G : Row ${prevRow}] • Last Assessment - 1 Score | Current Value: ${Number(pillarVal?.prevScore ?? 0).toFixed(2)}`}
+                >
+                  <div className="flex flex-col items-center justify-center">
+                    <span>{Number(pillarVal?.prevScore ?? 0).toFixed(2)}</span>
+                    <CellOriginTag className="mt-0.5" col="G" onOriginClick="{onOriginClick}" row="{prevRow}" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
+                  </div>
+                </td>
+              );
+            })}
+          </tr>
+
+          <tr className="bg-slate-50/70 hover:bg-slate-100/70 border-b-2 border-indigo-100">
+            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200">Level</td>
+            {visiblePillars.map((p) => {
+              const pillarVal = app.pillars[p.key];
+              const prevLevelRow = startRow + p.rowOffset + 4;
+
+              return (
+                <td
+                  key={p.key}
+                  className="py-2 px-3 text-center text-slate-500 font-semibold border-r border-slate-200 cursor-help hover:bg-slate-200/50"
+                  title={`'Assessments-Extracts'!G${prevLevelRow} [Column G : Row ${prevLevelRow}] • Last Assessment - 1 Level | Current Value: ${pillarVal?.prevLevel || 'Lvl 0'}`}
+                >
+                  <div className="flex flex-col items-center justify-center">
+                    <span>{pillarVal?.prevLevel || 'Lvl 0'}</span>
+                    <CellOriginTag className="mt-0.5" col="G" onOriginClick="{onOriginClick}" row="{prevLevelRow}" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
+                  </div>
+                </td>
+              );
+            })}
+          </tr>
+
+          <tr className="bg-slate-100 text-slate-700 font-semibold">
+            <td colSpan={visiblePillars.length + 2} className="py-1.5 px-3 text-[11px] uppercase tracking-wider text-slate-600">
+              New Pending Assessment Follow-up (Extract Progression)
+            </td>
+          </tr>
+
+          <tr className="hover:bg-slate-50">
+            <td className="py-2 px-3 font-semibold text-slate-700 border-r border-slate-200 sticky left-0 bg-white z-10">
+              Assessor
+              <div className="text-[10px] text-slate-400 font-normal mt-0.5">Extracts Col C</div>
+            </td>
+            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200 text-[11px]">Assessor</td>
+            {visiblePillars.map((p) => {
+              const pillarVal = app.pillars[p.key];
+              const assessorRow = startRow + p.rowOffset;
+              const assessorName = pillarVal?.assessor || '-';
+              const hasOwner = Boolean(assessorName && assessorName !== '-');
+
+              return (
+                <td
+                  key={p.key}
+                  className="py-2 px-2 text-center text-[11px] text-slate-700 font-medium border-r border-slate-200 cursor-help hover:bg-indigo-50/30"
+                  title={`'Assessments-Extracts'!C${assessorRow} [Column C : Row ${assessorRow}] • Assessor / Owner | Current Value: ${assessorName}`}
+                >
+                  <div className="flex flex-col items-center justify-center">
+                    <span
+                      className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium truncate max-w-[130px] ${
+                        hasOwner
+                          ? 'bg-slate-100 text-slate-800 border border-slate-200'
+                          : 'bg-slate-50 text-slate-400 border border-dashed border-slate-200'
+                      }`}
+                    >
+                      {assessorName}
+                    </span>
+                    <CellOriginTag className="mt-0.5" col="C" onOriginClick="{onOriginClick}" row="{assessorRow}" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
+                  </div>
+                </td>
+              );
+            })}
+          </tr>
+
+          <tr className="hover:bg-slate-50">
+            <td className="py-2 px-3 font-semibold text-slate-700 border-r border-slate-200 sticky left-0 bg-white z-10">
+              Last extract
+              <div className="text-[10px] text-slate-400 font-normal">2025-05-11</div>
+            </td>
+            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200">Progress</td>
+            {visiblePillars.map((p) => {
+              const pillarVal = app.pillars[p.key];
+              const lastExtractRow = startRow + p.rowOffset + 5;
+              const prog = Math.round(Number(pillarVal?.lastExtract ?? 0));
+
+              return (
+                <td
+                  key={p.key}
+                  className="py-2 px-3 border-r border-slate-200 cursor-help hover:bg-indigo-50/30"
+                  title={`'Assessments-Extracts'!G${lastExtractRow} [Column G : Row ${lastExtractRow}] • Last Pending Assessment Snapshot Progress | Current Value: ${prog}%`}
+                >
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="font-bold text-slate-900 text-xs">{prog}%</span>
+                    <div className="w-16 bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${
+                          prog === 100 ? 'bg-emerald-500' : prog > 0 ? 'bg-indigo-600' : 'bg-slate-300'
+                        }`}
+                        style={{ width: `${prog}%` }}
+                      />
+                    </div>
+                    <CellOriginTag className="mt-0.5" col="G" onOriginClick="{onOriginClick}" row="{lastExtractRow}" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
+                  </div>
+                </td>
+              );
+            })}
+          </tr>
+
+          <tr className="hover:bg-slate-50">
+            <td className="py-2 px-3 font-semibold text-slate-600 border-r border-slate-200 sticky left-0 bg-white z-10">
+              Previous extract
+              <div className="text-[10px] text-slate-400 font-normal">2025-04-11</div>
+            </td>
+            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200">Progress</td>
+            {visiblePillars.map((p) => {
+              const pillarVal = app.pillars[p.key];
+              const prevExtractRow = startRow + p.rowOffset + 6;
+              const prevProg = Math.round(Number(pillarVal?.prevExtract ?? 0));
+
+              return (
+                <td
+                  key={p.key}
+                  className="py-2 px-3 text-center text-slate-500 border-r border-slate-200 cursor-help hover:bg-slate-200/50"
+                  title={`'Assessments-Extracts'!G${prevExtractRow} [Column G : Row ${prevExtractRow}] • Previous Pending Assessment Snapshot Progress | Current Value: ${prevProg}%`}
+                >
+                  <div className="flex flex-col items-center justify-center">
+                    <span>{prevProg}%</span>
+                    <CellOriginTag className="mt-0.5" col="G" onOriginClick="{onOriginClick}" row="{prevExtractRow}" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
+                  </div>
+                </td>
+              );
+            })}
+          </tr>
+
+          <tr className="bg-slate-50 font-bold">
+            <td className="py-2 px-3 text-slate-800 border-r border-slate-200 sticky left-0 bg-slate-50 z-10">Filled Progress Indicator</td>
+            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200 text-[10px]">Trend</td>
+            {visiblePillars.map((p) => {
+              const pillarVal = app.pillars[p.key];
+              const curr = Math.round(Number(pillarVal?.lastExtract ?? 0));
+              const prev = Math.round(Number(pillarVal?.prevExtract ?? 0));
+
+              let trendIcon = '➡️';
+              let trendColor = 'text-slate-600 bg-slate-100';
+              let trendLabel = 'No Change';
+
+              if (curr === 100) {
+                trendIcon = '✅';
+                trendColor = 'text-emerald-700 bg-emerald-50';
+                trendLabel = 'Finished';
+              } else if (curr > prev) {
+                trendIcon = '↗️';
+                trendColor = 'text-emerald-700 bg-emerald-50';
+                trendLabel = 'Improved';
+              } else if (curr < prev) {
+                trendIcon = '↘️';
+                trendColor = 'text-rose-700 bg-rose-50';
+                trendLabel = 'Degraded';
+              }
+
+              const cellG1 = startRow + p.rowOffset + 5;
+              const cellG2 = startRow + p.rowOffset + 6;
+
+              return (
+                <td
+                  key={p.key}
+                  className="py-2 px-3 text-center border-r border-slate-200 cursor-help"
+                  title={`Trend: ${trendLabel}\nCompared from 'Assessments-Extracts'!G${cellG1} vs G${cellG2}`}
+                >
+                  <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs ${trendColor}`}>{trendIcon}</span>
+                </td>
+              );
+            })}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export function MaturityMatrixTab({ applications, onOriginClick }: MaturityMatrixTabProps) {
+  const showCellOrigins = useMaturityMatrixStore((s) => s.showCellOrigins);
+  const selectedPillar = useMaturityMatrixStore((s) => s.selectedPillar);
+  const storePillars = useMaturityMatrixStore((s) => s.data.pillars);
+  const storeApplications = useMaturityMatrixStore((s) => s.data.applications);
+
+  const updateLeader = useMaturityMatrixStore((s) => s.updateLeader);
+  const toggleToGenerate = useMaturityMatrixStore((s) => s.toggleToGenerate);
+  const toggleTarget = useMaturityMatrixStore((s) => s.toggleTarget);
+  const updateCommentary = useMaturityMatrixStore((s) => s.updateCommentary);
+
+  const pillars = storePillars && storePillars.length > 0 ? storePillars : DEFAULT_PILLARS;
+
+  const leaderOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          storeApplications
+            .map((app) => app.leader)
+            .filter((leader): leader is string => Boolean(leader && leader !== '-')),
+        ),
+      ).sort(),
+    [storeApplications],
+  );
+
+  const [expandedAppCodes, setExpandedAppCodes] = useState<Record<string, boolean>>({
+    AVAILABLE_SHIPMENT: true,
+  });
+
+  const [editingNotes, setEditingNotes] = useState<Record<string, boolean>>({});
+  const [notesDraft, setNotesDraft] = useState<Record<string, string>>({});
+
+  const toggleExpandApp = (code: string) => {
+    setExpandedAppCodes((prev) => ({
+      ...prev,
+      [code]: !prev[code],
+    }));
+  };
+
+  const handleStartEditNote = (code: string, commentary: string) => {
+    setEditingNotes((prev) => ({ ...prev, [code]: true }));
+    setNotesDraft((prev) => ({ ...prev, [code]: commentary || '' }));
+  };
+
+  const handleSaveNote = (code: string) => {
+    const val = notesDraft[code] ?? '';
+    updateCommentary(code, val);
+    setEditingNotes((prev) => ({ ...prev, [code]: false }));
+  };
+
+  const handleCancelEditNote = (code: string) => {
+    setEditingNotes((prev) => ({ ...prev, [code]: false }));
+  };
+
+  const handleDraftChange = (code: string, val: string) => {
+    setNotesDraft((prev) => ({ ...prev, [code]: val }));
+  };
+
+  if (applications.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
+        No applications match the current filters.
+      </div>
+    );
+  }
+
+  return (
+    <section className="flex flex-col gap-6">
+      {applications.map((app, index) => {
+        const appKey = app.id || app.code;
+        const isExpanded = Boolean(expandedAppCodes[app.code] ?? expandedAppCodes[appKey] ?? false);
+        const health = getDateHealth(app.lastAssessmentDate);
+        const rowIdx = getAppRowIdx(app, index);
+        const startRow = getAppStartRow(app, index);
+        const isEditingNote = Boolean(editingNotes[app.code] || editingNotes[appKey]);
+        const noteDraftVal = notesDraft[app.code] ?? notesDraft[appKey] ?? app.commentary ?? '';
+
+        return (
+          <Card className="overflow-hidden border-slate-200 bg-white shadow-sm" key="{appKey}">
+            <div className="bg-slate-50 border-b border-slate-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <Button onClick="{()"> toggleExpandApp(app.code || appKey)}
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                  className="h-7 w-7 p-1 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded-md transition-colors"
+                  title={isExpanded ? 'Collapse Application' : 'Expand Application'}
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points={isExpanded ? '18 15 12 9 6 15' : '6 9 12 15 18 9'} />
+                  </svg>
+                </Button>
+
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-base font-bold text-slate-900 tracking-tight">{app.name}</h2>
+
+                    <span className="px-2 py-0.5 bg-slate-200 text-slate-700 text-[11px] font-mono rounded flex items-center gap-1">
+                      <span>{app.code}</span>
+                      <CellOriginTag col="D" onOriginClick="{onOriginClick}" row="{rowIdx}" sheet="Maturity-Matrix-Projects" showCellOrigins="{showCellOrigins}"/>
+                    </span>
+
+                    <span
+                      className={`px-2 py-0.5 text-[10px] font-bold rounded-full flex items-center gap-1 border ${
+                        app.toGenerate
+                          ? 'bg-indigo-100 text-indigo-800 border-indigo-200'
+                          : 'bg-slate-200 text-slate-700 border-slate-300'
+                      }`}
+                    >
+                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      <span>TO GENERATE = {app.toGenerate ? 'TRUE' : 'FALSE'}</span>
+                      <CellOriginTag col="F" onOriginClick="{onOriginClick}" row="{rowIdx}" sheet="Maturity-Matrix-Projects" showCellOrigins="{showCellOrigins}"/>
+                    </span>
+                  </div>
+
+                  <div className="text-xs text-slate-500 flex flex-wrap items-center gap-3 mt-1.5">
+                    <div className="flex items-center gap-1.5 bg-purple-50 text-purple-900 border border-purple-200 px-2 py-0.5 rounded font-semibold text-[11px]">
+                      <svg className="w-3 h-3 text-purple-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                      </svg>
+                      <span>Leader (Col E):</span>
+                      <Select onValueChange="{(newLeader)" value="{app.leader}"> {
+                          if (typeof newLeader === 'string') updateLeader(app.code, newLeader);
+                        }}
+                      >
+                        <SelectTrigger className="h-6 border-purple-200 bg-white/70 text-purple-950 px-2 py-0 text-[11px] font-bold shadow-none hover:bg-white">
+                          <SelectValue 'Select leader'} placeholder="{app.leader" ||/>
+                        </SelectTrigger>
+                        <SelectContent className="min-w-[160px]">
+                          {leaderOptions.map((leader) => (
+                            <SelectItem key="{leader}" value="{leader}">
+                              {leader}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <CellOriginTag col="E" onOriginClick="{onOriginClick}" row="{rowIdx}" sheet="Maturity-Matrix-Projects" showCellOrigins="{showCellOrigins}"/>
+                    </div>
+
+                    <span>•</span>
+
+                    <span className="flex items-center gap-1.5">
+                      <span>Last Assessment:</span>
+                      <span
+                        className={`px-2 py-0.5 rounded text-[11px] font-mono border flex items-center gap-1 cursor-help ${health.badgeBg}`}
+                        title={`'Assessments-Extracts'!E${startRow + 1} [Column E : Row ${startRow + 1}] • Application Last Assessment Date | Current Value: ${app.lastAssessmentDate || 'null'}\nStatus: ${health.label}`}
+                      >
+                        <span className={`w-1.5 h-1.5 rounded-full ${health.dotColor}`} />
+                        <span>{app.lastAssessmentDate || 'null'}</span>
+                        <span className="text-[10px] opacity-75 font-sans font-normal">({health.desc})</span>
+                        <CellOriginTag + 1} className="ml-1" col="E" onOriginClick="{onOriginClick}" row="{startRow" sheet="Assessments-Extracts" showCellOrigins="{showCellOrigins}"/>
+                      </span>
+                    </span>
+
+                    <span>•</span>
+
+                    <span>
+                      Previous: <strong className="text-slate-600">{app.prevAssessmentDate || '—'}</strong>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 self-end sm:self-auto">
+                <Button onClick="{()"> toggleToGenerate(app.code)}
+                  size="xs"
+                  type="button"
+                  variant={app.toGenerate ? 'destructive' : 'default'}
+                  className="text-xs font-semibold px-2.5 py-1 rounded transition-colors"
+                  title="Toggle sheet F column 'To Generate'"
+                >
+                  Set TO Generate = {app.toGenerate ? 'FALSE' : 'TRUE'}
+                </Button>
+              </div>
+            </div>
+
+            {isExpanded && (
+              <div>
+                <MatrixTable app="{app}" appIndex="{index}" onOriginClick="{onOriginClick}" onToggleTarget="{toggleTarget}" pillars="{pillars}" selectedPillar="{selectedPillar}" showCellOrigins="{showCellOrigins}"/>
+
+                <CommentaryEditor appCode="{app.code}" commentary="{app.commentary}" draftVal="{noteDraftVal}" isEditing="{isEditingNote}" onCancel="{handleCancelEditNote}" onDraftChange="{handleDraftChange}" onSave="{handleSaveNote}" onStartEdit="{handleStartEditNote}"/>
+              </div>
+            )}
+          </Card>
+        );
+      })}
+    </section>
+  );
+}
+
+export default MaturityMatrixTab;
+EOF
+
+echo "✅ Successfully written shared models, backend mapper, and webview component."

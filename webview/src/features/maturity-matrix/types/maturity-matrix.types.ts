@@ -7,4 +7,4 @@ export type {
 
 export type MaturityMatrixTabId = 'matrix' | 'compare' | 'extracts';
 
-export type DateStatus = 'yellow' | 'green' | 'blue' | 'red';
+export type DateStatus = 'yellow' | 'green' | 'blue' | 'orange' | 'red';

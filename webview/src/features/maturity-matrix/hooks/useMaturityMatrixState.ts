@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useMaturityMatrixStore } from '../store/useMaturityMatrixStore';
-import type { DateStatus, MaturityApplication, MaturityPillarDefinition } from '../types/maturity-matrix.types';
+import type { DateStatus } from '../types/maturity-matrix.types';
 
 export function getDateStatus(date: string | null | undefined): DateStatus {
   if (!date) {
@@ -12,8 +12,9 @@ export function getDateStatus(date: string | null | undefined): DateStatus {
   const diffDays = Math.max(0, Math.floor((today.getTime() - assessmentDate.getTime()) / 86400000));
 
   if (diffDays <= 15) return 'green';
-  if (diffDays <= 180) return 'blue';
-  return 'red';
+  if (diffDays <= 150) return 'blue';    // Valid (<= 5 Months)
+  if (diffDays <= 182) return 'orange';  // Todo (> 5 Months up to 6 Months)
+  return 'red';                          // Outdated (> 6 Months)
 }
 
 export function useMaturityMatrixState() {
@@ -85,16 +86,17 @@ export function useMaturityMatrixState() {
 
   const statusCounts: Record<DateStatus | 'ALL', number> = useMemo(() => {
     const counts: Record<DateStatus | 'ALL', number> = {
-      ALL: data.applications.length,
-      yellow: 0,
-      green: 0,
-      blue: 0,
-      red: 0,
+        ALL: data.applications.length,
+        yellow: 0,
+        green: 0,
+        blue: 0,
+        orange: 0,
+        red: 0,
     };
 
     data.applications.forEach((app) => {
-      const status = getDateStatus(app.lastAssessmentDate ?? null);
-      counts[status] += 1;
+        const status = getDateStatus(app.lastAssessmentDate ?? null);
+        counts[status] += 1;
     });
 
     return counts;

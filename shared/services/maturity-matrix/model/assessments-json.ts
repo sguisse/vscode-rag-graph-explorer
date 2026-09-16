@@ -19,6 +19,8 @@ export interface MaturityPillarValue {
   target: boolean;
   lastExtract: number;
   prevExtract: number;
+  diffLevel: number | null;
+  diffScore: number | null;
 }
 
 export interface MaturityApplication {

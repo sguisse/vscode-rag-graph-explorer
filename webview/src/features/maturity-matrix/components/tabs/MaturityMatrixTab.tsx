@@ -5,7 +5,35 @@ import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useMaturityMatrixStore } from '../../store/useMaturityMatrixStore';
-import type { MaturityApplication, MaturityPillarDefinition } from '../../types/maturity-matrix.types';
+import type { MaturityApplication, MaturityPillarDefinition, MaturityPillarValue } from '../../types/maturity-matrix.types';
+
+// Helper to extract or compute score delta
+function getDiffScore(pillarVal?: MaturityPillarValue): number | null {
+  if (!pillarVal) return null;
+  if (pillarVal.diffScore !== undefined && pillarVal.diffScore !== null) {
+    return pillarVal.diffScore;
+  }
+  if (pillarVal.prevDate && pillarVal.prevScore !== undefined) {
+    return pillarVal.score - pillarVal.prevScore;
+  }
+  return null;
+}
+
+// Helper to extract or compute level delta
+function getDiffLevel(pillarVal?: MaturityPillarValue): number | null {
+  if (!pillarVal) return null;
+  if (pillarVal.diffLevel !== undefined && pillarVal.diffLevel !== null) {
+    return pillarVal.diffLevel;
+  }
+  if (pillarVal.prevDate && pillarVal.level && pillarVal.prevLevel) {
+    const currNum = parseInt(pillarVal.level.replace(/\D/g, ''), 10);
+    const prevNum = parseInt(pillarVal.prevLevel.replace(/\D/g, ''), 10);
+    if (!isNaN(currNum) && !isNaN(prevNum)) {
+      return currNum - prevNum;
+    }
+  }
+  return null;
+}
 
 interface MaturityMatrixTabProps {
   applications: MaturityApplication[];
@@ -67,8 +95,8 @@ function getDateHealth(dateStr: string | null | undefined) {
     return {
       status: 'yellow',
       label: 'Yellow: No assessment',
-      badgeBg: 'bg-yellow-100 text-yellow-900 border-yellow-300',
-      dotColor: 'bg-yellow-500',
+      badgeBg: 'bg-amber-100 text-amber-900 border-amber-300',
+      dotColor: 'bg-amber-500',
       desc: 'No assessment',
     };
   }
@@ -91,13 +119,21 @@ function getDateHealth(dateStr: string | null | undefined) {
       dotColor: 'bg-emerald-500',
       desc: `${diffDays}d ago (≤15d)`,
     };
-  } else if (diffDays <= 182) {
+  } else if (diffDays <= 150) {
     return {
       status: 'blue',
       label: 'Blue: Valid',
       badgeBg: 'bg-blue-100 text-blue-900 border-blue-300',
       dotColor: 'bg-blue-500',
       desc: `Valid (${diffMonths}m ago)`,
+    };
+  } else if (diffDays <= 182) {
+    return {
+      status: 'orange',
+      label: 'Orange: todo if >5M',
+      badgeBg: 'bg-orange-100 text-orange-900 border-orange-300',
+      dotColor: 'bg-orange-500',
+      desc: `Todo (${diffMonths}m ago)`,
     };
   } else {
     return {
@@ -326,49 +362,67 @@ function MatrixTable({
             })}
           </tr>
 
-          <tr className="hover:bg-slate-50">
-            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200">Score</td>
-            {visiblePillars.map((p) => {
-              const pillarVal = app.pillars[p.key];
-              const cellRow = startRow + p.rowOffset + 1;
+          {/* Score Row */}
+        <tr className="hover:bg-slate-50">
+        <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200">Score</td>
+        {visiblePillars.map((p) => {
+            const pillarVal = app.pillars[p.key];
+            const cellRow = startRow + p.rowOffset + 1;
+            const diffScore = getDiffScore(pillarVal);
 
-              return (
-                <td
-                  key={p.key}
-                  className="py-2 px-3 text-center border-r border-slate-200 cursor-help transition-colors hover:bg-indigo-50/30"
-                  title={`'Assessments-Extracts'!G${cellRow} [Column G : Row ${cellRow}] • Last Assessment Score | Current Value: ${Number(pillarVal?.score ?? 0).toFixed(2)}`}
-                >
-                  <div className="flex flex-col items-center justify-center">
+            return (
+            <td
+                key={p.key}
+                className="py-2 px-3 text-center border-r border-slate-200 cursor-help transition-colors hover:bg-indigo-50/30"
+                title={`'Assessments-Extracts'!G${cellRow} [Column G : Row ${cellRow}] • Last Assessment Score | Current Value: ${Number(pillarVal?.score ?? 0).toFixed(2)}`}
+            >
+                <div className="flex flex-col items-center justify-center">
+                <div className="flex items-baseline justify-center gap-1.5">
                     <span className="text-sm font-bold text-slate-900">{Number(pillarVal?.score ?? 0).toFixed(2)}</span>
-                    <CellOriginTag className="mt-0.5" col="G" onOriginClick={onOriginClick} row={cellRow} sheet="Assessments-Extracts" showCellOrigins={showCellOrigins} />
-                  </div>
-                </td>
-              );
-            })}
-          </tr>
+                    {diffScore !== null && Math.abs(diffScore) >= 0.01 && (
+                    <span className={`text-[11px] font-bold ${diffScore > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {diffScore > 0 ? `+${diffScore.toFixed(2)}` : diffScore.toFixed(2)}
+                    </span>
+                    )}
+                </div>
+                <CellOriginTag className="mt-0.5" col="G" onOriginClick={onOriginClick} row={cellRow} sheet="Assessments-Extracts" showCellOrigins={showCellOrigins} />
+                </div>
+            </td>
+            );
+        })}
+        </tr>
 
-          <tr className="hover:bg-slate-50 border-b border-slate-300">
-            <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200">Level</td>
-            {visiblePillars.map((p) => {
-              const pillarVal = app.pillars[p.key];
-              const levelRow = startRow + p.rowOffset + 2;
+        {/* Level Row */}
+        <tr className="hover:bg-slate-50 border-b border-slate-300">
+        <td className="py-2 px-2 text-slate-500 font-medium border-r border-slate-200">Level</td>
+        {visiblePillars.map((p) => {
+            const pillarVal = app.pillars[p.key];
+            const levelRow = startRow + p.rowOffset + 2;
+            const diffLevel = getDiffLevel(pillarVal);
 
-              return (
-                <td
-                  key={p.key}
-                  className="py-2 px-3 text-center border-r border-slate-200 cursor-help transition-colors hover:bg-indigo-50/30"
-                  title={`'Assessments-Extracts'!G${levelRow} [Column G : Row ${levelRow}] • Last Assessment Level | Current Value: ${pillarVal?.level || 'Lvl 0'}`}
-                >
-                  <div className="flex flex-col items-center justify-center gap-0.5">
+            return (
+            <td
+                key={p.key}
+                className="py-2 px-3 text-center border-r border-slate-200 cursor-help transition-colors hover:bg-indigo-50/30"
+                title={`'Assessments-Extracts'!G${levelRow} [Column G : Row ${levelRow}] • Last Assessment Level | Current Value: ${pillarVal?.level || 'Lvl 0'}`}
+            >
+                <div className="flex flex-col items-center justify-center gap-0.5">
+                <div className="flex items-center justify-center gap-1.5">
                     <Badge className="text-[11px] py-0.5 px-2.5" variant="default">
-                      {pillarVal?.level || 'Lvl 0'}
+                    {pillarVal?.level || 'Lvl 0'}
                     </Badge>
-                    <CellOriginTag className="mt-0.5" col="G" onOriginClick={onOriginClick} row={levelRow} sheet="Assessments-Extracts" showCellOrigins={showCellOrigins} />
-                  </div>
-                </td>
-              );
-            })}
-          </tr>
+                    {diffLevel !== null && diffLevel !== 0 && (
+                    <span className={`text-[10px] font-bold ${diffLevel > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {diffLevel > 0 ? `+${diffLevel}` : diffLevel}
+                    </span>
+                    )}
+                </div>
+                <CellOriginTag className="mt-0.5" col="G" onOriginClick={onOriginClick} row={levelRow} sheet="Assessments-Extracts" showCellOrigins={showCellOrigins} />
+                </div>
+            </td>
+            );
+        })}
+        </tr>
 
           <tr className="bg-slate-50/70 hover:bg-slate-100/70">
             <td rowSpan={3} className="py-2 px-3 font-semibold text-slate-600 border-r border-slate-200 sticky left-0 bg-slate-50/90 z-10">
@@ -684,7 +738,7 @@ export function MaturityMatrixTab({ applications, onOriginClick }: MaturityMatri
 
                     <span className="px-2 py-0.5 bg-slate-200 text-slate-700 text-[11px] font-mono rounded flex items-center gap-1">
                       <span>{app.code}</span>
-                      <CellOriginTag col="D" row={rowIdx} sheet="Maturity-Matrix-Projects" showCellOrigins={showCellOrigins} onOriginClick={onOriginClick} />
+                      <CellOriginTag col="D" onOriginClick={onOriginClick} row={rowIdx} sheet="Maturity-Matrix-Projects" showCellOrigins={showCellOrigins} />
                     </span>
 
                     <span
@@ -698,7 +752,7 @@ export function MaturityMatrixTab({ applications, onOriginClick }: MaturityMatri
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                       <span>TO GENERATE = {app.toGenerate ? 'TRUE' : 'FALSE'}</span>
-                      <CellOriginTag col="F" row={rowIdx} sheet="Maturity-Matrix-Projects" showCellOrigins={showCellOrigins} onOriginClick={onOriginClick} />
+                      <CellOriginTag col="F" onOriginClick={onOriginClick} row={rowIdx} sheet="Maturity-Matrix-Projects" showCellOrigins={showCellOrigins} />
                     </span>
                   </div>
 
@@ -726,7 +780,7 @@ export function MaturityMatrixTab({ applications, onOriginClick }: MaturityMatri
                           ))}
                         </SelectContent>
                       </Select>
-                      <CellOriginTag col="E" row={rowIdx} sheet="Maturity-Matrix-Projects" showCellOrigins={showCellOrigins} onOriginClick={onOriginClick} />
+                      <CellOriginTag col="E" onOriginClick={onOriginClick} row={rowIdx} sheet="Maturity-Matrix-Projects" showCellOrigins={showCellOrigins} />
                     </div>
 
                     <span>•</span>
@@ -740,7 +794,7 @@ export function MaturityMatrixTab({ applications, onOriginClick }: MaturityMatri
                         <span className={`w-1.5 h-1.5 rounded-full ${health.dotColor}`} />
                         <span>{app.lastAssessmentDate || 'null'}</span>
                         <span className="text-[10px] opacity-75 font-sans font-normal">({health.desc})</span>
-                        <CellOriginTag className="ml-1" col="E" row={startRow + 1} sheet="Assessments-Extracts" showCellOrigins={showCellOrigins} onOriginClick={onOriginClick} />
+                        <CellOriginTag className="ml-1" col="E" onOriginClick={onOriginClick} row={startRow + 1} sheet="Assessments-Extracts" showCellOrigins={showCellOrigins} />
                       </span>
                     </span>
 

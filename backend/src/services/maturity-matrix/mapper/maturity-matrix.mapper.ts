@@ -78,6 +78,8 @@ export class MaturityMatrixMapper {
               target: false,
               lastExtract: 0,
               prevExtract: 0,
+              diffLevel: 0,
+              diffScore: 0,
             };
           });
 
@@ -127,6 +129,16 @@ export class MaturityMatrixMapper {
         if (pillar.prevDate && (!prevDate || pillar.prevDate > prevDate)) {
           prevDate = pillar.prevDate;
         }
+
+        // Compute diffScore and diffLevel (default to 0 if no diff)
+        const score = pillar.score ?? 0;
+        const prevScore = pillar.prevScore ?? 0;
+        const diffScore = Number((score - prevScore).toFixed(2));
+        pillar.diffScore = isNaN(diffScore) ? 0 : diffScore;
+
+        const currLvl = MaturityMatrixMapper.parseLevelNum(pillar.level);
+        const prevLvl = MaturityMatrixMapper.parseLevelNum(pillar.prevLevel);
+        pillar.diffLevel = (currLvl !== null && prevLvl !== null) ? (currLvl - prevLvl) : 0;
       }
 
       app.lastAssessmentDate = lastDate;
@@ -142,6 +154,12 @@ export class MaturityMatrixMapper {
       pillars: PILLARS_DEFINITIONS,
       applications,
     };
+  }
+
+  private static parseLevelNum(lvl: string | null | undefined): number | null {
+    if (!lvl) return null;
+    const match = lvl.match(/-?\d+/);
+    return match ? parseInt(match[0], 10) : null;
   }
 
   private static parseDate(val: string | undefined): string | null {
