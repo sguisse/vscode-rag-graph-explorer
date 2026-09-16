@@ -1,16 +1,11 @@
 // Place your settings in this file to overwrite default and user settings.
 {
 	"files.exclude": {
-      "**/.git": true,
-      "**/.svn": true,
-      "**/.hg": true,
-      "**/.DS_Store": true,
-      "**/Thumbs.db": true,
-      "**/.trunk/*actions/": true,
-      "**/.trunk/*logs/": true,
-      "**/.trunk/*notifications/": true,
-      "**/.trunk/*out/": true,
-      "**/.trunk/*plugins/": true,
+      "**/.trunk/*actions/": false,
+      "**/.trunk/*logs/": false,
+      "**/.trunk/*notifications/": false,
+      "**/.trunk/*out/": false,
+      "**/.trunk/*plugins/": false,
       "out": false,
       "dist": false
    },
@@ -113,6 +108,7 @@
          "badge": "SB"
       }
    ],
+   "favorites.sortDirection": "ASC",
    // Prevent VS Code from decoration-checking every untracked file
    //"git.decorations.enabled": false
 

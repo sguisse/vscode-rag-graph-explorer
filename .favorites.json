@@ -1,0 +1,130 @@
+[
+    {
+        "type": "Group",
+        "name": "00-🤖-AI-configuration",
+        "parent_id": null,
+        "workspaceRoot": null,
+        "workspacePath": null,
+        "id": "vrcgKePYSOnzWxLV"
+    },
+    {
+        "type": "Group",
+        "name": "01-🔥-Main",
+        "parent_id": null,
+        "workspaceRoot": null,
+        "workspacePath": null,
+        "id": "yscgKePYSOnzWxLV"
+    },
+    {
+        "type": "Group",
+        "name": "02-📚-Documentation",
+        "parent_id": null,
+        "workspaceRoot": null,
+        "workspacePath": null,
+        "id": "zcCPBhwzg03aRLAc"
+    },
+    {
+        "type": "Group",
+        "name": "03-📈-Feature_Maturity-Matrix",
+        "parent_id": null,
+        "workspaceRoot": null,
+        "workspacePath": null,
+        "id": "EpCPBhwzg03aRLAc"
+    },
+    {
+        "type": "Directory",
+        "name": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer/webview",
+        "parent_id": "yscgKePYSOnzWxLV",
+        "workspaceRoot": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer",
+        "workspacePath": "webview",
+        "id": "3vW4j0EYbJna79Hr"
+    },
+    {
+        "type": "Directory",
+        "name": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer/shared",
+        "parent_id": "yscgKePYSOnzWxLV",
+        "workspaceRoot": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer",
+        "workspacePath": "shared",
+        "id": "DlPISGQBupfWTixg"
+    },
+    {
+        "type": "Directory",
+        "name": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer/backend",
+        "parent_id": "yscgKePYSOnzWxLV",
+        "workspaceRoot": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer",
+        "workspacePath": "backend",
+        "id": "NuQkSVnTs4q21OKA"
+    },
+    {
+        "type": "Directory",
+        "name": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer/scripts",
+        "parent_id": "yscgKePYSOnzWxLV",
+        "workspaceRoot": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer",
+        "workspacePath": "scripts",
+        "id": "ZC7RzwjB9WqnFK0v"
+    },
+    {
+        "type": "File",
+        "name": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer/package.json",
+        "parent_id": "yscgKePYSOnzWxLV",
+        "workspaceRoot": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer",
+        "workspacePath": "package.json",
+        "id": "n2PWiNYCGVbfZhkF"
+    },
+    {
+        "type": "Directory",
+        "name": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer/dev-tools",
+        "parent_id": "yscgKePYSOnzWxLV",
+        "workspaceRoot": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer",
+        "workspacePath": "dev-tools",
+        "id": "3P6EoBTOyJGAuYkF"
+    },
+    {
+        "type": "File",
+        "name": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer/architecture.md",
+        "parent_id": "zcCPBhwzg03aRLAc",
+        "workspaceRoot": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer",
+        "workspacePath": "architecture.md",
+        "id": "je3a2y8ZQmufSF4N"
+    },
+    {
+        "type": "File",
+        "name": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer/contributor.md",
+        "parent_id": "zcCPBhwzg03aRLAc",
+        "workspaceRoot": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer",
+        "workspacePath": "contributor.md",
+        "id": "ankYKDtq3u8jPhcC"
+    },
+    {
+        "type": "File",
+        "name": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer/README.md",
+        "parent_id": "zcCPBhwzg03aRLAc",
+        "workspaceRoot": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer",
+        "workspacePath": "README.md",
+        "id": "0kWaqDlL26IcnKT1"
+    },
+    {
+        "type": "Directory",
+        "name": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer/documentation",
+        "parent_id": "zcCPBhwzg03aRLAc",
+        "workspaceRoot": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer",
+        "workspacePath": "documentation",
+        "id": "Pz1jhybgFwrcvMUt"
+    },
+    {
+        "type": "Directory",
+        "name": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer/.github/agents",
+        "parent_id": "vrcgKePYSOnzWxLV",
+        "workspaceRoot": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer",
+        "workspacePath": ".github/agents",
+        "id": "M4XH5OiLy0IUPrhp"
+    },
+    {
+        "type": "Directory",
+        "name": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer/.github/skills",
+        "parent_id": "vrcgKePYSOnzWxLV",
+        "workspaceRoot": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer",
+        "workspacePath": ".github/skills",
+        "id": "uDFby1dv4AV0T93j"
+    }
+]

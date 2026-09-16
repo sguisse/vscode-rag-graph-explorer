@@ -1,5 +1,5 @@
 ---
-name: react-sheet-dashboard-cloner
+name: gsheet-react-dashboard-cloner
 description: Transform exported Google Sheets specifications, HTML/CSS dashboard layouts, and CSV datasets into a production-grade, self-contained React feature (<FeatureNameClone/>) using Tailwind v4, shadcn/ui (Base UI primitives), and Zustand.
 license: MIT
 metadata:
@@ -7,7 +7,7 @@ metadata:
   author: sguisse
 ---
 
-# 🚀 Agent Skill: React Sheet Dashboard Cloner (`react-sheet-dashboard-cloner`)
+# 🚀 Agent Skill: React Sheet Dashboard Cloner (`gsheet-react-dashboard-cloner`)
 
 You are a **Senior Reverse Engineer, React Architect, UI Rendering Specialist, and Frontend Integration Architect**.
 

@@ -19,6 +19,7 @@ import { RulesFeature } from '@/features/rules/RulesFeature';
 import { WorkflowBuilderFeature } from '@/features/ai-workflow-builder/WorkflowBuilderFeature';
 import { ExporterFeature } from '@/features/exporter/ExporterFeature';
 import { MaturityMatrixFeature } from '@/features/maturity-matrix/MaturityMatrixFeature';
+import { MonthlySupportProductPerformanceDashboardFeature } from '@/features/monthly-support-product-performance-dashboard/MonthlySupportProductPerformanceDashboardFeature';
 import { HelpFeature } from '@/features/help/HelpFeature';
 import { InstructionsFeature } from '@/features/sdlc/domains/instructions';
 import { ConfigurationFeature } from '@/features/sdlc/domains/configuration';
@@ -59,6 +60,7 @@ const FEATURE_TO_ROUTE_MAP: Record<string, string> = {
   'feature-exporter': '/exporter',
   'feature-codebase-exporter': '/exporter',
   'feature-maturity-matrix': '/maturity-matrix',
+  'feature-monthly-support-product-performance-dashboard': '/monthly-support-product-performance-dashboard',
   'feat-prompt': '/exporter',
   'feature-help': '/help',
   'feature-configuration': '/configuration',
@@ -82,6 +84,7 @@ const ROUTE_TO_FEATURE_MAP: Record<string, string> = {
   '/workflow-builder': 'feature-ai-workflow-builder',
   '/exporter': 'feature-exporter',
   '/maturity-matrix': 'feature-maturity-matrix',
+  '/monthly-support-product-performance-dashboard': 'feature-monthly-support-product-performance-dashboard',
   '/help': 'feature-help',
   '/configuration': 'feature-configuration',
   '/codebase-context': 'feature-codebase-context',
@@ -100,6 +103,7 @@ export const ROUTE_BREADCRUMB_LABELS: Record<string, string> = {
   '/workflow-builder': 'Workflow Builder',
   '/exporter': 'Codebase Exporter',
   '/maturity-matrix': 'Maturity Matrix',
+  '/monthly-support-product-performance-dashboard': 'Monthly Support & Product Performance Dashboard',
   '/help': 'Documentation',
   '/configuration': 'Configuration',
   '/codebase-context': 'Codebase Context',
@@ -284,6 +288,13 @@ export const maturityMatrixRoute = createRoute({
   component: MaturityMatrixFeature,
 });
 
+export const monthlySupportProductPerformanceDashboardRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/monthly-support-product-performance-dashboard',
+  staticData: { breadcrumb: 'Monthly Support & Product Performance Dashboard' },
+  component: MonthlySupportProductPerformanceDashboardFeature,
+});
+
 export const helpRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/help',
@@ -342,6 +353,7 @@ const routeTree = rootRoute.addChildren([
   workflowRoute,
   exporterRoute,
   maturityMatrixRoute,
+  monthlySupportProductPerformanceDashboardRoute,
   helpRoute,
   configurationRoute,
   codebaseContextRoute,

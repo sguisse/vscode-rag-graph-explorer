@@ -1,5 +1,5 @@
 ---
-name: react-feature-mng
+name: feature-react-mng
 description: Generates or updates a full-stack Webview feature module in Token Razor across webview/src/features/<feature-name>, shared/services/<feature-name>, and backend/src/services/<feature-name>. Enforces declarative UI architecture, shadcn/ui components, CollapsibleCard summary badges, data-tooltip HTML attributes, log-view/utils-log logging wrappers, build-time types in dev-tools/generate-types.json, TanStack router integration, and SidebarLeft menu items.
 license: MIT
 metadata:

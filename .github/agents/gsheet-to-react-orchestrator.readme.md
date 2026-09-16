@@ -11,9 +11,9 @@ The engine operates via a **Master Copilot Custom Agent** (`gsheet-to-react-orch
 | Component | Type | Responsibility |
 | :--- | :--- | :--- |
 | **`gsheet-to-react-orchestrator`** | Copilot Custom Agent | Manages state transitions, prompts user, and coordinates sub-skills |
-| **`react-sheet-dashboard-reverse`** | Agent Skill | Generates Gemini Canvas prompts to produce AST specs (`CANVAS_IR`) |
+| **`gsheet-react-dashboard-reverse`** | Agent Skill | Generates Gemini Canvas prompts to produce AST specs (`CANVAS_IR`) |
 | **`html-split`** | Agent Skill | Ephemeral DOM parser extracting inline CSS/JS into modular files |
-| **`react-sheet-dashboard-cloner`** | Agent Skill | 2-Stage compiler transforming 3 IR inputs into React components |
+| **`gsheet-react-dashboard-cloner`** | Agent Skill | 2-Stage compiler transforming 3 IR inputs into React components |
 
 ---
 
@@ -30,11 +30,11 @@ The engine operates via a **Master Copilot Custom Agent** (`gsheet-to-react-orch
     │   │   ├── split-html.js             # JSDOM parser with @import hoisting & head commenting
     │   │   └── test/                     # Automated manual test suites
     │   └── SKILL.md
-    ├── react-sheet-dashboard-reverse/    # Reverse engineering prompt generator skill
+    ├── gsheet-react-dashboard-reverse/    # Reverse engineering prompt generator skill
     │   ├── references/
     │   │   └── reverse-prompt-template.md # 7-Tab Markdown & AST specification template
     │   └── SKILL.md
-    └── react-sheet-dashboard-cloner/     # React compilation skill contract
+    └── gsheet-react-dashboard-cloner/     # React compilation skill contract
         └── SKILL.md
 ```
 
@@ -56,7 +56,7 @@ flowchart TD
 
     subgraph Phase1 [Phase 1: Setup & Prompting]
         Agent -->|2. Ask dashboard-name| User
-        Agent -->|3. Invoke Skill| ReverseSkill[🛠️ react-sheet-dashboard-reverse]:::skill
+        Agent -->|3. Invoke Skill| ReverseSkill[🛠️ gsheet-react-dashboard-reverse]:::skill
         ReverseSkill -->|Load Reference Template| PromptTmpl[(📄 reverse-prompt-template.md)]:::artifact
         Agent -->|Output Parameterized Prompt| User
     end
@@ -76,7 +76,7 @@ flowchart TD
     end
 
     subgraph Phase4 [Phase 4: React Compilation & Verification]
-        CleanedDOM & SpecFile & CsvFile -->|9. Compile Feature| ClonerSkill[🛠️ react-sheet-dashboard-cloner]:::skill
+        CleanedDOM & SpecFile & CsvFile -->|9. Compile Feature| ClonerSkill[🛠️ gsheet-react-dashboard-cloner]:::skill
         ClonerSkill -->|Generate Architecture| ReactApp[⚛️ React Feature Codebase]:::artifact
         Agent -->|10. Execute npm run build| Terminal[💻 Workspace Terminal]:::agent
         Terminal -->|Validation Pass| Success([✅ Complete & Ready Component]):::artifact
@@ -168,13 +168,13 @@ stateDiagram-v2
 | :---: | :--- | :---: | :--- |
 | **1** | Acknowledge & Initialize | Automated | Initial response greeting |
 | **2** | Capture Dashboard Name | Interactive | Creates `sandbox/dashboards/<dashboard-name>/agent/plan-follower.md` |
-| **3** | Generate Reverse Prompt | Automated | Displays Gemini Canvas prompt using `react-sheet-dashboard-reverse` |
+| **3** | Generate Reverse Prompt | Automated | Displays Gemini Canvas prompt using `gsheet-react-dashboard-reverse` |
 | **4** | Retrieve Specifications | User Action | `sandbox/dashboards/<dashboard-name>/specifications.md` |
 | **5** | Export CSV Data | User Action | `sandbox/dashboards/<dashboard-name>/<dashboard-name>-data.csv` |
 | **6** | Export HTML DOM | User Action | `sandbox/dashboards/<dashboard-name>/iframe-html/<dashboard-name>.html` |
 | **7** | Execute HTML Split | Automated | Executed via `run-split.sh --rendering-only` |
 | **8** | Store Target Gate | Interactive | Captures `STORE_DESTINATION_TARGET` |
-| **9** | React Code Compilation | Automated | Generates full `<FeatureNameClone/>` component tree via `react-sheet-dashboard-cloner` |
+| **9** | React Code Compilation | Automated | Generates full `<FeatureNameClone/>` component tree via `gsheet-react-dashboard-cloner` |
 | **10**| Build & Verify | Automated | Executes `npm run build` in workspace terminal |
 | **11**| Final Handoff | Automated | Marks `plan-follower.md` completed & provides output paths |
 

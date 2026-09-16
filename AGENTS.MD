@@ -28,6 +28,80 @@ Token Razor is a VS Code Extension Host application (TypeScript/Node.js ES2022) 
 - 🐍 **Python Background Engines**: `./backend/src/services/_python-scripts/` (bridge wrappers), `.token-razor/` (local workspace execution directory).
 - 🕸️ **GraphRAG & Neo4j Integration**: `./backend/src/services/graph-rag-explorer/`, `./backend/src/services/neo4j/` (Cypher query builders, jQAssistant GraphRAG normalization).
 
+### 📂 Directory Structure
+
+```text
+./
+├── .token-razor/                                # 🐍 Local workspace execution directory (when extension is installed)
+├── backend/                                     # 🔌 Backend Extension Host
+│   └── src/
+│       ├── core/                                # 🔌 ServiceRegistry, AbstractServiceAdapter
+│       ├── managers/                            # 🔌 VS Code settings and process managers
+│       └── services/                            # 🔌 Domain adapters & extension host services
+│           ├── _python-scripts/                 # 🐍 Bridge wrappers
+│           ├── <feature-name>/                  # 🔌 Feature Backend Domain Adapter
+│           │   └── <feature-name>-service.adapter.ts # 🔌 Domain service adapter implementation
+│           └── neo4j/                           # 🕸️ Cypher query builders, jQAssistant GraphRAG normalization
+├── shared/                                      # 🔀 Shared RPC Layer
+│   ├── config/                                   # 🔀 Service enums, RPC method constants
+│   ├── rpc/                                     # 🔀 RpcProtocol implementation
+│   └── services/                                # 🔀 Strongly-typed DTOs and port interfaces
+│       └── <feature-name>/                      # 🔀 Feature Contracts, DTOs & Ports
+│           ├── index.ts                         # 📦 Shared service export barrel
+│           ├── model/                           # 📐 interface of Domain DTOs & Data Transfer Models
+│           │   ├── index.ts                     # 📦 Models export barrel
+│           │   ├── <sample-report>.ts             # 📐 Assessment report model schema
+│           │   └── <sample-result>.ts             # 📐 Assessment result model schema
+│           ├── types/                           # 📐 Domain Enum, type with list of values
+│           │   ├── index.ts                     # 📦 Types export barrel
+│           │   ├── <sample-pillar>.enum.ts        # 📐 Sample enum
+│           │   └── <sample-status>.type.ts        # 📐 Sample status type
+│           └── port-out/                        # 🔌 Service Output Ports
+│               └── <feature-name>-service.port.ts # 🔌 Service port interface definition
+└── webview/                                     # 🎨 Webview Frontend
+    └── src/
+        ├── components/                          # 🧩 UI Primitives & Design System
+        │   └── ui/                              # 🧩 Adapted shadcn/ui Primitives (Base UI + Tailwind v4 Styled)
+        │       ├── button.tsx                   # 🔘 Button primitive with variants
+        │       └── input.tsx                    # ✏️ Styled native input component
+        │
+        └── features/                            # ⚛️ Isolated Feature Domains
+            └── <feature-name>/                  # ⚛️ Main Isolated Feature Domain
+                ├── <FeatureName>Feature.tsx     # 🚀 Primary Entry Point Component
+                ├── index.ts                     # 📦 Feature Export Barrel
+                │
+                ├── components/                  # 🧩 <FeatureName> Core Layout Components
+                │   ├── <FeatureName>Panel.tsx   # 🖼️ Main Content Layout Wrapper
+                │   ├── <FeatureName>ToolBar.tsx # 🛠️ Toolbar
+                │   ├── <FeatureName>Header.tsx  # 📌 Feature Header with native action buttons
+                │   ├── <sample-kpis>.tsx        # 📈 Summary KPI Metric Cards container
+                │   ├── <sample-legend>.tsx      # 🎨 Status color rules & badge indicator legends
+                │   └── tabs/                    # 📑 Feature Views / Tab Panels
+                │       ├── <FeatureName>Tab.tsx # 📑 Primary Assessment Matrix view
+                │       ├── <sample-extracts-and-assessors-tab>.tsx # 📑 Extracts & Assessors tabular view
+                │       └── <sample-pillar-delta-analytics-tab>.tsx # 📑 Analytics & Delta comparison view
+                │
+                ├── data/                        # ⚙️ YAML/JSON/CSV used for Webview rendering like select options, legends, and sample datasets
+                │   ├── <feature-name>.csv       # 📊 Source CSV data
+                │   └── <feature-name>.json      # 📄 Structured domain JSON dataset
+                │
+                ├── hooks/                       # ⚓ Custom React Hooks
+                │   ├── use<FeatureName>Handlers.ts # ⚡ Action & event handlers hook
+                │   └── use<FeatureName>State.ts # 🔄 Reactive state selectors hook
+                │
+                ├── layout-ctns/                 # 📐 Scoped Layout Containers
+                │   └── CenterPanelContainer.tsx # 📐 Centered panel wrapper container
+                │
+                ├── store/                       # 🗃️ State Store Layer
+                │   └── use<FeatureName>Store.ts # 🔄 Zustand domain state store
+                │
+                ├── types/                       # 📐 TypeScript Contracts
+                │   └── <feature-name>.types.ts  # 📐 Domain types & data contracts
+                │
+                └── utils/                       # 🛠️ Helper Utilities
+                    └── htmlSanitizer.ts         # 🧹 HTML & DOM sanitization utility
+```
+
 ---
 
 ## 🚀 Running and Verifying

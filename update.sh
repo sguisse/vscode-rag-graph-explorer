@@ -62,7 +62,7 @@ When the user asks to clone a GSheet dashboard, acknowledge the request.
 **Stop and wait for the user's confirmation before advancing.**
 
 **Step 3: Generate Reverse-Engineering Prompt**
-1. Execute `.github/skills/react-sheet-dashboard-reverse/references/reverse-prompt-template.md` (substituting `GSHEET_DASHBORD_SHEET_NAME` with `<dashboard-name>`).
+1. Execute `.github/skills/gsheet-react-dashboard-reverse/references/reverse-prompt-template.md` (substituting `GSHEET_DASHBORD_SHEET_NAME` with `<dashboard-name>`).
 2. Output the full prompt to the user in a copyable markdown code block.
 3. Update `plan-follower.md`: Mark Step 3 as `COMPLETED` and Step 4 as `IN_PROGRESS`.
 
@@ -103,7 +103,7 @@ Ask the user to use Chrome Inspect tool to copy the dashboard iframe HTML and sa
 ### Phase 4: Code Generation & Verification
 
 **Step 9: Execute Dashboard Cloner Compilation**
-1. Act as the React compiler specified in `.github/skills/react-sheet-dashboard-cloner/SKILL.md`.
+1. Act as the React compiler specified in `.github/skills/gsheet-react-dashboard-cloner/SKILL.md`.
 2. Generate the React application files using the 3 staged inputs from `sandbox/dashboards/<dashboard-name>/`.
 3. Update `plan-follower.md`: Mark Step 9 as `COMPLETED` and Step 10 as `IN_PROGRESS`.
 
