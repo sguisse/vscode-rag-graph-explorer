@@ -27,7 +27,14 @@ export function useMaturityMatrixState() {
   const searchQuery = useMaturityMatrixStore((state) => state.searchQuery);
 
   const leaderOptions = useMemo(
-    () => Array.from(new Set(data.applications.map((app) => app.leader))).sort(),
+    () =>
+      Array.from(
+        new Set(
+          data.applications
+            .map((app) => app.leader)
+            .filter((leader): leader is string => Boolean(leader && leader !== '-')),
+        ),
+      ).sort(),
     [data.applications],
   );
 
@@ -128,7 +135,7 @@ export function useMaturityMatrixState() {
       extractPercent: totalPillarsCount > 0 ? Math.round((finishedExtracts / totalPillarsCount) * 100) : 0,
       finishedExtracts,
       totalPillarsCount,
-      leaderCount: new Set(filteredApplications.map((app) => app.leader)).size,
+      leaderCount: new Set(filteredApplications.map((app) => app.leader).filter((l) => Boolean(l && l !== '-'))).size,
     };
   }, [data.pillars.length, filteredApplications]);
 

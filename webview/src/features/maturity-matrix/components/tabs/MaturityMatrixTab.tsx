@@ -598,7 +598,14 @@ export function MaturityMatrixTab({ applications, onOriginClick }: MaturityMatri
   const pillars = storePillars && storePillars.length > 0 ? storePillars : DEFAULT_PILLARS;
 
   const leaderOptions = useMemo(
-    () => Array.from(new Set(storeApplications.map((app) => app.leader))).sort(),
+    () =>
+      Array.from(
+        new Set(
+          storeApplications
+            .map((app) => app.leader)
+            .filter((leader): leader is string => Boolean(leader && leader !== '-')),
+        ),
+      ).sort(),
     [storeApplications],
   );
 
@@ -709,7 +716,7 @@ export function MaturityMatrixTab({ applications, onOriginClick }: MaturityMatri
                         }}
                       >
                         <SelectTrigger className="h-6 border-purple-200 bg-white/70 text-purple-950 px-2 py-0 text-[11px] font-bold shadow-none hover:bg-white">
-                          <SelectValue placeholder={app.leader} />
+                          <SelectValue placeholder={app.leader || 'Select leader'} />
                         </SelectTrigger>
                         <SelectContent className="min-w-[160px]">
                           {leaderOptions.map((leader) => (

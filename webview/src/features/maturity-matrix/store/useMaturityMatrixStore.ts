@@ -1,9 +1,12 @@
 import { create } from 'zustand';
-import type { MaturityMatrixData, MaturityMatrixTabId, DateStatus } from '../types/maturity-matrix.types';
-import initialData from '../data/maturity-matrix.json';
+import { maturityMatrixApiService } from '@/services/api/maturity-matrix-api.service.gen';
+import type { MaturityMatrixData } from '@/shared/services/maturity-matrix/model/assessments-json';
+import type { DateStatus, MaturityMatrixTabId } from '../types/maturity-matrix.types';
 
-interface MaturityMatrixState {
+export interface MaturityMatrixState {
   data: MaturityMatrixData;
+  isLoading: boolean;
+  error: string | null;
   activeTab: MaturityMatrixTabId;
   filterToGenerate: boolean;
   showCellOrigins: boolean;
@@ -14,43 +17,77 @@ interface MaturityMatrixState {
   searchQuery: string;
   lastUpdated: string;
 
+  // Actions
+  fetchLastAssessments: () => Promise<void>;
   setActiveTab: (tab: MaturityMatrixTabId) => void;
-  setFilterToGenerate: (fn: boolean | ((current: boolean) => boolean)) => void;
-  setShowCellOrigins: (fn: boolean | ((current: boolean) => boolean)) => void;
+  setFilterToGenerate: (value: boolean | ((current: boolean) => boolean)) => void;
+  setShowCellOrigins: (value: boolean | ((current: boolean) => boolean)) => void;
   setSelectedLeader: (leader: string) => void;
   setSelectedAssessor: (assessor: string) => void;
   setSelectedPillar: (pillar: string) => void;
   setSelectedDateStatus: (status: DateStatus | 'ALL') => void;
   setSearchQuery: (query: string) => void;
-  setLastUpdated: (time: string) => void;
-
+  setLastUpdated: (lastUpdated: string) => void;
   updateLeader: (appCode: string, leader: string) => void;
   toggleToGenerate: (appCode: string) => void;
   toggleTarget: (appCode: string, pillarKey: string) => void;
   updateCommentary: (appCode: string, commentary: string) => void;
 }
 
-export const useMaturityMatrixStore = create<MaturityMatrixState>((set) => ({
-  data: initialData as MaturityMatrixData,
+const EMPTY_MATURITY_DATA: MaturityMatrixData = {
+  updatedAt: '',
+  generatedAt: '',
+  pillars: [],
+  applications: [],
+};
+
+export const useMaturityMatrixStore = create<MaturityMatrixState>((set, get) => ({
+  data: EMPTY_MATURITY_DATA,
+  isLoading: false,
+  error: null,
   activeTab: 'matrix',
   filterToGenerate: true,
-  showCellOrigins: true,
+  showCellOrigins: false,
   selectedLeader: 'ALL',
   selectedAssessor: 'ALL',
   selectedPillar: 'ALL',
   selectedDateStatus: 'ALL',
   searchQuery: '',
-  lastUpdated: '09:17:20',
+  lastUpdated: 'Not synced',
+
+  fetchLastAssessments: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const data = await maturityMatrixApiService.getLastAssessments();
+      const updatedTime = data.updatedAt
+        ? new Date(data.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+      set({
+        data,
+        isLoading: false,
+        lastUpdated: updatedTime,
+      });
+    } catch (err) {
+      set({
+        isLoading: false,
+        error: err instanceof Error ? err.message : 'Failed to fetch last assessments',
+      });
+    }
+  },
 
   setActiveTab: (activeTab) => set({ activeTab }),
-  setFilterToGenerate: (fn) =>
+
+  setFilterToGenerate: (value) =>
     set((state) => ({
-      filterToGenerate: typeof fn === 'function' ? fn(state.filterToGenerate) : fn,
+      filterToGenerate: typeof value === 'function' ? value(state.filterToGenerate) : value,
     })),
-  setShowCellOrigins: (fn) =>
+
+  setShowCellOrigins: (value) =>
     set((state) => ({
-      showCellOrigins: typeof fn === 'function' ? fn(state.showCellOrigins) : fn,
+      showCellOrigins: typeof value === 'function' ? value(state.showCellOrigins) : value,
     })),
+
   setSelectedLeader: (selectedLeader) => set({ selectedLeader }),
   setSelectedAssessor: (selectedAssessor) => set({ selectedAssessor }),
   setSelectedPillar: (selectedPillar) => set({ selectedPillar }),
@@ -84,15 +121,15 @@ export const useMaturityMatrixStore = create<MaturityMatrixState>((set) => ({
         ...state.data,
         applications: state.data.applications.map((app) => {
           if (app.code === appCode || app.id === appCode) {
-            const pillar = app.pillars[pillarKey];
-            if (!pillar) return app;
+            const currentPillar = app.pillars[pillarKey];
+            if (!currentPillar) return app;
             return {
               ...app,
               pillars: {
                 ...app.pillars,
                 [pillarKey]: {
-                  ...pillar,
-                  target: !pillar.target,
+                  ...currentPillar,
+                  target: !currentPillar.target,
                 },
               },
             };

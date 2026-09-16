@@ -372,7 +372,7 @@ class AssessmentsExtractorService:
 
         assessment_datetime = target_dir.name
         report_yaml_path = target_dir / "report-extract.yaml"
-        yaml_content = f"""MMAssessmentsReport:
+        yaml_content = f"""AssessmentsReport:
   assessment_datetime: "{assessment_datetime}"
   target_directory: "{target_dir.resolve()}"
   files:
@@ -403,7 +403,7 @@ message: "Assessments extraction completed successfully."
 
 
 def extract_assessments() -> Dict[str, Any]:
-    """Triggers the assessment extraction service execution and returns the MMAssessmentsReport dictionary."""
+    """Triggers the assessment extraction service execution and returns the AssessmentsReport dictionary."""
     service = AssessmentsExtractorService()
     report_data = service.execute_extraction()
     return report_data

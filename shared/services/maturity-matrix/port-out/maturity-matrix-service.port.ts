@@ -1,8 +1,9 @@
-import type { MMAssessmentsReport, MMAssessmentsResult } from '../model/index';
+import type { AssessmentsPyReport, AssessmentsPyResult } from '../model/index';
+import { MaturityMatrixData } from '../model/assessments-json';
 
 export interface IMaturityMatrixServicePort {
-  refreshAssessments(): Promise<MMAssessmentsReport>;
-  getLastAssessments(): Promise<MMAssessmentsResult>;
-  getAssessmentsAt(datetimeExtract: string): Promise<MMAssessmentsResult>;
+  refreshAssessments(): Promise<AssessmentsPyReport>;
+  getLastAssessments(): Promise<MaturityMatrixData>;
+  getAssessmentsAt(datetimeExtract: string): Promise<MaturityMatrixData>;
   getAssessmentsAvailable(): Promise<string[]>; // return timestamp folder names
 }

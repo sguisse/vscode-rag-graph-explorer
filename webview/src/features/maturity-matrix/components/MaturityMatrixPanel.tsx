@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { MaturityMatrixFilterBar } from './MaturityMatrixFilterBar';
 import { MaturityMatrixHeader } from './MaturityMatrixHeader';
 import { MaturityMatrixKpis } from './MaturityMatrixKpis';
@@ -28,6 +29,10 @@ export function MaturityMatrixPanel() {
 
   const showCellOrigins = useMaturityMatrixStore((state) => state.showCellOrigins);
   const lastUpdated = useMaturityMatrixStore((state) => state.lastUpdated);
+  const isLoading = useMaturityMatrixStore((state) => state.isLoading);
+  const error = useMaturityMatrixStore((state) => state.error);
+  const fetchLastAssessments = useMaturityMatrixStore((state) => state.fetchLastAssessments);
+
   const {
     handleTabChange,
     handleRefresh,
@@ -43,6 +48,10 @@ export function MaturityMatrixPanel() {
     handleCollapseAll,
   } = useMaturityMatrixHandlers();
 
+  useEffect(() => {
+    fetchLastAssessments();
+  }, [fetchLastAssessments]);
+
   return (
     <div className="flex h-full w-full flex-col gap-4 overflow-auto bg-slate-50 p-4 text-slate-800">
       <MaturityMatrixHeader
@@ -57,41 +66,55 @@ export function MaturityMatrixPanel() {
         onToggleCellOrigins={handleToggleCellOrigins}
       />
 
-      <MaturityMatrixKpis metrics={kpis} />
-
-      <MaturityMatrixFilterBar
-        activeTab={activeTab}
-        selectedLeader={selectedLeader}
-        selectedAssessor={selectedAssessor}
-        selectedPillar={selectedPillar}
-        selectedDateStatus={selectedDateStatus}
-        searchQuery={searchQuery}
-        leaderOptions={leaderOptions}
-        assessorOptions={assessorOptions}
-        pillarOptions={pillarOptions.map((pillar) => ({ key: pillar.key, label: pillar.label, icon: pillar.icon }))}
-        statusCounts={statusCounts}
-        onTabChange={handleTabChange}
-        onSelectedLeaderChange={handleSelectedLeaderChange}
-        onSelectedAssessorChange={handleSelectedAssessorChange}
-        onSelectedPillarChange={handleSelectedPillarChange}
-        onSelectedDateStatusChange={handleSelectedDateStatusChange}
-        onSearchQueryChange={handleSearchQueryChange}
-        onExpandAll={handleExpandAll}
-        onCollapseAll={handleCollapseAll}
-      />
-
-      <MaturityMatrixLegend
-        selectedDateStatus={selectedDateStatus}
-        statusCounts={statusCounts}
-        onStatusClick={handleSelectedDateStatusChange}
-      />
-
-      {activeTab === 'matrix' && <MaturityMatrixTab applications={filteredApplications} />}
-      {activeTab === 'compare' && (
-        <PillarDeltaAnalyticsTab pillars={pillarOptions} applications={filteredApplications} />
+      {error && (
+        <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs font-medium text-rose-700">
+          ⚠️ {error}
+        </div>
       )}
-      {activeTab === 'extracts' && (
-        <ExtractsAndAssessorsTab pillars={pillarOptions} applications={filteredApplications} />
+
+      {isLoading ? (
+        <div className="flex h-48 w-full items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white p-8 text-sm text-slate-500">
+          Loading maturity matrix assessments...
+        </div>
+      ) : (
+        <>
+          <MaturityMatrixKpis metrics={kpis} />
+
+          <MaturityMatrixFilterBar
+            activeTab={activeTab}
+            selectedLeader={selectedLeader}
+            selectedAssessor={selectedAssessor}
+            selectedPillar={selectedPillar}
+            selectedDateStatus={selectedDateStatus}
+            searchQuery={searchQuery}
+            leaderOptions={leaderOptions}
+            assessorOptions={assessorOptions}
+            pillarOptions={pillarOptions.map((pillar) => ({ key: pillar.key, label: pillar.label, icon: pillar.icon }))}
+            statusCounts={statusCounts}
+            onTabChange={handleTabChange}
+            onSelectedLeaderChange={handleSelectedLeaderChange}
+            onSelectedAssessorChange={handleSelectedAssessorChange}
+            onSelectedPillarChange={handleSelectedPillarChange}
+            onSelectedDateStatusChange={handleSelectedDateStatusChange}
+            onSearchQueryChange={handleSearchQueryChange}
+            onExpandAll={handleExpandAll}
+            onCollapseAll={handleCollapseAll}
+          />
+
+          <MaturityMatrixLegend
+            selectedDateStatus={selectedDateStatus}
+            statusCounts={statusCounts}
+            onStatusClick={handleSelectedDateStatusChange}
+          />
+
+          {activeTab === 'matrix' && <MaturityMatrixTab applications={filteredApplications} />}
+          {activeTab === 'compare' && (
+            <PillarDeltaAnalyticsTab pillars={pillarOptions} applications={filteredApplications} />
+          )}
+          {activeTab === 'extracts' && (
+            <ExtractsAndAssessorsTab pillars={pillarOptions} applications={filteredApplications} />
+          )}
+        </>
       )}
     </div>
   );

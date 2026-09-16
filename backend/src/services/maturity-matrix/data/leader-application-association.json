@@ -1,0 +1,46 @@
+[
+   {
+      "leader": "Fabrice LEDUCQ",
+      "applications": [
+         "APO",
+         "MPS_APO",
+         "MRP_VC4I",
+         "RFQ_AND_SHARING"
+      ]
+   },
+   {
+      "leader": "Nicolas FLAMENT",
+      "applications": [
+         "AVAILABLE_SHIPMENT",
+         "ORDER_AMENDMENT_BACK",
+         "ORDER_AMENDMENT_FRONT",
+         "ORDER_DELIVERY_PARTNER",
+         "ORDER_MANAGEMENT_PURCHASE_ORDER_API",
+         "SHU_SSCC"
+      ]
+   },
+   {
+      "leader": "Nicolas GUNST",
+      "applications": [
+         "BOM_MANAGER",
+         "SUPPLY_REF",
+         "MRP_EXCHANGE",
+         "PRODCOM",
+         "PRODCOM_API",
+         "SAVE_THE_STOCKS",
+         "SCAN_DELAY",
+         "SMART_SUPPLY_BACK",
+         "SMART_SUPPLY_FRONT",
+         "SMDI"
+      ]
+   },
+   {
+      "leader": "Richard ZANG",
+      "applications": [
+         "DPCP_FORCAST",
+         "MOLD",
+         "ORDERMAX",
+         "PSV"
+      ]
+   }
+]

@@ -11,7 +11,7 @@ export function useMaturityMatrixHandlers() {
   const setSelectedPillar = useMaturityMatrixStore((state) => state.setSelectedPillar);
   const setSelectedDateStatus = useMaturityMatrixStore((state) => state.setSelectedDateStatus);
   const setSearchQuery = useMaturityMatrixStore((state) => state.setSearchQuery);
-  const setLastUpdated = useMaturityMatrixStore((state) => state.setLastUpdated);
+  const fetchLastAssessments = useMaturityMatrixStore((state) => state.fetchLastAssessments);
   const updateLeader = useMaturityMatrixStore((state) => state.updateLeader);
   const toggleToGenerate = useMaturityMatrixStore((state) => state.toggleToGenerate);
   const toggleTarget = useMaturityMatrixStore((state) => state.toggleTarget);
@@ -23,12 +23,12 @@ export function useMaturityMatrixHandlers() {
   );
 
   const handleRefresh = useCallback(() => {
-    setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-  }, [setLastUpdated]);
+    fetchLastAssessments();
+  }, [fetchLastAssessments]);
 
   const handleExtractAll = useCallback(() => {
-    setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-  }, [setLastUpdated]);
+    fetchLastAssessments();
+  }, [fetchLastAssessments]);
 
   const handleToggleFilter = useCallback(() => {
     setFilterToGenerate((current) => !current);
@@ -83,13 +83,9 @@ export function useMaturityMatrixHandlers() {
     [updateCommentary],
   );
 
-  const handleExpandAll = useCallback(() => {
-    // handled in MaturityMatrixTab or store
-  }, []);
+  const handleExpandAll = useCallback(() => {}, []);
 
-  const handleCollapseAll = useCallback(() => {
-    // handled in MaturityMatrixTab or store
-  }, []);
+  const handleCollapseAll = useCallback(() => {}, []);
 
   return {
     handleTabChange,

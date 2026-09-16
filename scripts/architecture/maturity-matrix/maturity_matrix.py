@@ -39,15 +39,12 @@ def get_target_base_dir() -> Path:
     """Resolves the target base extraction directory from the extractor configuration."""
     service = AssessmentsExtractorService()
     config, _ = service._load_extractor_config()
-    base_dir_str = config.get(
-        "target-extracted-file-location",
-        "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer/sandbox/gen/archi/mm",
-    )
+    base_dir_str = config.get("target-extracted-file-location")
     return Path(base_dir_str)
 
 
 def refresh_assessments() -> Dict[str, Any]:
-    """Executes fresh extraction of assessments and returns the MMAssessmentsReport dictionary."""
+    """Executes fresh extraction of assessments and returns the AssessmentsReport dictionary."""
     return run_extract_assessments()
 
 

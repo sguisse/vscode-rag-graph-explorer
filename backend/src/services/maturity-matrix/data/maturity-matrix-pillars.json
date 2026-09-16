@@ -1,0 +1,13 @@
+[
+  { "key": "DATA", "label": "DATA", "icon": "💾", "rowOffset": 0 },
+  { "key": "DELIVERY", "label": "DELIVERY", "icon": "🚚", "rowOffset": 7 },
+  { "key": "DESIGN", "label": "DESIGN", "icon": "🎨", "rowOffset": 14 },
+  { "key": "DEV", "label": "DEV", "icon": "💻", "rowOffset": 21 },
+  { "key": "INFRA", "label": "INFRA", "icon": "🏗️", "rowOffset": 28 },
+  { "key": "PROCESS_PRACTICES", "label": "PROCESS PRACTICES", "icon": "⚙️", "rowOffset": 42 },
+  { "key": "QUALITY", "label": "QUALITY", "icon": "🧪", "rowOffset": 49 },
+  { "key": "OPERATION", "label": "OPERATION", "icon": "📊", "rowOffset": 35 },
+  { "key": "SECURITY", "label": "SECURITY", "icon": "🛡️", "rowOffset": 56 },
+  { "key": "STREAMING", "label": "STREAMING", "icon": "📡", "rowOffset": 63 },
+  { "key": "ACCESSIBILITY", "label": "ACCESSIBILITY", "icon": "♿", "rowOffset": 70 }
+]
