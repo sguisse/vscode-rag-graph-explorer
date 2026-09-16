@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 import { useMaturityMatrixStore } from '../store/useMaturityMatrixStore';
-import type { DateStatus } from '../types/maturity-matrix.types';
+import type { DateStatus, MaturityPillarDefinition } from '../types/maturity-matrix.types';
 
 export function getDateStatus(date: string | null | undefined): DateStatus {
-  if (!date) {
+  if (!date || date === 'null') {
     return 'yellow';
   }
 
@@ -13,7 +13,7 @@ export function getDateStatus(date: string | null | undefined): DateStatus {
 
   if (diffDays <= 15) return 'green';
   if (diffDays <= 150) return 'blue';    // Valid (<= 5 Months)
-  if (diffDays <= 182) return 'orange';  // Todo (> 5 Months up to 6 Months)
+  if (diffDays <= 182) return 'orange';  // Todo (> 5 Months)
   return 'red';                          // Outdated (> 6 Months)
 }
 
@@ -63,17 +63,18 @@ export function useMaturityMatrixState() {
       const matchesLeader = selectedLeader === 'ALL' || app.leader === selectedLeader;
       const matchesAssessor =
         selectedAssessor === 'ALL' ||
-        Object.values(app.pillars).some(
-          (pillar) => pillar.assessor && pillar.assessor === selectedAssessor,
-        );
+        Object.values(app.pillars).some((pillar) => pillar.assessor === selectedAssessor);
       const matchesPillar =
         selectedPillar === 'ALL' ||
-        Boolean(app.pillars[selectedPillar]?.score !== undefined && app.pillars[selectedPillar]?.score !== null);
+        Boolean(app.pillars[selectedPillar]?.score !== undefined);
+
+      // Rule: Selected if AT LEAST ONE pillar has the corresponding date status
       const matchesStatus =
         selectedDateStatus === 'ALL' ||
-        getDateStatus(
-          Object.values(app.pillars).find((pillar) => pillar.date && pillar.assessor && pillar.assessor !== '-')?.date ?? app.lastAssessmentDate,
-        ) === selectedDateStatus;
+        Object.values(app.pillars).some(
+          (pillar) => getDateStatus(pillar.date) === selectedDateStatus
+        );
+
       const matchesQuery =
         term.length === 0 ||
         app.name.toLowerCase().includes(term) ||
@@ -84,19 +85,23 @@ export function useMaturityMatrixState() {
     });
   }, [data.applications, filterToGenerate, searchQuery, selectedAssessor, selectedDateStatus, selectedLeader, selectedPillar]);
 
+  // Count applications having AT LEAST ONE pillar in each status
   const statusCounts: Record<DateStatus | 'ALL', number> = useMemo(() => {
     const counts: Record<DateStatus | 'ALL', number> = {
-        ALL: data.applications.length,
-        yellow: 0,
-        green: 0,
-        blue: 0,
-        orange: 0,
-        red: 0,
+      ALL: data.applications.length,
+      yellow: 0,
+      green: 0,
+      blue: 0,
+      orange: 0,
+      red: 0,
     };
 
-    data.applications.forEach((app) => {
-        const status = getDateStatus(app.lastAssessmentDate ?? null);
-        counts[status] += 1;
+    const statuses: DateStatus[] = ['yellow', 'green', 'blue', 'orange', 'red'];
+
+    statuses.forEach((status) => {
+      counts[status] = data.applications.filter((app) =>
+        Object.values(app.pillars).some((pillar) => getDateStatus(pillar.date) === status)
+      ).length;
     });
 
     return counts;
