@@ -4,7 +4,7 @@ An enterprise-grade, agent-driven orchestration framework designed to reverse-en
 
 ---
 
-## 🚀 System Overview
+## 👁️‍🗨️ System Overview
 
 The engine operates via a **Master Copilot Custom Agent** (`gsheet-to-react-orchestrator`) that drives a deterministic, 11-step pipeline. Progress is persistently tracked in an execution ledger (`plan-follower.md`) to guarantee state resumption across context resets.
 
@@ -19,7 +19,7 @@ The engine operates via a **Master Copilot Custom Agent** (`gsheet-to-react-orch
 
 ## 🧩 Architecture & Component Breakdown
 
-```
+```text
 .github/
 ├── agents/
 │   └── gsheet-to-react-orchestrator.md   # Master Agent Profile & State Machine Directives
@@ -46,11 +46,11 @@ The diagram below illustrates how the **Master Orchestrator Agent** interacts wi
 
 ```mermaid
 flowchart TD
-    %% Node Styling Definitions
-    classDef agent fill:#1e293b,stroke:#38bdf8,stroke-width:2px,color:#f8fafc
-    classDef skill fill:#0f172a,stroke:#818cf8,stroke-width:2px,color:#f8fafc
-    classDef user fill:#1e1b4b,stroke:#c084fc,stroke-width:2px,color:#f8fafc
-    classDef artifact fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#f8fafc
+    %% Node Styling Definitions (Pastel Theme)
+    classDef agent fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0f172a
+    classDef skill fill:#e0e7ff,stroke:#4f46e5,stroke-width:2px,color:#0f172a
+    classDef user fill:#f3e8ff,stroke:#9333ea,stroke-width:2px,color:#0f172a
+    classDef artifact fill:#d1fae5,stroke:#059669,stroke-width:2px,color:#0f172a
 
     User([👤 User]):::user -->|1. Request Dashboard Clone| Agent[🤖 gsheet-to-react-orchestrator Agent]:::agent
 
@@ -63,15 +63,15 @@ flowchart TD
 
     subgraph Phase2 [Phase 2: Manual User Extractions]
         User -->|Execute Prompt in Gemini Canvas| Gemini[✨ Gemini Canvas]:::user
-        Gemini -->|Save Result| SpecFile[/📄 specifications.md/]\:::artifact
-        User -->|Export CSV Data| CsvFile[/📊 data.csv/]\:::artifact
-        User -->|Copy iFrame HTML| HtmlFile[/🌐 iframe.html/]\:::artifact
+        Gemini -->|Save Result| SpecFile[/📄 specifications.md/]:::artifact
+        User -->|Export CSV Data| CsvFile[/📊 data.csv/]:::artifact
+        User -->|Copy iFrame HTML| HtmlFile[/🌐 iframe.html/]:::artifact
     end
 
     subgraph Phase3 [Phase 3: Automated Asset Processing]
         SpecFile & CsvFile & HtmlFile -->|Staged Files| Agent
         Agent -->|7. Execute Terminal Tool| SplitSkill[🛠️ html-split / run-split.sh]:::skill
-        SplitSkill -->|--rendering-only| CleanedDOM[/🎨 index.html + styles.css/]\:::artifact
+        SplitSkill -->|--rendering-only| CleanedDOM[/🎨 index.html + styles.css/]:::artifact
         Agent -->|8. Request Store Target| User
     end
 
@@ -81,6 +81,7 @@ flowchart TD
         Agent -->|10. Execute npm run build| Terminal[💻 Workspace Terminal]:::agent
         Terminal -->|Validation Pass| Success([✅ Complete & Ready Component]):::artifact
     end
+
 ```
 
 ---
@@ -178,6 +179,12 @@ stateDiagram-v2
 | **10**| Build & Verify | Automated | Executes `npm run build` in workspace terminal |
 | **11**| Final Handoff | Automated | Marks `plan-follower.md` completed & provides output paths |
 
+
+>💡 Note on Step 6 (HTML DOM Extraction Procedure) to obtain `iframe.html` :
+>   1. open Google Sheets in Google Chrome, open Chrome Developer Tools (Inspector),
+>   2. right-click the root iframe element or its inner `<html>` element,
+>   3. select **Edit as HTML**, copy the full content,
+>   4. and paste it into an external file named `iframe.html` inside the destination folder.
 ---
 
 ## 📁 Staged Artifact Directory Layout
@@ -200,3 +207,13 @@ sandbox/
             ├── <dashboard-name>.html         # Raw extracted Google Sheets iframe HTML
             └── script.js                     # Quarantined non-React inline script
 ```
+
+---
+
+## 🚀 How to start using this orchestrator
+1. In vscode, open a new AI session, and
+2. Select the `gsheet-to-react-orchestrator` agent.
+3. Select minimal model (`MAI-Code-1.1-Flash`) is enough.
+4. Then, enter `@gsheet-to-react-orchestrator Start cloning my dashboard "<GSHEET_DASHBOARD_CANVAS_NAME>"` to start the migration process.
+
+Then the orchestrator will guide you through each step of the migration process, ensuring that all necessary files are generated and organized correctly.

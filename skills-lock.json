@@ -1,6 +1,18 @@
 {
   "version": 1,
   "skills": {
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "skillPath": "skills/find-skills/SKILL.md",
+      "computedHash": "b146008599c31057cef1c145774cea5d5afb30e8f43fa802e47a4b461419aaaf"
+    },
+    "java-spring-boot": {
+      "source": "pluginagentmarketplace/custom-plugin-java",
+      "sourceType": "github",
+      "skillPath": "skills/java-spring-boot/SKILL.md",
+      "computedHash": "93e5a124d8d5f29e0b19692d431452f8b6c2a2e1c3e05c0f93f07fb2473ab32a"
+    },
     "ponytail": {
       "source": "DietrichGebert/ponytail",
       "sourceType": "github",
@@ -36,6 +48,18 @@
       "sourceType": "github",
       "skillPath": "skills/ponytail-review/SKILL.md",
       "computedHash": "4646594fcd75455533f7ff1425f4f1c5ba0fa65f88241bf262b1c4fc275f049a"
+    },
+    "spring-boot-performance-and-resilience": {
+      "source": "amritmalla/claude-full-stack-2.0",
+      "sourceType": "github",
+      "skillPath": "skills/implementations/backend/spring-boot/spring-boot-performance-and-resilience/SKILL.md",
+      "computedHash": "55c825559b4e5c658393b6dd448ba53c6e2c50646b0c61bc4fc89b8d7783bd69"
+    },
+    "system-architect": {
+      "source": "georgekhananaev/claude-skills-vault",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/system-architect/SKILL.md",
+      "computedHash": "566ba5c25546aeec23927b111f973110ea3b0719f2d39bbb37b82dd6d69bbd0a"
     }
   }
 }
