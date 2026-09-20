@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: ai-architecture-auditor-test
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+  liquibase:
+    enabled: false
+
+neo4j:
+  uri: bolt://localhost:7687
+  authentication:
+    username: neo4j
+    password: password
+
+llm:
+  gateway:
+    url: http://localhost:11434/api/generate
+    model: mistral

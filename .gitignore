@@ -4,6 +4,7 @@ node_modules
 .vscode-test/
 *.vsix
 .history
+**/target
 exported-files
 *.bak*
 graphify-out
