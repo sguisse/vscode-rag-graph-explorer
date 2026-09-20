@@ -249,6 +249,8 @@ export const BookmarksManagerPanel: React.FC = () => {
           onOpenGlobalConfig={() => setIsGlobalConfigOpen(true)}
           onOpenOmniSearch={() => setIsOmniOpen(true)}
           onOpenAnalytics={() => setIsAnalyticsOpen(true)}
+          onOpenAuditHistory={() => setIsAuditOpen(true)}
+          onOpenDuplicateResolver={() => setIsDuplicateOpen(true)}
         />
       )}
 

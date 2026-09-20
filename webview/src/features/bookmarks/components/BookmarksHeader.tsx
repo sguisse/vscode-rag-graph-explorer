@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Globe, Search, EyeOff, Eye, Sliders, User, BarChart2, Sun, Moon, Maximize2 } from 'lucide-react';
+import { Globe, Search, EyeOff, Eye, Sliders, User, BarChart2, Sun, Moon, Maximize2, History, Copy } from 'lucide-react';
 import { useBookmarksStore } from '../store/useBookmarksStore';
 import initialData from '../data/initialBookmarks.json';
 import { User as UserType } from '../types/bookmarks.types';
@@ -8,12 +8,16 @@ interface BookmarksHeaderProps {
   onOpenGlobalConfig?: () => void;
   onOpenOmniSearch?: () => void;
   onOpenAnalytics?: () => void;
+  onOpenAuditHistory?: () => void;
+  onOpenDuplicateResolver?: () => void;
 }
 
 export const BookmarksHeader: React.FC<BookmarksHeaderProps> = ({
   onOpenGlobalConfig = () => {},
   onOpenOmniSearch = () => {},
-  onOpenAnalytics = () => {}
+  onOpenAnalytics = () => {},
+  onOpenAuditHistory = () => {},
+  onOpenDuplicateResolver = () => {},
 }) => {
   const {
     isDarkMode,
@@ -118,7 +122,7 @@ export const BookmarksHeader: React.FC<BookmarksHeaderProps> = ({
             }}
             className="bg-transparent text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
           >
-            {users.map(u => (
+            {users.map((u) => (
               <option
                 key={u.id}
                 value={u.id}
@@ -128,6 +132,24 @@ export const BookmarksHeader: React.FC<BookmarksHeaderProps> = ({
             ))}
           </select>
         </div>
+
+        <button
+          type="button"
+          title="Audit Log History"
+          onClick={onOpenAuditHistory}
+          className="p-2 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+        >
+          <History className="w-4 h-4"/>
+        </button>
+
+        <button
+          type="button"
+          title="Find Duplicates"
+          onClick={onOpenDuplicateResolver}
+          className="p-2 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+        >
+          <Copy className="w-4 h-4"/>
+        </button>
 
         <button
           type="button"
