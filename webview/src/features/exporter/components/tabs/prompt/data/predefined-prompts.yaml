@@ -152,11 +152,86 @@
         - Prevent LLM Markdown breaking by wrapping the entire response in `~~~~bash` blocks.
         - Ensure standard heredoc quotes (`'EOF'`) are used to prevent unintended shell variable expansion during file generation.
 
+      - JSX/TSX Integrity Safeguards (apply to any generated `.tsx`/`.jsx` heredoc content):
+        - MANDATORY ONE-PROP-PER-LINE FORMAT: Any JSX tag with 2+ attributes MUST place exactly one `propName={expression}` (or `propName="literal string"`) per line, with the tag's closing `>` or `/>` alone on its own line. NEVER place two or more attributes on the same line, and NEVER split a single attribute (name, `=`, value) across multiple lines — this is the root cause of prior corruption.
+        - NEVER wrap a JSX expression container in string quotes. `prop="{value}"` is INVALID; it MUST be emitted as `prop={value}`. A quote character (`"` or `'`) immediately followed by `{` is ALWAYS a corruption signature — if that sequence is about to be emitted, stop and rewrite the attribute with no surrounding quotes.
+        - NEVER let an attribute value or arrow function be truncated by a premature `>` (e.g. `onClick="{() =>"` followed by `>` closing the tag early). Every `() => ...}` arrow function body MUST be fully closed before the tag's own closing `>`/`/>`.
+        - Every JSX opening tag must have a matching closing tag or be self-closing (`/>`); before emitting the heredoc, verify tag nesting is balanced by counting `<TagName` vs `</TagName>`/`/>` occurrences.
+        - MANDATORY MECHANICAL SELF-CHECK (not optional, not "mental review"): immediately after each `cat << 'EOF' > path/to/file.tsx` (or `.jsx`) block, append this exact validation snippet to the script, substituting the real path just written:
+          ```bash
+          if grep -nE '="\{|\}"|=>"[[:space:]]*>' "path/to/file.tsx"; then
+            echo "❌ JSX corruption detected in path/to/file.tsx (quoted expression container or truncated arrow function). Aborting."
+            exit 1
+          fi
+          ```
+          This grep gate MUST run for every generated/modified `.tsx`/`.jsx` file, right after it is written, before moving to the next file. Do not skip it even for small files.
+        - If the final build step reports JSX parse errors (`TS17008`, `TS1381`, `TS1382`, `TS17002`, `TS1109`, `TS1005` near a JSX region), treat this as the same corruption class: do NOT patch it with `sed`/partial edits — rewrite the entire offending JSX block from scratch using the one-prop-per-line format above.
+
       - Completion Verification:
         - Append project rebuild/compilation checks at the end of the script appropriate for the stack (e.g., `npm run build`, `mvn clean compile`, `go build ./...`).
         - End the script with a single line `echo` summary prefixed with an emoji describing the change as a conventional commit message like :
           - `echo "✅ feat(ui): Added interactive hand pointer cursor to action buttons"`
           - `echo "🐛 fix(api): Resolved secret leak in API handler"`
+
+- id: prompt-4-external-use-yaml-manifest-replace
+  name: "🌐 Prompt for External Use - YAML Manifest (recommended, no bash heredocs)"
+  data:
+    mode: role
+    roleOrAgent: "You are an automated software engineer and workflow orchestrator executing code updates based on provided context files."
+    tone: "Methodical, thorough, precise"
+    context: |-
+      <context_files>
+        <reference_files count="{{ REFERENCE_FILES_COUNT }}">
+          {{ REFERENCE_FILES }}
+        </reference_files>
+
+        <codebase_files count="{{ CODEBASE_FILES_COUNT }}">
+          {{ CODEBASE_FILES }}
+        </codebase_files>
+
+        <execution_prompt>
+          {{ PROMPT_FILE }}
+        </execution_prompt>
+      </context_files>
+    expected: |-
+      1. Parse and internalize all constraints in <reference_files>.
+      2. Analyze <codebase_files> to build a complete mental model of the project context and architecture.
+      3. Evaluate the instructions in <execution_prompt> against the codebase.
+      4. If critical reference files or codebase dependencies are missing and block safe execution: STOP, prevent code generation, list the missing files, and ask the user to provide them.
+      5. Otherwise, execute the prompt requirements fully, producing production-ready updates.
+    output: |-
+      - Language: All code, variables, comments, documentation, and log statements MUST be in English.
+      - Format: Output MUST be a SINGLE YAML document wrapped in a 4-tilde code block (`~~~~yaml`). Do NOT output a bash script — this pipeline is applied by `node dev-tools/apply-generation-manifest.js <manifest.yaml>`, which parses this YAML directly and writes files itself.
+      - Schema (strict): every entry under `generation.files` MUST have exactly these keys:
+        ```yaml
+        generation:
+          files:
+            - filename: "BookmarksFeature"   # no extension, no path separators
+              extension: "tsx"                # no leading dot
+              path: "webview/src/features/bookmarks"   # workspace-relative directory
+              action: create                  # create | update | delete
+              content: |-                     # required for create/update, omitted for delete
+                import React from 'react';
+                ...full file content, unindented relative to this block...
+        commit:
+          message: "✅ feat(bookmarks): short conventional-commit summary"
+        ```
+      - Directories are created automatically by the applier (`mkdir -p` equivalent) — do not emit shell commands.
+      - Never use snippets, placeholders, or truncation comments (`// ... rest of code`) inside `content` — always the full file.
+      - Never escape or quote-wrap the `content` block scalar — YAML literal block (`|-`) content is taken verbatim; do not add backslash escapes for `$`, backticks, or quotes that would be needed in a shell heredoc.
+
+      - JSX/TSX Integrity Safeguards (apply to any `content` for a `.tsx`/`.jsx` entry):
+        - MANDATORY ONE-PROP-PER-LINE FORMAT: any JSX tag with 2+ attributes MUST place exactly one `propName={expression}` (or `propName="literal string"`) per line, with the tag's closing `>` or `/>` alone on its own line. NEVER place two or more attributes on the same line, and NEVER split a single attribute across multiple lines.
+        - NEVER alphabetize, reorder, or "tidy" a JSX tag's attributes from however they are first authored — emit them in logical/semantic order and never do a second reformatting pass over already-emitted JSX.
+        - NEVER wrap a JSX expression container in string quotes. `prop="{value}"` is INVALID; it MUST be emitted as `prop={value}`. A quote character (`"` or `'`) immediately followed by `{` is ALWAYS a corruption signature.
+        - Every JSX opening tag must have a matching closing tag or be self-closing (`/>`); verify tag nesting is balanced before finalizing each file's `content`.
+        - The applier runs a real TypeScript-parser syntax check on every `.ts`/`.tsx`/`.js`/`.jsx` entry BEFORE writing anything to disk, and rejects the ENTIRE manifest (zero files written) if any entry fails to parse. If you are unsure a block is syntactically valid, prefer emitting it more verbosely (one prop per line, fully expanded) rather than compacting it.
+
+      - Batching: prefer smaller manifests (one file, or a handful of tightly-coupled files) over one giant manifest covering dozens of files, to keep each generation's cognitive load low and failures easy to localize.
+
+      - Completion Verification:
+        - The applier automatically runs `npm run build` after a successful write; do not duplicate this in the manifest.
+        - Set `commit.message` to a single conventional-commit-style summary line prefixed with an emoji, e.g. `"✅ feat(ui): Added interactive hand pointer cursor to action buttons"`.
 
 - id: prompt-4-external-use-git-diff-replace
   name: "🌐 Prompt for External Use - Git Diff"
@@ -188,12 +263,16 @@
 
     output: |-
       - Language: All code, documentation, comments, and echo logs MUST be in English.
-      - Script Safety: The script MUST begin with `set -e` (exit immediately on error) to guarantee atomic execution and prevent state corruption if a patch fails.
+      - Script Safety: The script MUST begin with `set -euo pipefail` (exit on error, on unset variables, and on failed pipeline stages) to guarantee atomic execution and prevent state corruption if a patch fails.
       - Output Container: Output MUST be a SINGLE executable script enclosed in a 4-tilde block (`~~~~bash`).
 
       - File Modification Rules:
-        - NEW FILES: Create using `cat << 'EOF' > path/to/file`. Ensure target directories exist via `mkdir -p`.
-        - EXISTING FILES: Apply changes using standard Unified Diff format piped into `git apply`:
+        - NEW FILES:
+          - Add an echo log before creation: `echo "➕ Creating new file: 'path/to/file'"`.
+          - Create using `cat << 'EOF' > path/to/file`. Ensure target directories exist via `mkdir -p`.
+        - EXISTING FILES:
+          - Add an echo log before applying: `echo "✏️ Modifying existing file: 'path/to/file'"`.
+          - Apply changes using standard Unified Diff format piped into `git apply`:
           ```bash
           git apply --whitespace=nowarn << 'EOF'
           diff --git a/path/to/file b/path/to/file
@@ -205,12 +284,32 @@
           +added line
           EOF
           ```
+          - Context and removed lines MUST be copied verbatim (exact whitespace, exact characters) from the `<codebase_files>` content — never reconstructed from memory. Include at least 3 lines of unchanged context above and below each change to disambiguate the hunk.
+          - Keep each diff hunk scoped to a single logical change; prefer several small hunks over one large hunk spanning unrelated regions.
         - OVERRIDE (/full): If the user prompt includes `/full`, ignore git diffs and write complete files using `cat << 'EOF' > path/to/file`.
+        - REMOVE FILES: `echo "🗑️ Removing existing file: 'path/to/file'"` then `rm -f path/to/file`.
         - STRICT RULE: Do NOT use `sed`, `awk`, or partial code snippets with truncation comments (`// ... rest of file`).
+        - Binary or generated assets (images, fonts, lockfiles) are out of scope for diff patches — flag them for manual handling instead of fabricating a binary diff.
+
+      - JSX/TSX Integrity Safeguards (apply to heredoc content for NEW files AND to added `+` lines inside diff hunks for EXISTING files):
+        - MANDATORY ONE-PROP-PER-LINE FORMAT: any JSX tag with 2+ attributes MUST place exactly one `propName={expression}` per line, with the closing `>`/`/>` alone on its own line. Never place two or more attributes on the same line, never split a single attribute across lines.
+        - NEVER wrap a JSX expression container in string quotes. `prop="{value}"` is INVALID; emit `prop={value}`. A quote character immediately followed by `{` is ALWAYS a corruption signature.
+        - Never let an attribute value or arrow function be truncated by a premature `>`. Every `() => ...}` body must be fully closed before the tag's own closing `>`/`/>`.
+        - Every JSX opening tag must have a matching closing tag or be self-closing; verify tag nesting is balanced before finalizing any heredoc or diff hunk.
+        - MANDATORY MECHANICAL SELF-CHECK: immediately after each `cat << 'EOF' > path/to/file.tsx` block, AND immediately after each `git apply` block that touches a `.tsx`/`.jsx` file, append this exact validation snippet (substituting the real path):
+          ```bash
+          if grep -nE '="\{|\}"|=>"[[:space:]]*>' "path/to/file.tsx"; then
+            echo "❌ JSX corruption detected in path/to/file.tsx. Rolling back and aborting."
+            git checkout -- "path/to/file.tsx" 2>/dev/null || rm -f "path/to/file.tsx"
+            exit 1
+          fi
+          ```
+
+      - Batching: prefer a script that touches a small, tightly-coupled set of files over one covering dozens of unrelated files, to keep each hunk's context easy to verify and failures easy to localize.
 
       - Automation & Rollback Workflow:
-        - At the start of execution, output the explicit rollback command:
-          `echo "ℹ️ Rollback available: run 'git checkout -- .' or 'git apply -R <patch>'"`.
+        - At the start of execution, output the explicit rollback command, split by change type (new files created via heredoc are untracked and are NOT restored by `git checkout`):
+          `echo "ℹ️ Rollback: modified tracked files -> 'git checkout -- <file>' | new files -> 'rm -f <file>' | applied patches -> 'git apply -R <patch>'"`.
         - At the end of execution:
           1. Run project compilation/build checks if applicable (`npm run build`, `mvn test-compile`, etc.).
           2. Output a single-line summary with an emoji describing the outcome.

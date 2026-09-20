@@ -949,7 +949,9 @@
     "build": "npm run build:backend && npm run build:webview",
     "watch:backend": "node backend/esbuild.js --watch",
     "watch:webview": "cd webview && npm run dev",
-    "compile": "npm run build"
+    "compile": "npm run build",
+    "apply:yaml-on-codebase": "node dev-tools/apply-yaml-on-codebase.js",
+    "apply:git-diff-on-codebase": "node dev-tools/apply-git-diff-on-codebase.js"
   },
   "dependencies": {
     "js-yaml": "^5.4.1",

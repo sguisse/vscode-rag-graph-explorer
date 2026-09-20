@@ -12,3 +12,4 @@ __pycache__
 zz-tmp/rvng-jqassistant-analysis
 webview/src/features/explorer/wksp-cnt-graph/data/sample-ast-data-for-dev.json
 copilot-models-custom.json
+update.yaml

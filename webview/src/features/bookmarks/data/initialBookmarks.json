@@ -1,0 +1,707 @@
+{
+  "INITIAL_USERS": [
+    {
+      "id": "usr_jane_admin",
+      "name": "Jane Doe",
+      "email": "j.doe@corp.internal",
+      "role": "admin"
+    },
+    {
+      "id": "usr_alex_editor",
+      "name": "Alex Rivera",
+      "email": "a.rivera@corp.internal",
+      "role": "editor"
+    },
+    {
+      "id": "usr_sam_viewer",
+      "name": "Sam Chen",
+      "email": "s.chen@corp.internal",
+      "role": "viewer"
+    }
+  ],
+  "INITIAL_TABS": [
+    {
+      "id": "tab_frontend",
+      "name": "Frontend Stack",
+      "description": "Core web UI frameworks, CSS toolkits, and build systems",
+      "isPrivate": false,
+      "owner": "usr_jane_admin",
+      "isLocked": false,
+      "userRolePermissions": {
+        "admin": true,
+        "editor": true,
+        "viewer": false
+      },
+      "style": {
+        "tabNameBackgroundColor": "#4f46e5",
+        "tabNameTextColor": "#ffffff"
+      },
+      "cards": [
+        {
+          "id": "card_react",
+          "name": "React Ecosystem",
+          "tabId": "tab_frontend",
+          "description": "Core React 19 documentation and ecosystem libraries",
+          "isPrivate": false,
+          "owner": "usr_jane_admin",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "w": 2,
+            "h": 2
+          },
+          "locks": {
+            "cardLocks": {
+              "lockedPosition": false,
+              "lockedSize": false,
+              "lockedName": false,
+              "lockedDeletion": false
+            },
+            "bookmarkLocks": {
+              "editable": true,
+              "reorderable": true,
+              "urlEditableOnly": false,
+              "removable": true,
+              "addable": true
+            }
+          },
+          "headerStyle": {
+            "backgroundColor": "#312e81",
+            "textColor": "#ffffff"
+          },
+          "contentStyle": {
+            "backgroundColor": "",
+            "borderStyle": "solid",
+            "borderColor": "#4f46e5"
+          },
+          "adaptiveFaviconTheme": true,
+          "badges": [
+            {
+              "id": "b1",
+              "name": "Core Tier",
+              "backgroundColor": "#e0e7ff",
+              "textColor": "#3730a3",
+              "icon": "Code",
+              "iconType": "lucide"
+            },
+            {
+              "id": "b2",
+              "name": "Verified",
+              "backgroundColor": "#dcfce7",
+              "textColor": "#166534",
+              "icon": "ShieldCheck",
+              "iconType": "lucide"
+            }
+          ],
+          "bookmarks": [
+            {
+              "id": "bm_react_docs",
+              "name": "React Official Documentation",
+              "description": "The library for web and native user interfaces with Actions and Server Components.",
+              "url": "[https://react.dev](https://react.dev)",
+              "icon": "[https://react.dev/favicon.ico](https://react.dev/favicon.ico)",
+              "iconType": "url",
+              "tags": [
+                "react",
+                "frontend",
+                "official"
+              ],
+              "isPrivate": false,
+              "owner": "usr_jane_admin",
+              "isLocked": false,
+              "healthStatus": "healthy",
+              "clickCount": 142,
+              "createdAt": 1788587367546
+            },
+            {
+              "id": "bm_vite",
+              "name": "Vite Next Generation Bundler",
+              "description": "Blazing fast frontend tooling powered by native ES modules and Rollup.",
+              "url": "[https://vite.dev](https://vite.dev)",
+              "icon": "🛠️",
+              "iconType": "emoji",
+              "tags": [
+                "bundler",
+                "vite",
+                "dx"
+              ],
+              "isPrivate": false,
+              "owner": "usr_jane_admin",
+              "isLocked": false,
+              "healthStatus": "healthy",
+              "clickCount": 88,
+              "createdAt": 1788932967546
+            },
+            {
+              "id": "bm_tailwind",
+              "name": "Tailwind CSS v4 Engine",
+              "description": "Modern CSS framework with CSS-first @theme directive and native CSS variables.",
+              "url": "[https://tailwindcss.com](https://tailwindcss.com)",
+              "icon": "Palette",
+              "iconType": "lucide",
+              "tags": [
+                "tailwind",
+                "css",
+                "design-system"
+              ],
+              "isPrivate": false,
+              "owner": "usr_jane_admin",
+              "isLocked": false,
+              "healthStatus": "healthy",
+              "clickCount": 195,
+              "createdAt": 1788068967546
+            }
+          ]
+        },
+        {
+          "id": "card_state",
+          "name": "State & Data Architecture",
+          "tabId": "tab_frontend",
+          "description": "State management, schema validation, and cache synchronization",
+          "isPrivate": true,
+          "owner": "usr_jane_admin",
+          "position": {
+            "x": 2,
+            "y": 0,
+            "w": 2,
+            "h": 2
+          },
+          "locks": {
+            "cardLocks": {
+              "lockedPosition": true,
+              "lockedSize": false,
+              "lockedName": false,
+              "lockedDeletion": false
+            },
+            "bookmarkLocks": {
+              "editable": true,
+              "reorderable": true,
+              "urlEditableOnly": false,
+              "removable": false,
+              "addable": true
+            }
+          },
+          "headerStyle": {
+            "backgroundColor": "#1e293b",
+            "textColor": "#f8fafc"
+          },
+          "contentStyle": {
+            "backgroundColor": "",
+            "borderStyle": "dashed",
+            "borderColor": "#64748b"
+          },
+          "adaptiveFaviconTheme": false,
+          "badges": [
+            {
+              "id": "b3",
+              "name": "Private Spec",
+              "backgroundColor": "#fef3c7",
+              "textColor": "#92400e",
+              "icon": "Lock",
+              "iconType": "lucide"
+            }
+          ],
+          "bookmarks": [
+            {
+              "id": "bm_zustand",
+              "name": "Zustand State Store",
+              "description": "Small, fast and scalable bearbones state-management solution using simplified flux principles.",
+              "url": "[https://github.com/pmndrs/zustand](https://github.com/pmndrs/zustand)",
+              "icon": "🐻",
+              "iconType": "emoji",
+              "tags": [
+                "zustand",
+                "state",
+                "react"
+              ],
+              "isPrivate": true,
+              "owner": "usr_jane_admin",
+              "isLocked": false,
+              "healthStatus": "healthy",
+              "clickCount": 64,
+              "createdAt": 1789105767546
+            },
+            {
+              "id": "bm_zod",
+              "name": "Zod TypeScript-first Schema",
+              "description": "TypeScript-first schema declaration and validation library with static type inference.",
+              "url": "[https://zod.dev](https://zod.dev)",
+              "icon": "ShieldCheck",
+              "iconType": "lucide",
+              "tags": [
+                "zod",
+                "validation",
+                "typescript"
+              ],
+              "isPrivate": false,
+              "owner": "usr_jane_admin",
+              "isLocked": true,
+              "healthStatus": "healthy",
+              "clickCount": 110,
+              "createdAt": 1787636967546
+            },
+            {
+              "id": "bm_tanstack_query",
+              "name": "TanStack React Query",
+              "description": "Powerful asynchronous state management, server-state caching, and data synchronization.",
+              "url": "[https://tanstack.com/query/latest](https://tanstack.com/query/latest)",
+              "icon": "Globe",
+              "iconType": "lucide",
+              "tags": [
+                "tanstack",
+                "cache",
+                "async"
+              ],
+              "isPrivate": false,
+              "owner": "usr_jane_admin",
+              "isLocked": false,
+              "healthStatus": "healthy",
+              "clickCount": 89,
+              "createdAt": 1788241767546
+            }
+          ]
+        },
+        {
+          "id": "card_01",
+          "name": "01",
+          "tabId": "tab_frontend",
+          "description": "Workspace Section 01 - Confidential Internal Specs",
+          "isPrivate": true,
+          "owner": "usr_jane_admin",
+          "position": {
+            "x": 0,
+            "y": 2,
+            "w": 2,
+            "h": 2
+          },
+          "bookmarkDisplayMode": "compact",
+          "locks": {
+            "cardLocks": {
+              "lockedPosition": false,
+              "lockedSize": false,
+              "lockedName": false,
+              "lockedDeletion": false
+            },
+            "bookmarkLocks": {
+              "editable": true,
+              "reorderable": true,
+              "urlEditableOnly": false,
+              "removable": true,
+              "addable": true
+            }
+          },
+          "headerStyle": {
+            "backgroundColor": "#1e1b4b",
+            "textColor": "#e0e7ff"
+          },
+          "contentStyle": {
+            "backgroundColor": "",
+            "borderStyle": "solid",
+            "borderColor": "#4f46e5"
+          },
+          "adaptiveFaviconTheme": false,
+          "badges": [
+            {
+              "id": "b_priv",
+              "name": "Private Vault",
+              "backgroundColor": "#fef3c7",
+              "textColor": "#92400e",
+              "icon": "Lock",
+              "iconType": "lucide"
+            }
+          ],
+          "bookmarks": [
+            {
+              "id": "bm_priv_api_keys",
+              "name": "Internal Production Auth Vault",
+              "description": "Secure enterprise key rotation registry and OAuth client secrets gateway.",
+              "url": "[https://vault.internal.corp/secrets/prod](https://vault.internal.corp/secrets/prod)",
+              "icon": "Lock",
+              "iconType": "lucide",
+              "tags": [
+                "security",
+                "vault",
+                "tokens"
+              ],
+              "isPrivate": true,
+              "owner": "usr_jane_admin",
+              "isLocked": true,
+              "healthStatus": "healthy",
+              "clickCount": 45,
+              "createdAt": 1788760167546
+            },
+            {
+              "id": "bm_priv_metrics",
+              "name": "Confidential Performance SLOs",
+              "description": "Real-time telemetry and incident triage reports for backend microservices.",
+              "url": "[https://metrics.internal.corp/slo/tier1](https://metrics.internal.corp/slo/tier1)",
+              "icon": "BarChart2",
+              "iconType": "lucide",
+              "tags": [
+                "telemetry",
+                "slo",
+                "confidential"
+              ],
+              "isPrivate": true,
+              "owner": "usr_jane_admin",
+              "isLocked": false,
+              "healthStatus": "healthy",
+              "clickCount": 78,
+              "createdAt": 1789019367546
+            },
+            {
+              "id": "bm_priv_design_doc",
+              "name": "Q4 Architecture Whitepaper",
+              "description": "Proprietary event streaming and multi-region replication blueprint.",
+              "url": "[https://docs.internal.corp/rfc/arch-2026-q4](https://docs.internal.corp/rfc/arch-2026-q4)",
+              "icon": "BookOpen",
+              "iconType": "lucide",
+              "tags": [
+                "rfc",
+                "architecture",
+                "private"
+              ],
+              "isPrivate": true,
+              "owner": "usr_jane_admin",
+              "isLocked": false,
+              "healthStatus": "healthy",
+              "clickCount": 120,
+              "createdAt": 1789364967546
+            }
+          ]
+        },
+        {
+          "id": "card_02",
+          "name": "02",
+          "tabId": "tab_frontend",
+          "description": "Workspace Section 02 - Core Tooling",
+          "isPrivate": false,
+          "owner": "usr_jane_admin",
+          "position": {
+            "x": 2,
+            "y": 2,
+            "w": 2,
+            "h": 2
+          },
+          "bookmarkDisplayMode": "compact",
+          "locks": {
+            "cardLocks": {
+              "lockedPosition": false,
+              "lockedSize": false,
+              "lockedName": false,
+              "lockedDeletion": false
+            },
+            "bookmarkLocks": {
+              "editable": true,
+              "reorderable": true,
+              "urlEditableOnly": false,
+              "removable": true,
+              "addable": true
+            }
+          },
+          "headerStyle": {
+            "backgroundColor": "#1e293b",
+            "textColor": "#f8fafc"
+          },
+          "contentStyle": {
+            "backgroundColor": "",
+            "borderStyle": "solid",
+            "borderColor": "#3b82f6"
+          },
+          "adaptiveFaviconTheme": false,
+          "badges": [],
+          "bookmarks": [
+            {
+              "id": "bm_biome",
+              "name": "Biome Toolchain",
+              "description": "Fast formatter, linter, and more for JavaScript, TypeScript, JSX, and JSON.",
+              "url": "[https://biomejs.dev](https://biomejs.dev)",
+              "icon": "Code",
+              "iconType": "lucide",
+              "tags": [
+                "linter",
+                "formatter",
+                "toolchain"
+              ],
+              "isPrivate": false,
+              "owner": "usr_jane_admin",
+              "isLocked": false,
+              "healthStatus": "healthy",
+              "clickCount": 52,
+              "createdAt": 1788500967546
+            },
+            {
+              "id": "bm_playwright",
+              "name": "Playwright End-to-End Testing",
+              "description": "Fast and reliable end-to-end testing for modern web apps across Chromium, WebKit, and Firefox.",
+              "url": "[https://playwright.dev](https://playwright.dev)",
+              "icon": "🎭",
+              "iconType": "emoji",
+              "tags": [
+                "testing",
+                "e2e",
+                "automation"
+              ],
+              "isPrivate": false,
+              "owner": "usr_jane_admin",
+              "isLocked": false,
+              "healthStatus": "healthy",
+              "clickCount": 93,
+              "createdAt": 1787896167546
+            },
+            {
+              "id": "bm_vitest",
+              "name": "Vitest Unit Test Runner",
+              "description": "Next-generation testing framework powered by Vite with out-of-the-box ESM and TypeScript support.",
+              "url": "[https://vitest.dev](https://vitest.dev)",
+              "icon": "⚡",
+              "iconType": "emoji",
+              "tags": [
+                "unit-testing",
+                "vite",
+                "tdd"
+              ],
+              "isPrivate": false,
+              "owner": "usr_jane_admin",
+              "isLocked": false,
+              "healthStatus": "healthy",
+              "clickCount": 67,
+              "createdAt": 1788846567546
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tab_cloud",
+      "name": "Cloud & Infrastructure",
+      "description": "Multi-cloud console access, monitoring, and pipeline orchestration",
+      "isPrivate": false,
+      "owner": "usr_alex_editor",
+      "isLocked": false,
+      "userRolePermissions": {
+        "admin": true,
+        "editor": true,
+        "viewer": true
+      },
+      "style": {
+        "tabNameBackgroundColor": "#0284c7",
+        "tabNameTextColor": "#ffffff"
+      },
+      "cards": [
+        {
+          "id": "card_aws",
+          "name": "AWS Operations",
+          "tabId": "tab_cloud",
+          "description": "Core compute, storage, and IAM authorization services",
+          "isPrivate": false,
+          "owner": "usr_alex_editor",
+          "position": {
+            "x": 0,
+            "y": 0,
+            "w": 2,
+            "h": 2
+          },
+          "bookmarkDisplayMode": "compact",
+          "locks": {
+            "cardLocks": {
+              "lockedPosition": false,
+              "lockedSize": true,
+              "lockedName": false,
+              "lockedDeletion": true
+            },
+            "bookmarkLocks": {
+              "editable": true,
+              "reorderable": false,
+              "urlEditableOnly": true,
+              "removable": false,
+              "addable": true
+            }
+          },
+          "headerStyle": {
+            "backgroundColor": "#0f172a",
+            "textColor": "#fb923c"
+          },
+          "contentStyle": {
+            "backgroundColor": "",
+            "borderStyle": "solid",
+            "borderColor": "#fb923c"
+          },
+          "adaptiveFaviconTheme": false,
+          "badges": [
+            {
+              "id": "b4",
+              "name": "Critical Infra",
+              "backgroundColor": "#fee2e2",
+              "textColor": "#991b1b",
+              "icon": "Cloud",
+              "iconType": "lucide"
+            }
+          ],
+          "bookmarks": [
+            {
+              "id": "bm_aws_ec2",
+              "name": "EC2 Elastic Compute Console",
+              "description": "Scalable computing capacity in the Amazon Web Services cloud.",
+              "url": "[https://console.aws.amazon.com/ec2](https://console.aws.amazon.com/ec2)",
+              "icon": "Cloud",
+              "iconType": "lucide",
+              "tags": [
+                "aws",
+                "compute",
+                "cloud"
+              ],
+              "isPrivate": false,
+              "owner": "usr_alex_editor",
+              "isLocked": true,
+              "healthStatus": "healthy",
+              "clickCount": 312,
+              "createdAt": 1787204967546
+            },
+            {
+              "id": "bm_aws_s3_broken",
+              "name": "Legacy Staging S3 Bucket (Internal)",
+              "description": "Internal staging repository for decommissioned test build assets.",
+              "url": "[https://s3-staging.internal.invalid/test](https://s3-staging.internal.invalid/test)",
+              "icon": "Cloud",
+              "iconType": "lucide",
+              "tags": [
+                "s3",
+                "storage",
+                "deprecated"
+              ],
+              "isPrivate": false,
+              "owner": "usr_alex_editor",
+              "isLocked": false,
+              "healthStatus": "broken",
+              "clickCount": 15,
+              "createdAt": 1785908967546
+            },
+            {
+              "id": "bm_aws_rds",
+              "name": "RDS Managed Relational Database",
+              "description": "Managed PostgreSQL and MySQL database instances with multi-AZ failover.",
+              "url": "[https://console.aws.amazon.com/rds](https://console.aws.amazon.com/rds)",
+              "icon": "Cloud",
+              "iconType": "lucide",
+              "tags": [
+                "database",
+                "rds",
+                "sql"
+              ],
+              "isPrivate": false,
+              "owner": "usr_alex_editor",
+              "isLocked": false,
+              "healthStatus": "healthy",
+              "clickCount": 164,
+              "createdAt": 1788068967546
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "INITIAL_TREE_NODES": [
+    {
+      "id": "node_bar",
+      "name": "Bookmarks Bar",
+      "selectionState": "unchecked",
+      "path": [
+        "Bookmarks Bar"
+      ],
+      "children": [
+        {
+          "id": "node_eng",
+          "name": "Engineering & Architecture",
+          "selectionState": "unchecked",
+          "path": [
+            "Bookmarks Bar",
+            "Engineering & Architecture"
+          ],
+          "children": [
+            {
+              "id": "leaf_tc39",
+              "name": "TC39 ECMAScript Proposals",
+              "url": "[https://github.com/tc39/proposals](https://github.com/tc39/proposals)",
+              "icon": "Code",
+              "iconType": "lucide",
+              "selectionState": "unchecked",
+              "path": [
+                "Bookmarks Bar",
+                "Engineering & Architecture"
+              ]
+            },
+            {
+              "id": "leaf_webdev",
+              "name": "web.dev Guidance by Google",
+              "url": "[https://web.dev](https://web.dev)",
+              "icon": "Globe",
+              "iconType": "lucide",
+              "selectionState": "unchecked",
+              "path": [
+                "Bookmarks Bar",
+                "Engineering & Architecture"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "node_devops",
+          "name": "DevOps & Reliability",
+          "selectionState": "unchecked",
+          "path": [
+            "Bookmarks Bar",
+            "DevOps & Reliability"
+          ],
+          "children": [
+            {
+              "id": "leaf_k8s",
+              "name": "Kubernetes Production Docs",
+              "url": "[https://kubernetes.io/docs/](https://kubernetes.io/docs/)",
+              "icon": "Cloud",
+              "iconType": "lucide",
+              "selectionState": "unchecked",
+              "path": [
+                "Bookmarks Bar",
+                "DevOps & Reliability"
+              ]
+            },
+            {
+              "id": "leaf_docker",
+              "name": "Docker Hub Repositories",
+              "url": "[https://hub.docker.com](https://hub.docker.com)",
+              "icon": "Cloud",
+              "iconType": "lucide",
+              "selectionState": "unchecked",
+              "path": [
+                "Bookmarks Bar",
+                "DevOps & Reliability"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "node_reading",
+      "name": "Tech Reading List",
+      "selectionState": "unchecked",
+      "path": [
+        "Tech Reading List"
+      ],
+      "children": [
+        {
+          "id": "leaf_dan",
+          "name": "Overreacted by Dan Abramov",
+          "url": "[https://overreacted.io](https://overreacted.io)",
+          "icon": "BookOpen",
+          "iconType": "lucide",
+          "selectionState": "unchecked",
+          "path": [
+            "Tech Reading List"
+          ]
+        }
+      ]
+    }
+  ]
+}

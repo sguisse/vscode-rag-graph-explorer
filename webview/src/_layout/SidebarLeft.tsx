@@ -16,6 +16,7 @@ import {
   Bot,
   Sparkles,
   MessageSquare,
+  Bookmark,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -52,6 +53,7 @@ export interface SidebarLeftProps {
 
 export const SIDEBAR_MENU_ITEMS: NavItem[] = [
   { id: 'feature-home', icon: Home, label: 'Home' },
+  { id: 'feature-bookmarks', icon: Bookmark, label: 'Bookmarks' },
   { id: 'feature-codebase-exporter', icon: FolderDown, label: 'Codebase Exporter', badge: '' },
   { id: 'feature-maturity-matrix', icon: Sparkles, label: 'Maturity Matrix', badge: 'New' },
   { id: 'feature-monthly-support-product-performance-dashboard', icon: Sparkles, label: 'Monthly Support & Product Performance', badge: 'New' },

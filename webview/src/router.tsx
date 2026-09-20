@@ -16,6 +16,7 @@ import { ReferencesFeature } from '@/features/references/ReferencesFeature';
 import { TransformerFeature } from '@/features/transformer/TransformerFeature';
 import { InstallFeature } from '@/features/install/InstallFeature';
 import { RulesFeature } from '@/features/rules/RulesFeature';
+import { BookmarksFeature } from '@/features/bookmarks/BookmarksFeature';
 import { WorkflowBuilderFeature } from '@/features/ai-workflow-builder/WorkflowBuilderFeature';
 import { ExporterFeature } from '@/features/exporter/ExporterFeature';
 import { MaturityMatrixFeature } from '@/features/maturity-matrix/MaturityMatrixFeature';
@@ -55,6 +56,7 @@ const FEATURE_TO_ROUTE_MAP: Record<string, string> = {
   'feature-transformer': '/transformer',
   'feature-install': '/install',
   'feature-rules': '/rules',
+  'feature-bookmarks': '/bookmarks',
   'feature-impact': '/rules',
   'feature-ai-workflow-builder': '/workflow-builder',
   'feature-exporter': '/exporter',
@@ -81,6 +83,7 @@ const ROUTE_TO_FEATURE_MAP: Record<string, string> = {
   '/transformer': 'feature-transformer',
   '/install': 'feature-install',
   '/rules': 'feature-rules',
+  '/bookmarks': 'feature-bookmarks',
   '/workflow-builder': 'feature-ai-workflow-builder',
   '/exporter': 'feature-exporter',
   '/maturity-matrix': 'feature-maturity-matrix',
@@ -100,6 +103,7 @@ export const ROUTE_BREADCRUMB_LABELS: Record<string, string> = {
   '/transformer': 'Transformer Engine',
   '/install': 'Installation & Health',
   '/rules': 'Impact Rules',
+  '/bookmarks': 'Bookmarks',
   '/workflow-builder': 'Workflow Builder',
   '/exporter': 'Codebase Exporter',
   '/maturity-matrix': 'Maturity Matrix',
@@ -267,6 +271,13 @@ export const rulesRoute = createRoute({
   component: RulesFeature,
 });
 
+export const bookmarksRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/bookmarks',
+  staticData: { breadcrumb: 'Bookmarks' },
+  component: BookmarksFeature,
+});
+
 export const workflowRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/workflow-builder',
@@ -350,6 +361,7 @@ const routeTree = rootRoute.addChildren([
   transformerRoute,
   installRoute,
   rulesRoute,
+  bookmarksRoute,
   workflowRoute,
   exporterRoute,
   maturityMatrixRoute,
