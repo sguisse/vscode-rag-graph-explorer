@@ -50,9 +50,9 @@ LLM-authored bash script with `cat <<'EOF'` heredocs.
 
 ### Key Features
 - **AST Syntax Validation**: Every `.ts`/`.tsx`/`.js`/`.jsx` entry is syntax-checked with the real TypeScript parser (`ts.transpileModule`) **before** any file is written to disk. If any entry fails to parse, zero files are written (can be bypassed with `--skipCheckSyntax`).
-- **JSX Corruption Pre-Check**: Includes a regex gate to instantly catch LLM corruption signatures (e.g., `prop={val}` or truncated callbacks).
-- **Sanitization Reporting**: Automatically tracks and prints the exact replacement counts per file for LLM syntax auto-repairs.
-- **Atomic Workspace Rollback**: Takes in-memory file backups before applying. If the subsequent `npm run build` verification fails, all modified/created files are automatically rolled back to restore a clean workspace. **Note**: When `--skipCheckSyntax` is active, a build failure will display a **Warning** and skip automatic rollback, leaving generated changes on disk for inspection.
+- **JSX Corruption Pre-Check**: Includes a regex gate to instantly catch LLM corruption signatures (e.g., `prop="{val}"` or truncated callbacks).
+- **Sanitization Reporting**: Automatically tracks and prints the exact replacement counts per file for `.tsx` and `.jsx` LLM syntax auto-repairs.
+- **Atomic Workspace Rollback**: Takes in-memory file backups before applying. If the subsequent `npm run build` verification fails, all modified/created files are automatically rolled back to restore a clean workspace. **Note**: When `--disableRollback` or `--skipCheckSyntax` is active, a build failure will display a **Warning** and skip automatic rollback, leaving generated changes on disk for inspection.
 
 Manifest schema:
 ```yaml
@@ -75,16 +75,17 @@ message: "✅ feat(bookmarks): short conventional-commit summary"
 # 1. Direct invocation against a manifest file anywhere in the workspace
 node dev-tools/apply-yaml-on-codebase.js update.yaml
 
-# 2. Bypass syntax validation via flag (build errors raise a Warning and skip rollback)
+# 2. Bypass syntax validation or disable rollback via flags
 node dev-tools/apply-yaml-on-codebase.js update.yaml --skipCheckSyntax
+node dev-tools/apply-yaml-on-codebase.js update.yaml --disableRollback
 
 # 3. Via the npm script alias
 npm run apply:yaml-on-codebase -- update.yaml
-npm run apply:yaml-on-codebase -- update.yaml --skipCheckSyntax
+npm run apply:yaml-on-codebase -- update.yaml --disableRollback
 
 # 4. Via the update.sh wrapper (looks for ./update.yaml at workspace root)
 ./update-from-yaml.sh
-./update-from-yaml.sh --skipCheckSyntax
+./update-from-yaml.sh --disableRollback
 ```
 
 ---
