@@ -2,43 +2,46 @@ package com.company.auditor.rules;
 
 import com.company.auditor.core.domain.AnalysisContext;
 import com.company.auditor.core.domain.Observation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
-import java.util.*;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Registry and concurrent execution engine for all registered static architecture rules.
+ * Registry containing all static architecture analysis rules.
  */
+@Component
 public class StaticRuleRegistry {
 
-    private final List<StaticArchitectureRule> registeredRules = new CopyOnWriteArrayList<>();
+    private static final Logger log = LoggerFactory.getLogger(StaticRuleRegistry.class);
 
-    public StaticRuleRegistry() {
-        registerDefaultRules();
+    private final List<StaticArchitectureRule> rules;
+
+    public StaticRuleRegistry(List<StaticArchitectureRule> rules) {
+        this.rules = rules != null ? rules : List.of();
     }
 
-    private void registerDefaultRules() {
-        registerRule(new HexagonalIsolationRule());
-        registerRule(new TransactionalBoundaryRule());
-        registerRule(new JpaNPlusOneRule());
-    }
+    /**
+     * Executes all registered static architecture rules against the analysis context.
+     */
+    public List<Observation> executeAllRules(AnalysisContext context) {
+        List<Observation> observations = new ArrayList<>();
+        log.info("Executing {} static architecture rules in registry...", rules.size());
 
-    public void registerRule(StaticArchitectureRule rule) {
-        registeredRules.add(rule);
-    }
+        for (StaticArchitectureRule rule : rules) {
+            try {
+                List<Observation> ruleObservations = rule.evaluate(context);
+                if (ruleObservations != null) {
+                    observations.addAll(ruleObservations);
+                }
+            } catch (Exception e) {
+                log.error("Error executing static architecture rule [{}]: {}", rule.id(), e.getMessage(), e);
+            }
+        }
 
-    public List<Observation> executeAll(AnalysisContext context) {
-        List<Observation> allObservations = Collections.synchronizedList(new ArrayList<>());
-
-        registeredRules.parallelStream().forEach(rule -> {
-            List<Observation> results = rule.evaluate(context);
-            allObservations.addAll(results);
-        });
-
-        return new ArrayList<>(allObservations);
-    }
-
-    public List<StaticArchitectureRule> getRegisteredRules() {
-        return Collections.unmodifiableList(registeredRules);
+        log.info("Completed static architecture rules execution. Total observations: {}", observations.size());
+        return observations;
     }
 }

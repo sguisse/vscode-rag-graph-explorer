@@ -16,3 +16,8 @@ fi
 
 echo "🚀 Applying yaml generated manifest: $MANIFEST_FILE"
 node dev-tools/apply-yaml-on-codebase.js "$MANIFEST_FILE" "$@"
+
+cd modules/ai-architecture-auditor || exit 1
+echo "🚀 Running Maven build to ensure generated files are compiled"
+pwd
+mvn clean install

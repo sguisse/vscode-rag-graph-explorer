@@ -13,6 +13,11 @@ spring:
     show-sql: false
   flyway:
     enabled: false
+  neo4j:
+  uri: bolt://localhost:7687
+  authentication:
+    username: neo4j
+    password: password
 
 neo4j:
   uri: bolt://localhost:7687
@@ -23,4 +28,4 @@ neo4j:
 llm:
   gateway:
     url: http://localhost:11434/api/generate
-    model: mistral
+    model: qwen2.5-coder:1.5b

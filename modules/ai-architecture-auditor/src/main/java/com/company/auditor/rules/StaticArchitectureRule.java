@@ -6,10 +6,26 @@ import com.company.auditor.core.domain.Observation;
 import java.util.List;
 
 /**
- * Common interface for all deterministic static architecture rules.
+ * Contract for all static architecture rules.
  */
 public interface StaticArchitectureRule {
-    String getRuleId();
-    String getName();
+
+    /**
+     * Unique identifier for the rule (e.g. HEX-001, DB-001, ORM-001).
+     */
+    default String id() {
+        return getClass().getSimpleName();
+    }
+
+    /**
+     * Description of the architecture rule.
+     */
+    default String description() {
+        return "";
+    }
+
+    /**
+     * Evaluates the rule against the provided analysis context.
+     */
     List<Observation> evaluate(AnalysisContext context);
 }

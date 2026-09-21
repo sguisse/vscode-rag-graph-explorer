@@ -26,6 +26,11 @@ spring:
     schemas: ai_architecture_auditor
     default-schema: ai_architecture_auditor
     locations: classpath:db/migration
+  neo4j:
+    uri: ${NEO4J_URI:bolt://localhost:7687}
+    authentication:
+      username: ${NEO4J_USERNAME:neo4j}
+      password: ${NEO4J_PASSWORD:password}
 
 neo4j:
   uri: ${NEO4J_URI:bolt://localhost:7687}
