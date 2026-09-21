@@ -1,6 +1,7 @@
 package com.company.auditor.core.graph;
 
 import com.company.auditor.core.domain.GraphSubTree;
+import com.company.auditor.core.domain.Observation;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -19,25 +20,29 @@ public class GraphRAGContextFetcher {
         this.graphClient = graphClient;
     }
 
-    /**
-     * Extracts a minified graph sub-tree for a given target class or symbol up to specified hop depth.
-     */
-    public GraphSubTree fetchMinifiedContext(String targetSymbol, int depth) {
-        return graphClient.extractMinifiedSubTree(targetSymbol, depth);
+    public GraphSubTree fetchContextForSymbol(String symbol, int depth) {
+        if (graphClient != null) {
+            return graphClient.extractMinifiedSubTree(symbol, depth);
+        }
+        return new GraphSubTree(symbol, depth, List.of(), List.of(), 0);
     }
 
-    /**
-     * Formats a GraphSubTree into a compact prompt string for LLM triage context window.
-     */
-    public String formatForPrompt(GraphSubTree subTree) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("TARGET SYMBOL: ").append(subTree.targetSymbol()).append("\n");
-        sb.append("GRAPH CONNECTIVITY (Hop Depth ").append(subTree.hopDepth()).append("):\n");
+    public GraphSubTree fetchContextForObservation(Observation observation, int depth) {
+        String symbol = (observation != null && observation.location() != null && observation.location().symbol() != null)
+                ? observation.location().symbol()
+                : "N/A";
+        return fetchContextForSymbol(symbol, depth);
+    }
 
+    public String formatSubTreeForPrompt(GraphSubTree subTree) {
+        if (subTree == null || subTree.nodes() == null) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("SUB-TREE CONTEXT (Symbol: ").append(subTree.targetSymbol()).append("):\n");
         for (Map<String, Object> node : subTree.nodes()) {
             sb.append("  - NODE: ").append(node.get("fqn")).append("\n");
         }
-
         return sb.toString();
     }
 }

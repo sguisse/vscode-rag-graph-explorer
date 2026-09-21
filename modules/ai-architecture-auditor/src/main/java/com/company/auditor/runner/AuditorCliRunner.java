@@ -2,14 +2,21 @@ package com.company.auditor.runner;
 
 import com.company.auditor.core.domain.AnalysisContext;
 import com.company.auditor.core.domain.Finding;
+import com.company.auditor.core.domain.GraphSubTree;
 import com.company.auditor.core.domain.Location;
 import com.company.auditor.core.domain.Observation;
 import com.company.auditor.core.export.SarifReportExporter;
+import com.company.auditor.core.graph.GraphRAGContextFetcher;
+import com.company.auditor.core.llm.AuditTriageRequest;
+import com.company.auditor.core.llm.AuditTriageResponse;
+import com.company.auditor.core.llm.LlmGatewayClient;
+import com.company.auditor.core.llm.TokenMetricsService;
 import com.company.auditor.drivers.java.JavaSpringDriver;
 import com.company.auditor.persistence.entity.AuditWorkflowStateEntity;
 import com.company.auditor.persistence.repository.AuditWorkflowStateRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -29,13 +36,28 @@ public class AuditorCliRunner implements CommandLineRunner {
     private final JavaSpringDriver javaSpringDriver;
     private final AuditWorkflowStateRepository workflowStateRepository;
     private final SarifReportExporter sarifReportExporter;
+    private final LlmGatewayClient llmGatewayClient;
+    private final TokenMetricsService tokenMetricsService;
+    private final GraphRAGContextFetcher graphRAGContextFetcher;
+
+    @Value("${llm.gateway.url:http://localhost:11434/api/generate}")
+    private String llmEndpointUrl;
+
+    @Value("${llm.model.name:qwen2.5-coder:1.5b}")
+    private String modelName;
 
     public AuditorCliRunner(JavaSpringDriver javaSpringDriver,
-                             AuditWorkflowStateRepository workflowStateRepository,
-                             SarifReportExporter sarifReportExporter) {
+                            AuditWorkflowStateRepository workflowStateRepository,
+                            SarifReportExporter sarifReportExporter,
+                            LlmGatewayClient llmGatewayClient,
+                            TokenMetricsService tokenMetricsService,
+                            GraphRAGContextFetcher graphRAGContextFetcher) {
         this.javaSpringDriver = javaSpringDriver;
         this.workflowStateRepository = workflowStateRepository;
         this.sarifReportExporter = sarifReportExporter;
+        this.llmGatewayClient = llmGatewayClient;
+        this.tokenMetricsService = tokenMetricsService;
+        this.graphRAGContextFetcher = graphRAGContextFetcher;
     }
 
     @Override
@@ -61,16 +83,20 @@ public class AuditorCliRunner implements CommandLineRunner {
 
         // 3. Execute Static Architecture Rules & Neo4j Graph Checks
         List<Observation> observations = javaSpringDriver.executeStaticRules(context);
+        log.info("Static architecture rules completed. Total observations: {}", observations.size());
 
-        // 4. Map Observations to Findings for SARIF Reporting
+        // 4. Perform Semantic LLM Triage & Token Economics Tracking
+        performLlmTriageAndRecordMetrics(runId, observations);
+
+        // 5. Map Observations to Findings for SARIF Reporting
         List<Finding> findings = mapObservationsToFindings(observations);
 
-        // 5. Export OASIS SARIF 2.1.0 Report
+        // 6. Export OASIS SARIF 2.1.0 Report
         Path sarifPath = repoPath.resolve("target/audit-results.sarif");
         File sarifFile = sarifReportExporter.exportSarifReport(findings, sarifPath);
         log.info("SARIF 2.1.0 report successfully written to location path: {}", sarifFile.getAbsolutePath());
 
-        // 6. Update Workflow State to COMPLETED
+        // 7. Update Workflow State to COMPLETED
         AuditWorkflowStateEntity completedState = new AuditWorkflowStateEntity(
                 runId,
                 "COMPLETED",
@@ -85,6 +111,49 @@ public class AuditorCliRunner implements CommandLineRunner {
             log.error("BUILD FAILURE: Critical architecture violations detected.");
         } else {
             log.info("AUDIT SUCCESS: No blocking violations detected.");
+        }
+    }
+
+    private void performLlmTriageAndRecordMetrics(String runId, List<Observation> observations) {
+        if (llmGatewayClient == null || tokenMetricsService == null) {
+            log.info("LLM Gateway or Token Metrics Service not injected. Skipping LLM triage.");
+            return;
+        }
+
+        log.info("Starting LLM triage and token metrics tracking for {} observations...", observations.size());
+        for (Observation obs : observations) {
+            try {
+                GraphSubTree subTree = new GraphSubTree(
+                        obs.location() != null ? obs.location().symbol() : "N/A",
+                        2,
+                        List.of(),
+                        List.of(),
+                        0
+                );
+                if (graphRAGContextFetcher != null) {
+                    try {
+                        subTree = graphRAGContextFetcher.fetchContextForObservation(obs, 2);
+                    } catch (Exception ignored) {
+                        // Fallback to basic AST skeleton subTree
+                    }
+                }
+
+                AuditTriageRequest triageRequest = new AuditTriageRequest(runId, obs, subTree, null);
+                AuditTriageResponse response = llmGatewayClient.triageObservation(llmEndpointUrl, triageRequest);
+
+                tokenMetricsService.recordMetrics(
+                        runId,
+                        modelName,
+                        response.promptTokens(),
+                        response.completionTokens(),
+                        response.executionTimeMs()
+                );
+                log.info("LLM triage completed for observation [{}]: TruePositive={}, Confidence={}. Recorded token metrics.",
+                        obs.observationId(), response.isTruePositive(), response.confidenceScore());
+            } catch (Exception e) {
+                log.warn("⚠️ LLM Triage skipped for observation [{}]: {} (LLM Gateway offline or unreachable)",
+                        obs.observationId(), e.getMessage());
+            }
         }
     }
 
