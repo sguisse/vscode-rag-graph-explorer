@@ -1,14 +1,15 @@
 import os
 import sys
-from install.modules.system.core.constants import KEY_GITIGNORE_RULE_MAPPED
 from install.base import BaseInstallModule
 from install.registry import InstallerRegistry
+from install.report_handler import ReportHandler
 from core.utils import error, info
 
 from core.VsCodeSettings_gen import vsCodeSettings
 from install.modules.system.core.constants import (
     CORE_MODULE_NAME,
     STATUS_OK,
+    KEY_GITIGNORE_RULE_MAPPED,
     PREREQUISITES_VERIFY_LIST,
 )
 
@@ -53,10 +54,13 @@ class SystemCoreInstaller(BaseInstallModule):
                 "At least all these tools should be installed before using « Token Razor ».",
                 component=self.name
             )
+            report_handler = ReportHandler(self.context)
+            report_handler.save_snapshot(self.name, "after", installStatus)
+            report_handler.compile_final_summary()
             self.stop_installation()
 
         info("Start append gitignore exclusion...", component=self.name)
         if installStatus.get(KEY_GITIGNORE_RULE_MAPPED, {}).get("status") != STATUS_OK:
-          self.append_gitignore_exclusion()
+            self.append_gitignore_exclusion()
 
         info("System core installation completed successfully.", component=self.name)

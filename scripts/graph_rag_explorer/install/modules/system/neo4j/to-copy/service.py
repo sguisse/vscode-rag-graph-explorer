@@ -14,19 +14,19 @@ PID_FILE = os.path.join(PIDS_DIR, "neo4j_instance.pid")
 
 
 def log_info(msg: str) -> None:
-    print(f"ℹ️ [Neo4jService] {msg}")
+    print(f"ℹ️ [Neo4jService] {msg}", flush=True)
 
 
 def log_success(msg: str) -> None:
-    print(f"✅ [Neo4jService] {msg}")
+    print(f"✅ [Neo4jService] {msg}", flush=True)
 
 
 def log_warn(msg: str) -> None:
-    print(f"⚠️ [Neo4jService] {msg}")
+    print(f"⚠️ [Neo4jService] {msg}", file=sys.stderr, flush=True)
 
 
 def log_error(msg: str) -> None:
-    print(f"❌ [Neo4jService] {msg}")
+    print(f"❌ [Neo4jService] {msg}", file=sys.stderr, flush=True)
 
 
 def find_neo4j_binary() -> Optional[str]:

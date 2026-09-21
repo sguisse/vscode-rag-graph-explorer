@@ -16,17 +16,26 @@ from install.modules.system.core.constants import (
     KEY_NODE_PREREQUISITE,
     KEY_NPM_PREREQUISITE,
     KEY_JAVA_PREREQUISITE,
+    KEY_POSTGRESQL_PREREQUISITE,
     KEY_GITIGNORE_RULE_MAPPED,
 )
 
 
 def resolve_binary_path(cmd: str) -> Optional[str]:
-    """Finds binary path considering standard system PATH, Volta, Homebrew, NVM, etc."""
+    """Finds binary path considering standard system PATH, Volta, Homebrew, NVM, Postgres, etc."""
     home = Path.home()
     extra_paths = [
         os.path.join(os.environ.get("VOLTA_HOME", str(home / ".volta")), "bin"),
         "/opt/homebrew/bin",
+        "/opt/homebrew/opt/postgresql@16/bin",
+        "/opt/homebrew/opt/postgresql@15/bin",
+        "/opt/homebrew/opt/postgresql/bin",
         "/usr/local/bin",
+        "/usr/local/opt/postgresql@16/bin",
+        "/usr/local/opt/postgresql/bin",
+        "/usr/lib/postgresql/16/bin",
+        "/usr/lib/postgresql/15/bin",
+        "/Applications/Postgres.app/Contents/Versions/latest/bin",
         str(home / ".fnm" / "current" / "bin"),
         str(home / ".n" / "bin"),
     ]
@@ -56,12 +65,14 @@ class SystemCoreChecker(BaseCheckModule):
         return CORE_MODULE_NAME
 
     def check_system_prerequisites(self):
+        pg_cmd = "psql" if resolve_binary_path("psql") else ("pg_ctl" if resolve_binary_path("pg_ctl") else "psql")
         tools_to_check = [
             ("python3", ["--version"], KEY_PYTHON3_PREREQUISITE),
             ("pip3" if resolve_binary_path("pip3") else "pip", ["--version"], KEY_PIP_PREREQUISITE),
             ("node", ["--version"], KEY_NODE_PREREQUISITE),
             ("npm", ["--version"], KEY_NPM_PREREQUISITE),
             ("java", ["-version"], KEY_JAVA_PREREQUISITE),
+            (pg_cmd, ["--version"], KEY_POSTGRESQL_PREREQUISITE),
         ]
 
         for tool_cmd, version_args, status_key in tools_to_check:
