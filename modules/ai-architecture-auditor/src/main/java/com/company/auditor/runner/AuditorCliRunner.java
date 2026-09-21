@@ -11,9 +11,18 @@ import com.company.auditor.core.llm.AuditTriageRequest;
 import com.company.auditor.core.llm.AuditTriageResponse;
 import com.company.auditor.core.llm.LlmGatewayClient;
 import com.company.auditor.core.llm.TokenMetricsService;
+import com.company.auditor.docascode.ArchitectureDriftDetector;
+import com.company.auditor.docascode.C4DiagramExtractor;
+import com.company.auditor.docascode.DocAsCodeSyncEngine;
 import com.company.auditor.drivers.java.JavaSpringDriver;
 import com.company.auditor.persistence.entity.AuditWorkflowStateEntity;
 import com.company.auditor.persistence.repository.AuditWorkflowStateRepository;
+import com.company.auditor.policy.EnterprisePolicyRegistry;
+import com.company.auditor.policy.ExecutiveReportExporter;
+import com.company.auditor.policy.OpaPolicyEvaluator;
+import com.company.auditor.remediation.OpenRewriteRecipeGenerator;
+import com.company.auditor.remediation.PullRequestService;
+import com.company.auditor.remediation.ShadowModeValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,6 +48,15 @@ public class AuditorCliRunner implements CommandLineRunner {
     private final LlmGatewayClient llmGatewayClient;
     private final TokenMetricsService tokenMetricsService;
     private final GraphRAGContextFetcher graphRAGContextFetcher;
+    private final OpenRewriteRecipeGenerator openRewriteRecipeGenerator;
+    private final ShadowModeValidator shadowModeValidator;
+    private final PullRequestService pullRequestService;
+    private final C4DiagramExtractor c4DiagramExtractor;
+    private final DocAsCodeSyncEngine docAsCodeSyncEngine;
+    private final ArchitectureDriftDetector architectureDriftDetector;
+    private final OpaPolicyEvaluator opaPolicyEvaluator;
+    private final EnterprisePolicyRegistry enterprisePolicyRegistry;
+    private final ExecutiveReportExporter executiveReportExporter;
 
     @Value("${llm.gateway.url:http://localhost:11434/api/generate}")
     private String llmEndpointUrl;
@@ -46,18 +64,39 @@ public class AuditorCliRunner implements CommandLineRunner {
     @Value("${llm.model.name:qwen2.5-coder:1.5b}")
     private String modelName;
 
+    @Value("${remediation.auto-fix.enabled:true}")
+    private boolean autoFixEnabled;
+
     public AuditorCliRunner(JavaSpringDriver javaSpringDriver,
                             AuditWorkflowStateRepository workflowStateRepository,
                             SarifReportExporter sarifReportExporter,
                             LlmGatewayClient llmGatewayClient,
                             TokenMetricsService tokenMetricsService,
-                            GraphRAGContextFetcher graphRAGContextFetcher) {
+                            GraphRAGContextFetcher graphRAGContextFetcher,
+                            OpenRewriteRecipeGenerator openRewriteRecipeGenerator,
+                            ShadowModeValidator shadowModeValidator,
+                            PullRequestService pullRequestService,
+                            C4DiagramExtractor c4DiagramExtractor,
+                            DocAsCodeSyncEngine docAsCodeSyncEngine,
+                            ArchitectureDriftDetector architectureDriftDetector,
+                            OpaPolicyEvaluator opaPolicyEvaluator,
+                            EnterprisePolicyRegistry enterprisePolicyRegistry,
+                            ExecutiveReportExporter executiveReportExporter) {
         this.javaSpringDriver = javaSpringDriver;
         this.workflowStateRepository = workflowStateRepository;
         this.sarifReportExporter = sarifReportExporter;
         this.llmGatewayClient = llmGatewayClient;
         this.tokenMetricsService = tokenMetricsService;
         this.graphRAGContextFetcher = graphRAGContextFetcher;
+        this.openRewriteRecipeGenerator = openRewriteRecipeGenerator;
+        this.shadowModeValidator = shadowModeValidator;
+        this.pullRequestService = pullRequestService;
+        this.c4DiagramExtractor = c4DiagramExtractor;
+        this.docAsCodeSyncEngine = docAsCodeSyncEngine;
+        this.architectureDriftDetector = architectureDriftDetector;
+        this.opaPolicyEvaluator = opaPolicyEvaluator;
+        this.enterprisePolicyRegistry = enterprisePolicyRegistry;
+        this.executiveReportExporter = executiveReportExporter;
     }
 
     @Override
@@ -68,7 +107,7 @@ public class AuditorCliRunner implements CommandLineRunner {
 
         log.info("Starting Architecture Audit Run [runId={}] for repository: {}", runId, repoPath);
 
-        // 1. Initialize and persist Workflow State FIRST to satisfy FK constraint (fk_obs_run_id)
+        // 1. Initialize and persist Workflow State FIRST
         AuditWorkflowStateEntity initialState = new AuditWorkflowStateEntity(
                 runId,
                 "ANALYZING",
@@ -76,27 +115,51 @@ public class AuditorCliRunner implements CommandLineRunner {
                 System.currentTimeMillis()
         );
         workflowStateRepository.save(initialState);
-        log.info("Persisted initial audit workflow state for runId={}", runId);
 
         // 2. Build Analysis Context
         AnalysisContext context = new AnalysisContext(runId, repoPath, Map.of(), Map.of(), List.of());
 
         // 3. Execute Static Architecture Rules & Neo4j Graph Checks
         List<Observation> observations = javaSpringDriver.executeStaticRules(context);
-        log.info("Static architecture rules completed. Total observations: {}", observations.size());
 
-        // 4. Perform Semantic LLM Triage & Token Economics Tracking
+        // 4. Epic 7: Execute Doc-as-Code & Architecture Drift Sync
+        if (docAsCodeSyncEngine != null) {
+            observations.addAll(docAsCodeSyncEngine.synchronizeDocAsCode(repoPath, runId));
+        }
+        if (architectureDriftDetector != null) {
+            ArchitectureDriftDetector.DriftReport driftReport = architectureDriftDetector.detectArchitectureDrift(runId, repoPath);
+            observations.addAll(driftReport.driftObservations());
+        }
+        if (c4DiagramExtractor != null) {
+            c4DiagramExtractor.exportC4Diagrams(repoPath, runId);
+        }
+
+        // 5. Perform Semantic LLM Triage & Token Economics Tracking
         performLlmTriageAndRecordMetrics(runId, observations);
 
-        // 5. Map Observations to Findings for SARIF Reporting
+        // 6. Map Observations to Findings for SARIF & Policy Reporting
         List<Finding> findings = mapObservationsToFindings(observations);
 
-        // 6. Export OASIS SARIF 2.1.0 Report
+        // 7. Epic 8: Open Policy Agent (OPA) Evaluation & Executive Compliance Report Export
+        OpaPolicyEvaluator.OpaEvaluationOutcome opaOutcome = new OpaPolicyEvaluator.OpaEvaluationOutcome(OpaPolicyEvaluator.PolicyResult.ALLOW, findings.size(), 0, List.of());
+        if (opaPolicyEvaluator != null && enterprisePolicyRegistry != null) {
+            String regoPolicy = enterprisePolicyRegistry.resolveEffectivePolicy(repoPath);
+            opaOutcome = opaPolicyEvaluator.evaluateFindings(findings, regoPolicy);
+        }
+        if (executiveReportExporter != null) {
+            executiveReportExporter.exportExecutiveComplianceReport(repoPath, runId, findings, opaOutcome);
+        }
+
+        // 8. Execute Epic 6 Automated Remediation & Double-Loop Auto-Fix Pipeline
+        if (autoFixEnabled && !findings.isEmpty() && openRewriteRecipeGenerator != null) {
+            executeAutomatedRemediationPipeline(repoPath, runId, findings);
+        }
+
+        // 9. Export OASIS SARIF 2.1.0 Report
         Path sarifPath = repoPath.resolve("target/audit-results.sarif");
         File sarifFile = sarifReportExporter.exportSarifReport(findings, sarifPath);
-        log.info("SARIF 2.1.0 report successfully written to location path: {}", sarifFile.getAbsolutePath());
 
-        // 7. Update Workflow State to COMPLETED
+        // 10. Update Workflow State to COMPLETED
         AuditWorkflowStateEntity completedState = new AuditWorkflowStateEntity(
                 runId,
                 "COMPLETED",
@@ -105,22 +168,30 @@ public class AuditorCliRunner implements CommandLineRunner {
         );
         workflowStateRepository.save(completedState);
 
-        log.info("Audit run [runId={}] completed successfully. Total observations: {}. Written report location: {}", runId, observations.size(), sarifFile.getAbsolutePath());
+        log.info("Audit run [runId={}] completed successfully. OPA Status: {}. Written SARIF report location: {}", runId, opaOutcome.result(), sarifFile.getAbsolutePath());
+    }
 
-        if (observations.stream().anyMatch(o -> "CRITICAL".equalsIgnoreCase(o.severity()))) {
-            log.error("BUILD FAILURE: Critical architecture violations detected.");
-        } else {
-            log.info("AUDIT SUCCESS: No blocking violations detected.");
+    private void executeAutomatedRemediationPipeline(Path repoPath, String runId, List<Finding> findings) {
+        log.info("Starting Epic 6 Automated Remediation & Double-Loop Auto-Fix for {} findings...", findings.size());
+        for (Finding finding : findings) {
+            try {
+                String recipeYaml = openRewriteRecipeGenerator.synthesizeRecipe(finding);
+                ShadowModeValidator.ShadowValidationResult shadowResult = shadowModeValidator.validatePatchInShadowMode(repoPath, runId, finding, recipeYaml);
+                PullRequestService.PullRequestManifest prManifest = pullRequestService.createAutoFixPullRequest(repoPath, runId, finding, shadowResult);
+
+                log.info("Remediation completed for finding [{}]: PR Branch=[{}], Verified=[{}], Patch=[{}]",
+                        finding.id(), prManifest.branchName(), shadowResult.isValid(), prManifest.patchFilePath());
+            } catch (Exception e) {
+                log.warn("Remediation skipped for finding [{}]: {}", finding.id(), e.getMessage());
+            }
         }
     }
 
     private void performLlmTriageAndRecordMetrics(String runId, List<Observation> observations) {
         if (llmGatewayClient == null || tokenMetricsService == null) {
-            log.info("LLM Gateway or Token Metrics Service not injected. Skipping LLM triage.");
             return;
         }
 
-        log.info("Starting LLM triage and token metrics tracking for {} observations...", observations.size());
         for (Observation obs : observations) {
             try {
                 GraphSubTree subTree = new GraphSubTree(
@@ -134,7 +205,6 @@ public class AuditorCliRunner implements CommandLineRunner {
                     try {
                         subTree = graphRAGContextFetcher.fetchContextForObservation(obs, 2);
                     } catch (Exception ignored) {
-                        // Fallback to basic AST skeleton subTree
                     }
                 }
 
@@ -148,11 +218,8 @@ public class AuditorCliRunner implements CommandLineRunner {
                         response.completionTokens(),
                         response.executionTimeMs()
                 );
-                log.info("LLM triage completed for observation [{}]: TruePositive={}, Confidence={}. Recorded token metrics.",
-                        obs.observationId(), response.isTruePositive(), response.confidenceScore());
             } catch (Exception e) {
-                log.warn("⚠️ LLM Triage skipped for observation [{}]: {} (LLM Gateway offline or unreachable)",
-                        obs.observationId(), e.getMessage());
+                log.warn("⚠️ LLM Triage skipped for observation [{}]: {}", obs.observationId(), e.getMessage());
             }
         }
     }
