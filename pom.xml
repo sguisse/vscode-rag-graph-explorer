@@ -10,6 +10,10 @@
     <packaging>pom</packaging>
 
     <name>Java Module Aggregator</name>
+    <description>This parent, is not really a parent is much more an aggregator to allow VSCode access through Maven to the external libraries analysis.
+                 And prevent underlining all external classes imported in the Java code.
+                 It is a workaround to allow VSCode to understand the external dependencies and provide code completion and navigation.
+    </description>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>

@@ -67,6 +67,15 @@ public class LlmGatewayClient {
         int evalCount = responseMap.containsKey("eval_count") ? ((Number) responseMap.get("eval_count")).intValue() : 50;
         int promptEvalCount = responseMap.containsKey("prompt_eval_count") ? ((Number) responseMap.get("prompt_eval_count")).intValue() : 150;
 
+        log.info("-----------------------------------------");
+        log.info("LLM Gateway triage completed for observation [{}]. Execution time: {} ms, Prompt eval count: {}, Eval count: {}",
+                obsId, executionTime, promptEvalCount, evalCount);
+        log.info("--> Model '{}', Prompt: {}", defaultModelName, prompt);
+        log.info("--> Request body: \n{}", requestBody);
+        log.info("--> Response body: \n{}", response.body());
+        log.info("-----------------------------------------");
+
+
         return new AuditTriageResponse(
                 obsId,
                 true,
