@@ -1,5 +1,7 @@
 package com.company.auditor.runner;
 
+import com.company.auditor.analyzers.greenit.GreenItProfiler;
+import com.company.auditor.analyzers.security.VexReachabilityAnalyzer;
 import com.company.auditor.core.domain.AnalysisContext;
 import com.company.auditor.core.domain.Finding;
 import com.company.auditor.core.domain.GraphSubTree;
@@ -15,6 +17,7 @@ import com.company.auditor.docascode.ArchitectureDriftDetector;
 import com.company.auditor.docascode.C4DiagramExtractor;
 import com.company.auditor.docascode.DocAsCodeSyncEngine;
 import com.company.auditor.drivers.java.JavaSpringDriver;
+import com.company.auditor.lsp.AuditorLspServer;
 import com.company.auditor.persistence.entity.AuditWorkflowStateEntity;
 import com.company.auditor.persistence.repository.AuditWorkflowStateRepository;
 import com.company.auditor.policy.EnterprisePolicyRegistry;
@@ -57,6 +60,9 @@ public class AuditorCliRunner implements CommandLineRunner {
     private final OpaPolicyEvaluator opaPolicyEvaluator;
     private final EnterprisePolicyRegistry enterprisePolicyRegistry;
     private final ExecutiveReportExporter executiveReportExporter;
+    private final VexReachabilityAnalyzer vexReachabilityAnalyzer;
+    private final GreenItProfiler greenItProfiler;
+    private final AuditorLspServer auditorLspServer;
 
     @Value("${llm.gateway.url:http://localhost:11434/api/generate}")
     private String llmEndpointUrl;
@@ -81,7 +87,10 @@ public class AuditorCliRunner implements CommandLineRunner {
                             ArchitectureDriftDetector architectureDriftDetector,
                             OpaPolicyEvaluator opaPolicyEvaluator,
                             EnterprisePolicyRegistry enterprisePolicyRegistry,
-                            ExecutiveReportExporter executiveReportExporter) {
+                            ExecutiveReportExporter executiveReportExporter,
+                            VexReachabilityAnalyzer vexReachabilityAnalyzer,
+                            GreenItProfiler greenItProfiler,
+                            AuditorLspServer auditorLspServer) {
         this.javaSpringDriver = javaSpringDriver;
         this.workflowStateRepository = workflowStateRepository;
         this.sarifReportExporter = sarifReportExporter;
@@ -97,6 +106,9 @@ public class AuditorCliRunner implements CommandLineRunner {
         this.opaPolicyEvaluator = opaPolicyEvaluator;
         this.enterprisePolicyRegistry = enterprisePolicyRegistry;
         this.executiveReportExporter = executiveReportExporter;
+        this.vexReachabilityAnalyzer = vexReachabilityAnalyzer;
+        this.greenItProfiler = greenItProfiler;
+        this.auditorLspServer = auditorLspServer;
     }
 
     @Override
@@ -105,7 +117,7 @@ public class AuditorCliRunner implements CommandLineRunner {
         Path repoPath = Paths.get(targetRepo).toAbsolutePath().normalize();
         String runId = UUID.randomUUID().toString();
 
-        log.info("Starting Architecture Audit Run [runId={}] for repository: {}", runId, repoPath);
+        log.info("Starting Master Architecture Audit Run [runId={}] for repository: {}", runId, repoPath);
 
         // 1. Initialize and persist Workflow State FIRST
         AuditWorkflowStateEntity initialState = new AuditWorkflowStateEntity(
@@ -134,13 +146,23 @@ public class AuditorCliRunner implements CommandLineRunner {
             c4DiagramExtractor.exportC4Diagrams(repoPath, runId);
         }
 
-        // 5. Perform Semantic LLM Triage & Token Economics Tracking
+        // 5. Epic 9: Green IT & Carbon Footprint Profiler
+        if (greenItProfiler != null) {
+            observations.addAll(greenItProfiler.profileEnergyInefficiencies(repoPath, runId));
+        }
+
+        // 6. Epic 9: CVE Reachability Analysis & OpenVEX Statements
+        if (vexReachabilityAnalyzer != null) {
+            vexReachabilityAnalyzer.analyzeCveReachability(runId, List.of("CVE-2021-44228"));
+        }
+
+        // 7. Perform Semantic LLM Triage & Token Economics Tracking
         performLlmTriageAndRecordMetrics(runId, observations);
 
-        // 6. Map Observations to Findings for SARIF & Policy Reporting
+        // 8. Map Observations to Findings for SARIF & Policy Reporting
         List<Finding> findings = mapObservationsToFindings(observations);
 
-        // 7. Epic 8: Open Policy Agent (OPA) Evaluation & Executive Compliance Report Export
+        // 9. Epic 8: Open Policy Agent (OPA) Evaluation & Executive Compliance Report Export
         OpaPolicyEvaluator.OpaEvaluationOutcome opaOutcome = new OpaPolicyEvaluator.OpaEvaluationOutcome(OpaPolicyEvaluator.PolicyResult.ALLOW, findings.size(), 0, List.of());
         if (opaPolicyEvaluator != null && enterprisePolicyRegistry != null) {
             String regoPolicy = enterprisePolicyRegistry.resolveEffectivePolicy(repoPath);
@@ -150,16 +172,16 @@ public class AuditorCliRunner implements CommandLineRunner {
             executiveReportExporter.exportExecutiveComplianceReport(repoPath, runId, findings, opaOutcome);
         }
 
-        // 8. Execute Epic 6 Automated Remediation & Double-Loop Auto-Fix Pipeline
+        // 10. Execute Epic 6 Automated Remediation & Double-Loop Auto-Fix Pipeline
         if (autoFixEnabled && !findings.isEmpty() && openRewriteRecipeGenerator != null) {
             executeAutomatedRemediationPipeline(repoPath, runId, findings);
         }
 
-        // 9. Export OASIS SARIF 2.1.0 Report
+        // 11. Export OASIS SARIF 2.1.0 Report
         Path sarifPath = repoPath.resolve("target/audit-results.sarif");
         File sarifFile = sarifReportExporter.exportSarifReport(findings, sarifPath);
 
-        // 10. Update Workflow State to COMPLETED
+        // 12. Update Workflow State to COMPLETED
         AuditWorkflowStateEntity completedState = new AuditWorkflowStateEntity(
                 runId,
                 "COMPLETED",
