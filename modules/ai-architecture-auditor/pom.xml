@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -40,6 +39,7 @@
         <graphviz.version>0.18.1</graphviz.version>
         <structurizr.version>6.2.3</structurizr.version>
         <structurizr-plantuml.version>1.6.3</structurizr-plantuml.version>
+        <chicory.version>1.7.5</chicory.version>
         <maven-compiler-plugin.version>3.12.1</maven-compiler-plugin.version>
     </properties>
 
@@ -109,14 +109,14 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Flyway Database Migration Framework (Locked to Spring Boot 3.2.3 compatible 9.22.3) -->
+        <!-- Flyway Database Migration Framework -->
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
             <version>${flyway.version}</version>
         </dependency>
 
-        <!-- JAXB API & Runtime for Java 11+ / Java 21 reflection compatibility -->
+        <!-- JAXB API & Runtime -->
         <dependency>
             <groupId>javax.xml.bind</groupId>
             <artifactId>jaxb-api</artifactId>
@@ -140,6 +140,20 @@
             <groupId>org.openrewrite</groupId>
             <artifactId>rewrite-maven</artifactId>
             <version>${openrewrite.version}</version>
+        </dependency>
+
+        <!-- Chicory JVM-Native WebAssembly Runtime for Sandboxed Wasm Parsers -->
+        <dependency>
+            <groupId>com.dylibso.chicory</groupId>
+            <artifactId>wasm</artifactId>
+            <version>${chicory.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.dylibso.chicory</groupId>
+            <artifactId>wasm-corpus</artifactId>
+            <version>0.0.12</version>
+            <scope>test</scope>
         </dependency>
 
         <!-- Jackson JSON Mapping & JSR310 Datatype Support -->
@@ -197,14 +211,14 @@
             <version>${plantuml.version}</version>
         </dependency>
 
-        <!-- Graphviz Java Engine (Embedded layout generator for PlantUML) -->
+        <!-- Graphviz Java Engine -->
         <dependency>
             <groupId>guru.nidi</groupId>
             <artifactId>graphviz-java</artifactId>
             <version>${graphviz.version}</version>
         </dependency>
 
-        <!-- Structurizr C4 Model Exporter (PlantUML & Mermaid DSL) -->
+        <!-- Structurizr C4 Model Exporter -->
         <dependency>
             <groupId>com.structurizr</groupId>
             <artifactId>structurizr-core</artifactId>
@@ -246,4 +260,5 @@
             </plugin>
         </plugins>
     </build>
+
 </project>
