@@ -2,6 +2,7 @@ package com.company.auditor.core.graph;
 
 import com.company.auditor.core.domain.GraphSubTree;
 import com.company.auditor.core.domain.Observation;
+import com.company.auditor.core.scip.ScipDeltaPayload;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Session;
 import org.slf4j.Logger;
@@ -106,6 +107,59 @@ public class Neo4jSemanticGraphClient {
         } catch (Exception e) {
             log.error("Extract minified sub-tree Cypher execution failed for fqn={}: {}", fqn, e.getMessage(), e);
             throw e;
+        }
+    }
+
+    /**
+     * Executes atomic Cypher delta mutations to update modified AST nodes (Epic 13 / Story 13.2).
+     */
+    public void applyIncrementalDelta(ScipDeltaPayload payload) {
+        if (payload == null) return;
+        log.info("⚡ Applying incremental Cypher delta patch for runId={}: {} modified, {} deleted files",
+                payload.runId(), payload.modifiedFilePaths().size(), payload.deletedFilePaths().size());
+
+        try (Session session = neo4jDriver.session()) {
+            // 1. Detach delete removed and modified file nodes
+            List<String> filesToPurge = new ArrayList<>(payload.modifiedFilePaths());
+            filesToPurge.addAll(payload.deletedFilePaths());
+
+            if (!filesToPurge.isEmpty()) {
+                String deleteCypher = """
+                        UNWIND $files AS fileName
+                        MATCH (t:Type {fileName: fileName})
+                        DETACH DELETE t
+                        """;
+                session.run(deleteCypher, Map.of("files", filesToPurge));
+            }
+
+            // 2. Batch insert updated Type nodes
+            if (payload.typeNodes() != null && !payload.typeNodes().isEmpty()) {
+                String insertTypesCypher = """
+                        UNWIND $types AS typeData
+                        MERGE (t:Type {fqn: typeData.fqn})
+                        SET t.name = typeData.name,
+                            t.fileName = typeData.fileName,
+                            t.runId = typeData.runId
+                        """;
+                session.run(insertTypesCypher, Map.of("types", payload.typeNodes()));
+            }
+
+            // 3. Batch insert updated Method nodes
+            if (payload.methodNodes() != null && !payload.methodNodes().isEmpty()) {
+                String insertMethodsCypher = """
+                        UNWIND $methods AS mData
+                        MATCH (t:Type {fqn: mData.typeFqn})
+                        MERGE (m:Method {signature: mData.signature})
+                        SET m.name = mData.name,
+                            m.runId = mData.runId
+                        MERGE (t)-[:DECLARES]->(m)
+                        """;
+                session.run(insertMethodsCypher, Map.of("methods", payload.methodNodes()));
+            }
+
+            log.info("✅ Incremental Cypher delta patch applied successfully for runId={}", payload.runId());
+        } catch (Exception e) {
+            log.error("❌ Failed to apply incremental Cypher delta patch for runId={}: {}", payload.runId(), e.getMessage(), e);
         }
     }
 }
