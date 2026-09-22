@@ -36,6 +36,10 @@
         <byte-buddy.version>1.17.5</byte-buddy.version>
         <picocli.version>4.7.6</picocli.version>
         <testcontainers.version>1.19.7</testcontainers.version>
+        <plantuml.version>1.2026.8</plantuml.version>
+        <graphviz.version>0.18.1</graphviz.version>
+        <structurizr.version>6.2.3</structurizr.version>
+        <structurizr-plantuml.version>1.6.3</structurizr-plantuml.version>
         <maven-compiler-plugin.version>3.12.1</maven-compiler-plugin.version>
     </properties>
 
@@ -185,6 +189,33 @@
             <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- PlantUML Engine for Native PNG & SVG Diagram Rendering -->
+        <dependency>
+            <groupId>net.sourceforge.plantuml</groupId>
+            <artifactId>plantuml</artifactId>
+            <version>${plantuml.version}</version>
+        </dependency>
+
+        <!-- Graphviz Java Engine (Embedded layout generator for PlantUML) -->
+        <dependency>
+            <groupId>guru.nidi</groupId>
+            <artifactId>graphviz-java</artifactId>
+            <version>${graphviz.version}</version>
+        </dependency>
+
+        <!-- Structurizr C4 Model Exporter (PlantUML & Mermaid DSL) -->
+        <dependency>
+            <groupId>com.structurizr</groupId>
+            <artifactId>structurizr-core</artifactId>
+            <version>${structurizr.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.structurizr</groupId>
+            <artifactId>structurizr-plantuml</artifactId>
+            <version>${structurizr-plantuml.version}</version>
+        </dependency>
+
     </dependencies>
 
     <build>

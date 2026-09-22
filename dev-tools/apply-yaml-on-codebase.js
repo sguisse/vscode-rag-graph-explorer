@@ -14,6 +14,7 @@
  *   node dev-tools/apply-yaml-on-codebase.js path/to/manifest.yaml
  *   node dev-tools/apply-yaml-on-codebase.js path/to/manifest.yaml --skipCheckSyntax
  *   node dev-tools/apply-yaml-on-codebase.js path/to/manifest.yaml --disableRollback
+ *   node dev-tools/apply-yaml-on-codebase.js path/to/manifest.yaml --skipNodeBuild
  */
 const fs = require('fs');
 const path = require('path');
@@ -88,7 +89,7 @@ function sanitizeJavaContentWithCount(content) {
     let result = content;
 
     const rules = [
-        [/\\\$\{/g, '${'],
+        [/\\\$/g, '$'],
     ];
 
     for (const [regex, replacement] of rules) {
@@ -173,9 +174,10 @@ function main() {
     const cliArgs = process.argv.slice(2);
     const skipCheckSyntax = cliArgs.some((arg) => arg === '--skipCheckSyntax' || arg === 'skipCheckSyntax');
     const disableRollback = cliArgs.some((arg) => arg === '--disableRollback' || arg === 'disableRollback');
-    const manifestArg = cliArgs.find((arg) => !arg.startsWith('--') && arg !== 'skipCheckSyntax' && arg !== 'disableRollback');
+    const skipNodeBuild = cliArgs.some((arg) => arg === '--skipNodeBuild' || arg === 'skipNodeBuild' || arg === '—skipNodeBuild');
+    const manifestArg = cliArgs.find((arg) => !arg.startsWith('--') && !arg.startsWith('—') && arg !== 'skipCheckSyntax' && arg !== 'disableRollback' && arg !== 'skipNodeBuild');
 
-    if (!manifestArg) fail('Usage: node dev-tools/apply-yaml-on-codebase.js path/to/manifest.yaml [--skipCheckSyntax] [--disableRollback]');
+    if (!manifestArg) fail('Usage: node dev-tools/apply-yaml-on-codebase.js path/to/manifest.yaml [--skipCheckSyntax] [--disableRollback] [--skipNodeBuild]');
 
     const manifestPath = path.resolve(WORKSPACE_ROOT, manifestArg);
     if (!fs.existsSync(manifestPath)) fail(`Manifest not found: ${manifestPath}`);
@@ -287,8 +289,12 @@ function main() {
             fs.writeFileSync(targetFile, entry.content, 'utf8');
         });
 
-        console.log('🧪 Running workspace build verification...');
-        execFileSync('npm', ['run', 'build'], { cwd: WORKSPACE_ROOT, stdio: 'inherit' });
+        if (skipNodeBuild) {
+            console.log('⚠️ Node build verification has been skipped.');
+        } else {
+            console.log('🧪 Running workspace build verification...');
+            execFileSync('npm', ['run', 'build'], { cwd: WORKSPACE_ROOT, stdio: 'inherit' });
+        }
 
     } catch (err) {
         if (disableRollback || skipCheckSyntax) {
