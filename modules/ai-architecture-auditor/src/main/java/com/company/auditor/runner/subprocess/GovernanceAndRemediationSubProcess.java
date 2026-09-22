@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -83,7 +84,19 @@ public class GovernanceAndRemediationSubProcess {
 
         File sarifFile = null;
         if (sarifReportExporter != null) {
-            sarifFile = sarifReportExporter.exportSarifReport(findings, projectPath);
+            Path targetSarifPath = (projectPath != null && Files.isDirectory(projectPath))
+                    ? projectPath.resolve("target/audit-results.sarif")
+                    : (projectPath != null ? projectPath : Path.of("target/audit-results.sarif"));
+
+            try {
+                if (targetSarifPath.getParent() != null) {
+                    Files.createDirectories(targetSarifPath.getParent());
+                }
+                sarifFile = sarifReportExporter.exportSarifReport(findings, targetSarifPath);
+            } catch (Exception e) {
+                log.warn("⚠️ Failed to export SARIF report: {}", e.getMessage(), e);
+            }
+
             if (renderer != null) {
                 renderer.recordStepStatus(ProcessStepConstants.STEP_SARIF_REPORT_EXPORT, StepExecutionStatus.EXECUTED);
             }
