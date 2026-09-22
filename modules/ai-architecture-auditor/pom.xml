@@ -75,7 +75,7 @@
             <version>${picocli.version}</version>
         </dependency>
 
-        <!-- Add Byte Buddy explicit dependency upgrade -->
+        <!-- Byte Buddy -->
         <dependency>
             <groupId>net.bytebuddy</groupId>
             <artifactId>byte-buddy</artifactId>
@@ -94,6 +94,13 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Eclipse LSP4J for IDE Language Server Protocol Integration -->
+        <dependency>
+            <groupId>org.eclipse.lsp4j</groupId>
+            <artifactId>org.eclipse.lsp4j</artifactId>
+            <version>${lsp4j.version}</version>
+        </dependency>
+
         <!-- Neo4j Graph Database Bolt Driver -->
         <dependency>
             <groupId>org.neo4j.driver</groupId>
@@ -101,14 +108,13 @@
             <version>${neo4j-driver.version}</version>
         </dependency>
 
-        <!-- PostgreSQL Database Driver -->
+        <!-- PostgreSQL Database Driver & pgvector -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <version>${postgresql.version}</version>
             <scope>runtime</scope>
         </dependency>
-
         <dependency>
             <groupId>com.pgvector</groupId>
             <artifactId>pgvector</artifactId>
@@ -148,7 +154,6 @@
             <artifactId>jaxb-api</artifactId>
             <version>${jaxb-api.version}</version>
         </dependency>
-
         <dependency>
             <groupId>org.glassfish.jaxb</groupId>
             <artifactId>jaxb-runtime</artifactId>
@@ -161,7 +166,6 @@
             <artifactId>rewrite-java</artifactId>
             <version>${openrewrite.version}</version>
         </dependency>
-
         <dependency>
             <groupId>org.openrewrite</groupId>
             <artifactId>rewrite-maven</artifactId>
@@ -174,6 +178,11 @@
             <artifactId>wasm</artifactId>
             <version>${chicory.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.dylibso.chicory</groupId>
+            <artifactId>runtime</artifactId>
+            <version>${chicory.version}</version>
+        </dependency>
 
         <dependency>
             <groupId>com.dylibso.chicory</groupId>
@@ -182,13 +191,12 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Jackson JSON Mapping & JSR310 Datatype Support -->
+        <!-- Jackson JSON Mapping -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>${jackson.version}</version>
         </dependency>
-
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
@@ -208,28 +216,24 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers</artifactId>
             <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>junit-jupiter</artifactId>
             <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>neo4j</artifactId>
             <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>postgresql</artifactId>
@@ -237,21 +241,17 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- PlantUML Engine for Native PNG & SVG Diagram Rendering -->
+        <!-- Diagram Exporters -->
         <dependency>
             <groupId>net.sourceforge.plantuml</groupId>
             <artifactId>plantuml</artifactId>
             <version>${plantuml.version}</version>
         </dependency>
-
-        <!-- Graphviz Java Engine -->
         <dependency>
             <groupId>guru.nidi</groupId>
             <artifactId>graphviz-java</artifactId>
             <version>${graphviz.version}</version>
         </dependency>
-
-        <!-- Structurizr C4 Model Exporter -->
         <dependency>
             <groupId>com.structurizr</groupId>
             <artifactId>structurizr-core</artifactId>
@@ -285,7 +285,6 @@
                     <argLine>-Dnet.bytebuddy.experimental=true</argLine>
                 </configuration>
             </plugin>
-
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
