@@ -1,4 +1,4 @@
-# 🏛️ AI Architecture Auditor Configuration Manifest
+# 🏛️ AI Architecture Auditor Default Configuration Manifest
 version: "4.0"
 
 filters:
@@ -10,10 +10,11 @@ filters:
   ignoreExternalLibraries: true
 
 workflow:
+  predictiveBlastRadius:
+    enabled: true
+    churnThresholdDays: 90
+    mlPruningConfidence: 0.95
   steps:
-    predictiveBlastRadius:
-      enabled: true
-      dependsOn: []
     staticRules:
       enabled: true
       dependsOn: []

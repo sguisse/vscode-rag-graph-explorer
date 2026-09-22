@@ -73,7 +73,6 @@ function sanitizeJavaContentWithCount(content) {
         [/\\\$\{/g, '${'],
     ];
 
-
     for (const [regex, replacement] of rules) {
         const matches = result.match(regex);
         if (matches) {
@@ -105,6 +104,12 @@ function resolveTargetPath(entry, index) {
     const relative = path.relative(WORKSPACE_ROOT, targetFile);
     if (relative.startsWith('..') || path.isAbsolute(relative)) {
         fail(`Entry #${index} (${entry.filename}.${entry.extension}): path escapes workspace root.`);
+    }
+
+    // Identify if target path is a directory instead of a file
+    if (fs.existsSync(targetFile) && fs.statSync(targetFile).isDirectory()) {
+        console.error(`🚨 Illegal path operation: Target path points to an existing directory instead of a file: '${targetFile}'`);
+        fail(`Entry #${index} (${entry.filename}.${entry.extension}): Target path is a directory: '${relative}'`);
     }
 
     return targetFile;
@@ -232,6 +237,10 @@ function main() {
     const backups = new Map();
     resolvedEntries.forEach(({ targetFile }) => {
         if (fs.existsSync(targetFile)) {
+            if (fs.statSync(targetFile).isDirectory()) {
+                console.error(`🚨 Cannot backup directory path: '${targetFile}'`);
+                fail(`Target path is a directory, expected file: '${targetFile}'`);
+            }
             backups.set(targetFile, fs.readFileSync(targetFile));
         } else {
             backups.set(targetFile, null);
@@ -243,8 +252,12 @@ function main() {
             const relativeDisplay = path.relative(WORKSPACE_ROOT, targetFile);
             if (entry.action === 'delete') {
                 if (fs.existsSync(targetFile)) {
-                    fs.unlinkSync(targetFile);
-                    console.log(`🗑️ Removed existing file: '${relativeDisplay}'`);
+                    if (fs.statSync(targetFile).isDirectory()) {
+                        fs.rmSync(targetFile, { recursive: true, force: true });
+                    } else {
+                        fs.unlinkSync(targetFile);
+                    }
+                    console.log(`🗑️ Removed existing file/directory: '${relativeDisplay}'`);
                 }
                 return;
             }
@@ -268,7 +281,13 @@ function main() {
             console.error('\n❌ Workspace build verification failed! Rolling back disk changes...');
             backups.forEach((content, file) => {
                 if (content === null) {
-                    if (fs.existsSync(file)) fs.unlinkSync(file);
+                    if (fs.existsSync(file)) {
+                        if (fs.statSync(file).isDirectory()) {
+                            fs.rmSync(file, { recursive: true, force: true });
+                        } else {
+                            fs.unlinkSync(file);
+                        }
+                    }
                 } else {
                     fs.writeFileSync(file, content);
                 }
