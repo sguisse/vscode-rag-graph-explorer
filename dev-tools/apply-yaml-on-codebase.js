@@ -3,6 +3,7 @@
  * Applies a YAML "generation manifest" (file create/update/delete list) to the workspace.
  *
  * Features:
+ * - Extracts YAML manifest content enclosed in ~~~~yaml code blocks if present.
  * - Auto-repairs `.tsx`, `.jsx`, and `.java` file content for common LLM syntax corruption signatures.
  * - Tracks and reports sanitization replacement counts per file at completion.
  * - Full AST syntax validation via TypeScript Compiler API (can be bypassed with --skipCheckSyntax).
@@ -28,6 +29,23 @@ const SANITIZED_JAVA_EXTENSIONS = new Set(['java']);
 
 // Pattern for common LLM JSX corruption signatures
 const JSX_CORRUPTION_REGEX = /="\{|\}"|=>"[[:space:]]*>/;
+
+/**
+ * Pre-pass helper to extract YAML content enclosed between ~~~~yaml and ~~~~ block delimiters.
+ * If no ~~~~yaml block is found or the extracted content is empty, returns the full raw text.
+ */
+function extractYamlContent(text) {
+    if (typeof text !== 'string') return text;
+
+    const regex = /~{4,}yaml[ \t]*\r?\n?([\s\S]*?)~{4,}/i;
+    const match = text.match(regex);
+
+    if (match && match[1] && match[1].trim().length > 0) {
+        return match[1];
+    }
+
+    return text;
+}
 
 /**
  * Pre-pass auto-repair for common LLM generation/formatting corruptions on JSX/TSX content.
@@ -163,10 +181,11 @@ function main() {
     if (!fs.existsSync(manifestPath)) fail(`Manifest not found: ${manifestPath}`);
 
     const rawManifestText = fs.readFileSync(manifestPath, 'utf8');
+    const yamlContent = extractYamlContent(rawManifestText);
 
     let manifest;
     try {
-        manifest = yaml.load(rawManifestText);
+        manifest = yaml.load(yamlContent);
     } catch (err) {
         fail(`Failed to parse YAML manifest: ${err.message}`);
     }

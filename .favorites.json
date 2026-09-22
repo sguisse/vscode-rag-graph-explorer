@@ -166,5 +166,13 @@
         "workspaceRoot": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer",
         "workspacePath": "scripts/architecture/maturity-matrix",
         "id": "XnO3xEAacw1R264p"
+    },
+    {
+        "type": "File",
+        "name": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer/webview/src/features/exporter/components/tabs/prompt/data/predefined-prompts.yaml",
+        "parent_id": null,
+        "workspaceRoot": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer",
+        "workspacePath": "webview/src/features/exporter/components/tabs/prompt/data/predefined-prompts.yaml",
+        "id": "jo70gekVnJEpx6lF"
     }
 ]
