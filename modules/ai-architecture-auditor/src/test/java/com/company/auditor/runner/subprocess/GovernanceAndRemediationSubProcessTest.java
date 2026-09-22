@@ -5,62 +5,46 @@ import com.company.auditor.config.WorkflowStateRenderer;
 import com.company.auditor.config.WorkflowStateRenderer.StepExecutionStatus;
 import com.company.auditor.core.domain.Finding;
 import com.company.auditor.core.export.SarifReportExporter;
-import com.company.auditor.distillation.ModelDistillationManager;
+import com.company.auditor.core.remediation.OpenRewriteRecipeGenerator;
 import com.company.auditor.policy.EnterprisePolicyRegistry;
-import com.company.auditor.policy.ExecutiveReportExporter;
 import com.company.auditor.policy.OpaPolicyEvaluator;
-import com.company.auditor.remediation.OpenRewriteRecipeGenerator;
-import com.company.auditor.remediation.PullRequestService;
-import com.company.auditor.remediation.SemanticMutationTester;
-import com.company.auditor.remediation.ShadowModeValidator;
 import com.company.auditor.runner.ProcessStepConstants;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.any;
-
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
 class GovernanceAndRemediationSubProcessTest {
 
-    @Mock private OpaPolicyEvaluator opaPolicyEvaluator;
-    @Mock private EnterprisePolicyRegistry enterprisePolicyRegistry;
-    @Mock private ExecutiveReportExporter executiveReportExporter;
-    @Mock private OpenRewriteRecipeGenerator openRewriteRecipeGenerator;
-    @Mock private ShadowModeValidator shadowModeValidator;
-    @Mock private SemanticMutationTester semanticMutationTester;
-    @Mock private PullRequestService pullRequestService;
-    @Mock private ModelDistillationManager modelDistillationManager;
-    @Mock private SarifReportExporter sarifReportExporter;
-    @Mock private WorkflowStateRenderer workflowStateRenderer;
-
+    private EnterprisePolicyRegistry enterprisePolicyRegistry;
+    private OpaPolicyEvaluator opaPolicyEvaluator;
+    private SarifReportExporter sarifReportExporter;
+    private OpenRewriteRecipeGenerator openRewriteRecipeGenerator;
+    private WorkflowStateRenderer workflowStateRenderer;
     private GovernanceAndRemediationSubProcess governanceAndRemediationSubProcess;
 
     @BeforeEach
     void setUp() {
+        enterprisePolicyRegistry = mock(EnterprisePolicyRegistry.class);
+        opaPolicyEvaluator = mock(OpaPolicyEvaluator.class);
+        sarifReportExporter = mock(SarifReportExporter.class);
+        openRewriteRecipeGenerator = mock(OpenRewriteRecipeGenerator.class);
+        workflowStateRenderer = mock(WorkflowStateRenderer.class);
+
         governanceAndRemediationSubProcess = new GovernanceAndRemediationSubProcess(
-                opaPolicyEvaluator,
                 enterprisePolicyRegistry,
-                executiveReportExporter,
-                openRewriteRecipeGenerator,
-                shadowModeValidator,
-                semanticMutationTester,
-                pullRequestService,
-                modelDistillationManager,
-                sarifReportExporter
+                opaPolicyEvaluator,
+                sarifReportExporter,
+                openRewriteRecipeGenerator
         );
     }
 
@@ -90,5 +74,16 @@ class GovernanceAndRemediationSubProcessTest {
 
         verify(workflowStateRenderer, times(1)).recordStepStatus(ProcessStepConstants.STEP_OPA_POLICY_EVALUATION, StepExecutionStatus.EXECUTED);
         verify(workflowStateRenderer, times(1)).recordStepStatus(ProcessStepConstants.STEP_SARIF_REPORT_EXPORT, StepExecutionStatus.EXECUTED);
+    }
+
+    @Test
+    void testExecuteRemediationPipelineWithFindings() {
+        Finding finding = mock(Finding.class);
+        when(finding.id()).thenReturn("FINDING-001");
+        when(openRewriteRecipeGenerator.synthesizeRecipe(finding)).thenReturn("type: specs.openrewrite.org/v1beta/recipe");
+
+        governanceAndRemediationSubProcess.executeRemediationPipeline(List.of(finding));
+
+        verify(openRewriteRecipeGenerator, times(1)).synthesizeRecipe(finding);
     }
 }

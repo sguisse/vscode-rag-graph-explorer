@@ -6,9 +6,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
- * Core OpenRewrite Refactoring Recipe Generator for Bounded Context Refactoring.
+ * Canonical OpenRewrite Refactoring Recipe Generator for Bounded Context Refactoring.
+ * Single Source of Truth for generating AST package relocation patches across the platform.
  */
-@Service("coreOpenRewriteRecipeGenerator")
+@Service
 public class OpenRewriteRecipeGenerator {
 
     private static final Logger log = LoggerFactory.getLogger(OpenRewriteRecipeGenerator.class);
@@ -49,11 +50,14 @@ public class OpenRewriteRecipeGenerator {
         String ruleId = finding != null ? finding.ruleId() : "GENERIC-001";
         String symbol = "OrderService";
         if (finding != null && finding.observed() != null) {
-            String desc = finding.observed();
-            if (desc.contains("Violation: ")) {
-                String[] parts = desc.split("Violation: ");
+            String obs = finding.observed();
+            if (obs.contains("Violation: ")) {
+                String[] parts = obs.split("Violation: ");
                 if (parts.length > 1) {
-                    symbol = parts[1].split(" ")[0].trim();
+                    String[] tokens = parts[1].trim().split("\\s+");
+                    if (tokens.length > 0 && !tokens[0].isBlank()) {
+                        symbol = tokens[0];
+                    }
                 }
             }
         }

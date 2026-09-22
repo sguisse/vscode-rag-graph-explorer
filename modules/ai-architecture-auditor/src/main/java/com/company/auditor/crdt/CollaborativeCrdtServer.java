@@ -4,7 +4,6 @@ import com.company.auditor.core.remediation.OpenRewriteRecipeGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -22,7 +21,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
  * Synchronizes Yjs CRDT vector clocks and Excalidraw architecture canvas state across peer browser sessions.
  * Automatically triggers OpenRewrite refactoring recipes when boundary drag events occur.
  */
-@Component("crdtCanvasWebSocketServer")
+@Component
 public class CollaborativeCrdtServer extends TextWebSocketHandler {
 
     private static final Logger log = LoggerFactory.getLogger(CollaborativeCrdtServer.class);
@@ -31,7 +30,7 @@ public class CollaborativeCrdtServer extends TextWebSocketHandler {
     private final OpenRewriteRecipeGenerator openRewriteRecipeGenerator;
 
     @Autowired
-    public CollaborativeCrdtServer(@Autowired(required = false) @Qualifier("coreOpenRewriteRecipeGenerator") OpenRewriteRecipeGenerator openRewriteRecipeGenerator) {
+    public CollaborativeCrdtServer(@Autowired(required = false) OpenRewriteRecipeGenerator openRewriteRecipeGenerator) {
         this.openRewriteRecipeGenerator = openRewriteRecipeGenerator;
     }
 

@@ -105,7 +105,7 @@ public class AuditorCliRunner implements CommandLineRunner {
             workflowStateRenderer.renderWorkflowPlantUml(repoPath, runId);
         }
 
-        String sarifPathString = (outcome.sarifFile() != null) ? outcome.sarifFile().getAbsolutePath().replace("\\", "\\\\") : "N/A (SARIF Export Disabled)";
+        String sarifPathString = (outcome.sarifFile() != null) ? outcome.sarifFile().getAbsoluteFile().toString().replace("\\", "\\\\") : "N/A (SARIF Export Disabled)";
 
         AuditWorkflowStateEntity completedState = new AuditWorkflowStateEntity(
                 runId,

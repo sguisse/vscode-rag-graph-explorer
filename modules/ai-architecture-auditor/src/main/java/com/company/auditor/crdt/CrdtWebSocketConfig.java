@@ -1,7 +1,6 @@
 package com.company.auditor.crdt;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
@@ -17,7 +16,7 @@ public class CrdtWebSocketConfig implements WebSocketConfigurer {
     private final CollaborativeCrdtServer collaborativeCrdtServer;
 
     @Autowired
-    public CrdtWebSocketConfig(@Qualifier("crdtCanvasWebSocketServer") CollaborativeCrdtServer collaborativeCrdtServer) {
+    public CrdtWebSocketConfig(CollaborativeCrdtServer collaborativeCrdtServer) {
         this.collaborativeCrdtServer = collaborativeCrdtServer;
     }
 
