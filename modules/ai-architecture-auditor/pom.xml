@@ -42,6 +42,7 @@
         <structurizr.version>6.2.3</structurizr.version>
         <structurizr-plantuml.version>1.6.3</structurizr-plantuml.version>
         <chicory.version>1.7.5</chicory.version>
+        <lsp4j.version>0.21.0</lsp4j.version>
         <maven-compiler-plugin.version>3.12.1</maven-compiler-plugin.version>
     </properties>
 
@@ -187,6 +188,13 @@
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
             <version>${jackson.version}</version>
+        </dependency>
+
+        <!-- Eclipse LSP4J for IDE Language Server Protocol Integration -->
+        <dependency>
+            <groupId>org.eclipse.lsp4j</groupId>
+            <artifactId>org.eclipse.lsp4j</artifactId>
+            <version>${lsp4j.version}</version>
         </dependency>
 
         <!-- Testing Dependencies -->
