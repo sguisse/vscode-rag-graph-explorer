@@ -57,3 +57,6 @@ workflow:
     sarifExport:
       enabled: true
       dependsOn: []
+    githubActionsWorkflow:
+      enabled: false
+      dependsOn: ["sarifExport"]

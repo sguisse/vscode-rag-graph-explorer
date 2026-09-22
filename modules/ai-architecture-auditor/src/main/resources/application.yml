@@ -22,6 +22,7 @@ spring:
         default_schema: ai_architecture_auditor
   flyway:
     enabled: true
+    create-schemas: true
     baseline-on-migrate: true
     schemas: ai_architecture_auditor
     default-schema: ai_architecture_auditor

@@ -1,0 +1,48 @@
+# 🏛️ Evidence-Driven AI Architecture Auditor GitHub Actions Workflow
+# DISABLED BY DEFAULT per AuditorConfig specification (`githubActionsWorkflow.enabled: false`).
+# To enable, trigger via `workflow_dispatch` or update `ai-architecture-auditor.config.yaml`.
+
+name: Evidence-Driven Architecture Audit Gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      targetRepo:
+        description: 'Target repository path to audit'
+        required: false
+        default: '.'
+      failOn:
+        description: 'Build fail severity threshold (CRITICAL, HIGH, MEDIUM, LOW, NONE)'
+        required: false
+        default: 'CRITICAL'
+
+jobs:
+  architecture-audit:
+    name: Architecture Governance Audit
+    runs-on: ubuntu-latest
+    if: false # Disabled by default per AuditorConfig specification
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Build Auditor Module
+        run: mvn clean package -DskipTests
+
+      - name: Execute Architecture Audit & Build Gate
+        run: |
+          java -jar target/ai-architecture-auditor-4.0.0.jar \
+            --target-repo=\${{ github.event.inputs.targetRepo || '.' }} \
+            --fail-on=\${{ github.event.inputs.failOn || 'CRITICAL' }}
+
+      - name: Upload SARIF Audit Report
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: target/audit-results.sarif

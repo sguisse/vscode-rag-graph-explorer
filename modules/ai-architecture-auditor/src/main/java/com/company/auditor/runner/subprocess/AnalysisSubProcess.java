@@ -19,10 +19,9 @@ import org.springframework.stereotype.Component;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
- * SubProcess 1: Static Rules, AST, Cross-Stack Alignment & Telemetry Analysis.
+ * SubProcess 1: Static Rules Execution, AST Graph Extraction, Cross-Stack Alignment & Telemetry Hydration.
  */
 @Component
 public class AnalysisSubProcess {
@@ -51,52 +50,41 @@ public class AnalysisSubProcess {
     }
 
     public List<Observation> executeAnalysis(Path repoPath, String runId, AuditorConfig config, WorkflowStateRenderer workflowStateRenderer) {
-        log.info("➡️ Step 2: Calculating predictive blast radius and DAG execution pruning");
-        boolean isPbrEnabled = config != null && config.workflow() != null
-                && config.workflow().predictiveBlastRadius() != null
-                && config.workflow().predictiveBlastRadius().enabled();
-
-        if (isPbrEnabled && predictiveBlastRadius != null) {
+        log.info("➡️ Step 1: Evaluating Predictive Blast Radius & ML Churn Risk");
+        if (predictiveBlastRadius != null) {
             predictiveBlastRadius.calculatePredictiveBlastRadius(repoPath, List.of(), config);
             workflowStateRenderer.recordStepStatus(ProcessStepConstants.STEP_PREDICTIVE_BLAST_RADIUS, StepExecutionStatus.EXECUTED);
-        } else {
-            workflowStateRenderer.recordStepStatus(ProcessStepConstants.STEP_PREDICTIVE_BLAST_RADIUS, StepExecutionStatus.DISABLED);
         }
 
-        log.info("➡️ Step 3: Executing static architecture rules across multi-language SPI drivers");
+        log.info("➡️ Step 2: Executing Java/Spring Boot Static Rule Suite and AST graph extraction");
         List<Observation> observations = new ArrayList<>();
-        if (isStepEnabled(config, ProcessStepConstants.KEY_STATIC_RULES)) {
-            AnalysisContext context = new AnalysisContext(
-                    runId,
-                    repoPath,
-                    Map.of(),
-                    Map.of(),
-                    List.of(),
-                    config != null ? config.filters() : null
-            );
+        if (javaSpringDriver != null) {
+            AnalysisContext context = new AnalysisContext(runId, repoPath, config);
+            javaSpringDriver.buildCodeGraph(context);
             observations.addAll(javaSpringDriver.executeStaticRules(context));
             workflowStateRenderer.recordStepStatus(ProcessStepConstants.STEP_STATIC_RULES_EXECUTION, StepExecutionStatus.EXECUTED);
-
-            if (crossStackAligner != null) {
-                observations.addAll(crossStackAligner.auditCrossStackAlignment(repoPath, runId));
-            }
-            if (pactMswContractGenerator != null) {
-                pactMswContractGenerator.generateContracts(repoPath, runId);
-            }
-        } else {
-            workflowStateRenderer.recordStepStatus(ProcessStepConstants.STEP_STATIC_RULES_EXECUTION, StepExecutionStatus.DISABLED);
         }
 
-        log.info("➡️ Step 4: Ingesting OpenTelemetry runtime telemetry and auditing Kubernetes/Helm manifest drift");
-        if (isStepEnabled(config, ProcessStepConstants.KEY_OTEL_HYDRATION) && otelTraceHydrator != null) {
-            observations.addAll(otelTraceHydrator.hydrateRuntimeTelemetry(repoPath, runId));
+        log.info("➡️ Step 3: Checking Cross-Stack API Alignment & Pact/MSW Contracts");
+        if (crossStackAligner != null) {
+            CrossStackAligner.CrossStackAlignmentOutcome outcome = crossStackAligner.alignCrossStackContracts(runId);
+            if (outcome != null && outcome.observations() != null) {
+                observations.addAll(outcome.observations());
+            }
+            workflowStateRenderer.recordStepStatus(ProcessStepConstants.STEP_CROSS_STACK_ALIGNER, StepExecutionStatus.EXECUTED);
+        }
+
+        log.info("➡️ Step 4: OpenTelemetry Trace Hydration & Runtime Observation Mapping");
+        if (otelTraceHydrator != null && isStepEnabled(config, ProcessStepConstants.KEY_OTEL_HYDRATION)) {
+            otelTraceHydrator.hydrateTraces(repoPath, runId);
             workflowStateRenderer.recordStepStatus(ProcessStepConstants.STEP_OPENTELEMETRY_HYDRATION, StepExecutionStatus.EXECUTED);
         } else {
             workflowStateRenderer.recordStepStatus(ProcessStepConstants.STEP_OPENTELEMETRY_HYDRATION, StepExecutionStatus.DISABLED);
         }
 
-        if (isStepEnabled(config, ProcessStepConstants.KEY_K8S_MANIFEST_DRIFT) && k8sManifestAnalyzer != null) {
-            observations.addAll(k8sManifestAnalyzer.analyzeK8sManifestDrift(repoPath, runId));
+        log.info("➡️ Step 5: K8s Infrastructure & Manifest Drift Analysis");
+        if (k8sManifestAnalyzer != null && isStepEnabled(config, ProcessStepConstants.KEY_K8S_MANIFEST_DRIFT)) {
+            k8sManifestAnalyzer.analyzeManifests(repoPath, runId);
             workflowStateRenderer.recordStepStatus(ProcessStepConstants.STEP_K8S_MANIFEST_ANALYZER, StepExecutionStatus.EXECUTED);
         } else {
             workflowStateRenderer.recordStepStatus(ProcessStepConstants.STEP_K8S_MANIFEST_ANALYZER, StepExecutionStatus.DISABLED);

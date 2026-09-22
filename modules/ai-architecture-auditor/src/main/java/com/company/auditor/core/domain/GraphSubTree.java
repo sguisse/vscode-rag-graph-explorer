@@ -4,12 +4,16 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Minified graph context output for Graph RAG LLM queries.
+ * Minified graph context extracted via jQAssistant Graph RAG for LLM triage (Story 3.2).
  */
 public record GraphSubTree(
-    String targetSymbol,
-    int hopDepth,
-    List<Map<String, Object>> nodes,
-    List<Map<String, Object>> edges,
-    int estimatedTokenFootprint
-) {}
+        String fqn,
+        int depth,
+        List<Map<String, Object>> nodes,
+        List<Map<String, Object>> relationships,
+        int estimatedTokenCount
+) {
+    public String targetSymbol() {
+        return fqn;
+    }
+}

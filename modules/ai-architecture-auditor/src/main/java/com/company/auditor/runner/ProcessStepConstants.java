@@ -24,6 +24,7 @@ public final class ProcessStepConstants {
     public static final String KEY_SHADOW_REMEDIATION = "shadowRemediation";
     public static final String KEY_MODEL_DISTILLATION = "modelDistillation";
     public static final String KEY_SARIF_EXPORT = "sarifExport";
+    public static final String KEY_GITHUB_ACTIONS_WORKFLOW = "githubActionsWorkflow";
 
     // Workflow State Display Names (Recorded in WorkflowStateRenderer & PlantUML)
     public static final String STEP_PREDICTIVE_BLAST_RADIUS = "PredictiveBlastRadius";
@@ -43,4 +44,5 @@ public final class ProcessStepConstants {
     public static final String STEP_DOUBLE_LOOP_REMEDIATION = "DoubleLoopRemediation";
     public static final String STEP_MODEL_DISTILLATION_EXPORT = "ModelDistillationExport";
     public static final String STEP_SARIF_REPORT_EXPORT = "SarifReportExport";
+    public static final String STEP_GITHUB_ACTIONS_WORKFLOW = "GitHubActionsWorkflow";
 }

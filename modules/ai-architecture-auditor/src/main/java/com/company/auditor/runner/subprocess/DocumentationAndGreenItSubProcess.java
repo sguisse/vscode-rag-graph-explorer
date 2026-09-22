@@ -6,10 +6,9 @@ import com.company.auditor.config.AuditorConfig;
 import com.company.auditor.config.WorkflowStateRenderer;
 import com.company.auditor.config.WorkflowStateRenderer.StepExecutionStatus;
 import com.company.auditor.core.domain.Observation;
-import com.company.auditor.docascode.C4DiagramExtractor;
-import com.company.auditor.docascode.DocAsCodeSyncEngine;
-import com.company.auditor.docgen.BusinessRuleInverter;
-import com.company.auditor.docgen.GherkinScenarioValidator;
+import com.company.auditor.docgen.BusinessRuleInversionEngine;
+import com.company.auditor.docgen.C4DiagramExtractor;
+import com.company.auditor.docgen.DocAsCodeSyncEngine;
 import com.company.auditor.runner.ProcessStepConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * SubProcess 2: Doc-as-Code Synchronization, C4 Diagram Export, Green IT Profiling & OpenVEX Reachability.
+ * SubProcess 2: Doc-as-Code Synchronization, C4 Diagram Generation, Green IT Footprint Profiling & VEX CVE Reachability.
  */
 @Component
 public class DocumentationAndGreenItSubProcess {
@@ -29,21 +28,18 @@ public class DocumentationAndGreenItSubProcess {
 
     private final DocAsCodeSyncEngine docAsCodeSyncEngine;
     private final C4DiagramExtractor c4DiagramExtractor;
-    private final BusinessRuleInverter businessRuleInverter;
-    private final GherkinScenarioValidator gherkinScenarioValidator;
+    private final BusinessRuleInversionEngine businessRuleInversionEngine;
     private final GreenItProfiler greenItProfiler;
     private final VexReachabilityAnalyzer vexReachabilityAnalyzer;
 
     public DocumentationAndGreenItSubProcess(DocAsCodeSyncEngine docAsCodeSyncEngine,
-                                             C4DiagramExtractor c4DiagramExtractor,
-                                             BusinessRuleInverter businessRuleInverter,
-                                             GherkinScenarioValidator gherkinScenarioValidator,
-                                             GreenItProfiler greenItProfiler,
-                                             VexReachabilityAnalyzer vexReachabilityAnalyzer) {
+                                              C4DiagramExtractor c4DiagramExtractor,
+                                              BusinessRuleInversionEngine businessRuleInversionEngine,
+                                              GreenItProfiler greenItProfiler,
+                                              VexReachabilityAnalyzer vexReachabilityAnalyzer) {
         this.docAsCodeSyncEngine = docAsCodeSyncEngine;
         this.c4DiagramExtractor = c4DiagramExtractor;
-        this.businessRuleInverter = businessRuleInverter;
-        this.gherkinScenarioValidator = gherkinScenarioValidator;
+        this.businessRuleInversionEngine = businessRuleInversionEngine;
         this.greenItProfiler = greenItProfiler;
         this.vexReachabilityAnalyzer = vexReachabilityAnalyzer;
     }
@@ -51,42 +47,49 @@ public class DocumentationAndGreenItSubProcess {
     public List<Observation> executeDocumentationAndGreenIt(Path repoPath, String runId, AuditorConfig config, WorkflowStateRenderer workflowStateRenderer) {
         List<Observation> observations = new ArrayList<>();
 
-        log.info("➡️ Step 5: Synchronizing Doc-as-Code, exporting C4 diagrams, and inverting business decision rules");
-        if (isStepEnabled(config, ProcessStepConstants.KEY_DOC_AS_CODE_SYNC) && docAsCodeSyncEngine != null) {
-            observations.addAll(docAsCodeSyncEngine.synchronizeDocAsCode(repoPath, runId));
+        log.info("➡️ Step 6: Doc-as-Code Sync, C4 Diagrams & Business Rule Matrix Inversion");
+        if (docAsCodeSyncEngine != null && isStepEnabled(config, ProcessStepConstants.KEY_DOC_AS_CODE_SYNC)) {
+            docAsCodeSyncEngine.syncDocAsCode(repoPath, runId);
             workflowStateRenderer.recordStepStatus(ProcessStepConstants.STEP_DOC_AS_CODE_SYNC, StepExecutionStatus.EXECUTED);
         } else {
             workflowStateRenderer.recordStepStatus(ProcessStepConstants.STEP_DOC_AS_CODE_SYNC, StepExecutionStatus.DISABLED);
         }
 
-        if (isStepEnabled(config, ProcessStepConstants.KEY_C4_DIAGRAM_EXPORT) && c4DiagramExtractor != null) {
-            c4DiagramExtractor.exportC4Diagrams(repoPath, runId, config);
+        if (c4DiagramExtractor != null && isStepEnabled(config, ProcessStepConstants.KEY_C4_DIAGRAM_EXPORT)) {
+            c4DiagramExtractor.exportC4Diagrams(repoPath, runId);
             workflowStateRenderer.recordStepStatus(ProcessStepConstants.STEP_C4_DIAGRAM_EXPORT, StepExecutionStatus.EXECUTED);
         } else {
             workflowStateRenderer.recordStepStatus(ProcessStepConstants.STEP_C4_DIAGRAM_EXPORT, StepExecutionStatus.DISABLED);
         }
 
-        if (isStepEnabled(config, ProcessStepConstants.KEY_BUSINESS_RULE_INVERSION) && businessRuleInverter != null) {
-            businessRuleInverter.invertBusinessRulesToMarkdown(repoPath, runId);
+        if (businessRuleInversionEngine != null && isStepEnabled(config, ProcessStepConstants.KEY_BUSINESS_RULE_INVERSION)) {
+            businessRuleInversionEngine.invertBusinessRules(repoPath, runId);
             workflowStateRenderer.recordStepStatus(ProcessStepConstants.STEP_BUSINESS_RULE_INVERSION, StepExecutionStatus.EXECUTED);
         } else {
             workflowStateRenderer.recordStepStatus(ProcessStepConstants.STEP_BUSINESS_RULE_INVERSION, StepExecutionStatus.DISABLED);
         }
 
-        if (gherkinScenarioValidator != null) {
-            observations.addAll(gherkinScenarioValidator.validateGherkinEventStormingAlignment(repoPath, runId));
-        }
-
-        log.info("➡️ Step 6: Profiling Green IT carbon metrics and evaluating CVE call-graph reachability (OpenVEX)");
-        if (isStepEnabled(config, ProcessStepConstants.KEY_GREEN_IT_PROFILING) && greenItProfiler != null) {
-            observations.addAll(greenItProfiler.profileEnergyInefficiencies(repoPath, runId));
+        log.info("➡️ Step 7: Green IT Profiling & Software Energy/Carbon Intensity Footprint");
+        if (greenItProfiler != null && isStepEnabled(config, ProcessStepConstants.KEY_GREEN_IT_PROFILING)) {
+            GreenItProfiler.GreenItReport report = greenItProfiler.profileGreenItEfficiency(runId);
+            if (report != null && report.observations() != null) {
+                observations.addAll(report.observations());
+            }
             workflowStateRenderer.recordStepStatus(ProcessStepConstants.STEP_GREEN_IT_PROFILING, StepExecutionStatus.EXECUTED);
         } else {
             workflowStateRenderer.recordStepStatus(ProcessStepConstants.STEP_GREEN_IT_PROFILING, StepExecutionStatus.DISABLED);
         }
 
-        if (isStepEnabled(config, ProcessStepConstants.KEY_VEX_REACHABILITY) && vexReachabilityAnalyzer != null) {
-            vexReachabilityAnalyzer.analyzeCveReachability(runId, List.of("CVE-2021-44228"));
+        log.info("➡️ Step 8: OpenVEX & CVE Call-Graph Reachability Analysis");
+        if (vexReachabilityAnalyzer != null && isStepEnabled(config, ProcessStepConstants.KEY_VEX_REACHABILITY)) {
+            List<VexReachabilityAnalyzer.VexReachabilityResult> vexResults = vexReachabilityAnalyzer.analyzeCveReachability(runId, List.of("CVE-2023-34055", "CVE-2024-22233"));
+            if (vexResults != null) {
+                for (VexReachabilityAnalyzer.VexReachabilityResult res : vexResults) {
+                    if (res != null && res.observations() != null) {
+                        observations.addAll(res.observations());
+                    }
+                }
+            }
             workflowStateRenderer.recordStepStatus(ProcessStepConstants.STEP_VEX_REACHABILITY_ANALYSIS, StepExecutionStatus.EXECUTED);
         } else {
             workflowStateRenderer.recordStepStatus(ProcessStepConstants.STEP_VEX_REACHABILITY_ANALYSIS, StepExecutionStatus.DISABLED);

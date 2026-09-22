@@ -1,22 +1,25 @@
 package com.company.auditor;
 
+import com.company.auditor.core.graph.Neo4jSemanticGraphClient;
+import com.company.auditor.core.graph.PostgresEvidenceStore;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.neo4j.driver.Driver;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.context.ActiveProfiles;
+import org.springframework.beans.factory.annotation.Autowired;
 
-@SpringBootTest
-@ActiveProfiles("test")
-class AiArchitectureAuditorApplicationTests {
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-    @MockBean
-    private Driver neo4jDriver;
+class AiArchitectureAuditorApplicationTests extends AbstractIntegrationTest {
 
-    @MockBean
-    private com.company.auditor.runner.AuditorCliRunner runnerAuditorCliRunner;
+    @Autowired(required = false)
+    private Neo4jSemanticGraphClient neo4jSemanticGraphClient;
+
+    @Autowired(required = false)
+    private PostgresEvidenceStore postgresEvidenceStore;
 
     @Test
+    @DisplayName("Spring ApplicationContext loads successfully with Testcontainers for PostgreSQL, Neo4j, and Ollama")
     void contextLoads() {
+        assertNotNull(neo4jSemanticGraphClient);
+        assertNotNull(postgresEvidenceStore);
     }
 }

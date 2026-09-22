@@ -1,36 +1,45 @@
 package com.company.auditor.drivers.java;
 
 import com.company.auditor.core.domain.AnalysisContext;
-import com.company.auditor.core.domain.GraphValidationReport;
 import com.company.auditor.core.domain.Observation;
-import com.company.auditor.core.graph.Neo4jGraphValidationService;
 import com.company.auditor.core.graph.Neo4jSemanticGraphClient;
 import com.company.auditor.core.spi.LanguageDriver;
-import com.company.auditor.rules.StaticRuleRegistry;
+import com.company.auditor.rules.HexagonalIsolationRule;
+import com.company.auditor.rules.JpaNPlusOneRule;
+import com.company.auditor.rules.TransactionalBoundaryRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Java / Spring Boot SPI Language Driver (Epic 2 / Story 2.1 & 2.2).
+ * Ingests Java AST via jQAssistant scanner and executes core static architecture rules against Neo4j.
+ */
 @Component
 public class JavaSpringDriver implements LanguageDriver {
 
     private static final Logger log = LoggerFactory.getLogger(JavaSpringDriver.class);
 
-    private final Neo4jSemanticGraphClient neo4jSemanticGraphClient;
-    private final Neo4jGraphValidationService neo4jGraphValidationService;
-    private final StaticRuleRegistry staticRuleRegistry;
+    private final JQAssistantScannerService jqAssistantScannerService;
+    private final Neo4jSemanticGraphClient graphClient;
+    private final HexagonalIsolationRule hexagonalIsolationRule;
+    private final TransactionalBoundaryRule transactionalBoundaryRule;
+    private final JpaNPlusOneRule jpaNPlusOneRule;
 
-    public JavaSpringDriver(Neo4jSemanticGraphClient neo4jSemanticGraphClient,
-                            Neo4jGraphValidationService neo4jGraphValidationService,
-                            StaticRuleRegistry staticRuleRegistry) {
-        this.neo4jSemanticGraphClient = neo4jSemanticGraphClient;
-        this.neo4jGraphValidationService = neo4jGraphValidationService;
-        this.staticRuleRegistry = staticRuleRegistry;
+    public JavaSpringDriver(JQAssistantScannerService jqAssistantScannerService,
+                            Neo4jSemanticGraphClient graphClient,
+                            HexagonalIsolationRule hexagonalIsolationRule,
+                            TransactionalBoundaryRule transactionalBoundaryRule,
+                            JpaNPlusOneRule jpaNPlusOneRule) {
+        this.jqAssistantScannerService = jqAssistantScannerService;
+        this.graphClient = graphClient;
+        this.hexagonalIsolationRule = hexagonalIsolationRule;
+        this.transactionalBoundaryRule = transactionalBoundaryRule;
+        this.jpaNPlusOneRule = jpaNPlusOneRule;
     }
 
     @Override
@@ -40,44 +49,49 @@ public class JavaSpringDriver implements LanguageDriver {
 
     @Override
     public boolean supports(Path repositoryPath) {
-        return Files.exists(repositoryPath.resolve("pom.xml")) || Files.exists(repositoryPath.resolve("build.gradle"));
+        if (repositoryPath == null) return false;
+        return repositoryPath.resolve("pom.xml").toFile().exists()
+                || repositoryPath.resolve("build.gradle").toFile().exists()
+                || repositoryPath.resolve("build.gradle.kts").toFile().exists();
     }
 
     @Override
     public void buildCodeGraph(Path repositoryPath, String runId) {
-        // Triggers jQAssistant CLI scan to populate Neo4j with :Type, :Method, :DEPENDS_ON nodes
+        log.info("🌱 Executing jQAssistant Java AST scan for repository: {}", repositoryPath);
+        if (jqAssistantScannerService != null) {
+            try {
+                jqAssistantScannerService.scanRepository(repositoryPath, runId);
+                log.info("✅ jQAssistant code graph scanning completed successfully for runId={}", runId);
+            } catch (Exception e) {
+                log.error("Failed to execute jQAssistant scanner: {}", e.getMessage(), e);
+            }
+        }
+    }
+
+    public void buildCodeGraph(AnalysisContext context) {
+        if (context != null) {
+            buildCodeGraph(context.repositoryPath(), context.runId());
+        }
     }
 
     @Override
     public List<Observation> executeStaticRules(AnalysisContext context) {
+        log.info("⚡ Executing Java/Spring Boot static rule suite for runId={}", context.runId());
         List<Observation> observations = new ArrayList<>();
 
-        // 1. Validate Neo4j Code Graph completeness and schema integrity against source files
-        if (neo4jGraphValidationService != null) {
-            GraphValidationReport report = neo4jGraphValidationService.validateGraphIntegrity(
-                    context.repositoryPath(), context.runId()
-            );
-            if (!report.isValid()) {
-                log.warn("Graph validation reported missing nodes or schema gaps: {}", report.summary());
-            }
+        if (hexagonalIsolationRule != null) {
+            observations.addAll(hexagonalIsolationRule.evaluate(context));
         }
 
-        // 2. Execute Neo4j Graph Cypher checks
-        if (neo4jSemanticGraphClient != null) {
-            List<Observation> hexObservations = neo4jSemanticGraphClient.executeHexagonalIsolationCheck(context.runId());
-            if (hexObservations != null) {
-                observations.addAll(hexObservations);
-            }
+        if (transactionalBoundaryRule != null) {
+            observations.addAll(transactionalBoundaryRule.evaluate(context));
         }
 
-        // 3. Execute AST Static Rules from registry
-        if (staticRuleRegistry != null) {
-            List<Observation> staticObs = staticRuleRegistry.executeAllRules(context);
-            if (staticObs != null) {
-                observations.addAll(staticObs);
-            }
+        if (jpaNPlusOneRule != null) {
+            observations.addAll(jpaNPlusOneRule.evaluate(context));
         }
 
+        log.info("Java/Spring Boot static rule execution completed. Total observations: {}", observations.size());
         return observations;
     }
 }
