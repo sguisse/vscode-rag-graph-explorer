@@ -3,6 +3,7 @@ package com.company.auditor.core.graph;
 import com.company.auditor.core.domain.GraphSubTree;
 import com.company.auditor.core.domain.Observation;
 import com.company.auditor.core.scip.ScipDeltaPayload;
+import com.company.auditor.core.api.ApiContractPayload;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Session;
 import org.slf4j.Logger;
@@ -119,7 +120,6 @@ public class Neo4jSemanticGraphClient {
                 payload.runId(), payload.modifiedFilePaths().size(), payload.deletedFilePaths().size());
 
         try (Session session = neo4jDriver.session()) {
-            // 1. Detach delete removed and modified file nodes
             List<String> filesToPurge = new ArrayList<>(payload.modifiedFilePaths());
             filesToPurge.addAll(payload.deletedFilePaths());
 
@@ -132,7 +132,6 @@ public class Neo4jSemanticGraphClient {
                 session.run(deleteCypher, Map.of("files", filesToPurge));
             }
 
-            // 2. Batch insert updated Type nodes
             if (payload.typeNodes() != null && !payload.typeNodes().isEmpty()) {
                 String insertTypesCypher = """
                         UNWIND $types AS typeData
@@ -144,7 +143,6 @@ public class Neo4jSemanticGraphClient {
                 session.run(insertTypesCypher, Map.of("types", payload.typeNodes()));
             }
 
-            // 3. Batch insert updated Method nodes
             if (payload.methodNodes() != null && !payload.methodNodes().isEmpty()) {
                 String insertMethodsCypher = """
                         UNWIND $methods AS mData
@@ -160,6 +158,53 @@ public class Neo4jSemanticGraphClient {
             log.info("✅ Incremental Cypher delta patch applied successfully for runId={}", payload.runId());
         } catch (Exception e) {
             log.error("❌ Failed to apply incremental Cypher delta patch for runId={}: {}", payload.runId(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Ingests OpenAPI & AsyncAPI schema nodes and controller binding edges (Epic 17).
+     */
+    public void ingestApiContractPayload(ApiContractPayload payload) {
+        if (payload == null) return;
+        log.info("📜 Ingesting API Contract graph nodes into Neo4j for runId={}: {} endpoints, {} async channels",
+                payload.runId(), payload.endpoints().size(), payload.asyncChannels().size());
+
+        try (Session session = neo4jDriver.session()) {
+            if (!payload.endpoints().isEmpty()) {
+                String epCypher = """
+                        UNWIND $endpoints AS ep
+                        MERGE (e:ApiEndpoint {path: ep.path, method: ep.method})
+                        SET e.operationId = ep.operationId,
+                            e.summary = ep.summary,
+                            e.runId = ep.runId
+                        """;
+                session.run(epCypher, Map.of("endpoints", payload.endpoints()));
+            }
+
+            if (!payload.controllerBindings().isEmpty()) {
+                String bindCypher = """
+                        UNWIND $bindings AS b
+                        MATCH (e:ApiEndpoint {path: b.endpointPath, method: b.httpMethod})
+                        MATCH (c:Type {fqn: b.controllerFqn})
+                        MERGE (c)-[:EXPOSES_ENDPOINT]->(e)
+                        """;
+                session.run(bindCypher, Map.of("bindings", payload.controllerBindings()));
+            }
+
+            if (!payload.asyncChannels().isEmpty()) {
+                String chCypher = """
+                        UNWIND $channels AS ch
+                        MERGE (a:AsyncChannel {channelName: ch.channelName})
+                        SET a.protocol = ch.protocol,
+                            a.messageType = ch.messageType,
+                            a.runId = ch.runId
+                        """;
+                session.run(chCypher, Map.of("channels", payload.asyncChannels()));
+            }
+
+            log.info("✅ API Contract graph ingestion completed successfully for runId={}", payload.runId());
+        } catch (Exception e) {
+            log.error("❌ API Contract graph ingestion failed for runId={}: {}", payload.runId(), e.getMessage(), e);
         }
     }
 }
