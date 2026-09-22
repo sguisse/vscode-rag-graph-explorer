@@ -1,0 +1,58 @@
+# 🏛️ AI Architecture Auditor Configuration Manifest
+version: "4.0"
+
+filters:
+  packages:
+    include:
+      - "com.company.auditor.*"
+    exclude:
+      - "com.company.auditor.legacy.*"
+  ignoreExternalLibraries: true
+
+workflow:
+  steps:
+    predictiveBlastRadius:
+      enabled: true
+      dependsOn: []
+    staticRules:
+      enabled: true
+      dependsOn: []
+    otelHydration:
+      enabled: false
+      dependsOn: ["staticRules"]
+    k8sManifestDrift:
+      enabled: true
+      dependsOn: ["staticRules"]
+    docAsCodeSync:
+      enabled: true
+      dependsOn: ["staticRules"]
+    c4DiagramExport:
+      enabled: true
+      dependsOn: ["staticRules"]
+    businessRuleInversion:
+      enabled: true
+      dependsOn: ["staticRules"]
+    greenItProfiling:
+      enabled: true
+      dependsOn: ["staticRules"]
+    vexReachability:
+      enabled: true
+      dependsOn: ["staticRules"]
+    zeroTrustAnonymization:
+      enabled: true
+      dependsOn: []
+    llmTriage:
+      enabled: true
+      dependsOn: ["staticRules", "zeroTrustAnonymization"]
+    opaPolicyEvaluation:
+      enabled: true
+      dependsOn: ["staticRules"]
+    shadowRemediation:
+      enabled: false
+      dependsOn: ["opaPolicyEvaluation"]
+    modelDistillation:
+      enabled: true
+      dependsOn: ["llmTriage"]
+    sarifExport:
+      enabled: true
+      dependsOn: []
