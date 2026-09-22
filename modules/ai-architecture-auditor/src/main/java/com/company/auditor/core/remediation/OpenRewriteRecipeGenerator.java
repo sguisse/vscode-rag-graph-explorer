@@ -1,4 +1,4 @@
-package com.company.auditor.remediation;
+package com.company.auditor.core.remediation;
 
 import com.company.auditor.core.domain.Finding;
 import org.slf4j.Logger;
@@ -6,9 +6,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
- * Remediation OpenRewrite Refactoring Recipe Generator.
+ * Core OpenRewrite Refactoring Recipe Generator for Bounded Context Refactoring.
  */
-@Service("remediationOpenRewriteRecipeGenerator")
+@Service("coreOpenRewriteRecipeGenerator")
 public class OpenRewriteRecipeGenerator {
 
     private static final Logger log = LoggerFactory.getLogger(OpenRewriteRecipeGenerator.class);
@@ -53,7 +53,7 @@ public class OpenRewriteRecipeGenerator {
             if (desc.contains("Violation: ")) {
                 String[] parts = desc.split("Violation: ");
                 if (parts.length > 1) {
-                    symbol = parts[1].split(" ")[0] .trim();
+                    symbol = parts[1].split(" ")[0].trim();
                 }
             }
         }

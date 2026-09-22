@@ -1,0 +1,22 @@
+{
+  "name": "ai-architecture-auditor-canvas-ui",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Real-Time Collaborative CRDT Architecture Canvas UI (Excalidraw + Yjs)",
+  "dependencies": {
+    "@excalidraw/excalidraw": "^0.17.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "yjs": "^13.6.14",
+    "y-websocket": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.66",
+    "@types/react-dom": "^18.2.22",
+    "typescript": "^5.4.2"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build"
+  }
+}
