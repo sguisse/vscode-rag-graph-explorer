@@ -6,14 +6,14 @@ An enterprise-grade, agent-driven orchestration framework designed to reverse-en
 
 ## 👁️‍🗨️ System Overview
 
-The engine operates via a **Master Copilot Custom Agent** (`gsheet-to-react-orchestrator`) that drives a streamlined, 6-step pipeline with pre-created `.wait` file placeholders, automated file-system detection, and seamless Handoff Button checkpoints. Progress is persistently tracked in an execution ledger (`plan-follower.md`) to guarantee state resumption across context resets.
+The engine operates via a **Master Copilot Custom Agent** (`gsheet-to-react-orchestrator`) that drives a streamlined, 6-step pipeline with pre-created `.wait` file placeholders and strict multi-file React Feature generation. Progress is persistently tracked in an execution ledger (`plan-follower.md`) to guarantee state resumption across context resets.
 
 | Component | Type | Responsibility |
 | :--- | :--- | :--- |
-| **`gsheet-to-react-orchestrator`** | Copilot Custom Agent | Manages state transitions, pre-creates `.wait` placeholders, presents handoff buttons, and coordinates sub-skills |
+| **`gsheet-to-react-orchestrator`** | Copilot Custom Agent | Manages state transitions, pre-creates `.wait` placeholders, and coordinates sub-skills |
 | **`gsheet-react-dashboard-reverse`** | Agent Skill | Generates Gemini Canvas prompts to produce AST specs (`CANVAS_IR`) |
 | **`html-split`** | Agent Skill | Ephemeral DOM parser extracting inline CSS/JS into co-located modular files |
-| **`gsheet-react-dashboard-cloner`** | Agent Skill | 2-Stage compiler transforming 3 IR inputs into React components |
+| **`gsheet-react-dashboard-cloner`** | Agent Skill | 2-Stage compiler transforming 3 IR inputs into modular React feature components |
 
 ---
 
@@ -23,7 +23,7 @@ The engine operates via a **Master Copilot Custom Agent** (`gsheet-to-react-orch
 .github/
 ├── agents/
 │   ├── gsheet-to-react-orchestrator.md      # Master Agent Profile & State Machine Directives
-│   └── gsheet-to-react-orchestrator.readme  # Agent Documentation & Architecture Guide
+│   └── gsheet-to-react-orchestrator.readme  # Agent Documentation & Comprehensive User Guide
 └── skills/
     ├── html-split/                          # Isolated DOM & CSS split skill (jsdom + run-split.sh)
     │   ├── scripts/
@@ -43,11 +43,8 @@ The engine operates via a **Master Copilot Custom Agent** (`gsheet-to-react-orch
 
 ## 🔀 Workflow & Skills Integration Flowchart
 
-The diagram below illustrates how the **Master Orchestrator Agent** interacts with the user, Gemini Canvas, and the underlying skills throughout the migration lifecycle:
-
 ```mermaid
 flowchart TD
-    %% Node Styling Definitions (Pastel Theme)
     classDef agent fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0f172a
     classDef skill fill:#e0e7ff,stroke:#4f46e5,stroke-width:2px,color:#0f172a
     classDef user fill:#f3e8ff,stroke:#9333ea,stroke-width:2px,color:#0f172a
@@ -68,19 +65,18 @@ flowchart TD
         Gemini -->|Save Result| SpecFile[/📄 specifications.md/]:::artifact
         User -->|Export CSV Data| CsvFile[/📊 data.csv/]:::artifact
         User -->|Copy iFrame HTML| HtmlFile[/🌐 iframe-html/iframe.html/]:::artifact
+        User -->|Reply Confirm Artifacts Saved| Agent
     end
 
     subgraph Phase3 [Phase 3: Automated Asset Processing]
-        SpecFile & CsvFile & HtmlFile -->|Auto-Detect Files via Terminal| Agent
         Agent -->|4. Execute Terminal Tool| SplitSkill[🛠️ html-split / run-split.sh]:::skill
         SplitSkill -->|Co-locate Split Assets| SplitAssets[/🎨 styles.css + script.js + iframe.html/]:::artifact
     end
 
     subgraph Phase4 [Phase 4: React Compilation & Verification]
         SplitAssets & SpecFile & CsvFile -->|5a. Stage 1 Blueprint| ClonerSkill[🛠️ gsheet-react-dashboard-cloner]:::skill
-        Agent -->|Handoff Button: Generate Codebase| User
-        User -->|Click Generate Codebase| ClonerSkill
-        ClonerSkill -->|5b. Stage 2 Codebase| ReactApp[⚛️ React Feature Codebase]:::artifact
+        User -->|Reply GENERATE CODEBASE| ClonerSkill
+        ClonerSkill -->|5b. Stage 2 Modular Codebase| ReactApp[⚛️ Multi-file React Feature]:::artifact
         Agent -->|6. Execute npm run build| Terminal[💻 Workspace Terminal]:::agent
         Terminal -->|Validation Pass| Success([✅ Complete & Ready Component]):::artifact
     end
@@ -90,61 +86,60 @@ flowchart TD
 
 ## 🔄 Orchestrator State Machine Diagram
 
-The orchestrator enforces strict state persistence via `sandbox/dashboards/<dashboard-name>/agent/plan-follower.md`. If interrupted, the agent reads the plan file to resume execution:
-
 ```mermaid
 stateDiagram-v2
-    [*] --> InitConfig: User initiates request
+    [*] --> InitConfig: User initiates request (@gsheet-to-react-orchestrator)
 
     state "Step 1: Smart Config Setup" as InitConfig {
-        [*] --> ExtractParams
-        ExtractParams --> SetDefaults: Infer dashboard-name & store target
-        SetDefaults --> CreatePlan: Create .wait placeholders & plan-follower.md
+        [*] --> ExtractParams: Parse dashboard-name & store target
+        ExtractParams --> TouchPlaceholders: Create .wait files in sandbox
+        TouchPlaceholders --> CreateLedger: Initialize plan-follower.md
     }
 
     InitConfig --> Step2_PromptGen
 
     state "Step 2: Reverse Prompt Generation" as Step2_PromptGen {
-        [*] --> CallReverseSkill
-        CallReverseSkill --> WritePromptFile
+        [*] --> CallReverseSkill: Invoke gsheet-react-dashboard-reverse
+        CallReverseSkill --> SavePrompt: Write reverse-prompt-<feature-name>.md
     }
 
-    Step2_PromptGen --> Step3_BatchCollection: Update plan-follower.md
+    Step2_PromptGen --> Step3_BatchCollection: Update plan-follower.md ledger
 
-    state "Step 3: Batch Artifact Collection" as Step3_BatchCollection {
-        [*] --> CheckFileSystem
-        CheckFileSystem --> AutoAdvance: All 3 files present on disk
-        CheckFileSystem --> AwaitSingleGate: Files missing
-        AwaitSingleGate --> UserSavesFiles: User saves specifications, CSV, and HTML
-        UserSavesFiles --> AutoAdvance: Click "Confirm Artifacts Saved"
+    state "Step 3: Batch Artifact Collection Gate (PAUSE)" as Step3_BatchCollection {
+        [*] --> TouchPlaceholders: Create .wait placeholder files
+        TouchPlaceholders --> DisplayChecklist: Display save locations to user
+        DisplayChecklist --> AwaitUserConfirmation: Stop output and await turn prompt
+        AwaitUserConfirmation --> UserSavesFiles: User saves specifications, CSV, and HTML DOM
+        UserSavesFiles --> TriggerNextTurn: User replies "Confirm Artifacts Saved"
     }
 
-    Step3_BatchCollection --> Step4_HTMLSplit: Update plan-follower.md
+    Step3_BatchCollection --> Step4_HTMLSplit: Triggered by "Confirm Artifacts Saved"
 
     state "Step 4: HTML & CSS Auto-Split" as Step4_HTMLSplit {
-        [*] --> RunSplitScript
-        RunSplitScript --> CoLocateAssets: Write styles.css, script.js, and HTML to iframe-html/
+        [*] --> RunSplitScript: Execute html-split/run-split.sh --rendering-only
+        RunSplitScript --> CoLocateAssets: Write styles.css, script.js & HTML to iframe-html/
     }
 
-    Step4_HTMLSplit --> Step5a_Blueprint: Update plan-follower.md
+    Step4_HTMLSplit --> Step5a_Blueprint: Update plan-follower.md ledger
 
-    state "Step 5a: Stage 1 Blueprint" as Step5a_Blueprint {
-        [*] --> GenerateBlueprint
-        GenerateBlueprint --> PromptHandoffButton: Offer "Generate Codebase" button
+    state "Step 5a: Stage 1 Architecture Blueprint (PAUSE)" as Step5a_Blueprint {
+        [*] --> InvokeClonerStage1: Parse inputs with gsheet-react-dashboard-cloner
+        InvokeClonerStage1 --> DisplayBlueprint: Render Evidence Audit & Store Blueprints
+        DisplayBlueprint --> AwaitGenerateCodebase: Prompt user for "GENERATE CODEBASE"
     }
 
-    Step5a_Blueprint --> Step5b_Codebase: Click "Generate Codebase" Handoff Button
+    Step5a_Blueprint --> Step5b_Codebase: User replies "GENERATE CODEBASE"
 
-    state "Step 5b: Stage 2 Codebase Compilation" as Step5b_Codebase {
-        [*] --> EmitCodebase: Write React code to react-clone/
+    state "Step 5b: Stage 2 Modular Codebase Compilation" as Step5b_Codebase {
+        [*] --> EmitCanonicalStructure: Generate multi-file React feature strictly matching reverse prompt tree
     }
 
-    Step5b_Codebase --> Step6_BuildVerify: Update plan-follower.md
+    Step5b_Codebase --> Step6_BuildVerify: Update plan-follower.md ledger
 
     state "Step 6: Build Verification & Final Handoff" as Step6_BuildVerify {
-        [*] --> ExecNpmBuild
-        ExecNpmBuild --> MarkAllCompleted
-        MarkAllCompleted --> HandoffSummary
+        [*] --> ExecNpmBuild: Run npm run build in terminal
+        ExecNpmBuild --> MarkAllCompleted: Mark all steps COMPLETED in plan-follower.md
+        MarkAllCompleted --> HandoffSummary: Output absolute file paths to React component
     }
 
     Step6_BuildVerify --> [*]
@@ -152,55 +147,66 @@ stateDiagram-v2
 
 ---
 
-## 📋 Step-by-Step 6-Phase Pipeline
+## 📋 Step-by-Step Execution Summary
 
 | Step | Action | Execution Type | Primary Output / Artifact |
 | :---: | :--- | :---: | :--- |
 | **1** | Init & Smart Config Setup | Automated | Sets defaults, creates `.wait` placeholders & `plan-follower.md` |
 | **2** | Generate Reverse Prompt | Automated | Generates `sandbox/dashboards/<dashboard-name>/reverse-prompt-<feature-name>.md` |
-| **3** | Batch Artifact Collection | User / Auto-Detected | Collects `specifications.md`, `<dashboard-name>-data.csv`, and `iframe-html/<dashboard-name>.html` |
+| **3** | Batch Artifact Collection | User Action | Collects `specifications.md`, `data.csv`, and `iframe-html/iframe.html` (Reply **Confirm Artifacts Saved**) |
 | **4** | Auto HTML Split | Automated | Splits DOM into `styles.css`, `script.js`, and cleaned HTML inside `iframe-html/` |
 | **5a**| Stage 1 Blueprint | Automated | Generates Reconciliation Report & Architecture Blueprint |
-| **5b**| Stage 2 Codebase Compilation | Interactive (Handoff Button) | Generates full React codebase inside `react-clone/` upon clicking **"Generate Codebase"** |
+| **5b**| Stage 2 Codebase Compilation | Interactive Trigger | Generates multi-file React feature inside `react-clone/` upon replying `"GENERATE CODEBASE"` |
 | **6** | Build Verification & Handoff | Automated | Runs `npm run build`, marks ledger completed, and presents output paths |
-
-> 💡 **Note on HTML DOM Extraction Procedure** to obtain `iframe.html`:
-> 1. Open Google Sheets in Google Chrome and launch Chrome Developer Tools (Inspector).
-> 2. Right-click the root iframe element or its inner `<html>` element.
-> 3. Select **Edit as HTML**, copy the full content.
-> 4. Save into `sandbox/dashboards/<dashboard-name>/iframe-html/<dashboard-name>.html` (replacing `<dashboard-name>.html.wait`).
 
 ---
 
-## 📁 Staged Artifact Directory Layout
+## 📖 Detailed File Extraction Procedures
 
-During execution, all input and output files are cleanly isolated inside the sandbox hierarchy, with `.wait` placeholders generated on setup:
+### 1. Generating Specifications (`specifications.md`)
+1. Open your target dashboard in Google Sheets Canvas.
+2. Open `sandbox/dashboards/<dashboard-name>/reverse-prompt-<feature-name>.md` and copy its full content.
+3. Paste the prompt into Gemini Canvas (or your LLM analyzer) pointing to the dashboard sheet.
+4. Copy the complete 7-module Markdown response and save it to:
+   `sandbox/dashboards/<dashboard-name>/specifications.md` (replacing `specifications.md.wait`).
+
+### 2. Exporting Dataset (`<dashboard-name>-data.csv`)
+1. In Google Sheets, navigate to the active sheet containing your raw/consolidated dashboard data.
+2. Select **File > Download > Comma-separated values (.csv)**.
+3. Move/rename the downloaded file to:
+   `sandbox/dashboards/<dashboard-name>/<dashboard-name>-data.csv` (replacing `<dashboard-name>-data.csv.wait`).
+
+### 3. Exporting HTML DOM Layout (`iframe-html/<dashboard-name>.html`)
+1. Open Google Sheets in Google Chrome and press `F12` (or Right Click > Inspect) to open **Chrome Developer Tools**.
+2. In the Elements panel, locate the root `<iframe>` element containing the canvas or select its inner `<html>` element.
+3. Right-click the element and select **Edit as HTML** (or **Copy > Copy element**).
+4. Copy the full HTML payload and save it to:
+   `sandbox/dashboards/<dashboard-name>/iframe-html/<dashboard-name>.html` (replacing `<dashboard-name>.html.wait`).
+
+---
+
+## 📁 Canonical React Feature Target Directory Layout
+
+The generated React clone strictly follows the canonical feature pattern defined in `reverse-prompt-<feature-name>.template.md`:
 
 ```text
-sandbox/
-└── dashboards/
-    └── <dashboard-name>/
-        ├── agent/
-        │   └── plan-follower.md             # Persistent State Machine Tracking Ledger
-        │
-        ├── reverse-prompt-<feature-name>.md  # Generated Gemini Canvas reverse prompt
-        ├── specifications.md.wait            # Initial placeholder (replaced by specifications.md)
-        ├── specifications.md                 # Input 1: Gemini Canvas 7-Tab Spec (SPEC_IR)
-        ├── <dashboard-name>-data.csv.wait    # Initial placeholder (replaced by CSV data)
-        ├── <dashboard-name>-data.csv         # Input 2: Raw CSV Dataset (DATA_IR)
-        │
-        ├── iframe-html/                      # Co-located HTML split assets (Input 3 DOM_IR)
-        │   ├── <dashboard-name>.html.wait    # Initial placeholder (replaced by HTML export)
-        │   ├── <dashboard-name>.html         # Cleaned DOM layout (Rendering-Only Mode)
-        │   ├── styles.css                    # Extracted Tailwind CSS v4 design tokens
-        │   └── script.js                     # Extracted non-React script block
-        │
-        └── react-clone/                      # Generated standalone React feature codebase
-            ├── src/
-            │   ├── components/               # Adapted shadcn/ui & feature layout components
-            │   ├── features/                 # Main feature modules, stores, and utilities
-            │   └── styles/                   # Scoped Tailwind CSS v4 directives
-            └── package.json
+src/
+├── components/
+│   └── ui/                               # Primitive UI (Shadcn Base UI: Button, Modal, Checkbox, Tooltip, Badge, Input)
+├── features/
+│   ├── `<feature-name/>`/                # Main feature component folder
+│   │   ├── `<FeatureName/>Feature.tsx`   # Main feature entry point, organize Global layout. import `<FeatureName/>Panel`
+│   │   ├── `<FeatureName/>Panel.tsx`     # Panel layout, import `<FeatureName/>`Header, `<FeatureName/>`Grid, `<FeatureName/>`Footer, ...
+│   │   ├── components/                   # `<FeatureName/>`Header, `<FeatureName/>`Grid, VirtualTable, KPI, Cards
+│   │   │   └── tabs/                     # `TabName01`Tab, `TabName02`Tab, ...
+│   │   ├── hooks/                        # use`<FeatureName/>`Handlers.ts, use`<FeatureName/>`State.ts, ...
+│   │   ├── store/                        # use`<FeatureName/>`Store.ts (Pure In-Memory Zustand Store)
+│   │   ├── model/                        # `<FeatureName/>` UI interfaces models
+│   │   ├── types/                        # types.ts (enums and types definitions)
+│   │   └── utils/                        # utility functions (Converters, Data Pipelines, Coordinate Parsers, FormulaDAG, SecuritySanitizer, etc.)
+├── styles/                               # Global styles, TailwindCSS v4 config, and design tokens
+├── services/                             # API services, data ingestion, and validation pipelines
+└── utils/                                # transformers, sanitizers, and shared utility functions
 ```
 
 ---
@@ -211,37 +217,15 @@ sandbox/
 2. Select the `@gsheet-to-react-orchestrator` agent.
 3. Enter: `@gsheet-to-react-orchestrator Start cloning my dashboard "<GSHEET_DASHBOARD_CANVAS_NAME>"` to start the migration process.
 
-The orchestrator will automatically configure target folders with `.wait` placeholders, generate the reverse engineering prompt, detect saved input files, and display convenient Handoff Buttons (like **"Generate Codebase"**) to advance state without manual typing.
-
+The orchestrator will automatically configure target folders with `.wait` placeholders, generate the reverse engineering prompt, and guide you turn-by-turn.
 
 ---
 
 # 😎 User-Guide
 
-### 🎯 Workflow Assessment & Validation Simulation
-
-Your updated agent and skills setup (`export-2026-09-23_13-59-10_01.yaml`) provides a **frictionless, 3-turn interactive experience**.
-
-#### Workflow Guarantees Verified:
-
-1. **User Effort Minimization:** The user only types **once** in Turn 1 (providing the dashboard name and optional store target).
-
-
-2. **Zero Text Commands:** All subsequent transitions use **Handoff Buttons** (`[Confirm Artifacts Saved]` and `[Generate Codebase]`) or automated file-system checks (`test -f`).
-
-
-3. **Workspace Visibility:** Pre-created `.wait` files immediately signal where output artifacts belong in VS Code.
-
-
-4. **Context Truncation Defense:** The two-stage compilation protocol in `gsheet-react-dashboard-cloner` is triggered cleanly via the `[Generate Codebase]` button.
-
-
-
----
-
 ### 🎭 End-to-End Workflow Simulation
 
-Below is the step-by-step simulation of how a developer interacts with the updated Orchestrator Agent.
+Below is the step-by-step simulation of how a developer interacts with the Orchestrator Agent.
 
 ---
 
@@ -254,258 +238,97 @@ Below is the step-by-step simulation of how a developer interacts with the updat
 **Agent Execution (Automated Steps 1, 2 & 3):**
 
 1. **Step 1 (Smart Config Setup):**
-* Extracts `<dashboard-name>` = `sales-kpi-dashboard`.
-
-
-* Registers `STORE_DESTINATION_TARGET` = `localStorage`.
-
-
-* Creates workspace directory structure and `.wait` placeholder files:
-
-
-```bash
-mkdir -p sandbox/dashboards/sales-kpi-dashboard/agent/
-mkdir -p sandbox/dashboards/sales-kpi-dashboard/iframe-html/
-touch sandbox/dashboards/sales-kpi-dashboard/specifications.md.wait
-touch sandbox/dashboards/sales-kpi-dashboard/sales-kpi-dashboard-data.csv.wait
-touch sandbox/dashboards/sales-kpi-dashboard/iframe-html/sales-kpi-dashboard.html.wait
-
-```
-
-
-* Initializes `sandbox/dashboards/sales-kpi-dashboard/agent/plan-follower.md`.
-
-
-
+   * Extracts `<dashboard-name>` = `sales-kpi-dashboard`.
+   * Registers `STORE_DESTINATION_TARGET` = `localStorage`.
+   * Creates workspace directory structure and `.wait` placeholder files:
+     ```bash
+     mkdir -p sandbox/dashboards/sales-kpi-dashboard/agent/
+     mkdir -p sandbox/dashboards/sales-kpi-dashboard/iframe-html/
+     touch sandbox/dashboards/sales-kpi-dashboard/specifications.md.wait
+     touch sandbox/dashboards/sales-kpi-dashboard/sales-kpi-dashboard-data.csv.wait
+     touch sandbox/dashboards/sales-kpi-dashboard/iframe-html/sales-kpi-dashboard.html.wait
+     ```
+   * Initializes `sandbox/dashboards/sales-kpi-dashboard/agent/plan-follower.md`.
 
 2. **Step 2 (Reverse Engineering Prompt Generation):**
-* Calls skill `gsheet-react-dashboard-reverse`.
-
-
-* Writes the full reverse prompt to `sandbox/dashboards/sales-kpi-dashboard/reverse-prompt-sales-kpi-dashboard.md`.
-
-
-
+   * Calls skill `gsheet-react-dashboard-reverse`.
+   * Writes the full reverse prompt to `sandbox/dashboards/sales-kpi-dashboard/reverse-prompt-sales-kpi-dashboard.md`.
 
 3. **Step 3 (Batch Artifact Collection Gate):**
-* Checks if non-wait files exist via terminal execution. Since they are missing, it presents the file collection checklist.
-
-
-
-
+   * Displays target paths with `.wait` placeholders and stops output to await user confirmation.
 
 **Agent Response Output:**
 
 > ### 📋 Plan Initialized: `sales-kpi-dashboard`
 >
->
 > Target Store Model: `localStorage`
->
 >
 > Reverse prompt generated at: `sandbox/dashboards/sales-kpi-dashboard/reverse-prompt-sales-kpi-dashboard.md`
 >
 > ---
 >
->
 > ### 📥 Batch Asset Collection Gate
->
 >
 > Placeholder files (`.wait`) have been created in `sandbox/dashboards/sales-kpi-dashboard/`. Please save or replace the 3 authoritative source artifacts at these paths:
 >
+> 1. **Specifications Markdown:** Save to `sandbox/dashboards/sales-kpi-dashboard/specifications.md`
+> 2. **CSV Data:** Save to `sandbox/dashboards/sales-kpi-dashboard/sales-kpi-dashboard-data.csv`
+> 3. **HTML DOM Export:** Save to `sandbox/dashboards/sales-kpi-dashboard/iframe-html/sales-kpi-dashboard.html`
 >
-> 1. **Specifications Markdown:** Run the prompt in Gemini Canvas and save output to:
-> `sandbox/dashboards/sales-kpi-dashboard/specifications.md`
->
-> 2. **CSV Data:** Export dataset as CSV and save to:
-> `sandbox/dashboards/sales-kpi-dashboard/sales-kpi-dashboard-data.csv`
->
-> 3. **HTML DOM Export:** Copy Chrome DevTools iframe HTML and save to:
-> `sandbox/dashboards/sales-kpi-dashboard/iframe-html/sales-kpi-dashboard.html`
->
->
->
-> ---
->
->
-> 🔘 **[ Confirm Artifacts Saved ]** *(Handoff Button)*
->
+> 👉 **Action Required:** Once all 3 files are saved, reply in chat with **`Confirm Artifacts Saved`**!
 
 ---
 
-#### 🎬 TURN 2 — Artifact Drop & Blueprint Generation (User Click)
+#### 🎬 TURN 2 — Artifact Drop & Blueprint Generation (User Input)
 
 **User Action:**
 
 * User drops the 3 requested files into the `sandbox/dashboards/sales-kpi-dashboard/` folder.
-
-
-* User clicks the button: **`[ Confirm Artifacts Saved ]`**.
-
-
+* User replies in chat: **`Confirm Artifacts Saved`**
 
 **Agent Execution (Automated Steps 4 & 5a):**
 
 1. **Step 4 (Auto HTML Split & Co-location):**
-* Executes terminal command:
-`bash .github/skills/html-split/scripts/run-split.sh sandbox/dashboards/sales-kpi-dashboard/iframe-html/sales-kpi-dashboard.html sandbox/dashboards/sales-kpi-dashboard/iframe-html/ --rendering-only`
-
-
-* Extracts design tokens into `styles.css` and isolates non-React scripts into `script.js` directly alongside the cleaned HTML.
-
-
-
+   * Executes `html-split/run-split.sh` to extract `styles.css`, `script.js`, and cleaned HTML.
 
 2. **Step 5a (Cloner Stage 1 Blueprint):**
-* Reads `specifications.md`, `sales-kpi-dashboard-data.csv`, `styles.css`, and `sales-kpi-dashboard.html`.
-
-
-* Invokes `gsheet-react-dashboard-cloner` with `STORE_DESTINATION_TARGET = localStorage`.
-
-
-* Produces Stage 1 Evidence Audit, Conflict Reconciliation, Abstract Model IR, and Zustand Store Blueprints.
-
-
-* Updates `plan-follower.md`.
-
-
-
-
+   * Invokes `gsheet-react-dashboard-cloner` with `STORE_DESTINATION_TARGET = localStorage`.
+   * Produces Stage 1 Evidence Audit, Conflict Reconciliation, Abstract Model IR, and Zustand Store Blueprints.
+   * Updates `plan-follower.md`.
 
 **Agent Response Output:**
 
 > ### 🎨 Asset Extraction Complete
->
->
 > HTML/CSS split executed successfully. Design tokens and scripts co-located in `sandbox/dashboards/sales-kpi-dashboard/iframe-html/`.
 >
->
 > ### 🏗️ Stage 1 Architecture Blueprint
+> [Displays Evidence Audit Matrix, Conflict Log, and Zustand Store Blueprint]
 >
->
-> #### 1. Evidence Audit Matrix
->
->
-> | Component ID | Classification | Evidence Source | Fidelity Score |
-> | --- | --- | --- | --- |
-> | `HeaderScopeSelect` | `OBSERVED` | `SPEC_IR` / `DOM_IR` | `EXACT` |
-> | `KpiCardSection` | `OBSERVED` | `DOM_IR` | `EXACT` |
-> | `MaturityGrid` | `DERIVED` | `SPEC_IR` + `DATA_IR` | `HIGH` |
->
->
-> #### 2. Conflict Reconciliation Log
->
->
-> | Domain | Priority Source | Decision |
-> | --- | --- | --- |
-> | Date Formatting | `DATA_IR` | Transformed raw ISO strings to timezone-safe local dates |
->
->
-> #### 3. Zustand Store Blueprint (`useSalesKpiDashboardStore.ts`)
->
->
-> ```typescript
-> export const useSalesKpiDashboardStore = create<SalesKpiDashboardStoreState>((set, get) => ({
->   data: [],
->   saveStore: (target = "default") => {
->     const currentState = get();
->     localStorage.setItem("sales-kpi-dashboard-state", JSON.stringify(currentState.data));
->   }
-> }));
->
-> ```
->
->
-> ---
->
->
-> 🔘 **[ Generate Codebase ]** *(Handoff Button)*
->
+> 👉 **Action Required:** Reply in chat with **`GENERATE CODEBASE`** to compile the React application!
 
 ---
 
-#### 🎬 TURN 3 — Full Codebase Compilation & Verification (User Click)
+#### 🎬 TURN 3 — Full Codebase Compilation & Verification (User Input)
 
 **User Action:**
 
-* User clicks the button: **`[ Generate Codebase ]`**.
-
-
+* User replies in chat: **`GENERATE CODEBASE`**
 
 **Agent Execution (Automated Steps 5b & 6):**
 
 1. **Step 5b (Codebase Compilation):**
-* Receives `"GENERATE CODEBASE"` prompt payload from the Handoff Button.
-
-
-* Generates complete, fully typed TypeScript types, data coercion utilities, adapted shadcn UI primitives, feature layout components, and Zustand store into `sandbox/dashboards/sales-kpi-dashboard/react-clone/`.
-
-
-
+   * Emits complete, fully typed multi-file React feature strictly matching the canonical directory structure into `sandbox/dashboards/sales-kpi-dashboard/react-clone/`.
 
 2. **Step 6 (Build Verification & Final Handoff):**
-* Runs `npm run build` inside `sandbox/dashboards/sales-kpi-dashboard/react-clone/`.
-
-
-* Updates `plan-follower.md` to `COMPLETED` for all 6 steps.
-
-
-
-
+   * Runs `npm run build` inside `sandbox/dashboards/sales-kpi-dashboard/react-clone/`.
+   * Updates `plan-follower.md` to `COMPLETED` for all 6 steps.
 
 **Agent Response Output:**
 
 > ### ✅ React Codebase Successfully Generated & Verified
->
->
-> All components have been compiled into `sandbox/dashboards/sales-kpi-dashboard/react-clone/` with zero truncation.
->
->
-> #### 💻 Build Verification Pass
->
->
-> ```text
-> > sales-kpi-dashboard@1.0.0 build
-> > tsc && vite build
->
-> vite v5.4.0 building for production...
-> ✓ 28 modules transformed.
-> dist/assets/index-D8x2a1P.css   12.4 kB │ gzip:  3.1 kB
-> dist/assets/index-B9c31xZ.js   148.2 kB │ gzip: 42.8 kB
-> ✓ built in 1.42s
->
-> ```
->
+> All components have been compiled into `sandbox/dashboards/sales-kpi-dashboard/react-clone/` matching the canonical modular React feature structure.
 >
 > #### 📁 Component File Hierarchy
->
->
-> * 🚀 Main Entry Point: `sandbox/dashboards/sales-kpi-dashboard/react-clone/src/features/sales-kpi-dashboard/SalesKpiDashboardClone.tsx`
->
+> * 🚀 Main Entry Point: `sandbox/dashboards/sales-kpi-dashboard/react-clone/src/features/sales-kpi-dashboard/SalesKpiDashboardFeature.tsx`
 > * 🏪 State Store: `sandbox/dashboards/sales-kpi-dashboard/react-clone/src/features/sales-kpi-dashboard/store/useSalesKpiDashboardStore.ts`
->
-> * 🎨 Scoped CSS: `sandbox/dashboards/sales-kpi-dashboard/react-clone/src/features/sales-kpi-dashboard/styles/index.css`
->
->
->
-
----
-
-### 🌟 Summary of Verification Results
-
-| Verification Criterion | Status | Implementation Detail |
-| --- | --- | --- |
-| **Only 1 Manual Text Input** | ✅ Pass | User only types the initial prompt (`dashboard-name` + `store`).
-
- |
-| **Zero Manual Command Typing** | ✅ Pass | Stage 1 $\rightarrow$ Stage 2 transition relies strictly on the `[Generate Codebase]` button.
-
- |
-| **No File Misplacements** | ✅ Pass | Pre-created `.wait` placeholders explicitly signal target file paths.
-
- |
-| **Asset Path Co-location** | ✅ Pass | `styles.css`, `script.js`, and HTML remain together inside `iframe-html/`.
-
- |
-| **Persistent Resume Ledger** | ✅ Pass | `plan-follower.md` continuously tracks progress across context boundaries.
-
- |
+> * 🎨 Scoped CSS: `sandbox/dashboards/sales-kpi-dashboard/react-clone/src/styles/index.css`
