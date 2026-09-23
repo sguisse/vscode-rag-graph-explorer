@@ -1,9 +1,9 @@
-## Instructions to the User :
-* This is a Generic **reverse engineering prompt** designed to extract a formal technical specification from an observed Google Sheets Canvas dashboard and generate a React reproduction of that dashboard.
-* Before you launch the following prompt, identify the different parts of the dashboard/screen you want to reverse.
-  * If it contains multiple tabs, indicate the `tab/view` names and how they are organized (e.g., `Tab1` --> Button named "Export", `Tab2` --> Button named "Revenue", `Tab3` --> Button named "Top Customers").
-    * ⚠️ By default the tool **don't see the hidden** tabs/views, so you need to provide the tab names and how they are displayed.
-  * 💡 Ideally, you should provide a global description of the dashboard, including its purpose, the data it displays, and any specific interactions or behaviors that are important to capture in the React reproduction. Like :
+## Instructions to the User:
+* This is a generic **reverse engineering prompt** designed to extract a formal technical specification from an observed Google Sheets Canvas dashboard and generate a React reproduction of that dashboard.
+* Before launching this prompt, identify the different parts of the dashboard/screen you want to reverse engineer.
+  * If it contains multiple tabs, indicate the tab/view names and how they are organized (e.g., `Tab1` -> Button named "Export", `Tab2` -> Button named "Revenue", `Tab3` -> Button named "Top Customers").
+    * ⚠️ By default, the tool **does not see hidden** tabs/views, so you must explicitly list all tab names and their visual display layout.
+  * 💡 Ideally, provide a global description of the dashboard, including its purpose, displayed data, and any specific interactions or behaviors crucial to capture in the React reproduction. Example:
 
 ```markdown
 ### VISUAL & FUNCTIONAL CONTEXT (OBSERVED REALITY)
@@ -11,7 +11,7 @@ The target canvas `my-test-dash-03` has the following exact layout and behavior:
 - **Header Section:** Contains
   - a "Scope" Select dropdown (filtering by Leader/App Code).
   - Next to it are 4 Navigation Tabs: "Maturity Matrix Canvas", "Domain Deep Dive", "Detailed Action Items", and "Google Sheets Blueprint".
-- **Top Section** Contains 4 KPI cards: 'Average Maturity Score' (3.56/5.00), 'Assessment Coverage' (73%), 'Target Alignment' (18%), and a risk alert 'Primary Risk Area: UX & Design Systems'.
+- **Top Section:** Contains 4 KPI cards: 'Average Maturity Score' (3.56/5.00), 'Assessment Coverage' (73%), 'Target Alignment' (18%), and a risk alert 'Primary Risk Area: UX & Design Systems'.
 - **Main Section (Dynamic TabPanel):** Changes based on the active tab.
 - **Tab 1 (Maturity Matrix Canvas):** A comprehensive table listing 8 engineering domains (Data Management, Delivery & CI/CD, etc.). Columns include current assessment score, a current-vs-target dropdown, L1-L5 visual progress markers, and a 'Health' status tag (e.g., 'Gap -3' or 'Target Met').
 - **Tab 2 (Domain Deep Dive):** A granular view of specific pillar questions.
@@ -20,11 +20,8 @@ The target canvas `my-test-dash-03` has the following exact layout and behavior:
 - **Behavior:** Changing the "Scope" dropdown globally filters all KPIs and Tab data. Changing Tabs swaps the main view without losing the Scope state.
 ```
 
-  * 🚨 At the end of the prompt result, verify all the extracted specifications and React reproduction details <br/>
-       to ensure they accurately reflect the original dashboard's functionality and design.<br/>
-       If **not**, ask Gemini to **complete the specification** with missing components **clearly identified** like in `visual and functional context`
-
-  * ☺️ Now you are **ready to launch** the following **prompt** on the target canvas.
+  * 🚨 At the end of the prompt result, verify all extracted specifications and React reproduction details to ensure they accurately reflect the original dashboard's functionality and design. If not, request Gemini to complete the specification with clearly identified missing components.
+  * ☺️ Now you are ready to launch the following prompt on the target canvas.
 
 ---
 <br/><br/>
@@ -39,7 +36,7 @@ You are a **Senior Reverse Engineer, UI Systems Analyst, Data Lineage Specialist
 Your objective is twofold:
 
 1. Reconstruct an observed Google Sheets Canvas dashboard (`<GSHEET_DASHBOARD_SHEET_NAME>`) into a formal technical specification (`CANVAS_IR`).
-2. Generate an implementation spec for a React reproduction (`<FeatureName/>Feature`)
+2. Generate an implementation spec for a React reproduction (`<FeatureName/>Feature`).
 
 ---
 
@@ -51,7 +48,7 @@ Do not analyze or generate specifications immediately. Acknowledge readiness and
 
 1. `<GSHEET_DASHBOARD_SHEET_NAME>`: The exact name of the Google Sheets Canvas dashboard to reverse engineer.
 
-if the user has not provided `<GSHEET_DASHBOARD_SHEET_NAME>`, prompt:
+If the user has not provided `<GSHEET_DASHBOARD_SHEET_NAME>`, prompt:
 > *"Please provide the exact name of the Google Sheets Canvas dashboard you want to reverse engineer (e.g., `sales-kpi-dashboard`). This will be used to generate the reverse prompt and the React reproduction."*
 
 ### STEP 2 — NORMALIZE FEATURE NAME

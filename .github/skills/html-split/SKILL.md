@@ -37,7 +37,7 @@ Use this skill whenever:
 The main entry point for the agent is the self-cleaning shell runner script `scripts/run-split.sh`.
 
 ### 1. Standard Extraction
-Extracts inline styles to `styles.css`, scripts to `script.js`, and updates the HTML file accordingly:
+Extracts inline styles to `styles.css`, scripts to `script.js`, and updates the HTML file accordingly in the target output directory:
 ```bash
 bash .github/skills/html-split/scripts/run-split.sh <inputFile> <outputDir>
 ```
@@ -55,6 +55,7 @@ bash .github/skills/html-split/scripts/run-split.sh <inputFile> <outputDir> --re
 - **Ephemeral Dependency Management**: Dependencies (`jsdom`) are installed inside a temporary lifecycle in the script directory and purged automatically via `trap` cleanup upon execution finish or failure.
 - **CSS `@import` Order Integrity**: CSS `@import` statements extracted from `<style>` tags are automatically hoisted to the top of `styles.css` to comply with standard CSS syntax requirements.
 - **Script DOM Sequence Retention**: The extracted external `<script src="script.js">` tag replaces the exact position of the first inline `<script>` tag in the DOM to preserve document load sequence and execution timing.
+- **Asset Co-location Guarantee**: All generated split assets (`styles.css`, `script.js`, and output HTML) are written together to `<outputDir>`, ensuring relative script and link path references remain strictly valid.
 - **Module Attribute Retention**: If any extracted script block utilizes `type="module"`, the attribute is preserved on the external script tag.
 - **Non-JS Script Tag Exclusion**: Non-executable template or data scripts (e.g., `<script type="application/json">`) are preserved intact inside the HTML file.
 - **Rendering-Only Comments**: When `--rendering-only` is provided, non-style tags in `<head>` (such as `<meta>`, `<script>`, `<title>`, `<base>`) are converted into HTML comments (`<!-- ... -->`) while leaving `<style>` and `<link rel="stylesheet">` active.

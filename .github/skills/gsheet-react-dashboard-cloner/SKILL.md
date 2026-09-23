@@ -26,9 +26,9 @@ Use this skill whenever:
 
 ## 1. MANDATORY PRE-FLIGHT CHECK: STORE DESTINATION GATE
 
-Before parsing inputs or executing compilation, you **MUST** verify if the user specified their target **Store Destination** in their prompt.
+Before parsing inputs or executing compilation, you **MUST** verify if the target **Store Destination** (`STORE_DESTINATION_TARGET`) has been specified.
 
-- **Condition Check:** Search the user prompt for an explicit persistence target (`in-memory`, `localStorage`, `sessionStorage`, `IndexedDB`, `REST/GraphQL API`, or `host-callback`).
+- **Condition Check:** Verify that an explicit persistence target (`in-memory`, `localStorage`, `sessionStorage`, `IndexedDB`, `REST/GraphQL API`, or `host-callback`) is provided.
 - **If MISSING:** Stop execution immediately. Reply strictly with:
   > **"STORE DESTINATION REQUIRED:** Please specify your desired store persistence target (e.g., `in-memory`, `localStorage`, `sessionStorage`, `IndexedDB`, `REST/GraphQL API`, or `host-callback`) before code compilation can begin."
 - **If PROVIDED:** Register the value as `STORE_DESTINATION_TARGET` and proceed to Stage 1 Compilation.
@@ -109,11 +109,6 @@ export const use<FeatureName>Store = create<<FeatureName>StoreState<any>>((set, 
     const currentState = get();
     console.log(
       `[<FeatureName>Store] saveStore called (Target: ${target}, Destination: ${STORE_DESTINATION_TARGET}). ` +
-      `To implement here are different possibilities: ` +
-      `1. Save to localStorage / sessionStorage, ` +
-      `2. Persist to IndexedDB / PouchDB, ` +
-      `3. Dispatch to custom REST/GraphQL API backend, ` +
-      `4. Trigger host application props.onSaveState callback. ` +
       `Current snapshot:`,
       currentState.data
     );
@@ -146,11 +141,6 @@ export const use<FeatureName>Store = create<<FeatureName>StoreState<any>>((set, 
   },
 }));
 ```
-
-### B. Technical Data Utilities
-
-* **Type Coercion & Errors:** Handle currency (`€1,420.00` $\rightarrow$ `1420`), percentages (`82%` $\rightarrow$ `0.82`), ISO dates, and explicit spreadsheet formula errors (`#N/A`, `#DIV/0!`, `#REF!`, `#VALUE!`).
-* **Date Parser:** Use timezone-safe local date parsing (`parseLocalDate`).
 
 ---
 

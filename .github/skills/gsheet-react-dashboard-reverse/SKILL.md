@@ -32,8 +32,8 @@ When this skill is invoked:
    - Replace `<GSHEET_DASHBOARD_SHEET_NAME>` with the target spreadsheet/sheet name provided by the user (or prompt for it if missing).
    - Replace `<feature-name>` / `<FeatureName>` with the target feature domain name.
 3. **Output Full Prompt**:
-   - Output the fully populated Markdown prompt block wrapped cleanly for the user to copy/paste directly into Google Sheets Canvas,
-   - Output the fully populated Markdown prompt block also in a folder structure if `<outputDir>` is transmitted by the Agent.
+   - Output the fully populated Markdown prompt block wrapped cleanly for the user to copy/paste directly into Google Sheets Canvas.
+   - Save the fully populated Markdown prompt block to the designated destination file if `<outputDir>` or a target output file path is provided by the Orchestrator.
 
 ---
 
