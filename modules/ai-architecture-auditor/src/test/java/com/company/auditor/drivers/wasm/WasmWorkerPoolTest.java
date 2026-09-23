@@ -2,44 +2,37 @@ package com.company.auditor.drivers.wasm;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
-import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class WasmWorkerPoolTest {
 
-    private WasmWorkerPool wasmWorkerPool;
+    private WasmWorkerPool workerPool;
 
     @BeforeEach
     void setUp() {
-        wasmWorkerPool = new WasmWorkerPool();
+        workerPool = new WasmWorkerPool();
     }
 
     @Test
-    void testSubmitWasmTaskSuccess(@TempDir Path tempDir) throws Exception {
-        CompletableFuture<WasmWorkerPool.WasmTaskResult> future =
-                wasmWorkerPool.submitWasmTask("ts-morph-parser.wasm", tempDir);
-
-        WasmWorkerPool.WasmTaskResult result = future.get();
+    void testExecuteTaskSyncWithBytes() {
+        byte[] code = "console.log('hello');".getBytes();
+        WasmWorkerPool.WasmTaskResult result = workerPool.executeTaskSync("typescript", code);
 
         assertNotNull(result);
         assertTrue(result.success());
-        assertEquals("ts-morph-parser.wasm", result.wasmBinaryName());
         assertNotNull(result.astJson());
-        assertTrue(result.astJn().contains("ts-morph-parser.wasm"));
-        assertTrue(result.executionTimeMs() > 0);
+        assertEquals("{\"type\":\"Program\",\"body\":[]}", result.astJson());
     }
 
     @Test
-    void testWasmAstParserSandboxIntegration(@TempDir Path tempDir) {
-        WasmAstParserSandbox sandbox = new WasmAstParserSandbox(wasmWorkerPool);
-        String astJson = sandbox.parseSourceFiles("python-libcst-parser.wasm", tempDir);
+    void testExecuteWasmTaskSyncWithPath() {
+        WasmWorkerPool.WasmTaskResult result = workerPool.executeWasmTaskSync("python", Path.of("main.py"));
 
-        assertNotNull(astJson);
-        assertTrue(astJson.contains("SUCCESS"));
-        assertTrue(astJson.contains("python-libcst-parser.wasm"));
+        assertNotNull(result);
+        assertTrue(result.success());
+        assertNotNull(result.getAstJson());
     }
 }

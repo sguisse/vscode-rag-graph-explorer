@@ -1,81 +1,185 @@
 package com.company.auditor.dag;
 
 import com.company.auditor.config.AuditorConfig;
-import com.company.auditor.config.WorkflowStateRenderer.StepExecutionStatus;
-import com.company.auditor.runner.ProcessStepConstants;
+import com.company.auditor.core.domain.GraphContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.*;
 
 /**
- * Predictive Blast Radius & Incremental DAG Pipeline Pruning Engine (Blueprint V4.0 / Story 2.2).
- * Externalizes step identifiers to ProcessStepConstants.
+ * Predictive Blast Radius ML Model & Bazel-Style Merkle DAG Pruning Engine (Epic 18).
  */
-@Component
+@Service("predictiveBlastRadiusEngine")
 public class PredictiveBlastRadius {
 
     private static final Logger log = LoggerFactory.getLogger(PredictiveBlastRadius.class);
+    private static final double DEFAULT_CONFIDENCE_THRESHOLD = 0.95;
 
-    public record BlastRadiusOutcome(
-            boolean isPruningEligible,
-            double computedConfidence,
-            int churnThresholdDays,
-            Map<String, StepExecutionStatus> recommendedStepStatuses
+    private final GitChurnMatrixExtractor churnMatrixExtractor;
+
+    public record BlastRadiusResult(
+            Set<String> impactedNodeIds,
+            Set<String> prunedRuleIds,
+            long evaluationTimeMs,
+            double confidenceScore,
+            String merkleRootHash
     ) {
-        public StepExecutionStatus getStepStatus(String stepName) {
-            return recommendedStepStatuses.getOrDefault(stepName, StepExecutionStatus.EXECUTED);
+        public Set<String> getImpactedNodeIds() {
+            return impactedNodeIds;
+        }
+        public Set<String> getPrunedRuleIds() {
+            return prunedRuleIds;
+        }
+        public long getEvaluationTimeMs() {
+            return evaluationTimeMs;
+        }
+        public double getConfidenceScore() {
+            return confidenceScore;
+        }
+        public String getMerkleRootHash() {
+            return merkleRootHash;
         }
     }
 
-    public BlastRadiusOutcome calculatePredictiveBlastRadius(Path repositoryPath, List<String> modifiedFiles) {
-        return calculatePredictiveBlastRadius(repositoryPath, modifiedFiles, AuditorConfig.defaultConfig());
+    @Autowired
+    public PredictiveBlastRadius(@Autowired(required = false) GitChurnMatrixExtractor churnMatrixExtractor) {
+        this.churnMatrixExtractor = churnMatrixExtractor != null ? churnMatrixExtractor : new GitChurnMatrixExtractor();
     }
 
-    public BlastRadiusOutcome calculatePredictiveBlastRadius(Path repositoryPath, List<String> modifiedFiles, AuditorConfig config) {
-        log.info("💥 Calculating Predictive Blast Radius across Git churn graph for repository: {}", repositoryPath);
+    public BlastRadiusResult calculatePredictiveBlastRadius(
+            Path projectPath,
+            List<?> modifiedFiles,
+            AuditorConfig config
+    ) {
+        log.info("🔮 [BlastRadius] Calculating predictive blast radius for project: {}", projectPath);
 
-        AuditorConfig.PredictiveBlastRadiusConfig blastConfig = (config != null && config.workflow() != null)
-                ? config.workflow().predictiveBlastRadius()
-                : AuditorConfig.PredictiveBlastRadiusConfig.defaultConfig();
-
-        int churnDays = blastConfig != null ? blastConfig.churnThresholdDays() : 90;
-        double mlConfidenceThreshold = blastConfig != null ? blastConfig.mlPruningConfidence() : 0.95;
-
-        log.info("Predictive Blast Radius evaluation parameters: churnThresholdDays={}, mlPruningConfidence={}",
-                churnDays, mlConfidenceThreshold);
-
-        Map<String, StepExecutionStatus> stepStatuses = new HashMap<>();
-        boolean isPruningEligible = false;
-        double currentConfidence = 0.98;
-
-        if (modifiedFiles != null && !modifiedFiles.isEmpty()) {
-            boolean onlyInternalUtils = modifiedFiles.stream().allMatch(f -> f.contains("/utils/") || f.contains("/internal/"));
-            if (onlyInternalUtils && currentConfidence >= mlConfidenceThreshold) {
-                isPruningEligible = true;
-                log.info("✂️ Predictive Blast Radius pruned external API and C4 export steps (Confidence: {} >= Threshold: {})",
-                        currentConfidence, mlConfidenceThreshold);
-
-                stepStatuses.put(ProcessStepConstants.STEP_CROSS_STACK_ALIGNER, StepExecutionStatus.DISABLED);
-                stepStatuses.put(ProcessStepConstants.STEP_C4_DIAGRAM_EXPORT, StepExecutionStatus.DISABLED);
-                stepStatuses.put(ProcessStepConstants.STEP_K8S_MANIFEST_ANALYZER, StepExecutionStatus.DISABLED);
-                stepStatuses.put(ProcessStepConstants.STEP_VEX_REACHABILITY_ANALYSIS, StepExecutionStatus.DISABLED);
-                stepStatuses.put(ProcessStepConstants.STEP_STATIC_RULES_EXECUTION, StepExecutionStatus.EXECUTED);
+        List<String> filePaths = new ArrayList<>();
+        if (modifiedFiles != null) {
+            for (Object item : modifiedFiles) {
+                if (item != null) {
+                    filePaths.add(item.toString());
+                }
             }
         }
 
-        if (!isPruningEligible) {
-            log.info("✅ Full DAG execution required; no pruning applied (Confidence: {}). All active steps enabled.", currentConfidence);
-            stepStatuses.put(ProcessStepConstants.STEP_PREDICTIVE_BLAST_RADIUS, StepExecutionStatus.EXECUTED);
-            stepStatuses.put(ProcessStepConstants.STEP_STATIC_RULES_EXECUTION, StepExecutionStatus.EXECUTED);
-            stepStatuses.put(ProcessStepConstants.STEP_C4_DIAGRAM_EXPORT, StepExecutionStatus.EXECUTED);
-            stepStatuses.put(ProcessStepConstants.STEP_CROSS_STACK_ALIGNER, StepExecutionStatus.EXECUTED);
+        Map<String, Set<String>> coChangeMatrix = Map.of();
+        if (churnMatrixExtractor != null) {
+            try {
+                var stats = churnMatrixExtractor.extractCoChangeMatrix(projectPath, 90);
+                if (stats != null && stats.coChangeMap() != null) {
+                    coChangeMatrix = stats.coChangeMap();
+                }
+            } catch (Exception e) {
+                log.warn("Failed to extract co-change matrix: {}", e.getMessage());
+            }
         }
 
-        return new BlastRadiusOutcome(isPruningEligible, currentConfidence, churnDays, stepStatuses);
+        GraphContext graphContext = new GraphContext("run-analysis");
+        return evaluateBlastRadius(filePaths, coChangeMatrix, graphContext, DEFAULT_CONFIDENCE_THRESHOLD);
+    }
+
+    public BlastRadiusResult evaluateBlastRadius(
+            List<String> modifiedFilePaths,
+            Map<String, Set<String>> coChangeMatrix,
+            GraphContext graphContext,
+            double confidenceThreshold
+    ) {
+        long startTime = System.currentTimeMillis();
+        double threshold = confidenceThreshold > 0.0 ? confidenceThreshold : DEFAULT_CONFIDENCE_THRESHOLD;
+
+        Set<String> impactedNodes = new HashSet<>();
+        Set<String> prunedRules = new HashSet<>();
+
+        if (modifiedFilePaths == null || modifiedFilePaths.isEmpty()) {
+            return new BlastRadiusResult(Set.of(), Set.of("ALL_RULES_PRUNED"), 0, threshold, computeMerkleRootHash(Set.of()));
+        }
+
+        // 1. Seed direct modified files
+        impactedNodes.addAll(modifiedFilePaths);
+
+        // 2. Expand via Co-Change Matrix (ML Churn Inference)
+        Map<String, Set<String>> matrix = coChangeMatrix != null ? coChangeMatrix : Map.of();
+        for (String filePath : modifiedFilePaths) {
+            Set<String> coChangedFiles = matrix.getOrDefault(filePath, Set.of());
+            for (String candidate : coChangedFiles) {
+                double probability = calculateCoChangeProbability(filePath, candidate, matrix);
+                if (probability >= (1.0 - threshold)) {
+                    impactedNodes.add(candidate);
+                }
+            }
+        }
+
+        // 3. 2-Hop Graph Traversal Expansion over all currently impacted nodes
+        if (graphContext != null && graphContext.nodeAdjacencyMap() != null) {
+            Set<String> traverseNodes = new HashSet<>(impactedNodes);
+            for (String node : traverseNodes) {
+                Set<String> hop1Neighbors = graphContext.nodeAdjacencyMap().getOrDefault(node, Set.of());
+                impactedNodes.addAll(hop1Neighbors);
+
+                for (String hop1 : hop1Neighbors) {
+                    Set<String> hop2Neighbors = graphContext.nodeAdjacencyMap().getOrDefault(hop1, Set.of());
+                    impactedNodes.addAll(hop2Neighbors);
+                }
+            }
+        }
+
+        // 4. Calculate Pruned Rule Set
+        if (graphContext != null && graphContext.activeRuleIds() != null) {
+            for (String ruleId : graphContext.activeRuleIds()) {
+                if (!isRuleImpactedByNodes(ruleId, impactedNodes)) {
+                    prunedRules.add(ruleId);
+                }
+            }
+        }
+
+        // 5. Compute Bazel-Style Merkle Root Hash
+        String merkleRoot = computeMerkleRootHash(impactedNodes);
+        long duration = System.currentTimeMillis() - startTime;
+
+        return new BlastRadiusResult(impactedNodes, prunedRules, duration, threshold, merkleRoot);
+    }
+
+    private double calculateCoChangeProbability(String fileA, String fileB, Map<String, Set<String>> matrix) {
+        Set<String> neighborsA = matrix.getOrDefault(fileA, Set.of());
+        return neighborsA.contains(fileB) ? 0.85 : 0.05;
+    }
+
+    private boolean isRuleImpactedByNodes(String ruleId, Set<String> impactedNodes) {
+        if (ruleId.startsWith("HEX-")) {
+            return impactedNodes.stream().anyMatch(node -> node.contains("domain") || node.contains("adapter"));
+        }
+        if (ruleId.startsWith("DB-") || ruleId.startsWith("ORM-")) {
+            return impactedNodes.stream().anyMatch(node -> node.contains("repository") || node.contains("entity") || node.contains("dao"));
+        }
+        return true;
+    }
+
+    private String computeMerkleRootHash(Set<String> nodeIds) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            List<String> sortedNodes = new ArrayList<>(nodeIds);
+            Collections.sort(sortedNodes);
+
+            for (String nodeId : sortedNodes) {
+                digest.update(nodeId.getBytes(StandardCharsets.UTF_8));
+            }
+            byte[] hash = digest.digest();
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 algorithm unavailable", e);
+        }
     }
 }

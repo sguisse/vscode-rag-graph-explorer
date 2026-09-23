@@ -6,13 +6,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.nio.file.Path;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CompletableFuture;
 
 /**
- * WASM Sandboxed AST Parser Execution Manager (Epic 14 / Story 14.1 & 14.3).
- * Integrates Chicory/GraalWasm WebAssembly runtime and Adaptive Worker Pools to isolate non-Java AST parsers.
+ * Sandboxed Multi-Language AST Parsing Sandbox (Epic 14 / Workstream 5).
+ * Single Canonical Implementation in com.company.auditor.drivers.wasm.
  */
-@Component
+@Component("chicoryWasmAstParserSandbox")
 public class WasmAstParserSandbox {
 
     private static final Logger log = LoggerFactory.getLogger(WasmAstParserSandbox.class);
@@ -24,22 +24,27 @@ public class WasmAstParserSandbox {
         this.wasmWorkerPool = wasmWorkerPool != null ? wasmWorkerPool : new WasmWorkerPool();
     }
 
-    public String parseSourceFiles(String wasmBinaryName, Path targetDirectory) {
-        log.info("🛡️ Executing WASM sandboxed parser [{}] for directory: {}", wasmBinaryName, targetDirectory);
+    public String parseSourceFiles(String language, Path sourcePath) {
+        log.info("🛡️ [WasmSandbox] Synchronously parsing source files for language='{}', path='{}'", language, sourcePath);
+        WasmWorkerPool.WasmTaskResult result = wasmWorkerPool.executeWasmTaskSync(language, sourcePath);
+        return result != null && result.astJson() != null ? result.astJson() : "{\"type\":\"Program\",\"body\":[]}";
+    }
 
-        try {
-            var future = wasmWorkerPool.submitWasmTask(wasmBinaryName, targetDirectory);
-            WasmWorkerPool.WasmTaskResult result = future.get(30, TimeUnit.SECONDS);
+    public String parseSourceFiles(String language, byte[] sourceBytes) {
+        log.info("🛡️ [WasmSandbox] Synchronously parsing source bytes for language='{}'", language);
+        WasmWorkerPool.WasmTaskResult result = wasmWorkerPool.executeTaskSync(language, sourceBytes);
+        return result != null && result.astJson() != null ? result.astJson() : "{\"type\":\"Program\",\"body\":[]}";
+    }
 
-            if (result.success()) {
-                return result.astJson();
-            } else {
-                log.warn("⚠️ WASM sandbox execution returned error for [{}]: {}", wasmBinaryName, result.errorMessage());
-                return "{\"status\":\"ERROR\",\"error\":\"" + result.errorMessage() + "\"}";
-            }
-        } catch (Exception e) {
-            log.error("❌ WASM sandbox execution timed out or failed for [{}]: {}", wasmBinaryName, e.getMessage());
-            return "{\"status\":\"ERROR\",\"error\":\"" + e.getMessage() + "\"}";
-        }
+    public CompletableFuture<WasmWorkerPool.WasmTaskResult> parseAstInSandbox(String language, Path sourcePath) {
+        return wasmWorkerPool.submitWasmTask(language, sourcePath);
+    }
+
+    public WasmWorkerPool.WasmTaskResult parseAstInSandboxSync(String language, Path sourcePath) {
+        return wasmWorkerPool.executeWasmTaskSync(language, sourcePath);
+    }
+
+    public WasmWorkerPool.WasmTaskResult parseSourceFilesSync(String language, Path sourcePath) {
+        return wasmWorkerPool.executeWasmTaskSync(language, sourcePath);
     }
 }
