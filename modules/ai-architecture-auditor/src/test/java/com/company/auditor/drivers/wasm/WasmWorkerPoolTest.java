@@ -29,7 +29,7 @@ class WasmWorkerPoolTest {
         assertTrue(result.success());
         assertEquals("ts-morph-parser.wasm", result.wasmBinaryName());
         assertNotNull(result.astJson());
-        assertTrue(result.astJson().contains("ts-morph-parser.wasm"));
+        assertTrue(result.astJn().contains("ts-morph-parser.wasm"));
         assertTrue(result.executionTimeMs() > 0);
     }
 

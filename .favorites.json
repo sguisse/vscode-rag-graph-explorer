@@ -174,5 +174,13 @@
         "workspaceRoot": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer",
         "workspacePath": "webview/src/features/exporter/components/tabs/prompt/data/predefined-prompts.yaml",
         "id": "jo70gekVnJEpx6lF"
+    },
+    {
+        "type": "Directory",
+        "name": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer/modules/ai-architecture-auditor",
+        "parent_id": null,
+        "workspaceRoot": "/Users/mac-SGUISS21/01-work/01-projects/10-tools/01-plugins/01-vscode/vscode-rag-graph-explorer",
+        "workspacePath": "modules/ai-architecture-auditor",
+        "id": "ADvEsem6aLKPkbiI"
     }
 ]
