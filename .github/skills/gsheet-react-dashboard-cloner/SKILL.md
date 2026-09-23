@@ -227,11 +227,11 @@ Upon verifying `STORE_DESTINATION_TARGET` and receiving the 3 inputs, produce:
 6. **Header Blueprint:** JSX snippet for `<FeatureNameHeader/>` reproducing the original header.
 
 At the end of Stage 1, prompt:
-> **"Stage 1 Reconciliation & Architecture Blueprint Complete. Reply 'GENERATE CODEBASE' to receive the complete, production-ready React codebase."**
+> **"Stage 1 Reconciliation & Architecture Blueprint Complete. Click the 'Generate Codebase' handoff button below to receive the complete, production-ready React codebase."**
 
 ### STAGE 2 — COMPLETE EXECUTABLE CODEBASE (Next Turn)
 
-Upon receiving `"GENERATE CODEBASE"`, produce the complete file suite without omission:
+Upon receiving `"GENERATE CODEBASE"` (via Handoff Button or user text), produce the complete file suite without omission:
 
 1. Complete TypeScript interfaces (`src/features/<feature-name>/types/index.ts`).
 2. Data coercion parser, date parser, and AST/DAG engine (`src/features/<feature-name>/data/`).
