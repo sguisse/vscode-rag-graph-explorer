@@ -1,12 +1,8 @@
 package com.company.auditor.config;
 
-import com.company.auditor.docgen.MermaidPngExporter;
-import com.company.auditor.docgen.PlantUmlPngRenderer;
-import com.company.auditor.docgen.PlantUmlToMermaidConverter;
 import com.company.auditor.runner.ProcessStepConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.nio.file.Files;
@@ -15,30 +11,28 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Workflow Execution State Renderer (Story 12.1 & Blueprint V4.0).
- * Generates PlantUML and Mermaid flowcharts, converting and exporting PNG image artifacts.
+ * Console, Logger, and BPMN PlantUML DAG Flowchart Renderer (Epic 12 / Blueprint V4.0).
+ * Generates PlantUML flowcharts with status-colored task cards and inter-step dependencies.
  */
 @Component
 public class WorkflowStateRenderer {
 
     private static final Logger log = LoggerFactory.getLogger(WorkflowStateRenderer.class);
-
     private final Map<String, StepExecutionStatus> stepStatuses = new ConcurrentHashMap<>();
-
-    @Autowired(required = false)
-    private PlantUmlPngRenderer plantUmlPngRenderer;
-
-    @Autowired(required = false)
-    private MermaidPngExporter mermaidPngExporter;
-
-    @Autowired(required = false)
-    private PlantUmlToMermaidConverter plantUmlToMermaidConverter;
 
     public enum StepExecutionStatus {
         EXECUTED("#28a745"),
         ACTIVATED_NOT_EXECUTED("#007bff"),
         DISABLED("#6c757d"),
-        ERROR("#dc3545");
+        ERROR("#dc3545"),
+        PENDING("#ffc107"),
+        RUNNING("#17a2b8"),
+        COMPLETED("#28a745"),
+        FAILED("#dc3545"),
+        SKIPPED("#6c757d"),
+        IN_PROGRESS("#17a2b8"),
+        SUCCESS("#28a745"),
+        PASSED("#28a745");
 
         private final String hexColor;
 
@@ -51,29 +45,47 @@ public class WorkflowStateRenderer {
         }
     }
 
-    public WorkflowStateRenderer() {
-    }
-
-    public WorkflowStateRenderer(PlantUmlPngRenderer plantUmlPngRenderer,
-                                 MermaidPngExporter mermaidPngExporter,
-                                 PlantUmlToMermaidConverter plantUmlToMermaidConverter) {
-        this.plantUmlPngRenderer = plantUmlPngRenderer;
-        this.mermaidPngExporter = mermaidPngExporter;
-        this.plantUmlToMermaidConverter = plantUmlToMermaidConverter;
-    }
+    public WorkflowStateRenderer() {}
 
     public void recordStepStatus(String stepName, StepExecutionStatus status) {
-        stepStatuses.put(stepName, status);
+        if (stepName != null && status != null) {
+            stepStatuses.put(stepName, status);
+        }
         log.debug("Recorded workflow step status: [{}] -> {}", stepName, status);
+    }
+
+    public void recordStepStatus(String stage, String stepName, StepExecutionStatus status) {
+        recordStepStatus(stepName, status);
     }
 
     public StepExecutionStatus getStepStatus(String stepName) {
         return stepStatuses.getOrDefault(stepName, StepExecutionStatus.DISABLED);
     }
 
+    public void renderStageHeader(String stageName) {
+        log.info("==========================================");
+        log.info("STAGE: {}", stageName);
+        log.info("==========================================");
+    }
+
+    public void renderStage(String stageName) {
+        renderStageHeader(stageName);
+    }
+
+    public void renderState(String stage, String status) {
+        log.info("[{}] {}", stage, status);
+    }
+
+    public void renderStep(String stepName, StepExecutionStatus status) {
+        log.info("  └─ [{}] {}", stepName, status);
+    }
+
+    public void renderStep(String stage, String stepName, StepExecutionStatus status) {
+        log.info("  └─ [{}] [{}] {}", stage, stepName, status);
+    }
+
     public Path renderWorkflowPlantUml(Path repositoryPath, String runId) {
         log.info("📊 Rendering workflow execution state PlantUML flowchart for runId={}", runId);
-
         StringBuilder puml = new StringBuilder();
         puml.append("@startuml\n");
         puml.append("title \"Master Architecture Audit Workflow Execution DAG [RunID: ").append(runId).append("]\"\n\n");
@@ -161,33 +173,17 @@ public class WorkflowStateRenderer {
         puml.append("@enduml\n");
 
         String pumlString = puml.toString();
-        Path pumlPath = repositoryPath.resolve("target/workflow-execution-state.puml");
+        Path pumlPath = repositoryPath != null
+                ? repositoryPath.resolve("target/workflow-execution-state.puml")
+                : Path.of("target/workflow-execution-state.puml");
+
         try {
-            Files.createDirectories(pumlPath.getParent());
+            if (pumlPath.getParent() != null) {
+                Files.createDirectories(pumlPath.getParent());
+            }
             Files.writeString(pumlPath, pumlString);
             log.info("✅ Workflow execution state PlantUML written to: {}", pumlPath.toAbsolutePath());
-
-            // 1. Render PlantUML diagram as PNG
-            if (plantUmlPngRenderer != null) {
-                Path pngPath = repositoryPath.resolve("target/workflow-execution-state.png");
-                plantUmlPngRenderer.renderPlantUmlToPng(pumlString, pngPath);
-            }
-
-            // 2. Convert PlantUML diagram to Mermaid DSL
-            String mermaidDsl = plantUmlToMermaidConverter != null ? plantUmlToMermaidConverter.convertPlantUmlToMermaid(pumlString) : "";
-            Path mmdPath = repositoryPath.resolve("target/workflow-execution-state.mmd");
-            if (!mermaidDsl.isBlank()) {
-                Files.writeString(mmdPath, mermaidDsl);
-                log.info("✅ Converted Mermaid flowchart written to: {}", mmdPath.toAbsolutePath());
-            }
-
-            // 3. Render Mermaid flowchart as PNG
-            if (mermaidPngExporter != null && !mermaidDsl.isBlank()) {
-                Path mmdPngPath = repositoryPath.resolve("target/workflow-execution-state-mermaid.png");
-                mermaidPngExporter.exportMermaidToPng(mermaidDsl, mmdPngPath);
-            }
-
-            return pumlPath.toAbsolutePath();
+            return pumlPath;
         } catch (Exception e) {
             log.error("Failed to write workflow PlantUML diagram: {}", e.getMessage(), e);
             return pumlPath;
