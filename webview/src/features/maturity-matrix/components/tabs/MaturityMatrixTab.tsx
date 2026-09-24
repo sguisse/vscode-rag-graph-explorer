@@ -14,6 +14,8 @@ export function MaturityMatrixTab({ applications, onOriginClick }: MaturityMatri
   const selectedPillar = useMaturityMatrixStore((s) => s.selectedPillar);
   const storePillars = useMaturityMatrixStore((s) => s.data.pillars);
   const storeApplications = useMaturityMatrixStore((s) => s.data.applications);
+  const expandedAppCodes = useMaturityMatrixStore((s) => s.expandedAppCodes);
+  const toggleExpandApp = useMaturityMatrixStore((s) => s.toggleExpandApp);
 
   const updateLeader = useMaturityMatrixStore((s) => s.updateLeader);
   const toggleToGenerate = useMaturityMatrixStore((s) => s.toggleToGenerate);
@@ -34,19 +36,8 @@ export function MaturityMatrixTab({ applications, onOriginClick }: MaturityMatri
     [storeApplications],
   );
 
-  const [expandedAppCodes, setExpandedAppCodes] = useState<Record<string, boolean>>({
-    AVAILABLE_SHIPMENT: true,
-  });
-
   const [editingNotes, setEditingNotes] = useState<Record<string, boolean>>({});
   const [notesDraft, setNotesDraft] = useState<Record<string, string>>({});
-
-  const toggleExpandApp = (code: string) => {
-    setExpandedAppCodes((prev) => ({
-      ...prev,
-      [code]: !prev[code],
-    }));
-  };
 
   const handleStartEditNote = (code: string, commentary: string) => {
     setEditingNotes((prev) => ({ ...prev, [code]: true }));
@@ -84,27 +75,7 @@ export function MaturityMatrixTab({ applications, onOriginClick }: MaturityMatri
         const noteDraftVal = notesDraft[app.code] ?? notesDraft[appKey] ?? app.commentary ?? '';
 
         return (
-          <MaturityMatrixAppCard
-            key={appKey}
-            app={app}
-            isExpanded={isExpanded}
-            index={index}
-            pillars={pillars}
-            selectedPillar={selectedPillar}
-            showCellOrigins={showCellOrigins}
-            leaderOptions={leaderOptions}
-            isEditingNote={isEditingNote}
-            noteDraftVal={noteDraftVal}
-            onToggleExpand={toggleExpandApp}
-            onToggleTarget={toggleTarget}
-            onOriginClick={onOriginClick}
-            onUpdateLeader={updateLeader}
-            onToggleToGenerate={toggleToGenerate}
-            onStartEditNote={handleStartEditNote}
-            onSaveNote={handleSaveNote}
-            onCancelEditNote={handleCancelEditNote}
-            onDraftChange={handleDraftChange}
-          />
+          <MaturityMatrixAppCard app={app} index={index} isEditingNote={isEditingNote} isExpanded={isExpanded} key={appKey} leaderOptions={leaderOptions} noteDraftVal={noteDraftVal} onCancelEditNote={handleCancelEditNote} onDraftChange={handleDraftChange} onOriginClick={onOriginClick} onSaveNote={handleSaveNote} onStartEditNote={handleStartEditNote} onToggleExpand={toggleExpandApp} onToggleTarget={toggleTarget} onToggleToGenerate={toggleToGenerate} onUpdateLeader={updateLeader} pillars={pillars} selectedPillar={selectedPillar} showCellOrigins={showCellOrigins}/>
         );
       })}
     </section>

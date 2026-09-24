@@ -16,6 +16,7 @@ export interface MaturityMatrixState {
   selectedDateStatus: DateStatus | 'ALL';
   searchQuery: string;
   lastUpdated: string;
+  expandedAppCodes: Record<string, boolean>;
 
   // Actions
   fetchLastAssessments: () => Promise<void>;
@@ -32,6 +33,9 @@ export interface MaturityMatrixState {
   toggleToGenerate: (appCode: string) => void;
   toggleTarget: (appCode: string, pillarKey: string) => void;
   updateCommentary: (appCode: string, commentary: string) => void;
+  expandAll: () => void;
+  collapseAll: () => void;
+  toggleExpandApp: (appCode: string) => void;
 }
 
 const EMPTY_MATURITY_DATA: MaturityMatrixData = {
@@ -54,6 +58,7 @@ export const useMaturityMatrixStore = create<MaturityMatrixState>((set, get) => 
   selectedDateStatus: 'ALL',
   searchQuery: '',
   lastUpdated: 'Not synced',
+  expandedAppCodes: { AVAILABLE_SHIPMENT: true },
 
   fetchLastAssessments: async () => {
     set({ isLoading: true, error: null });
@@ -146,6 +151,26 @@ export const useMaturityMatrixStore = create<MaturityMatrixState>((set, get) => 
         applications: state.data.applications.map((app) =>
           app.code === appCode || app.id === appCode ? { ...app, commentary } : app,
         ),
+      },
+    })),
+
+  expandAll: () =>
+    set((state) => {
+      const expanded: Record<string, boolean> = {};
+      state.data.applications.forEach((app) => {
+        if (app.code) expanded[app.code] = true;
+        if (app.id) expanded[app.id] = true;
+      });
+      return { expandedAppCodes: expanded };
+    }),
+
+  collapseAll: () => set({ expandedAppCodes: {} }),
+
+  toggleExpandApp: (appCode) =>
+    set((state) => ({
+      expandedAppCodes: {
+        ...state.expandedAppCodes,
+        [appCode]: !state.expandedAppCodes[appCode],
       },
     })),
 }));

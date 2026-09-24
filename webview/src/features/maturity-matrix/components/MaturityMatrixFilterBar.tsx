@@ -42,6 +42,8 @@ export function MaturityMatrixFilterBar({
   onSelectedPillarChange,
   onSelectedDateStatusChange,
   onSearchQueryChange,
+  onExpandAll,
+  onCollapseAll,
 }: MaturityMatrixFilterBarProps) {
   const tabs: Array<{ key: MaturityMatrixTabId; label: string; icon: React.ReactNode }> = [
     {
@@ -131,12 +133,8 @@ export function MaturityMatrixFilterBar({
           strokeLinecap="round"
           strokeLinejoin="round"
         >
-          <polyline
-            points="23 6 13.5 15.5 8.5 10.5 1 18"
-          />
-          <polyline
-            points="17 6 23 6 23 12"
-          />
+          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+          <polyline points="17 6 23 6 23 12" />
         </svg>
       ),
     },
@@ -181,16 +179,11 @@ export function MaturityMatrixFilterBar({
                 </span>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem
-                  value="ALL"
-                >
+                <SelectItem value="ALL">
                   All Leaders
                 </SelectItem>
                 {leaderOptions.map((leader) => (
-                  <SelectItem
-                    key={leader}
-                    value={leader}
-                  >
+                  <SelectItem key={leader} value={leader}>
                     {leader}
                   </SelectItem>
                 ))}
@@ -210,16 +203,11 @@ export function MaturityMatrixFilterBar({
                 </span>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem
-                  value="ALL"
-                >
+                <SelectItem value="ALL">
                   All Assessors ({assessorOptions.length})
                 </SelectItem>
                 {assessorOptions.map((assessor) => (
-                  <SelectItem
-                    key={assessor}
-                    value={assessor}
-                  >
+                  <SelectItem key={assessor} value={assessor}>
                     {assessor}
                   </SelectItem>
                 ))}
@@ -241,16 +229,11 @@ export function MaturityMatrixFilterBar({
                 </span>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem
-                  value="ALL"
-                >
+                <SelectItem value="ALL">
                   All {pillarOptions.length} Pillars
                 </SelectItem>
                 {pillarOptions.map((pillar) => (
-                  <SelectItem
-                    key={pillar.key}
-                    value={pillar.key}
-                  >
+                  <SelectItem key={pillar.key} value={pillar.key}>
                     {pillar.icon} {pillar.label}
                   </SelectItem>
                 ))}
@@ -272,34 +255,22 @@ export function MaturityMatrixFilterBar({
                 </span>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem
-                  value="ALL"
-                >
+                <SelectItem value="ALL">
                   All Statuses ({statusCounts.ALL})
                 </SelectItem>
-                <SelectItem
-                  value="yellow"
-                >
+                <SelectItem value="yellow">
                   Yellow ({statusCounts.yellow})
                 </SelectItem>
-                <SelectItem
-                  value="green"
-                >
+                <SelectItem value="green">
                   Green ({statusCounts.green})
                 </SelectItem>
-                <SelectItem
-                  value="blue"
-                >
+                <SelectItem value="blue">
                   Blue ({statusCounts.blue})
                 </SelectItem>
-                <SelectItem
-                  value="orange"
-                >
+                <SelectItem value="orange">
                   Orange ({statusCounts.orange})
                 </SelectItem>
-                <SelectItem
-                  value="red"
-                >
+                <SelectItem value="red">
                   Red ({statusCounts.red})
                 </SelectItem>
               </SelectContent>
@@ -340,10 +311,11 @@ export function MaturityMatrixFilterBar({
 
         <div className="pt-2 border-t border-slate-100 flex justify-end w-full">
           <MaturityMatrixLegend
-            selectedDateStatus={selectedDateStatus}
-            statusCounts={statusCounts}
-            onStatusClick={onSelectedDateStatusChange}
-          />
+          onCollapseAll={onCollapseAll}
+          onExpandAll={onExpandAll}
+          statusCounts={statusCounts}
+          onStatusClick={onSelectedDateStatusChange}
+          selectedDateStatus={selectedDateStatus} />
         </div>
       </div>
     </section>

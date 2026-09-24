@@ -16,6 +16,8 @@ export function useMaturityMatrixHandlers() {
   const toggleToGenerate = useMaturityMatrixStore((state) => state.toggleToGenerate);
   const toggleTarget = useMaturityMatrixStore((state) => state.toggleTarget);
   const updateCommentary = useMaturityMatrixStore((state) => state.updateCommentary);
+  const expandAll = useMaturityMatrixStore((state) => state.expandAll);
+  const collapseAll = useMaturityMatrixStore((state) => state.collapseAll);
 
   const handleTabChange = useCallback(
     (nextTab: MaturityMatrixTabId) => setActiveTab(nextTab),
@@ -83,9 +85,13 @@ export function useMaturityMatrixHandlers() {
     [updateCommentary],
   );
 
-  const handleExpandAll = useCallback(() => {}, []);
+  const handleExpandAll = useCallback(() => {
+    expandAll();
+  }, [expandAll]);
 
-  const handleCollapseAll = useCallback(() => {}, []);
+  const handleCollapseAll = useCallback(() => {
+    collapseAll();
+  }, [collapseAll]);
 
   return {
     handleTabChange,

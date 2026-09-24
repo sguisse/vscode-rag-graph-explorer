@@ -6,6 +6,8 @@ interface MaturityMatrixLegendProps {
   selectedDateStatus: DateStatus | 'ALL';
   statusCounts: Record<DateStatus | 'ALL', number>;
   onStatusClick: (value: DateStatus | 'ALL') => void;
+  onExpandAll?: () => void;
+  onCollapseAll?: () => void;
   todayDate?: string;
   className?: string;
 }
@@ -66,64 +68,106 @@ export function MaturityMatrixLegend({
   selectedDateStatus,
   statusCounts,
   onStatusClick,
+  onExpandAll,
+  onCollapseAll,
   todayDate = '2026-09-16',
   className = '',
 }: MaturityMatrixLegendProps) {
   const isFiltered = selectedDateStatus !== 'ALL';
 
   return (
-    <div className={`flex flex-wrap items-center justify-end gap-2 ${className}`}>
-      {isFiltered && (
+    <div className={`flex flex-wrap items-center justify-between gap-2 w-full ${className}`}>
+      {/* Expand and Collapse action buttons placed on the left side */}
+      <div className="flex items-center gap-1.5">
+        {onExpandAll && (
+          <Button className="h-7 rounded-lg border-slate-200/80 bg-slate-50/80 px-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-2xs gap-1 cursor-pointer" onClick={onExpandAll} size="xs" title="Expand all application cards" type="button" variant="outline">
+            <svg
+              className="h-3.5 w-3.5 shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="7 13 12 18 17 13" />
+              <polyline points="7 6 12 11 17 6" />
+            </svg>
+            <span>Expand All</span>
+          </Button>
+        )}
+
+        {onCollapseAll && (
+          <Button className="h-7 rounded-lg border-slate-200/80 bg-slate-50/80 px-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-2xs gap-1 cursor-pointer" onClick={onCollapseAll} size="xs" title="Collapse all application cards" type="button" variant="outline">
+            <svg
+              className="h-3.5 w-3.5 shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="17 11 12 6 7 11" />
+              <polyline points="17 18 12 13 7 18" />
+            </svg>
+            <span>Collapse All</span>
+          </Button>
+        )}
+      </div>
+
+      {/* Status filter controls and today date tag */}
+      <div className="flex flex-wrap items-center gap-2">
+        {isFiltered && (
         <Button
           type="button"
           size="xs"
           onClick={() => onStatusClick('ALL')}
-          className="h-7 rounded-lg bg-indigo-600 px-2.5 text-xs font-semibold text-white hover:bg-indigo-700 transition-colors"
-        >
-          Reset Filter
-        </Button>
-      )}
+            className="h-7 rounded-lg bg-indigo-600 px-2.5 text-xs font-semibold text-white hover:bg-indigo-700 transition-colors"
+          >
+            Reset Filter
+          </Button>
+        )}
 
-      <span className="flex h-7 items-center rounded-lg border border-slate-200/80 bg-slate-100 px-2.5 text-xs font-bold text-slate-700 shadow-2xs">
-        Today: {todayDate}
-      </span>
+        <span className="flex h-7 items-center rounded-lg border border-slate-200/80 bg-slate-100 px-2.5 text-xs font-bold text-slate-700 shadow-2xs">
+          Today: {todayDate}
+        </span>
 
-      {statusConfigs.map((status) => {
-        const isActive = selectedDateStatus === status.key;
-        const count = statusCounts[status.countKey] ?? 0;
+        {statusConfigs.map((status) => {
+          const isActive = selectedDateStatus === status.key;
+          const count = statusCounts[status.countKey] ?? 0;
 
-        return (
+          return (
           <Button
             key={status.key}
             type="button"
             size="sm"
             variant="outline"
             onClick={() => onStatusClick(isActive ? 'ALL' : status.key)}
-            className={`flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-xs transition-colors cursor-pointer ${
-              isActive ? status.selectedStyles : status.unselectedStyles
-            }`}
-          >
-            <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${status.dotColor}`} />
-            <span>
-              {status.label} ({count})
-            </span>
-            {isActive && (
-              <svg
-                className="ml-0.5 h-3.5 w-3.5 shrink-0 stroke-[2.5]"
-                fill="none"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                viewBox="0 0 24 24"
-              >
-                <polyline
-                  points="20 6 9 17 4 12"
-                />
-              </svg>
-            )}
-          </Button>
-        );
-      })}
+              className={`flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-xs transition-colors cursor-pointer ${
+                isActive ? status.selectedStyles : status.unselectedStyles
+              }`}
+            >
+              <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${status.dotColor}`} />
+              <span>
+                {status.label} ({count})
+              </span>
+              {isActive && (
+                <svg
+                  className="ml-0.5 h-3.5 w-3.5 shrink-0 stroke-[2.5]"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  viewBox="0 0 24 24"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              )}
+            </Button>
+          );
+        })}
+      </div>
     </div>
   );
 }
