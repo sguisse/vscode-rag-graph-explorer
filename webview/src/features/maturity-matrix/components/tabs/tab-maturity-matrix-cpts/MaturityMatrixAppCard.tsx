@@ -1,7 +1,14 @@
+import React, { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { MaturityApplication, MaturityPillarDefinition } from '../../../types/maturity-matrix.types';
-import { getAppMinMaxDates, getAppRowIdx, getDateHealth, getAppStartRow } from './maturity-matrix-tab.utils';
+import {
+  getAppMinMaxDates,
+  getAppRowIdx,
+  getDateHealth,
+  getDiffScore,
+  getDiffLevel,
+} from './maturity-matrix-tab.utils';
 import { CellOriginTag } from './MaturityMatrixCellOriginTag';
 import { MatrixTable } from './MaturityMatrixTable';
 import { CommentaryEditor } from './MaturityMatrixCommentaryEditor';
@@ -41,7 +48,6 @@ export function MaturityMatrixAppCard({
   onToggleTarget,
   onOriginClick,
   onUpdateLeader,
-  onToggleToGenerate,
   onStartEditNote,
   onSaveNote,
   onCancelEditNote,
@@ -51,119 +57,206 @@ export function MaturityMatrixAppCard({
   const appKey = app.id || app.code;
   const health = getDateHealth(minDate);
   const rowIdx = getAppRowIdx(app, index);
-  const startRow = getAppStartRow(app, index);
 
-  const dateRangeDisplay = !minDate
-    ? 'null'
-    : minDate === maxDate
-      ? minDate
-      : `${minDate} → ${maxDate}`;
+  const dateRangeDisplay = !minDate ? 'null' : minDate === maxDate ? minDate : `${minDate} → ${maxDate}`;
+
+  const visiblePillars = useMemo(
+    () => (selectedPillar === 'ALL' ? pillars : pillars.filter((p) => p.key === selectedPillar)),
+    [pillars, selectedPillar],
+  );
 
   return (
-    <div className="overflow-hidden border border-slate-200 bg-white shadow-sm rounded-xl">
-      <div className="bg-slate-50 border-b border-slate-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+    <div className="overflow-hidden border border-slate-200 bg-white shadow-xs rounded-xl">
+      {/* Compact Header Bar (-20px height) */}
+      <div className="bg-slate-50 border-b border-slate-200 py-1 px-3 flex flex-wrap items-center justify-between gap-2 text-xs min-h-[36px]">
+        {/* Left Side Info */}
+        <div className="flex items-center gap-2.5 min-w-0 flex-1 flex-wrap">
           <Button
-            onClick={() => onToggleExpand(app.code || appKey)}
-            size="sm"
             type="button"
+            size="sm"
             variant="ghost"
-            className="h-7 w-7 p-1 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded-md transition-colors"
+            onClick={() => onToggleExpand(app.code || appKey)}
+            className="h-6 w-6 p-0.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded transition-colors shrink-0 cursor-pointer"
             title={isExpanded ? 'Collapse Application' : 'Expand Application'}
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points={isExpanded ? '18 15 12 9 6 15' : '6 9 12 15 18 9'} />
+            <svg
+              className="w-3.5 h-3.5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline
+                points={isExpanded ? '18 15 12 9 6 15' : '6 9 12 15 18 9'}
+              />
             </svg>
           </Button>
 
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-base font-bold text-slate-900 tracking-tight">{app.name}</h2>
+          <h2 className="text-sm font-bold text-slate-900 tracking-tight shrink-0">
+            {app.name}
+          </h2>
 
-              <span className="px-2 py-0.5 bg-slate-200 text-slate-700 text-[11px] font-mono rounded flex items-center gap-1">
-                <span>{app.code}</span>
-                <CellOriginTag col="D" onOriginClick={onOriginClick} row={rowIdx} sheet="Maturity-Matrix-Projects" showCellOrigins={showCellOrigins} />
-              </span>
+          <span className="px-1.5 py-0.5 bg-slate-200 text-slate-700 text-[10px] font-mono rounded flex items-center gap-1 shrink-0">
+            <span>{app.code}</span>
+            <CellOriginTag
+              col="D"
+              onOriginClick={onOriginClick}
+              row={rowIdx}
+              sheet="Maturity-Matrix-Projects"
+              showCellOrigins={showCellOrigins}
+            />
+          </span>
 
-              <span
-                className={`px-2 py-0.5 text-[10px] font-bold rounded-full flex items-center gap-1 border ${
-                  app.toGenerate
-                    ? 'bg-indigo-100 text-indigo-800 border-indigo-200'
-                    : 'bg-slate-200 text-slate-700 border-slate-300'
-                }`}
-              >
-                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                <span>TO GENERATE = {app.toGenerate ? 'TRUE' : 'FALSE'}</span>
-                <CellOriginTag col="F" onOriginClick={onOriginClick} row={rowIdx} sheet="Maturity-Matrix-Projects" showCellOrigins={showCellOrigins} />
-              </span>
-            </div>
-
-            <div className="text-xs text-slate-500 flex flex-wrap items-center gap-3 mt-1.5">
-              <div className="flex items-center gap-1.5 bg-purple-50 text-purple-900 border border-purple-200 px-2 py-0.5 rounded font-semibold text-[11px]">
-                <svg className="w-3 h-3 text-purple-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
-                <span>Leader (Col E):</span>
-                <Select
-                  value={app.leader}
-                  onValueChange={(newLeader) => {
-                    if (typeof newLeader === 'string') onUpdateLeader(app.code, newLeader);
-                  }}
-                >
-                  <SelectTrigger className="h-6 border-purple-200 bg-white/70 text-purple-950 px-2 py-0 text-[11px] font-bold shadow-none hover:bg-white">
-                    <SelectValue placeholder={app.leader || 'Select leader'} />
-                  </SelectTrigger>
-                  <SelectContent className="min-w-[160px]">
-                    {leaderOptions.map((leader) => (
-                      <SelectItem key={leader} value={leader}>
-                        {leader}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <CellOriginTag col="E" onOriginClick={onOriginClick} row={rowIdx} sheet="Maturity-Matrix-Projects" showCellOrigins={showCellOrigins} />
-              </div>
-
-              <span>•</span>
-
-              <span className="flex items-center gap-1.5">
-                <span>Last Assessment:</span>
-                <span
-                  className={`px-2 py-0.5 rounded text-[11px] font-mono border flex items-center gap-1.5 cursor-help font-bold ${health.badgeBg}`}
-                  title={`Assessment Date Range: ${dateRangeDisplay}\nStatus (driven by earliest date ${minDate || 'none'}): ${health.label}`}
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full ${health.dotColor}`} />
-                  <span>{dateRangeDisplay}</span>
-                  <span className="text-[10px] opacity-75 font-sans font-normal">({health.desc})</span>
-                </span>
-              </span>
-
-              <span>•</span>
-
-              <span>
-                Previous: <strong className="text-slate-600">{app.prevAssessmentDate || '—'}</strong>
-              </span>
-            </div>
+          <div className="flex items-center gap-1 bg-purple-50 text-purple-900 border border-purple-200 px-1.5 py-0.5 rounded font-semibold text-[10px] shrink-0">
+            <svg
+              className="w-3 h-3 text-purple-600 shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path
+                d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"
+              />
+              <circle
+                cx="12"
+                cy="7"
+                r="4"
+              />
+            </svg>
+            <span>Leader (Col E):</span>
+            <Select
+              value={app.leader}
+              onValueChange={(newLeader) => {
+                if (typeof newLeader === 'string') onUpdateLeader(app.code, newLeader);
+              }}
+            >
+              <SelectTrigger className="h-5 border-purple-200 bg-white/70 text-purple-950 px-1.5 py-0 text-[10px] font-bold shadow-none hover:bg-white min-w-[110px]">
+                <SelectValue placeholder={app.leader || 'Select leader'} />
+              </SelectTrigger>
+              <SelectContent className="min-w-[150px]">
+                {leaderOptions.map((leader) => (
+                  <SelectItem
+                    key={leader}
+                    value={leader}
+                  >
+                    {leader}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <CellOriginTag
+              col="E"
+              onOriginClick={onOriginClick}
+              row={rowIdx}
+              sheet="Maturity-Matrix-Projects"
+              showCellOrigins={showCellOrigins}
+            />
           </div>
         </div>
 
-        <div className="flex items-center gap-2 self-end sm:self-auto">
-          <Button
-            onClick={() => onToggleToGenerate(app.code)}
-            size="xs"
-            type="button"
-            variant={app.toGenerate ? 'destructive' : 'default'}
-            className="text-xs font-semibold px-2.5 py-1 rounded transition-colors"
-            title="Toggle sheet F column 'To Generate'"
-          >
-            Set TO Generate = {app.toGenerate ? 'FALSE' : 'TRUE'}
-          </Button>
+        {/* Right Aligned Assessment Info */}
+        <div className="flex items-center gap-2 text-slate-500 text-[11px] shrink-0 ml-auto">
+          <span className="flex items-center gap-1">
+            <span>Last Assessment:</span>
+            <span
+              className={`px-1.5 py-0.5 rounded text-[10px] font-mono border flex items-center gap-1 cursor-help font-bold ${health.badgeBg}`}
+              title={`Assessment Date Range: ${dateRangeDisplay}\nStatus (driven by earliest date ${minDate || 'none'}): ${health.label}`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${health.dotColor}`} />
+              <span>{dateRangeDisplay}</span>
+              <span className="text-[9px] opacity-75 font-sans font-normal">
+                ({health.desc})
+              </span>
+            </span>
+          </span>
+
+          <span>•</span>
+
+          <span>
+            Previous: <strong className="text-slate-600">{app.prevAssessmentDate || '—'}</strong>
+          </span>
         </div>
       </div>
 
+      {/* Collapsed Table Rendering for Pillar Alignment */}
+      {!isExpanded && (
+        <div className="border-t border-slate-100 bg-slate-50/30 overflow-x-auto p-2">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-600 bg-slate-100/60">
+                {visiblePillars.map((p) => (
+                  <th
+                    key={p.key}
+                    className="p-1.5 text-center font-bold"
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      <span>{p.icon}</span>
+                      <span>{p.label}</span>
+                    </span>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                {visiblePillars.map((p) => {
+                  const pillarVal = app.pillars[p.key];
+                  const pillarHealth = getDateHealth(pillarVal?.date);
+                  const diffScore = getDiffScore(pillarVal);
+                  const diffLevel = getDiffLevel(pillarVal);
+
+                  return (
+                    <td
+                      key={p.key}
+                      className="p-2 border-r border-slate-100 last:border-r-0 text-center align-top bg-white"
+                    >
+                      <div className="flex flex-col items-center gap-1">
+                        {/* Assessment Date Badge */}
+                        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono rounded border ${pillarHealth.badgeBg}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${pillarHealth.dotColor}`} />
+                          <span>{pillarVal?.date || 'null'}</span>
+                        </span>
+
+                        {/* Score & Level Evolution in Single Row under Date */}
+                        <div className="flex items-center justify-center gap-2 text-[10px] font-mono text-slate-700 mt-0.5">
+                          <span className="inline-flex items-center gap-0.5">
+                            <span className="text-slate-400">Score:</span>
+                            <span className="font-bold text-slate-900">{Number(pillarVal?.score ?? 0).toFixed(2)}</span>
+                            {diffScore !== null && Math.abs(diffScore) >= 0.01 && (
+                              <span className={`font-bold ${diffScore > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                ({diffScore > 0 ? `+${diffScore.toFixed(2)}` : diffScore.toFixed(2)})
+                              </span>
+                            )}
+                          </span>
+
+                          <span className="text-slate-300">/</span>
+
+                          <span className="inline-flex items-center gap-0.5">
+                            <span className="text-slate-400">Level:</span>
+                            <span className="font-semibold text-slate-800">{pillarVal?.level || 'Lvl 0'}</span>
+                            {diffLevel !== null && diffLevel !== 0 && (
+                              <span className={`font-bold ${diffLevel > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                ({diffLevel > 0 ? `+${diffLevel}` : diffLevel})
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+                  );
+                })}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Expanded Table & Commentary */}
       {isExpanded && (
         <div>
           <MatrixTable

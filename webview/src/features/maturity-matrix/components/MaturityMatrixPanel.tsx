@@ -1,8 +1,7 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { MaturityMatrixFilterBar } from './MaturityMatrixFilterBar';
 import { MaturityMatrixHeader } from './MaturityMatrixHeader';
 import { MaturityMatrixKpis } from './MaturityMatrixKpis';
-import { MaturityMatrixLegend } from './MaturityMatrixLegend';
 import { MaturityMatrixTab } from './tabs/MaturityMatrixTab';
 import { PillarDeltaAnalyticsTab } from './tabs/PillarDeltaAnalyticsTab';
 import { ExtractsAndAssessorsTab } from './tabs/ExtractsAndAssessorsTab';
@@ -101,18 +100,18 @@ export function MaturityMatrixPanel() {
             onCollapseAll={handleCollapseAll}
           />
 
-          <MaturityMatrixLegend
-            selectedDateStatus={selectedDateStatus}
-            statusCounts={statusCounts}
-            onStatusClick={handleSelectedDateStatusChange}
-          />
-
           {activeTab === 'matrix' && <MaturityMatrixTab applications={filteredApplications} />}
           {activeTab === 'compare' && (
-            <PillarDeltaAnalyticsTab pillars={pillarOptions} applications={filteredApplications} />
+            <PillarDeltaAnalyticsTab
+              pillars={pillarOptions}
+              applications={filteredApplications}
+            />
           )}
           {activeTab === 'extracts' && (
-            <ExtractsAndAssessorsTab pillars={pillarOptions} applications={filteredApplications} />
+            <ExtractsAndAssessorsTab
+              pillars={pillarOptions}
+              applications={filteredApplications}
+            />
           )}
         </>
       )}
