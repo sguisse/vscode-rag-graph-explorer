@@ -5,6 +5,7 @@ import { MaturityMatrixKpis } from './MaturityMatrixKpis';
 import { MaturityMatrixTab } from './tabs/MaturityMatrixTab';
 import { PillarDeltaAnalyticsTab } from './tabs/PillarDeltaAnalyticsTab';
 import { ExtractsAndAssessorsTab } from './tabs/ExtractsAndAssessorsTab';
+import { AssessorSpeedrunTab } from './tabs/AssessorSpeedrunTab';
 import { useMaturityMatrixHandlers } from '../hooks/useMaturityMatrixHandlers';
 import { useMaturityMatrixState } from '../hooks/useMaturityMatrixState';
 import { useMaturityMatrixStore } from '../store/useMaturityMatrixStore';
@@ -77,7 +78,7 @@ export function MaturityMatrixPanel() {
         </div>
       ) : (
         <>
-          <MaturityMatrixKpis metrics={kpis} />
+          <MaturityMatrixKpis metrics={kpis}/>
 
           <MaturityMatrixFilterBar
             activeTab={activeTab}
@@ -109,6 +110,12 @@ export function MaturityMatrixPanel() {
           )}
           {activeTab === 'extracts' && (
             <ExtractsAndAssessorsTab
+              pillars={pillarOptions}
+              applications={filteredApplications}
+            />
+          )}
+          {activeTab === 'speedrun' && (
+            <AssessorSpeedrunTab
               pillars={pillarOptions}
               applications={filteredApplications}
             />
