@@ -41,12 +41,12 @@ export function MatrixTable({
     <div className="overflow-x-auto">
       <table className="w-full text-left border-collapse text-xs">
         <thead>
-          <tr className="bg-gradient-to-r from-blue-500 to-blue-50/90 text-slate-800 font-semibold shadow-2xs border-b border-blue-200/80">
+          <tr className="bg-gradient-to-r from-blue-1000 to-blue-50/90 text-slate-800 font-semibold shadow-2xs border-b border-blue-200/80">
             <th className="py-2 px-3 border-r border-blue-600/20 w-36 sticky left-0 bg-blue-500 text-white font-bold text-[11px] uppercase tracking-wide z-10 shadow-xs">
-              <span className="tracking-wide uppercase text-[11px]">Assessment Type</span>
+              <span className="tracking-wide uppercase text-[11px]">Assessment Type fff</span>
             </th>
             <th className="py-2 px-2 border-r border-blue-500/20 w-24 text-blue-100 font-bold text-[11px] uppercase tracking-wide">
-              <span className="tracking-wide uppercase text-[11px]">Metric&nbsp;evol.</span>
+              <span className="tracking-wide uppercase text-[11px]">Metricddd&nbsp;evol.</span>
             </th>
             {visiblePillars.map((p, idx) => {
               const total = visiblePillars.length;
@@ -77,12 +77,15 @@ export function MatrixTable({
               const pillarVal = app.pillars[p.key];
               const isTargetActive = Boolean(pillarVal?.target);
               return (
-                <td key={p.key} className="py-2.5 px-3 text-center border-r border-slate-200">
+                <td
+                  key={p.key}
+                  className="py-2.5 px-3 text-center border-r border-slate-200"
+                >
                   <Button
-                    onClick={() => onToggleTarget(app.code, p.key)}
-                    size="xs"
                     type="button"
+                    size="xs"
                     variant="outline"
+                    onClick={() => onToggleTarget(app.code, p.key)}
                     className={
                       isTargetActive
                         ? 'bg-amber-400 text-amber-950 font-bold hover:bg-amber-500 scale-105 shadow-sm h-6 px-2.5 text-xs'
@@ -98,7 +101,10 @@ export function MatrixTable({
           </tr>
 
           <tr className="hover:bg-slate-50">
-            <td rowSpan={3} className="py-2 px-3 font-semibold text-slate-700 border-r border-slate-200 sticky left-0 bg-white z-10">
+            <td
+              rowSpan={3}
+              className="py-2 px-3 font-semibold text-slate-700 border-r border-slate-200 sticky left-0 bg-white z-10"
+            >
               Last Assessment
               <div className="text-[10px] text-slate-400 font-normal mt-0.5">Compared to TODAY</div>
               <div className="text-[9px] text-indigo-500 font-mono font-medium mt-0.5">💡 hover for origin</div>
@@ -121,7 +127,14 @@ export function MatrixTable({
                       <span>{pillarVal?.date || 'null'}</span>
                     </span>
                     <span className="text-[9px] text-slate-500 font-medium">{health.desc}</span>
-                    <CellOriginTag className="mt-0.5" col="E" onOriginClick={onOriginClick} row={cellRow} sheet="Assessments-Extracts" showCellOrigins={showCellOrigins} />
+                    <CellOriginTag
+                      col="E"
+                      sheet="Assessments-Extracts"
+                      row={cellRow}
+                      showCellOrigins={showCellOrigins}
+                      onOriginClick={onOriginClick}
+                      className="mt-0.5"
+                    />
                   </div>
                 </td>
               );
@@ -150,7 +163,14 @@ export function MatrixTable({
                         </span>
                       )}
                     </div>
-                    <CellOriginTag className="mt-0.5" col="G" onOriginClick={onOriginClick} row={cellRow} sheet="Assessments-Extracts" showCellOrigins={showCellOrigins} />
+                    <CellOriginTag
+                      col="G"
+                      sheet="Assessments-Extracts"
+                      row={cellRow}
+                      showCellOrigins={showCellOrigins}
+                      onOriginClick={onOriginClick}
+                      className="mt-0.5"
+                    />
                   </div>
                 </td>
               );
@@ -172,7 +192,10 @@ export function MatrixTable({
                 >
                   <div className="flex flex-col items-center justify-center gap-0.5">
                     <div className="flex items-center justify-center gap-1.5">
-                      <Badge className="text-[11px] py-0.5 px-2.5" variant="default">
+                      <Badge
+                        variant="default"
+                        className="text-[11px] py-0.5 px-2.5"
+                      >
                         {pillarVal?.level || 'Lvl 0'}
                       </Badge>
                       {diffLevel !== null && diffLevel !== 0 && (
@@ -181,7 +204,14 @@ export function MatrixTable({
                         </span>
                       )}
                     </div>
-                    <CellOriginTag className="mt-0.5" col="G" onOriginClick={onOriginClick} row={levelRow} sheet="Assessments-Extracts" showCellOrigins={showCellOrigins} />
+                    <CellOriginTag
+                      col="G"
+                      sheet="Assessments-Extracts"
+                      row={levelRow}
+                      showCellOrigins={showCellOrigins}
+                      onOriginClick={onOriginClick}
+                      className="mt-0.5"
+                    />
                   </div>
                 </td>
               );
@@ -189,7 +219,10 @@ export function MatrixTable({
           </tr>
 
           <tr className="bg-slate-50/70 hover:bg-slate-100/70">
-            <td rowSpan={3} className="py-2 px-3 font-semibold text-slate-600 border-r border-slate-200 sticky left-0 bg-slate-50/90 z-10">
+            <td
+              rowSpan={3}
+              className="py-2 px-3 font-semibold text-slate-600 border-r border-slate-200 sticky left-0 bg-slate-50/90 z-10"
+            >
               Last Assessment - 1
               <div className="text-[10px] text-slate-400 font-normal mt-0.5">Previous Session</div>
             </td>
@@ -206,7 +239,14 @@ export function MatrixTable({
                 >
                   <div className="flex flex-col items-center justify-center">
                     <span>{pillarVal?.prevDate || '—'}</span>
-                    <CellOriginTag className="mt-0.5" col="E" onOriginClick={onOriginClick} row={prevRow} sheet="Assessments-Extracts" showCellOrigins={showCellOrigins} />
+                    <CellOriginTag
+                      col="E"
+                      sheet="Assessments-Extracts"
+                      row={prevRow}
+                      showCellOrigins={showCellOrigins}
+                      onOriginClick={onOriginClick}
+                      className="mt-0.5"
+                    />
                   </div>
                 </td>
               );
@@ -227,7 +267,14 @@ export function MatrixTable({
                 >
                   <div className="flex flex-col items-center justify-center">
                     <span>{Number(pillarVal?.prevScore ?? 0).toFixed(2)}</span>
-                    <CellOriginTag className="mt-0.5" col="G" onOriginClick={onOriginClick} row={prevRow} sheet="Assessments-Extracts" showCellOrigins={showCellOrigins} />
+                    <CellOriginTag
+                      col="G"
+                      sheet="Assessments-Extracts"
+                      row={prevRow}
+                      showCellOrigins={showCellOrigins}
+                      onOriginClick={onOriginClick}
+                      className="mt-0.5"
+                    />
                   </div>
                 </td>
               );
@@ -248,7 +295,14 @@ export function MatrixTable({
                 >
                   <div className="flex flex-col items-center justify-center">
                     <span>{pillarVal?.prevLevel || 'Lvl 0'}</span>
-                    <CellOriginTag className="mt-0.5" col="G" onOriginClick={onOriginClick} row={prevLevelRow} sheet="Assessments-Extracts" showCellOrigins={showCellOrigins} />
+                    <CellOriginTag
+                      col="G"
+                      sheet="Assessments-Extracts"
+                      row={prevLevelRow}
+                      showCellOrigins={showCellOrigins}
+                      onOriginClick={onOriginClick}
+                      className="mt-0.5"
+                    />
                   </div>
                 </td>
               );
@@ -259,10 +313,21 @@ export function MatrixTable({
             onClick={() => setIsExtractsExpanded((prev) => !prev)}
             className="bg-slate-100/90 hover:bg-slate-200/80 text-slate-700 font-semibold cursor-pointer transition-colors select-none"
           >
-            <td colSpan={visiblePillars.length + 2} className="py-1.5 px-3 text-[11px] uppercase tracking-wider text-slate-600">
+            <td
+              colSpan={visiblePillars.length + 2}
+              className="py-1.5 px-3 text-[11px] uppercase tracking-wider text-slate-600"
+            >
               <div className="flex items-center gap-2">
                 <span className="inline-flex h-4 w-4 items-center justify-center rounded-md text-slate-500 hover:text-slate-800 transition-colors">
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    className="w-3.5 h-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    viewBox="0 0 24 24"
+                  >
                     <polyline points={isExtractsExpanded ? '18 15 12 9 6 15' : '6 9 12 15 18 9'} />
                   </svg>
                 </span>
@@ -302,7 +367,14 @@ export function MatrixTable({
                     >
                       {assessorName}
                     </span>
-                    <CellOriginTag className="mt-0.5" col="C" onOriginClick={onOriginClick} row={assessorRow} sheet="Assessments-Extracts" showCellOrigins={showCellOrigins} />
+                    <CellOriginTag
+                      col="C"
+                      sheet="Assessments-Extracts"
+                      row={assessorRow}
+                      showCellOrigins={showCellOrigins}
+                      onOriginClick={onOriginClick}
+                      className="mt-0.5"
+                    />
                   </div>
                 </td>
               );
@@ -338,7 +410,14 @@ export function MatrixTable({
                             style={{ width: `${prog}%` }}
                           />
                         </div>
-                        <CellOriginTag className="mt-0.5" col="G" onOriginClick={onOriginClick} row={lastExtractRow} sheet="Assessments-Extracts" showCellOrigins={showCellOrigins} />
+                        <CellOriginTag
+                          col="G"
+                          sheet="Assessments-Extracts"
+                          row={lastExtractRow}
+                          showCellOrigins={showCellOrigins}
+                          onOriginClick={onOriginClick}
+                          className="mt-0.5"
+                        />
                       </div>
                     </td>
                   );
@@ -364,7 +443,14 @@ export function MatrixTable({
                     >
                       <div className="flex flex-col items-center justify-center">
                         <span>{prevProg}%</span>
-                        <CellOriginTag className="mt-0.5" col="G" onOriginClick={onOriginClick} row={prevExtractRow} sheet="Assessments-Extracts" showCellOrigins={showCellOrigins} />
+                        <CellOriginTag
+                          col="G"
+                          sheet="Assessments-Extracts"
+                          row={prevExtractRow}
+                          showCellOrigins={showCellOrigins}
+                          onOriginClick={onOriginClick}
+                          className="mt-0.5"
+                        />
                       </div>
                     </td>
                   );

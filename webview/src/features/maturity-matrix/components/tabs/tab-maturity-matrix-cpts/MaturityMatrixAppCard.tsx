@@ -67,7 +67,7 @@ export function MaturityMatrixAppCard({
 
   return (
     <div className="overflow-hidden border border-slate-200 bg-white shadow-xs rounded-xl">
-      {/* Compact Header Bar (-20px height) */}
+      {/* Compact Header Bar */}
       <div className="bg-slate-50 border-b border-slate-200 py-1 px-3 flex flex-wrap items-center justify-between gap-2 text-xs min-h-[36px]">
         {/* Left Side Info */}
         <div className="flex items-center gap-2.5 min-w-0 flex-1 flex-wrap">
@@ -88,9 +88,7 @@ export function MaturityMatrixAppCard({
               strokeLinecap="round"
               strokeLinejoin="round"
             >
-              <polyline
-                points={isExpanded ? '18 15 12 9 6 15' : '6 9 12 15 18 9'}
-              />
+              <polyline points={isExpanded ? '18 15 12 9 6 15' : '6 9 12 15 18 9'} />
             </svg>
           </Button>
 
@@ -119,9 +117,7 @@ export function MaturityMatrixAppCard({
               strokeLinecap="round"
               strokeLinejoin="round"
             >
-              <path
-                d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"
-              />
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
               <circle
                 cx="12"
                 cy="7"
@@ -183,37 +179,80 @@ export function MaturityMatrixAppCard({
         </div>
       </div>
 
-      {/* Collapsed Table Rendering for Pillar Alignment */}
+      {/* Collapsed Table Rendering with exact requested header gradient style */}
       {!isExpanded && (
-        <div className="border-t border-slate-100 bg-slate-50/30 overflow-x-auto p-2">
+        <div className="border-t border-slate-100 bg-slate-50/30 overflow-x-auto p-0">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-600 bg-slate-100/60">
-                {visiblePillars.map((p) => (
-                  <th
-                    key={p.key}
-                    className="p-1.5 text-center font-bold"
-                  >
-                    <span className="inline-flex items-center gap-1">
-                      <span>{p.icon}</span>
-                      <span>{p.label}</span>
-                    </span>
-                  </th>
-                ))}
+              <tr className="bg-gradient-to-r from-blue-500 to-blue-50/90 text-slate-800 font-semibold shadow-2xs border-b border-blue-200/80">
+                <th className="py-2 px-3 border-r border-blue-600/20 w-36 sticky left-0 bg-blue-500 text-white font-bold text-[11px] uppercase tracking-wide z-10 shadow-xs">
+                  <span className="tracking-wide uppercase text-[11px]">Assessment Type</span>
+                </th>
+                <th className="py-2 px-2 border-r border-blue-500/20 w-24 text-blue-100 font-bold text-[11px] uppercase tracking-wide">
+                  <span className="tracking-wide uppercase text-[11px]">Metric&nbsp;evol.</span>
+                </th>
+                {visiblePillars.map((p, idx) => {
+                  const total = visiblePillars.length;
+                  const ratio = total > 1 ? idx / (total - 1) : 0;
+                  const textStyle = ratio > 0.65 ? 'text-slate-800 font-bold' : 'text-white font-bold';
+
+                  return (
+                    <th
+                      key={p.key}
+                      className={`py-2 px-3 border-r border-slate-200/40 text-center min-w-[125px] text-[11px] uppercase tracking-wide ${textStyle}`}
+                    >
+                      <div className="flex items-center justify-center gap-1.5">
+                        <span className="text-sm">{p.icon}</span>
+                        <span className="font-bold tracking-wide uppercase text-[11px]">{p.label}</span>
+                      </div>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
               <tr>
+                <td className="py-2.5 px-3 font-semibold text-slate-700 border-r border-slate-200 sticky left-0 bg-white z-10 w-36">
+                  Last Assessment
+                </td>
+                <td className="py-2.5 px-2 text-slate-500 font-mono text-[11px] border-r border-slate-200 w-24 text-center items-center justify-center">
+                    Date<br />
+                  score&nbsp;/&nbsp;Level
+                </td>
                 {visiblePillars.map((p) => {
                   const pillarVal = app.pillars[p.key];
                   const pillarHealth = getDateHealth(pillarVal?.date);
                   const diffScore = getDiffScore(pillarVal);
                   const diffLevel = getDiffLevel(pillarVal);
 
+                  let scoreText = '--';
+                  let scoreColor = 'text-slate-400';
+                  if (diffScore !== null && Math.abs(diffScore) >= 0.001) {
+                    if (diffScore > 0) {
+                      scoreText = `+${diffScore.toFixed(2)}`;
+                      scoreColor = 'text-emerald-600 font-bold';
+                    } else if (diffScore < 0) {
+                      scoreText = `${diffScore.toFixed(2)}`;
+                      scoreColor = 'text-rose-600 font-bold';
+                    }
+                  }
+
+                  let levelText = '--';
+                  let levelColor = 'text-slate-400';
+                  if (diffLevel !== null && diffLevel !== 0) {
+                    if (diffLevel > 0) {
+                      levelText = `+${diffLevel.toFixed(1)}`;
+                      levelColor = 'text-emerald-600 font-bold';
+                    } else if (diffLevel < 0) {
+                      levelText = `${diffLevel.toFixed(1)}`;
+                      levelColor = 'text-rose-600 font-bold';
+                    }
+                  }
+
                   return (
                     <td
                       key={p.key}
-                      className="p-2 border-r border-slate-100 last:border-r-0 text-center align-top bg-white"
+                      className="p-2 border-r border-slate-100 last:border-r-0 text-center align-top bg-white min-w-[125px]"
                     >
                       <div className="flex flex-col items-center gap-1">
                         {/* Assessment Date Badge */}
@@ -222,29 +261,11 @@ export function MaturityMatrixAppCard({
                           <span>{pillarVal?.date || 'null'}</span>
                         </span>
 
-                        {/* Score & Level Evolution in Single Row under Date */}
-                        <div className="flex items-center justify-center gap-2 text-[10px] font-mono text-slate-700 mt-0.5">
-                          <span className="inline-flex items-center gap-0.5">
-                            <span className="text-slate-400">Score:</span>
-                            <span className="font-bold text-slate-900">{Number(pillarVal?.score ?? 0).toFixed(2)}</span>
-                            {diffScore !== null && Math.abs(diffScore) >= 0.01 && (
-                              <span className={`font-bold ${diffScore > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                ({diffScore > 0 ? `+${diffScore.toFixed(2)}` : diffScore.toFixed(2)})
-                              </span>
-                            )}
-                          </span>
-
+                        {/* Diff score / level evol line */}
+                        <div className="flex items-center justify-center gap-1 text-[10px] font-mono mt-0.5">
+                          <span className={scoreColor}>{scoreText}</span>
                           <span className="text-slate-300">/</span>
-
-                          <span className="inline-flex items-center gap-0.5">
-                            <span className="text-slate-400">Level:</span>
-                            <span className="font-semibold text-slate-800">{pillarVal?.level || 'Lvl 0'}</span>
-                            {diffLevel !== null && diffLevel !== 0 && (
-                              <span className={`font-bold ${diffLevel > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                ({diffLevel > 0 ? `+${diffLevel}` : diffLevel})
-                              </span>
-                            )}
-                          </span>
+                          <span className={levelColor}>{levelText}</span>
                         </div>
                       </div>
                     </td>
