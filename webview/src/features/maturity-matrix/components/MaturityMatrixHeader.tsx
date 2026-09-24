@@ -1,27 +1,17 @@
+import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import type { MaturityMatrixTabId } from '../types/maturity-matrix.types';
 
 interface MaturityMatrixHeaderProps {
   activeTab?: MaturityMatrixTabId;
   lastUpdated: string;
-  filterToGenerate: boolean;
-  showCellOrigins: boolean;
   onTabChange?: (nextTab: MaturityMatrixTabId) => void;
   onRefresh: () => void;
-  onExtractAll: () => void;
-  onToggleFilter: () => void;
-  onToggleCellOrigins: () => void;
 }
 
 export function MaturityMatrixHeader({
   lastUpdated,
-  filterToGenerate,
-  showCellOrigins,
   onRefresh,
-  onExtractAll,
-  onToggleFilter,
-  onToggleCellOrigins,
 }: MaturityMatrixHeaderProps) {
   return (
     <header className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs">
@@ -49,35 +39,20 @@ export function MaturityMatrixHeader({
               Maturity Matrix Evolution Dashboard
             </h1>
             <p className="mt-0.5 text-xs text-slate-500 font-normal">
-              Tracking Pillar Progress between Assessments &amp; Extracts • Specification from{' '}
-              <strong className="font-bold text-slate-700">"Readme"</strong> Sheet
+              Tracking Pillar Progress between Assessments &amp; Extracts
             </p>
           </div>
         </div>
 
         {/* Global Action Controls */}
         <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" variant="default" size="sm" onClick={onRefresh}>
+          <Button data-tooltip="Refresh data from Maturity Matrix Repository, it will create a new snapshot view of Assessments" onClick={onRefresh} size="sm" title="Refresh data from Maturity Matrix Repository, it will create a new snapshot view of Assessments" type="button" variant="default">
             Refresh Data
           </Button>
 
-          <Button type="button" variant="secondary" size="sm" onClick={onExtractAll}>
-            Extract ALL
-          </Button>
-
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-semibold text-slate-700">
-            <Checkbox checked={filterToGenerate} onCheckedChange={onToggleFilter} />
-            <span>Filter: TO Generate = TRUE</span>
-          </label>
-
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-semibold text-slate-700">
-            <Checkbox checked={showCellOrigins} onCheckedChange={onToggleCellOrigins} />
-            <span>Show Cell Origins</span>
-          </label>
-
           <div className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-medium text-slate-600">
             <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" />
-            <span>Last extract: {lastUpdated}</span>
+            <span><strong>Last extract:</strong> {lastUpdated}</span>
           </div>
         </div>
       </div>

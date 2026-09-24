@@ -13,7 +13,6 @@ import { useMaturityMatrixStore } from '../store/useMaturityMatrixStore';
 export function MaturityMatrixPanel() {
   const {
     activeTab,
-    filterToGenerate,
     selectedLeader,
     selectedAssessor,
     selectedPillar,
@@ -27,7 +26,6 @@ export function MaturityMatrixPanel() {
     kpis,
   } = useMaturityMatrixState();
 
-  const showCellOrigins = useMaturityMatrixStore((state) => state.showCellOrigins);
   const lastUpdated = useMaturityMatrixStore((state) => state.lastUpdated);
   const isLoading = useMaturityMatrixStore((state) => state.isLoading);
   const error = useMaturityMatrixStore((state) => state.error);
@@ -36,9 +34,6 @@ export function MaturityMatrixPanel() {
   const {
     handleTabChange,
     handleRefresh,
-    handleExtractAll,
-    handleToggleFilter,
-    handleToggleCellOrigins,
     handleSelectedLeaderChange,
     handleSelectedAssessorChange,
     handleSelectedPillarChange,
@@ -54,17 +49,7 @@ export function MaturityMatrixPanel() {
 
   return (
     <div className="flex h-full w-full flex-col gap-4 overflow-auto bg-slate-50 p-4 text-slate-800">
-      <MaturityMatrixHeader
-        activeTab={activeTab}
-        lastUpdated={lastUpdated}
-        filterToGenerate={filterToGenerate}
-        showCellOrigins={showCellOrigins}
-        onTabChange={handleTabChange}
-        onRefresh={handleRefresh}
-        onExtractAll={handleExtractAll}
-        onToggleFilter={handleToggleFilter}
-        onToggleCellOrigins={handleToggleCellOrigins}
-      />
+      <MaturityMatrixHeader activeTab={activeTab} lastUpdated={lastUpdated} onRefresh={handleRefresh} onTabChange={handleTabChange}/>
 
       {error && (
         <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs font-medium text-rose-700">
@@ -101,24 +86,15 @@ export function MaturityMatrixPanel() {
             onCollapseAll={handleCollapseAll}
           />
 
-          {activeTab === 'matrix' && <MaturityMatrixTab applications={filteredApplications} />}
+          {activeTab === 'matrix' && <MaturityMatrixTab applications={filteredApplications}/>}
           {activeTab === 'compare' && (
-            <PillarDeltaAnalyticsTab
-              pillars={pillarOptions}
-              applications={filteredApplications}
-            />
+            <PillarDeltaAnalyticsTab applications={filteredApplications} pillars={pillarOptions}/>
           )}
           {activeTab === 'extracts' && (
-            <ExtractsAndAssessorsTab
-              pillars={pillarOptions}
-              applications={filteredApplications}
-            />
+            <ExtractsAndAssessorsTab applications={filteredApplications} pillars={pillarOptions}/>
           )}
           {activeTab === 'speedrun' && (
-            <AssessmentSpeedrunTab
-              pillars={pillarOptions}
-              applications={filteredApplications}
-            />
+            <AssessmentSpeedrunTab applications={filteredApplications} pillars={pillarOptions}/>
           )}
         </>
       )}

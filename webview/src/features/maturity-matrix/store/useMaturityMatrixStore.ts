@@ -46,6 +46,27 @@ const EMPTY_MATURITY_DATA: MaturityMatrixData = {
   applications: [],
 };
 
+function formatLastExtractDate(rawDate: string): string {
+  if (!rawDate) return 'Not synced';
+  const match = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})-(\d{2})$/);
+  if (match) {
+    return `${match[1]}/${match[2]}/${match[3]} -- ${match[4]}:${match[5]}:${match[6]}`;
+  }
+
+  const parsedDate = new Date(rawDate.replace('_', 'T'));
+  if (!isNaN(parsedDate.getTime())) {
+    const yyyy = parsedDate.getFullYear();
+    const mm = String(parsedDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(parsedDate.getDate()).padStart(2, '0');
+    const hh = String(parsedDate.getHours()).padStart(2, '0');
+    const min = String(parsedDate.getMinutes()).padStart(2, '0');
+    const ss = String(parsedDate.getSeconds()).padStart(2, '0');
+    return `${yyyy}/${mm}/${dd} -- ${hh}:${min}:${ss}`;
+  }
+
+  return rawDate;
+}
+
 export const useMaturityMatrixStore = create<MaturityMatrixState>((set, get) => ({
   data: EMPTY_MATURITY_DATA,
   isLoading: false,
@@ -65,9 +86,8 @@ export const useMaturityMatrixStore = create<MaturityMatrixState>((set, get) => 
     set({ isLoading: true, error: null });
     try {
       const data = await maturityMatrixApiService.getLastAssessments();
-      const updatedTime = data.updatedAt
-        ? new Date(data.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-        : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const rawDate = data.updatedAt || data.generatedAt || '';
+      const updatedTime = formatLastExtractDate(rawDate);
 
       set({
         data,

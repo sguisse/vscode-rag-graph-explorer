@@ -73,8 +73,6 @@ export function MaturityMatrixLegend({
   todayDate = '2026-09-16',
   className = '',
 }: MaturityMatrixLegendProps) {
-  const isFiltered = selectedDateStatus !== 'ALL';
-
   return (
     <div className={`flex flex-wrap items-center justify-between gap-2 w-full ${className}`}>
       {/* Left side: Expand/Collapse action buttons */}
@@ -118,17 +116,6 @@ export function MaturityMatrixLegend({
 
       {/* Right side: Status filters and date */}
       <div className="flex flex-wrap items-center gap-2">
-        {isFiltered && (
-        <Button
-          type="button"
-          size="xs"
-          onClick={() => onStatusClick('ALL')}
-            className="h-7 rounded-lg bg-indigo-600 px-2.5 text-xs font-semibold text-white hover:bg-indigo-700 transition-colors"
-          >
-            Reset Filter
-          </Button>
-        )}
-
         <span className="flex h-7 items-center rounded-lg border border-slate-200/80 bg-slate-100 px-2.5 text-xs font-bold text-slate-700 shadow-2xs">
           Today: {todayDate}
         </span>
