@@ -4,39 +4,15 @@ interface KpiSummary {
   avgPrevScore: string;
   scoreDelta: string;
   totalTargets: number;
-  extractPercent: number;
-  finishedExtracts: number;
-  totalPillarsCount: number;
+  freshPercent: number;
+  freshPillarsCount: number;
+  totalEligiblePillars: number;
+  over5MonthsCount: number;
   leaderCount: number;
 }
 
 interface MaturityMatrixKpisProps {
   metrics: KpiSummary;
-}
-
-const primaryCards = [
-  { label: 'Tracked Applications', value: 'totalApps', accent: 'text-slate-900' },
-  { label: 'Avg Maturity Score', value: 'avgScore', accent: 'text-indigo-700' },
-  { label: 'Targeted Pillars', value: 'totalTargets', accent: 'text-amber-600' },
-  { label: 'Extracts Finished', value: 'extractPercent', accent: 'text-emerald-600' },
-  { label: 'Active Leaders', value: 'leaderCount', accent: 'text-violet-700' },
-] as const;
-
-function formatValue(label: string, metrics: KpiSummary) {
-  switch (label) {
-    case 'tracked':
-      return metrics.totalApps;
-    case 'avgScore':
-      return `${metrics.avgScore}`;
-    case 'targets':
-      return metrics.totalTargets;
-    case 'extracts':
-      return `${metrics.extractPercent}%`;
-    case 'leaders':
-      return metrics.leaderCount;
-    default:
-      return '';
-  }
 }
 
 export function MaturityMatrixKpis({ metrics }: MaturityMatrixKpisProps) {
@@ -48,7 +24,7 @@ export function MaturityMatrixKpis({ metrics }: MaturityMatrixKpisProps) {
           <span>📊</span>
         </div>
         <div className="mt-3 text-2xl font-bold text-slate-900">{metrics.totalApps}</div>
-        <div className="mt-2 text-[11px] text-slate-500">TO Generate = TRUE ({metrics.totalApps} apps)</div>
+        <div className="mt-2 text-[11px] text-slate-500"></div>
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -75,12 +51,12 @@ export function MaturityMatrixKpis({ metrics }: MaturityMatrixKpisProps) {
 
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex items-center justify-between text-[11px] font-medium uppercase tracking-wide text-slate-500">
-          <span>Extracts Finished</span>
-          <span>✅</span>
+          <span>Fresh Assessments</span>
+          <span>🗓️</span>
         </div>
-        <div className="mt-3 text-2xl font-bold text-emerald-600">{metrics.extractPercent}%</div>
+        <div className="mt-3 text-2xl font-bold text-emerald-600">{metrics.freshPercent}%</div>
         <div className="mt-2 text-[11px] text-slate-500">
-          {metrics.finishedExtracts} / {metrics.totalPillarsCount} pillars 100%
+          {metrics.freshPillarsCount} / {metrics.totalEligiblePillars} pillars ≤ 6M ({metrics.over5MonthsCount} &gt; 5M)
         </div>
       </div>
 

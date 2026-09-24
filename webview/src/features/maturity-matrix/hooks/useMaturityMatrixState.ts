@@ -127,11 +127,43 @@ export function useMaturityMatrixState() {
       0,
     );
 
-    const totalPillarsCount = data.pillars.length * filteredApplications.length;
-    const finishedExtracts = filteredApplications.reduce(
-      (count, app) => count + Object.values(app.pillars).filter((pillar) => Number(pillar.lastExtract ?? 0) >= 100).length,
-      0,
-    );
+    let freshPillarsCount = 0;
+    let totalEligiblePillars = 0;
+    let over5MonthsCount = 0;
+
+    filteredApplications.forEach((app) => {
+      const nullDateCount = data.pillars.reduce((acc, pDef) => {
+        const pillar = app.pillars[pDef.key];
+        const isNullDate = !pillar || !pillar.date || pillar.date === 'null';
+        return acc + (isNullDate ? 1 : 0);
+      }, 0);
+
+      const ignoreNullDates = nullDateCount <= 2;
+
+      data.pillars.forEach((pDef) => {
+        const pillar = app.pillars[pDef.key];
+        if (!pillar) return;
+
+        const isNullDate = !pillar.date || pillar.date === 'null';
+        if (isNullDate && ignoreNullDates) {
+          return;
+        }
+
+        totalEligiblePillars += 1;
+
+        const status = getDateStatus(pillar.date);
+        if (status === 'green' || status === 'blue' || status === 'orange') {
+          freshPillarsCount += 1;
+        }
+        if (status === 'orange' || status === 'red' || status === 'yellow') {
+          over5MonthsCount += 1;
+        }
+      });
+    });
+
+    const freshPercent = totalEligiblePillars > 0
+      ? Math.round((freshPillarsCount / totalEligiblePillars) * 100)
+      : 0;
 
     return {
       totalApps,
@@ -139,12 +171,13 @@ export function useMaturityMatrixState() {
       avgPrevScore: averagePrevScore.toFixed(2),
       scoreDelta: `+${(averageScore - averagePrevScore).toFixed(2)}`,
       totalTargets,
-      extractPercent: totalPillarsCount > 0 ? Math.round((finishedExtracts / totalPillarsCount) * 100) : 0,
-      finishedExtracts,
-      totalPillarsCount,
+      freshPercent,
+      freshPillarsCount,
+      totalEligiblePillars,
+      over5MonthsCount,
       leaderCount: new Set(filteredApplications.map((app) => app.leader).filter((l) => Boolean(l && l !== '-'))).size,
     };
-  }, [data.pillars.length, filteredApplications]);
+  }, [data.pillars, filteredApplications]);
 
   return {
     activeTab,
