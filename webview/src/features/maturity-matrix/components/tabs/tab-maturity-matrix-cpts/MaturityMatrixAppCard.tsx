@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import type { MaturityApplication, MaturityPillarDefinition } from '../../../types/maturity-matrix.types';
 import {
   getAppMinMaxDates,
@@ -65,6 +66,18 @@ export function MaturityMatrixAppCard({
     [pillars, selectedPillar],
   );
 
+  const projectCode = app.code || app.id;
+  const url = `https://maturity-matrix.decathlon.net/PROJECT?project=${projectCode}`;
+  const tooltipText = `${url}<br/>If you press cmd/ctrl you will open the url in vscode embedded browser tab`;
+
+  const handleOpenProjectUrl = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const isCmdOrCtrl = e.metaKey || e.ctrlKey;
+    const inExternalBrowser = !isCmdOrCtrl;
+    vsCodeApiService.openUrl(url, inExternalBrowser);
+  };
+
   return (
     <div className="overflow-hidden border border-slate-200 bg-white shadow-xs rounded-xl">
       {/* Compact Header Bar */}
@@ -92,11 +105,20 @@ export function MaturityMatrixAppCard({
             </svg>
           </Button>
 
-          <h2 className="text-sm font-bold text-slate-900 tracking-tight shrink-0">
+          <h2
+            className="text-sm font-bold text-slate-900 tracking-tight shrink-0 cursor-pointer hover:text-indigo-600 hover:underline"
+            onClick={handleOpenProjectUrl}
+            title={tooltipText}
+            data-tooltip={tooltipText}
+          >
             {app.name}
           </h2>
 
-          <span className="px-1.5 py-0.5 bg-slate-200 text-slate-700 text-[10px] font-mono rounded flex items-center gap-1 shrink-0">
+          <span
+            className="px-1.5 py-0.5 bg-slate-200 text-slate-700 hover:text-indigo-900 hover:bg-slate-300 text-[10px] font-mono rounded flex items-center gap-1 shrink-0 cursor-pointer transition-colors"
+            onClick={handleOpenProjectUrl}
+            data-tooltip={tooltipText}
+          >
             <span>{app.code}</span>
             <CellOriginTag
               col="D"
@@ -179,7 +201,7 @@ export function MaturityMatrixAppCard({
         </div>
       </div>
 
-      {/* Collapsed Table Rendering with exact requested header gradient style */}
+      {/* Collapsed Table Rendering */}
       {!isExpanded && (
         <div className="border-t border-slate-100 bg-slate-50/30 overflow-x-auto p-0">
           <table className="w-full text-left border-collapse text-xs">
@@ -216,7 +238,7 @@ export function MaturityMatrixAppCard({
                   Last Assessment
                 </td>
                 <td className="py-2.5 px-2 text-slate-500 font-mono text-[11px] border-r border-slate-200 w-24 text-center items-center justify-center">
-                    Date<br />
+                  Date<br />
                   score&nbsp;/&nbsp;Level
                 </td>
                 {visiblePillars.map((p) => {

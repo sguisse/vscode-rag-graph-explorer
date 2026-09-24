@@ -77,7 +77,7 @@ export function MaturityMatrixLegend({
 
   return (
     <div className={`flex flex-wrap items-center justify-between gap-2 w-full ${className}`}>
-      {/* Expand and Collapse action buttons placed on the left side */}
+      {/* Left side: Expand/Collapse action buttons */}
       <div className="flex items-center gap-1.5">
         {onExpandAll && (
           <Button className="h-7 rounded-lg border-slate-200/80 bg-slate-50/80 px-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-2xs gap-1 cursor-pointer" onClick={onExpandAll} size="xs" title="Expand all application cards" type="button" variant="outline">
@@ -116,7 +116,7 @@ export function MaturityMatrixLegend({
         )}
       </div>
 
-      {/* Status filter controls and today date tag */}
+      {/* Right side: Status filters and date */}
       <div className="flex flex-wrap items-center gap-2">
         {isFiltered && (
         <Button
