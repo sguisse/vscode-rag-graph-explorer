@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { LeftCenterRightPanel } from '@/components/app/left-center-right-panel';
 import { vsCodeApiService } from '@/services/api/vs-code-api.service.gen';
 import type { MaturityApplication, MaturityPillarDefinition } from '../../../types/maturity-matrix.types';
 import {
@@ -67,7 +68,7 @@ export function MaturityMatrixAppCard({
   );
 
   const projectCode = app.code || app.id;
-  const url = `https://maturity-matrix.decathlon.net/PROJECT?project=${projectCode}`;
+  const url = `[https://maturity-matrix.decathlon.net/PROJECT?project=$](https://maturity-matrix.decathlon.net/PROJECT?project=$){projectCode}`;
   const tooltipText = `${url}<br/>If you press cmd/ctrl you will open the url in vscode embedded browser tab`;
 
   const handleOpenProjectUrl = (e: React.MouseEvent) => {
@@ -78,13 +79,9 @@ export function MaturityMatrixAppCard({
     vsCodeApiService.openUrl(url, inExternalBrowser);
   };
 
-  return (
-    <div className="overflow-hidden border border-slate-200 bg-white shadow-xs rounded-xl">
-      {/* Compact Header Bar */}
-      <div className="bg-slate-50 border-b border-slate-200 py-1 px-3 flex flex-wrap items-center justify-between gap-2 text-xs min-h-[36px]">
-        {/* Left Side Info */}
-        <div className="flex items-center gap-2.5 min-w-0 flex-1 flex-wrap">
-          <Button
+  const leftContent = (
+    <div className="flex items-center gap-2.5 min-w-0">
+       <Button
             type="button"
             size="sm"
             variant="ghost"
@@ -92,62 +89,60 @@ export function MaturityMatrixAppCard({
             className="h-6 w-6 p-0.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded transition-colors shrink-0 cursor-pointer"
             title={isExpanded ? 'Collapse Application' : 'Expand Application'}
           >
-            <svg
-              className="w-3.5 h-3.5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <polyline points={isExpanded ? '18 15 12 9 6 15' : '6 9 12 15 18 9'} />
-            </svg>
-          </Button>
+        <svg
+          className="w-3.5 h-3.5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <polyline points={isExpanded ? '18 15 12 9 6 15' : '6 9 12 15 18 9'} />
+        </svg>
+      </Button>
 
-          <h2
-            className="text-sm font-bold text-slate-900 tracking-tight shrink-0 cursor-pointer hover:text-indigo-600 hover:underline"
-            onClick={handleOpenProjectUrl}
-            title={tooltipText}
-            data-tooltip={tooltipText}
-          >
-            {app.name}
-          </h2>
+      <h2
+        className="text-sm font-bold text-slate-900 tracking-tight shrink-0 cursor-pointer hover:text-indigo-600 hover:underline"
+        onClick={handleOpenProjectUrl}
+        title={tooltipText}
+        data-tooltip={tooltipText}
+      >
+        {app.name}
+      </h2>
 
-          <span
-            className="px-1.5 py-0.5 bg-slate-200 text-slate-700 hover:text-indigo-900 hover:bg-slate-300 text-[10px] font-mono rounded flex items-center gap-1 shrink-0 cursor-pointer transition-colors"
-            onClick={handleOpenProjectUrl}
-            data-tooltip={tooltipText}
-          >
-            <span>{app.code}</span>
-            <CellOriginTag
-              col="D"
-              onOriginClick={onOriginClick}
-              row={rowIdx}
-              sheet="Maturity-Matrix-Projects"
-              showCellOrigins={showCellOrigins}
-            />
-          </span>
+      <span
+        className="px-1.5 py-0.5 bg-slate-200 text-slate-700 hover:text-indigo-900 hover:bg-slate-300 text-[10px] font-mono rounded flex items-center gap-1 shrink-0 cursor-pointer transition-colors"
+        onClick={handleOpenProjectUrl}
+        data-tooltip={tooltipText}
+      >
+        <span>{app.code}</span>
+        <CellOriginTag col="D" onOriginClick={onOriginClick} row={rowIdx} sheet="Maturity-Matrix-Projects" showCellOrigins={showCellOrigins}/>
+      </span>
+    </div>
+  );
 
-          <div className="flex items-center gap-1 bg-purple-50 text-purple-900 border border-purple-200 px-1.5 py-0.5 rounded font-semibold text-[10px] shrink-0">
-            <svg
-              className="w-3 h-3 text-purple-600 shrink-0"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle
-                cx="12"
-                cy="7"
-                r="4"
-              />
-            </svg>
-            <span>Leader (Col E):</span>
-            <Select
+  const centerContent = (
+    <div className="w-full flex items-center justify-start pl-2">
+      <div className="flex items-center gap-1 bg-purple-50 text-purple-900 border border-purple-200 px-1.5 py-0.5 rounded font-semibold text-[10px] shrink-0">
+        <svg
+          className="w-3 h-3 text-purple-600 shrink-0"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+          <circle
+            cx="12"
+            cy="7"
+            r="4"
+          />
+        </svg>
+        <span>Leader:</span>
+         <Select
               value={app.leader}
               onValueChange={(newLeader) => {
                 if (typeof newLeader === 'string') onUpdateLeader(app.code, newLeader);
@@ -167,39 +162,37 @@ export function MaturityMatrixAppCard({
                 ))}
               </SelectContent>
             </Select>
-            <CellOriginTag
-              col="E"
-              onOriginClick={onOriginClick}
-              row={rowIdx}
-              sheet="Maturity-Matrix-Projects"
-              showCellOrigins={showCellOrigins}
-            />
-          </div>
-        </div>
-
-        {/* Right Aligned Assessment Info */}
-        <div className="flex items-center gap-2 text-slate-500 text-[11px] shrink-0 ml-auto">
-          <span className="flex items-center gap-1">
-            <span>Last Assessment:</span>
-            <span
-              className={`px-1.5 py-0.5 rounded text-[10px] font-mono border flex items-center gap-1 cursor-help font-bold ${health.badgeBg}`}
-              title={`Assessment Date Range: ${dateRangeDisplay}\nStatus (driven by earliest date ${minDate || 'none'}): ${health.label}`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${health.dotColor}`} />
-              <span>{dateRangeDisplay}</span>
-              <span className="text-[9px] opacity-75 font-sans font-normal">
-                ({health.desc})
-              </span>
-            </span>
-          </span>
-
-          <span>•</span>
-
-          <span>
-            Previous: <strong className="text-slate-600">{app.prevAssessmentDate || '—'}</strong>
-          </span>
-        </div>
       </div>
+    </div>
+  );
+
+  const rightContent = (
+    <div className="flex items-center gap-2 text-slate-500 text-[11px] shrink-0">
+      <span className="flex items-center gap-1">
+        <span>Last Assessment:</span>
+        <span
+          className={`px-1.5 py-0.5 rounded text-[10px] font-mono border flex items-center gap-1 cursor-help font-bold ${health.badgeBg}`}
+          title={`Assessment Date Range: ${dateRangeDisplay}\nStatus (driven by earliest date ${minDate || 'none'}): ${health.label}`}
+        >
+          <span className={`w-1.5 h-1.5 rounded-full ${health.dotColor}`} />
+          <span>{dateRangeDisplay}</span>
+          <span className="text-[9px] opacity-75 font-sans font-normal">
+            ({health.desc})
+          </span>
+        </span>
+      </span>
+
+      <span>•</span>
+
+      <span>
+        Previous: <strong className="text-slate-600">{app.prevAssessmentDate || '—'}</strong>
+      </span>
+    </div>
+  );
+
+  return (
+    <div className="overflow-hidden border border-slate-200 bg-white shadow-xs rounded-xl">
+      <LeftCenterRightPanel center={centerContent} className="bg-slate-50 border-b border-slate-200 py-1 px-3 min-h-[36px]" id={`app-card-header-${appKey}`} left={leftContent} right={rightContent}/>
 
       {/* Collapsed Table Rendering */}
       {!isExpanded && (

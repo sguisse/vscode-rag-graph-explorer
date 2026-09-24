@@ -5,7 +5,7 @@ import { MaturityMatrixKpis } from './MaturityMatrixKpis';
 import { MaturityMatrixTab } from './tabs/MaturityMatrixTab';
 import { PillarDeltaAnalyticsTab } from './tabs/PillarDeltaAnalyticsTab';
 import { ExtractsAndAssessorsTab } from './tabs/ExtractsAndAssessorsTab';
-import { AssessorSpeedrunTab } from './tabs/AssessorSpeedrunTab';
+import { AssessmentSpeedrunTab } from './tabs/AssessmentSpeedrunTab';
 import { useMaturityMatrixHandlers } from '../hooks/useMaturityMatrixHandlers';
 import { useMaturityMatrixState } from '../hooks/useMaturityMatrixState';
 import { useMaturityMatrixStore } from '../store/useMaturityMatrixStore';
@@ -115,7 +115,7 @@ export function MaturityMatrixPanel() {
             />
           )}
           {activeTab === 'speedrun' && (
-            <AssessorSpeedrunTab
+            <AssessmentSpeedrunTab
               pillars={pillarOptions}
               applications={filteredApplications}
             />

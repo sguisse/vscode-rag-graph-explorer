@@ -20,6 +20,7 @@ export interface MaturityMatrixState {
 
   // Actions
   fetchLastAssessments: () => Promise<void>;
+  refreshAssessments: () => Promise<void>;
   setActiveTab: (tab: MaturityMatrixTabId) => void;
   setFilterToGenerate: (value: boolean | ((current: boolean) => boolean)) => void;
   setShowCellOrigins: (value: boolean | ((current: boolean) => boolean)) => void;
@@ -77,6 +78,19 @@ export const useMaturityMatrixStore = create<MaturityMatrixState>((set, get) => 
       set({
         isLoading: false,
         error: err instanceof Error ? err.message : 'Failed to fetch last assessments',
+      });
+    }
+  },
+
+  refreshAssessments: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      await maturityMatrixApiService.refreshAssessments();
+      await get().fetchLastAssessments();
+    } catch (err) {
+      set({
+        isLoading: false,
+        error: err instanceof Error ? err.message : 'Failed to refresh assessments',
       });
     }
   },

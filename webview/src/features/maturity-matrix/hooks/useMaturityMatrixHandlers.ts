@@ -12,6 +12,7 @@ export function useMaturityMatrixHandlers() {
   const setSelectedDateStatus = useMaturityMatrixStore((state) => state.setSelectedDateStatus);
   const setSearchQuery = useMaturityMatrixStore((state) => state.setSearchQuery);
   const fetchLastAssessments = useMaturityMatrixStore((state) => state.fetchLastAssessments);
+  const refreshAssessments = useMaturityMatrixStore((state) => state.refreshAssessments);
   const updateLeader = useMaturityMatrixStore((state) => state.updateLeader);
   const toggleToGenerate = useMaturityMatrixStore((state) => state.toggleToGenerate);
   const toggleTarget = useMaturityMatrixStore((state) => state.toggleTarget);
@@ -25,8 +26,8 @@ export function useMaturityMatrixHandlers() {
   );
 
   const handleRefresh = useCallback(() => {
-    fetchLastAssessments();
-  }, [fetchLastAssessments]);
+    refreshAssessments();
+  }, [refreshAssessments]);
 
   const handleExtractAll = useCallback(() => {
     fetchLastAssessments();

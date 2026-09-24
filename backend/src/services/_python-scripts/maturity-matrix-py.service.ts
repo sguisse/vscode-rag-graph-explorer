@@ -7,6 +7,7 @@ import {
   AssessmentsPyResult,
 } from '../../../../shared/services/maturity-matrix/index.js';
 import { getWorkspaceExtentionPath, getWorkspaceRoot } from '../../utils/utils-vscode.js';
+import { logInfo, logError } from '../../utils/utils-log';
 
 const execAsync = promisify(exec);
 
@@ -57,21 +58,25 @@ export class MaturityMatrixPyService {
   }
 
   async refreshAssessments(): Promise<AssessmentsPyReport> {
+    logInfo(`[MaturityMatrixPyService] Refreshing assessments using script: ${this.scriptPath}`);
     const rawOutput = await this.runPythonAction('refresh-assessments');
     return JSON.parse(rawOutput) as AssessmentsPyReport;
   }
 
   async getLastAssessments(): Promise<AssessmentsPyResult> {
+    logInfo(`[MaturityMatrixPyService] Getting last assessments using script: ${this.scriptPath}`);
     const rawOutput = await this.runPythonAction('get-last-assessments');
     return JSON.parse(rawOutput) as AssessmentsPyResult;
   }
 
   async getAssessmentsAt(datetimeExtract: string): Promise<AssessmentsPyResult> {
+    logInfo(`[MaturityMatrixPyService] Getting assessments at ${datetimeExtract} using script: ${this.scriptPath}`);
     const rawOutput = await this.runPythonAction('get-assessments-at', `--assessment-datetime "${datetimeExtract}"`);
     return JSON.parse(rawOutput) as AssessmentsPyResult;
   }
 
   async getAssessmentsAvailable(): Promise<string[]> {
+    logInfo(`[MaturityMatrixPyService] Getting available assessments using script: ${this.scriptPath}`);
     const rawOutput = await this.runPythonAction('get-assessments-available');
     return JSON.parse(rawOutput) as string[];
   }
