@@ -1,0 +1,71 @@
+applications:
+  - code: "APO"
+    pillars:
+      - name: "DATA"
+        targeted: true
+        status: "IN_PROGRESS"
+        capabilities:
+          - name: "Data privacy"
+            question-id: "#2-DP00-FDIITDOY-ce51054c"
+            date: "YYYY-MM-DD"
+            status: "TO-DO"
+            ticket: "https://jira.example.com/browse/CI-163"
+            comments: ""
+
+      - name: "DELIVERY"
+        targeted: true
+        capabilities:
+          - name: "Continous Integration"
+            question-id: "#3-CI00-YAUARWMB-7ca8ad29"
+            date: "TO-DEFINE"
+            status: "TO-DO"
+            ticket: "https://jira.example.com/browse/CI-123"
+            comments: "This capability is currently under review and will be implemented in the next phase."
+          - name: "Continous Integration"
+            question-id: "#4-CI00-YAUTDRWS-9b3f4eb5"
+            date: "2024-06-01"
+            status: "IN_PROGRESS"
+            ticket: "https://jira.example.com/browse/CI-124"
+            comments: "Difficult to fix."
+          - name: "Continous Integration"
+            question-id: "#4-CI00-YAUTDRWS-9b3f4eb5"
+            date: "2024-06-01"
+            status: "IN_PROGRESS"
+            ticket: "https://jira.example.com/browse/CI-124"
+            comments: "Difficult to fix."
+
+  - code: "BOM_MANAGER"
+    pillars:
+      - name: "DATA"
+        targeted: true
+        date: "2024-06-01"
+        status: "IN_PROGRESS"
+        capabilities:
+          - name: "Data privacy"
+            question-id: "#2-DP00-FDIITDOY-ce51054c"
+            date: "YYYY-MM-DD"
+            status: "TO-DO"
+            ticket: "https://jira.example.com/browse/CI-163"
+            comments: null
+
+      - name: "DELIVERY"
+        targeted: true
+        capabilities:
+          - name: "Continous Integration"
+            question-id: "#3-CI00-YAUARWMB-7ca8ad29"
+            date: "TO-DEFINE"
+            status: "TO-DO"
+            ticket: "https://jira.example.com/browse/CI-123"
+            comments: "This capability is currently under review and will be implemented in the next phase."
+          - name: "Continous Integration"
+            question-id: "#4-CI00-YAUTDRWS-9b3f4eb5"
+            date: "2024-06-01"
+            status: "IN_PROGRESS"
+            ticket: "https://jira.example.com/browse/CI-124"
+            comments: "Difficult to fix."
+          - name: "Continous Integration"
+            question-id: "#4-CI00-YAUTDRWS-9b3f4eb5"
+            date: "2024-06-01"
+            status: "IN_PROGRESS"
+            ticket: null
+            comments: null
