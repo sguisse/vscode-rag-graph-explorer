@@ -68,7 +68,7 @@ export function MaturityMatrixAppCard({
   );
 
   const projectCode = app.code || app.id;
-  const url = `[https://maturity-matrix.decathlon.net/PROJECT?project=$](https://maturity-matrix.decathlon.net/PROJECT?project=$){projectCode}`;
+  const url = `https://maturity-matrix.decathlon.net/PROJECT?project=${projectCode}`;
   const tooltipText = `${url}<br/>If you press cmd/ctrl you will open the url in vscode embedded browser tab`;
 
   const handleOpenProjectUrl = (e: React.MouseEvent) => {
