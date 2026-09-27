@@ -109,6 +109,7 @@
       }
    ],
    "favorites.sortDirection": "ASC",
+   "commentTranslate.source": "Google",
    // Prevent VS Code from decoration-checking every untracked file
    //"git.decorations.enabled": false
 
