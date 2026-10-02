@@ -284,7 +284,7 @@ class VsCodeSettings:
     logFileEnabled: bool = True
     logFileMaxSize: int = 5
     logFileMaxCountRetention: int = 5
-    processTimeout: int = 10000
+    processTimeout: int = 500000
     processSoundPath: str = "/System/Library/Sounds/Glass.aiff"
     processSoundDelay: int = 10000
     graphRagExplorer: "GraphRagExplorerSettings" = field(default_factory=GraphRagExplorerSettings)

@@ -51,7 +51,7 @@ export class PythonScriptExecutionManager {
     private finishedProcesses: Map<number, PythonScriptStatus> = new Map();
 
     private readonly MAX_FINISHED_PROCESSES = 100;
-    private readonly MAX_PROCESS_TIMEOUT_IN_MS = 10000;
+    private readonly MAX_PROCESS_TIMEOUT_IN_MS = 500_000;
     private readonly TIMEOUT_CHECK_INTERVAL_MS = 1000;
 
     private constructor() {

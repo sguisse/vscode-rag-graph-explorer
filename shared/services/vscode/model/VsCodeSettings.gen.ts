@@ -20,7 +20,7 @@ export class VsCodeSettings {
 
     logFileMaxCountRetention = 5;
 
-    processTimeout = 10000;
+    processTimeout = 500000;
 
     processSoundPath = "/System/Library/Sounds/Glass.aiff";
 

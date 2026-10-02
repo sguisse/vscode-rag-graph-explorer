@@ -181,7 +181,7 @@
         },
         "tokenRazor.processTimeout": {
           "type": "number",
-          "default": 10000,
+          "default": 500000,
           "description": "Default external process timeout in milliseconds (python scripts, sh scripts, ...)."
         },
         "tokenRazor.processSoundPath": {
