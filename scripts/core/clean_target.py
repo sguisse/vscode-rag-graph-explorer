@@ -8,8 +8,8 @@ script_dir = os.path.abspath(os.path.dirname(__file__))
 sys.path.insert(0, script_dir)
 sys.path.insert(0, os.path.abspath(os.path.join(script_dir, "..")))
 
-from core.VsCodeSettings_gen import vsCodeSettings
-from core.utils import info, success, warn
+import config as config_module
+from core.utils import info, success, warn, error
 
 # Key folders/keywords to PRESERVE from deletion
 PRESERVED_KEYWORDS = [
@@ -64,7 +64,7 @@ def is_valid_target_path(path: str, backend_rel_path: str) -> bool:
     segments = [seg for seg in norm_path.split("/") if seg]
 
     # Extract normalized backend directory segment (e.g., '.token-razor')
-    backend_seg = os.path.basename(backend_rel_path.strip("/\\")).lower() or ".token-razor"
+    backend_seg = os.path.basename(backend_rel_path.strip("/\\")).lower()
 
     has_target = "target" in segments
     has_backend = backend_seg in segments or backend_seg in norm_path
@@ -73,8 +73,11 @@ def is_valid_target_path(path: str, backend_rel_path: str) -> bool:
 
 
 def clean_target_workspace():
-    workspace_root = vsCodeSettings.workspaceRoot or os.getcwd()
-    backend_rel_path = vsCodeSettings.backendWorkspacePath or ".token-razor"
+    workspace_root = config_module.config.vsCodeSettings.workspaceRoot or os.getcwd()
+    backend_rel_path = getattr(config_module.config.vsCodeSettings, "backendWorkspacePath", None)
+    if not backend_rel_path:
+        error("backendWorkspacePath is missing in the central configuration; cleanup aborted.", component="CleanTarget")
+        raise ValueError("backendWorkspacePath is missing or undefined in vsCodeSettings configuration.")
 
     target_base = os.path.abspath(os.path.join(workspace_root, backend_rel_path)).replace("\\", "/")
 

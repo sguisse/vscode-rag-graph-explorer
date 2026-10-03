@@ -1,21 +1,21 @@
 import os
 import sys
-from install.base import BaseInstallModule
-from install.registry import InstallerRegistry
-from install.report_handler import ReportHandler
+from install.install import GraphRagExplorerInstall
+from core.installer.registry import InstallerRegistry
+from core.installer.report_handler import ReportHandler
 from core.utils import error, info
 
 from core.VsCodeSettings_gen import vsCodeSettings
 from install.modules.system.core.constants import (
-    CORE_MODULE_NAME,
     STATUS_OK,
     KEY_GITIGNORE_RULE_MAPPED,
     PREREQUISITES_VERIFY_LIST,
 )
+from install.modules.system.core.context import CORE_MODULE_NAME
 
 
 @InstallerRegistry.register_installer
-class SystemCoreInstaller(BaseInstallModule):
+class SystemCoreInstaller(GraphRagExplorerInstall):
     def __init__(self, context):
         super().__init__(context)
 

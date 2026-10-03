@@ -1,10 +1,14 @@
 import os
 import re
-from core.context import EnvironmentContext
 from core.VsCodeSettings_gen import vsCodeSettings
+from graph_rag_explorer.install.context import GraphRagExplorerContext
 
-class PostgresqlContext:
-    def __init__(self, ctx: EnvironmentContext):
+POSTGRESQL_MODULE_NAME = "01_system_postgresql16"
+
+
+class PostgresqlContext(GraphRagExplorerContext):
+    def __init__(self, ctx: GraphRagExplorerContext):
+        super().__init__(tool_name=ctx.tool_name)
         # Configuration Settings
         self.version = "16.2-1"
         try:
@@ -44,23 +48,23 @@ class PostgresqlContext:
         self.env["LC_ALL"] = self.lc_all
 
         # Core Sandbox Paths
-        self.sandbox_root = f"{ctx.tools_dir}/system/postgresql16"
+        self.sandbox_root = f"{self.tools_dir}/system/postgresql16"
         self.target_folder = os.path.join(self.sandbox_root, f"postgresql-{self.version}")
         self.bin_dir = os.path.join(self.target_folder, "bin")
         self.data_dir = os.path.join(self.sandbox_root, "data")
         self.logs_dir = os.path.join(self.sandbox_root, "logs")
 
         # Target results directory
-        self.raw_outputs_dir = f"{ctx.raw_outputs_dir}/postgresql"
+        self.raw_outputs_dir = f"{self.raw_outputs_dir}/postgresql"
 
         # Executable Commands
-        self.initdb_cmd = os.path.join(self.bin_dir, "initdb.exe" if ctx.is_windows else "initdb")
-        self.pg_ctl_cmd = os.path.join(self.bin_dir, "pg_ctl.exe" if ctx.is_windows else "pg_ctl")
-        self.psql_cmd = os.path.join(self.bin_dir, "psql.exe" if ctx.is_windows else "psql")
-        self.createdb_cmd = os.path.join(self.bin_dir, "createdb.exe" if ctx.is_windows else "createdb")
+        self.initdb_cmd = os.path.join(self.bin_dir, "initdb.exe" if self.is_windows else "initdb")
+        self.pg_ctl_cmd = os.path.join(self.bin_dir, "pg_ctl.exe" if self.is_windows else "pg_ctl")
+        self.psql_cmd = os.path.join(self.bin_dir, "psql.exe" if self.is_windows else "psql")
+        self.createdb_cmd = os.path.join(self.bin_dir, "createdb.exe" if self.is_windows else "createdb")
 
         # Distribution Archive Paths
-        if ctx.is_windows:
+        if self.is_windows:
             self.archive_name = f"postgresql-{self.version}-windows-x64-binaries.zip"
             self.download_url = f"https://get.enterprisedb.com/postgresql/postgresql-{self.version}-windows-x64-binaries.zip"
         else:

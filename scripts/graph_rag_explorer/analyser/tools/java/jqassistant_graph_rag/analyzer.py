@@ -4,7 +4,7 @@ from analyser.base import BaseAnalyser
 from analyser.registry import AnalyserRegistry
 from analyser.tools.neo4j.neo4j_client import Neo4jClient
 from core.utils import info, error, debug, execute_tracked_command, success, warn
-from core.context import EnvironmentContext
+from graph_rag_explorer.install.context import GraphRagExplorerContext
 from core.VsCodeSettings_gen import vsCodeSettings
 from install.modules.java.jqassistant_graph_rag.context import JQAssistantGraphRagContext
 
@@ -12,7 +12,7 @@ from install.modules.java.jqassistant_graph_rag.context import JQAssistantGraphR
 @AnalyserRegistry.register_analyser
 class JQAssistantGraphRagAnalyzer(BaseAnalyser):
 
-    def __init__(self, context: EnvironmentContext):
+    def __init__(self, context: GraphRagExplorerContext):
         # 1. Call the parent class (BaseAnalyser) to store global context
         super().__init__(context)
         # 2. Compose the specific jQAssistant Graph RAG context

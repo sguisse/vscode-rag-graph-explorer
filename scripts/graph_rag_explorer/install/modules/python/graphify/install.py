@@ -1,12 +1,22 @@
-from install.base import BaseInstallModule
-from install.registry import InstallerRegistry
+from install.install import GraphRagExplorerInstall
+from core.installer.registry import InstallerRegistry
+from install.modules.python.graphify.context import (
+    PYTHON_GRAPHIFY_MODULE_NAME,
+    PythonGraphifyContext,
+)
 from core.utils import info
 from core.VsCodeSettings_gen import vsCodeSettings
 
+
 @InstallerRegistry.register_installer
-class PythonGraphifyInstaller(BaseInstallModule):
+class PythonGraphifyInstaller(GraphRagExplorerInstall):
+    def __init__(self, context):
+        super().__init__(context)
+        self.ctx = PythonGraphifyContext(context)
+
     @property
-    def name(self) -> str: return "python_graphify"
+    def name(self) -> str:
+        return PYTHON_GRAPHIFY_MODULE_NAME
 
     def verify_graphify_arguments_setting(self):
         graphify_args = vsCodeSettings.graphRagExplorer.graphify.arguments

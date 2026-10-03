@@ -10,15 +10,13 @@ import subprocess
 import socket
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
-from install.base import BaseInstallModule
-from install.registry import InstallerRegistry
+from install.install import GraphRagExplorerInstall
+from core.installer.registry import InstallerRegistry
 from core.utils import info, success, error, warn
-from install.modules.system.neo4j.context import Neo4jContext
-
-NEO4J_MODULE_NAME = "01_system_neo4j"
+from install.modules.system.neo4j.context import NEO4J_MODULE_NAME, Neo4jContext
 
 @InstallerRegistry.register_installer
-class SystemNeo4jInstaller(BaseInstallModule):
+class SystemNeo4jInstaller(GraphRagExplorerInstall):
     def __init__(self, context):
         super().__init__(context)
         self.neo4j_ctx = Neo4jContext(context)

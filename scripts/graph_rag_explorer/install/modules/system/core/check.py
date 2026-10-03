@@ -3,12 +3,11 @@ import shutil
 import subprocess
 from pathlib import Path
 from typing import Optional
-from install.base import BaseCheckModule
-from install.registry import InstallerRegistry
+from install.check import GraphRagExplorerCheck
+from core.installer.registry import InstallerRegistry
 
 from core.VsCodeSettings_gen import vsCodeSettings
 from install.modules.system.core.constants import (
-    CORE_MODULE_NAME,
     STATUS_OK,
     STATUS_KO,
     KEY_PYTHON3_PREREQUISITE,
@@ -19,6 +18,7 @@ from install.modules.system.core.constants import (
     KEY_POSTGRESQL_PREREQUISITE,
     KEY_GITIGNORE_RULE_MAPPED,
 )
+from install.modules.system.core.context import CORE_MODULE_NAME
 
 
 def resolve_binary_path(cmd: str) -> Optional[str]:
@@ -56,7 +56,7 @@ def resolve_binary_path(cmd: str) -> Optional[str]:
 
 
 @InstallerRegistry.register_checker
-class SystemCoreChecker(BaseCheckModule):
+class SystemCoreChecker(GraphRagExplorerCheck):
     def __init__(self, context):
         super().__init__(context)
 

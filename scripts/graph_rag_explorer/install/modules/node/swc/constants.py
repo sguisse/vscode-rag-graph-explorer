@@ -1,1 +1,1 @@
-MODULE_NAME = "node_swc"
+from install.modules.node.swc.context import MODULE_NAME

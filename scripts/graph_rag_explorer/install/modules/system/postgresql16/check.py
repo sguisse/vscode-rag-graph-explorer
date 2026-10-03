@@ -4,14 +4,13 @@ import sys
 import subprocess
 import socket
 from typing import Optional
-from install.base import BaseCheckModule
-from install.registry import InstallerRegistry
-from install.modules.system.postgresql16.install import POSTGRESQL_MODULE_NAME
-from install.modules.system.postgresql16.context import PostgresqlContext
+from install.check import GraphRagExplorerCheck
+from core.installer.registry import InstallerRegistry
+from install.modules.system.postgresql16.context import PostgresqlContext, POSTGRESQL_MODULE_NAME
 from core.utils import info
 
 @InstallerRegistry.register_checker
-class SystemPostgresqlChecker(BaseCheckModule):
+class SystemPostgresqlChecker(GraphRagExplorerCheck):
     def __init__(self, context):
         super().__init__(context)
         self.pg_ctx = PostgresqlContext(context)

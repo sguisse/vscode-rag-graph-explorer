@@ -35,7 +35,7 @@ export function activate(extentionContext: vscode.ExtensionContext) {
 }
 
 function createOpenToolCommand(extentionContext: vscode.ExtensionContext) {
-    return () => {
+    return async () => {
         if (currentWebviewPanel) {
             currentWebviewPanel.reveal(vscode.ViewColumn.One);
             return;
@@ -43,6 +43,14 @@ function createOpenToolCommand(extentionContext: vscode.ExtensionContext) {
 
         pythonScriptExecutionManager.killAll();
         workspaceInstallationManager.syncScripts(extentionContext);
+        try {
+            await pythonScriptExecutionManager.ensurePythonEnvironment();
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            logError(`Failed to prepare the Python runtime: ${message}`, error);
+            await vscode.window.showErrorMessage(`GraphRAG Explorer could not prepare its Python runtime: ${message}`);
+            return;
+        }
 
         const webviewPanel: vscode.WebviewPanel = createWebviewPanel(extentionContext);
         currentWebviewPanel = webviewPanel;

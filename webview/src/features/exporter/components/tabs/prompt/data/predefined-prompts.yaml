@@ -219,6 +219,7 @@
       - Directories are created automatically by the applier (`mkdir -p` equivalent) — do not emit shell commands.
       - Never use snippets, placeholders, or truncation comments (`// ... rest of code`) inside `content` — always the full file.
       - Never escape or quote-wrap the `content` block scalar — YAML literal block (`|-`) content is taken verbatim; do not add backslash escapes for `$`, backticks, or quotes that would be needed in a shell heredoc.
+      - Never remove comment lines inside the `content` block; they are considered part of the file's content and may be necessary for context or documentation.
 
       - JSX/TSX Integrity Safeguards (apply to any `content` for a `.tsx`/`.jsx` entry):
         - MANDATORY ONE-PROP-PER-LINE FORMAT: any JSX tag with 2+ attributes MUST place exactly one `propName={expression}` (or `propName="literal string"`) per line, with the tag's closing `>` or `/>` alone on its own line. NEVER place two or more attributes on the same line, and NEVER split a single attribute across multiple lines.
@@ -290,6 +291,7 @@
         - REMOVE FILES: `echo "🗑️ Removing existing file: 'path/to/file'"` then `rm -f path/to/file`.
         - STRICT RULE: Do NOT use `sed`, `awk`, or partial code snippets with truncation comments (`// ... rest of file`).
         - Binary or generated assets (images, fonts, lockfiles) are out of scope for diff patches — flag them for manual handling instead of fabricating a binary diff.
+        - Never remove comment lines inside the `content` block; they are considered part of the file's content and may be necessary for context or documentation.
 
       - JSX/TSX Integrity Safeguards (apply to heredoc content for NEW files AND to added `+` lines inside diff hunks for EXISTING files):
         - MANDATORY ONE-PROP-PER-LINE FORMAT: any JSX tag with 2+ attributes MUST place exactly one `propName={expression}` per line, with the closing `>`/`/>` alone on its own line. Never place two or more attributes on the same line, never split a single attribute across lines.

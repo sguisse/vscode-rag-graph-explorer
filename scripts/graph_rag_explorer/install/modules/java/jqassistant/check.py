@@ -3,22 +3,22 @@ from typing import cast
 import shutil
 import os
 import subprocess
-from install.base import BaseCheckModule
-from install.registry import InstallerRegistry
-from install.modules.java.jqassistant.context import JQAssistantContext
+from install.check import GraphRagExplorerCheck
+from core.installer.registry import InstallerRegistry
+from install.modules.java.jqassistant.context import JQASSISTANT_MODULE_NAME, JQAssistantContext
 from install.modules.system.neo4j.check import SystemNeo4jChecker
 from core.VsCodeSettings_gen import vsCodeSettings
 from core.utils import info, success, error, warn
 
 @InstallerRegistry.register_checker
-class JQAssistantChecker(BaseCheckModule):
+class JQAssistantChecker(GraphRagExplorerCheck):
     def __init__(self, context):
         super().__init__(context)
         self.jqa = JQAssistantContext(context)
 
 
     @property
-    def name(self) -> str: return "java_jqassistant"
+    def name(self) -> str: return JQASSISTANT_MODULE_NAME
 
     def _find_sandboxed_binary(self, base_dir: str, target_name: str) -> str:
         if not os.path.exists(base_dir): return None

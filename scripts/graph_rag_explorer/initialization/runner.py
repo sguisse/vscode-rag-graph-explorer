@@ -1,7 +1,6 @@
 import os
 from core.utils import info, success
 #from initialization.discovery_engine import DiscoveryEngine
-from install.base import EnvironmentContext
 from install.modules.system.neo4j.check import SystemNeo4jChecker
 from install.modules.system.neo4j.install import SystemNeo4jInstaller
 
@@ -18,4 +17,5 @@ def run_initialization_pipeline() -> str:
     #manifest_path = discovery.generate_manifest()
 
     #return manifest_path
+    success(f"Phase 2 completed: no initialization step to execute for workspace '{workspace_root}'.", component="InitializationRunner")
     return ""

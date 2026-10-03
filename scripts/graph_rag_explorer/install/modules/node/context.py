@@ -1,11 +1,9 @@
 import os
-from typing import Any
-from core.VsCodeSettings_gen import vsCodeSettings
-from core.utils import info
-from core.context import EnvironmentContext
+from graph_rag_explorer.install.context import GraphRagExplorerContext
 
 
-class NodeContext:
-    def __init__(self, ctx: EnvironmentContext):
-        # We pass the global EnvironmentContext to derive specific paths
-        self.node_env_path = f"{ctx.tools_dir}/node"
+class NodeContext(GraphRagExplorerContext):
+    def __init__(self, ctx: GraphRagExplorerContext):
+        super().__init__(tool_name=ctx.tool_name)
+        # We pass the global GraphRagExplorerContext to derive specific paths
+        self.node_env_path = f"{self.tools_dir}/node"

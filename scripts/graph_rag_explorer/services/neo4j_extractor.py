@@ -2,11 +2,11 @@ import os
 import json
 from analyser.tools.neo4j.neo4j_client import Neo4jClient
 from core.utils import info, success, error, normalize_path
-from core.context import EnvironmentContext
+from graph_rag_explorer.install.context import GraphRagExplorerContext
 from install.modules.system.neo4j.context import Neo4jContext
 
 class UIExtractor:
-    def __init__(self, env_context: EnvironmentContext, neo4j_client: Neo4jClient):
+    def __init__(self, env_context: GraphRagExplorerContext, neo4j_client: Neo4jClient):
         self.ui_outputs_dir = normalize_path(f"{env_context.ui_outputs_dir}")
         self.workspace_root = normalize_path(env_context.workspace_root)
         self.neo4j_client = neo4j_client
@@ -156,7 +156,7 @@ def run_ui_extractor_pipeline():
     info("Bootstrapping Phase 4: UI render payload generation...", component="UIExtractorPipeline")
 
     # 1. Instantiate the Contexts
-    env_context = EnvironmentContext()
+    env_context = GraphRagExplorerContext()
     neo4j_ctx = Neo4jContext(env_context)
 
     # 2. Connect to the Database

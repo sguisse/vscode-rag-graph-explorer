@@ -1,6 +1,6 @@
 ---
 name: py-module-installer
-description: Create and register a modular tool checker and installer within the GraphRAG Explorer installation pipeline adhering to BaseCheckModule and BaseInstallModule standards.
+description: Create and register a modular tool checker and installer within the GraphRAG Explorer installation pipeline using GraphRAG-specific base classes.
 ---
 
 # GraphRAG Explorer Tool Installer Module Creation
@@ -25,8 +25,8 @@ Create the tool module in the pipeline directory tree:
 scripts/graph_rag_explorer/install/modules/<category>/<tool_name>/
 ├── constants.py    # (Optional) Platform target generation & module constants
 ├── context.py      # (Optional) Tool-specific context, path resolution, VS Code settings
-├── check.py        # MANDATORY: Check module inheriting BaseCheckModule with decorator
-└── install.py      # MANDATORY: Install module inheriting BaseInstallModule with decorator
+├── check.py        # MANDATORY: Check module inheriting GraphRagExplorerCheck with decorator
+└── install.py      # MANDATORY: Install module inheriting GraphRagExplorerInstall with decorator
 ```
 
 ---
@@ -35,7 +35,7 @@ scripts/graph_rag_explorer/install/modules/<category>/<tool_name>/
 
 ### Step 1: Define Module Context & Constants (Optional)
 
-Manage path resolutions using `EnvironmentContext` (`core.context`) and settings bindings from `vsCodeSettings` (`core.VsCodeSettings_gen`).
+Manage path resolutions using `GraphRagExplorerContext` (`graph_rag_explorer.install.context`) and settings bindings from `vsCodeSettings` (`core.VsCodeSettings_gen`).
 
 **Example: Target Resolution (`constants.py`)**
 
@@ -56,10 +56,10 @@ def get_platform_target() -> str:
 
 ```python
 from core.VsCodeSettings_gen import vsCodeSettings
-from core.context import EnvironmentContext
+from graph_rag_explorer.install.context import GraphRagExplorerContext
 
 class ToolContext:
-    def __init__(self, ctx: EnvironmentContext):
+    def __init__(self, ctx: GraphRagExplorerContext):
         self.version = vsCodeSettings.graphRagExplorer.<tool_name>.version
         self.tools_dir = f"{ctx.tools_dir}/<category>/<tool_name>"
         self.workspace_root = ctx.workspace_root
@@ -67,16 +67,16 @@ class ToolContext:
 
 ### Step 2: Implement the Checker (`check.py`)
 
-Inherit from `BaseCheckModule`, implement `name` and `execute_all_checks()`, and decorate with `@InstallerRegistry.register_checker`.
+Inherit from `GraphRagExplorerCheck`, implement `name` and `execute_all_checks()`, and decorate with `@InstallerRegistry.register_checker`.
 
 ```python
 import os
-from install.base import BaseCheckModule
-from install.registry import InstallerRegistry
+from install.check import GraphRagExplorerCheck
+from core.installer.registry import InstallerRegistry
 from install.modules.node.context import NodeContext
 
 @InstallerRegistry.register_checker
-class ToolChecker(BaseCheckModule):
+class ToolChecker(GraphRagExplorerCheck):
     def __init__(self, context):
         super().__init__(context)
         self.node_ctx = NodeContext(context)
@@ -109,18 +109,18 @@ class ToolChecker(BaseCheckModule):
 
 ### Step 3: Implement the Installer (`install.py`)
 
-Inherit from `BaseInstallModule`, implement `name` and `execute_all_installations()`, and decorate with `@InstallerRegistry.register_installer`.
+Inherit from `GraphRagExplorerInstall`, implement `name` and `execute_all_installations()`, and decorate with `@InstallerRegistry.register_installer`.
 
 ```python
 from typing import Optional
-from install.base import BaseInstallModule
-from install.registry import InstallerRegistry
+from install.install import GraphRagExplorerInstall
+from core.installer.registry import InstallerRegistry
 from core.utils import execute_tracked_command, info, success, error
 from install.modules.node.context import NodeContext
 from install.modules.<category>.<tool_name>.check import ToolChecker
 
 @InstallerRegistry.register_installer
-class ToolInstaller(BaseInstallModule):
+class ToolInstaller(GraphRagExplorerInstall):
     def __init__(self, context):
         super().__init__(context)
         self.node_ctx = NodeContext(context)

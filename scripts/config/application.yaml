@@ -1,0 +1,12 @@
+# Default global application configuration for python scripts
+appName: "GraphRAG Explorer Backend Scripts"
+version: "2.0.0"
+
+vsCodeSettings:
+  logFileEnabled: true
+  logFileMaxSize: 5
+  logFileMaxCountRetention: 5
+
+exporter:
+  defaultFormat: "yaml"
+  maxChunkSizeKb: 500

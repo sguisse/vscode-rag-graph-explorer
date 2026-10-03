@@ -1,14 +1,14 @@
 import shutil
 import os
-from install.base import BaseCheckModule
-from install.registry import InstallerRegistry
-from install.modules.node.dependency_cruiser.constants import (
+from install.check import GraphRagExplorerCheck
+from core.installer.registry import InstallerRegistry
+from install.modules.node.dependency_cruiser.context import (
     MODULE_NAME,
+    NodeContext,
 )
-from install.modules.node.context import NodeContext
 
 @InstallerRegistry.register_checker
-class NodeDependencyCruiserChecker(BaseCheckModule):
+class NodeDependencyCruiserChecker(GraphRagExplorerCheck):
     def __init__(self, context):
         super().__init__(context)
         self.node_ctx = NodeContext(context)

@@ -2,11 +2,11 @@
 from abc import abstractmethod
 
 from analyser.tools.neo4j.neo4j_client import Neo4jClient
-from core.context import EnvironmentContext
+from graph_rag_explorer.install.context import GraphRagExplorerContext
 
 class BaseAnalyser:
 
-    def __init__(self, context: EnvironmentContext):
+    def __init__(self, context: GraphRagExplorerContext):
         self.context = context
 
     @property

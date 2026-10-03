@@ -10,15 +10,13 @@ import zipfile
 import subprocess
 import socket
 from typing import Optional
-from install.base import BaseInstallModule
-from install.registry import InstallerRegistry
+from install.install import GraphRagExplorerInstall
+from core.installer.registry import InstallerRegistry
 from core.utils import info, success, error, warn
-from install.modules.system.postgresql16.context import PostgresqlContext
-
-POSTGRESQL_MODULE_NAME = "01_system_postgresql16"
+from install.modules.system.postgresql16.context import PostgresqlContext, POSTGRESQL_MODULE_NAME
 
 @InstallerRegistry.register_installer
-class SystemPostgresqlInstaller(BaseInstallModule):
+class SystemPostgresqlInstaller(GraphRagExplorerInstall):
     def __init__(self, context):
         super().__init__(context)
         self.pg_ctx = PostgresqlContext(context)

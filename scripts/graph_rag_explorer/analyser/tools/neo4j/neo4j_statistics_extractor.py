@@ -1,7 +1,7 @@
 import os
 import json
 from core.utils import info, success, error, debug
-from core.context import EnvironmentContext
+from graph_rag_explorer.install.context import GraphRagExplorerContext
 from install.modules.system.neo4j.context import Neo4jContext
 
 def build_statistics(neo4j_client, workspace_root: str):
@@ -11,7 +11,7 @@ def build_statistics(neo4j_client, workspace_root: str):
     """
     info("Extracting Neo4j advanced architectural matrix statistics...", component="StatisticsExtractor")
 
-    env_context = EnvironmentContext()
+    env_context = GraphRagExplorerContext()
     neo4j_ctx = Neo4jContext(env_context)
     stats_target_dir = neo4j_ctx.raw_outputs_dir
     info(f"Neo4j stats_target_dir '{stats_target_dir}", component="StatisticsExtractor")

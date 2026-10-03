@@ -1,4 +1,4 @@
-CORE_MODULE_NAME = "01_system_core"
+from install.modules.system.core.context import CORE_MODULE_NAME
 
 STATUS_OK = "✅"
 STATUS_KO = "❌"

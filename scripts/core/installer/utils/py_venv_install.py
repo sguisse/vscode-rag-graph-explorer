@@ -19,7 +19,7 @@ from typing import Any
 # When this module lives in `_common/`, the scripts directory is the parent
 # folder of the package folder.
 # ---------------------------------------------------------------------------
-_SCRIPTS_DIR = Path(__file__).parents[2]
+_SCRIPTS_DIR = Path(__file__).parents[3]
 
 # ---------------------------------------------------------------------------
 # Ensure callers running the module standalone can still import the sibling

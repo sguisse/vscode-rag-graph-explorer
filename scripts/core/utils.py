@@ -6,7 +6,7 @@ import signal
 from datetime import datetime
 from typing import List, Dict, Any
 
-from core.VsCodeSettings_gen import vsCodeSettings
+import config as config_module
 
 for stream in (sys.stdout, sys.stderr):
     if hasattr(stream, "reconfigure"):
@@ -29,7 +29,9 @@ def configure_logger(workspace_root: str, enabled: bool, max_size: int, retentio
     MAX_SIZE_MB = max_size
     MAX_RETENTION = retention
     if LOG_ENABLED and WORKSPACE_ROOT:
-        beScriptsPath = vsCodeSettings.backendWorkspacePath
+        beScriptsPath = getattr(config_module.config.vsCodeSettings, "backendWorkspacePath", None)
+        if not beScriptsPath:
+            raise ValueError("backendWorkspacePath is missing or undefined in vsCodeSettings configuration.")
         logs_dir = f"{WORKSPACE_ROOT}/{beScriptsPath}/logs"
         os.makedirs(logs_dir, exist_ok=True)
         active_idx = 1
@@ -57,9 +59,10 @@ def _log(level: str, component: str, message: str):
 
     if LOG_ENABLED and WORKSPACE_ROOT:
         try:
-            beScriptsPath = vsCodeSettings.backendWorkspacePath
+            beScriptsPath = getattr(config_module.config.vsCodeSettings, "backendWorkspacePath", None)
+            if not beScriptsPath:
+                raise ValueError("backendWorkspacePath is missing or undefined in vsCodeSettings configuration.")
             logs_dir = f"{WORKSPACE_ROOT}/{beScriptsPath}/logs"
-            log_path = f"{logs_dir}/logs_dir/graph-rag-explorer-{CURRENT_FILE_INDEX:02d}.log"
             with open(f"{logs_dir}/graph-rag-explorer-{CURRENT_FILE_INDEX:02d}.log", "a", encoding="utf-8") as lf:
                 lf.write(full_message + "\n")
         except Exception: pass
@@ -78,7 +81,9 @@ def resolve_executable_name(base_command: str) -> str:
     return base_command
 
 def get_pids_dir() -> str:
-    beScriptsPath = vsCodeSettings.backendWorkspacePath
+    beScriptsPath = getattr(config_module.config.vsCodeSettings, "backendWorkspacePath", None)
+    if not beScriptsPath:
+        raise ValueError("backendWorkspacePath is missing or undefined in vsCodeSettings configuration.")
     return f"{WORKSPACE_ROOT}/{beScriptsPath}/target/pids"
 
 def cleanup_orphan_pids():

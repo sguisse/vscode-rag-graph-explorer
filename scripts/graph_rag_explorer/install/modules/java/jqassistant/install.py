@@ -8,16 +8,16 @@ import zipfile
 import urllib.request
 import urllib.error
 from typing import Optional
-from install.base import BaseInstallModule
-from install.registry import InstallerRegistry
+from install.install import GraphRagExplorerInstall
+from core.installer.registry import InstallerRegistry
 from core.utils import info, success, error, warn
-from core.sources_discovery import discover_workspace_sources
+from graph_rag_explorer.services.sources_discovery import discover_workspace_sources
 from install.modules.java.jqassistant.check import JQAssistantChecker
-from install.modules.java.jqassistant.context import JQAssistantContext
+from install.modules.java.jqassistant.context import JQASSISTANT_MODULE_NAME, JQAssistantContext
 from core.VsCodeSettings_gen import vsCodeSettings
 
 @InstallerRegistry.register_installer
-class JavaJQAssistantInstaller(BaseInstallModule):
+class JavaJQAssistantInstaller(GraphRagExplorerInstall):
     def __init__(self, context):
         super().__init__(context)
         self.jqa = JQAssistantContext(context)
@@ -25,7 +25,7 @@ class JavaJQAssistantInstaller(BaseInstallModule):
         self._last_reported_percent = -5
 
     @property
-    def name(self) -> str: return "java_jqassistant"
+    def name(self) -> str: return JQASSISTANT_MODULE_NAME
 
     def _download_progress_bar(self, block_num, block_size, total_size):
         if total_size <= 0: return

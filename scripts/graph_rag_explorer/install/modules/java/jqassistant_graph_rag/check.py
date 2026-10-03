@@ -3,20 +3,25 @@ import shutil
 import os
 import subprocess
 import socket
-from install.base import BaseCheckModule
-from install.registry import InstallerRegistry
-from install.modules.java.jqassistant_graph_rag.context import JQAssistantGraphRagContext
+from install.check import GraphRagExplorerCheck
+from core.installer.registry import InstallerRegistry
+from install.modules.java.jqassistant_graph_rag.context import (
+    JQAssistantGraphRagContext,
+    JAVA_JQASSISTANT_GRAPH_RAG_MODULE_NAME,
+)
 from install.modules.system.neo4j.check import SystemNeo4jChecker
 from core.VsCodeSettings_gen import vsCodeSettings
 
+
 @InstallerRegistry.register_checker
-class JQAssistantGraphRagChecker(BaseCheckModule):
+class JQAssistantGraphRagChecker(GraphRagExplorerCheck):
     def __init__(self, context):
         super().__init__(context)
         self.jqa_gr = JQAssistantGraphRagContext(context)
 
     @property
-    def name(self) -> str: return "java_jqassistant_graph_rag"
+    def name(self) -> str:
+        return JAVA_JQASSISTANT_GRAPH_RAG_MODULE_NAME
 
     def check_git_lfs_availability(self):
         self.steps_count += 1

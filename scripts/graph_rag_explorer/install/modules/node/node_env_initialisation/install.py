@@ -1,17 +1,17 @@
 import os
 from typing import Optional
-from install.base import BaseInstallModule
-from install.registry import InstallerRegistry
-from core.utils import execute_tracked_command
+from install.install import GraphRagExplorerInstall
+from core.installer.registry import InstallerRegistry
+from core.utils import execute_tracked_command, info, success, error
 
-from install.modules.node.node_env_initialisation.constants import (
-    MODULE_NAME
+from install.modules.node.node_env_initialisation.context import (
+    MODULE_NAME,
+    NodeContext,
 )
-from install.modules.node.context import NodeContext
 from install.modules.node.node_env_initialisation.check import NodeEnvironmentChecker
 
 @InstallerRegistry.register_installer
-class NodeEnvironmentInstaller(BaseInstallModule):
+class NodeEnvironmentInstaller(GraphRagExplorerInstall):
     def __init__(self, context):
         super().__init__(context)
         self.node_ctx = NodeContext(context)
@@ -21,7 +21,12 @@ class NodeEnvironmentInstaller(BaseInstallModule):
 
     def init_package_json(self):
         if not os.path.exists(f"{self.node_ctx.node_env_path}/package.json"):
-            execute_tracked_command(["npm", "init", "-y"], "node_init", cwd=self.node_ctx.node_env_path)
+            info(f"Initializing node environment (npm init) in {self.node_ctx.node_env_path}...", component=self.name)
+            return_code = execute_tracked_command(["npm", "init", "-y"], "node_init", cwd=self.node_ctx.node_env_path)
+            if return_code == 0:
+                success("Node environment initialized.", component=self.name)
+            else:
+                error(f"npm init failed with code {return_code}", component=self.name)
 
     def execute_all_installations(self, installStatus: Optional[dict] = None) -> None:
         """Selectively runs configurations."""

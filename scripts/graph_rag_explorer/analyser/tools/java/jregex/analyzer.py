@@ -5,7 +5,7 @@ from analyser.registry import AnalyserRegistry
 from analyser.tools.neo4j.neo4j_client import Neo4jClient
 from core.utils import debug, info, error
 from install.modules.java.jqassistant.context import JQAssistantContext
-from graph_rag_explorer.core.sources_discovery import discover_workspace_sources
+from graph_rag_explorer.services.sources_discovery import discover_workspace_sources
 
 # TODO: Consider refactoring this into a more modular design, potentially splitting the regex analysis into separate classes for maintainability.
 # TODO:    Do the same thing for typescript, javascript, ... analyzers in the future.

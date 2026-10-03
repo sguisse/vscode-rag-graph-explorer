@@ -1,7 +1,6 @@
-import os
 import platform
 
-MODULE_NAME = "node_llm_copilot_sdk"
+from install.modules.node.sdk_copilot.context import MODULE_NAME
 
 def get_platform_target() -> str:
     """Detects system platform and architecture identifier."""

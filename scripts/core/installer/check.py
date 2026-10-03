@@ -1,13 +1,12 @@
-import os
-
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional
-from core.context import EnvironmentContext
+from typing import Dict, Any
+from core.installer.context import BaseEnvironmentContext
+
 
 class BaseCheckModule(ABC):
-    def __init__(self, context: EnvironmentContext):
+    def __init__(self, context: BaseEnvironmentContext):
         self.context = context
-        self.status = {}
+        self.status: Dict[str, Any] = {}
         self.steps_count = 0
         self.ko_count = 0
 
@@ -25,19 +24,6 @@ class BaseCheckModule(ABC):
             "globalStatus": "✅" if self.ko_count == 0 else "❌",
             "stepsCount": str(self.steps_count),
             "koCount": self.ko_count,
-            "okCount": self.steps_count - self.ko_count
+            "okCount": self.steps_count - self.ko_count,
         }
         return self.status
-
-class BaseInstallModule(ABC):
-    def __init__(self, context: EnvironmentContext):
-        self.context = context
-
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        pass
-
-    @abstractmethod
-    def execute_all_installations(self, installStatus: Optional[Dict[str, Any]] = None) -> None:
-        pass

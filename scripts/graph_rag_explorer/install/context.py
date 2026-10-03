@@ -1,10 +1,16 @@
 import os
-from typing import Any
+from core.installer.context import BaseEnvironmentContext
 from core.VsCodeSettings_gen import vsCodeSettings
-from core.utils import info
 
-class EnvironmentContext:
-    def __init__(self):
+GRAPH_RAG_EXPLORER_TOOL_NAME = "graph_rag_explorer"
+
+
+class GraphRagExplorerContext(BaseEnvironmentContext):
+    """Dedicated environment context implementation for graph_rag_explorer."""
+
+    def __init__(self, tool_name: str = GRAPH_RAG_EXPLORER_TOOL_NAME):
+        super().__init__(tool_name=tool_name)
+
         # System State
         self.is_windows = (os.name == 'nt')
 

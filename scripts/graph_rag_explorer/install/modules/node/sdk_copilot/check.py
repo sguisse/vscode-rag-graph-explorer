@@ -1,15 +1,15 @@
 import shutil
 import os
-from install.base import BaseCheckModule
-from install.registry import InstallerRegistry
-from install.modules.node.sdk_copilot.constants import (
+from install.check import GraphRagExplorerCheck
+from core.installer.registry import InstallerRegistry
+from install.modules.node.sdk_copilot.context import (
     MODULE_NAME,
-    get_platform_target
+    NodeContext,
 )
-from install.modules.node.context import NodeContext
+from install.modules.node.sdk_copilot.constants import get_platform_target
 
 @InstallerRegistry.register_checker
-class LlmSdkCopilotChecker(BaseCheckModule):
+class LlmSdkCopilotChecker(GraphRagExplorerCheck):
     def __init__(self, context):
         super().__init__(context)
         self.node_ctx = NodeContext(context)

@@ -2,8 +2,10 @@ import os
 import sys
 import importlib.util
 from typing import List, Type
-from install.base import BaseCheckModule, BaseInstallModule
-from core.utils import info, error
+from core.installer.check import BaseCheckModule
+from core.installer.install import BaseInstallModule
+from core.utils import info, success, error
+
 
 class InstallerRegistry:
     _checker_classes: List[Type[BaseCheckModule]] = []
@@ -33,6 +35,7 @@ class InstallerRegistry:
         cls._installer_classes.clear()
 
         info(f"Discovering and loading checkers and installers from: {install_root_dir}", component="InstallerRegistry")
+        failed_modules: List[str] = []
         for root, _, files in os.walk(install_root_dir):
             for target_file in ["check.py", "install.py"]:
                 if target_file in files:
@@ -49,4 +52,14 @@ class InstallerRegistry:
                         try:
                             spec.loader.exec_module(module)
                         except Exception as e:
+                            failed_modules.append(module_name)
                             error(f"Failed to load module {module_name} from {file_path}: {e}", component="InstallerRegistry")
+                    else:
+                        failed_modules.append(module_name)
+                        error(f"Unable to build an import spec for {module_name} from {file_path}", component="InstallerRegistry")
+
+        summary = f"{len(cls._checker_classes)} checker(s) and {len(cls._installer_classes)} installer(s) registered."
+        if failed_modules:
+            error(f"{summary} {len(failed_modules)} module(s) failed to load: {', '.join(failed_modules)}", component="InstallerRegistry")
+        else:
+            success(summary, component="InstallerRegistry")

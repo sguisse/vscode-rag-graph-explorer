@@ -11,15 +11,18 @@ import urllib.request
 import urllib.error
 from typing import Optional
 from pathlib import Path
-from install.base import BaseInstallModule
-from install.registry import InstallerRegistry
+from install.install import GraphRagExplorerInstall
+from core.installer.registry import InstallerRegistry
 from core.utils import info, success, error, warn
-from core.sources_discovery import discover_workspace_sources
+from graph_rag_explorer.services.sources_discovery import discover_workspace_sources
 from graph_rag_explorer.install.modules.java.jqassistant_graph_rag.check import JQAssistantGraphRagChecker
 from graph_rag_explorer.install.modules.java.jqassistant_graph_rag.tools.graph_rag_llm_model_dwn import download_graph_rag_llm_model
-from graph_rag_explorer.install.modules.java.jqassistant_graph_rag.context import JQAssistantGraphRagContext
+from graph_rag_explorer.install.modules.java.jqassistant_graph_rag.context import (
+    JQAssistantGraphRagContext,
+    JAVA_JQASSISTANT_GRAPH_RAG_MODULE_NAME,
+)
 from core.VsCodeSettings_gen import vsCodeSettings
-from graph_rag_explorer.install.utils.py_venv_install import venv_install, get_venv_python
+from core.installer.utils.py_venv_install import venv_install, get_venv_python
 
 
 def is_port_open(port: int, host: str = "127.0.0.1") -> bool:
@@ -32,7 +35,7 @@ def is_port_open(port: int, host: str = "127.0.0.1") -> bool:
 
 
 @InstallerRegistry.register_installer
-class JQAssistantGraphRagInstaller(BaseInstallModule):
+class JQAssistantGraphRagInstaller(GraphRagExplorerInstall):
     def __init__(self, context):
         super().__init__(context)
         self.jqa_gr = JQAssistantGraphRagContext(context)
@@ -40,7 +43,8 @@ class JQAssistantGraphRagInstaller(BaseInstallModule):
         self._last_reported_percent = -5
 
     @property
-    def name(self) -> str: return "java_jqassistant_graph_rag"
+    def name(self) -> str:
+        return JAVA_JQASSISTANT_GRAPH_RAG_MODULE_NAME
 
     def ensure_git_lfs(self):
         """Verifies git-lfs presence and applies symlink remediation or prompts installation."""
@@ -84,7 +88,11 @@ class JQAssistantGraphRagInstaller(BaseInstallModule):
         shutil.copytree(source_path, target_path, dirs_exist_ok=True)
 
         info(f"Installing jqassistant-graph-rag tool dedicated python environment...", component=self.name)
-        venv_install(target_path)
+        venv_status, venv_message = venv_install(target_path)
+        if venv_status != "OK":
+            error(f"Python environment installation failed for jqassistant-graph-rag: {venv_message}", component=self.name)
+            return
+        info(venv_message, component=self.name)
 
         success(f"jqassistant_graph_rag tool installed successfully into {target_path}", component=self.name)
 

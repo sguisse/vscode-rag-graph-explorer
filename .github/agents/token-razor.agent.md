@@ -52,8 +52,8 @@ When requested to create or modify a Webview feature or RPC endpoint:
 ### 2. GraphRAG Tool Installer Creation (`py-module-installer`)
 When requested to add a new tool check/installer in the GraphRAG pipeline:
 - Create `scripts/graph_rag_explorer/install/modules/<category>/<tool_name>/`.
-- Implement `check.py` extending `BaseCheckModule` with `@InstallerRegistry.register_checker`.
-- Implement `install.py` extending `BaseInstallModule` with `@InstallerRegistry.register_installer`.
+- Implement `check.py` extending `GraphRagExplorerCheck` with `@InstallerRegistry.register_checker`.
+- Implement `install.py` extending `GraphRagExplorerInstall` with `@InstallerRegistry.register_installer`.
 - Ensure `name` properties match exactly across `check.py` and `install.py`.
 
 ---
@@ -89,7 +89,7 @@ principles = [
   "ALWAYS enforce 4-layer UI separation in Webview features using feature-react-mng: [Feature]Panel.tsx, use[Feature]Handlers, use[Feature]State, and Zustand stores",
   "NEVER use primitive HTML form elements in Webview UI; ALWAYS use shadcn/ui components from @/components/ui/*",
   "ALWAYS use data-tooltip with HTML markup support for tooltips and log-view/utils-log wrappers for logging",
-  "ALWAYS inherit BaseCheckModule and BaseInstallModule for GraphRAG installer modules using py-module-installer"
+  "ALWAYS inherit GraphRagExplorerCheck and GraphRagExplorerInstall for GraphRAG installer modules using py-module-installer"
 ]
 
 persistent_facts = [
@@ -115,7 +115,7 @@ menu = [
 | Task Trigger | Targeted Skill | Affected Layers & Paths | Primary Output |
 | :--- | :--- | :--- | :--- |
 | **New Webview Feature / RPC Endpoint** | **`feature-react-mng`** | `webview/src/features/<feature>/`<br>`shared/services/<feature>/`<br>`backend/src/services/<feature>/`<br>`dev-tools/generate-types.json` | Full-stack feature module, shadcn/ui views, CollapsibleCard badges, router & sidebar menu entries. |
-| **GraphRAG Tool Installer** | **`py-module-installer`** | `scripts/graph_rag_explorer/install/modules/<category>/<tool>/` | `check.py` (`BaseCheckModule`), `install.py` (`BaseInstallModule`), decorated registry entries. |
+| **GraphRAG Tool Installer** | **`py-module-installer`** | `scripts/graph_rag_explorer/install/modules/<category>/<tool>/` | `check.py` (`GraphRagExplorerCheck`), `install.py` (`GraphRagExplorerInstall`), decorated registry entries. |
 | **Architectural Review** | **`bmad-review`** | Entire codebase | Zero-concession multi-perspective audit report across Architect, Dev, and SRE lenses. |
 | **Build & Type Verification** | **`npm run verify:generated`** | `src/**/*.gen.ts` | Assert zero uncommitted code-generation diffs in CI pipelines. |
 

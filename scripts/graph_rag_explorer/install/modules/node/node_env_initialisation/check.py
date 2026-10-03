@@ -1,15 +1,15 @@
 import shutil
 import os
-from install.base import BaseCheckModule
-from install.registry import InstallerRegistry
+from install.check import GraphRagExplorerCheck
+from core.installer.registry import InstallerRegistry
 
-from install.modules.node.node_env_initialisation.constants import (
-    MODULE_NAME
+from install.modules.node.node_env_initialisation.context import (
+    MODULE_NAME,
+    NodeContext,
 )
-from install.modules.node.context import NodeContext
 
 @InstallerRegistry.register_checker
-class NodeEnvironmentChecker(BaseCheckModule):
+class NodeEnvironmentChecker(GraphRagExplorerCheck):
     def __init__(self, context):
         super().__init__(context)
         self.node_ctx = NodeContext(context)

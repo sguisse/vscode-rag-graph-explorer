@@ -1,6 +1,7 @@
 'use strict';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as crypto from 'crypto';
 import * as childProcess from 'child_process';
 import { getWorkspaceExtentionPath } from '../utils/utils-vscode';
 import { logInfo, log, logScriptLine } from '../utils/utils-log';
@@ -49,6 +50,8 @@ export class PythonScriptExecutionManager {
     private processTimeouts: Map<number, number> = new Map();
     private processCommands: Map<number, string> = new Map();
     private finishedProcesses: Map<number, PythonScriptStatus> = new Map();
+    private pythonEnvironmentPromise?: Promise<void>;
+    private pythonExecutable?: string;
 
     private readonly MAX_FINISHED_PROCESSES = 100;
     private readonly MAX_PROCESS_TIMEOUT_IN_MS = 500_000;
@@ -67,6 +70,73 @@ export class PythonScriptExecutionManager {
             this.processTimeout = vsCodeSettingsManager.getSettings().processTimeout || this.MAX_PROCESS_TIMEOUT_IN_MS;
         }
         return this.processTimeout;
+    }
+
+    public ensurePythonEnvironment(): Promise<void> {
+        if (!this.pythonEnvironmentPromise) {
+            this.pythonEnvironmentPromise = this.provisionPythonEnvironment().catch((error) => {
+                this.pythonEnvironmentPromise = undefined;
+                throw error;
+            });
+        }
+        return this.pythonEnvironmentPromise;
+    }
+
+    private async provisionPythonEnvironment(): Promise<void> {
+        const extensionDataPath = getWorkspaceExtentionPath();
+        const scriptsPath = path.join(extensionDataPath, 'scripts');
+        const requirementsPath = path.join(scriptsPath, 'requirements.txt');
+        const environmentPath = path.join(extensionDataPath, 'python-runtime');
+        const markerPath = path.join(environmentPath, 'requirements.sha256');
+        const requirements = fs.readFileSync(requirementsPath);
+        const requirementsHash = crypto.createHash('sha256').update(requirements).digest('hex');
+        const isWindows = process.platform === 'win32';
+        const environmentPython = path.join(
+            environmentPath,
+            isWindows ? 'Scripts' : 'bin',
+            isWindows ? 'python.exe' : 'python'
+        );
+        const basePython = isWindows ? 'python' : 'python3';
+
+        if (
+            fs.existsSync(environmentPython) &&
+            fs.existsSync(markerPath) &&
+            fs.readFileSync(markerPath, 'utf8').trim() === requirementsHash
+        ) {
+            this.pythonExecutable = environmentPython;
+            return;
+        }
+
+        if (!fs.existsSync(environmentPython)) {
+            await this.runSetupCommand(basePython, ['-m', 'venv', environmentPath], scriptsPath);
+        }
+        await this.runSetupCommand(environmentPython, ['-m', 'pip', 'install', '-r', requirementsPath], scriptsPath);
+        fs.writeFileSync(markerPath, requirementsHash, 'utf8');
+        this.pythonExecutable = environmentPython;
+    }
+
+    private runSetupCommand(command: string, args: string[], cwd: string): Promise<void> {
+        return new Promise((resolve, reject) => {
+            const child = this.spawnPythonProcess(
+                command,
+                args,
+                { cwd },
+                'python-runtime-setup',
+                this.MAX_PROCESS_TIMEOUT_IN_MS
+            );
+            let stderr = '';
+            child.stderr?.on('data', (data: Buffer) => {
+                stderr += data.toString();
+            });
+            child.once('error', reject);
+            child.once('close', (code) => {
+                if (code === 0) {
+                    resolve();
+                } else {
+                    reject(new Error(`Python environment setup failed (${command} ${args.join(' ')}): ${stderr.trim()}`));
+                }
+            });
+        });
     }
 
     public static getInstance(): PythonScriptExecutionManager {
@@ -317,7 +387,7 @@ export class PythonScriptExecutionManager {
         timeout?: number
     ): childProcess.ChildProcess {
         const isWindows = process.platform === 'win32';
-        const pythonBinary = isWindows ? 'python' : 'python3';
+        const pythonBinary = this.pythonExecutable || (isWindows ? 'python' : 'python3');
 
         const absScriptPath = path.isAbsolute(scriptPath) ? scriptPath : path.resolve(scriptPath);
         const fullArgs = ['-u', absScriptPath, ...args];

@@ -3,14 +3,13 @@ import os
 import sys
 import subprocess
 import socket
-from install.base import BaseCheckModule
-from install.registry import InstallerRegistry
-from install.modules.system.neo4j.install import NEO4J_MODULE_NAME
-from install.modules.system.neo4j.context import Neo4jContext
+from install.check import GraphRagExplorerCheck
+from core.installer.registry import InstallerRegistry
+from install.modules.system.neo4j.context import NEO4J_MODULE_NAME, Neo4jContext
 from core.utils import info
 
 @InstallerRegistry.register_checker
-class SystemNeo4jChecker(BaseCheckModule):
+class SystemNeo4jChecker(GraphRagExplorerCheck):
     def __init__(self, context):
         super().__init__(context)
         self.neo4j_ctx = Neo4jContext(context)
