@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    tech-kafka - Kafka producers, listeners and configuration
+    Portable good-practice pack (copied verbatim by the installer, no {{PROJECT_NAME}} placeholder).
+    Rule conventions: constraints only read, concepts write idempotently, variable-length paths are bounded, constraints return
+    Element / Fqn / Detail (+ File, Line when available), parameters have safe defaults. Violations are indicated, never blocking.
+-->
+<jqa:jqassistant-rules xmlns:jqa="http://schema.jqassistant.org/rule/v2.9" xmlns="http://schema.jqassistant.org/rule/v2.9">
+
+    <concept id="tech-kafka:ProducerSend">
+        <providesConcept refId="xc-tx:SideEffectCall"/>
+        <providesConcept refId="xc-res:OutboundCall"/>
+        <providesConcept refId="xc-tx:BrokerSend"/>
+        <description>Labels KafkaTemplate send methods as :OutboundCall, :SideEffectCall and :BrokerSend.</description>
+        <cypher><![CDATA[
+            MATCH (lt:Type {fqn: 'org.springframework.kafka.core.KafkaTemplate'})-[:DECLARES]->(m:Method)
+                WHERE coalesce(m.name, last(split(split(m.signature, '(')[0], ' '))) STARTS WITH 'send' OR coalesce(m.name, last(split(split(m.signature, '(')[0], ' '))) = 'executeInTransaction'
+                SET m:SideEffectCall:OutboundCall:BrokerSend
+                RETURN count(DISTINCT m) AS ProducerMethods
+        ]]></cypher>
+    </concept>
+    <concept id="tech-kafka:KafkaListener">
+        <providesConcept refId="xc-res:MessageConsumer"/>
+        <description>Labels @KafkaListener methods as broker :MessageConsumer (consumerKind = 'broker').</description>
+        <cypher><![CDATA[
+            MATCH (t:Type)-[:DECLARES]->(m:Method)
+                WHERE m.name IS NOT NULL AND EXISTS { MATCH (m)-[:ANNOTATED_BY]->(:Annotation)-[:OF_TYPE]->(ax:Type) WHERE ax.fqn IN ['org.springframework.kafka.annotation.KafkaListener'] }
+                SET m:MessageConsumer, m.consumerKind = 'broker'
+                RETURN count(DISTINCT m) AS Listeners
+        ]]></cypher>
+    </concept>
+    <constraint id="tech-kafka:KafkaStreamsResidue" severity="major">
+        <description>Kafka Streams types remain in the code base although the stream topology is no longer used.</description>
+        <cypher><![CDATA[
+            MATCH (t:Type)-[:DEPENDS_ON]->(x:Type)
+                WHERE NOT t:Test AND x.fqn STARTS WITH 'org.apache.kafka.streams.'
+                RETURN DISTINCT t AS Element, t.fqn AS Fqn, x.fqn AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+    <constraint id="tech-kafka:ProducerAcksZero" severity="critical">
+        <description>spring.kafka.producer.acks=0 loses messages silently: use 'all' (with idempotence).</description>
+        <cypher><![CDATA[
+            MATCH (f:Yaml:File)-[:HAS_DOCUMENT]->(:Yaml:Document)-[:HAS_MAP]->(:Yaml:Map)-[:HAS_KEY]->(:Yaml:Key {name: 'spring'})-[:HAS_VALUE]->(:Yaml:Map)-[:HAS_KEY]->(:Yaml:Key {name: 'kafka'})-[:HAS_VALUE]->(:Yaml:Map)-[:HAS_KEY]->(:Yaml:Key {name: 'producer'})-[:HAS_VALUE]->(:Yaml:Map)-[:HAS_KEY]->(k:Yaml:Key {name: 'acks'})-[:HAS_VALUE]->(v:Yaml:Scalar)
+                WHERE v.value = '0'
+                RETURN f AS Element, f.fileName AS Fqn, 'spring.kafka.producer.acks: 0' AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+
+    <group id="tech-kafka:Default">
+        <description>tech-kafka - Kafka producers, listeners and configuration</description>
+        <includeConcept refId="tech-kafka:ProducerSend"/>
+        <includeConcept refId="tech-kafka:KafkaListener"/>
+        <includeConstraint refId="tech-kafka:KafkaStreamsResidue"/>
+        <includeConstraint refId="tech-kafka:ProducerAcksZero"/>
+    </group>
+
+</jqa:jqassistant-rules>

@@ -3,6 +3,7 @@ import json
 import shutil
 import subprocess
 import sys
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from analyser.base import BaseAnalyser
 from analyser.registry import AnalyserRegistry
@@ -158,16 +159,87 @@ class JQAssistantAnalyzer(BaseAnalyser):
         if scan_return_code == 0:
             success ("jQAssistant 'scan' completed successfully.", component=self.name)
             info("Proceeding to jQAssistant 'analyze' phase...", component=self.name)
+        else:
+            # A partial scan still leaves a usable store: analyze must run anyway (violations are indicated, never blocking).
+            warn(f"jQAssistant 'scan' failed with code {scan_return_code}. Running 'analyze' anyway on the partially scanned store.", component=self.name)
 
+        try:
             analyze_return_code = self._execute_analyze(executable_target, custom_env)
             if analyze_return_code != 0:
-                error(f"jQAssistant 'analyze' failed with code {analyze_return_code}. . Skipping 'analyze' phase.", component=self.name)
+                warn(f"jQAssistant 'analyze' exited with code {analyze_return_code} (rule violations or a rule failure; this never blocks the analysis). Parsing the report anyway.", component=self.name)
             else:
                 success ("jQAssistant 'analyze' completed successfully.", component=self.name)
-        else:
-            error(f"jQAssistant 'scan' failed with code {scan_return_code}. Skipping 'analyze' phase.", component=self.name)
+        except Exception as e:
+            warn(f"jQAssistant 'analyze' could not be executed: {e}", component=self.name)
 
+        self._summarize_report()
         return scan_return_code
+
+    #----------------
+    def _report_path(self) -> str:
+        return os.path.join(self.jqa.raw_outputs_dir, "jqassistant", "report", "jqassistant-report.xml")
+
+    def _parse_report_summary(self, report_path: str) -> dict:
+        """Counts rule results per (kind, severity, status) from jqassistant-report.xml; tolerant to partial reports."""
+        def local(tag: str) -> str:
+            return tag.rsplit("}", 1)[-1]
+
+        def child_text(node, name: str) -> str:
+            for child in node.iter():
+                if local(child.tag) == name:
+                    return (child.text or "").strip().lower()
+            return ""
+
+        summary = {"counts": {}, "violation_rows": 0, "partial": False}
+        try:
+            for _event, elem in ET.iterparse(report_path, events=("end",)):
+                kind = local(elem.tag)
+                if kind not in ("constraint", "concept"):
+                    continue
+                key = (kind, child_text(elem, "severity") or "unknown", child_text(elem, "status") or "unknown")
+                summary["counts"][key] = summary["counts"].get(key, 0) + 1
+                if kind == "constraint":
+                    summary["violation_rows"] += sum(1 for n in elem.iter() if local(n.tag) == "row")
+                elem.clear()
+        except ET.ParseError as e:
+            summary["partial"] = True
+            warn(f"jQAssistant report is truncated or malformed ({e}); summary covers the complete rules only.", component=self.name)
+        return summary
+
+    def _summarize_report(self) -> None:
+        """Always parses the XML report (even after a non-zero exit code) and prints a per-severity summary."""
+        report_path = self._report_path()
+        if not os.path.isfile(report_path) or os.path.getsize(report_path) == 0:
+            warn(f"jQAssistant report not found or empty, no severity summary available: {report_path}", component=self.name)
+            return
+        try:
+            summary = self._parse_report_summary(report_path)
+        except Exception as e:
+            warn(f"Could not parse jQAssistant report '{report_path}': {e}", component=self.name)
+            return
+
+        counts = summary["counts"]
+        if not counts:
+            warn(f"jQAssistant report contains no concept/constraint results: {report_path}", component=self.name)
+            return
+        order = ["blocker", "critical", "major", "minor", "info", "unknown"]
+        info(f"jQAssistant report summary ({report_path}){' [PARTIAL]' if summary['partial'] else ''}:", component=self.name)
+        for kind in ("constraint", "concept"):
+            lines = sorted(
+                ((sev, status, n) for (k, sev, status), n in counts.items() if k == kind),
+                key=lambda t: (order.index(t[0]) if t[0] in order else len(order), t[1]),
+            )
+            for sev, status, n in lines:
+                info(f"  {kind:<10} severity={sev:<8} status={status:<8} results={n}", component=self.name)
+        violated = sum(n for (k, _s, st), n in counts.items() if k == "constraint" and st in ("failure", "warning"))
+        if violated:
+            warn(
+                f"{violated} constraint(s) report violations ({summary['violation_rows']} row(s)); "
+                "violations are indicated only and never block the analysis.",
+                component=self.name,
+            )
+        else:
+            success("No constraint violations reported.", component=self.name)
 
     #----------------
     def _execute_scan_or_analyze(self, cmd, executable_target: str, discovered_sources: dict, custom_env: dict) -> int:

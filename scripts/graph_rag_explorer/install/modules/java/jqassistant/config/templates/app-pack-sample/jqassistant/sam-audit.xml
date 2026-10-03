@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    sam:Audit - group activated by the installer (every group id ending with ':Audit' in <workspace>/jqassistant/*.xml is added to analyze.groups).
+    Severities can be overridden per rule with includeConstraint severity="..." (information only: violations never block the analysis).
+-->
+<jqa:jqassistant-rules xmlns:jqa="http://schema.jqassistant.org/rule/v2.9" xmlns="http://schema.jqassistant.org/rule/v2.9">
+
+    <group id="sam:Audit">
+        <description>Audit pack: portable good-practice packs + smart-assessment decisions</description>
+        <includeConstraint refId="java:TestMethodWithoutAssertion" severity="minor"/>
+        <includeGroup refId="gp:Default"/>
+        <includeGroup refId="sam:Default"/>
+        <includeGroup refId="spring-transaction:Default"/>
+    </group>
+
+</jqa:jqassistant-rules>

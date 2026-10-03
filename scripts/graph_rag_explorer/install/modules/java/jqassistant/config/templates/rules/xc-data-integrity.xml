@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    xc-data-integrity - schema ownership of entities (abstract labels only)
+    Portable good-practice pack (copied verbatim by the installer, no {{PROJECT_NAME}} placeholder).
+    Rule conventions: constraints only read, concepts write idempotently, variable-length paths are bounded, constraints return
+    Element / Fqn / Detail (+ File, Line when available), parameters have safe defaults. Violations are indicated, never blocking.
+-->
+<jqa:jqassistant-rules xmlns:jqa="http://schema.jqassistant.org/rule/v2.9" xmlns="http://schema.jqassistant.org/rule/v2.9">
+
+    <concept id="xc-data:Entity" abstract="true">
+        <description>Persistent entity type (label :Entity, properties tableSchema and tableName).</description>
+    </concept>
+    <concept id="xc-data:Repository" abstract="true">
+        <description>Spring Data / JPA repository type (label :Repository).</description>
+    </concept>
+    <constraint id="xc-data:EntitySchemaOwnership" severity="major">
+        <requiresConcept refId="xc-arch:Module"/>
+        <requiresConcept refId="xc-data:Entity"/>
+        <requiresParameter name="moduleSchemas" type="String" defaultValue=""/>
+        <description>An entity must live in the database schema owned by its module (parameter moduleSchemas = 'module=schema;module=schema').</description>
+        <cypher><![CDATA[
+            MATCH (m:Module) WITH collect(m) AS mods
+                MATCH (e:Type:Entity) WHERE NOT e:Test AND $moduleSchemas <> ''
+                WITH e, [x IN mods WHERE e.fqn STARTS WITH x.fqn + '.'][0] AS m
+                WHERE m IS NOT NULL
+                WITH e, m, [p IN split($moduleSchemas, ';') WHERE trim(split(p, '=')[0]) = m.name][0] AS pair
+                WHERE pair IS NOT NULL AND trim(split(pair, '=')[1]) <> '' AND coalesce(e.tableSchema, '') <> trim(split(pair, '=')[1])
+                RETURN e AS Element, e.fqn AS Fqn, 'schema ' + coalesce(e.tableSchema, '<none>') + ' but module ' + m.name + ' owns ' + trim(split(pair, '=')[1]) AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+    <constraint id="xc-data:CrossModuleEntityOrRepositoryUse" severity="major">
+        <requiresConcept refId="xc-arch:Module"/>
+        <requiresConcept refId="xc-data:Entity"/>
+        <requiresConcept refId="xc-data:Repository"/>
+        <description>A module must not use the entities or repositories of another module directly: go through the other module's API.</description>
+        <cypher><![CDATA[
+            MATCH (m:Module) WITH collect(m) AS mods
+                MATCH (t1:Type)-[:DEPENDS_ON]->(t2:Type)
+                WHERE NOT t1:Test AND (t2:Entity OR t2:Repository)
+                WITH t1, t2, [x IN mods WHERE t1.fqn STARTS WITH x.fqn + '.'][0] AS m1, [x IN mods WHERE t2.fqn STARTS WITH x.fqn + '.'][0] AS m2
+                WHERE m1 IS NOT NULL AND m2 IS NOT NULL AND m1 <> m2
+                RETURN DISTINCT t1 AS Element, t1.fqn AS Fqn, t2.fqn AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+
+    <group id="xc-data-integrity:Default">
+        <description>xc-data-integrity - schema ownership of entities (abstract labels only)</description>
+        <includeConstraint refId="xc-data:EntitySchemaOwnership"/>
+        <includeConstraint refId="xc-data:CrossModuleEntityOrRepositoryUse"/>
+    </group>
+
+</jqa:jqassistant-rules>

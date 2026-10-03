@@ -63,6 +63,41 @@
   (:Member)
     :Method and :Field nodes have also :Member label
 
+  (:Type | :Package | :Module) risk properties (only when the audit overlay was imported)
+    riskScore: INTEGER   //max severity weight (info=1 .. blocker=5) + number of active violations
+    riskMaxWeight: INTEGER
+    riskCount: INTEGER
+
+  (:Audit:Rule)
+    //Audit overlay (optional). A jQAssistant constraint/fact rule. Read-only: rules are never executed from here.
+    //Overlay rules also carry the internal marker label :AuditRule (jQA's own :jQAssistant:Rule nodes are distinct and untouched). Always match (:Audit:Rule).
+    id: STRING (UNIQUE)  //e.g. "sam-sec:RhinoForbidden"
+    pack: STRING  //part of the id before ':'
+    axis: STRING  //tech | xc | sam | legacy
+    severity: STRING  //info | minor | major | critical | blocker
+    lastEvaluated: STRING  //ISO timestamp of the last run in which the rule was evaluated (also with 0 violations)
+    lastStatus: STRING
+    newCandidates: INTEGER  //active violations that match no audit finding
+
+  (:Audit:Finding)
+    //Audit overlay (optional). A remark of the audit documents.
+    fid: STRING (UNIQUE)  //e.g. "V3-B0-01"
+    severity: STRING
+    sf: STRING
+    tag: STRING
+    title: STRING
+    fix: STRING
+    source: STRING  //'audit-v3' | 'jqa' | 'fact'
+    coverageStatus: STRING  //confirmed | resolved? | contradiction | not automatable
+
+  (:Audit:SystemicFinding) id: STRING (UNIQUE)  //e.g. "SF-14"
+  (:Audit:Requirement) id: STRING (UNIQUE), title, target, status, statusNorm  //e.g. "14-1", "D07", "R-10"
+  (:Audit:Epic) id: STRING (UNIQUE)  //e.g. "EPIC-19"
+  (:Audit:Run) commit: STRING (UNIQUE), date: STRING
+  (:Audit:Fact) key: STRING (UNIQUE), kind, path, line, snippet  //violation anchor for SQL/HTML/Dockerfile facts
+  (:Audit:UnresolvedLocation) raw: STRING (UNIQUE)  //audit location that could not be mapped to code
+  (:TestResult) key: STRING (UNIQUE), className, name, status, timeSeconds, kind  //surefire/failsafe results
+
 ## Relationships:
   (:Project) -[:CONTAINS_SOURCE]-> (:Directory)
   (:Project) -[:CONTAINS_CLASS]-> (:ClassTree)
@@ -83,6 +118,14 @@
   (:Class | :Interface | :Enum) -[:WITH_SOURCE]-> (:SourceFile)
   (:Method | :Field) -[:WITH_SOURCE]-> (:SourceFile)
 
+  (:Type | :Method | :SourceFile | :Audit:Fact) -[:VIOLATES {key, severity, weight, firstSeen, lastSeen, commit, active, detail, count}]-> (:Audit:Rule)
+  (:Audit:Rule) -[:COVERS]-> (:Audit:Finding | :Audit:Requirement | :Audit:SystemicFinding | :Audit:Epic)
+  (:Audit:Finding) -[:LOCATED_IN {startLine, endLine}]-> (:SourceFile | :Type | :Method)
+  (:Audit:Finding) -[:UNRESOLVED_AT]-> (:Audit:UnresolvedLocation)
+  (:Audit:Finding) -[:MEMBER_OF]-> (:Audit:SystemicFinding)
+  (:Audit:Finding | :Audit:Requirement) -[:TRACKED_BY]-> (:Audit:Epic)
+  (:TestResult) -[:RESULT_OF]-> (:Type)
+
 ## Condensed form of Relationships:
   (:Project) -[:CONTAINS_SOURCE]-> (:Directory)
   (:Directory) -[:CONTAINS_SOURCE]-> (:Directory | :SourceFile)
@@ -92,6 +135,9 @@
   (:Type) -[:EXTENDS|:IMPLEMENTS]-> (:Type)
   (:Method) -[:INVOKES]-> (:Method)
   (:Type | :Member) -[:WITH_SOURCE]-> (:SourceFile)
+  (:Type | :Method | :SourceFile | :Audit:Fact) -[:VIOLATES]-> (:Audit:Rule)
+  (:Audit:Rule) -[:COVERS]-> (:Audit:Finding | :Audit:Requirement | :Audit:SystemicFinding | :Audit:Epic)
+  (:Audit:Finding) -[:LOCATED_IN | :UNRESOLVED_AT | :MEMBER_OF | :TRACKED_BY]-> (:SourceFile | :Type | :Method | :Audit:UnresolvedLocation | :Audit:SystemicFinding | :Audit:Epic)
 
 ## Property Explanations:
   entity_id: A stable, globally unique identifier for the node. 
@@ -100,3 +146,5 @@
   signature: The unique signature of a method or field within its declaring type.
   summary: A summary of the node's purpose and role.  
   summaryEmbedding: A vector embedding of the 'summary' property, used for semantic similarity searches.
+  VIOLATES: Audit overlay. A violation is "active" while the latest run still reports it; resolved violations keep firstSeen/lastSeen and have active=false. Use MCP tools get_audit_findings / get_rule_violations / get_audit_coverage / explain_finding instead of hand-written Cypher.
+  riskScore: Audit overlay. Max severity weight (info=1, minor=2, major=3, critical=4, blocker=5) plus the number of active violations on a Type (own and members), Package or Module.

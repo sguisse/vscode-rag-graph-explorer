@@ -47,6 +47,28 @@ export function logError(message: string, details?: any): void {
   logMessage('ERROR', message, details);
 }
 
+type ScriptLineLevel = 'debug' | 'info' | 'warn' | 'error';
+
+function detectScriptLineLevel(line: string, fallback: ScriptLineLevel): ScriptLineLevel {
+  if (line.includes('🪲') || line.includes('[DEBUG]')) return 'debug';
+  if (line.includes('⚠️') || line.includes('[WARN]')) return 'warn';
+  if (line.includes('❌') || line.includes('[ERROR]')) return 'error';
+  if (line.includes('ℹ️') || line.includes('[INFO]') || line.includes('✅')) return 'info';
+  return fallback;
+}
+
+/** Logs one line of a script output as "[origin] line", at the level indicated by its markers (or the fallback level). */
+export function logScriptLine(origin: string, line: string, fallback: ScriptLineLevel = 'info'): void {
+  const message = `[${origin}] ${line}`;
+  const channel = getLogChannel();
+  switch (detectScriptLineLevel(line, fallback)) {
+    case 'debug': channel.debug(message); break;
+    case 'warn': channel.warn(message); break;
+    case 'error': channel.error(message); break;
+    default: channel.info(message);
+  }
+}
+
 export function log(origin: string, message: string, details?: any): void {
   getLogChannel().appendLine(`[${origin}] ${message}`);
   if (details !== undefined && details !== null) {

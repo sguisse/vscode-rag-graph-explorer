@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    tech-github-actions - CI workflows (YAML)
+    Portable good-practice pack (copied verbatim by the installer, no {{PROJECT_NAME}} placeholder).
+    Rule conventions: constraints only read, concepts write idempotently, variable-length paths are bounded, constraints return
+    Element / Fqn / Detail (+ File, Line when available), parameters have safe defaults. Violations are indicated, never blocking.
+-->
+<jqa:jqassistant-rules xmlns:jqa="http://schema.jqassistant.org/rule/v2.9" xmlns="http://schema.jqassistant.org/rule/v2.9">
+
+    <constraint id="tech-github-actions:CiSkipsTests" severity="critical">
+        <description>CI must not skip tests (-DskipTests, -DskipITs, -Dmaven.test.skip).</description>
+        <cypher><![CDATA[
+            MATCH (f:Yaml:File)-[:HAS_DOCUMENT|HAS_MAP|HAS_KEY|HAS_VALUE|HAS_ITEM*1..14]->(s:Yaml:Scalar)
+                WHERE s.value =~ '.*-D(skipTests|skipITs|maven\\.test\\.skip)(=true)?.*'
+                RETURN DISTINCT f AS Element, f.fileName AS Fqn, s.value AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+    <constraint id="tech-github-actions:UnpinnedActions" severity="major">
+        <description>Third-party actions must be pinned to a commit SHA, not to a movable tag.</description>
+        <cypher><![CDATA[
+            MATCH (f:Yaml:File)-[:HAS_DOCUMENT|HAS_MAP|HAS_KEY|HAS_VALUE|HAS_ITEM*1..14]->(k:Yaml:Key {name: 'uses'})-[:HAS_VALUE]->(v:Yaml:Scalar)
+                WHERE v.value CONTAINS '@' AND NOT v.value =~ '.*@[0-9a-f]{40}$'
+                RETURN DISTINCT f AS Element, f.fileName AS Fqn, v.value AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+
+    <group id="tech-github-actions:Default">
+        <description>tech-github-actions - CI workflows (YAML)</description>
+        <includeConstraint refId="tech-github-actions:CiSkipsTests"/>
+        <includeConstraint refId="tech-github-actions:UnpinnedActions"/>
+    </group>
+
+</jqa:jqassistant-rules>

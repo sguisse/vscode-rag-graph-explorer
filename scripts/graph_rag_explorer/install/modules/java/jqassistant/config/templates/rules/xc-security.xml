@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    xc-security - transversal security rules (abstract labels only)
+    Portable good-practice pack (copied verbatim by the installer, no {{PROJECT_NAME}} placeholder).
+    Rule conventions: constraints only read, concepts write idempotently, variable-length paths are bounded, constraints return
+    Element / Fqn / Detail (+ File, Line when available), parameters have safe defaults. Violations are indicated, never blocking.
+-->
+<jqa:jqassistant-rules xmlns:jqa="http://schema.jqassistant.org/rule/v2.9" xmlns="http://schema.jqassistant.org/rule/v2.9">
+
+    <concept id="xc-sec:Endpoint" abstract="true">
+        <description>HTTP entry point. Label :Endpoint on the method with properties httpMethod and fullPath.</description>
+    </concept>
+    <concept id="xc-sec:Authorized" abstract="true">
+        <description>Method/type carrying an authorization check (label :Authorized, property authExpr).</description>
+    </concept>
+    <concept id="xc-obs:LogCall" abstract="true">
+        <description>Method of a logging API (label :LogCall).</description>
+    </concept>
+    <concept id="xc-sec:SensitiveValue">
+        <requiresParameter name="sensitiveRegex" type="String" defaultValue="(?i)get(password|secret|token|apikey|credential)s?"/>
+        <description>Labels methods whose name matches the parameter sensitiveRegex (getters of secrets / PII) as :SensitiveValue.</description>
+        <cypher><![CDATA[
+            MATCH (:Artifact)-[:CONTAINS]->(t:Type)-[:DECLARES]->(m:Method)
+                WHERE NOT t:Test AND m.name IS NOT NULL AND m.name =~ $sensitiveRegex
+                SET m:SensitiveValue
+                RETURN count(DISTINCT m) AS SensitiveValues
+        ]]></cypher>
+    </concept>
+    <constraint id="xc-sec:EndpointWithoutAuthorization" severity="major">
+        <requiresConcept refId="xc-sec:Endpoint"/>
+        <requiresConcept refId="xc-sec:Authorized"/>
+        <requiresParameter name="publicPathRegex" type="String" defaultValue="(?!)"/>
+        <description>Every endpoint must carry an authorization check unless its path matches publicPathRegex.</description>
+        <cypher><![CDATA[
+            MATCH (t:Type)-[:DECLARES]->(m:Method:Endpoint)
+                WHERE NOT t:Test AND NOT m:Authorized AND NOT t:Authorized
+                  AND NOT coalesce(m.fullPath, '') =~ $publicPathRegex
+                RETURN DISTINCT m AS Element, t.fqn AS Fqn, m.httpMethod + ' ' + coalesce(m.fullPath, '') AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+    <constraint id="xc-sec:DestructiveEndpointWithoutAdmin" severity="blocker">
+        <requiresConcept refId="xc-sec:Endpoint"/>
+        <requiresConcept refId="xc-sec:Authorized"/>
+        <requiresParameter name="destructivePathRegex" type="String" defaultValue=".*/(migrate|temp|clear|reload|sync)(/.*)?"/>
+        <requiresParameter name="adminExprRegex" type="String" defaultValue="(?i).*admin.*"/>
+        <description>Destructive endpoints (migrate, clear, reload, sync...) must require an administrator role.</description>
+        <cypher><![CDATA[
+            MATCH (t:Type)-[:DECLARES]->(m:Method:Endpoint)
+                WHERE NOT t:Test AND coalesce(m.fullPath, '') =~ $destructivePathRegex
+                  AND (m.authExpr IS NULL OR NOT m.authExpr =~ $adminExprRegex)
+                RETURN DISTINCT m AS Element, t.fqn AS Fqn, m.httpMethod + ' ' + m.fullPath AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+    <constraint id="xc-sec:InternalPathExposed" severity="critical">
+        <requiresConcept refId="xc-sec:Endpoint"/>
+        <requiresParameter name="internalPathRegex" type="String" defaultValue="(?!)"/>
+        <description>Internal service-to-service paths (parameter internalPathRegex) must not be reachable by end users: protect them at the gateway and with service authentication.</description>
+        <cypher><![CDATA[
+            MATCH (t:Type)-[:DECLARES]->(m:Method:Endpoint)
+                WHERE NOT t:Test AND coalesce(m.fullPath, '') =~ $internalPathRegex
+                RETURN DISTINCT m AS Element, t.fqn AS Fqn, m.httpMethod + ' ' + m.fullPath AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+    <constraint id="xc-sec:SensitiveDataLogged" severity="critical">
+        <requiresConcept refId="xc-sec:SensitiveValue"/>
+        <requiresConcept refId="xc-obs:LogCall"/>
+        <description>A method must not log a sensitive value (password, token, secret, PII).</description>
+        <cypher><![CDATA[
+            MATCH (t:Type)-[:DECLARES]->(m:Method)-[:INVOKES]->(s:Method:SensitiveValue)
+                WHERE NOT t:Test AND EXISTS { MATCH (m)-[:INVOKES]->(:Method:LogCall) }
+                RETURN DISTINCT m AS Element, t.fqn AS Fqn, s.signature AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+
+    <group id="xc-security:Default">
+        <description>xc-security - transversal security rules (abstract labels only)</description>
+        <includeConcept refId="xc-sec:SensitiveValue"/>
+        <includeConstraint refId="xc-sec:EndpointWithoutAuthorization"/>
+        <includeConstraint refId="xc-sec:DestructiveEndpointWithoutAdmin"/>
+        <includeConstraint refId="xc-sec:InternalPathExposed"/>
+        <includeConstraint refId="xc-sec:SensitiveDataLogged"/>
+    </group>
+
+</jqa:jqassistant-rules>

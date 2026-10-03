@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    tech-spring-web - Spring MVC endpoints
+    Portable good-practice pack (copied verbatim by the installer, no {{PROJECT_NAME}} placeholder).
+    Rule conventions: constraints only read, concepts write idempotently, variable-length paths are bounded, constraints return
+    Element / Fqn / Detail (+ File, Line when available), parameters have safe defaults. Violations are indicated, never blocking.
+-->
+<jqa:jqassistant-rules xmlns:jqa="http://schema.jqassistant.org/rule/v2.9" xmlns="http://schema.jqassistant.org/rule/v2.9">
+
+    <concept id="tech-spring-web:Endpoint">
+        <providesConcept refId="xc-sec:Endpoint"/>
+        <description>Labels controller methods carrying a request mapping as :Endpoint (httpMethod, fullPath = class mapping + method mapping).</description>
+        <cypher><![CDATA[
+            MATCH (t:Type)-[:DECLARES]->(m:Method)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(at:Type)
+                WHERE at.fqn IN ['org.springframework.web.bind.annotation.RequestMapping', 'org.springframework.web.bind.annotation.GetMapping', 'org.springframework.web.bind.annotation.PostMapping', 'org.springframework.web.bind.annotation.PutMapping', 'org.springframework.web.bind.annotation.DeleteMapping', 'org.springframework.web.bind.annotation.PatchMapping']
+                  AND EXISTS { MATCH (t)-[:ANNOTATED_BY]->(:Annotation)-[:OF_TYPE]->(ax:Type) WHERE ax.fqn IN ['org.springframework.stereotype.Controller', 'org.springframework.web.bind.annotation.RestController'] }
+                OPTIONAL MATCH (a)-[:HAS]->(:Value {name: 'value'})-[:CONTAINS]->(mp:Value)
+                OPTIONAL MATCH (t)-[:ANNOTATED_BY]->(ca:Annotation)-[:OF_TYPE]->(:Type {fqn: 'org.springframework.web.bind.annotation.RequestMapping'})
+                OPTIONAL MATCH (ca)-[:HAS]->(:Value {name: 'value'})-[:CONTAINS]->(cp:Value)
+                WITH m, at, head(collect(DISTINCT mp.value)) AS methodPath, head(collect(DISTINCT cp.value)) AS classPath
+                SET m:Endpoint, m.httpMethod = toUpper(replace(at.name, 'Mapping', '')), m.fullPath = coalesce(classPath, '') + coalesce(methodPath, '')
+                RETURN count(DISTINCT m) AS Endpoints
+        ]]></cypher>
+    </concept>
+    <concept id="tech-spring-web:SseEmitterSend">
+        <providesConcept refId="xc-tx:SideEffectCall"/>
+        <description>Labels SseEmitter#send as :SideEffectCall.</description>
+        <cypher><![CDATA[
+            MATCH (lt:Type {fqn: 'org.springframework.web.servlet.mvc.method.annotation.SseEmitter'})-[:DECLARES]->(m:Method)
+                WHERE coalesce(m.name, last(split(split(m.signature, '(')[0], ' '))) = 'send'
+                SET m:SideEffectCall
+                RETURN count(m) AS Labelled
+        ]]></cypher>
+    </concept>
+    <constraint id="tech-spring-web:MultipleControllerAdvicesWithoutOrder" severity="major">
+        <description>Several @ControllerAdvice classes need an explicit @Order, otherwise exception-handler selection is undefined.</description>
+        <cypher><![CDATA[
+            MATCH (:Artifact)-[:CONTAINS]->(t:Type)
+                WHERE NOT t:Test AND EXISTS { MATCH (t)-[:ANNOTATED_BY]->(:Annotation)-[:OF_TYPE]->(ax:Type) WHERE ax.fqn IN ['org.springframework.web.bind.annotation.ControllerAdvice', 'org.springframework.web.bind.annotation.RestControllerAdvice'] }
+                WITH collect(DISTINCT t) AS advices
+                WHERE size(advices) > 1
+                UNWIND advices AS t
+                WITH t WHERE NOT EXISTS { MATCH (t)-[:ANNOTATED_BY]->(:Annotation)-[:OF_TYPE]->(ax:Type) WHERE ax.fqn IN ['org.springframework.core.annotation.Order', 'org.springframework.core.Ordered'] }
+                RETURN t AS Element, t.fqn AS Fqn, 'multiple @ControllerAdvice without @Order' AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+    <constraint id="tech-spring-web:ByteArrayOnRequestPath" severity="minor">
+        <requiresConcept refId="tech-spring-web:Endpoint"/>
+        <description>Endpoints exchanging byte[] load whole payloads in memory: stream them (InputStreamResource / StreamingResponseBody).</description>
+        <cypher><![CDATA[
+            MATCH (t:Type)-[:DECLARES]->(m:Method:Endpoint)
+                WHERE NOT t:Test AND (m.signature STARTS WITH 'byte[] ' OR m.signature CONTAINS '(byte[]' OR m.signature CONTAINS ',byte[]')
+                RETURN DISTINCT m AS Element, t.fqn AS Fqn, m.signature AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+    <constraint id="tech-spring-web:RequestBodyWithoutValidation" severity="minor">
+        <requiresConcept refId="tech-spring-web:Endpoint"/>
+        <description>@RequestBody parameters should be validated (@Valid / @Validated).</description>
+        <cypher><![CDATA[
+            MATCH (t:Type)-[:DECLARES]->(m:Method:Endpoint)-[:HAS]->(p:Parameter)-[:ANNOTATED_BY]->(:Annotation)-[:OF_TYPE]->(:Type {fqn: 'org.springframework.web.bind.annotation.RequestBody'})
+                WHERE NOT t:Test AND NOT EXISTS { MATCH (p)-[:ANNOTATED_BY]->(:Annotation)-[:OF_TYPE]->(vt:Type) WHERE vt.fqn IN ['jakarta.validation.Valid', 'javax.validation.Valid', 'org.springframework.validation.annotation.Validated'] }
+                RETURN DISTINCT m AS Element, t.fqn AS Fqn, m.signature AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+    <constraint id="tech-spring-web:CookieWithoutHttpOnly" severity="major">
+        <description>Cookies created in code must be marked HttpOnly (and Secure).</description>
+        <cypher><![CDATA[
+            MATCH (t:Type)-[:DECLARES]->(m:Method)-[:INVOKES]->(c:Method)<-[:DECLARES]-(ct:Type)
+                WHERE NOT t:Test AND ct.fqn IN ['jakarta.servlet.http.Cookie', 'javax.servlet.http.Cookie'] AND coalesce(c.name, last(split(split(c.signature, '(')[0], ' '))) = '<init>'
+                  AND NOT EXISTS { MATCH (m)-[:INVOKES]->(s:Method) WHERE coalesce(s.name, last(split(split(s.signature, '(')[0], ' '))) = 'setHttpOnly' }
+                RETURN DISTINCT m AS Element, t.fqn AS Fqn, 'Cookie created without setHttpOnly' AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+
+    <group id="tech-spring-web:Default">
+        <description>tech-spring-web - Spring MVC endpoints</description>
+        <includeConcept refId="tech-spring-web:Endpoint"/>
+        <includeConcept refId="tech-spring-web:SseEmitterSend"/>
+        <includeConstraint refId="tech-spring-web:MultipleControllerAdvicesWithoutOrder"/>
+        <includeConstraint refId="tech-spring-web:ByteArrayOnRequestPath"/>
+        <includeConstraint refId="tech-spring-web:RequestBodyWithoutValidation"/>
+        <includeConstraint refId="tech-spring-web:CookieWithoutHttpOnly"/>
+    </group>
+
+</jqa:jqassistant-rules>

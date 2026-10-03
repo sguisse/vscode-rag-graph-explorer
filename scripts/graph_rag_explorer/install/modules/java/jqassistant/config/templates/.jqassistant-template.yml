@@ -23,6 +23,11 @@ jqassistant:
     - group-id: org.jqassistant.plugin.typescript
       artifact-id: jqassistant-typescript-plugin
       version: 1.4.4
+    # Spring plugin: provides spring-component:*, spring-mvc:*, spring-injection:* and spring-transaction:* concepts/constraints
+    # reused by the tech-* / xc-* packs (jqassistant-java, -xml, -yaml2, -junit and -maven3 plugins are bundled in the CLI distribution).
+    - group-id: org.jqassistant.plugin
+      artifact-id: jqassistant-spring-plugin
+      version: 2.9.0
 
   # ---------------------------------------------------------------------------
   # Store — NEO4J database configuration (embedded or remote)
@@ -72,6 +77,12 @@ jqassistant:
   #   The filesystem scanner visits .java source files and creates :SourceFile nodes
   #   with absolute_path properties. These are required by the graph-rag main.py
   #   enrichment query:  MATCH (f:SourceFile) WHERE f.absolute_path ENDS WITH '.java'
+  #
+  # target/test-classes is scanned through the 'java:classpath::' scope (injected by the installer
+  #   source discovery together with target/classes) so that :Test types exist (tech-junit5-testing:TestType).
+  #
+  # {JQA_CONFIG_DIRS_YAML_LIST} lists src/main/resources and .github/workflows directories (YAML 2 / XML plugins),
+  #   used by the configuration, Maven and CI rules.
   scan:
     reset: true
     continue-on-error: true
@@ -83,6 +94,8 @@ jqassistant:
   {{JQA_POM_FILES_YAML_LIST}}
         # Scanning the source directories of all modules. Ignored if not found.
   {{JQA_SRC_DIRS_YAML_LIST}}
+        # Configuration (YAML/XML) and CI workflow directories. Ignored if not found.
+  {{JQA_CONFIG_DIRS_YAML_LIST}}
     properties:
       file.exclude:
         - /node_modules/**
@@ -101,6 +114,11 @@ jqassistant:
     # Option A: activate built-in Java rule group
     groups:
       - '{{PROJECT_NAME}}:Default' # Option B: our custom rules in jqassistant/rules/smarttopic-microservices-core-rules.xml (file name pattern: <project-name>-rules.xml)
+      # Portable good-practice packs (tech-* / xc-*) are rules/gp-*.xml; the group gp:Default includes them all.
+      # Violations are indicated only (see report below). An application pack may add its own group (e.g. sam:Audit) in jqassistant/.
+      - 'gp:Default'
+      # Application audit groups (ids ending with ':Audit') declared by the application pack in <workspace>/jqassistant/*.xml. Ignored if none.
+  {{JQA_APP_GROUPS_YAML}}
 
     # Option C: explicit concepts for graph enrichment (add more as needed)
     concepts:
@@ -109,15 +127,39 @@ jqassistant:
       - java:InnerType
       - java:MethodOverrides
 
+    # Rule parameters consumed by the tech-* / xc-* packs. Every parameter has a safe default declared in the rule itself,
+    # so nothing is set here by default. Application values come from <workspace>/jqassistant/rule-parameters.yml
+    # (flat 'name: value' pairs) which the installer injects below.
+    # Available: moduleSchemas, internalPathRegex, destructivePathRegex, publicPathRegex, adminExprRegex, forbiddenNameRegex,
+    #            forbiddenDependencies, requiredDependencies, outboxTypeRegex, idempotencyTypeRegex, sensitiveRegex,
+    #            allowedKafkaProducerRegex, executorNames
+    rule-parameters:
+  {{JQA_RULE_PARAMETERS_YAML}}
+
     # Severity defaults for custom rules (lowercase: blocker, critical, major, minor, info)
     rule:
       directory: '{{JQA_RULES_DIRECTORY}}'
       default-concept-severity: minor
       default-constraint-severity: major
+      # A missing / empty provider concept must not stop the rules that consume its label
+      required-concepts-are-optional-by-default: true
 
-    # Reporting
+    # Re-apply concepts on every run (labels written by an earlier run must not be skipped silently)
+    execute-applied-concepts: true
+
+    # Slow rules are flagged, not killed
+    warn-on-rule-execution-time-seconds: 5
+
+    # Reporting - violations are INDICATED, never block the analysis
     report:
       continue-on-failure: true
+      # Severity is information only: BLOCKER results are labelled FAILURE, every lower result is shown as WARNING
+      fail-on-severity: BLOCKER
+      warn-on-severity: INFO
+
+    # The jQA baseline would hide known violations; known-vs-new is computed in graph-rag (firstSeen / lastSeen)
+    baseline:
+      enabled: false
 
   server:
     daemon: true

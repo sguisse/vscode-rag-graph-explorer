@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as childProcess from 'child_process';
 import { getWorkspaceExtentionPath } from '../utils/utils-vscode';
-import { logInfo, log } from '../utils/utils-log';
+import { logInfo, log, logScriptLine } from '../utils/utils-log';
 import { PythonScriptStatus } from '../../../shared/services/_python-scripts';
 import { vsCodeSettingsManager } from './VsCodeSettings.manager';
 
@@ -166,7 +166,7 @@ export class PythonScriptExecutionManager {
         });
     }
 
-    private bindStreamLogging(stream: NodeJS.ReadableStream | null, origin: string): void {
+    private bindStreamLogging(stream: NodeJS.ReadableStream | null, origin: string, fallbackLevel: 'info' | 'error' = 'info'): void {
         if (!stream) return;
 
         let buffer = '';
@@ -177,14 +177,14 @@ export class PythonScriptExecutionManager {
 
             for (const line of lines) {
                 if (line.trim()) {
-                    log(origin, line);
+                    logScriptLine(origin, line.trim(), fallbackLevel);
                 }
             }
         });
 
         stream.on('end', () => {
             if (buffer.trim()) {
-                log(origin, buffer.trim());
+                logScriptLine(origin, buffer.trim(), fallbackLevel);
             }
         });
     }
@@ -220,7 +220,7 @@ export class PythonScriptExecutionManager {
         }
 
         this.bindStreamLogging(child.stdout, origin);
-        this.bindStreamLogging(child.stderr, `${origin}:ERR`);
+        this.bindStreamLogging(child.stderr, `${origin}:ERR`, 'error');
 
         const cleanup = () => {
             this.unregisterPid(pid);

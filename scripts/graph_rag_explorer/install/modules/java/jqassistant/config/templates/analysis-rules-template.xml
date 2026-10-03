@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<jqa:jqassistant-rules xmlns:jqa="http://www.buschmais.com/jqassistant/core/analysis/rules/schema/v1.0">
+<jqa:jqassistant-rules xmlns:jqa="http://schema.jqassistant.org/rule/v2.9" xmlns="http://schema.jqassistant.org/rule/v2.9">
 
     <concept id="{{PROJECT_NAME}}:MarkSpringController">
         <description>Labels every class annotated with @Controller as :Controller</description>
@@ -66,6 +66,11 @@
     </concept>
 
     <concept id="{{PROJECT_NAME}}:MarkDomainObject">
+        <requiresConcept refId="{{PROJECT_NAME}}:MarkSpringController"/>
+        <requiresConcept refId="{{PROJECT_NAME}}:MarkSpringRestController"/>
+        <requiresConcept refId="{{PROJECT_NAME}}:MarkSpringService"/>
+        <requiresConcept refId="{{PROJECT_NAME}}:MarkSpringRepository"/>
+        <requiresConcept refId="{{PROJECT_NAME}}:MarkDbEntity"/>
         <description>Labels classes located inside domain packages without framework annotations as :DomainObject</description>
         <cypher><![CDATA[
             MATCH (p:Package)-[:CONTAINS*]->(c:Class)
@@ -147,6 +152,8 @@
     </concept>
 
     <concept id="{{PROJECT_NAME}}:MarkInfrastructure">
+        <requiresConcept refId="{{PROJECT_NAME}}:MarkSpringController"/>
+        <requiresConcept refId="{{PROJECT_NAME}}:MarkSpringRestController"/>
         <description>Labels driving/primary infrastructure configurations and entry points</description>
         <cypher><![CDATA[
             MATCH (c:Class)
@@ -157,6 +164,9 @@
     </concept>
 
     <concept id="{{PROJECT_NAME}}:MarkInfrastructurePrimary">
+        <requiresConcept refId="{{PROJECT_NAME}}:MarkSpringController"/>
+        <requiresConcept refId="{{PROJECT_NAME}}:MarkSpringRestController"/>
+        <requiresConcept refId="{{PROJECT_NAME}}:MarkSpringRepository"/>
         <description>Labels driving/primary infrastructure configurations and entry points</description>
         <cypher><![CDATA[
             MATCH (c:Class)
@@ -167,6 +177,7 @@
     </concept>
 
     <concept id="{{PROJECT_NAME}}:MarkInfrastructureSecondary">
+        <requiresConcept refId="{{PROJECT_NAME}}:MarkSpringRepository"/>
         <description>Labels driven/secondary infrastructure components (persistence, messaging clients)</description>
         <cypher><![CDATA[
             MATCH (c:Class)
@@ -177,6 +188,8 @@
     </concept>
 
     <concept id="{{PROJECT_NAME}}:MarkServiceAsUseCases">
+        <requiresConcept refId="{{PROJECT_NAME}}:MarkSpringService"/>
+        <requiresConcept refId="{{PROJECT_NAME}}:MarkPortIn"/>
         <description>Labels core domain services acting explicitly as application Use Cases</description>
         <cypher><![CDATA[
             MATCH (c:Service)-[:IMPLEMENTS]->(i:PortIn)
@@ -302,7 +315,8 @@
         <description>Marks strong composition fields (private lifecycle-bound custom internal types)</description>
         <cypher><![CDATA[
             MATCH (c1:Class)-[:DECLARES]->(f:Field)-[:OF_TYPE]->(c2:Class)
-            WHERE NOT f.type STARTS WITH 'java.' AND NOT f.type STARTS WITH 'org.springframework.'
+            // f.type does not exist in the jQAssistant graph model: the field type is the (f)-[:OF_TYPE]->(c2) target
+            WHERE NOT c2.fqn STARTS WITH 'java.' AND NOT c2.fqn STARTS WITH 'org.springframework.'
             SET f:CompositionField
             RETURN count(f) AS MarkedCompositions
         ]]></cypher>
@@ -481,10 +495,13 @@
         <cypher><![CDATA[
             MATCH (c:Class)-[:DECLARES]->(f:Field)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(t:Type)
             WHERE t.fqn = 'org.springframework.beans.factory.annotation.Value'
+            // The annotation attribute is a (:Value {name: 'value'}) node (v.value); a.value is kept as a fallback
+            OPTIONAL MATCH (a)-[:HAS]->(v:Value {name: 'value'})
             // Extraction de la clé brute ex: ${my.config.key} -> my.config.key
-            WITH f, a.value AS rawValue
-            WHERE rawValue STARTS WITH '${'
-            WITH f, substring(rawValue, 2, size(rawValue) - 3) AS propertyKey
+            WITH f, coalesce(v.value, a.value) AS rawValue
+            WHERE rawValue IS NOT NULL AND toString(rawValue) STARTS WITH '${'
+            // Default values (${key:default}) are not part of the property key
+            WITH f, split(substring(toString(rawValue), 2, size(toString(rawValue)) - 3), ':')[0] AS propertyKey
             SET f.usesProperty = propertyKey
             RETURN count(f) AS LinkedProperties
         ]]></cypher>
@@ -505,7 +522,13 @@
             AND NOT c.name ENDS WITH 'Test'
             AND NOT c.name ENDS WITH 'Application'
             // Fusion des conditions : Aucun chemin de dépendance depuis la Main
-            AND NOT (main)-[:DEPENDS_ON|INVOKES*]->(c)
+            // Variable-length path capped to *1..3 (an unbounded traversal explodes on large graphs)
+            AND NOT (main)-[:DEPENDS_ON|INVOKES*1..3]->(c)
+            // Beans are reached by component scan, not by dependency: never flag them, nor classes referenced elsewhere
+            AND NOT c:Service AND NOT c:Repository AND NOT c:DbEntity
+            AND NOT (c)-[:ANNOTATED_BY]->()-[:OF_TYPE]->(:Type {fqn: 'org.springframework.stereotype.Component'})
+            AND NOT (c)-[:ANNOTATED_BY]->()-[:OF_TYPE]->(:Type {fqn: 'org.springframework.context.annotation.Configuration'})
+            AND NOT (:Type)-[:DEPENDS_ON]->(c)
 
             // 3. Marquage
             SET c:DeadCodeCandidate

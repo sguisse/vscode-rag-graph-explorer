@@ -3,7 +3,7 @@ import logging
 import sys
 from pathlib import Path
 
-from input_params import add_neo4j_args, add_logging_args, add_rag_args
+from input_params import add_neo4j_args, add_logging_args, add_rag_args, add_audit_args
 from neo4j_manager import Neo4jManager
 from log_manager import init_logging
 from graph_orchestrator import GraphOrchestrator
@@ -20,6 +20,7 @@ def main():
     add_neo4j_args(parser)
     add_logging_args(parser)
     add_rag_args(parser)
+    add_audit_args(parser)
 
     args = parser.parse_args()
 
@@ -45,7 +46,13 @@ def main():
             try:
                 logger.info("▶ Initializing GraphOrchestrator...")
                 graph_orchestrator = GraphOrchestrator(
-                    neo4j_mgr, repo_root=args.repo_root
+                    neo4j_mgr,
+                    repo_root=args.repo_root,
+                    audit_dir=args.audit_dir,
+                    jqa_report=args.jqa_report,
+                    audit_rule_map=args.audit_rule_map,
+                    jacoco_xml=args.jacoco_xml,
+                    surefire_dir=args.surefire_dir,
                 )
                 logger.info("▶ Running GraphOrchestrator enrichment passes...")
                 graph_orchestrator.run_enrichment_passes()

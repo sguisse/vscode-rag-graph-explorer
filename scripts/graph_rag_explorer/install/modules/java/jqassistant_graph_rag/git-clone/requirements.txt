@@ -23,6 +23,9 @@ tqdm==4.67.1
 # --- System ---
 certifi>=2023.0.0
 
+# --- Audit overlay (audit-rule-map.yaml) ---
+PyYAML>=6.0
+
 # Optional: torch is required by sentence-transformers for local models. Installing
 # torch is platform specific; uncomment and install the appropriate wheel for your
 # environment (CPU/GPU). Example CPU wheel install:

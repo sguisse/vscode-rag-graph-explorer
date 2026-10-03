@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    tech-postgres-flyway - datasource / JPA configuration (YAML)
+    Portable good-practice pack (copied verbatim by the installer, no {{PROJECT_NAME}} placeholder).
+    Rule conventions: constraints only read, concepts write idempotently, variable-length paths are bounded, constraints return
+    Element / Fqn / Detail (+ File, Line when available), parameters have safe defaults. Violations are indicated, never blocking.
+-->
+<jqa:jqassistant-rules xmlns:jqa="http://schema.jqassistant.org/rule/v2.9" xmlns="http://schema.jqassistant.org/rule/v2.9">
+
+    <constraint id="tech-postgres-flyway:OpenInViewEnabled" severity="major">
+        <description>spring.jpa.open-in-view=true keeps a database connection open during view rendering: disable it.</description>
+        <cypher><![CDATA[
+            MATCH (f:Yaml:File)-[:HAS_DOCUMENT]->(:Yaml:Document)-[:HAS_MAP]->(:Yaml:Map)-[:HAS_KEY]->(:Yaml:Key {name: 'spring'})-[:HAS_VALUE]->(:Yaml:Map)-[:HAS_KEY]->(:Yaml:Key {name: 'jpa'})-[:HAS_VALUE]->(:Yaml:Map)-[:HAS_KEY]->(k:Yaml:Key {name: 'open-in-view'})-[:HAS_VALUE]->(v:Yaml:Scalar)
+                WHERE toLower(toString(v.value)) = 'true'
+                RETURN f AS Element, f.fileName AS Fqn, 'spring.jpa.open-in-view: true' AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+    <constraint id="tech-postgres-flyway:HikariPoolTooLarge" severity="major">
+        <requiresParameter name="maxHikariPoolSize" type="String" defaultValue="30"/>
+        <description>spring.datasource.hikari.maximum-pool-size above the parameter maxHikariPoolSize overcommits the database.</description>
+        <cypher><![CDATA[
+            MATCH (f:Yaml:File)-[:HAS_DOCUMENT]->(:Yaml:Document)-[:HAS_MAP]->(:Yaml:Map)-[:HAS_KEY]->(:Yaml:Key {name: 'spring'})-[:HAS_VALUE]->(:Yaml:Map)-[:HAS_KEY]->(:Yaml:Key {name: 'datasource'})-[:HAS_VALUE]->(:Yaml:Map)-[:HAS_KEY]->(:Yaml:Key {name: 'hikari'})-[:HAS_VALUE]->(:Yaml:Map)-[:HAS_KEY]->(k:Yaml:Key {name: 'maximum-pool-size'})-[:HAS_VALUE]->(v:Yaml:Scalar)
+                WHERE v.value =~ '[0-9]+' AND toInteger(v.value) > toInteger($maxHikariPoolSize)
+                RETURN f AS Element, f.fileName AS Fqn, 'maximum-pool-size: ' + v.value AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+
+    <group id="tech-postgres-flyway:Default">
+        <description>tech-postgres-flyway - datasource / JPA configuration (YAML)</description>
+        <includeConstraint refId="tech-postgres-flyway:OpenInViewEnabled"/>
+        <includeConstraint refId="tech-postgres-flyway:HikariPoolTooLarge"/>
+    </group>
+
+</jqa:jqassistant-rules>

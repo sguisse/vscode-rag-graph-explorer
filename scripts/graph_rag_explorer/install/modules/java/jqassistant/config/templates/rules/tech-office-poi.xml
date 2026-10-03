@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    tech-office-poi - Apache POI workbooks
+    Portable good-practice pack (copied verbatim by the installer, no {{PROJECT_NAME}} placeholder).
+    Rule conventions: constraints only read, concepts write idempotently, variable-length paths are bounded, constraints return
+    Element / Fqn / Detail (+ File, Line when available), parameters have safe defaults. Violations are indicated, never blocking.
+-->
+<jqa:jqassistant-rules xmlns:jqa="http://schema.jqassistant.org/rule/v2.9" xmlns="http://schema.jqassistant.org/rule/v2.9">
+
+    <concept id="tech-office-poi:WorkbookConstructors">
+        <providesConcept refId="xc-perf:HeavyWork"/>
+        <description>Labels in-memory POI workbook constructors (XSSF / HSSF) as :HeavyWork.</description>
+        <cypher><![CDATA[
+            MATCH (lt:Type)-[:DECLARES]->(m:Method)
+                WHERE coalesce(m.name, last(split(split(m.signature, '(')[0], ' '))) = '<init>' AND lt.fqn IN ['org.apache.poi.xssf.usermodel.XSSFWorkbook', 'org.apache.poi.hssf.usermodel.HSSFWorkbook']
+                SET m:HeavyWork:InMemoryWorkbook
+                RETURN count(DISTINCT m) AS Constructors
+        ]]></cypher>
+    </concept>
+    <constraint id="tech-office-poi:InMemoryWorkbook" severity="minor">
+        <requiresConcept refId="tech-office-poi:WorkbookConstructors"/>
+        <description>XSSFWorkbook / HSSFWorkbook hold the whole workbook in memory: use SXSSFWorkbook (streaming) for exports.</description>
+        <cypher><![CDATA[
+            MATCH (t:Type)-[:DECLARES]->(m:Method)-[:INVOKES]->(c:Method:InMemoryWorkbook)
+                WHERE NOT t:Test
+                RETURN DISTINCT m AS Element, t.fqn AS Fqn, c.signature AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+
+    <group id="tech-office-poi:Default">
+        <description>tech-office-poi - Apache POI workbooks</description>
+        <includeConcept refId="tech-office-poi:WorkbookConstructors"/>
+        <includeConstraint refId="tech-office-poi:InMemoryWorkbook"/>
+    </group>
+
+</jqa:jqassistant-rules>

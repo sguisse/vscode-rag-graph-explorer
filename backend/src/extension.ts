@@ -196,20 +196,6 @@ function runPythonScan(mode: string, targetFile: string = "") {
         return;
     }
 
-    const parseLogLine = (line: string, fallbackLevel: 'debug' | 'info' | 'warn' | 'error') => {
-        const cleanLine = line.trim();
-        if (!cleanLine) return;
-        let level = fallbackLevel;
-        if (cleanLine.includes("🪲") || cleanLine.includes("[DEBUG]")) level = "debug";
-        else if (cleanLine.includes("⚠️") || cleanLine.includes("[WARN]")) level = "warn";
-        else if (cleanLine.includes("❌") || cleanLine.includes("[ERROR]")) level = "error";
-        else if (cleanLine.includes("ℹ️") || cleanLine.includes("[INFO]") || cleanLine.includes("✅")) level = "info";
-
-        if (level === "error") logError(`[Python] ${cleanLine}`);
-        else if (level === "warn") logWarn(`[Python] ${cleanLine}`);
-        else logInfo(`[Python] ${cleanLine}`);
-    };
-
     const payloadConfig = vsCodeSettingsManager.toJson();
     if (!payloadConfig[EXTENSION_BASE_CONFIG_NAME]) {
         payloadConfig[EXTENSION_BASE_CONFIG_NAME] = {};
@@ -233,11 +219,9 @@ function runPythonScan(mode: string, targetFile: string = "") {
     child.stdin?.write(JSON.stringify(payloadConfig));
     child.stdin?.end();
 
-    child.stdout?.on("data", (data: any) => data.toString().split("\n").forEach((l: string) => parseLogLine(l, "info")));
+    // stdout/stderr lines are already logged as "[<script>.py] ..." by PythonScriptExecutionManager; only keep stderr for the exit error message.
     child.stderr?.on("data", (data: any) => {
-        const str = data.toString();
-        stderrBuffer += str;
-        str.split("\n").forEach((l: string) => parseLogLine(l, "error"));
+        stderrBuffer += data.toString();
     });
 
     child.on("close", (code: number | null, signal: string | null) => {

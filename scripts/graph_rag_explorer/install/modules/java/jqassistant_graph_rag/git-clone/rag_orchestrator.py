@@ -30,6 +30,7 @@ from llm_client import (
 )
 from summary_cache_manager import SummaryCacheManager
 from node_summary_processor import NodeSummaryProcessor
+from prompt_manager import AuditAwarePromptManager
 
 logger = logging.getLogger(__name__)
 
@@ -177,6 +178,8 @@ class RagOrchestrator:
                 "ℹ️ [RAG Pre-flight] Notice: :Type nodes exist without the explicit :Java label. Proceeding with :Type matching."
             )
 
+        self._run_audit_pre_pass()
+
         self.cache_manager.load()
         progress_plan: Optional[_CounterPlan] = None
         try:
@@ -237,6 +240,97 @@ class RagOrchestrator:
             )
         finally:
             self.cache_manager.save()
+
+    # ------------------------------------------------------------------
+    # Audit overlay (additive): risk scores + findings as summary context
+    # ------------------------------------------------------------------
+    _RISK_LABELS = ("Type", "Package", "Module")
+
+    def _run_audit_pre_pass(self) -> None:
+        """Runs before the existing passes, only when overlay data (VIOLATES) exists. Never raises."""
+        try:
+            from audit_model import AuditGraph
+
+            if not AuditGraph(self.neo4j_manager).has_overlay_data():
+                logger.info("ℹ️ [RAG Audit] No audit overlay data found; skipping risk scores.")
+                return
+            self.compute_risk_scores()
+            self._install_audit_prompt_context()
+        except Exception:
+            logger.exception("Audit pre-pass failed; continuing with the regular RAG passes.")
+
+    def compute_risk_scores(self) -> None:
+        """
+        riskScore = max severity weight + number of active violations, on Type (own + declared members),
+        Package (all contained types) and Module (types under its base package), derived from VIOLATES.
+        Properties: riskScore, riskMaxWeight, riskCount. Stale scores are reset first.
+        """
+        for label in self._RISK_LABELS:
+            self.neo4j_manager.execute_write_query(
+                f"MATCH (n:{label}) WHERE n.riskScore IS NOT NULL "
+                "REMOVE n.riskScore, n.riskMaxWeight, n.riskCount"
+            )
+        self.neo4j_manager.execute_write_query(
+            """
+            MATCH (t:Type)-[:DECLARES*0..1]->(n)-[v:VIOLATES]->(:Audit:Rule)
+            WHERE coalesce(v.active, true)
+            WITH t, max(coalesce(v.weight, 0)) AS mx, count(v) AS cnt
+            SET t.riskMaxWeight = mx, t.riskCount = cnt, t.riskScore = mx + cnt
+            """
+        )
+        self.neo4j_manager.execute_write_query(
+            """
+            MATCH (p:Package)-[:CONTAINS_CLASS|CONTAINS*1..15]->(t:Type) WHERE t.riskScore IS NOT NULL
+            WITH DISTINCT p, t
+            WITH p, max(t.riskMaxWeight) AS mx, sum(t.riskCount) AS cnt
+            SET p.riskMaxWeight = mx, p.riskCount = cnt, p.riskScore = mx + cnt
+            """
+        )
+        # Module: best effort - :Module nodes (spring-modulith concept) exposing fqn or basePackage.
+        self.neo4j_manager.execute_write_query(
+            """
+            MATCH (m:Module) WHERE coalesce(m.fqn, m.basePackage) IS NOT NULL
+            MATCH (t:Type) WHERE t.riskScore IS NOT NULL
+              AND t.fqn STARTS WITH (coalesce(m.fqn, m.basePackage) + '.')
+            WITH m, max(t.riskMaxWeight) AS mx, sum(t.riskCount) AS cnt
+            SET m.riskMaxWeight = mx, m.riskCount = cnt, m.riskScore = mx + cnt
+            """
+        )
+        logger.info("✅ [RAG Audit] riskScore computed on Type, Package and Module nodes.")
+
+    def _install_audit_prompt_context(self) -> None:
+        """
+        Attaches active findings to type/method summary prompts via AuditAwarePromptManager.
+        Note: analyzer.py hard-codes llm_api="fake", so this only becomes useful once a real LLM is configured.
+        Names shared by several nodes are skipped (prompts only carry the simple name); cached summaries are
+        reused as-is, so already cached nodes do not get the extra context until their cache entry is regenerated.
+        """
+        rows = self.neo4j_manager.execute_read_query(
+            """
+            MATCH (n)-[v:VIOLATES]->(r:Audit:Rule)
+            WHERE coalesce(v.active, true) AND (n:Type OR n:Method) AND n.name IS NOT NULL
+            RETURN n.name AS name, n:Type AS isType, r.id AS rule, v.severity AS severity,
+                   CASE WHEN n:Type THEN COUNT { MATCH (x:Type {name: n.name}) }
+                        ELSE COUNT { MATCH (x:Method {name: n.name}) } END AS same
+            """
+        ) or []
+        type_findings: dict[str, list[str]] = defaultdict(list)
+        method_findings: dict[str, list[str]] = defaultdict(list)
+        for row in rows:
+            if row.get("same", 0) != 1:
+                continue
+            target = type_findings if row.get("isType") else method_findings
+            entry = f"{row['rule']} ({row.get('severity') or 'n/a'})"
+            if entry not in target[row["name"]]:
+                target[row["name"]].append(entry)
+        if type_findings or method_findings:
+            self.node_summary_processor.prompt_manager = AuditAwarePromptManager(
+                dict(type_findings), dict(method_findings)
+            )
+            logger.info(
+                "✅ [RAG Audit] Findings attached to %d type(s) and %d method(s) as summary context.",
+                len(type_findings), len(method_findings),
+            )
 
     @staticmethod
     def _initialize_pass_progress(

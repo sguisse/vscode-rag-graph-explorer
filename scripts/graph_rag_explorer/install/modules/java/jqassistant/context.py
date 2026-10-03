@@ -17,6 +17,10 @@ class JQAssistantContext:
         self.templates_dir = f"{ctx.beScriptsPath}/scripts/graph_rag_explorer/install/modules/java/jqassistant/config/templates"
         self.jqassistant_template_path = os.path.join(self.templates_dir, ".jqassistant-template.yml")
         self.analysis_rules_template = os.path.join(self.templates_dir, "analysis-rules-template.xml")
+        # Portable good-practice packs (tech-* / xc-* / gp:Default), copied verbatim into rules_dir
+        self.rule_packs_dir = os.path.join(self.templates_dir, "rules")
+        # Application pack versioned in the application repository (rules, rule-parameters.yml, audit-rule-map.yaml)
+        self.app_pack_dir = os.path.join(ctx.workspace_root, "jqassistant")
         self.mcp_server_template_path = os.path.join(self.templates_dir, "mcp-server-template.json")
 
         self.rules_dir = f"{self.config_dir}/rules"

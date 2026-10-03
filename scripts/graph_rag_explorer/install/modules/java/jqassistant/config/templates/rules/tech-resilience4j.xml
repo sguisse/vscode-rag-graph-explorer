@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    tech-resilience4j - retry / circuit breaker / bulkhead / time limiter / rate limiter
+    Portable good-practice pack (copied verbatim by the installer, no {{PROJECT_NAME}} placeholder).
+    Rule conventions: constraints only read, concepts write idempotently, variable-length paths are bounded, constraints return
+    Element / Fqn / Detail (+ File, Line when available), parameters have safe defaults. Violations are indicated, never blocking.
+-->
+<jqa:jqassistant-rules xmlns:jqa="http://schema.jqassistant.org/rule/v2.9" xmlns="http://schema.jqassistant.org/rule/v2.9">
+
+    <concept id="tech-resilience4j:ResilienceGuarded">
+        <providesConcept refId="xc-res:ResilienceGuarded"/>
+        <description>Labels methods and types annotated with a Resilience4j annotation as :ResilienceGuarded.</description>
+        <cypher><![CDATA[
+            MATCH (x)-[:ANNOTATED_BY]->(:Annotation)-[:OF_TYPE]->(at:Type)
+                WHERE (x:Method OR x:Type) AND at.fqn IN ['io.github.resilience4j.retry.annotation.Retry', 'io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker', 'io.github.resilience4j.bulkhead.annotation.Bulkhead', 'io.github.resilience4j.timelimiter.annotation.TimeLimiter', 'io.github.resilience4j.ratelimiter.annotation.RateLimiter']
+                SET x:ResilienceGuarded
+                RETURN count(DISTINCT x) AS Guarded
+        ]]></cypher>
+    </concept>
+
+    <group id="tech-resilience4j:Default">
+        <description>tech-resilience4j - retry / circuit breaker / bulkhead / time limiter / rate limiter</description>
+        <includeConcept refId="tech-resilience4j:ResilienceGuarded"/>
+    </group>
+
+</jqa:jqassistant-rules>

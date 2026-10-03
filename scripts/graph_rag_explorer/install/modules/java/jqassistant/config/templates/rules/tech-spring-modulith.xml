@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    tech-spring-modulith - application modules and their boundaries
+    Portable good-practice pack (copied verbatim by the installer, no {{PROJECT_NAME}} placeholder).
+    Rule conventions: constraints only read, concepts write idempotently, variable-length paths are bounded, constraints return
+    Element / Fqn / Detail (+ File, Line when available), parameters have safe defaults. Violations are indicated, never blocking.
+-->
+<jqa:jqassistant-rules xmlns:jqa="http://schema.jqassistant.org/rule/v2.9" xmlns="http://schema.jqassistant.org/rule/v2.9">
+
+    <concept id="tech-spring-modulith:Module">
+        <providesConcept refId="xc-arch:Module"/>
+        <description>Labels the direct sub-packages of the @SpringBootApplication package as :Module (name, fqn).</description>
+        <cypher><![CDATA[
+            MATCH (app:Type)-[:ANNOTATED_BY]->(:Annotation)-[:OF_TYPE]->(:Type {fqn: 'org.springframework.boot.autoconfigure.SpringBootApplication'})
+                MATCH (root:Package)-[:CONTAINS]->(app)
+                MATCH (root)-[:CONTAINS]->(p:Package)
+                WHERE NOT p.fqn ENDS WITH '.internal' AND p.fqn <> root.fqn
+                SET p:Module
+                RETURN count(DISTINCT p) AS Modules
+        ]]></cypher>
+    </concept>
+    <concept id="tech-spring-modulith:ModuleDependencies">
+        <requiresConcept refId="tech-spring-modulith:Module"/>
+        <description>Creates (:Module)-[:DEPENDS_ON_MODULE {weight}]-&gt;(:Module) from type dependencies between modules.</description>
+        <cypher><![CDATA[
+            MATCH (m:Module) WITH collect(m) AS mods
+                MATCH (t1:Type)-[:DEPENDS_ON]->(t2:Type)
+                WHERE NOT t1:Test
+                WITH t1, t2, [x IN mods WHERE t1.fqn STARTS WITH x.fqn + '.'][0] AS m1, [x IN mods WHERE t2.fqn STARTS WITH x.fqn + '.'][0] AS m2
+                WHERE m1 IS NOT NULL AND m2 IS NOT NULL AND m1 <> m2
+                WITH m1, m2, count(DISTINCT t1) AS weight
+                MERGE (m1)-[r:DEPENDS_ON_MODULE]->(m2)
+                SET r.weight = weight
+                RETURN count(r) AS ModuleDependencies
+        ]]></cypher>
+    </concept>
+    <concept id="tech-spring-modulith:ApplicationModuleListener">
+        <providesConcept refId="xc-res:MessageConsumer"/>
+        <description>Labels @ApplicationModuleListener methods as :MessageConsumer (consumerKind = 'event', registryBacked = true).</description>
+        <cypher><![CDATA[
+            MATCH (t:Type)-[:DECLARES]->(m:Method)
+                WHERE m.name IS NOT NULL AND EXISTS { MATCH (m)-[:ANNOTATED_BY]->(:Annotation)-[:OF_TYPE]->(ax:Type) WHERE ax.fqn IN ['org.springframework.modulith.events.ApplicationModuleListener'] }
+                SET m:MessageConsumer, m.consumerKind = 'event', m.registryBacked = true
+                RETURN count(DISTINCT m) AS ModuleListeners
+        ]]></cypher>
+    </concept>
+    <constraint id="tech-spring-modulith:ModuleCycle" severity="critical">
+        <requiresConcept refId="tech-spring-modulith:ModuleDependencies"/>
+        <description>Modules must not depend on each other in a cycle.</description>
+        <cypher><![CDATA[
+            MATCH (a:Module)-[:DEPENDS_ON_MODULE*2..4]->(a)
+                RETURN DISTINCT a AS Element, a.fqn AS Fqn, 'module participates in a dependency cycle' AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+    <constraint id="tech-spring-modulith:ModuleInternalAccess" severity="major">
+        <requiresConcept refId="tech-spring-modulith:Module"/>
+        <description>A module may only use the types of another module's base package (its API), not its internal sub-packages (unless exposed as @NamedInterface).</description>
+        <cypher><![CDATA[
+            MATCH (m:Module) WITH collect(m) AS mods
+                MATCH (t1:Type)-[:DEPENDS_ON]->(t2:Type)
+                WHERE NOT t1:Test
+                WITH t1, t2, [x IN mods WHERE t1.fqn STARTS WITH x.fqn + '.'][0] AS m1, [x IN mods WHERE t2.fqn STARTS WITH x.fqn + '.'][0] AS m2
+                WHERE m1 IS NOT NULL AND m2 IS NOT NULL AND m1 <> m2 AND NOT EXISTS { MATCH (m2)-[:CONTAINS]->(t2) }
+                  AND NOT EXISTS { MATCH (sub:Package)-[:CONTAINS]->(t2), (sub)-[:ANNOTATED_BY]->(:Annotation)-[:OF_TYPE]->(:Type {fqn: 'org.springframework.modulith.NamedInterface'}) }
+                RETURN DISTINCT t1 AS Element, t1.fqn AS Fqn, t2.fqn AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+    <constraint id="tech-spring-modulith:CrossModuleEventWithoutRegistry" severity="major">
+        <requiresConcept refId="tech-spring-modulith:Module"/>
+        <requiresConcept refId="xc-res:MessageConsumer"/>
+        <description>In-process events inside a module application should use @ApplicationModuleListener (event publication registry) instead of a plain @EventListener.</description>
+        <cypher><![CDATA[
+            MATCH (m:Module) WITH collect(m) AS mods
+                MATCH (t:Type)-[:DECLARES]->(c:Method:MessageConsumer)
+                WHERE NOT t:Test AND c.consumerKind = 'event' AND coalesce(c.registryBacked, false) = false
+                  AND any(x IN mods WHERE t.fqn STARTS WITH x.fqn + '.')
+                RETURN DISTINCT c AS Element, t.fqn AS Fqn, c.signature AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+    <constraint id="tech-spring-modulith:ModulithVerifyMissing" severity="critical">
+        <requiresConcept refId="tech-spring-modulith:Module"/>
+        <description>No test calls ApplicationModules.verify(): module rules are not enforced at build time.</description>
+        <cypher><![CDATA[
+            MATCH (m:Module) WITH collect(m) AS mods
+                WHERE size(mods) > 0 AND NOT EXISTS {
+                  MATCH (a:Artifact)-[:CONTAINS]->(:Type)-[:DECLARES]->(:Method)-[:INVOKES]->(i:Method)<-[:DECLARES]-(:Type {fqn: 'org.springframework.modulith.core.ApplicationModules'})
+                  WHERE a.fileName ENDS WITH 'test-classes' AND coalesce(i.name, last(split(split(i.signature, '(')[0], ' '))) = 'verify'
+                }
+                RETURN mods[0] AS Element, mods[0].fqn AS Fqn, 'ApplicationModules.verify() is not called by any test' AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+
+    <group id="tech-spring-modulith:Default">
+        <description>tech-spring-modulith - application modules and their boundaries</description>
+        <includeConcept refId="tech-spring-modulith:Module"/>
+        <includeConcept refId="tech-spring-modulith:ModuleDependencies"/>
+        <includeConcept refId="tech-spring-modulith:ApplicationModuleListener"/>
+        <includeConstraint refId="tech-spring-modulith:ModuleCycle"/>
+        <includeConstraint refId="tech-spring-modulith:ModuleInternalAccess"/>
+        <includeConstraint refId="tech-spring-modulith:CrossModuleEventWithoutRegistry"/>
+        <includeConstraint refId="tech-spring-modulith:ModulithVerifyMissing"/>
+    </group>
+
+</jqa:jqassistant-rules>

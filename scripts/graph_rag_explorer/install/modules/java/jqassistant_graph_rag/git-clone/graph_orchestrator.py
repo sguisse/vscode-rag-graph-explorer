@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from typing import Optional
 from neo4j_manager import Neo4jManager
 from graph_basic_normalizer import GraphBasicNormalizer
 from source_file_linker import SourceFileLinker
@@ -17,8 +18,23 @@ class GraphOrchestrator:
     Manages and executes the sequence of graph normalization and enrichment passes.
     """
 
-    def __init__(self, neo4j_manager: Neo4jManager, repo_root: str = ""):
+    def __init__(
+        self,
+        neo4j_manager: Neo4jManager,
+        repo_root: str = "",
+        audit_dir: Optional[str] = None,
+        jqa_report: Optional[str] = None,
+        audit_rule_map: Optional[str] = None,
+        jacoco_xml: Optional[str] = None,
+        surefire_dir: Optional[str] = None,
+    ):
         self.neo4j_manager = neo4j_manager
+        # Optional audit overlay inputs (Phase 6); all None = overlay is a no-op.
+        self.audit_dir = audit_dir
+        self.jqa_report = jqa_report
+        self.audit_rule_map = audit_rule_map
+        self.jacoco_xml = jacoco_xml
+        self.surefire_dir = surefire_dir
         self.project_path = Path(repo_root).resolve() if repo_root else Path.cwd().resolve()
         self.repo_root = repo_root or ""
         logger.info(f"Initialized GraphOrchestrator with initial project_path: {self.project_path}")
@@ -83,4 +99,27 @@ class GraphOrchestrator:
 
         safe_pass("Phase 5: Create Entities and Stable IDs", entity_setter.create_entities_and_stable_ids)
 
+        safe_pass("Phase 6: Audit Overlay Integration", self._run_audit_overlay)
+
         logger.info("--- All Graph Enrichment and Normalization Passes Finished ---")
+
+    def _run_audit_overlay(self):
+        """
+        Phase 6 (additive, non-blocking): imports jQA report, audit markdown, rule map, facts, surefire and
+        JaCoCo data as an audit overlay. No-op when no audit input is available.
+        """
+        from audit_overlay import AuditOverlay
+
+        overlay = AuditOverlay(
+            self.neo4j_manager,
+            self.project_path,
+            audit_dir=self.audit_dir,
+            jqa_report=self.jqa_report,
+            audit_rule_map=self.audit_rule_map,
+            jacoco_xml=self.jacoco_xml,
+            surefire_dir=self.surefire_dir,
+        )
+        if not overlay.has_inputs():
+            logger.info("ℹ️ Audit overlay skipped: no audit inputs provided or found.")
+            return
+        overlay.run()

@@ -65,3 +65,33 @@ def add_rag_args(parser: argparse.ArgumentParser):
         default=int(os.getenv("JQA_METHOD_MIN_CYCLOMATIC", "6")),
         help="Only generate method code_analysis for methods with cyclomatic complexity > MIN (default: 6). Set 0 to disable.",
     )
+
+
+def add_audit_args(parser: argparse.ArgumentParser):
+    """Adds the optional audit overlay inputs (all default to None = overlay disabled for that input)."""
+    group = parser.add_argument_group("Audit Overlay (Optional)")
+    group.add_argument(
+        "--audit-dir",
+        default=None,
+        help="Directory with audit markdown files (compliance matrix, report FID/SF rows, EPIC backlog).",
+    )
+    group.add_argument(
+        "--jqa-report",
+        default=None,
+        help="Path to jqassistant-report.xml. A missing, empty or partial report is tolerated.",
+    )
+    group.add_argument(
+        "--audit-rule-map",
+        default=None,
+        help="Path to audit-rule-map.yaml mapping audit IDs to covering jQA rules (e.g. SF-14: [sam-sec:RhinoForbidden]).",
+    )
+    group.add_argument(
+        "--jacoco-xml",
+        default=None,
+        help="Path to a JaCoCo XML report (e.g. target/site/jacoco/jacoco.xml) to import and bridge to methods.",
+    )
+    group.add_argument(
+        "--surefire-dir",
+        default=None,
+        help="Directory with surefire/failsafe TEST-*.xml reports (e.g. target/surefire-reports).",
+    )

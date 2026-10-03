@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    gp:Default - portable good-practice rule set (all tech-* technology packs + all xc-* cross-cutting packs).
+    A rule whose technology is absent simply returns 0 rows. Activated from analyze.groups of .jqassistant.yml.
+    Technology packs never reference cross-cutting packs; cross-cutting packs only use abstract labels (xc-*) that tech packs provide.
+-->
+<jqa:jqassistant-rules xmlns:jqa="http://schema.jqassistant.org/rule/v2.9" xmlns="http://schema.jqassistant.org/rule/v2.9">
+
+    <group id="gp:Default">
+        <description>Portable good-practice rules: technology packs (tech-*) and cross-cutting packs (xc-*)</description>
+        <includeGroup refId="tech-github-actions:Default"/>
+        <includeGroup refId="tech-http-clients:Default"/>
+        <includeGroup refId="tech-jackson:Default"/>
+        <includeGroup refId="tech-java:Default"/>
+        <includeGroup refId="tech-jpa-hibernate:Default"/>
+        <includeGroup refId="tech-junit5-testing:Default"/>
+        <includeGroup refId="tech-kafka:Default"/>
+        <includeGroup refId="tech-logging:Default"/>
+        <includeGroup refId="tech-mail:Default"/>
+        <includeGroup refId="tech-maven:Default"/>
+        <includeGroup refId="tech-object-storage:Default"/>
+        <includeGroup refId="tech-office-poi:Default"/>
+        <includeGroup refId="tech-postgres-flyway:Default"/>
+        <includeGroup refId="tech-redis:Default"/>
+        <includeGroup refId="tech-resilience4j:Default"/>
+        <includeGroup refId="tech-scheduling-quartz:Default"/>
+        <includeGroup refId="tech-scripting:Default"/>
+        <includeGroup refId="tech-spring-core:Default"/>
+        <includeGroup refId="tech-spring-modulith:Default"/>
+        <includeGroup refId="tech-spring-security:Default"/>
+        <includeGroup refId="tech-spring-web:Default"/>
+        <includeGroup refId="xc-architecture:Default"/>
+        <includeGroup refId="xc-data-integrity:Default"/>
+        <includeGroup refId="xc-performance:Default"/>
+        <includeGroup refId="xc-resilience:Default"/>
+        <includeGroup refId="xc-security:Default"/>
+        <includeGroup refId="xc-testing:Default"/>
+        <includeGroup refId="xc-transactional:Default"/>
+    </group>
+
+</jqa:jqassistant-rules>

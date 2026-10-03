@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    tech-object-storage - GCS / S3 / OSS clients
+    Portable good-practice pack (copied verbatim by the installer, no {{PROJECT_NAME}} placeholder).
+    Rule conventions: constraints only read, concepts write idempotently, variable-length paths are bounded, constraints return
+    Element / Fqn / Detail (+ File, Line when available), parameters have safe defaults. Violations are indicated, never blocking.
+-->
+<jqa:jqassistant-rules xmlns:jqa="http://schema.jqassistant.org/rule/v2.9" xmlns="http://schema.jqassistant.org/rule/v2.9">
+
+    <concept id="tech-object-storage:Clients">
+        <providesConcept refId="xc-res:OutboundCall"/>
+        <providesConcept refId="xc-tx:SideEffectCall"/>
+        <description>Labels object storage client methods (GCS, AWS S3, Aliyun OSS) as :OutboundCall and :SideEffectCall.</description>
+        <cypher><![CDATA[
+            MATCH (lt:Type)-[:DECLARES]->(m:Method)
+                WHERE lt.fqn IN ['com.google.cloud.storage.Storage', 'software.amazon.awssdk.services.s3.S3Client', 'com.aliyun.oss.OSS', 'com.aliyun.oss.OSSClient', 'com.amazonaws.services.s3.AmazonS3']
+                  AND coalesce(m.name, last(split(split(m.signature, '(')[0], ' '))) <> '<init>' AND coalesce(m.name, last(split(split(m.signature, '(')[0], ' '))) <> '<clinit>'
+                SET m:OutboundCall:SideEffectCall
+                RETURN count(DISTINCT m) AS Methods
+        ]]></cypher>
+    </concept>
+
+    <group id="tech-object-storage:Default">
+        <description>tech-object-storage - GCS / S3 / OSS clients</description>
+        <includeConcept refId="tech-object-storage:Clients"/>
+    </group>
+
+</jqa:jqassistant-rules>

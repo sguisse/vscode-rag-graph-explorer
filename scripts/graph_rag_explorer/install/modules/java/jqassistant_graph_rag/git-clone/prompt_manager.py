@@ -2,7 +2,7 @@
 This module centralizes all LLM prompt templates for the GraphRAG system.
 """
 
-from typing import List
+from typing import Dict, List, Optional
 
 
 class PromptManager:
@@ -280,3 +280,50 @@ Summary:
             raise ValueError(
                 f"Unknown context_type for project summary: {context_type}"
             )
+
+
+class AuditAwarePromptManager(PromptManager):
+    """
+    Optional, additive PromptManager that appends the audit/jQA findings attached to a type or method
+    to the (single-shot) type and method summary prompts. Every other prompt is inherited unchanged.
+    """
+
+    MAX_FINDINGS = 5
+
+    def __init__(
+        self,
+        type_findings: Optional[Dict[str, List[str]]] = None,
+        method_findings: Optional[Dict[str, List[str]]] = None,
+    ):
+        self.type_findings = type_findings or {}
+        self.method_findings = method_findings or {}
+
+    def _audit_suffix(self, findings: Optional[List[str]]) -> str:
+        if not findings:
+            return ""
+        listed = "; ".join(findings[: self.MAX_FINDINGS])
+        return (
+            "\n\nKnown audit / static-analysis findings attached to this element "
+            f"(mention them only if relevant to its role): [{listed}]."
+        )
+
+    def get_type_summary_prompt(
+        self,
+        type_name: str,
+        type_label: str,
+        parent_summaries: List[str],
+        member_summaries: List[str],
+    ) -> str:
+        prompt = super().get_type_summary_prompt(type_name, type_label, parent_summaries, member_summaries)
+        return prompt + self._audit_suffix(self.type_findings.get(type_name))
+
+    def get_method_summary_prompt(
+        self,
+        method_name: str,
+        code_analysis: str,
+        callers: List[str],
+        callees: List[str],
+    ) -> str:
+        prompt = super().get_method_summary_prompt(method_name, code_analysis, callers, callees)
+        return prompt + self._audit_suffix(self.method_findings.get(method_name))
+

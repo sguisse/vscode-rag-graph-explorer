@@ -11,7 +11,8 @@ def _process_java_src(norm_root: str, discovered_set: Set[str]) -> None:
 
 def _process_java_classes(norm_root: str, discovered_set: Set[str]) -> None:
     """Identifies compiled bytecode targets and formats them for the jQAssistant CLI."""
-    if norm_root.endswith("target/classes"):
+    # target/test-classes feeds the :Test labelling (tech-junit5-testing) and test-coverage rules
+    if norm_root.endswith("target/classes") or norm_root.endswith("target/test-classes"):
         # Explicitly prepend the jQAssistant classpath scanner protocol prefix
         jqa_classpath_target = f"java:classpath::{norm_root}"
         discovered_set.add(jqa_classpath_target)

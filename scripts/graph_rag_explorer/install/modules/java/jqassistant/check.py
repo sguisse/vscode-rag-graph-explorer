@@ -84,7 +84,8 @@ class JQAssistantChecker(BaseCheckModule):
     def check_sandboxed_rules(self):
         self.steps_count += 1
         rules_dir = f"{self.jqa.rules_dir}"
-        if os.path.exists(rules_dir) and any(f.endswith(".xml") for f in os.listdir(rules_dir)):
+        # gp-default.xml marks an installation that already contains the portable good-practice packs
+        if os.path.exists(rules_dir) and any(f.endswith(".xml") for f in os.listdir(rules_dir)) and os.path.exists(os.path.join(rules_dir, "gp-default.xml")):
             self.status["jqassistant_custom_rules"] = {"status": "✅"}
         else:
             self.status["jqassistant_custom_rules"] = {

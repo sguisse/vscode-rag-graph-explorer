@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    xc-architecture - module boundaries (abstract labels only)
+    Portable good-practice pack (copied verbatim by the installer, no {{PROJECT_NAME}} placeholder).
+    Rule conventions: constraints only read, concepts write idempotently, variable-length paths are bounded, constraints return
+    Element / Fqn / Detail (+ File, Line when available), parameters have safe defaults. Violations are indicated, never blocking.
+-->
+<jqa:jqassistant-rules xmlns:jqa="http://schema.jqassistant.org/rule/v2.9" xmlns="http://schema.jqassistant.org/rule/v2.9">
+
+    <concept id="xc-arch:Module" abstract="true">
+        <description>Application module (label :Module on the module base package, relation DEPENDS_ON_MODULE{weight} between modules).</description>
+    </concept>
+
+    <group id="xc-architecture:Default">
+        <description>xc-architecture - module boundaries (abstract labels only)</description>
+    </group>
+
+</jqa:jqassistant-rules>

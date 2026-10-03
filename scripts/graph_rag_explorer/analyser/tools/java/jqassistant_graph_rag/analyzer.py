@@ -37,6 +37,28 @@ class JQAssistantGraphRagAnalyzer(BaseAnalyser):
             return sys.executable
         return python_bin
 
+    def _audit_overlay_args(self, workspace_root: str) -> list:
+        """Builds the optional audit overlay flags (--audit-dir, --jqa-report, ...) for the paths that exist."""
+        candidates = [
+            ("--audit-dir", os.path.join(workspace_root, "audit"), os.path.isdir),
+            (
+                "--jqa-report",
+                os.path.join(self.jqa_gr.raw_outputs_dir, "jqassistant", "report", "jqassistant-report.xml"),
+                os.path.isfile,
+            ),
+            ("--audit-rule-map", os.path.join(workspace_root, "jqassistant", "audit-rule-map.yaml"), os.path.isfile),
+            ("--jacoco-xml", os.path.join(workspace_root, "target", "site", "jacoco", "jacoco.xml"), os.path.isfile),
+            ("--surefire-dir", os.path.join(workspace_root, "target", "surefire-reports"), os.path.isdir),
+        ]
+        args: list = []
+        for flag, path, exists in candidates:
+            if exists(path):
+                args += [flag, os.path.abspath(path)]
+                info(f"Audit overlay input detected: {flag} {path}", component=self.name)
+            else:
+                debug(f"Audit overlay input absent, '{flag}' not passed: {path}", component=self.name)
+        return args
+
     def run_analysis(self, neo4j_client: Neo4jClient) -> None:
         """Main orchestrator for the jQAssistant Graph RAG analysis pipeline using local LLM and local embeddings."""
         os.makedirs(self.jqa_gr.raw_outputs_dir, exist_ok=True)
@@ -134,6 +156,9 @@ class JQAssistantGraphRagAnalyzer(BaseAnalyser):
             "--min-cyclomatic",
             str(min_cyclomatic),
         ]
+
+        # Optional audit overlay inputs: each flag is passed only when its path exists.
+        cmd_args += self._audit_overlay_args(workspace_root)
 
         info(
             f"Invoking graph-rag enrichment script in '{git_clone_dir}' with python binary '{python_bin}' (LLM API: '{llm_api}')",

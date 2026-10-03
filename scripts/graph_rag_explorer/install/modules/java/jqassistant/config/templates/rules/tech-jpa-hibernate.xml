@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    tech-jpa-hibernate - JPA entities and Spring Data repositories
+    Portable good-practice pack (copied verbatim by the installer, no {{PROJECT_NAME}} placeholder).
+    Rule conventions: constraints only read, concepts write idempotently, variable-length paths are bounded, constraints return
+    Element / Fqn / Detail (+ File, Line when available), parameters have safe defaults. Violations are indicated, never blocking.
+-->
+<jqa:jqassistant-rules xmlns:jqa="http://schema.jqassistant.org/rule/v2.9" xmlns="http://schema.jqassistant.org/rule/v2.9">
+
+    <concept id="tech-jpa-hibernate:Entity">
+        <providesConcept refId="xc-data:Entity"/>
+        <description>Labels @Entity classes as :Entity and stores the @Table schema / name (tableSchema, tableName).</description>
+        <cypher><![CDATA[
+            MATCH (t:Type)
+                WHERE EXISTS { MATCH (t)-[:ANNOTATED_BY]->(:Annotation)-[:OF_TYPE]->(ax:Type) WHERE ax.fqn IN ['jakarta.persistence.Entity', 'javax.persistence.Entity'] }
+                OPTIONAL MATCH (t)-[:ANNOTATED_BY]->(ta:Annotation)-[:OF_TYPE]->(tt:Type)
+                WHERE tt.fqn IN ['jakarta.persistence.Table', 'javax.persistence.Table']
+                OPTIONAL MATCH (ta)-[:HAS]->(sv:Value {name: 'schema'})
+                OPTIONAL MATCH (ta)-[:HAS]->(nv:Value {name: 'name'})
+                SET t:Entity, t.tableSchema = sv.value, t.tableName = nv.value
+                RETURN count(DISTINCT t) AS Entities
+        ]]></cypher>
+    </concept>
+    <concept id="tech-jpa-hibernate:Repository">
+        <providesConcept refId="xc-data:Repository"/>
+        <description>Labels Spring Data repository interfaces (direct or inherited, through at most 3 application types, from an org.springframework.data *Repository type) as :Repository. Library types are not scanned, so the library supertype is matched by name.</description>
+        <cypher><![CDATA[
+            MATCH (t:Type)-[:EXTENDS|IMPLEMENTS*1..3]->(s:Type)
+                WHERE s.fqn STARTS WITH 'org.springframework.data.' AND s.fqn ENDS WITH 'Repository'
+                SET t:Repository
+                RETURN count(DISTINCT t) AS Repositories
+        ]]></cypher>
+    </concept>
+    <concept id="tech-jpa-hibernate:RepositoryWrite">
+        <providesConcept refId="xc-tx:RepositoryWrite"/>
+        <requiresConcept refId="tech-jpa-hibernate:Repository"/>
+        <description>Labels the save* / delete* / flush methods of Spring Data repositories and @Modifying queries as :RepositoryWrite.</description>
+        <cypher><![CDATA[
+            MATCH (t:Type:Repository)-[:DECLARES]->(m:Method)
+                WHERE (coalesce(m.name, last(split(split(m.signature, '(')[0], ' '))) STARTS WITH 'save' OR coalesce(m.name, last(split(split(m.signature, '(')[0], ' '))) STARTS WITH 'delete' OR coalesce(m.name, last(split(split(m.signature, '(')[0], ' '))) = 'flush'
+                   OR EXISTS { MATCH (m)-[:ANNOTATED_BY]->(:Annotation)-[:OF_TYPE]->(:Type {fqn: 'org.springframework.data.jpa.repository.Modifying'}) })
+                SET m:RepositoryWrite
+                RETURN count(DISTINCT m) AS RepositoryWrites
+        ]]></cypher>
+    </concept>
+    <constraint id="tech-jpa-hibernate:EntityWithoutSchema" severity="critical">
+        <requiresConcept refId="tech-jpa-hibernate:Entity"/>
+        <description>Every @Entity must declare its database schema in @Table(schema = ...).</description>
+        <cypher><![CDATA[
+            MATCH (e:Type:Entity)
+                WHERE NOT e:Test AND coalesce(e.tableSchema, '') = ''
+                RETURN e AS Element, e.fqn AS Fqn, 'no @Table(schema=...)' AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+    <constraint id="tech-jpa-hibernate:DuplicateTableMapping" severity="major">
+        <requiresConcept refId="tech-jpa-hibernate:Entity"/>
+        <description>Two entities must not be mapped to the same table.</description>
+        <cypher><![CDATA[
+            MATCH (e:Type:Entity)
+                WHERE NOT e:Test AND e.tableName IS NOT NULL
+                WITH coalesce(e.tableSchema, '') + '.' + e.tableName AS tbl, collect(e) AS entities
+                WHERE size(entities) > 1
+                UNWIND entities AS e
+                RETURN e AS Element, e.fqn AS Fqn, 'table ' + tbl + ' mapped by ' + toString(size(entities)) + ' entities' AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+    <constraint id="tech-jpa-hibernate:FloatingPointNumericField" severity="minor">
+        <requiresConcept refId="tech-jpa-hibernate:Entity"/>
+        <description>Entities should not store money / exact quantities in float or double: use BigDecimal.</description>
+        <cypher><![CDATA[
+            MATCH (e:Type:Entity)-[:DECLARES]->(f:Field)-[:OF_TYPE]->(ft:Type)
+                WHERE NOT e:Test AND ft.fqn IN ['double', 'float', 'java.lang.Double', 'java.lang.Float']
+                RETURN DISTINCT f AS Element, e.fqn AS Fqn, f.name + ' : ' + ft.fqn AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+    <constraint id="tech-jpa-hibernate:EntityWithoutVersion" severity="info">
+        <requiresConcept refId="tech-jpa-hibernate:Entity"/>
+        <description>Entities without a @Version field have no optimistic locking.</description>
+        <cypher><![CDATA[
+            MATCH (e:Type:Entity)
+                WHERE NOT e:Test AND NOT EXISTS { MATCH (e)-[:DECLARES]->(f:Field)-[:ANNOTATED_BY]->(:Annotation)-[:OF_TYPE]->(vt:Type) WHERE vt.fqn IN ['jakarta.persistence.Version', 'javax.persistence.Version'] }
+                RETURN e AS Element, e.fqn AS Fqn, 'no @Version field' AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+    <constraint id="tech-jpa-hibernate:UnboundedRepositoryQuery" severity="minor">
+        <requiresConcept refId="tech-jpa-hibernate:Repository"/>
+        <description>Repository finders returning a List without Pageable / Sort / Top-N are unbounded: page them.</description>
+        <cypher><![CDATA[
+            MATCH (t:Type:Repository)-[:DECLARES]->(m:Method)
+                WHERE NOT t:Test AND coalesce(m.name, last(split(split(m.signature, '(')[0], ' '))) STARTS WITH 'find' AND m.signature STARTS WITH 'java.util.List '
+                  AND NOT m.signature CONTAINS 'Pageable' AND NOT m.signature CONTAINS 'Sort' AND NOT coalesce(m.name, last(split(split(m.signature, '(')[0], ' '))) CONTAINS 'Top' AND NOT coalesce(m.name, last(split(split(m.signature, '(')[0], ' '))) CONTAINS 'First'
+                RETURN DISTINCT m AS Element, t.fqn AS Fqn, m.signature AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+    <constraint id="tech-jpa-hibernate:MultipleRevisionEntities" severity="major">
+        <description>Exactly one Envers @RevisionEntity is allowed.</description>
+        <cypher><![CDATA[
+            MATCH (:Artifact)-[:CONTAINS]->(t:Type)-[:ANNOTATED_BY]->(:Annotation)-[:OF_TYPE]->(:Type {fqn: 'org.hibernate.envers.RevisionEntity'})
+                WHERE NOT t:Test
+                WITH collect(DISTINCT t) AS revs
+                WHERE size(revs) > 1
+                UNWIND revs AS t
+                RETURN t AS Element, t.fqn AS Fqn, toString(size(revs)) + ' revision entities' AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+
+    <group id="tech-jpa-hibernate:Default">
+        <description>tech-jpa-hibernate - JPA entities and Spring Data repositories</description>
+        <includeConcept refId="tech-jpa-hibernate:Entity"/>
+        <includeConcept refId="tech-jpa-hibernate:Repository"/>
+        <includeConcept refId="tech-jpa-hibernate:RepositoryWrite"/>
+        <includeConstraint refId="tech-jpa-hibernate:EntityWithoutSchema"/>
+        <includeConstraint refId="tech-jpa-hibernate:DuplicateTableMapping"/>
+        <includeConstraint refId="tech-jpa-hibernate:FloatingPointNumericField"/>
+        <includeConstraint refId="tech-jpa-hibernate:EntityWithoutVersion"/>
+        <includeConstraint refId="tech-jpa-hibernate:UnboundedRepositoryQuery"/>
+        <includeConstraint refId="tech-jpa-hibernate:MultipleRevisionEntities"/>
+    </group>
+
+</jqa:jqassistant-rules>

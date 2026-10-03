@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    tech-maven - build dependencies and plugins
+    Portable good-practice pack (copied verbatim by the installer, no {{PROJECT_NAME}} placeholder).
+    Rule conventions: constraints only read, concepts write idempotently, variable-length paths are bounded, constraints return
+    Element / Fqn / Detail (+ File, Line when available), parameters have safe defaults. Violations are indicated, never blocking.
+-->
+<jqa:jqassistant-rules xmlns:jqa="http://schema.jqassistant.org/rule/v2.9" xmlns="http://schema.jqassistant.org/rule/v2.9">
+
+    <constraint id="tech-maven:ForbiddenDependency" severity="major">
+        <requiresParameter name="forbiddenDependencies" type="String" defaultValue=""/>
+        <description>Declared dependencies must not match the parameter forbiddenDependencies (comma separated regex on group:artifact).</description>
+        <cypher><![CDATA[
+            MATCH (pom:Maven:Pom)-[:DECLARES_DEPENDENCY]->(:Maven:Dependency)-[:TO_ARTIFACT]->(a:Maven:Artifact)
+                WITH pom, a, [x IN split($forbiddenDependencies, ',') | trim(x)] AS forbidden
+                WHERE any(r IN forbidden WHERE r <> '' AND (a.group + ':' + a.name) =~ r)
+                RETURN DISTINCT pom AS Element, pom.fileName AS Fqn, a.group + ':' + a.name AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+    <constraint id="tech-maven:RequiredDependency" severity="major">
+        <requiresParameter name="requiredDependencies" type="String" defaultValue=""/>
+        <description>At least one POM must declare each dependency of the parameter requiredDependencies (comma separated substrings of group:artifact).</description>
+        <cypher><![CDATA[
+            UNWIND [x IN split($requiredDependencies, ',') | trim(x)] AS req
+                WITH req WHERE req <> '' AND NOT EXISTS { MATCH (:Maven:Pom)-[:DECLARES_DEPENDENCY]->(:Maven:Dependency)-[:TO_ARTIFACT]->(a:Maven:Artifact) WHERE (a.group + ':' + a.name) CONTAINS req }
+                RETURN req AS Element, req AS Fqn, 'required dependency is not declared' AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+    <constraint id="tech-maven:CoverageGateMissing" severity="critical">
+        <description>The JaCoCo plugin is declared but no execution runs the 'check' goal: the coverage gate is not enforced.</description>
+        <cypher><![CDATA[
+            MATCH (pom:Maven:Pom)-[:USES_PLUGIN]->(p:Maven:Plugin)-[:IS_ARTIFACT]->(:Maven:Artifact {group: 'org.jacoco', name: 'jacoco-maven-plugin'})
+                WHERE NOT EXISTS { MATCH (p)-[:HAS_EXECUTION]->(:Maven:PluginExecution)-[:HAS_GOAL]->(:Maven:ExecutionGoal {name: 'check'}) }
+                RETURN DISTINCT p AS Element, pom.fileName AS Fqn, 'jacoco-maven-plugin without check goal' AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+    <constraint id="tech-maven:EnforcerMissing" severity="minor">
+        <description>No POM uses the maven-enforcer-plugin (dependency convergence, banned dependencies).</description>
+        <cypher><![CDATA[
+            MATCH (pom:Maven:Pom) WITH collect(pom) AS poms
+                WHERE size(poms) > 0 AND NOT EXISTS { MATCH (:Maven:Pom)-[:USES_PLUGIN]->(:Maven:Plugin)-[:IS_ARTIFACT]->(:Maven:Artifact {name: 'maven-enforcer-plugin'}) }
+                RETURN poms[0] AS Element, poms[0].fileName AS Fqn, 'maven-enforcer-plugin is not used' AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+
+    <group id="tech-maven:Default">
+        <description>tech-maven - build dependencies and plugins</description>
+        <includeConstraint refId="tech-maven:ForbiddenDependency"/>
+        <includeConstraint refId="tech-maven:RequiredDependency"/>
+        <includeConstraint refId="tech-maven:CoverageGateMissing"/>
+        <includeConstraint refId="tech-maven:EnforcerMissing"/>
+    </group>
+
+</jqa:jqassistant-rules>

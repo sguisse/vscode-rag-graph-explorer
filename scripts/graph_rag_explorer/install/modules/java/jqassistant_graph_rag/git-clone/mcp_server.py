@@ -4,6 +4,7 @@ from typing import Optional, Dict, Any
 from fastmcp import FastMCP
 from neo4j_manager import Neo4jManager
 from llm_client import get_embedding_client
+import audit_queries
 
 # --- Configuration and Initialization ---
 logger = logging.getLogger(__name__)
@@ -246,6 +247,60 @@ def search_nodes_for_semantic_similarity(
         return {"results": results}
     except Exception as e:
         return {"error": f"An error occurred during semantic search: {e}"}
+
+
+# --- Audit overlay tools (additive; read-only) ---
+
+
+@mcp.tool(
+    name="get_audit_findings",
+    description=(
+        "Lists audit findings and rule violations (jQAssistant constraints, facts) attached to a type, method or file. "
+        "entity_or_file: entity_id, fqn, method signature, file path (suffix) or simple type name. "
+        "min_severity: info|minor|major|critical|blocker."
+    ),
+)
+def get_audit_findings(entity_or_file: str, min_severity: str = "info") -> Dict[str, Any]:
+    try:
+        return audit_queries.get_audit_findings(neo4j_mgr, entity_or_file, min_severity)
+    except Exception as e:
+        return {"error": f"Could not retrieve audit findings: {e}"}
+
+
+@mcp.tool(
+    name="get_rule_violations",
+    description="Returns a rule's metadata, the audit IDs it covers and all its violations (active ones first).",
+)
+def get_rule_violations(rule_id: str) -> Dict[str, Any]:
+    try:
+        return audit_queries.get_rule_violations(neo4j_mgr, rule_id)
+    except Exception as e:
+        return {"error": f"Could not retrieve rule violations: {e}"}
+
+
+@mcp.tool(
+    name="get_audit_coverage",
+    description=(
+        "Returns audit coverage per audit ID: confirmed / resolved? / contradiction / not automatable, "
+        "plus rules with new candidate violations."
+    ),
+)
+def get_audit_coverage() -> Dict[str, Any]:
+    try:
+        return audit_queries.get_audit_coverage(neo4j_mgr)
+    except Exception as e:
+        return {"error": f"Could not retrieve audit coverage: {e}"}
+
+
+@mcp.tool(
+    name="explain_finding",
+    description="Explains an audit finding by fid: details, source code slice, covering rules and current violation state.",
+)
+def explain_finding(fid: str) -> Dict[str, Any]:
+    try:
+        return audit_queries.explain_finding(neo4j_mgr, fid, _read_file_slice, project_root=project_root_path)
+    except Exception as e:
+        return {"error": f"Could not explain finding: {e}"}
 
 
 # --- FastMCP Application ---

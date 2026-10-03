@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    tech-mail - outgoing mail
+    Portable good-practice pack (copied verbatim by the installer, no {{PROJECT_NAME}} placeholder).
+    Rule conventions: constraints only read, concepts write idempotently, variable-length paths are bounded, constraints return
+    Element / Fqn / Detail (+ File, Line when available), parameters have safe defaults. Violations are indicated, never blocking.
+-->
+<jqa:jqassistant-rules xmlns:jqa="http://schema.jqassistant.org/rule/v2.9" xmlns="http://schema.jqassistant.org/rule/v2.9">
+
+    <concept id="tech-mail:Send">
+        <providesConcept refId="xc-res:OutboundCall"/>
+        <providesConcept refId="xc-tx:SideEffectCall"/>
+        <description>Labels MailSender / JavaMailSender send methods as :OutboundCall and :SideEffectCall.</description>
+        <cypher><![CDATA[
+            MATCH (lt:Type)-[:DECLARES]->(m:Method)
+                WHERE lt.fqn IN ['org.springframework.mail.MailSender', 'org.springframework.mail.javamail.JavaMailSender', 'org.springframework.mail.javamail.JavaMailSenderImpl'] AND m.name STARTS WITH 'send'
+                SET m:OutboundCall:SideEffectCall
+                RETURN count(DISTINCT m) AS Methods
+        ]]></cypher>
+    </concept>
+
+    <group id="tech-mail:Default">
+        <description>tech-mail - outgoing mail</description>
+        <includeConcept refId="tech-mail:Send"/>
+    </group>
+
+</jqa:jqassistant-rules>

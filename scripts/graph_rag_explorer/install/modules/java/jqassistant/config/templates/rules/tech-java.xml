@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    tech-java - plain Java code health
+    Portable good-practice pack (copied verbatim by the installer, no {{PROJECT_NAME}} placeholder).
+    Rule conventions: constraints only read, concepts write idempotently, variable-length paths are bounded, constraints return
+    Element / Fqn / Detail (+ File, Line when available), parameters have safe defaults. Violations are indicated, never blocking.
+-->
+<jqa:jqassistant-rules xmlns:jqa="http://schema.jqassistant.org/rule/v2.9" xmlns="http://schema.jqassistant.org/rule/v2.9">
+
+    <constraint id="tech-java:WeakRandom" severity="major">
+        <description>java.util.Random and Math.random are predictable: use SecureRandom for anything security relevant, ThreadLocalRandom otherwise.</description>
+        <cypher><![CDATA[
+            MATCH (t:Type)-[:DECLARES]->(m:Method)-[:INVOKES]->(c:Method)<-[:DECLARES]-(rt:Type)
+                WHERE NOT t:Test AND ((rt.fqn = 'java.util.Random' AND coalesce(c.name, last(split(split(c.signature, '(')[0], ' '))) = '<init>') OR (rt.fqn = 'java.lang.Math' AND coalesce(c.name, last(split(split(c.signature, '(')[0], ' '))) = 'random'))
+                RETURN DISTINCT m AS Element, t.fqn AS Fqn, rt.fqn + '#' + coalesce(c.name, last(split(split(c.signature, '(')[0], ' '))) AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+    <constraint id="tech-java:NonInjectableClock" severity="minor">
+        <description>Reading the system clock / default zone directly makes code untestable: inject a java.time.Clock.</description>
+        <cypher><![CDATA[
+            MATCH (t:Type)-[:DECLARES]->(m:Method)-[:INVOKES]->(c:Method)<-[:DECLARES]-(rt:Type)
+                WHERE NOT t:Test AND ((rt.fqn IN ['java.time.Instant','java.time.LocalDate','java.time.LocalDateTime','java.time.ZonedDateTime','java.time.OffsetDateTime','java.time.LocalTime'] AND coalesce(c.name, last(split(split(c.signature, '(')[0], ' '))) = 'now' AND c.signature ENDS WITH ' now()') OR (rt.fqn = 'java.time.ZoneId' AND coalesce(c.name, last(split(split(c.signature, '(')[0], ' '))) = 'systemDefault'))
+                RETURN DISTINCT m AS Element, t.fqn AS Fqn, rt.fqn + '#' + coalesce(c.name, last(split(split(c.signature, '(')[0], ' '))) AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+    <constraint id="tech-java:BareRuntimeException" severity="minor">
+        <description>Throwing java.lang.RuntimeException directly hides the failure cause: throw a dedicated exception type.</description>
+        <cypher><![CDATA[
+            MATCH (t:Type)-[:DECLARES]->(m:Method)-[:INVOKES]->(c:Method)<-[:DECLARES]-(rt:Type)
+                WHERE NOT t:Test AND (rt.fqn = 'java.lang.RuntimeException' AND coalesce(c.name, last(split(split(c.signature, '(')[0], ' '))) = '<init>')
+                RETURN DISTINCT m AS Element, t.fqn AS Fqn, rt.fqn + '#' + coalesce(c.name, last(split(split(c.signature, '(')[0], ' '))) AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+    <constraint id="tech-java:NoArgOrElseThrow" severity="minor">
+        <description>Optional.orElseThrow() without argument throws an anonymous NoSuchElementException: supply a meaningful exception.</description>
+        <cypher><![CDATA[
+            MATCH (t:Type)-[:DECLARES]->(m:Method)-[:INVOKES]->(c:Method)<-[:DECLARES]-(rt:Type)
+                WHERE NOT t:Test AND (rt.fqn = 'java.util.Optional' AND coalesce(c.name, last(split(split(c.signature, '(')[0], ' '))) = 'orElseThrow' AND c.signature ENDS WITH ' orElseThrow()')
+                RETURN DISTINCT m AS Element, t.fqn AS Fqn, rt.fqn + '#' + coalesce(c.name, last(split(split(c.signature, '(')[0], ' '))) AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+    <constraint id="tech-java:UnreferencedType" severity="minor">
+        <description>Classes that nothing depends on and that are not discovered by a framework annotation are candidates for removal.</description>
+        <cypher><![CDATA[
+            MATCH (:Artifact)-[:CONTAINS]->(t:Class)
+                WHERE NOT t:Test AND NOT t.name CONTAINS '$' AND NOT t.name IN ['package-info', 'module-info']
+                  AND NOT (:Type)-[:DEPENDS_ON]->(t)
+                  AND NOT EXISTS { MATCH (t)-[:ANNOTATED_BY]->(:Annotation)-[:OF_TYPE]->(at:Type) WHERE at.fqn STARTS WITH 'org.springframework.' OR at.fqn STARTS WITH 'jakarta.' OR at.fqn STARTS WITH 'javax.' }
+                  AND NOT EXISTS { MATCH (t)-[:DECLARES]->(m:Method {name: 'main'}) }
+                RETURN DISTINCT t AS Element, t.fqn AS Fqn, 'no incoming dependency' AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+    <constraint id="tech-java:TemporaryOrDiagnosticCode" severity="major">
+        <requiresParameter name="temporaryCodeRegex" type="String" defaultValue="(?i).*\.(temp|tmp|scratch|playground)\..*"/>
+        <description>Temporary / diagnostic code (parameter temporaryCodeRegex) must not ship to production.</description>
+        <cypher><![CDATA[
+            MATCH (:Artifact)-[:CONTAINS]->(t:Type)
+                WHERE NOT t:Test AND t.fqn =~ $temporaryCodeRegex
+                RETURN DISTINCT t AS Element, t.fqn AS Fqn, 'temporary or diagnostic type' AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+    <constraint id="tech-java:DuplicateSimpleNames" severity="major">
+        <description>Two classes with the same simple name in different packages are a confusion and merge-error source: rename one.</description>
+        <cypher><![CDATA[
+            MATCH (:Artifact)-[:CONTAINS]->(t:Class)
+                WHERE NOT t:Test AND NOT t.name CONTAINS '$' AND NOT t.name IN ['package-info', 'module-info']
+                WITH t.name AS name, collect(DISTINCT t) AS types
+                WHERE size(types) > 1
+                UNWIND types AS t
+                RETURN t AS Element, t.fqn AS Fqn, 'simple name ' + name + ' declared ' + toString(size(types)) + ' times' AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+    <constraint id="tech-java:ForbiddenNamingTokens" severity="minor">
+        <requiresParameter name="forbiddenNameRegex" type="String" defaultValue="(?!)"/>
+        <description>Types whose fully qualified name matches the parameter forbiddenNameRegex (legacy technology names) must be renamed or removed.</description>
+        <cypher><![CDATA[
+            MATCH (:Artifact)-[:CONTAINS]->(t:Type)
+                WHERE NOT t:Test AND t.fqn =~ $forbiddenNameRegex
+                RETURN DISTINCT t AS Element, t.fqn AS Fqn, 'forbidden naming token' AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+
+    <group id="tech-java:Default">
+        <description>tech-java - plain Java code health</description>
+        <includeConstraint refId="tech-java:WeakRandom"/>
+        <includeConstraint refId="tech-java:NonInjectableClock"/>
+        <includeConstraint refId="tech-java:BareRuntimeException"/>
+        <includeConstraint refId="tech-java:NoArgOrElseThrow"/>
+        <includeConstraint refId="tech-java:UnreferencedType"/>
+        <includeConstraint refId="tech-java:TemporaryOrDiagnosticCode"/>
+        <includeConstraint refId="tech-java:DuplicateSimpleNames"/>
+        <includeConstraint refId="tech-java:ForbiddenNamingTokens"/>
+    </group>
+
+</jqa:jqassistant-rules>

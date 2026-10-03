@@ -3,6 +3,7 @@ import sys
 import ssl
 import json
 import re
+import shutil
 import zipfile
 import urllib.request
 import urllib.error
@@ -76,6 +77,59 @@ class JavaJQAssistantInstaller(BaseInstallModule):
             raise e
 
 
+    # Directories never scanned for configuration / workflow files
+    _SKIPPED_DIRS = {"node_modules", "target", ".git", "dist", "out", ".idea", ".vscode", ".history", ".token-razor"}
+
+    def _discover_config_dirs(self) -> list:
+        """src/main/resources and .github/workflows directories (YAML 2 / XML plugins)."""
+        found = []
+        for root, dirs, _files in os.walk(self.context.workspace_root):
+            dirs[:] = [d for d in dirs if d not in self._SKIPPED_DIRS]
+            norm = root.replace("\\", "/")
+            if norm.endswith("/src/main/resources") or norm.endswith("/.github/workflows"):
+                found.append(norm)
+                dirs[:] = []
+        return sorted(found)
+
+    @staticmethod
+    def _read_flat_yaml(path: str) -> dict:
+        """Reads flat 'name: value' pairs (comments allowed), no YAML dependency required."""
+        params = {}
+        if not os.path.isfile(path):
+            return params
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or ":" not in line:
+                    continue
+                key, value = line.split(":", 1)
+                value = value.strip()
+                if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
+                    value = value[1:-1]
+                if key.strip() and value:
+                    params[key.strip()] = value
+        return params
+
+    def _install_rule_packs(self) -> list:
+        """Copies the portable packs and the application pack XML files verbatim. Returns the application audit group ids."""
+        copied = 0
+        if os.path.isdir(self.jqa.rule_packs_dir):
+            for name in sorted(os.listdir(self.jqa.rule_packs_dir)):
+                if name.endswith(".xml"):
+                    shutil.copyfile(os.path.join(self.jqa.rule_packs_dir, name), os.path.join(self.jqa.rules_dir, name))
+                    copied += 1
+        app_groups = []
+        if os.path.isdir(self.jqa.app_pack_dir):
+            for name in sorted(os.listdir(self.jqa.app_pack_dir)):
+                if not name.endswith(".xml"):
+                    continue
+                shutil.copyfile(os.path.join(self.jqa.app_pack_dir, name), os.path.join(self.jqa.rules_dir, name))
+                copied += 1
+                with open(os.path.join(self.jqa.app_pack_dir, name), "r", encoding="utf-8") as f:
+                    app_groups.extend(re.findall(r'<group\s+id="([^"]+:Audit)"', f.read()))
+        info(f"{copied} rule pack file(s) copied into {self.jqa.rules_dir}", component=self.name)
+        return sorted(set(app_groups))
+
     def install_config_and_rules(self):
         os.makedirs(self.jqa.config_dir, exist_ok=True)
         os.makedirs(self.jqa.rules_dir, exist_ok=True)
@@ -104,6 +158,14 @@ class JavaJQAssistantInstaller(BaseInstallModule):
                     pom_xml_yaml_list.extend([f"        - '{os.path.join(root, 'pom.xml')}'"])
         jqa_pom_yaml = "\n".join(pom_xml_yaml_list)
 
+        #---------------
+        # Configuration / workflow directories, application rule parameters and application audit groups
+        jqa_config_yaml = "\n".join(f"        - '{path}'" for path in self._discover_config_dirs())
+        app_params = self._read_flat_yaml(os.path.join(self.jqa.app_pack_dir, "rule-parameters.yml"))
+        jqa_params_yaml = "\n".join(f"      {key}: '{value.replace(chr(39), chr(39) * 2)}'" for key, value in app_params.items()) or "      {}"
+        app_groups = self._install_rule_packs()
+        jqa_groups_yaml = "\n".join(f"      - '{group}'" for group in app_groups)
+
         neo4j_uri = vsCodeSettings.graphRagExplorer.neo4j.uri
         neo4j_user = vsCodeSettings.graphRagExplorer.neo4j.username
         neo4j_pass = vsCodeSettings.graphRagExplorer.neo4j.password
@@ -111,12 +173,18 @@ class JavaJQAssistantInstaller(BaseInstallModule):
 
         content = re.sub(r'[ \t]*\{\{JQA_POM_FILES_YAML_LIST\}\}', '{{JQA_POM_FILES_YAML_LIST}}', content)
         content = re.sub(r'[ \t]*\{\{JQA_SRC_DIRS_YAML_LIST\}\}', '{{JQA_SRC_DIRS_YAML_LIST}}', content)
+        content = re.sub(r'[ \t]*\{\{JQA_CONFIG_DIRS_YAML_LIST\}\}', '{{JQA_CONFIG_DIRS_YAML_LIST}}', content)
+        content = re.sub(r'[ \t]*\{\{JQA_RULE_PARAMETERS_YAML\}\}', '{{JQA_RULE_PARAMETERS_YAML}}', content)
+        content = re.sub(r'[ \t]*\{\{JQA_APP_GROUPS_YAML\}\}', '{{JQA_APP_GROUPS_YAML}}', content)
 
         content = content.replace("{{JQA_BOLT_URL}}", neo4j_uri)\
                          .replace("{{JQA_BOLT_USERNAME}}", neo4j_user)\
                          .replace("{{JQA_BOLT_PASSWORD}}", neo4j_pass)\
                          .replace("{{JQA_POM_FILES_YAML_LIST}}", jqa_pom_yaml)\
                          .replace("{{JQA_SRC_DIRS_YAML_LIST}}", jqa_src_yaml)\
+                         .replace("{{JQA_CONFIG_DIRS_YAML_LIST}}", jqa_config_yaml)\
+                         .replace("{{JQA_RULE_PARAMETERS_YAML}}", jqa_params_yaml)\
+                         .replace("{{JQA_APP_GROUPS_YAML}}", jqa_groups_yaml)\
                          .replace("{{PROJECT_NAME}}", project_name)\
                          .replace("{{JQA_RULES_DIRECTORY}}", self.jqa.rules_dir.replace("\\", "/"))\
 

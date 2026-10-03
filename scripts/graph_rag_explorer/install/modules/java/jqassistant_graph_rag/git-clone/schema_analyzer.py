@@ -42,6 +42,25 @@ class SchemaAnalyzer:
         logger.info("Listing relationship types and counts...")
         return self.neo4j_manager.execute_read_query(query)
 
+    def list_audit_overlay_counts(self) -> List[Dict[str, Any]]:
+        """Counts of the optional :Audit overlay nodes (empty when the overlay was never imported)."""
+        query = """
+        MATCH (n:Audit)
+        RETURN head([l IN labels(n) WHERE l <> 'Audit']) AS label, count(n) AS count
+        ORDER BY count DESC
+        """
+        logger.info("Listing audit overlay node counts...")
+        return self.neo4j_manager.execute_read_query(query)
+
+    def list_violation_counts(self) -> List[Dict[str, Any]]:
+        """Active/inactive VIOLATES relationships grouped by severity."""
+        query = """
+        MATCH ()-[v:VIOLATES]->(:Audit:Rule)
+        RETURN coalesce(v.severity, 'unknown') AS severity, coalesce(v.active, true) AS active, count(v) AS count
+        ORDER BY count DESC
+        """
+        return self.neo4j_manager.execute_read_query(query)
+
     def analyze_schema(self):
         """Executes all schema analysis queries and prints the results."""
         print("\n--- Starting jQAssistant Schema Analysis ---")
@@ -59,6 +78,16 @@ class SchemaAnalyzer:
             print("  No relationship types found.")
         for item in rel_counts:
             print(f"  - {item['relationshipType']}: {item['count']}")
+
+        audit_counts = self.list_audit_overlay_counts()
+        if audit_counts:
+            print("\nAudit Overlay Nodes:")
+            for item in audit_counts:
+                print(f"  - {item['label']}: {item['count']}")
+            print("\nRule Violations (VIOLATES) by severity:")
+            for item in self.list_violation_counts():
+                state = "active" if item["active"] else "resolved"
+                print(f"  - {item['severity']} ({state}): {item['count']}")
 
         print("\n--- jQAssistant Schema Analysis Complete ---")
 

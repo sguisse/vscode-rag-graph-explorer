@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    tech-redis - Redis templates and locks
+    Portable good-practice pack (copied verbatim by the installer, no {{PROJECT_NAME}} placeholder).
+    Rule conventions: constraints only read, concepts write idempotently, variable-length paths are bounded, constraints return
+    Element / Fqn / Detail (+ File, Line when available), parameters have safe defaults. Violations are indicated, never blocking.
+-->
+<jqa:jqassistant-rules xmlns:jqa="http://schema.jqassistant.org/rule/v2.9" xmlns="http://schema.jqassistant.org/rule/v2.9">
+
+    <concept id="tech-redis:Operations">
+        <providesConcept refId="xc-res:OutboundCall"/>
+        <description>Labels the methods of RedisTemplate and the *Operations interfaces as :OutboundCall.</description>
+        <cypher><![CDATA[
+            MATCH (lt:Type)-[:DECLARES]->(m:Method)
+                WHERE lt.fqn STARTS WITH 'org.springframework.data.redis.core.' AND (lt.fqn ENDS WITH 'Template' OR lt.fqn ENDS WITH 'Operations')
+                SET m:OutboundCall
+                RETURN count(DISTINCT m) AS RedisMethods
+        ]]></cypher>
+    </concept>
+    <constraint id="tech-redis:LockWithoutTtl" severity="major">
+        <description>A lock acquired with the two-argument setIfAbsent has no expiry: a crashed pod keeps the lock forever. Use the overload with timeout.</description>
+        <cypher><![CDATA[
+            MATCH (t:Type)-[:DECLARES]->(m:Method)-[:INVOKES]->(c:Method)<-[:DECLARES]-(rt:Type)
+                WHERE NOT t:Test AND rt.fqn STARTS WITH 'org.springframework.data.redis.core.' AND coalesce(c.name, last(split(split(c.signature, '(')[0], ' '))) = 'setIfAbsent' AND c.signature ENDS WITH 'setIfAbsent(java.lang.Object,java.lang.Object)'
+                RETURN DISTINCT m AS Element, t.fqn AS Fqn, c.signature AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+
+    <group id="tech-redis:Default">
+        <description>tech-redis - Redis templates and locks</description>
+        <includeConcept refId="tech-redis:Operations"/>
+        <includeConstraint refId="tech-redis:LockWithoutTtl"/>
+    </group>
+
+</jqa:jqassistant-rules>

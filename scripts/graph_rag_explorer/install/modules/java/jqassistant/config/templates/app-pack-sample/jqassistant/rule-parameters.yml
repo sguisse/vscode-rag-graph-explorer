@@ -1,0 +1,12 @@
+# Application values for the rule parameters of the portable packs (flat 'name: value' pairs).
+# The installer injects them into analyze.rule-parameters of .jqassistant.yml. Parameters left out keep their safe default.
+moduleSchemas: 'core=sa_core;assessment=sa_assessment;grid=sa_grid;supplier=sa_supplier;kit='
+internalPathRegex: '/feign/.*'
+destructivePathRegex: '.*/(migrate|temp|clear|reload|load_acl_preset|sync).*'
+# publicPathRegex: derive from the permitAll list of application-security.yaml
+adminExprRegex: '(?i).*admin.*'
+forbiddenNameRegex: '(?i).*(feign|fegin|microservicekit|nacos).*'
+forbiddenDependencies: 'org.mozilla:rhino, .*kafka-streams.*, .*elasticsearch.*, org.springframework.cloud:.*, .*nacos.*, .*openfeign.*'
+requiredDependencies: 'micrometer-registry-prometheus, spring-modulith-events-jpa, resilience4j-spring-boot3, shedlock-spring'
+executorNames: 'publish, acl, notification, pdf, gex'
+# outboxTypeRegex, idempotencyTypeRegex, sensitiveRegex, allowedKafkaProducerRegex, allowedModuleDependencies: to agree with the architect

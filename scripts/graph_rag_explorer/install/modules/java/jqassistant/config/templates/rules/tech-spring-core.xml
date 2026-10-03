@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    tech-spring-core - Spring Framework core (transactions, scheduling, events, async)
+    Portable good-practice pack (copied verbatim by the installer, no {{PROJECT_NAME}} placeholder).
+    Rule conventions: constraints only read, concepts write idempotently, variable-length paths are bounded, constraints return
+    Element / Fqn / Detail (+ File, Line when available), parameters have safe defaults. Violations are indicated, never blocking.
+-->
+<jqa:jqassistant-rules xmlns:jqa="http://schema.jqassistant.org/rule/v2.9" xmlns="http://schema.jqassistant.org/rule/v2.9">
+
+    <concept id="tech-spring-core:TransactionalMethod">
+        <providesConcept refId="xc-tx:TransactionalMethod"/>
+        <description>Labels methods running in a transaction (method or class level @Transactional) as :Transactional.</description>
+        <cypher><![CDATA[
+            MATCH (t:Type)-[:DECLARES]->(m:Method)
+                WHERE m.name IS NOT NULL AND NOT m:Constructor
+                  AND (EXISTS { MATCH (x)-[:ANNOTATED_BY]->(:Annotation)-[:OF_TYPE]->(at:Type) WHERE (x = m OR x = t) AND at.fqn IN ['org.springframework.transaction.annotation.Transactional', 'jakarta.transaction.Transactional', 'javax.transaction.Transactional'] })
+                SET m:Transactional
+                RETURN count(DISTINCT m) AS TransactionalMethods
+        ]]></cypher>
+    </concept>
+    <concept id="tech-spring-core:ReadOnlyTransactionalMethod">
+        <providesConcept refId="xc-tx:ReadOnlyTransactionalMethod"/>
+        <description>Labels methods running in a read-only transaction (@Transactional(readOnly = true)) as :ReadOnlyTransactional.</description>
+        <cypher><![CDATA[
+            MATCH (t:Type)-[:DECLARES]->(m:Method)
+                WHERE m.name IS NOT NULL AND NOT m:Constructor
+                  AND EXISTS {
+                    MATCH (x)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(at:Type), (a)-[:HAS]->(v:Value {name: 'readOnly'})
+                    WHERE (x = m OR x = t) AND at.fqn IN ['org.springframework.transaction.annotation.Transactional', 'jakarta.transaction.Transactional', 'javax.transaction.Transactional'] AND v.value = true
+                  }
+                SET m:ReadOnlyTransactional
+                RETURN count(DISTINCT m) AS ReadOnlyTransactionalMethods
+        ]]></cypher>
+    </concept>
+    <concept id="tech-spring-core:ScheduledJob">
+        <providesConcept refId="xc-res:ScheduledJob"/>
+        <description>Labels @Scheduled methods as :ScheduledJob.</description>
+        <cypher><![CDATA[
+            MATCH (t:Type)-[:DECLARES]->(m:Method)
+                WHERE m.name IS NOT NULL AND EXISTS { MATCH (m)-[:ANNOTATED_BY]->(:Annotation)-[:OF_TYPE]->(ax:Type) WHERE ax.fqn IN ['org.springframework.scheduling.annotation.Scheduled', 'org.springframework.scheduling.annotation.Schedules'] }
+                SET m:ScheduledJob
+                RETURN count(DISTINCT m) AS ScheduledJobs
+        ]]></cypher>
+    </concept>
+    <concept id="tech-spring-core:EventListener">
+        <providesConcept refId="xc-res:MessageConsumer"/>
+        <description>Labels @EventListener / @TransactionalEventListener methods as in-process :MessageConsumer (consumerKind = 'event').</description>
+        <cypher><![CDATA[
+            MATCH (t:Type)-[:DECLARES]->(m:Method)
+                WHERE m.name IS NOT NULL AND EXISTS { MATCH (m)-[:ANNOTATED_BY]->(:Annotation)-[:OF_TYPE]->(ax:Type) WHERE ax.fqn IN ['org.springframework.context.event.EventListener', 'org.springframework.transaction.event.TransactionalEventListener'] }
+                SET m:MessageConsumer, m.consumerKind = 'event'
+                RETURN count(DISTINCT m) AS EventListeners
+        ]]></cypher>
+    </concept>
+    <concept id="tech-spring-core:AsyncMethod">
+        <description>Labels @Async methods as :AsyncMethod and stores the executor name (property asyncExecutor).</description>
+        <cypher><![CDATA[
+            MATCH (t:Type)-[:DECLARES]->(m:Method)-[:ANNOTATED_BY]->(a:Annotation)-[:OF_TYPE]->(:Type {fqn: 'org.springframework.scheduling.annotation.Async'})
+                OPTIONAL MATCH (a)-[:HAS]->(v:Value {name: 'value'})
+                SET m:AsyncMethod, m.asyncExecutor = v.value
+                RETURN count(DISTINCT m) AS AsyncMethods
+        ]]></cypher>
+    </concept>
+    <constraint id="tech-spring-core:AsyncWithoutExecutorName" severity="major">
+        <requiresConcept refId="tech-spring-core:AsyncMethod"/>
+        <requiresParameter name="executorNames" type="String" defaultValue=""/>
+        <description>@Async must name a dedicated executor (and, when the parameter executorNames is set, one of the allowed pools), otherwise all concerns share one default pool.</description>
+        <cypher><![CDATA[
+            MATCH (t:Type)-[:DECLARES]->(m:Method:AsyncMethod)
+                WHERE NOT t:Test AND (m.asyncExecutor IS NULL OR m.asyncExecutor = ''
+                  OR ($executorNames <> '' AND NOT m.asyncExecutor IN [x IN split($executorNames, ',') | trim(x)]))
+                RETURN DISTINCT m AS Element, t.fqn AS Fqn, coalesce(m.asyncExecutor, '<default pool>') AS Detail
+        ]]></cypher>
+        <report primaryColumn="Element"/>
+    </constraint>
+
+    <group id="tech-spring-core:Default">
+        <description>tech-spring-core - Spring Framework core (transactions, scheduling, events, async)</description>
+        <includeConcept refId="tech-spring-core:TransactionalMethod"/>
+        <includeConcept refId="tech-spring-core:ReadOnlyTransactionalMethod"/>
+        <includeConcept refId="tech-spring-core:ScheduledJob"/>
+        <includeConcept refId="tech-spring-core:EventListener"/>
+        <includeConcept refId="tech-spring-core:AsyncMethod"/>
+        <includeConstraint refId="tech-spring-core:AsyncWithoutExecutorName"/>
+    </group>
+
+</jqa:jqassistant-rules>
