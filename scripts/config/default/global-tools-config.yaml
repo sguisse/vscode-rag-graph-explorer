@@ -1,0 +1,17 @@
+# Default Global Tool Enablement Configuration Template
+# Location: scripts/config/default/global-tools-config.yaml
+# Active workspace override location: <workspace>/<backendWorkspacePath>/config/global-tools-config.yaml
+
+graph_rag_explorer:
+  tools:
+    01_node_env_initialisation: true
+    01_system_core: true
+    01_system_neo4j: true
+    01_system_postgresql16: true
+    java_jacoco: true
+    java_jqassistant: true
+    java_jqassistant_graph_rag: true
+    node_dependency_cruiser: true
+    node_llm_copilot_sdk: true
+    node_swc: true
+    python_graphify: true

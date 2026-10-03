@@ -2,10 +2,13 @@ import os
 import sys
 from typing import Dict, Any, Optional, Type
 
+import config as config_module
 from core.utils import info, success, warn, error
 from core.installer.context import BaseEnvironmentContext
+from core.installer.config import BaseConfigModule
 from core.installer.check import BaseCheckModule
 from core.installer.install import BaseInstallModule
+from core.installer.dependency_validator import ToolDependencyValidator
 from core.installer.registry import InstallerRegistry
 from core.installer.report_handler import ReportHandler
 
@@ -46,27 +49,72 @@ def run_installation_pipeline(
     info(f"Discovering install modules from '{install_dir}'...", component="InstallRunner")
     InstallerRegistry.discover_and_load_checkers_and_installers(install_dir)
 
+    # Strict verification of required backendWorkspacePath configuration
+    backend_rel_path = getattr(config_module.config.vsCodeSettings, "backendWorkspacePath", None)
+    if not backend_rel_path:
+        error("backendWorkspacePath is missing in central configuration.", component="InstallRunner")
+        raise ValueError("Missing configuration value: backendWorkspacePath is required in vsCodeSettings configuration.")
+
+    # Validate global configuration and category dependencies
+    validator = ToolDependencyValidator(
+        workspace_root=context.workspace_root,
+        backend_rel_path=backend_rel_path
+    )
+    global_status = validator.load_global_tool_config()
+    dependency_map = validator.load_category_dependencies(install_dir)
+
+    configurators: Dict[str, BaseConfigModule] = {cls(context).name: cls(context) for cls in InstallerRegistry.get_configurators()}
     checkers: Dict[str, BaseCheckModule] = {cls(context).name: cls(context) for cls in InstallerRegistry.get_checkers()}
     installers: Dict[str, BaseInstallModule] = {cls(context).name: cls(context) for cls in InstallerRegistry.get_installers()}
 
-    info(f"Discovered these {len(checkers)} modules to check/install in this order:", component="InstallRunner")
-    for name in sorted(checkers):
-        info(f"   - {name}", component="InstallRunner")
-    missing_installers = sorted(set(checkers) - set(installers))
-    if missing_installers:
-        info(f"Modules without installer (check only): {', '.join(missing_installers)}", component="InstallRunner")
+    # All discovered module names
+    all_discovered_names = sorted(set(configurators.keys()) | set(checkers.keys()) | set(installers.keys()))
 
-    total_modules = len(checkers)
-    for index, name in enumerate(sorted(checkers), start=1):
+    # Filter enabled tools
+    enabled_modules = [name for name in all_discovered_names if validator.is_tool_enabled(name, global_status)]
+    disabled_modules = set(all_discovered_names) - set(enabled_modules)
+
+    if disabled_modules:
+        info(f"Disabled tool modules by global configuration (will be skipped): {', '.join(sorted(disabled_modules))}", component="InstallRunner")
+
+    # Validate dependencies for enabled tools
+    validator.validate_tool_dependencies(enabled_modules, dependency_map)
+
+    info(f"Active enabled modules to execute ({len(enabled_modules)}):", component="InstallRunner")
+    for name in enabled_modules:
+        info(f"   - {name}", component="InstallRunner")
+
+    total_modules = len(enabled_modules)
+    for index, name in enumerate(enabled_modules, start=1):
+        configurator: Optional[BaseConfigModule] = configurators.get(name)
         checker: Optional[BaseCheckModule] = checkers.get(name)
         installer: Optional[BaseInstallModule] = installers.get(name)
 
-        info(f"[{index}/{total_modules}] Checking module [{name}]...", component="InstallRunner")
+        info(f"[{index}/{total_modules}] Processing module [{name}]...", component="InstallRunner")
+
+        # STEP 1: CONFIGURATION (Runs BEFORE Check)
+        if configurator:
+            info(f"[{name}] Step 1/3: Executing module configuration...", component="InstallRunner")
+            try:
+                configurator.apply_config()
+            except Exception as e:
+                error(f"Configuration failed for module [{name}]: {e}", component="InstallRunner")
+                raise
+        else:
+            info(f"[{name}] Step 1/3: No configurator registered. Skipping config phase.", component="InstallRunner")
+
+        # STEP 2: CHECK
+        if not checker:
+            warn(f"[{name}] No checker registered. Skipping verification.", component="InstallRunner")
+            continue
+
+        info(f"[{name}] Step 2/3: Executing module checks...", component="InstallRunner")
         try:
             tool_install_status: Dict[str, Any] = checker.execute_all_checks()
         except Exception as e:
             error(f"Check failed for module [{name}]: {e}", component="InstallRunner")
             raise
+
         report_handler.save_snapshot(name, "before", tool_install_status)
         before_summary = tool_install_status.get("summary", {})
         info(
@@ -76,6 +124,7 @@ def run_installation_pipeline(
             component="InstallRunner",
         )
 
+        # STEP 3: INSTALL (If check failed)
         if tool_install_status.get("summary", {}).get("globalStatus") != "✅" and installer:
             warn(f"Validation anomaly caught on node [{name}]. Deploying fixes...", component="InstallRunner")
             try:

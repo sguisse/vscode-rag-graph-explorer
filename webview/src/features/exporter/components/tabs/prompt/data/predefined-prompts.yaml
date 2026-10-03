@@ -196,6 +196,7 @@
     expected: |-
       1. Parse and internalize all constraints in <reference_files>.
       2. Analyze <codebase_files> to build a complete mental model of the project context and architecture.
+         - Whenever an attachment is provided, always use Python code execution to open, parse, and analyze the complete file on disk before formulating a response. Never rely solely on the text preview.
       3. Evaluate the instructions in <execution_prompt> against the codebase.
       4. If critical reference files or codebase dependencies are missing and block safe execution: STOP, prevent code generation, list the missing files, and ask the user to provide them.
       5. Otherwise, execute the prompt requirements fully, producing production-ready updates.
@@ -258,9 +259,11 @@
 
     expected: |-
       1. Parse constraints in <reference_files> and build project architecture awareness from <codebase_files>.
-      2. Validate requirements in <execution_prompt>.
-      3. If required context files are missing, halt execution, list the missing files, and request them.
-      4. Prepare changes using unified diff patches (`git apply`) for existing files and heredocs for new files.
+      2. Analyze <codebase_files> to build a complete mental model of the project context and architecture.
+         - Whenever an attachment is provided, always use Python code execution to open, parse, and analyze the complete file on disk before formulating a response. Never rely solely on the text preview.
+      3. Validate requirements in <execution_prompt>.
+      4. If required context files are missing, halt execution, list the missing files, and request them.
+      5. Prepare changes using unified diff patches (`git apply`) for existing files and heredocs for new files.
 
     output: |-
       - Language: All code, documentation, comments, and echo logs MUST be in English.

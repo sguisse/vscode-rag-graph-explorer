@@ -1,31 +1,35 @@
 import os
+import shutil
 from abc import ABC
 import config as config_module
-from core.utils import info, error
+from core.utils import info, warn, error
 
 # Sub-contexts (one per install module) are built many times per run; resolved paths are only logged once per tool.
 _LOGGED_TOOLS = set()
 
+DEFAULT_CONFIG_FILE_NAME = "global-tools-config.yaml"
 
 class BaseEnvironmentContext(ABC):
     """Abstract Base Class providing common workspace paths, target directories, and report structures."""
 
     def __init__(self, tool_name: str = None):
         if not tool_name:
-            error("BaseEnvironmentContext built without a tool_name.", component="EnvironmentContext")
+            error("BaseEnvironmentContext built without a tool_name.", component="BaseEnvironmentContext")
             raise ValueError("tool_name must be explicitly defined by a concrete subclass or constructor argument.")
 
         be_scripts_path = getattr(config_module.config.vsCodeSettings, "backendWorkspacePath", None)
         if not be_scripts_path:
-            error("backendWorkspacePath is missing in the central configuration.", component="EnvironmentContext")
+            error("backendWorkspacePath is missing in the central configuration.", component="BaseEnvironmentContext")
             raise ValueError("backendWorkspacePath is missing or undefined in vsCodeSettings configuration.")
 
         self.tool_name = tool_name
         self.workspace_root = config_module.config.vsCodeSettings.workspaceRoot or os.getcwd()
         if os.path.abspath(self.workspace_root) == os.path.abspath(os.sep):
-            error(f"workspaceRoot resolves to the filesystem root ('{self.workspace_root}'); aborting.", component="EnvironmentContext")
+            error(f"workspaceRoot resolves to the filesystem root ('{self.workspace_root}'); aborting.", component="BaseEnvironmentContext")
             raise ValueError("workspaceRoot resolves to the filesystem root; refusing to create installer directories there.")
         self.beScriptsPath = be_scripts_path
+
+        self.global_target_config_dir = f"{self.workspace_root}/{self.beScriptsPath}/config"
 
         self.global_target_dir = f"{self.workspace_root}/{self.beScriptsPath}/target"
         self.global_install_reports_dir = f"{self.global_target_dir}/install_reports"
@@ -43,12 +47,28 @@ class BaseEnvironmentContext(ABC):
             info(
                 f"Environment context ready for [{tool_name}] "
                 f"(workspace_root='{self.workspace_root}', backend='{self.beScriptsPath}', target_dir='{self.target_dir}').",
-                component="EnvironmentContext",
+                component="BaseEnvironmentContext",
             )
 
     def ensure_directories(self) -> None:
         """Ensures all baseline context output directories exist on disk."""
+        os.makedirs(self.global_target_config_dir, exist_ok=True)
         os.makedirs(self.tools_dir, exist_ok=True)
         os.makedirs(self.global_install_reports_dir, exist_ok=True)
         os.makedirs(self.install_reports_dir, exist_ok=True)
         os.makedirs(self.raw_outputs_dir, exist_ok=True)
+
+        # Initialize workspace global-tools-config.yaml from default template if missing
+        default_config = os.path.normpath(
+            os.path.join(self.workspace_root, self.beScriptsPath, "scripts", "config", "default", DEFAULT_CONFIG_FILE_NAME)
+        ).replace("\\", "/")
+        target_config = os.path.normpath(
+            os.path.join(self.global_target_config_dir, DEFAULT_CONFIG_FILE_NAME)
+        ).replace("\\", "/")
+
+        if os.path.exists(default_config) and not os.path.exists(target_config):
+            try:
+                shutil.copy2(default_config, target_config)
+                info(f"Initialized workspace global tool configuration at '{target_config}' from default template.", component="BaseEnvironmentContext")
+            except Exception as e:
+                warn(f"Failed to copy default '{DEFAULT_CONFIG_FILE_NAME}' to workspace config directory: {e}", component="BaseEnvironmentContext")

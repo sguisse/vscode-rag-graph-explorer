@@ -1,0 +1,9 @@
+# Java Category Tool Dependencies Manifest
+# Used by ToolDependencyValidator to ensure required tools are enabled before execution.
+
+dependencies:
+  java_jqassistant_graph_rag:
+    - java_jqassistant
+    - 01_system_neo4j
+  java_jacoco:
+    - 01_system_core
