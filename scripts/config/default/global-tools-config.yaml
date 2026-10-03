@@ -4,14 +4,36 @@
 
 graph_rag_explorer:
   tools:
-    01_node_env_initialisation: true
-    01_system_core: true
-    01_system_neo4j: true
-    01_system_postgresql16: true
-    java_jacoco: true
-    java_jqassistant: true
-    java_jqassistant_graph_rag: true
-    node_dependency_cruiser: true
-    node_llm_copilot_sdk: true
-    node_swc: true
-    python_graphify: true
+    01_node_env_initialisation:
+      enabled: true
+      config_path: "node/node_env_initialisation"
+    01_system_core:
+      enabled: true
+      config_path: "system/core"
+    01_system_neo4j:
+      enabled: true
+      config_path: "system/neo4j"
+    01_system_postgresql16:
+      enabled: true
+      config_path: "system/postgresql16"
+    java_jacoco:
+      enabled: true
+      config_path: "java/jacoco"
+    java_jqassistant:
+      enabled: true
+      config_path: "java/jqassistant"
+    java_jqassistant_graph_rag:
+      enabled: true
+      config_path: "java/jqassistant_graph_rag"
+    node_dependency_cruiser:
+      enabled: true
+      config_path: "node/dependency_cruiser"
+    node_llm_copilot_sdk:
+      enabled: true
+      config_path: "node/sdk_copilot"
+    node_swc:
+      enabled: true
+      config_path: "node/swc"
+    python_graphify:
+      enabled: true
+      config_path: "python/graphify"

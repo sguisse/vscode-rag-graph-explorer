@@ -29,13 +29,13 @@ class ToolDependencyValidator:
             os.path.join(self.workspace_root, self.backend_rel_path, "scripts", "config", "default", "global-tools-config.yaml")
         ).replace("\\", "/")
 
-    def load_global_tool_config(self) -> Dict[str, bool]:
+    def load_global_tool_config(self) -> Dict[str, Any]:
         """
-        Loads tool enable/disable flags from global-tools-config.yaml.
+        Loads tool enable/disable flags and custom config paths from global-tools-config.yaml.
         Checks user workspace config first, then falls back to scripts/config/default/global-tools-config.yaml.
-        Returns dict mapping tool_name -> enabled boolean.
+        Returns dict mapping tool_name -> {"enabled": bool, "config_path": str}.
         """
-        tool_status: Dict[str, bool] = {}
+        tool_status: Dict[str, Any] = {}
         target_path = None
 
         if os.path.exists(self.global_config_path):
@@ -47,10 +47,24 @@ class ToolDependencyValidator:
             try:
                 with open(target_path, "r", encoding="utf-8") as f:
                     data = yaml.safe_load(f) or {}
-                    tools = data.get("tools", {})
-                    if isinstance(tools, dict):
-                        for tool, enabled in tools.items():
-                            tool_status[str(tool)] = bool(enabled)
+
+                # Support category levels (e.g. graph_rag_explorer -> tools) as well as top-level 'tools'
+                for app_key, app_data in data.items():
+                    tools_dict = None
+                    if isinstance(app_data, dict) and "tools" in app_data:
+                        tools_dict = app_data["tools"]
+                    elif app_key == "tools" and isinstance(app_data, dict):
+                        tools_dict = app_data
+
+                    if isinstance(tools_dict, dict):
+                        for tool_name, tool_info in tools_dict.items():
+                            if isinstance(tool_info, dict):
+                                enabled = bool(tool_info.get("enabled", True))
+                                config_path = str(tool_info.get("config_path", ""))
+                                tool_status[str(tool_name)] = {"enabled": enabled, "config_path": config_path}
+                            elif isinstance(tool_info, bool):
+                                tool_status[str(tool_name)] = {"enabled": tool_info, "config_path": ""}
+
                 info(f"Loaded global tools status from '{target_path}'.", component="DependencyValidator")
             except Exception as e:
                 warn(f"Failed to parse global tool config at '{target_path}': {e}", component="DependencyValidator")
@@ -59,9 +73,21 @@ class ToolDependencyValidator:
 
         return tool_status
 
-    def is_tool_enabled(self, tool_name: str, global_status: Dict[str, bool]) -> bool:
+    def is_tool_enabled(self, tool_name: str, global_status: Dict[str, Any]) -> bool:
         """Returns True if the tool is enabled in global_status (defaults to True if unlisted)."""
-        return global_status.get(tool_name, True)
+        entry = global_status.get(tool_name)
+        if isinstance(entry, dict):
+            return entry.get("enabled", True)
+        if isinstance(entry, bool):
+            return entry
+        return True
+
+    def get_tool_config_path(self, tool_name: str, global_status: Dict[str, Any]) -> str:
+        """Returns custom config_path for tool_name if specified in global_status."""
+        entry = global_status.get(tool_name)
+        if isinstance(entry, dict):
+            return entry.get("config_path", "")
+        return ""
 
     def load_category_dependencies(self, install_root_dir: str) -> Dict[str, List[str]]:
         """

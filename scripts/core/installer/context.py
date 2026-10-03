@@ -9,6 +9,7 @@ _LOGGED_TOOLS = set()
 
 DEFAULT_CONFIG_FILE_NAME = "global-tools-config.yaml"
 
+
 class BaseEnvironmentContext(ABC):
     """Abstract Base Class providing common workspace paths, target directories, and report structures."""
 
